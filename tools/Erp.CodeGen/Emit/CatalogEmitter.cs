@@ -74,7 +74,9 @@ public static class CatalogEmitter
             t.Exclusions.Select(e => e.Name).ToList(),
             t.ForeignKeys.Select(f => new ExpectedForeignKey(f.Name, f.Columns, f.TargetTable, f.TargetColumns)).ToList(),
             t.Indexes.Select(i => i.Name).ToList(),
-            t.IsAppendOnly ? [$"tg_{t.Name}_append_only", $"tg_{t.Name}_no_truncate"] : [],
+            (t.IsAppendOnly ? [$"tg_{t.Name}_append_only", $"tg_{t.Name}_no_truncate"] : new List<string>())
+                .Concat(model.ImplementedStubs.SelectMany(st => st.Implementation!.Triggers).Where(tr => tr.Table == t.FullName).Select(tr => tr.Trigger))
+                .ToList(),
             t.AppendOnlyUpdatable,
             CSharpEmitter.HasApi(model, t))).ToList();
         var stubs = model.Stubs.Select(s => new ExpectedStub(s.Table[..s.Table.IndexOf('.', StringComparison.Ordinal)], s.FunctionName, s.Table, s.Owner, s.Rule)).ToList();

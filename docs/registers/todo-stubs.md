@@ -8,7 +8,6 @@ Tests fail if the database and this register disagree, or if an owning slice has
 
 | Owner | Table | Placeholder | Rule (design text) |
 | --- | --- | --- | --- |
-| S1.03 | org.branches | `org.todo_branches_default_branch_per_company()` | Every company has at least one branch; small customers get one created automatically (rule SC-2). |
 | S1.10 | wf.workflow_tasks | `wf.todo_workflow_tasks_no_self_approval()` | assignee_user_id is distinct from the instance requester (FR-XM-32), enforced by trigger |
 | S1.14 | org.org_unit_links | `org.todo_org_unit_links_parent_cycle()` | parent_unit_id: fk org.org_units; null for root; cycle check by trigger |
 | S1.20 | hrm.employee_bank_accounts | `hrm.todo_employee_bank_accounts_bank_fields_required()` | bank fields required when payment_mode = bank_transfer or mobile_wallet |
@@ -39,4 +38,4 @@ Tests fail if the database and this register disagree, or if an owning slice has
 | S1.44 | hrm.provident_fund_accounts | `hrm.todo_provident_fund_accounts_transfer()` | On intra-group transfer the old account closes with a transfer entry and the new account opens with the balance (employment_events.carry_over). |
 | S1.49 | hrm.goals | `hrm.todo_goals_parent_cycle()` | Cycle check trigger on parent_goal_id. |
 
-30 placeholders.
+29 placeholders.

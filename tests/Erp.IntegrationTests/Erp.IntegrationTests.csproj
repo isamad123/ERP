@@ -14,6 +14,7 @@
     <ProjectReference Include="../../src/Modules/Hrm/Erp.Hrm.Infrastructure/Erp.Hrm.Infrastructure.csproj" />
     <ProjectReference Include="../../src/Modules/Hrm/Erp.Hrm.Api/Erp.Hrm.Api.csproj" />
     <ProjectReference Include="../../tools/Erp.CodeGen/Erp.CodeGen.csproj" />
+    <ProjectReference Include="../../src/Host/Erp.Host.Api/Erp.Host.Api.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />

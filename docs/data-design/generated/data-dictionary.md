@@ -6389,7 +6389,7 @@ Constraints:
 
 ### org.branches
 
-Requirements: KRN-ORG-02. Pending rule (S1.03, placeholder org.todo_branches_default_branch_per_company): Every company has at least one branch; small customers get one created automatically (rule SC-2). Source: kernel.yaml.
+Requirements: KRN-ORG-02. Rule (implemented in S1.03): Every company has at least one branch; small customers get one created automatically (rule SC-2). Source: kernel.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -6418,6 +6418,10 @@ Constraints:
 Indexes:
 
 - `uq_branches_company_id_code` CREATE UNIQUE INDEX uq_branches_company_id_code ON org.branches USING btree (company_id, lower(code)) WHERE (NOT is_deleted)
+
+Triggers:
+
+- `tg_branches_keep_one_per_company` CREATE TRIGGER tg_branches_keep_one_per_company BEFORE DELETE OR UPDATE ON org.branches FOR EACH ROW EXECUTE FUNCTION org.tg_branches_keep_one_per_company()
 
 ### org.companies
 
@@ -6463,6 +6467,10 @@ Indexes:
 - `ix_companies_holiday_calendar_id` CREATE INDEX ix_companies_holiday_calendar_id ON org.companies USING btree (holiday_calendar_id)
 - `ix_companies_logo_file_id` CREATE INDEX ix_companies_logo_file_id ON org.companies USING btree (logo_file_id)
 - `uq_companies_code` CREATE UNIQUE INDEX uq_companies_code ON org.companies USING btree (lower(code)) WHERE (NOT is_deleted)
+
+Triggers:
+
+- `tg_companies_default_branch` CREATE TRIGGER tg_companies_default_branch AFTER INSERT ON org.companies FOR EACH ROW EXECUTE FUNCTION org.tg_companies_default_branch()
 
 ### org.company_bank_accounts
 
@@ -7138,7 +7146,8 @@ Constraints:
 - `itg.tg_refuse_change` 
 - `job.tg_refuse_change` 
 - `meta.tg_refuse_change` 
-- `org.todo_branches_default_branch_per_company` Pending rule for org.branches, owned by S1.03: Every company has at least one branch; small customers get one created automatically (rule SC-2).
+- `org.tg_branches_keep_one_per_company` 
+- `org.tg_companies_default_branch` 
 - `org.todo_org_unit_links_parent_cycle` Pending rule for org.org_unit_links, owned by S1.14: parent_unit_id: fk org.org_units; null for root; cycle check by trigger
 - `wf.tg_refuse_change` 
 - `wf.todo_workflow_tasks_no_self_approval` Pending rule for wf.workflow_tasks, owned by S1.10: assignee_user_id is distinct from the instance requester (FR-XM-32), enforced by trigger

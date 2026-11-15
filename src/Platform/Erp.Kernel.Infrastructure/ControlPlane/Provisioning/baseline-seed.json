@@ -1,0 +1,19 @@
+{
+  "_comment": "Baseline data seeded into every new customer database by provisioning (S1.03). Keyed by stable codes; seeding is idempotent. Reference rows are ISO data for the countries and currencies Release 1.0 supports (Pakistan first, D-41). Role names are English only until the translation slice (S1.19) adds Urdu.",
+  "countries": {
+    "PK": { "en": "Pakistan", "ur": "پاکستان" }
+  },
+  "currencies": {
+    "PKR": { "name": { "en": "Pakistani Rupee", "ur": "پاکستانی روپیہ" }, "symbol": "Rs", "decimals": 2 }
+  },
+  "roles": [
+    { "code": "tenant_admin", "name": { "en": "Tenant Admin" } },
+    { "code": "company_admin", "name": { "en": "Company Admin" } },
+    { "code": "business_user", "name": { "en": "Business User" } },
+    { "code": "approver", "name": { "en": "Approver" } },
+    { "code": "auditor", "name": { "en": "Auditor" } }
+  ],
+  "admin_role": "tenant_admin",
+  "system_user": { "username": "system", "email": "system@erp.invalid", "display_name": "System", "language": "en", "time_zone": "Asia/Karachi" },
+  "user_defaults": { "language": "en", "time_zone": "Asia/Karachi" }
+}

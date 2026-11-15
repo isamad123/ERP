@@ -70,6 +70,14 @@ jobs:
       - name: Architecture tests
         run: dotnet test --project tests/Erp.ArchitectureTests --no-build -c Release --report-xunit-trx --results-directory logs/test-results
 
+      - name: PostgreSQL 16 client tools (pg_dump and pg_restore for the backup and restore test, S1.03)
+        run: |
+          if ! pg_dump --version | grep -Eq ' (1[6-9]|[2-9][0-9])\.'; then
+            sudo apt-get update -q && sudo apt-get install -y -q postgresql-client-16
+            echo "ERP_PG_BIN=/usr/lib/postgresql/16/bin" >> "$GITHUB_ENV"
+          fi
+          pg_dump --version
+
       - name: Integration tests (PostgreSQL 16)
         run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --report-xunit-trx --results-directory logs/test-results
 

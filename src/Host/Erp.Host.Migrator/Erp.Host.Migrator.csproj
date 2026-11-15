@@ -15,4 +15,10 @@
     <ProjectReference Include="../../Modules/Hrm/Erp.Hrm.Infrastructure/Erp.Hrm.Infrastructure.csproj" />
     <ProjectReference Include="../../Modules/Hrm/Erp.Hrm.Api/Erp.Hrm.Api.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The migration files ship next to the executable (ERP_MIGRATIONS_ROOT defaults to this copy). -->
+    <None Include="../../Platform/Erp.Kernel.Infrastructure/Migrations/*.sql" LinkBase="migrations/src/Platform/Erp.Kernel.Infrastructure/Migrations" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../Platform/Erp.Kernel.Infrastructure/ControlPlane/Migrations/*.sql" LinkBase="migrations/src/Platform/Erp.Kernel.Infrastructure/ControlPlane/Migrations" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../Modules/Hrm/Erp.Hrm.Infrastructure/Migrations/*.sql" LinkBase="migrations/src/Modules/Hrm/Erp.Hrm.Infrastructure/Migrations" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

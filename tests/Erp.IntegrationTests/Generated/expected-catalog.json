@@ -38893,7 +38893,9 @@
         }
       ],
       "indexes": [],
-      "triggers": [],
+      "triggers": [
+        "tg_branches_keep_one_per_company"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "org.branches"
@@ -39171,7 +39173,9 @@
         "ix_companies_holiday_calendar_id",
         "ix_companies_logo_file_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_companies_default_branch"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "org.companies"
@@ -42800,13 +42804,6 @@
       "table": "hrm.training_bonds",
       "owner": "S1.43",
       "rule": "Active bonds appear in final settlement as bond_recovery (LND-06)."
-    },
-    {
-      "schema": "org",
-      "function": "todo_branches_default_branch_per_company",
-      "table": "org.branches",
-      "owner": "S1.03",
-      "rule": "Every company has at least one branch; small customers get one created automatically (rule SC-2)."
     },
     {
       "schema": "org",

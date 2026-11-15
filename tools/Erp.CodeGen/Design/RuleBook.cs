@@ -11,7 +11,8 @@ public sealed record RuleAction(
     bool IsComment,
     string? EffWhere,
     CompositeFkRule? CompositeFk,
-    IReadOnlyList<string> AppendOnlyUpdatable);
+    IReadOnlyList<string> AppendOnlyUpdatable,
+    RuleImplementation? Implementation = null);
 
 public sealed record ColumnRule(string Column, string Text, RuleAction Action);
 
@@ -139,7 +140,23 @@ public sealed class RuleBook
             updatable = YamlNode.Texts(u, where);
         }
 
-        var action = new RuleAction(text, check, exclusion, stub, map.ContainsKey("comment"), YamlNode.OptionalText(map, "eff_where", where), compositeFk, updatable);
+        RuleImplementation? implementation = null;
+        if (map.TryGetValue("implemented", out var i))
+        {
+            if (stub is null)
+            {
+                throw new DesignException($"{where}: \"{text}\"", "implemented applies to a stub entry only");
+            }
+
+            var im = YamlNode.Map(i, where);
+            var triggers = YamlNode.List(im["triggers"], where)
+                .Select(t => YamlNode.Texts(t, where))
+                .Select(t => t.Count == 2 ? (t[0], t[1]) : throw new DesignException(where, "each implemented trigger is [table, trigger_name]"))
+                .ToList();
+            implementation = new RuleImplementation(YamlNode.Text(im["slice"], where), YamlNode.Text(im["sql"], where), triggers);
+        }
+
+        var action = new RuleAction(text, check, exclusion, stub, map.ContainsKey("comment"), YamlNode.OptionalText(map, "eff_where", where), compositeFk, updatable, implementation);
         var kinds = new object?[] { action.Check, action.Exclusion, action.Stub, action.IsComment ? true : null, action.EffWhere, action.CompositeFk, updatable.Count > 0 ? true : null };
         if (kinds.Count(k => k is not null) != 1)
         {

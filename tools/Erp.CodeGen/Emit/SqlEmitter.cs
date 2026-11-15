@@ -40,11 +40,110 @@ public static class SqlEmitter
                 Extensions(s.HrmSchemas, model, "hrm") + SchemaFile(model, schema, crossSchemaForeignKeys: true));
         }
 
+        // Slice S1.03 onwards. Files above are frozen once merged (CLAUDE.md "Migrations"); later changes are new files.
+        output.Add($"{HrmMigrations}/{FileName(s, hrmMinute, "hrm", "grants")}", Grants(model, s.HrmSchemas, "hrm"));
+        output.Add($"{KernelMigrations}/{FileName(s, 120, "kernel", "grants")}", Grants(model, s.KernelSchemas, "kernel"));
+        foreach (var slice in model.ImplementedStubs.Where(st => model.Table(st.Table).Module == "kernel").GroupBy(st => st.Implementation!.Slice).OrderBy(g => g.Key, StringComparer.Ordinal))
+        {
+            var sequence = 121 + RuleSliceOrder(slice.Key);
+            output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "rules_" + slice.Key.Replace(".", "_", StringComparison.Ordinal).ToLowerInvariant())}", RuleImplementations(model, slice.Key, slice));
+        }
+
+        if (model.ImplementedStubs.Any(st => model.Table(st.Table).Module != "kernel"))
+        {
+            throw new DesignException("rules.yaml", "implemented rules outside the kernel need their module's rules migration (not built yet)");
+        }
+
         foreach (var schema in s.ControlPlaneSchemas)
         {
             output.Add($"{ControlPlaneMigrations}/{FileName(s, 0, "controlplane", schema)}",
                 Extensions([schema], model, "controlplane") + SchemaFile(model, schema, crossSchemaForeignKeys: true));
         }
+    }
+
+    /// <summary>Stable position of a slice's rules file after the grants file: S1.03 → 0, S1.10 → 7.</summary>
+    private static int RuleSliceOrder(string slice) =>
+        int.Parse(slice[(slice.IndexOf('.', StringComparison.Ordinal) + 1)..], CultureInfo.InvariantCulture) - 3;
+
+    /// <summary>Database roles of spec 03 section 3.7 used by the customer database.</summary>
+    public static readonly IReadOnlyList<string> GroupRoles = ["app_rw", "app_ro", "app_audit", "backup"];
+
+    /// <summary>
+    /// Privileges of the group roles (spec 03 section 3.7 and 3.6). The migrator's login owns the objects; app_rw reads and
+    /// writes business tables but cannot update or delete append-only rows (the trigger is the second barrier) and only
+    /// reads audit tables; app_audit only inserts into audit tables; app_ro and backup only read. Per-customer logins
+    /// are members of these roles and can connect only to their own database (CR-004).
+    /// </summary>
+    private static string Grants(DesignModel model, IEnumerable<string> schemas, string module)
+    {
+        var b = new StringBuilder(Header($"Privileges of the database roles on the {module} tables (spec 03 section 3.7; CR-004)"));
+        b.Append("-- Group roles are created here only where the migrating login may create roles (a fresh server or a test);\n");
+        b.Append("-- provisioning creates them before the first migration, so a customer's owner login never needs that right.\n");
+        b.Append("do $do$ begin\n");
+        foreach (var role in GroupRoles)
+        {
+            b.Append(CultureInfo.InvariantCulture, $"    if not exists (select 1 from pg_roles where rolname = '{role}') then create role {role} nologin; end if;\n");
+        }
+
+        b.Append("end $do$;\n\n");
+        foreach (var schema in schemas)
+        {
+            var tables = model.Tables.Where(t => t.Schema == schema && t.Database == DatabaseKind.Tenant).OrderBy(t => t.Name, StringComparer.Ordinal).ToList();
+            if (tables.Count == 0)
+            {
+                continue;
+            }
+
+            b.Append(CultureInfo.InvariantCulture, $"grant usage on schema {schema} to {string.Join(", ", GroupRoles)};\n");
+            foreach (var table in tables)
+            {
+                if (schema == "aud")
+                {
+                    b.Append(CultureInfo.InvariantCulture, $"grant select on {table.FullName} to app_rw;\n");
+                    b.Append(CultureInfo.InvariantCulture, $"grant insert on {table.FullName} to app_audit;\n");
+                }
+                else if (table.IsAppendOnly)
+                {
+                    b.Append(CultureInfo.InvariantCulture, $"grant select, insert on {table.FullName} to app_rw;\n");
+                    if (table.AppendOnlyUpdatable.Count > 0)
+                    {
+                        b.Append(CultureInfo.InvariantCulture, $"grant update ({string.Join(", ", table.AppendOnlyUpdatable)}) on {table.FullName} to app_rw;\n");
+                    }
+                }
+                else
+                {
+                    b.Append(CultureInfo.InvariantCulture, $"grant select, insert, update, delete on {table.FullName} to app_rw;\n");
+                }
+            }
+
+            b.Append(CultureInfo.InvariantCulture, $"grant select on all tables in schema {schema} to app_ro, backup;\n");
+            b.Append(CultureInfo.InvariantCulture, $"grant usage, select on all sequences in schema {schema} to app_rw, app_ro, backup;\n\n");
+        }
+
+        return b.ToString().TrimEnd('\n') + "\n";
+    }
+
+    /// <summary>
+    /// The real rules that replace placeholders (rules.yaml <c>implemented</c>), in a new migration of the owning slice:
+    /// the placeholder function is dropped, the rule's SQL is applied and the table comment no longer says "pending".
+    /// </summary>
+    private static string RuleImplementations(DesignModel model, string slice, IEnumerable<StubDef> stubs)
+    {
+        var b = new StringBuilder(Header($"Rules implemented by slice {slice} (replacing placeholders of docs/registers/todo-stubs.md)"));
+        foreach (var stub in stubs.OrderBy(st => st.Table, StringComparer.Ordinal).ThenBy(st => st.Name, StringComparer.Ordinal))
+        {
+            var table = model.Table(stub.Table);
+            b.Append(CultureInfo.InvariantCulture, $"-- {stub.Table}: {stub.Rule}\n");
+            b.Append(CultureInfo.InvariantCulture, $"drop function if exists {table.Schema}.{stub.FunctionName}();\n");
+            b.Append(stub.Implementation!.Sql.Replace("\r", string.Empty, StringComparison.Ordinal).TrimEnd('\n'));
+            b.Append('\n');
+            b.Append(Comments(table, c => c.StartsWith($"Pending rule ({stub.Owner}, placeholder {table.Schema}.{stub.FunctionName}): ", StringComparison.Ordinal)
+                ? $"Rule (implemented in {slice}): {stub.Rule}"
+                : c));
+            b.Append('\n');
+        }
+
+        return b.ToString().TrimEnd('\n') + "\n";
     }
 
     private static string FileName(Settings s, int sequence, string module, string description) =>
@@ -280,7 +379,7 @@ public static class SqlEmitter
 
         """.Replace("\r", string.Empty, StringComparison.Ordinal);
 
-    private static string Comments(Table table)
+    private static string Comments(Table table, Func<string, string>? rewrite = null)
     {
         var b = new StringBuilder();
         var text = new List<string>();
@@ -294,7 +393,7 @@ public static class SqlEmitter
             text.Add("Requirements: " + string.Join(", ", table.Requirements) + ".");
         }
 
-        text.AddRange(table.Comments);
+        text.AddRange(rewrite is null ? table.Comments : table.Comments.Select(rewrite));
         text.Add("Source: " + table.SourceFile + ".");
         b.Append(CultureInfo.InvariantCulture, $"comment on table {table.FullName} is {Naming.SqlString(string.Join(" ", text))};\n");
         foreach (var column in table.Columns.Where(c => c.Comment is not null))
