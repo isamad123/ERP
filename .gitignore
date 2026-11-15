@@ -1,0 +1,15 @@
+bin/
+obj/
+*.user
+.vs/
+.idea/
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+*.pfx
+*.key
+appsettings.*.local.json
+TestResults/
+.DS_Store
