@@ -13,3 +13,6 @@ coverage/
 appsettings.*.local.json
 TestResults/
 .DS_Store
+artifacts/
+logs/
+*.trx

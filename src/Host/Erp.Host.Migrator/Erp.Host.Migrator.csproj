@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../BuildingBlocks/Erp.BuildingBlocks.Infrastructure/Erp.BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="../../Platform/Erp.Kernel.Contracts/Erp.Kernel.Contracts.csproj" />
+    <ProjectReference Include="../../Platform/Erp.Kernel.Domain/Erp.Kernel.Domain.csproj" />
+    <ProjectReference Include="../../Platform/Erp.Kernel.Application/Erp.Kernel.Application.csproj" />
+    <ProjectReference Include="../../Platform/Erp.Kernel.Infrastructure/Erp.Kernel.Infrastructure.csproj" />
+    <ProjectReference Include="../../Platform/Erp.Kernel.Api/Erp.Kernel.Api.csproj" />
+    <ProjectReference Include="../../Modules/Hrm/Erp.Hrm.Contracts/Erp.Hrm.Contracts.csproj" />
+    <ProjectReference Include="../../Modules/Hrm/Erp.Hrm.Domain/Erp.Hrm.Domain.csproj" />
+    <ProjectReference Include="../../Modules/Hrm/Erp.Hrm.Application/Erp.Hrm.Application.csproj" />
+    <ProjectReference Include="../../Modules/Hrm/Erp.Hrm.Infrastructure/Erp.Hrm.Infrastructure.csproj" />
+    <ProjectReference Include="../../Modules/Hrm/Erp.Hrm.Api/Erp.Hrm.Api.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Erp.Hrm.Application/Erp.Hrm.Application.csproj" />
+    <ProjectReference Include="../Erp.Hrm.Contracts/Erp.Hrm.Contracts.csproj" />
+  </ItemGroup>
+</Project>

@@ -77,13 +77,32 @@ higher one is a defect in the lower one: stop and report it.
 - No stub code that pretends to work. TODOs only with an issue id, listed in the report.
 - Seed data is idempotent and keyed by stable codes.
 
+## Branches and merging (product owner, 2026-11-15)
+- `main` is the single line of development. Every slice starts from the latest `main`.
+- Work on the session's branch, then open a pull request to `main` and merge it once CI is green
+  and the slice report is done. Do not leave finished work on side branches.
+- Never merge with failing CI. If `main` moved on, update the branch from `main` and rerun CI before merging.
+
 ## Slice report (always end with this)
 1. What was built, in plain language. 2. Requirement IDs covered. 3. Evidence: commands run and results.
 4. Tables, endpoints and events added or changed. 5. What is not done. 6. Risks and open questions.
 7. How the product owner can see it working.
 
 ## Commands
-(Filled in by the first build slice: build, test, run, migrate, lint, gates.)
+Run from the repository root. Tests use Microsoft Testing Platform (`global.json`), so `dotnet test` takes `--project`/`--solution`.
+- Restore and build (warnings are errors; this is also the lint step: analysers + `.editorconfig`): `dotnet build Erp.sln -v q`
+- Local PostgreSQL 16 for integration tests (when Docker is not running):
+  `sudo service postgresql start && sudo -u postgres psql -c "alter user postgres password 'postgres'"` then
+  `export ERP_TEST_PG="Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=postgres"`.
+  Without `ERP_TEST_PG` the tests start `postgres:16` through Testcontainers (needs Docker).
+- All tests: `dotnet test --solution Erp.sln --no-build`
+- One suite: `dotnet test --project tests/Erp.UnitTests --no-build` (also `Erp.ArchitectureTests`, `Erp.IntegrationTests`)
+- Licence gate (after restore): `python3 build/licence-gate.py --self-test && python3 build/licence-gate.py`
+- Run the API: `dotnet run --project src/Host/Erp.Host.Api --urls http://127.0.0.1:5080`, then `curl http://127.0.0.1:5080/health`
+- Run the worker: `dotnet run --project src/Host/Erp.Host.Worker`
+- Migrate: `dotnet run --project src/Host/Erp.Host.Migrator` (no migrations until S1.03)
+- CI: `.github/workflows/ci.yml` runs restore, build, unit, architecture, integration (PostgreSQL 16 service) and the licence gate.
+- Not yet automated: secret scan, tenant-isolation suite (S1.04), invariant tests.
 
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.

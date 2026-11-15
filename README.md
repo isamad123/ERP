@@ -4,7 +4,7 @@ A configurable, multi-company ERP product for organizations from 5 to 50,000+ em
 module by module. Markets: Pakistan first, then Saudi Arabia, then the United States.
 
 ## Status
-Pre-development. Phase 1 (HRMIS) is being prepared: requirement scope tagging, then data design. No application code yet.
+Release 1.0 build started. S1.01 done: empty .NET 10 modular-monolith solution, CI on GitHub Actions, architecture tests and licence gate. No business features yet.
 
 ## Phases (decisions D-41, D-48)
 | Phase | Modules | Release |

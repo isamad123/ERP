@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Host/Erp.Host.Api/Erp.Host.Api.csproj" />
+    <ProjectReference Include="../../src/Host/Erp.Host.Worker/Erp.Host.Worker.csproj" />
+    <ProjectReference Include="../../src/Host/Erp.Host.Migrator/Erp.Host.Migrator.csproj" />
+    <ProjectReference Include="../../tools/Erp.CodeGen/Erp.CodeGen.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="NetArchTest.Rules" />
+    <PackageReference Include="Mono.Cecil" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>
