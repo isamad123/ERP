@@ -2,4 +2,11 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/BuildingBlocks/Erp.BuildingBlocks.Infrastructure/Erp.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
 </Project>

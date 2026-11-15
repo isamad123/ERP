@@ -5,12 +5,21 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../../src/BuildingBlocks/Erp.BuildingBlocks.Infrastructure/Erp.BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Platform/Erp.Kernel.Infrastructure/Erp.Kernel.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Platform/Erp.Kernel.Api/Erp.Kernel.Api.csproj" />
+    <ProjectReference Include="../../src/Modules/Hrm/Erp.Hrm.Infrastructure/Erp.Hrm.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Modules/Hrm/Erp.Hrm.Api/Erp.Hrm.Api.csproj" />
+    <ProjectReference Include="../../tools/Erp.CodeGen/Erp.CodeGen.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

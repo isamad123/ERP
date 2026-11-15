@@ -55,6 +55,15 @@ jobs:
       - name: Build
         run: dotnet build Erp.sln --no-restore -c Release -v q "-flp:logfile=logs/build.log;verbosity=normal"
 
+      - name: Generator drift (generated code must match the data design)
+        run: |
+          dotnet run --project tools/Erp.CodeGen --no-build -c Release -- generate
+          git status --porcelain
+          test -z "$(git status --porcelain)" || { echo "Generated files differ from the committed ones: run the generator and commit."; git diff --stat; exit 1; }
+
+      - name: TypeScript type-check of the generated client
+        run: npx --yes -p typescript@6.0.2 tsc -p web/generated/tsconfig.json
+
       - name: Unit tests
         run: dotnet test --project tests/Erp.UnitTests --no-build -c Release --report-xunit-trx --results-directory logs/test-results
 
@@ -63,6 +72,11 @@ jobs:
 
       - name: Integration tests (PostgreSQL 16)
         run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --report-xunit-trx --results-directory logs/test-results
+
+      - name: Data dictionary drift (live database must match the committed dictionary)
+        run: |
+          dotnet run --project tools/Erp.CodeGen --no-build -c Release -- dictionary --connection "$ERP_TEST_PG"
+          test -z "$(git status --porcelain)" || { echo "docs/data-design/generated/data-dictionary.md is out of date."; git diff --stat; exit 1; }
 
       - name: Licence gate (D-09)
         run: |

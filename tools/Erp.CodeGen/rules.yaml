@@ -1,0 +1,276 @@
+# Reviewed translations of the free text in docs/data-design/*.yaml (slice S1.02).
+#
+# The data design is approved (D-50) and read-only. Where a table entry states a rule in words (table `checks`,
+# table `notes`, partial-unique phrases, a few column notes), this file says how the generator turns it into
+# database objects. Every entry quotes the design text exactly; if the design text changes, the generator stops
+# with "untranslated text" so the new wording is reviewed here before any code changes (D-39).
+#
+# Entry kinds:
+#   check:      SQL check constraint that states the rule literally.
+#   exclusion:  SQL exclusion constraint that states the rule literally.
+#   eff_where:  WHERE clause added to the table's effective-dating exclusion constraint.
+#   composite_fk: foreign key over several columns, replacing the single-column one on the same column.
+#   append_only_updatable: columns the append-only trigger still lets the owning service update.
+#   stub:       a rule that needs a trigger or application logic owned by a later slice. The generator creates a
+#               named placeholder function `<schema>.todo_<name>()` that raises "not implemented" if called, and lists
+#               it in docs/registers/todo-stubs.md. Tests keep the register, the database and the owning slice in step.
+#   comment:    descriptive text about behaviour (no rule for the database); kept as a table comment only.
+
+tables:
+  hrm.pay_periods:
+    checks:
+      - text: "exclusion: (pay_group_id with =, daterange(start_date, end_date, '[]') with &&)"
+        exclusion: { name: ex_pay_periods_pay_group_id_dates, elements: ["pay_group_id with =", "daterange(start_date, end_date, '[]') with &&"] }
+      - text: "start_date <= cut_off_date and start_date <= end_date"
+        check: { name: ck_pay_periods_dates, sql: "start_date <= cut_off_date and start_date <= end_date" }
+    notes:
+      - text: "Trigger refuses new pay_inputs, retro_adjustments or installments targeting a closed period."
+        stub: { name: pay_periods_closed_period_guard, owner: S1.38 }
+
+  hrm.statutory_tables:
+    notes:
+      - text: "Pack updates create new versions with a future valid_from."
+        comment: true
+
+  hrm.statutory_table_rows:
+    checks:
+      - text: "lower_bound < upper_bound when both present"
+        check: { name: ck_statutory_table_rows_bounds, sql: "lower_bound is null or upper_bound is null or lower_bound < upper_bound" }
+      - text: "exclusion: (table_id with =, coalesce(key,'') with =, numrange(lower_bound, upper_bound) with &&)"
+        exclusion: { name: ex_statutory_table_rows_table_id_key_bounds, elements: ["table_id with =", "(coalesce(key, '')) with =", "numrange(lower_bound, upper_bound) with &&"] }
+    notes:
+      - text: "Immutable by trigger once the parent version is effective or referenced by any run; change by a new table version."
+        stub: { name: statutory_table_rows_lock, owner: S1.36 }
+
+  hrm.pay_runs:
+    notes:
+      - text: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33); status column may still advance (paid, posted, closed) through the run service only."
+        stub: { name: pay_runs_lock, owner: S1.38 }
+
+  hrm.pay_run_employees:
+    checks:
+      - text: "exclusion: (employment_id with =, daterange(period_start, period_end, '[]') with &&) where run_kind in ('regular','final_settlement') and run_status <> 'cancelled'"
+        exclusion: { name: ex_pay_run_employees_employment_id_period, elements: ["employment_id with =", "daterange(period_start, period_end, '[]') with &&"], where: "run_kind in ('regular','final_settlement') and run_status <> 'cancelled'" }
+    notes:
+      - text: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
+        stub: { name: pay_run_employees_lock, owner: S1.38 }
+
+  hrm.pay_results:
+    notes:
+      - text: "Trigger refuses update and delete when the run status is locked or later. Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
+        stub: { name: pay_results_lock, owner: S1.38 }
+
+  hrm.pay_result_lines:
+    partition: none   # design: "partitioned yearly once volume requires"; not partitioned in Release 1.0
+    notes:
+      - text: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
+        stub: { name: pay_result_lines_lock, owner: S1.38 }
+
+  hrm.pay_traces:
+    notes:
+      - text: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
+        stub: { name: pay_traces_lock, owner: S1.38 }
+
+  hrm.pay_result_reversals:
+    checks:
+      - text: "allowed only while no non-failed payment line exists for the result"
+        stub: { name: pay_result_reversals_before_payment, owner: S1.39 }
+
+  hrm.retro_adjustments:
+    notes:
+      - text: "applied_in_run_id may be set once (trigger); status pending -> applied is one-way."
+        stub: { name: retro_adjustments_apply_once, owner: S1.39 }
+
+  hrm.salary_holds:
+    notes:
+      - text: "A release pays the original result of the held run through a payment batch; the salary is never recalculated. Each result is paid once (hrm.payment_lines unique key)."
+        comment: true
+
+  hrm.payment_lines:
+    unique_where:
+      "where status not in ('failed','reissued') and batch not cancelled (maintained via denormalized batch_status)": "status not in ('failed','reissued') and batch_status <> 'cancelled'"
+    checks:
+      - text: "deferred: sum of active lines per result equals pay_results.net"
+        stub: { name: payment_lines_sum_equals_net, owner: S1.40 }
+
+  hrm.final_settlements:
+    checks:
+      - text: "status may become approved only when clearance_status in (cleared, waived) (FR-XM-29)"
+        stub: { name: final_settlements_approval_needs_clearance, owner: S1.43 }
+      - text: "pay_run_id required before status = paid"
+        check: { name: ck_final_settlements_paid_needs_run, sql: "status <> 'paid' or pay_run_id is not null" }
+    notes:
+      - text: "Header and lines locked by trigger from approved onward; correction by cancel and reissue (FR-XM-05)."
+        stub: { name: final_settlements_lock, owner: S1.43 }
+
+  hrm.loan_installments:
+    notes:
+      - text: "Frozen by trigger once status = deducted."
+        stub: { name: loan_installments_freeze, owner: S1.41 }
+
+  hrm.loan_transactions:
+    checks:
+      - text: "trigger: a recovery cannot exceed the outstanding balance"
+        stub: { name: loan_transactions_recovery_within_balance, owner: S1.41 }
+    notes:
+      - text: "Recovery entries are written only when the pay run locks."
+        comment: true
+
+  hrm.salary_bands:
+    checks:
+      - text: "minimum <= midpoint and midpoint <= maximum"
+        check: { name: ck_salary_bands_order, sql: "minimum <= midpoint and midpoint <= maximum" }
+
+  hrm.provident_fund_accounts:
+    notes:
+      - text: "On intra-group transfer the old account closes with a transfer entry and the new account opens with the balance (employment_events.carry_over)."
+        stub: { name: provident_fund_accounts_transfer, owner: S1.44 }
+
+  hrm.person_identifiers:
+    notes:
+      - text: "One row per identifier; renewal updates issue and expiry dates (history in the audit log)."
+        comment: true
+
+  hrm.nominations:
+    checks:
+      - text: "deferred: shares per (person_id, scheme) on any date sum to 1"
+        stub: { name: nominations_shares_sum_to_one, owner: S1.20 }
+
+  hrm.employment_assignments:
+    notes:
+      - text: "Cycle check trigger on manager_employment_id."
+        stub: { name: employment_assignments_manager_cycle, owner: S1.20 }
+    column_stubs:
+      - column: cost_allocation
+        text: "list of {cost_center_ref or department, pct}; must sum to 1"
+        stub: { name: employment_assignments_cost_allocation_sum, owner: S1.20 }
+
+  hrm.employee_bank_accounts:
+    checks:
+      - text: "bank fields required when payment_mode = bank_transfer or mobile_wallet"
+        stub: { name: employee_bank_accounts_bank_fields_required, owner: S1.20 }
+    notes:
+      - text: "Changes go through maker-checker (iam.maker_checker_requests)."
+        comment: true
+
+  hrm.positions:
+    notes:
+      - text: "Cycle check trigger on reports_to_position_id."
+        stub: { name: positions_reporting_cycle, owner: S1.22 }
+
+  hrm.policy_versions:
+    notes:
+      - text: "Exclusion on policy_id applies where status <> 'draft'; dates assigned on activation."
+        eff_where: "status <> 'draft'"
+
+  hrm.form_definitions:
+    notes:
+      - text: "active_version_id uses composite FK (id, active_version_id) -> hrm.form_versions (parent_id, id)."
+        composite_fk: { column: active_version_id, columns: [id, active_version_id], target: hrm.form_versions, target_columns: [form_id, id] }
+
+  hrm.goals:
+    notes:
+      - text: "Cycle check trigger on parent_goal_id."
+        stub: { name: goals_parent_cycle, owner: S1.49 }
+
+  hrm.training_bonds:
+    notes:
+      - text: "Active bonds appear in final settlement as bond_recovery (LND-06)."
+        stub: { name: training_bonds_final_settlement_recovery, owner: S1.43 }
+
+  hrm.device_user_maps:
+    notes:
+      - text: "Punches resolve the employee by mapping valid on the punch date."
+        comment: true
+
+  hrm.pay_component_versions:
+    column_stubs:
+      - column: base_component_ids
+        text: "cycle check on save"
+        stub: { name: pay_component_versions_base_cycle, owner: S1.34 }
+
+  hrm.attendance_periods:
+    checks:
+      - text: "exclusion: (pay_group_id with =, daterange(period_start, period_end, '[]') with &&)"
+        exclusion: { name: ex_attendance_periods_pay_group_id_period, elements: ["pay_group_id with =", "daterange(period_start, period_end, '[]') with &&"] }
+    notes:
+      - text: "A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments."
+        stub: { name: attendance_periods_lock, owner: S1.31 }
+
+  hrm.attendance_days:
+    notes:
+      - text: "Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26)."
+        stub: { name: attendance_days_lock, owner: S1.31 }
+
+  hrm.leave_types:
+    notes:
+      - text: "Entitlement, accrual, carry-forward, encashment, eligibility and sandwich rules are a leave policy (hrm.policies type leave) assigned per leave type."
+        comment: true
+
+  hrm.leave_ledger:
+    notes:
+      - text: "Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30)."
+        stub: { name: leave_ledger_transfer, owner: S1.32 }
+
+  hrm.leave_request_days:
+    checks:
+      - text: "trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave)"
+        stub: { name: leave_request_days_daily_total, owner: S1.32 }
+
+  iam.sessions:
+    notes:
+      - text: "Not strictly append-only: last_seen_at and revoked_* are updatable by the session service role only."
+        append_only_updatable: [last_seen_at, revoked_at, revoked_reason]
+
+  org.branches:
+    notes:
+      - text: "Every company has at least one branch; small customers get one created automatically (rule SC-2)."
+        stub: { name: branches_default_branch_per_company, owner: S1.03 }
+
+  org.org_units:
+    notes:
+      - text: "Not effective-dated: renames and moves are audited; hierarchy changes are dated in org.org_unit_links."
+        comment: true
+
+  org.org_unit_links:
+    column_stubs:
+      - column: parent_unit_id
+        text: "fk org.org_units; null for root; cycle check by trigger"
+        stub: { name: org_unit_links_parent_cycle, owner: S1.14 }
+
+  cfg.numbering_counters:
+    notes:
+      - text: "Gap-free schemes lock this row in the transaction; gap-allowed schemes use a PostgreSQL sequence per scheme."
+        comment: true
+
+  wf.workflow_definitions:
+    notes:
+      - text: "active_version_id uses composite FK (id, active_version_id) -> wf.workflow_versions (parent_id, id)."
+        composite_fk: { column: active_version_id, columns: [id, active_version_id], target: wf.workflow_versions, target_columns: [definition_id, id] }
+
+  wf.workflow_tasks:
+    checks:
+      - text: "assignee_user_id is distinct from the instance requester (FR-XM-32), enforced by trigger"
+        stub: { name: workflow_tasks_no_self_approval, owner: S1.10 }
+
+  doc.templates:
+    notes:
+      - text: "active_version_id uses composite FK (id, active_version_id) -> doc.template_versions (parent_id, id)."
+        composite_fk: { column: active_version_id, columns: [id, active_version_id], target: doc.template_versions, target_columns: [template_id, id] }
+
+  itg.accounting_events:
+    checks:
+      - text: "total_debit = total_credit"
+        check: { name: ck_accounting_events_balanced, sql: "total_debit = total_credit" }
+
+  cp.tenant_domains:
+    column_checks:
+      - column: host
+        text: "lower-case; unique"
+        check: { name: ck_tenant_domains_host_lower_case, sql: "host = lower(host)" }
+
+  cp.platform_users:
+    column_checks:
+      - column: email
+        text: "lower-case unique"
+        check: { name: ck_platform_users_email_lower_case, sql: "email = lower(email)" }

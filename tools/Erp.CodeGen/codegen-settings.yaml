@@ -1,0 +1,35 @@
+# Generator settings (slice S1.02). Not part of the data design; reviewed with the generator.
+release: "1.0"
+# Migration file names follow spec 03 section 9: V{yyyymmddHHmm}__{module}__{description}.sql.
+# Release 1.0 uses 2026-11-15 (D-50 approval date); the last four digits order the files.
+migration_date: "20261115"
+
+# First and last month for which monthly partitions are created by the first migration; a default partition
+# catches anything outside. The maintenance job (S1.11) creates later months ahead of time.
+partitions_from: "2025-01"
+partitions_to: "2027-12"
+
+# Tenant-database schema order (kernel). Every kernel schema gets its own migration file in this order;
+# foreign keys between kernel schemas are added in a final file so the order never matters.
+kernel_schemas: [ref, org, iam, cfg, wf, aud, doc, ntf, itg, job, meta]
+hrm_schemas: [hrm]
+control_plane_schemas: [cp]
+
+# Tables that get no generated API endpoints (product owner ruling, S1.02): secrets, security records, audit,
+# keys and internal machinery get purpose-built code in their own slices. Outbox and inbox tables, control-plane
+# tables (cp.*) and tables without a single `id` key are excluded automatically.
+api_excluded:
+  - iam.user_credentials
+  - iam.password_history
+  - iam.mfa_devices
+  - iam.sessions
+  - iam.login_attempts
+  - iam.api_clients
+  - aud.change_log
+  - aud.access_log
+  - aud.chain_anchors
+  - aud.subject_keys
+  - aud.security_events
+  - meta.schema_history
+  - meta.local_entitlement
+  - cfg.numbering_counters
