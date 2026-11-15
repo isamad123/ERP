@@ -11,14 +11,23 @@ namespace Erp.IntegrationTests.Infrastructure;
 /// caller's transaction. Optional columns are left null; required ones get simple values of the right type; enum
 /// columns take their first allowed value. Company-scoped rows all belong to one company, so the composite company
 /// foreign keys (README rule 12) hold. Used to prove every table can actually be written and its guards fire.
+/// <paramref name="firstValue"/> and <paramref name="companyId"/> let several factories write committed rows into one
+/// database without repeating codes (S1.04): each starts its counter where the last stopped and reuses one company.
+/// <paramref name="enumChoice"/> picks a later allowed value of enum columns, for a retry after a unique-key clash.
 /// </summary>
-public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction transaction, ExpectedCatalog catalog)
+public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction transaction, ExpectedCatalog catalog, int firstValue = 0, object? companyId = null, int enumChoice = 0)
 {
     public static readonly DateOnly Day = new(2026, 1, 15);
 
     private readonly Dictionary<string, ExpectedTable> _tables = catalog.Tables.ToDictionary(t => t.Database + ":" + t.FullName);
-    private object? _companyId;
-    private int _counter;
+    private object? _companyId = companyId;
+    private int _counter = firstValue;
+
+    /// <summary>The company the company-scoped rows of this factory belong to (null until one was needed).</summary>
+    public object? CompanyId => _companyId;
+
+    /// <summary>The last value number used; the next factory on the same database starts after it.</summary>
+    public int LastValue => _counter;
 
     /// <summary>Inserts a row; <paramref name="overrides"/> fixes chosen column values (null means SQL null).</summary>
     public async Task<IReadOnlyDictionary<string, object?>> InsertAsync(ExpectedTable table, IReadOnlyDictionary<string, object?>? overrides, CancellationToken ct, int depth = 0)
@@ -101,7 +110,7 @@ public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction tr
             "Uuid" => Guid.CreateVersion7(),
             "Code" => "C" + n.ToString(CultureInfo.InvariantCulture),
             "Text" => "t" + n.ToString(CultureInfo.InvariantCulture),
-            "Enum" => column.EnumValues[0],
+            "Enum" => column.EnumValues[enumChoice % column.EnumValues.Count],
             "FixedText" => Letters(n, int.Parse(column.Type["character(".Length..^1], CultureInfo.InvariantCulture)),
             "I18n" => new Json("{\"en\":\"x\"}"),
             "Json" => new Json("{}"),

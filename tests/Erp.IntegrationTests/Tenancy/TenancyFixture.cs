@@ -86,22 +86,38 @@ public sealed class TenancyFixture : IAsyncLifetime
         await ProvisionAsync(CodeA, ct);
         await ProvisionAsync(CodeB, ct);
 
+        App = await StartAppAsync(null, ct);
+    }
+
+    /// <summary>
+    /// Starts the real API pipeline (<see cref="ApiHost"/>) on an in-process test server against this fixture's control
+    /// plane. <paramref name="configure"/> may map extra endpoints before the host starts (the S1.04 leak self-test).
+    /// The caller disposes the returned host, except <see cref="App"/>, which the fixture disposes.
+    /// </summary>
+    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken)
+    {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
+
+        // The isolation suite makes the database refuse thousands of cross-customer writes on purpose (answered 409);
+        // EF Core logs each refusal as an error, which floods the CI log and hides real test failures.
+        builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.None);
         builder.Configuration["ConnectionStrings:ControlPlane"] = Options.ConnectionString;
         builder.Configuration["Tenancy:HostCacheSeconds"] = "0";
         builder.Configuration["Auth:Issuer"] = Issuer;
         builder.Configuration["Auth:Audience"] = Audience;
         builder.Configuration["Auth:SigningPublicKeys:0"] = _tokenKey.ExportSubjectPublicKeyInfoPem();
-        App = ApiHost.Build(builder, Secrets, services =>
+        var app = ApiHost.Build(builder, Secrets, services =>
         {
             services.RemoveAll<IPermissionChecker>();
             services.AddSingleton<IPermissionChecker, AllowAll>();
             services.RemoveAll<IDataScopeFilter>();
             services.AddSingleton<IDataScopeFilter, AllRows>();
         });
-        await App.StartAsync(ct);
+        configure?.Invoke(app);
+        await app.StartAsync(cancellationToken);
+        return app;
     }
 
     public async ValueTask DisposeAsync()
@@ -186,9 +202,13 @@ public sealed class TenancyFixture : IAsyncLifetime
     }
 
     /// <summary>An HTTP client whose requests carry the customer's host name.</summary>
-    public HttpClient Client(string host, string? token = null)
+    public HttpClient Client(string host, string? token = null) => Client(App, host, token);
+
+    /// <summary>An HTTP client of <paramref name="app"/> whose requests carry the customer's host name.</summary>
+    public static HttpClient Client(WebApplication app, string host, string? token = null)
     {
-        var client = App.GetTestClient();
+        ArgumentNullException.ThrowIfNull(app);
+        var client = app.GetTestClient();
         client.BaseAddress = new Uri("http://" + host);
         if (token is not null)
         {
