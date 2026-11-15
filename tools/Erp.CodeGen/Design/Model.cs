@@ -86,10 +86,22 @@ public sealed record ForeignKey(string Name, IReadOnlyList<string> Columns, stri
 
 public sealed record PartitionDef(string Column, ColumnKind ColumnKind);
 
-/// <summary>A rule the database cannot enforce yet; a later slice owns it (docs/registers/todo-stubs.md).</summary>
-public sealed record StubDef(string Table, string Name, string Owner, string Rule)
+/// <summary>
+/// The real database objects that replace a placeholder (rules.yaml <c>implemented</c>). They go into a new migration
+/// file of the owning slice, because migrations that are already merged are never edited.
+/// </summary>
+public sealed record RuleImplementation(string Slice, string Sql, IReadOnlyList<(string Table, string Trigger)> Triggers);
+
+/// <summary>
+/// A rule the database cannot enforce yet; a later slice owns it (docs/registers/todo-stubs.md). Once
+/// <see cref="Implementation"/> is set the placeholder is still created by the original (frozen) migration and then
+/// dropped by the owning slice's migration.
+/// </summary>
+public sealed record StubDef(string Table, string Name, string Owner, string Rule, RuleImplementation? Implementation = null)
 {
     public string FunctionName => "todo_" + Name;
+
+    public bool IsPending => Implementation is null;
 }
 
 public sealed class Table
@@ -170,7 +182,14 @@ public sealed class DesignModel
 
     public IEnumerable<Table> DesignTables => Tables.Where(t => !t.IsOutboxOrInbox);
 
-    public IEnumerable<StubDef> Stubs => Tables.SelectMany(t => t.Stubs).OrderBy(s => s.Table, StringComparer.Ordinal).ThenBy(s => s.Name, StringComparer.Ordinal);
+    /// <summary>Every placeholder ever generated, implemented or not (the frozen first migrations still create them).</summary>
+    public IEnumerable<StubDef> AllStubs => Tables.SelectMany(t => t.Stubs).OrderBy(s => s.Table, StringComparer.Ordinal).ThenBy(s => s.Name, StringComparer.Ordinal);
+
+    /// <summary>Placeholders whose rule is not implemented yet (the register and the expected catalogue).</summary>
+    public IEnumerable<StubDef> Stubs => AllStubs.Where(s => s.IsPending);
+
+    /// <summary>Placeholders replaced by a real rule (rules.yaml <c>implemented</c>).</summary>
+    public IEnumerable<StubDef> ImplementedStubs => AllStubs.Where(s => !s.IsPending);
 
     public Table Table(string fullName) =>
         Tables.FirstOrDefault(t => t.FullName == fullName) ?? throw new DesignException(fullName, "table does not exist");

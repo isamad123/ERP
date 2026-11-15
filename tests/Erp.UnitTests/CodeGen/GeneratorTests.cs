@@ -125,7 +125,8 @@ public sealed class GeneratorTests
     public void Rules_every_free_text_rule_becomes_sql_or_a_tracked_placeholder()
     {
         var stubs = Model.Value.Stubs.ToList();
-        Assert.Equal(30, stubs.Count);
+        Assert.Equal(29, stubs.Count); // 30 from S1.02; S1.03 implemented SC-2 (org.branches)
+        Assert.Equal(30, Model.Value.AllStubs.Count());
         Assert.All(stubs, s => Assert.Matches(@"^S1\.\d{2}$", s.Owner));
         Assert.Contains(stubs, s => s.Name == "attendance_periods_lock" && s.Owner == "S1.31"); // FR-XM-26
         Assert.Contains(stubs, s => s.Name == "workflow_tasks_no_self_approval" && s.Owner == "S1.10"); // FR-XM-32
@@ -138,6 +139,39 @@ public sealed class GeneratorTests
         var handoffs = Directory.GetFiles(Path.Combine(Root, "docs", "handoff"), "*.md").Select(Path.GetFileNameWithoutExtension).ToList();
         var overdue = Model.Value.Stubs.Where(s => handoffs.Exists(h => h!.EndsWith("-" + s.Owner, StringComparison.Ordinal))).Select(s => $"{s.Owner}: {s.Table} {s.Name}").ToList();
         Assert.True(overdue.Count == 0, "Finished slices left placeholders: " + string.Join("; ", overdue));
+    }
+
+    [Fact]
+    public void S103_implemented_rule_goes_into_a_new_migration_and_leaves_the_merged_one_unchanged()
+    {
+        var implemented = Assert.Single(Model.Value.ImplementedStubs);
+        Assert.Equal("branches_default_branch_per_company", implemented.Name);
+        var files = Generator.Generate(Root).Files;
+
+        // The S1.02 migration (merged) still creates the placeholder exactly as before ...
+        Assert.Contains("create or replace function org.todo_branches_default_branch_per_company()", files[SqlEmitter.KernelMigrations + "/V202611150002__kernel__org.sql"], StringComparison.Ordinal);
+
+        // ... and the S1.03 migration, ordered after it, drops it and creates the real triggers.
+        var rules = files[SqlEmitter.KernelMigrations + "/V202611150201__kernel__rules_s1_03.sql"];
+        Assert.Contains("drop function if exists org.todo_branches_default_branch_per_company();", rules, StringComparison.Ordinal);
+        Assert.Contains("create or replace trigger tg_companies_default_branch", rules, StringComparison.Ordinal);
+        Assert.Contains("create or replace trigger tg_branches_keep_one_per_company", rules, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void S103_spec03_roles_app_rw_cannot_update_or_delete_append_only_tables()
+    {
+        var files = Generator.Generate(Root).Files;
+        var grants = files[SqlEmitter.KernelMigrations + "/V202611150200__kernel__grants.sql"] + files[SqlEmitter.HrmMigrations + "/V202611150101__hrm__grants.sql"];
+        foreach (var table in Model.Value.Tables.Where(t => t.Database == DatabaseKind.Tenant))
+        {
+            var lines = grants.Split('\n').Where(l => l.EndsWith($" on {table.FullName} to app_rw;", StringComparison.Ordinal)).ToList();
+            Assert.NotEmpty(lines);
+            if (table.IsAppendOnly || table.Schema == "aud")
+            {
+                Assert.DoesNotContain(lines, l => l.Contains("delete", StringComparison.Ordinal) || l.StartsWith("grant select, insert, update", StringComparison.Ordinal));
+            }
+        }
     }
 
     [Theory]

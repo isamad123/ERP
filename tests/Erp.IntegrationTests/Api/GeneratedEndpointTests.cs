@@ -160,8 +160,10 @@ public sealed class GeneratedEndpointTests : IAsyncLifetime
         var stale = await Client.PutAsJsonAsync($"/api/org/branches/{id}", new { code = "KHI", nameI18n = new { en = "Lost update" }, rowVersion = 1 }, ct);
         Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
 
+        // Rule SC-2 (S1.03): the company also has the default branch created with it, so it lists two branches.
         var list = await Client.GetFromJsonAsync<JsonElement>($"/api/org/branches?companyId={companyId}&limit=10", Json, ct);
-        Assert.Equal(1, list.GetProperty("items").GetArrayLength());
+        Assert.Equal(2, list.GetProperty("items").GetArrayLength());
+        Assert.Single(list.GetProperty("items").EnumerateArray(), b => b.GetProperty("id").GetGuid() == id);
 
         var deleted = await Client.DeleteAsync($"/api/org/branches/{id}?rowVersion=2", ct);
         Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
@@ -213,7 +215,9 @@ public sealed class GeneratedEndpointTests : IAsyncLifetime
         }
         while (after is not null);
 
-        Assert.Equal(5, seen.Distinct().Count());
+        // Five created here plus the default branch every company gets (rule SC-2, S1.03).
+        Assert.Equal(6, seen.Distinct().Count());
+        Assert.Equal(6, seen.Count);
     }
 
     private async Task<Guid> CreateCompanyAsync(CancellationToken ct)

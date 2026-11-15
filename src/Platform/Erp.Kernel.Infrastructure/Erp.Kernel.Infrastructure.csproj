@@ -4,4 +4,7 @@
     <ProjectReference Include="../Erp.Kernel.Application/Erp.Kernel.Application.csproj" />
     <ProjectReference Include="../../BuildingBlocks/Erp.BuildingBlocks.Infrastructure/Erp.BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="ControlPlane/Provisioning/baseline-seed.json" LogicalName="Erp.Kernel.Infrastructure.ControlPlane.Provisioning.baseline-seed.json" />
+  </ItemGroup>
 </Project>

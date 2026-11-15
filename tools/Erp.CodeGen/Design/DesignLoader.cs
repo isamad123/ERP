@@ -241,7 +241,7 @@ public static partial class DesignLoader
             {
                 rules.MarkUsed(table.FullName, stubRule.Text);
                 var (stubName, owner) = stubRule.Action.Stub ?? throw new DesignException(where, "column_stubs entry needs a stub");
-                table.Stubs.Add(new StubDef(table.FullName, stubName, owner, $"{name}: {note}"));
+                table.Stubs.Add(new StubDef(table.FullName, stubName, owner, $"{name}: {note}", stubRule.Action.Implementation));
             }
         }
 
@@ -629,7 +629,7 @@ public static partial class DesignLoader
         }
         else if (action.Stub is { } stub)
         {
-            table.Stubs.Add(new StubDef(table.FullName, stub.Name, stub.Owner, action.Text));
+            table.Stubs.Add(new StubDef(table.FullName, stub.Name, stub.Owner, action.Text, action.Implementation));
             table.Comments.Add($"Pending rule ({stub.Owner}, placeholder {table.Schema}.todo_{stub.Name}): {action.Text}");
         }
         else if (action.IsComment)
