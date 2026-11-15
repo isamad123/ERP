@@ -63,22 +63,17 @@ higher one is a defect in the lower one: stop and report it.
 - Before declaring a slice done run: build, unit, architecture, integration, tenant isolation, invariants, lint,
   licence and secret scans.
 
-## Models (D-45)
-- Class A (design, data design, contracts, payroll calculation design) and class B (tenancy, authorization,
-  payroll calculation, tax, attendance locking, core migrations): **Opus 5.5, high effort**. Every class B slice is
-  reviewed by a separate, fresh Opus session that has not seen the build conversation.
-- Class C (business logic): Opus 5.5, or Sonnet 5.5 once the pattern exists.
-- Class D (screens from existing components, simple validations, routine tests, translations, seed data): Sonnet 5.5.
-- Two failed attempts at the same problem: stop and report to the product owner. Do not loop.
+## Models and token use (D-45, docs/token-strategy.md)
+- Default to **Sonnet 5.5**. Use **Opus 5.5, high effort** only for slices marked class A or B (design, tenancy,
+  permissions, payroll and tax, attendance locking, final settlement, audit, licensing).
+- Generated code first: extend the code generator rather than hand-writing repeated code.
+- One slice per fresh session. Load only CLAUDE.md, the architecture reference, the slice file and touched files.
+- Quiet builds and tests; read only failures. Two failed attempts: stop and escalate.
 
 ## Scope discipline
 - Implement only the slice. No extra features, no unrelated refactors, no silent specification changes.
 - No stub code that pretends to work. TODOs only with an issue id, listed in the report.
 - Seed data is idempotent and keyed by stable codes.
-
-## Session discipline (token budget)
-- One slice per session. Stable material first in the prompt. End with a handoff note in `docs/handoff/`.
-- Start the next session from the handoff note and slice file, not from a re-read of specifications.
 
 ## Slice report (always end with this)
 1. What was built, in plain language. 2. Requirement IDs covered. 3. Evidence: commands run and results.
