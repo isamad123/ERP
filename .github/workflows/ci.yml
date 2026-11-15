@@ -71,13 +71,18 @@ jobs:
         run: dotnet test --project tests/Erp.ArchitectureTests --no-build -c Release --report-xunit-trx --results-directory logs/test-results
 
       - name: PostgreSQL 16 client tools (pg_dump and pg_restore for the backup and restore test, S1.03)
+        # The client tools must match the server's major version (16). The runner's own tools may be newer and its
+        # distribution may not package version 16, so the tools run from the same postgres:16 image as the service.
         run: |
-          # The client tools must match the server's major version (16); the runner's default may be newer.
-          if ! pg_dump --version | grep -Eq ' 16\.'; then
-            sudo apt-get update -q && sudo apt-get install -y -q postgresql-client-16
-            echo "ERP_PG_BIN=/usr/lib/postgresql/16/bin" >> "$GITHUB_ENV"
-          fi
-          "${ERP_PG_BIN:-/usr/lib/postgresql/16/bin}/pg_dump" --version 2>/dev/null || pg_dump --version
+          if pg_dump --version | grep -Eq ' 16\.'; then exit 0; fi
+          mkdir -p "$RUNNER_TEMP/pg16"
+          for tool in pg_dump pg_restore; do
+            printf '#!/bin/sh\nexec docker run --rm -i --network host -e PGPASSWORD postgres:16 %s "$@"\n' "$tool" > "$RUNNER_TEMP/pg16/$tool"
+            chmod +x "$RUNNER_TEMP/pg16/$tool"
+          done
+          echo "ERP_PG_BIN=$RUNNER_TEMP/pg16" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/pg16/pg_dump" --version
+          "$RUNNER_TEMP/pg16/pg_restore" --version
 
       - name: Integration tests (PostgreSQL 16)
         run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --report-xunit-trx --results-directory logs/test-results
