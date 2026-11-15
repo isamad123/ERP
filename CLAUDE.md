@@ -2,8 +2,8 @@
 
 ## What this repository is
 A modular-monolith ERP product (.NET 10, PostgreSQL, React, React Native). It is sold as SaaS and
-on-premises, with or without source code, module by module. The first release is **HRMIS only**
-(HR, attendance, leave, Pakistan payroll, self-service web, Android app).
+on-premises, with or without source code, module by module. The first release (1.0) is **HRMIS web only**
+(HR, attendance, leave, Pakistan payroll, self-service web). The Android app and the remaining HR features are Release 1.1 (D-48).
 
 The product owner is not a programmer. Explain outcomes in plain language and always give evidence
 (test output, query results, screenshots) instead of assurances.
@@ -20,7 +20,7 @@ section 14 as amended by D-47) → module specification → slice file → code.
 higher one is a defect in the lower one: stop and report it.
 
 ## Before you write any code
-1. Confirm the slice cites requirement IDs tagged **R** in `docs/registers/requirements.csv`. Build nothing tagged L or X.
+1. Confirm the slice cites requirement IDs whose `release` in `docs/registers/requirements.csv` is the release being built (1.0 first). Build nothing marked Later or Not planned.
 2. Use plan mode. Present files, tables, endpoints, tests and open questions. Wait for approval.
 3. If the specification is silent, ambiguous or contradictory, STOP and ask. Never invent a business rule.
 

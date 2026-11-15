@@ -12,7 +12,8 @@ file must be corrected.
 ## 2. Phases (D-41)
 | Phase | Scope |
 | --- | --- |
-| 1 | Minimum kernel + HRMIS core + Pakistan payroll + self-service web + Android M1 |
+| 1.0 | Minimum kernel + HRMIS core + Pakistan payroll + self-service web. **No mobile app** (D-48) |
+| 1.1 | Android ESS app, offline sync, geo-attendance, field tasks, workspaces, and remaining HRMIS features (D-48) |
 | 2 | Inventory and Asset Management (simple supplier receipt and customer issue documents included) |
 | 3 | Finance (starts per customer at a cutover date with opening balances) |
 | 4 | Procurement, Supply Chain, core Sales |
@@ -53,7 +54,7 @@ file must be corrected.
 | Jobs | Scheduled and chunked resumable jobs |
 | Entitlements | Signed entitlement, licence file, expiry states Active → Warning → Grace → Read-only → Locked |
 | Integration basics | API keys, outbox, import and export templates, mobile API conventions (KER-06) |
-| Offline sync (thin) | Device registry, idempotent action receipt, conflict records, for attendance and leave |
+| Offline sync | Release 1.1 with the mobile app |
 | Posting stub | Records accounting events and produces journal export files (D-43) |
 
 Not in Phase 1: parties, item catalog, kernel tax (Phase 2); report and dashboard builders, portals, global search,
@@ -75,7 +76,10 @@ collaboration, AI gateway, layout designer, custom objects (later).
 - Growing tables (attendance events, audit, job logs) are partitioned by month from the first migration.
 - Migrations: SQL-first, per module, expand and contract, tested on a fresh database and on previous-release data.
 
-## 7. HRMIS Phase 1 scope (spec 06a v0.3.1, D-42)
+## 7. HRMIS Phase 1 scope (spec 06a v0.3.1, D-42 as split by D-48)
+
+Release 1.0 is web only. Every item below that concerns the mobile app, offline sync, push notifications or geo-fences is Release 1.1. The `release` column of `docs/registers/requirements.csv` is authoritative.
+
 - **In:** POL policy framework; EMP employee records; POS organization and positions; DOC documents and letters;
   ATT-01 to ATT-22 (biometric import, web and mobile check-in with one circular office fence, exceptions,
   regularization); LVE leave; ONB basic onboarding and offboarding; SSP self-service web; RPT basic reports;

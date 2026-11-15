@@ -1,5 +1,16 @@
 # Phase 1 release scope (proposed, awaiting approval under D-34)
 
+## Release split (D-48, 15 November 2026)
+
+Phase 1 is delivered as Release 1.0 (web only) and Release 1.1 (mobile app and the remaining HR features), both before Phase 2. The `release` column in `requirements.csv` is now authoritative; the R/L/X tag is kept as history.
+
+| Source | 1.0 | 1.1 | Later | Not planned | Decision |
+| --- | --- | --- | --- | --- | --- |
+| Kernel | 122 | 19 | 90 | 5 | 0 |
+| Admin console | 101 | 0 | 74 | 0 | 0 |
+| HRMIS | 240 | 362 | 62 | 4 | 7 |
+| Cross-module rules | 8 | 0 | 24 | 0 | 0 |
+
 Generated 15 November 2026 from the specifications. Every requirement is tagged **R** (build in Phase 1), **L** (later phase), **X** (not planned), or **R?** (needs your decision). The full list with the reason for each tag is in `requirements.csv`.
 
 ## Totals
