@@ -99,6 +99,10 @@ public sealed class TenancyFixture : IAsyncLifetime
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
+
+        // The isolation suite makes the database refuse thousands of cross-customer writes on purpose (answered 409);
+        // EF Core logs each refusal as an error, which floods the CI log and hides real test failures.
+        builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.None);
         builder.Configuration["ConnectionStrings:ControlPlane"] = Options.ConnectionString;
         builder.Configuration["Tenancy:HostCacheSeconds"] = "0";
         builder.Configuration["Auth:Issuer"] = Issuer;
