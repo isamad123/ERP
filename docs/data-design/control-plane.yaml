@@ -6,14 +6,14 @@
   traits: [std]
   status: [provisioning, active, suspended, offboarding, deleted]
   columns:
-    - [code, code, req, "unique; used in host names"]
+    - [code, code, req, unique; used in host names]
     - [name, text, req]
     - [region_code, code, req, "hosting region, e.g. pk-1"]
     - [deployment_type, "enum(saas,on_prem)", req]
     - [country_code, char(2), req, "primary country, selects default country pack"]
-    - [size_profile, "enum(micro,sme,mid,enterprise)", req, "D-40; changeable"]
+    - [size_profile, "enum(micro,sme,mid,enterprise)", req, D-40; changeable]
     - [legal_hold, bool, req]
-    - [hibernated_at, ts, opt, "idle tenants (FR-STR-OPS-02)"]
+    - [hibernated_at, ts, opt, idle tenants (FR-STR-OPS-02)]
   unique: [[code]]
   reqs: [KRN-TEN-01, KRN-TEN-03, KRN-TEN-09]
 
@@ -22,7 +22,7 @@
   traits: [std]
   columns:
     - [tenant_id, uuid, req, fk cp.tenants]
-    - [host, text, req, "lower-case; unique"]
+    - [host, text, req, lower-case; unique]
     - [is_primary, bool, req]
     - [verified_at, ts, opt]
   unique: [[host]]
@@ -49,10 +49,10 @@
   columns:
     - [tenant_id, uuid, req, fk cp.tenants]
     - [db_cluster_id, uuid, req, fk cp.db_clusters]
-    - [env_type, "enum(production,uat,sandbox)", req, "default production; only production in 1.0"]
+    - [env_type, "enum(production,uat,sandbox)", req, default production; only production in 1.0]
     - [database_name, text, req]
     - [app_secret_ref, text, req]
-    - [schema_version, text, opt, "highest applied migration"]
+    - [schema_version, text, opt, highest applied migration]
     - [size_bytes, big, opt]
     - [last_backup_at, ts, opt]
     - [last_restore_test_at, ts, opt]
@@ -60,7 +60,7 @@
   reqs: [KRN-TEN-02, KRN-TEN-03, ADM-DAT-08]
 
 - table: cp.entitlements
-  purpose: Signed entitlement per tenant (edition, modules, limits, term); history kept
+  purpose: "Signed entitlement per tenant (edition, modules, limits, term); history kept"
   traits: [std]
   status: [active, warning, grace, read_only, locked, superseded]
   columns:
@@ -73,7 +73,7 @@
     - [effective_from, date, req]
     - [expires_at, date, opt]
     - [state_since, ts, req]
-  unique: [[tenant_id, version]]
+  unique: [[tenant_id, version], [tenant_id, "where status <> 'superseded'"]]
   reqs: [KRN-ENT-01, KRN-ENT-03, KRN-ENT-04, KRN-ENT-05, ADM-PLT-03]
 
 - table: cp.license_events
@@ -108,14 +108,14 @@
   columns:
     - [tenant_id, uuid, req, fk cp.tenants]
     - [meter_key, "enum(active_users,active_employees,companies,storage_bytes,api_calls)", req]
-    - [period, char(6), req, "yyyymm"]
+    - [period, char(6), req, yyyymm]
     - [value, big, req]
     - [as_of, ts, req]
   unique: [[tenant_id, meter_key, period]]
   reqs: [KRN-ENT-06, ADM-OPS-07, ADM-USR-08]
 
 - table: cp.module_catalog
-  purpose: Modules known to the platform, mirrors module manifests
+  purpose: "Modules known to the platform, mirrors module manifests"
   traits: [std]
   columns:
     - [module_id, code, req, "e.g. kernel, hrm"]
@@ -140,7 +140,7 @@
   purpose: Signed country and industry packs available to install
   traits: [std]
   columns:
-    - [pack_id, code, req, "e.g. country-pk"]
+    - [pack_id, code, req, e.g. country-pk]
     - [kind, "enum(country,industry,template,language)", req]
     - [version, text, req]
     - [compatible_from, text, req]
@@ -155,7 +155,7 @@
   traits: [std, soft]
   status: [active, disabled]
   columns:
-    - [email, text, req, "lower-case unique"]
+    - [email, text, req, lower-case unique]
     - [display_name, text, req]
     - [role, "enum(platform_admin,provisioning,support,read_only)", req]
     - [mfa_enrolled, bool, req]
@@ -173,7 +173,3 @@
     - [details, json, req]
   indexes: [[tenant_id, occurred_at], [platform_user_id, occurred_at]]
   reqs: [ADM-PLT-10, ADM-PLT-11]
-
-# Release 1.0 note: migration_runs and migration_run_items (fleet canaries, TEN-11) and support_grants (TEN-12)
-# are Release 1.1. In 1.0 the migrator applies migrations tenant by tenant and records results in
-# cp.tenant_databases.schema_version and the platform audit.

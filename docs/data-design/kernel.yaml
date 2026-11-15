@@ -1,21 +1,21 @@
 # Kernel tables inside every tenant database. Spec 02 and spec 03 sections 5 and 6, trimmed to Release 1.0.
-
 # ---------------- iam: identity and access ----------------
+
 - table: iam.users
-  purpose: People who sign in (employees, HR, admins)
+  purpose: "People who sign in (employees, HR, admins)"
   traits: [std, soft]
   status: [invited, active, locked, disabled, archived]
   columns:
-    - [username, text, req, "unique lower()"]
-    - [email, text, req, "unique lower()"]
+    - [username, text, req, unique lower()]
+    - [email, text, req, unique lower()]
     - [display_name, text, req]
     - [default_company_id, uuid, opt, fk org.companies]
-    - [language, char(2), req, "en or ur in 1.0"]
+    - [language, char(2), req, en or ur in 1.0]
     - [time_zone, text, req, "IANA, default Asia/Karachi"]
     - [last_login_at, ts, opt]
-    - [employee_ref, uuid, opt, "links to hrm.employments.id; no FK (module boundary)"]
-    - [is_system, bool, req, "reserved job and system users"]
-    - [access_valid_to, date, opt, "automatic disable date"]
+    - [employee_ref, uuid, opt, links to hrm.employments.id; no FK (module boundary)]
+    - [is_system, bool, req, reserved job and system users]
+    - [access_valid_to, date, opt, automatic disable date]
   unique: [[lower(username)], [lower(email)]]
   reqs: [KRN-IAM-01, ADM-USR-01, ADM-USR-03, ADM-USR-07]
 
@@ -28,7 +28,7 @@
     - [hash_algorithm, code, req]
     - [password_changed_at, ts, req]
     - [must_change, bool, req]
-    - [failed_attempts, int, req, "default 0"]
+    - [failed_attempts, int, req, default 0]
     - [locked_until, ts, opt]
   reqs: [KRN-IAM-01, ADM-USR-05, ADM-USR-20]
 
@@ -94,7 +94,7 @@
   columns:
     - [description_i18n, i18n, opt]
     - [source, "enum(module,pack,tenant)", req]
-    - [baseline_code, code, opt, "baseline role it was copied from"]
+    - [baseline_code, code, opt, baseline role it was copied from]
   unique: [[lower(code)]]
   reqs: [KRN-IAM-11, ADM-ROL-02, ADM-ROL-03]
 
@@ -106,11 +106,11 @@
   reqs: [KRN-IAM-10]
 
 - table: iam.data_scopes
-  purpose: Reusable record filters (own, team, subtree, company, branch, department list)
+  purpose: "Reusable record filters (own, team, subtree, company, branch, department list)"
   traits: [std, name]
   columns:
     - [kind, "enum(own,direct_team,subtree,org_units,branches,companies,all)", req]
-    - [definition, json, req, "parameters for the kind"]
+    - [definition, json, req, parameters for the kind]
   unique: [[lower(code)]]
   reqs: [KRN-IAM-12, ADM-ROL-06]
 
@@ -118,7 +118,7 @@
   key: [role_id, resource_type]
   columns:
     - [role_id, uuid, req, fk iam.roles]
-    - [resource_type, text, req, "e.g. hrm.employment"]
+    - [resource_type, text, req, e.g. hrm.employment]
     - [data_scope_id, uuid, req, fk iam.data_scopes]
   reqs: [KRN-IAM-12]
 
@@ -128,7 +128,7 @@
   columns:
     - [role_id, uuid, req, fk iam.roles]
     - [resource_type, text, req]
-    - [field_key, text, req, "includes custom fields"]
+    - [field_key, text, req, includes custom fields]
     - [access, "enum(hidden,masked,read_only,editable)", req]
   unique: [[role_id, resource_type, field_key]]
   reqs: [KRN-IAM-13, ADM-ROL-07]
@@ -139,7 +139,7 @@
   columns:
     - [user_id, uuid, req, fk iam.users]
     - [role_id, uuid, req, fk iam.roles]
-    - [company_id, uuid, opt, "fk org.companies; null means all companies"]
+    - [company_id, uuid, opt, fk org.companies; null means all companies]
     - [reason, text, opt]
   reqs: [KRN-IAM-11, ADM-ROL-04]
 
@@ -192,7 +192,7 @@
   columns:
     - [name, text, req]
     - [client_id, text, req]
-    - [secret_hash, text, req, "shown once at creation"]
+    - [secret_hash, text, req, shown once at creation]
     - [scopes, "text[]", req]
     - [ip_allow, "text[]", req]
     - [rate_limit_per_minute, int, req]
@@ -201,7 +201,6 @@
   unique: [[client_id]]
   reqs: [ADM-SEC-02, KRN-INT-07]
 
-# ---------------- org: organization ----------------
 - table: org.companies
   purpose: Legal entities
   traits: [std, soft, name]
@@ -213,48 +212,49 @@
     - [default_language, char(2), req]
     - [holiday_calendar_id, uuid, opt, fk ref.calendars]
     - [logo_file_id, uuid, opt, fk doc.files]
-    - [cost_center_model, "enum(none,external_ref)", req, "Finance cost centres are Later"]
+    - [cost_center_model, "enum(none,external_ref)", req, Finance cost centres are Later]
   unique: [[lower(code)]]
   reqs: [KRN-ORG-01, ADM-ORG-01]
 
 - table: org.company_registrations
-  purpose: Tax and statutory registration numbers of a company (NTN, EOBI, social security)
+  purpose: "Tax and statutory registration numbers of a company (NTN, EOBI, social security)"
   traits: [std, eff]
-  eff_key: [company_id, kind]
+  eff_key: [company_id, kind, authority]
   columns:
     - [company_id, uuid, req, fk org.companies]
     - [kind, "enum(ntn,strn,eobi,social_security,provident_fund,commercial_registration,other)", req]
     - [value, enc, req]
     - [value_hmac, hmac, req]
-    - [authority, text, opt, "e.g. PESSI, SESSI"]
+    - [authority, code, req, "e.g. PESSI, SESSI, EOBI, FBR; 'none' when not applicable"]
   reqs: [KRN-ORG-01, HRM-CPL-02]
 
 - table: org.company_bank_accounts
   purpose: Company accounts used to pay salaries
   traits: [std, co, soft]
   columns:
-    - [bank_code, code, req, "from ref.banks"]
+    - [bank_code, code, req, from ref.banks]
     - [account_title, text, req]
     - [account_number, enc, req]
     - [iban, enc, opt]
     - [iban_hmac, hmac, opt]
     - [currency_code, char(3), req]
-    - [salary_file_format, code, opt, "doc.templates code of the bank file format"]
+    - [salary_file_format, code, opt, doc.templates code of the bank file format]
   reqs: [HRM-PAY-23]
 
 - table: org.branches
   traits: [std, co, soft, name]
   unique: [[company_id, lower(code)]]
-  notes: "Every company has at least one branch; small customers get one created automatically (rule SC-2)."
+  notes: Every company has at least one branch; small customers get one created automatically (rule SC-2).
   reqs: [KRN-ORG-02]
 
 - table: org.locations
-  purpose: Physical sites (office, factory, warehouse)
+  purpose: "Physical sites (office, factory, warehouse)"
   traits: [std, co, soft, name]
   columns:
     - [branch_id, uuid, req, fk org.branches]
     - [address, json, req]
-    - [latitude, "numeric(9,6)", opt, "for 1.1 geo-attendance; plain columns (D-36)"]
+    - [region_code, code, req, "province or state, e.g. PB, SD, KP, BA, ICT; selects provincial tables"]
+    - [latitude, "numeric(9,6)", opt, for 1.1 geo-attendance; plain columns (D-36)]
     - [longitude, "numeric(9,6)", opt]
     - [time_zone, text, req]
     - [holiday_calendar_id, uuid, opt, fk ref.calendars]
@@ -269,14 +269,13 @@
   reqs: [KRN-ORG-03, ADM-ORG-04]
 
 - table: org.org_units
-  traits: [std, co, eff, cust, name]
-  eff_key: [id]
-  notes: "Effective-dated by versions: one row per unit, version history in org.org_unit_versions is not needed in 1.0; renames are audited."
+  traits: [std, co, soft, cust, name]
+  notes: "Not effective-dated: renames and moves are audited; hierarchy changes are dated in org.org_unit_links."
   columns:
     - [unit_type_id, uuid, req, fk org.org_unit_types]
     - [location_id, uuid, opt, fk org.locations]
     - [cost_center_ref, uuid, opt, "Finance, Later; no FK"]
-    - [head_position_ref, uuid, opt, "hrm.positions.id; no FK"]
+    - [head_position_ref, uuid, opt, hrm.positions.id; no FK]
   unique: [[company_id, lower(code)]]
   reqs: [KRN-ORG-03, ADM-ORG-03]
 
@@ -288,17 +287,16 @@
   reqs: [KRN-ORG-03]
 
 - table: org.org_unit_links
-  purpose: Parent of each unit per hierarchy, effective-dated
+  purpose: "Parent of each unit per hierarchy, effective-dated"
   traits: [std, eff]
   eff_key: [hierarchy_id, unit_id]
   columns:
     - [hierarchy_id, uuid, req, fk org.org_hierarchies]
     - [unit_id, uuid, req, fk org.org_units]
-    - [parent_unit_id, uuid, opt, "fk org.org_units; null for root; cycle check by trigger"]
+    - [parent_unit_id, uuid, opt, fk org.org_units; null for root; cycle check by trigger]
   indexes: [[hierarchy_id, parent_unit_id]]
   reqs: [KRN-ORG-03, ADM-ORG-03]
 
-# ---------------- ref: reference data ----------------
 - table: ref.currencies
   key: [code]
   columns:
@@ -318,7 +316,7 @@
   reqs: [KRN-LOC-02]
 
 - table: ref.banks
-  purpose: Banks per country, seeded by the country pack
+  purpose: "Banks per country, seeded by the country pack"
   traits: [std, name]
   columns:
     - [country_code, char(2), req, fk ref.countries]
@@ -328,7 +326,7 @@
   reqs: [HRM-EMP-06, HRM-PAY-23]
 
 - table: ref.calendars
-  purpose: Holiday calendars per country, company or location
+  purpose: "Holiday calendars per country, company or location"
   traits: [std, name]
   columns:
     - [country_code, char(2), opt]
@@ -343,11 +341,10 @@
     - [holiday_date, date, req]
     - [name_i18n, i18n, req]
     - [kind, "enum(public,religious,optional,restricted)", req]
-    - [is_tentative, bool, req, "moon-sighting dates confirmed later"]
+    - [is_tentative, bool, req, moon-sighting dates confirmed later]
   unique: [[calendar_id, holiday_date]]
   reqs: [HRM-ATT-15]
 
-# ---------------- cfg: settings, metadata, numbering, packs ----------------
 - table: cfg.settings
   purpose: Setting definitions registered from manifests
   key: [key]
@@ -407,7 +404,7 @@
   traits: [std]
   status: [active, retired]
   columns:
-    - [entity_type, text, req, "e.g. hrm.employment"]
+    - [entity_type, text, req, e.g. hrm.employment]
     - [field_key, code, req]
     - [data_type, "enum(text,long_text,number,decimal,date,bool,choice,multi_choice,user,employee,file)", req]
     - [label_i18n, i18n, req]
@@ -424,7 +421,7 @@
   reqs: [KRN-MET-01, KRN-MET-02, KRN-MET-05]
 
 - table: cfg.option_lists
-  purpose: Shared dropdown lists (reason codes, exit reasons, relationship types)
+  purpose: "Shared dropdown lists (reason codes, exit reasons, relationship types)"
   traits: [std, name]
   columns:
     - [is_system, bool, req, "system lists can be extended, not removed"]
@@ -439,7 +436,7 @@
     - [label_i18n, i18n, req]
     - [seq, int, req]
     - [is_active, bool, req]
-    - [attributes, json, req, "e.g. reason code maps to event kind"]
+    - [attributes, json, req, e.g. reason code maps to event kind]
   unique: [[list_id, lower(code)]]
   reqs: [KRN-MET-01]
 
@@ -472,10 +469,10 @@
   key: [scheme_id, scope_key]
   columns:
     - [scheme_id, uuid, req, fk cfg.numbering_schemes]
-    - [scope_key, text, req, "e.g. 2026 for yearly reset"]
+    - [scope_key, text, req, e.g. 2026 for yearly reset]
     - [last_value, big, req]
     - [updated_at, ts, req]
-  notes: "Gap-free schemes lock this row in the transaction; gap-allowed schemes use a PostgreSQL sequence per scheme."
+  notes: Gap-free schemes lock this row in the transaction; gap-allowed schemes use a PostgreSQL sequence per scheme.
   reqs: [KRN-NUM-02, KRN-NUM-06]
 
 - table: cfg.numbering_voids
@@ -497,7 +494,7 @@
   reqs: [KRN-CFG-01, KRN-CFG-02, ADM-PKG-01]
 
 - table: cfg.pack_items
-  purpose: Every object a pack created, with tenant override flag so upgrades keep overrides
+  purpose: "Every object a pack created, with tenant override flag so upgrades keep overrides"
   traits: [std]
   columns:
     - [pack_id, code, req]
@@ -522,7 +519,6 @@
   unique: [[module_id, task_key, company_id]]
   reqs: [ADM-ONB-01, ADM-ONB-02, ADM-ONB-03]
 
-# ---------------- wf: workflow ----------------
 - table: wf.workflow_definitions
   traits: [std, name]
   status: [active, inactive]
@@ -531,6 +527,7 @@
     - [active_version_id, uuid, opt, fk wf.workflow_versions]
   unique: [[lower(code)]]
   reqs: [KRN-WFL-01]
+  notes: "active_version_id uses composite FK (id, active_version_id) -> wf.workflow_versions (parent_id, id)."
 
 - table: wf.workflow_versions
   purpose: Immutable once active
@@ -567,7 +564,7 @@
     - [step_key, text, req]
     - [assignee_user_id, uuid, opt, fk iam.users]
     - [assignee_role_id, uuid, opt, fk iam.roles]
-    - [acting_for_user_id, uuid, opt, "delegation"]
+    - [acting_for_user_id, uuid, opt, delegation]
     - [due_at, ts, opt]
     - [escalated_at, ts, opt]
     - [acted_by, uuid, opt, fk iam.users]
@@ -589,7 +586,6 @@
   indexes: [[instance_id, created_at]]
   reqs: [KRN-WFL-05, KRN-WFL-07]
 
-# ---------------- aud: audit ----------------
 - table: aud.change_log
   traits: [app]
   partition: "range (occurred_at) monthly; key (id, occurred_at)"
@@ -602,7 +598,7 @@
     - [company_id, uuid, opt]
     - [action, "enum(create,update,delete,status)", req]
     - [changes, json, req, "field, before, after; personal fields encrypted with the subject key"]
-    - [subject_person_id, uuid, opt, "person whose key encrypted the personal fields"]
+    - [subject_person_id, uuid, opt, person whose key encrypted the personal fields]
     - [correlation_id, uuid, opt]
     - [ip_address, inet, opt]
     - [prev_hash, bytea, req]
@@ -611,7 +607,7 @@
   reqs: [KRN-AUD-01, KRN-AUD-03, KRN-AUD-04, KRN-AUD-07]
 
 - table: aud.access_log
-  purpose: Views and exports of sensitive fields (salary, national IDs, bank accounts)
+  purpose: "Views and exports of sensitive fields (salary, national IDs, bank accounts)"
   traits: [app]
   partition: "range (occurred_at) monthly; key (id, occurred_at)"
   columns:
@@ -650,22 +646,21 @@
   key: [person_id]
   columns:
     - [person_id, uuid, req, pk]
-    - [wrapped_key, bytea, req, "encrypted by the tenant key"]
+    - [wrapped_key, bytea, req, encrypted by the tenant key]
     - [destroyed_at, ts, opt]
   reqs: [HRM-PRV-04]
 
-# ---------------- doc: documents and templates ----------------
 - table: doc.files
   purpose: Metadata of stored files; content in the file store under the tenant prefix
   traits: [std, co]
   status: [uploading, clean, infected, quarantined, deleted]
   columns:
-    - [owner_type, text, req, "e.g. hrm.employment"]
+    - [owner_type, text, req, e.g. hrm.employment]
     - [owner_id, uuid, req]
     - [file_name, text, req]
     - [content_type, text, req]
     - [size_bytes, big, req]
-    - [checksum, text, req, "sha-256"]
+    - [checksum, text, req, sha-256]
     - [storage_key, text, req]
     - [version_no, int, req]
     - [previous_file_id, uuid, opt, fk doc.files]
@@ -673,7 +668,7 @@
     - [expires_on, date, opt]
     - [retention_until, date, opt]
     - [is_sensitive, bool, req]
-  indexes: [[owner_type, owner_id], [expires_on, "partial where expires_on is not null"]]
+  indexes: [[owner_type, owner_id], [expires_on, partial where expires_on is not null]]
   reqs: [KRN-DOC-01, KRN-DOC-02, KRN-DOC-03, KRN-DOC-08]
 
 - table: doc.retention_rules
@@ -682,22 +677,23 @@
     - [document_type, code, req]
     - [keep_months, int, req]
     - [action_after, "enum(archive,delete,review)", req]
-    - [legal_minimum_months, int, opt, "from pack; cannot be shortened"]
+    - [legal_minimum_months, int, opt, from pack; cannot be shortened]
   unique: [[document_type]]
   reqs: [KRN-DOC-04]
 
 - table: doc.templates
-  purpose: Letters, payslips, certificates, bank files, statutory forms
+  purpose: "Letters, payslips, certificates, bank files, statutory forms"
   traits: [std, name]
   columns:
     - [kind, "enum(letter,payslip,certificate,form,email,bank_file,report)", req]
     - [entity_type, text, req]
-    - [company_id, uuid, opt, "fk org.companies; null means all"]
+    - [company_id, uuid, opt, fk org.companies; null means all]
     - [language, char(2), req]
     - [source, "enum(pack,tenant)", req]
     - [active_version_id, uuid, opt, fk doc.template_versions]
   unique: [[lower(code), company_id, language]]
   reqs: [KRN-DOC-05, HRM-DOC-04, HRM-PAY-28]
+  notes: "active_version_id uses composite FK (id, active_version_id) -> doc.template_versions (parent_id, id)."
 
 - table: doc.template_versions
   traits: [std]
@@ -705,7 +701,7 @@
   columns:
     - [template_id, uuid, req, fk doc.templates]
     - [version, int, req]
-    - [body, text, req, "Scriban template"]
+    - [body, text, req, Scriban template]
     - [output_format, "enum(pdf,html,text,csv,fixed_width,xlsx)", req]
   unique: [[template_id, version]]
   reqs: [KRN-DOC-05]
@@ -721,7 +717,6 @@
   indexes: [[owner_type, owner_id]]
   reqs: [KRN-DOC-05, HRM-PAY-28]
 
-# ---------------- ntf: notifications ----------------
 - table: ntf.templates
   traits: [std]
   status: [active, retired]
@@ -757,7 +752,7 @@
 
 - table: ntf.outbound_messages
   traits: [std]
-  partition: "range (created_at) monthly; processed rows purged after 30 days"
+  partition: range (created_at) monthly; processed rows purged after 30 days
   status: [queued, sent, failed, dead]
   columns:
     - [channel, text, req]
@@ -771,6 +766,8 @@
     - [error, text, opt]
   indexes: [[status, next_attempt_at, "partial where status='queued'"]]
   reqs: [KRN-NTF-05, KRN-NTF-07, ADM-OPS-04]
+  key: [id, created_at]
+  unique: [[dedup_key, created_at, where dedup_key is not null]]
 
 - table: ntf.in_app_items
   traits: [std]
@@ -784,7 +781,6 @@
   indexes: [[user_id, read_at, created_at]]
   reqs: [HRM-NTF-09]
 
-# ---------------- itg: integration, import, accounting export ----------------
 - table: itg.import_templates
   traits: [std, name]
   columns:
@@ -829,7 +825,7 @@
   reqs: [ADM-DAT-04]
 
 - table: itg.connectors
-  purpose: Configured connectors (biometric devices, email gateway) in 1.0
+  purpose: "Configured connectors (biometric devices, email gateway) in 1.0"
   traits: [std, name]
   status: [active, disabled, error]
   columns:
@@ -842,22 +838,20 @@
   reqs: [KRN-INT-05, HRM-ATT-03]
 
 - table: itg.account_mappings
-  purpose: Maps payroll components and cost allocations to the customer's external chart of accounts
+  purpose: "Maps payroll components and cost allocations to the customer's external chart of accounts"
   traits: [std, co]
   columns:
     - [source_kind, "enum(pay_component,liability,payment,loan,expense)", req]
     - [source_key, code, req]
-    - [allocation_key, code, opt, "cost centre or department code; null means any"]
+    - [allocation_key, code, opt, cost centre or department code; null means any]
     - [debit_account, text, req]
     - [credit_account, text, req]
   unique: [[company_id, source_kind, source_key, allocation_key]]
   reqs: [KRN-INT-09, ADM-INT-07]
 
 - table: itg.accounting_events
-  purpose: Posting stub (D-43). One event per finalized payroll run, loan disbursement, approved claim batch or liability accrual per company
+  purpose: "Posting stub (D-43). One event per finalized payroll run, loan disbursement, approved claim batch or liability accrual per company"
   traits: [app, co]
-  partition: "range (created_at) monthly"
-  status: [recorded, exported, superseded]
   columns:
     - [source_module, code, req]
     - [source_type, text, req]
@@ -868,10 +862,19 @@
     - [lines, json, req, "account side, mapping key, allocation, amount"]
     - [total_debit, money, req]
     - [total_credit, money, req]
-    - [exported_in_id, uuid, opt]
-  checks: ["total_debit = total_credit"]
+    - [supersedes_event_id, uuid, opt, fk itg.accounting_events; a reversal or re-post]
+  checks: [total_debit = total_credit]
   unique: [[company_id, source_module, source_id, posting_version]]
   reqs: [KRN-INT-09, KRN-INT-12, HRM-PAY-30, FR-XM-27]
+
+- table: itg.accounting_event_exports
+  purpose: Which events went into which journal export
+  key: [event_id, export_id]
+  columns:
+    - [event_id, uuid, req, fk itg.accounting_events]
+    - [export_id, uuid, req, fk itg.journal_exports]
+    - [exported_at, ts, req]
+  reqs: [KRN-INT-09]
 
 - table: itg.journal_exports
   purpose: A downloadable journal file built from accounting events
@@ -885,7 +888,6 @@
     - [file_id, uuid, req, fk doc.files]
   reqs: [KRN-INT-09, ADM-INT-07]
 
-# ---------------- job: background jobs ----------------
 - table: job.definitions
   traits: [std]
   columns:
@@ -907,19 +909,19 @@
     - [definition_id, uuid, req, fk job.definitions]
     - [company_id, uuid, opt]
     - [progress_pct, pct, opt]
-    - [checkpoint, json, opt, "resume point"]
+    - [checkpoint, json, opt, resume point]
     - [started_at, ts, opt]
     - [finished_at, ts, opt]
     - [error, text, opt]
     - [requested_by, uuid, opt]
-    - [lease_owner, text, opt, "worker holding the run (runs once across workers)"]
+    - [lease_owner, text, opt, worker holding the run (runs once across workers)]
     - [lease_expires_at, ts, opt]
   indexes: [[status, created_at]]
   reqs: [KRN-JOB-02, KRN-JOB-03, KRN-JOB-05, HRM-PAY-34]
 
 - table: job.run_logs
   traits: [app]
-  partition: "range (created_at) monthly"
+  partition: range (created_at) monthly
   columns:
     - [run_id, uuid, req]
     - [level, "enum(info,warning,error)", req]
@@ -927,7 +929,6 @@
   indexes: [[run_id, created_at]]
   reqs: [KRN-JOB-03]
 
-# ---------------- meta ----------------
 - table: meta.schema_history
   traits: [app]
   columns:
@@ -947,5 +948,5 @@
     - [signature, bytea, req]
     - [state, text, req]
     - [state_since, ts, req]
-    - [highest_time_seen, ts, req, "clock roll-back guard"]
+    - [highest_time_seen, ts, req, clock roll-back guard]
   reqs: [KRN-ENT-04]

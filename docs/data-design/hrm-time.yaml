@@ -10,7 +10,8 @@
     - [connector_id, uuid, req, fk itg.connectors]
     - [serial_no, text, req]
     - [model, text, opt]
-    - [connection, json, req]
+    - [connection, json, req, "host, port, protocol only; no secrets"]
+    - [credentials_ref, text, opt, "reference to the secrets store (device password, comm key)"]
     - [last_seen_at, ts, opt]
     - [last_sync_at, ts, opt]
     - [last_error, text, opt]
@@ -19,14 +20,16 @@
 
 - table: hrm.device_user_maps
   purpose: Device user number to employee (ATT-03); biometric templates never stored (ATT-20)
-  traits: [std, co]
+  traits: [std, co, eff]
   columns:
-    - [device_id, uuid, opt, "fk hrm.attendance_devices; null means all devices of the company"]
+    - [device_id, uuid, opt, fk hrm.attendance_devices; null means all devices of the company]
+    - [device_scope, uuid, req, "generated always as coalesce(device_id, nil uuid) stored"]
     - [device_user_no, text, req]
     - [employment_id, uuid, req, fk hrm.employments]
-    - [consent_at, ts, opt, "biometric consent (ATT-20)"]
-  unique: [[company_id, device_id, device_user_no]]
+    - [consent_at, ts, opt, biometric consent (ATT-20)]
   reqs: [ATT-03, ATT-20]
+  eff_key: [company_id, device_scope, device_user_no]
+  notes: Punches resolve the employee by mapping valid on the punch date.
 
 - table: hrm.shifts
   traits: [std, co, soft, name]
@@ -37,7 +40,7 @@
     - [core_start, time, opt]
     - [core_end, time, opt]
     - [crosses_midnight, bool, req]
-    - [segments, json, req, "split shifts and breaks"]
+    - [segments, json, req, split shifts and breaks]
     - [min_full_day_minutes, int, req]
     - [policy_id, uuid, opt, "fk hrm.policies (attendance policy: grace, thresholds, rounding)"]
   unique: [[company_id, lower(code)]]
@@ -60,28 +63,29 @@
     - [roster_id, uuid, req, fk hrm.rosters]
     - [employment_id, uuid, req, fk hrm.employments]
     - [work_date, date, req]
-    - [shift_id, uuid, opt, "fk hrm.shifts; null means weekly off"]
+    - [shift_id, uuid, opt, fk hrm.shifts; null means weekly off]
     - [day_type, "enum(working,weekly_off,holiday)", req]
-  unique: [[employment_id, work_date, roster_id]]
+    - [roster_status, text, req, copy of rosters.status]
+  unique: [[employment_id, work_date, "where roster_status = 'published'"]]
   indexes: [[employment_id, work_date]]
   reqs: [ATT-07]
 
 - table: hrm.attendance_events
-  purpose: Raw punches from web check-in, biometric import, kiosk and HR entry (spec name 'punches')
+  purpose: "Raw punches from web check-in, biometric import, kiosk and HR entry (spec name 'punches')"
   traits: [app, co]
   partition: "range (event_date) monthly; key (id, event_date)"
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
-    - [event_date, date, req, "local date at the location"]
+    - [event_date, date, req, local date at the location]
     - [event_at, ts, req]
     - [direction, "enum(in,out,break_out,break_in,unknown)", req]
     - [source, "enum(web,biometric,kiosk,hr_entry,import)", req]
     - [device_id, uuid, opt, fk hrm.attendance_devices]
-    - [received_at, ts, req, "server receipt time (GHR-13)"]
+    - [received_at, ts, req, server receipt time (GHR-13)]
     - [idempotency_key, text, req]
     - [ip_address, inet, opt]
     - [is_duplicate, bool, req]
-    - [supersedes_event_id, uuid, opt, "correction of an earlier event"]
+    - [supersedes_event_id, uuid, opt, correction of an earlier event]
   unique: [[company_id, idempotency_key, event_date]]
   indexes: [[employment_id, event_date]]
   reqs: [ATT-01, ATT-03, DAT-01, DAT-02, DAT-04]
@@ -89,16 +93,18 @@
 - table: hrm.attendance_periods
   purpose: Lock unit for attendance per company and pay group (FR-XM-26)
   traits: [std, co]
-  status: [open, locked, reopened]
+  status: [open, locked]
   columns:
     - [pay_group_id, uuid, req, fk hrm.pay_groups]
+    - [pay_period_id, uuid, req, fk hrm.pay_periods]
     - [period_start, date, req]
     - [period_end, date, req]
     - [locked_at, ts, opt]
     - [locked_by_run_id, uuid, opt, fk hrm.pay_runs]
-    - [reopen_reason, text, opt]
-  unique: [[pay_group_id, period_start]]
+  unique: [[pay_period_id]]
   reqs: [ATT-17, ATT-21, FR-XM-26]
+  checks: ["exclusion: (pay_group_id with =, daterange(period_start, period_end, '[]') with &&)"]
+  notes: "A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments."
 
 - table: hrm.attendance_days
   purpose: Processed daily result per employee with explanation
@@ -117,14 +123,15 @@
     - [overtime_minutes, int, req]
     - [leave_request_id, uuid, opt, fk hrm.leave_requests]
     - [duty_request_id, uuid, opt, fk hrm.duty_requests]
-    - [explanation, json, req, "rule steps that produced the result (ATT-10)"]
+    - [explanation, json, req, rule steps that produced the result (ATT-10)]
     - [policy_version_id, uuid, opt, fk hrm.policy_versions]
-    - [period_id, uuid, opt, fk hrm.attendance_periods]
+    - [period_id, uuid, req, fk hrm.attendance_periods; derived from pay group and date on insert]
     - [processed_at, ts, req]
   unique: [[employment_id, work_date]]
   indexes: [[company_id, work_date, result]]
-  notes: "Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26)."
+  notes: Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26).
   reqs: [ATT-10, ATT-13, ATT-18, ATT-19, FR-XM-26]
+  partition: "range (work_date) monthly; key (id, work_date)"
 
 - table: hrm.attendance_exceptions
   traits: [std, co]
@@ -152,7 +159,7 @@
   reqs: [ATT-11]
 
 - table: hrm.duty_requests
-  purpose: On-duty, official visit and work-from-home requests (ATT-14)
+  purpose: "On-duty, official visit and work-from-home requests (ATT-14)"
   traits: [std, co]
   status: [submitted, approved, rejected, cancelled]
   columns:
@@ -173,15 +180,15 @@
     - [day_type, "enum(working,weekly_off,holiday)", req]
     - [minutes, int, req]
     - [approved_minutes, int, opt]
-    - [rate_multiplier, rate, req, "from overtime policy"]
+    - [rate_multiplier, rate, req, from overtime policy]
+    - [pay_input_id, uuid, opt, fk hrm.pay_inputs; the only path into payroll]
     - [attendance_day_id, uuid, opt, fk hrm.attendance_days]
-    - [pay_run_id, uuid, opt, fk hrm.pay_runs]
     - [comp_off_entry_id, uuid, opt, fk hrm.leave_ledger]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   indexes: [[employment_id, work_date]]
   reqs: [ATT-12, LVE-08]
+  unique: [[employment_id, work_date, "where status <> 'rejected'"]]
 
-# ---------------- leave ----------------
 - table: hrm.leave_types
   traits: [std, co, soft, name]
   columns:
@@ -190,23 +197,23 @@
     - [unit, "enum(day,half_day,hour)", req]
     - [requires_document, bool, req]
     - [is_comp_off, bool, req]
-    - [is_unpaid_deduction, bool, req, "flows to payroll as leave without pay (LVE-07)"]
+    - [is_unpaid_deduction, bool, req, flows to payroll as leave without pay (LVE-07)]
     - [source, "enum(pack,tenant)", req]
   unique: [[company_id, lower(code)]]
   reqs: [LVE-01, LVE-12]
   notes: "Entitlement, accrual, carry-forward, encashment, eligibility and sandwich rules are a leave policy (hrm.policies type leave) assigned per leave type."
 
 - table: hrm.leave_ledger
-  purpose: Every movement of a leave balance; balances are sums (LVE-10, LVE-14)
+  purpose: "Every movement of a leave balance; balances are sums (LVE-10, LVE-14)"
   traits: [app, co]
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
     - [leave_type_id, uuid, req, fk hrm.leave_types]
     - [leave_year, int, req]
     - [entry_date, date, req]
-    - [kind, "enum(opening,accrual,grant,usage,usage_reversal,adjustment,carry_forward,lapse,encashment,comp_off_earned,comp_off_expired,transfer_in)", req]
+    - [kind, "enum(opening,accrual,grant,usage,usage_reversal,adjustment,carry_forward,lapse,encashment,comp_off_earned,comp_off_expired,transfer_in,transfer_out)", req]
     - [quantity, qty, req, "positive adds, negative uses"]
-    - [expires_on, date, opt, "carry-forward and comp-off expiry"]
+    - [expires_on, date, opt, carry-forward and comp-off expiry]
     - [source_type, text, opt]
     - [source_id, uuid, opt]
     - [policy_version_id, uuid, opt, fk hrm.policy_versions]
@@ -214,6 +221,8 @@
     - [reason, text, opt]
   indexes: [[employment_id, leave_type_id, leave_year]]
   reqs: [LVE-02, LVE-03, LVE-08, LVE-10, LVE-14]
+  unique: [[source_type, source_id, kind, leave_type_id, where source_id is not null], [reverses_entry_id, where reverses_entry_id is not null]]
+  notes: Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30).
 
 - table: hrm.leave_requests
   traits: [std, co, br, cust]
@@ -245,12 +254,14 @@
     - [leave_date, date, req]
     - [quantity, qty, req]
     - [is_paid, bool, req]
+    - [request_status, text, req, copy of leave_requests.status]
   unique: [[leave_request_id, leave_date]]
   indexes: [[employment_id, leave_date]]
   reqs: [LVE-04, LVE-07]
+  checks: ["trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave)"]
 
 - table: hrm.leave_year_end_runs
-  purpose: Carry-forward, lapse and encashment with preview and rollback (LVE-11)
+  purpose: "Carry-forward, lapse and encashment with preview and rollback (LVE-11)"
   traits: [std, co]
   status: [preview, applied, rolled_back]
   columns:

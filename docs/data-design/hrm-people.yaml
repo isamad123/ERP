@@ -1,43 +1,42 @@
 # HRMIS: people, employment, structure, policies, documents, self-service requests, onboarding and exit.
 # Spec 06a sections 5 to 8, 11, 12, 27. All tables in schema hrm.
 
-# ---------------- persons ----------------
 - table: hrm.persons
   purpose: One row per human (FR-XM-28). Employments hang off the person
   traits: [std, soft, cust]
   columns:
-    - [person_no, text, req, "assigned by numbering"]
+    - [person_no, text, req, assigned by numbering]
     - [first_name, text, req]
     - [middle_name, text, opt]
     - [last_name, text, opt]
-    - [name_local, text, opt, "name in Urdu script"]
-    - [father_or_spouse_name, text, opt, "common in Pakistani records"]
+    - [name_local, text, opt, name in Urdu script]
+    - [father_or_spouse_name, text, opt, common in Pakistani records]
     - [gender, "enum(male,female,other,unspecified)", req]
     - [date_of_birth, date, opt]
-    - [marital_status, code, opt, "option list"]
+    - [marital_status, code, opt, option list]
     - [nationality_code, char(2), opt, fk ref.countries]
-    - [religion, code, opt, "only where a pack requires it (e.g. Hajj leave eligibility); field-secured"]
+    - [religion, code, opt, only where a pack requires it (e.g. Hajj leave eligibility); field-secured]
     - [photo_file_id, uuid, opt, fk doc.files]
-    - [party_ref, uuid, opt, "kernel party when Finance or Procurement pays the person (Later); no FK"]
+    - [party_ref, uuid, opt, kernel party when Finance or Procurement pays the person (Later); no FK]
   unique: [[lower(person_no)]]
   reqs: [EMP-01, EMP-15, FR-XM-28]
 
 - table: hrm.person_identifiers
-  purpose: National IDs, passports, tax numbers; validated per country pack
-  traits: [std, eff]
-  eff_key: [person_id, kind]
+  purpose: "National IDs, passports, tax numbers; validated per country pack"
+  traits: [std]
   columns:
     - [person_id, uuid, req, fk hrm.persons]
     - [kind, code, req, "cnic, nicop, passport, ntn, iqama ... from pack"]
     - [country_code, char(2), req]
     - [value, enc, req]
-    - [value_hmac, hmac, req, "duplicate detection"]
-    - [value_last4, text, opt, "for display"]
+    - [value_hmac, hmac, req, duplicate detection]
+    - [value_last4, text, opt, for display]
     - [issue_date, date, opt]
     - [expiry_date, date, opt]
     - [file_id, uuid, opt, fk doc.files]
-  unique: [[kind, value_hmac]]
+  unique: [[kind, country_code, value_hmac]]
   reqs: [EMP-05, EMP-16, EMP-18]
+  notes: One row per identifier; renewal updates issue and expiry dates (history in the audit log).
 
 - table: hrm.person_contacts
   traits: [std]
@@ -58,7 +57,7 @@
   reqs: [EMP-01]
 
 - table: hrm.person_relations
-  purpose: Family, dependents and emergency contacts in one table
+  purpose: "Family, dependents and emergency contacts in one table"
   traits: [std, soft]
   columns:
     - [person_id, uuid, req, fk hrm.persons]
@@ -70,12 +69,22 @@
     - [phone, text, opt]
     - [is_dependent, bool, req]
     - [is_emergency_contact, bool, req]
-    - [is_nominee, bool, req, "provident fund, gratuity, insurance"]
-    - [nominee_share, pct, opt]
   reqs: [EMP-01, CMP-04, CMP-05]
 
+- table: hrm.nominations
+  purpose: "Nominees per scheme (provident fund, gratuity, insurance plan)"
+  traits: [std, eff]
+  eff_key: [person_id, scheme, relation_id]
+  columns:
+    - [person_id, uuid, req, fk hrm.persons]
+    - [scheme, code, req, "pf, gratuity, or benefit plan code"]
+    - [relation_id, uuid, req, fk hrm.person_relations]
+    - [share, pct, req]
+  checks: ["deferred: shares per (person_id, scheme) on any date sum to 1"]
+  reqs: [CMP-04, CMP-05, PAY-26]
+
 - table: hrm.person_qualifications
-  purpose: Education, previous experience, languages and certifications
+  purpose: "Education, previous experience, languages and certifications"
   traits: [std, soft]
   columns:
     - [person_id, uuid, req, fk hrm.persons]
@@ -84,32 +93,31 @@
     - [institution, text, opt, "school, employer or issuing body"]
     - [start_date, date, opt]
     - [end_date, date, opt]
-    - [expiry_date, date, opt, "certifications (LND-05)"]
+    - [expiry_date, date, opt, certifications (LND-05)]
     - [grade_or_level, text, opt]
     - [details, json, req]
     - [file_id, uuid, opt, fk doc.files]
-    - [learning_record_id, uuid, opt, "fk hrm.learning_records when earned through training"]
-  indexes: [[person_id, kind], [expiry_date, "partial where expiry_date is not null"]]
+    - [learning_record_id, uuid, opt, fk hrm.learning_records when earned through training]
+  indexes: [[person_id, kind], [expiry_date, partial where expiry_date is not null]]
   reqs: [EMP-01, LND-05]
 
-# ---------------- employment ----------------
 - table: hrm.employments
   purpose: One employment of a person with one company; transfers between companies create a new linked row (FR-XM-30)
   traits: [std, co, cust]
   status: [pre_joining, active, on_notice, separated, cancelled]
   columns:
     - [person_id, uuid, req, fk hrm.persons]
-    - [employee_no, text, req, "numbering per company"]
+    - [employee_no, text, req, numbering per company]
     - [employee_type, code, req, "permanent, contract, probation, intern, daily_wage, consultant, part_time"]
     - [joining_date, date, req]
-    - [service_start_date, date, req, "carries over on intra-group transfer"]
+    - [service_start_date, date, req, carries over on intra-group transfer]
     - [confirmation_date, date, opt]
     - [expected_end_date, date, opt]
     - [separation_date, date, opt]
-    - [previous_employment_id, uuid, opt, "fk hrm.employments (transfer or rehire)"]
-    - [user_ref, uuid, opt, "iam.users.id"]
-    - [is_primary, bool, req, "one primary per person (multiple concurrent assignments are 1.1)"]
-  unique: [[company_id, lower(employee_no)]]
+    - [previous_employment_id, uuid, opt, fk hrm.employments (transfer or rehire)]
+    - [user_ref, uuid, opt, iam.users.id]
+    - [is_primary, bool, req, one primary per person (multiple concurrent assignments are 1.1)]
+  unique: [[company_id, lower(employee_no)], [person_id, "where is_primary and status in ('pre_joining','active','on_notice')"]]
   indexes: [[person_id], [company_id, status]]
   reqs: [EMP-02, EMP-04, EMP-07, EMP-15, EMP-17, FR-XM-30]
 
@@ -129,20 +137,21 @@
     - [manager_employment_id, uuid, opt, fk hrm.employments]
     - [pay_group_id, uuid, opt, fk hrm.pay_groups]
     - [cost_allocation, json, req, "list of {cost_center_ref or department, pct}; must sum to 1"]
-    - [fte, pct, req, "default 1"]
+    - [fte, pct, req, default 1]
     - [work_schedule, code, opt]
     - [is_acting, bool, req]
   indexes: [[employment_id, valid_from], [org_unit_id], [manager_employment_id]]
   reqs: [EMP-02, EMP-03, POS-01]
+  notes: Cycle check trigger on manager_employment_id.
 
 - table: hrm.employment_events
-  purpose: Why something changed (hire, promotion, transfer ... termination) with reason code
+  purpose: "Why something changed (hire, promotion, transfer ... termination) with reason code"
   traits: [std, co]
   status: [draft, pending_approval, approved, effective, cancelled]
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
     - [kind, "enum(hire,rehire,promotion,demotion,transfer,grade_change,acting,secondment,confirmation,probation_extension,salary_revision,separation,data_correction)", req]
-    - [reason_code, code, req, "option list"]
+    - [reason_code, code, req, option list]
     - [effective_date, date, req]
     - [notes, text, opt]
     - [carry_over, json, opt, "intra-group transfer: service, leave, loans rules (FR-XM-30)"]
@@ -186,18 +195,33 @@
     - [bank_id, uuid, opt, fk ref.banks]
     - [account_title, text, opt]
     - [account_number, enc, opt]
+    - [account_number_hmac, hmac, opt, normalized with bank; ghost-employee duplicate check]
     - [iban, enc, opt]
     - [iban_hmac, hmac, opt]
     - [split_kind, "enum(remainder,percent,amount)", req]
     - [split_value, money, opt]
     - [priority, int, req]
-  checks: ["bank fields required when payment_mode = bank_transfer or mobile_wallet"]
-  indexes: [[employment_id, valid_from]]
-  notes: "Changes go through maker-checker (iam.maker_checker_requests)."
+  checks: [bank fields required when payment_mode = bank_transfer or mobile_wallet]
+  indexes: [[employment_id, valid_from], [account_number_hmac], [iban_hmac]]
+  notes: Changes go through maker-checker (iam.maker_checker_requests).
   reqs: [EMP-06, PAY-24]
+  eff_key: [employment_id, priority]
+
+- table: hrm.employment_statutory_registrations
+  purpose: "Per-employee applicability and registration for EOBI, provincial social security and provident fund"
+  traits: [std, co, eff]
+  eff_key: [employment_id, scheme]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [scheme, code, req, "eobi, pessi, sessi, kp_ess, bessi, pf ... from pack"]
+    - [is_applicable, bool, req]
+    - [exemption_reason, text, opt]
+    - [registration_no, enc, opt]
+    - [registration_no_hmac, hmac, opt]
+  reqs: [PAY-20, CPL-02]
 
 - table: hrm.change_requests
-  purpose: Employee self-service changes to their own data, approved before applying (EMP-08)
+  purpose: "Employee self-service changes to their own data, approved before applying (EMP-08)"
   traits: [std, co]
   status: [submitted, approved, rejected, applied, cancelled]
   columns:
@@ -211,7 +235,7 @@
   reqs: [EMP-08, SSP-12]
 
 - table: hrm.service_requests
-  purpose: General HR requests from self-service (letters, documents, other)
+  purpose: "General HR requests from self-service (letters, documents, other)"
   traits: [std, co, br]
   status: [submitted, in_progress, fulfilled, rejected, cancelled]
   columns:
@@ -226,7 +250,7 @@
   reqs: [DOC-07, SSP-12]
 
 - table: hrm.employee_letters
-  purpose: Letters issued to an employee (offer, appointment, confirmation, increment, promotion, transfer, warning, experience, salary certificate)
+  purpose: "Letters issued to an employee (offer, appointment, confirmation, increment, promotion, transfer, warning, experience, salary certificate)"
   traits: [std, co]
   status: [draft, pending_approval, approved, issued, acknowledged, cancelled]
   columns:
@@ -235,7 +259,7 @@
     - [template_id, uuid, req, fk doc.templates]
     - [letter_type, code, req]
     - [data, json, req, "merged values, frozen at issue"]
-    - [contains_salary, bool, req, "only roles with salary permission may generate or view (DOC-08)"]
+    - [contains_salary, bool, req, only roles with salary permission may generate or view (DOC-08)]
     - [generated_document_id, uuid, opt, fk doc.generated_documents]
     - [issued_at, ts, opt]
     - [emailed_at, ts, opt]
@@ -247,21 +271,21 @@
   indexes: [[employment_id]]
   reqs: [DOC-04, DOC-05, DOC-07, DOC-08, CMP-06]
 
-# ---------------- structure ----------------
 - table: hrm.grades
   traits: [std, co, soft, name]
   columns:
-    - [rank, int, req, "ordering"]
-    - [defaults, json, req, "leave and policy defaults"]
+    - [rank, int, req, ordering]
+    - [defaults, json, req, leave and policy defaults]
   unique: [[company_id, lower(code)]]
   reqs: [POS-06]
 
 - table: hrm.positions
   traits: [std, co, eff, cust]
   status: [planned, open, filled, frozen, closed]
-  eff_key: [position_code_lower]
+  eff_key: [company_id, position_code_lower]
   columns:
     - [position_code, text, req]
+    - [position_code_lower, text, req, generated always as lower(position_code) stored]
     - [title, text, req]
     - [org_unit_id, uuid, req, fk org.org_units]
     - [grade_id, uuid, opt, fk hrm.grades]
@@ -269,9 +293,9 @@
     - [location_id, uuid, opt, fk org.locations]
     - [cost_center_ref, uuid, opt]
     - [budgeted_fte, pct, req]
-  notes: "One row per version; exclusion on (company_id, lower(position_code)) over the validity range."
   indexes: [[org_unit_id], [reports_to_position_id]]
   reqs: [POS-01, POS-02, POS-03, POS-04, POS-08]
+  notes: Cycle check trigger on reports_to_position_id.
 
 - table: hrm.headcount_budgets
   purpose: Headcount-based model (POS-01) — sanctioned strength per unit and grade
@@ -283,9 +307,8 @@
     - [sanctioned_count, int, req]
   reqs: [POS-01, POS-03]
 
-# ---------------- policies ----------------
 - table: hrm.policies
-  purpose: Named policies by type (leave, attendance, shift, overtime, pay, expense, loan, benefits, performance)
+  purpose: "Named policies by type (leave, attendance, shift, overtime, pay, expense, loan, benefits, performance)"
   traits: [std, co, soft, name]
   columns:
     - [policy_type, code, req]
@@ -300,10 +323,11 @@
   columns:
     - [policy_id, uuid, req, fk hrm.policies]
     - [version, int, req]
-    - [parameters, json, req, "validated against the policy type schema"]
-    - [is_overridden, bool, req, "tenant changed a pack value"]
+    - [parameters, json, req, validated against the policy type schema]
+    - [is_overridden, bool, req, tenant changed a pack value]
   unique: [[policy_id, version]]
   reqs: [POL-04, POL-06]
+  notes: "Exclusion on policy_id applies where status <> 'draft'; dates assigned on activation."
 
 - table: hrm.policy_assignments
   purpose: Assigns a policy by attribute rule with precedence
@@ -314,8 +338,8 @@
     - [rule, json, req, "conditions on company, location, grade, employee type, unit, custom field"]
   indexes: [[policy_id], [company_id, precedence]]
   reqs: [POL-02, POL-03]
+  eff_key: [policy_id, precedence]
 
-# ---------------- documents ----------------
 - table: hrm.employee_documents
   purpose: Employee document vault entries (file in doc.files)
   traits: [std, co]
@@ -353,7 +377,6 @@
   unique: [[publication_id, employment_id]]
   reqs: [DOC-06]
 
-# ---------------- onboarding and offboarding ----------------
 - table: hrm.checklist_templates
   traits: [std, co, soft, name]
   columns:
@@ -370,8 +393,8 @@
     - [title_i18n, i18n, req]
     - [owner_kind, "enum(hr,it,admin,manager,employee,finance,department)", req]
     - [owner_role_id, uuid, opt, fk iam.roles]
-    - [due_offset_days, int, req, "relative to joining or separation date"]
-    - [is_clearance, bool, req, "blocks final settlement until done (FR-XM-29)"]
+    - [due_offset_days, int, req, relative to joining or separation date]
+    - [is_clearance, bool, req, blocks final settlement until done (FR-XM-29)]
   reqs: [ONB-01, ONB-04]
 
 - table: hrm.checklists
@@ -406,11 +429,11 @@
     - [employment_id, uuid, req, fk hrm.employments]
     - [kind, "enum(resignation,termination,end_of_contract,retirement,death,absconding,other)", req]
     - [submitted_on, date, req]
-    - [notice_period_days, int, req, "from policy"]
+    - [notice_period_days, int, req, from policy]
     - [requested_last_day, date, opt]
     - [last_working_day, date, opt]
     - [notice_shortfall_days, int, opt]
-    - [exit_reason_code, code, opt, "standard taxonomy (ONB-13)"]
+    - [exit_reason_code, code, opt, standard taxonomy (ONB-13)]
     - [is_rehire_eligible, bool, opt]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   indexes: [[employment_id]]

@@ -1,7 +1,6 @@
 # HRMIS: payroll, statutory tables, tax, payments, final settlement, loans, expenses, compensation and benefits,
 # compliance. Spec 06a sections 14 to 17. Multi-currency payroll is Release 1.1: each pay group has one currency.
 
-# ---------------- payroll set-up ----------------
 - table: hrm.pay_groups
   traits: [std, co, soft, name]
   columns:
@@ -11,7 +10,7 @@
     - [cut_off_day, int, opt]
     - [payment_day, int, opt]
     - [company_bank_account_id, uuid, opt, fk org.company_bank_accounts]
-    - [approval_threshold, money, opt, "dual approval above this total (PAY-13)"]
+    - [approval_threshold, money, opt, dual approval above this total (PAY-13)]
   unique: [[company_id, lower(code)]]
   reqs: [PAY-01, PAY-13]
 
@@ -22,25 +21,20 @@
   columns:
     - [pay_group_id, uuid, req, fk hrm.pay_groups]
     - [period_no, int, req]
-    - [tax_year, int, req, "year in which the tax year starts"]
+    - [tax_year, int, req, year in which the tax year starts]
     - [start_date, date, req]
     - [end_date, date, req]
     - [cut_off_date, date, req]
     - [payment_date, date, req]
-  unique: [[pay_group_id, start_date]]
+  unique: [[pay_group_id, start_date], [pay_group_id, tax_year, period_no]]
   reqs: [PAY-01, PAY-38]
+  checks: ["exclusion: (pay_group_id with =, daterange(start_date, end_date, '[]') with &&)", start_date <= cut_off_date and start_date <= end_date]
+  notes: "Trigger refuses new pay_inputs, retro_adjustments or installments targeting a closed period."
 
 - table: hrm.pay_components
   traits: [std, co, soft, name]
   columns:
     - [kind, "enum(earning,deduction,employer_contribution,reimbursement,informational)", req]
-    - [method, "enum(fixed,percent_of,formula,table_lookup,per_day,per_hour,attendance_linked,manual)", req]
-    - [formula, text, opt, "expression over named inputs; validated and versioned"]
-    - [base_component_codes, "text[]", req]
-    - [table_code, code, opt, "statutory or tenant table for table_lookup"]
-    - [pro_rata_rule, "enum(none,calendar_days,working_days,fixed_30,custom)", req]
-    - [statutory_flags, json, req, "taxable, eobi_base, social_security_base, pf_base, gratuity_base ... set by pack"]
-    - [tax_treatment, code, opt, "regular, irregular (bonus, arrears, encashment), exempt"]
     - [payslip_order, int, req]
     - [is_recurring, bool, req]
     - [is_one_time_allowed, bool, req]
@@ -48,10 +42,25 @@
   unique: [[company_id, lower(code)]]
   reqs: [PAY-02, PAY-03, PAY-05, PAY-08, PAY-18, CMP-03]
 
+- table: hrm.pay_component_versions
+  purpose: "Calculation definition of a component, effective-dated; runs record the version used"
+  traits: [std, eff]
+  eff_key: [component_id]
+  columns:
+    - [component_id, uuid, req, fk hrm.pay_components]
+    - [method, "enum(fixed,percent_of,formula,table_lookup,per_day,per_hour,attendance_linked,manual)", req]
+    - [formula, text, opt, expression over named inputs]
+    - [base_component_ids, "uuid[]", req, cycle check on save]
+    - [statutory_table_code, code, opt]
+    - [pro_rata_rule, "enum(none,calendar_days,working_days,fixed_30,custom)", req]
+    - [statutory_flags, json, req, "taxable, eobi_base, social_security_base, pf_base, gratuity_base ... set by pack"]
+    - [tax_treatment, code, opt, "regular, irregular, exempt"]
+  reqs: [PAY-02, PAY-03, PAY-05, PAY-18, PAY-31]
+
 - table: hrm.salary_structures
   traits: [std, co, soft, name]
   columns:
-    - [assign_rule, json, opt, "default by grade or employee type"]
+    - [assign_rule, json, opt, default by grade or employee type]
   unique: [[company_id, lower(code)]]
   reqs: [PAY-04]
 
@@ -65,10 +74,11 @@
     - [default_amount, money, opt]
     - [default_percent, pct, opt]
     - [is_mandatory, bool, req]
+    - [currency_code, char(3), req]
   reqs: [PAY-04]
 
 - table: hrm.compensation_assignments
-  purpose: An employee's salary structure, effective-dated; a revision closes one row and opens another (PAY-06)
+  purpose: "An employee's salary structure, effective-dated; a revision closes one row and opens another (PAY-06)"
   traits: [std, co, eff]
   eff_key: [employment_id]
   columns:
@@ -76,13 +86,13 @@
     - [structure_id, uuid, req, fk hrm.salary_structures]
     - [event_id, uuid, req, fk hrm.employment_events]
     - [currency_code, char(3), req]
-    - [gross_amount, money, opt, "informational; lines are authoritative"]
+    - [gross_amount, money, opt, informational; lines are authoritative]
     - [increment_proposal_id, uuid, opt, fk hrm.increment_proposals]
   indexes: [[employment_id, valid_from]]
   reqs: [PAY-04, PAY-06, CMP-02]
 
 - table: hrm.compensation_lines
-  purpose: Amounts per component for an assignment, including allowances and perquisites (CMP-03)
+  purpose: "Amounts per component for an assignment, including allowances and perquisites (CMP-03)"
   traits: [std, co]
   columns:
     - [assignment_id, uuid, req, fk hrm.compensation_assignments]
@@ -94,17 +104,18 @@
   reqs: [PAY-04, CMP-03]
 
 - table: hrm.statutory_tables
-  purpose: Pack-supplied, tenant-overridable rate and slab tables (income tax slabs, EOBI, PESSI/SESSI, WWF, minimum wage)
+  purpose: "Pack-supplied, tenant-overridable rate and slab tables (income tax slabs, EOBI, PESSI/SESSI, WWF, minimum wage)"
   traits: [std, eff]
   eff_key: [company_scope, code]
   columns:
-    - [code, code, req, "e.g. pk.income_tax.salaried"]
-    - [company_id, uuid, opt, "fk org.companies; null = pack or tenant-wide value"]
+    - [code, code, req, e.g. pk.income_tax.salaried]
+    - [company_id, uuid, opt, fk org.companies; null = pack or tenant-wide value]
+    - [company_scope, uuid, req, "generated always as coalesce(company_id, nil uuid) stored"]
     - [source, "enum(pack,tenant)", req]
     - [kind, "enum(slab,rate,ceiling,lookup)", req]
     - [description_i18n, i18n, req]
     - [pack_version, text, opt]
-  notes: "company_scope = coalesce(company_id, nil uuid). Pack updates are staged (POL-05 is 1.1; in 1.0 a pack update creates new rows with a future valid_from)."
+  notes: Pack updates create new versions with a future valid_from.
   reqs: [PAY-17, PAY-20, PAY-21, POL-04, CPL-04]
 
 - table: hrm.statutory_table_rows
@@ -115,13 +126,15 @@
     - [lower_bound, money, opt]
     - [upper_bound, money, opt]
     - [fixed_amount, money, opt]
+    - [currency_code, char(3), opt, for money bounds]
     - [rate, rate, opt]
     - [key, code, opt, "for lookups, e.g. province code"]
     - [attributes, json, req]
   unique: [[table_id, seq]]
   reqs: [PAY-17, PAY-20, PAY-21]
+  checks: [lower_bound < upper_bound when both present, "exclusion: (table_id with =, coalesce(key,'') with =, numrange(lower_bound, upper_bound) with &&)"]
+  notes: Immutable by trigger once the parent version is effective or referenced by any run; change by a new table version.
 
-# ---------------- payroll runs ----------------
 - table: hrm.pay_runs
   traits: [std, co]
   status: [created, inputs_imported, calculated, validated, in_review, approved, locked, paid, posted, closed, cancelled]
@@ -137,29 +150,36 @@
     - [total_net, money, opt]
     - [total_employer, money, opt]
     - [employee_count, int, opt]
-    - [stage_log, json, req, "user and time per stage (PAY-10)"]
+    - [stage_log, json, req, user and time per stage (PAY-10)]
     - [reopened_reason, text, opt]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
-  unique: [[company_id, run_no]]
+  unique: [[company_id, run_no], [pay_group_id, pay_period_id, "where kind = 'regular' and status <> 'cancelled'"]]
   indexes: [[pay_group_id, pay_period_id]]
   reqs: [PAY-10, PAY-14, PAY-15, PAY-34]
+  notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33); status column may still advance (paid, posted, closed) through the run service only."
 
 - table: hrm.pay_run_employees
-  purpose: Who is in a run, the frozen input snapshot, status and validation flags
+  purpose: "Who is in a run, the frozen input snapshot, status and validation flags"
   traits: [std, co]
   status: [included, excluded, held, calculated, error]
   columns:
     - [pay_run_id, uuid, req, fk hrm.pay_runs]
     - [employment_id, uuid, req, fk hrm.employments]
-    - [snapshot, json, req, "frozen assignment, compensation lines, attendance summary, leave, loans, tables and policy versions (PAY-31)"]
+    - [period_start, date, req]
+    - [period_end, date, req]
+    - [run_kind, text, req, copy of pay_runs.kind]
+    - [run_status, text, req, "copy of pay_runs.status, maintained by the run service"]
+    - [snapshot, json, req, "frozen assignment, compensation lines, attendance summary, leave, loans, tables and policy versions (PAY-31); ids and amounts only, never identifiers or bank numbers in plaintext"]
     - [snapshot_hash, bytea, req]
     - [validation_flags, "text[]", req, "negative_net, missing_bank, missing_tax_id, variance_above_threshold, duplicate, no_attendance"]
     - [hold_id, uuid, opt, fk hrm.salary_holds]
   unique: [[pay_run_id, employment_id]]
   reqs: [PAY-09, PAY-11, PAY-31]
+  notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
+  checks: ["exclusion: (employment_id with =, daterange(period_start, period_end, '[]') with &&) where run_kind in ('regular','final_settlement') and run_status <> 'cancelled'"]
 
 - table: hrm.pay_inputs
-  purpose: One-time inputs to a period (bonus, incentive, deduction, adjustment, imported file rows)
+  purpose: "One-time inputs to a period (bonus, incentive, deduction, adjustment, imported file rows)"
   traits: [std, co]
   status: [pending, consumed, cancelled]
   columns:
@@ -167,6 +187,7 @@
     - [pay_period_id, uuid, req, fk hrm.pay_periods]
     - [component_id, uuid, req, fk hrm.pay_components]
     - [amount, money, opt]
+    - [currency_code, char(3), req]
     - [units, qty, opt]
     - [source_type, text, req, "manual, import, expense_claim, overtime, loan, bonus"]
     - [source_id, uuid, opt]
@@ -174,6 +195,7 @@
     - [import_batch_id, uuid, opt, fk itg.import_batches]
   indexes: [[employment_id, pay_period_id]]
   reqs: [PAY-07, PAY-08]
+  unique: [[source_type, source_id, component_id, "where status <> 'cancelled' and source_id is not null"]]
 
 - table: hrm.pay_results
   purpose: Net result per employee per run; append-only once the run is locked (PAY-33)
@@ -181,6 +203,8 @@
   columns:
     - [pay_run_id, uuid, req, fk hrm.pay_runs]
     - [employment_id, uuid, req, fk hrm.employments]
+    - [tax_year, int, req]
+    - [pay_period_id, uuid, req, fk hrm.pay_periods]
     - [gross, money, req]
     - [deductions, money, req]
     - [net, money, req]
@@ -189,24 +213,28 @@
     - [tax_ytd, money, req]
     - [worked_days, qty, req]
     - [paid_days, qty, req]
-    - [is_reversed, bool, req, "payslip reversed before payment (FR-XM-27)"]
     - [corrects_result_id, uuid, opt, fk hrm.pay_results]
   unique: [[pay_run_id, employment_id]]
-  notes: "Trigger refuses update and delete when the run status is locked or later."
+  notes: "Trigger refuses update and delete when the run status is locked or later. Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
   reqs: [PAY-12, PAY-28, PAY-33, FR-XM-27]
+  indexes: [[employment_id, tax_year]]
 
 - table: hrm.pay_result_lines
   traits: [std, co]
   columns:
     - [result_id, uuid, req, fk hrm.pay_results]
+    - [pay_period_id, uuid, req, denormalized]
+    - [employment_id, uuid, req, denormalized]
     - [component_id, uuid, req, fk hrm.pay_components]
     - [amount, money, req]
     - [units, qty, opt]
     - [rate, rate, opt]
     - [period_start, date, opt, "arrears: the period it relates to"]
-    - [cost_allocation, json, req, "split by cost centre or department for the journal"]
-  indexes: [[result_id]]
+    - [cost_allocation, json, req, split by cost centre or department for the journal]
+  indexes: [[result_id], [company_id, component_id, pay_period_id]]
   reqs: [PAY-06, PAY-29, PAY-30]
+  notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
+  partition: range on pay_period start (yearly) once volume requires; key includes partition column
 
 - table: hrm.pay_traces
   purpose: Calculation trace per result (PAY-32)
@@ -216,20 +244,37 @@
     - [trace, json, req, "inputs, formulas, rule and table versions, rounding steps"]
     - [engine_version, text, req]
   reqs: [PAY-32]
+  notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
+
+- table: hrm.pay_result_reversals
+  purpose: Reversal of a single payslip after approval and before payment (FR-XM-27); after payment correct by adjustment or off-cycle run
+  traits: [app, co]
+  columns:
+    - [result_id, uuid, req, fk hrm.pay_results]
+    - [reason, text, req]
+    - [approved_by, uuid, req, fk iam.users]
+    - [reversed_at, ts, req]
+  unique: [[result_id]]
+  checks: [allowed only while no non-failed payment line exists for the result]
+  reqs: [FR-XM-27, PAY-14]
 
 - table: hrm.retro_adjustments
-  purpose: Changes discovered after lock (attendance, salary, leave) carried to the next open run (PAY-16, FR-XM-26)
+  purpose: "Changes discovered after lock (attendance, salary, leave) carried to the next open run (PAY-16, FR-XM-26)"
   traits: [std, co]
   status: [pending, applied, cancelled]
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
     - [original_run_id, uuid, req, fk hrm.pay_runs]
+    - [original_pay_period_id, uuid, req, fk hrm.pay_periods; tax year of arrears]
     - [cause_type, text, req]
     - [cause_id, uuid, opt]
     - [component_id, uuid, req, fk hrm.pay_components]
     - [amount, money, req]
+    - [currency_code, char(3), req]
     - [applied_in_run_id, uuid, opt, fk hrm.pay_runs]
   reqs: [PAY-06, PAY-16, FR-XM-26]
+  notes: "applied_in_run_id may be set once (trigger); status pending -> applied is one-way."
+  indexes: [[employment_id, status, "partial where status='pending'"]]
 
 - table: hrm.salary_holds
   traits: [std, co]
@@ -238,10 +283,12 @@
     - [employment_id, uuid, req, fk hrm.employments]
     - [reason, text, req]
     - [held_from_run_id, uuid, req, fk hrm.pay_runs]
-    - [released_in_run_id, uuid, opt, fk hrm.pay_runs]
+    - [released_at, ts, opt]
+    - [released_by, uuid, opt]
   reqs: [PAY-09]
+  notes: A release pays the original result of the held run through a payment batch; the salary is never recalculated. Each result is paid once (hrm.payment_lines unique key).
+  indexes: [[employment_id, status, "partial where status='active'"]]
 
-# ---------------- tax ----------------
 - table: hrm.tax_declarations
   traits: [std, co]
   status: [draft, submitted, verified, rejected]
@@ -273,51 +320,65 @@
   unique: [[employment_id, tax_year, employer_name]]
   reqs: [PAY-22]
 
-# ---------------- payments ----------------
 - table: hrm.payment_batches
   traits: [std, co]
   status: [generated, validated, downloaded, partially_paid, paid, cancelled]
   columns:
-    - [pay_run_id, uuid, req, fk hrm.pay_runs]
+    - [pay_run_id, uuid, opt, fk hrm.pay_runs; null for a batch that releases held salaries]
     - [company_bank_account_id, uuid, opt, fk org.company_bank_accounts]
     - [payment_mode, "enum(bank_transfer,cheque,cash,mobile_wallet)", req]
-    - [template_id, uuid, opt, "fk doc.templates (bank file format)"]
+    - [template_id, uuid, opt, fk doc.templates (bank file format)]
     - [file_id, uuid, opt, fk doc.files]
     - [total_amount, money, req]
     - [line_count, int, req]
+    - [value_date, date, opt]
+    - [file_checksum, text, opt, sha-256 of the downloaded file]
+    - [currency_code, char(3), req]
   reqs: [PAY-23, PAY-24]
+  unique: [[pay_run_id, payment_mode, company_bank_account_id, "where status <> 'cancelled' (NULLS NOT DISTINCT)"]]
 
 - table: hrm.payment_lines
   traits: [std, co]
   status: [pending, paid, failed, reissued]
   columns:
     - [batch_id, uuid, req, fk hrm.payment_batches]
+    - [batch_status, text, req, copy of batch status for the partial unique key]
     - [result_id, uuid, req, fk hrm.pay_results]
+    - [source_run_id, uuid, req, fk hrm.pay_runs; run of the result being paid (differs from batch run for released holds)]
     - [bank_account_id, uuid, opt, fk hrm.employee_bank_accounts]
+    - [cheque_no, text, opt]
+    - [iban_hmac, hmac, opt, snapshot]
+    - [iban, enc, opt, snapshot]
+    - [account_number, enc, opt, snapshot]
+    - [account_title, text, opt, snapshot]
+    - [bank_id, uuid, opt, fk ref.banks; snapshot at generation]
     - [amount, money, req]
     - [bank_reference, text, opt]
     - [failure_reason, text, opt]
     - [reissued_in_line_id, uuid, opt, fk hrm.payment_lines]
   indexes: [[batch_id], [result_id]]
   reqs: [PAY-23, PAY-25]
+  unique: [[result_id, bank_account_id, "where status not in ('failed','reissued') and batch not cancelled (maintained via denormalized batch_status)"]]
+  checks: ["deferred: sum of active lines per result equals pay_results.net"]
 
-# ---------------- final settlement ----------------
 - table: hrm.final_settlements
   traits: [std, co]
   status: [draft, calculated, blocked, approved, paid, cancelled]
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
     - [separation_id, uuid, req, fk hrm.separations]
-    - [pay_run_id, uuid, opt, "fk hrm.pay_runs (off-cycle run that pays it)"]
+    - [pay_run_id, uuid, opt, fk hrm.pay_runs (off-cycle run that pays it)]
     - [clearance_status, "enum(pending,cleared,waived)", req]
     - [open_items, json, req, "from the clearance check: loans, advances, items, claims, approvals (FR-XM-29)"]
     - [net_amount, money, opt]
+    - [currency_code, char(3), req]
     - [statement_document_id, uuid, opt, fk doc.generated_documents]
     - [acknowledged_at, ts, opt]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   unique: [[employment_id, "where status <> 'cancelled'"]]
-  checks: ["status may become approved only when clearance_status in (cleared, waived) (FR-XM-29)"]
+  checks: ["status may become approved only when clearance_status in (cleared, waived) (FR-XM-29)", pay_run_id required before status = paid]
   reqs: [PAY-26, PAY-27, ONB-17, FR-XM-29]
+  notes: Header and lines locked by trigger from approved onward; correction by cancel and reissue (FR-XM-05).
 
 - table: hrm.final_settlement_lines
   traits: [std, co]
@@ -329,7 +390,6 @@
     - [basis, json, req]
   reqs: [PAY-26, LND-06, CMP-04]
 
-# ---------------- loans and advances ----------------
 - table: hrm.loan_types
   traits: [std, co, soft, name]
   columns:
@@ -347,7 +407,8 @@
     - [employment_id, uuid, req, fk hrm.employments]
     - [loan_type_id, uuid, req, fk hrm.loan_types]
     - [principal, money, req]
-    - [interest_rate, pct, req, "default 0"]
+    - [currency_code, char(3), req]
+    - [interest_rate, pct, req, default 0]
     - [installments, int, req]
     - [start_period_id, uuid, opt, fk hrm.pay_periods]
     - [guarantor_employment_id, uuid, opt, fk hrm.employments]
@@ -368,21 +429,24 @@
     - [pay_result_line_id, uuid, opt, fk hrm.pay_result_lines]
   unique: [[loan_id, seq]]
   reqs: [LON-03]
+  notes: Frozen by trigger once status = deducted.
 
 - table: hrm.loan_transactions
-  purpose: Loan ledger (disbursement, recovery, adjustment, write-off); balance is the sum
+  purpose: "Loan ledger (disbursement, recovery, adjustment, write-off); balance is the sum"
   traits: [app, co]
   columns:
     - [loan_id, uuid, req, fk hrm.loans]
     - [kind, "enum(disbursement,recovery,early_settlement,adjustment,write_off,settlement_recovery)", req]
-    - [amount, money, req, "positive increases balance"]
+    - [amount, money, req, positive increases balance]
     - [txn_date, date, req]
     - [source_type, text, opt]
     - [source_id, uuid, opt]
   indexes: [[loan_id, txn_date]]
   reqs: [LON-03, LON-05, LON-07]
+  unique: [[loan_id, source_type, source_id, kind, where source_id is not null]]
+  checks: ["trigger: a recovery cannot exceed the outstanding balance"]
+  notes: Recovery entries are written only when the pay run locks.
 
-# ---------------- expenses ----------------
 - table: hrm.expense_categories
   traits: [std, co, soft, name]
   columns:
@@ -415,13 +479,12 @@
     - [amount, money, req]
     - [description, text, opt]
     - [receipt_file_id, uuid, opt, fk doc.files]
-    - [receipt_hash, text, opt, "duplicate receipt check (EXP-03)"]
+    - [receipt_hash, text, opt, duplicate receipt check (EXP-03)]
     - [cost_allocation, json, req]
     - [policy_flags, "text[]", req, "over_limit, duplicate, missing_receipt, out_of_policy"]
   indexes: [[claim_id], [receipt_hash]]
   reqs: [EXP-02, EXP-03]
 
-# ---------------- compensation and benefits ----------------
 - table: hrm.salary_bands
   traits: [std, co, eff]
   eff_key: [grade_id, currency_code]
@@ -431,7 +494,7 @@
     - [minimum, money, req]
     - [midpoint, money, req]
     - [maximum, money, req]
-  checks: ["minimum <= midpoint and midpoint <= maximum"]
+  checks: [minimum <= midpoint and midpoint <= maximum]
   reqs: [CMP-01, POS-06]
 
 - table: hrm.increment_cycles
@@ -443,8 +506,8 @@
     - [budget_amount, money, opt]
     - [currency_code, char(3), req]
     - [eligibility_rule, json, req]
-    - [guidelines, json, req, "e.g. percent by rating and compa-ratio"]
-    - [review_cycle_id, uuid, opt, "fk hrm.review_cycles (PRF-09)"]
+    - [guidelines, json, req, e.g. percent by rating and compa-ratio]
+    - [review_cycle_id, uuid, opt, fk hrm.review_cycles (PRF-09)]
   reqs: [CMP-02, PRF-09]
 
 - table: hrm.increment_proposals
@@ -473,6 +536,7 @@
     - [coverage, json, req, "limits, dependents allowed"]
     - [employee_premium_component_id, uuid, opt, fk hrm.pay_components]
     - [employer_premium_component_id, uuid, opt, fk hrm.pay_components]
+    - [currency_code, char(3), req]
   unique: [[company_id, lower(code)]]
   reqs: [CMP-05]
 
@@ -483,7 +547,7 @@
     - [plan_id, uuid, req, fk hrm.benefit_plans]
     - [employment_id, uuid, req, fk hrm.employments]
     - [coverage_level, code, opt]
-    - [covered_relation_ids, "uuid[]", req, "hrm.person_relations"]
+    - [covered_relation_ids, "uuid[]", req, hrm.person_relations]
     - [employee_premium, money, opt]
     - [employer_premium, money, opt]
     - [policy_number, text, opt]
@@ -506,18 +570,20 @@
   status: [active, closed]
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
-    - [scheme_code, code, req, "statutory table or policy"]
+    - [scheme_code, code, req, statutory table or policy]
     - [opened_on, date, req]
     - [closed_on, date, opt]
+    - [currency_code, char(3), req]
   unique: [[employment_id, scheme_code]]
   reqs: [CMP-04]
+  notes: On intra-group transfer the old account closes with a transfer entry and the new account opens with the balance (employment_events.carry_over).
 
 - table: hrm.provident_fund_ledger
   traits: [app, co]
   columns:
     - [account_id, uuid, req, fk hrm.provident_fund_accounts]
     - [entry_date, date, req]
-    - [kind, "enum(employee_contribution,employer_contribution,profit,loan,loan_repayment,withdrawal,payout,adjustment)", req]
+    - [kind, "enum(employee_contribution,employer_contribution,profit,loan,loan_repayment,withdrawal,payout,adjustment,transfer_out,transfer_in)", req]
     - [amount, money, req]
     - [source_type, text, opt]
     - [source_id, uuid, opt]
@@ -525,22 +591,24 @@
   reqs: [CMP-04]
 
 - table: hrm.liability_accruals
-  purpose: Gratuity, leave encashment and similar liabilities computed per period (CMP-07, LVE-13 basis)
+  purpose: "Gratuity, leave encashment and similar liabilities computed per period (CMP-07, LVE-13 basis)"
   traits: [app, co]
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
     - [pay_period_id, uuid, req, fk hrm.pay_periods]
     - [kind, "enum(gratuity,leave_encashment,other)", req]
+    - [seq, int, req, "1 for the original, higher for corrections"]
     - [balance, money, req]
     - [movement, money, req]
+    - [currency_code, char(3), req]
     - [basis, json, req]
     - [accounting_event_id, uuid, opt, fk itg.accounting_events]
-  unique: [[employment_id, pay_period_id, kind]]
+    - [reverses_accrual_id, uuid, opt, fk hrm.liability_accruals]
+  unique: [[employment_id, pay_period_id, kind, seq]]
   reqs: [CMP-04, CMP-07]
 
-# ---------------- compliance ----------------
 - table: hrm.compliance_obligations
-  purpose: Statutory deadlines per company (CPL-01), from pack and tenant
+  purpose: "Statutory deadlines per company (CPL-01), from pack and tenant"
   traits: [std, co, name]
   columns:
     - [authority, text, req]
@@ -564,29 +632,29 @@
   reqs: [CPL-01]
 
 - table: hrm.statutory_returns
-  purpose: Generated registers and returns (EOBI, social security, withholding statements, tax certificates)
+  purpose: "Generated registers and returns (EOBI, social security, withholding statements, tax certificates)"
   traits: [app, co]
   columns:
     - [return_code, code, req]
     - [period_label, text, req]
     - [compliance_task_id, uuid, opt, fk hrm.compliance_tasks]
-    - [employment_id, uuid, opt, "fk hrm.employments for per-employee certificates (CPL-05)"]
+    - [employment_id, uuid, opt, fk hrm.employments for per-employee certificates (CPL-05)]
     - [generated_document_id, uuid, req, fk doc.generated_documents]
     - [source_run_ids, "uuid[]", req]
   indexes: [[company_id, return_code, period_label], [employment_id]]
   reqs: [CPL-02, CPL-04, CPL-05]
 
-# ---------------- parallel run (PAY-35) ----------------
 - table: hrm.parallel_runs
-  purpose: Compare a pay run with the customer's legacy payroll results before go-live
+  purpose: "Compare a pay run with the customer's legacy payroll results before go-live"
   traits: [std, co]
   status: [imported, compared, signed_off]
   columns:
     - [pay_run_id, uuid, req, fk hrm.pay_runs]
     - [import_batch_id, uuid, req, fk itg.import_batches]
-    - [tolerance, money, req, "differences at or below are treated as matching"]
+    - [tolerance, money, req, differences at or below are treated as matching]
     - [summary, json, opt, "matched, mismatched, missing counts by component"]
     - [signed_off_by, uuid, opt]
+    - [currency_code, char(3), req]
   reqs: [PAY-35]
 
 - table: hrm.parallel_run_lines

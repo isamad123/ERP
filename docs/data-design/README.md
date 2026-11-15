@@ -3,7 +3,7 @@
 Status: **proposed, awaiting product-owner approval**. No migration may be written before approval.
 
 This is the column-level design for the shared foundation (kernel) and HRMIS tables needed by the 369 requirements
-tagged Release 1.0 (199 tables in all). It follows `docs/specs/03-…` sections 3 to 10, with section 14 as amended by D-47
+tagged Release 1.0 (204 tables in all). It follows `docs/specs/03-…` sections 3 to 10, with section 14 as amended by D-47
 (separate database per customer; no `tenant_id`).
 
 The YAML files are written so a code generator can read them directly (token strategy, section 1). The same files are
@@ -12,10 +12,10 @@ the source for the generated data dictionary, which the build compares against t
 | File | Holds | Tables |
 | --- | --- | --- |
 | `control-plane.yaml` | The single small database that lists customers, their databases, licences and usage | 13 |
-| `kernel.yaml` | Shared foundation tables inside every customer database | 80 |
-| `hrm-people.yaml` | Persons, employment, organization structure, policies, documents, self-service, onboarding and exit | 29 |
+| `kernel.yaml` | Shared foundation tables inside every customer database | 81 |
+| `hrm-people.yaml` | Persons, employment, organization structure, policies, documents, self-service, onboarding and exit | 31 |
 | `hrm-time.yaml` | Devices, shifts, rosters, attendance, overtime, leave | 17 |
-| `hrm-pay.yaml` | Payroll, statutory tables, tax, payments, final settlement, loans, expenses, compensation and benefits, compliance, parallel run | 45 |
+| `hrm-pay.yaml` | Payroll, statutory tables, tax, payments, final settlement, loans, expenses, compensation and benefits, compliance, parallel run | 47 |
 | `hrm-talent.yaml` | Forms, performance management, learning | 15 |
 | `diagrams.md` | Entity relationship diagrams per area | — |
 
@@ -89,22 +89,35 @@ Every table also follows: primary key on `id` (or the composite key given); ever
    encrypted with a blind index.
 6. **Personal data in the audit log** is encrypted per person (`aud.subject_keys`) so that erasure can destroy the key
    without breaking the audit hash chain (spec 03 section 14.3).
-7. **Append-only:** audit, attendance events, leave ledger, payroll results after lock, provident fund ledger, loan
-   ledger, workflow history, accounting events.
+7. **Append-only:** audit, attendance events, leave ledger, provident fund ledger, loan ledger, liability accruals,
+   workflow history, accounting events, payslip reversals. **Locked after the event:** pay runs, run employees, results,
+   result lines and traces once the run locks; attendance and leave days once their attendance period locks; final
+   settlements once approved; statutory table rows once effective or used.
 8. **Partitioned by month from the first migration:** `aud.change_log`, `aud.access_log`, `iam.login_attempts`,
-   `hrm.attendance_events`, `job.run_logs`, `ntf.outbound_messages`, `itg.accounting_events`.
+   `hrm.attendance_events`, `hrm.attendance_days`, `job.run_logs`, `ntf.outbound_messages`. Unique keys on partitioned
+   tables always include the partition column. `itg.accounting_events` is not partitioned (low volume, needs a global
+   unique key). `hrm.pay_result_lines` carries its period so it can be partitioned yearly when volume requires.
 9. **Outbox and inbox** tables (`outbox_messages`, `inbox_messages`, spec 03 section 7.5) exist in every module
    schema and are not repeated in the files.
 10. **Reporting views** named `rpt.v_hrm_<entity>` are generated for every master and transactional table; they apply
     data scopes and hide salary columns from roles without salary permission.
 
+11. **Unique keys with nullable columns** use `NULLS NOT DISTINCT` (PostgreSQL 16 or later), so a null company, branch
+    or scope cannot create a duplicate. Exclusion constraints use a generated `coalesce(..., nil uuid)` column.
+12. **No cross-company references.** Every company-scoped parent table has `unique (company_id, id)`, and company-scoped
+    children reference it with a composite foreign key `(company_id, parent_id)`. A row can never point at another
+    company's employee, pay group, component, bank account or leave type.
+13. **Hierarchies** (org unit parents, managers, position reporting lines, cascading goals) have cycle-check triggers.
+14. **Idempotency.** Anything that can be fed twice into payroll, leave or loans has a unique source key
+    (`source_type, source_id, ...`), so retries never double-count.
+
 ## Cross-module rules enforced in the data design
 
 | Rule | Where |
 | --- | --- |
-| FR-XM-05, 06 Finalized is immutable; numbers never reused | `pay_results` append-only after lock; `cfg.numbering_voids`; status models with `cancelled` |
-| FR-XM-26 Attendance lock at payroll | `hrm.attendance_periods.status = locked`, set by the run; trigger refuses changes to `attendance_days` in a locked period; later changes go to `hrm.retro_adjustments` |
-| FR-XM-27 One summarized journal per company and cost allocation | `itg.accounting_events` per run per company, lines by component and cost allocation |
+| FR-XM-05, 06 Finalized is immutable; numbers never reused | Lock triggers on payroll, settlement and statutory tables; `cfg.numbering_voids`; status models with `cancelled` |
+| FR-XM-26 Attendance lock at payroll | `hrm.attendance_periods` (one per pay period, never reopened once its run locks); lock trigger on attendance days, leave days, overtime and regularizations; later changes go to `hrm.retro_adjustments` |
+| FR-XM-27 One summarized journal per company; payslip reversal before payment | `itg.accounting_events` unique per source and posting version; `hrm.pay_result_reversals` |
 | FR-XM-28 One person, several roles | `hrm.persons` separate from `hrm.employments`; kernel parties link later by `party_ref` |
 | FR-XM-29 Final settlement blocked by open items | `hrm.final_settlements.clearance_status`; settlement completes only when the clearance check view returns no open loans, advances, unreturned items, unsubmitted claims or pending approvals |
 | FR-XM-30 Transfer between companies | New `hrm.employments` row with `previous_employment_id` and carry-over rules recorded in `hrm.employment_events` |

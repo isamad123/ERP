@@ -2,13 +2,14 @@
 # Calibration, 9-box, continuous feedback, improvement plans, needs analysis and cost reports are Release 1.1.
 
 - table: hrm.form_definitions
-  purpose: Configurable forms for appraisals and probation reviews (PRF-03, ONB-12)
+  purpose: "Configurable forms for appraisals and probation reviews (PRF-03, ONB-12)"
   traits: [std, co, soft, name]
   columns:
     - [purpose, "enum(appraisal,probation_review,goal_review,custom)", req]
     - [active_version_id, uuid, opt, fk hrm.form_versions]
   unique: [[company_id, lower(code)]]
   reqs: [PRF-03, ONB-12]
+  notes: "active_version_id uses composite FK (id, active_version_id) -> hrm.form_versions (parent_id, id)."
 
 - table: hrm.form_versions
   traits: [std]
@@ -64,7 +65,7 @@
   reqs: [PRF-01, PRF-09]
 
 - table: hrm.review_assignments
-  purpose: Who reviews whom in a cycle (self, manager, skip-level, peer, 360)
+  purpose: "Who reviews whom in a cycle (self, manager, skip-level, peer, 360)"
   traits: [std, co]
   status: [pending, submitted, declined]
   columns:
@@ -82,9 +83,9 @@
   status: [draft, agreed, in_progress, achieved, partially_achieved, missed, cancelled]
   columns:
     - [cycle_id, uuid, opt, fk hrm.review_cycles]
-    - [owner_employment_id, uuid, opt, "fk hrm.employments; null for unit goals"]
+    - [owner_employment_id, uuid, opt, fk hrm.employments; null for unit goals]
     - [org_unit_id, uuid, opt, fk org.org_units]
-    - [parent_goal_id, uuid, opt, "fk hrm.goals (cascading)"]
+    - [parent_goal_id, uuid, opt, fk hrm.goals (cascading)]
     - [framework, "enum(kpi,okr,scorecard)", req]
     - [title, text, req]
     - [description, text, opt]
@@ -94,6 +95,7 @@
     - [due_date, date, opt]
   indexes: [[owner_employment_id, cycle_id], [parent_goal_id]]
   reqs: [PRF-02]
+  notes: Cycle check trigger on parent_goal_id.
 
 - table: hrm.goal_updates
   traits: [app, co]
@@ -105,7 +107,6 @@
   indexes: [[goal_id, created_at]]
   reqs: [PRF-02]
 
-# ---------------- learning ----------------
 - table: hrm.courses
   traits: [std, co, soft, name]
   columns:
@@ -149,7 +150,7 @@
   reqs: [LND-02, LND-03]
 
 - table: hrm.learning_records
-  purpose: Completed learning per employee, including external training and certificates
+  purpose: "Completed learning per employee, including external training and certificates"
   traits: [std, co]
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
@@ -170,7 +171,7 @@
   columns:
     - [course_id, uuid, req, fk hrm.courses]
     - [applies_rule, json, req, "role, location, grade, unit"]
-    - [due_within_days, int, req, "from joining or rule start"]
+    - [due_within_days, int, req, from joining or rule start]
     - [recurrence_months, int, opt]
   reqs: [LND-04]
 
@@ -196,5 +197,5 @@
     - [currency_code, char(3), req]
     - [obligation_until, date, req]
     - [recovery_rule, "enum(full,pro_rata)", req]
-  notes: "Active bonds appear in final settlement as bond_recovery (LND-06)."
+  notes: Active bonds appear in final settlement as bond_recovery (LND-06).
   reqs: [LND-06]
