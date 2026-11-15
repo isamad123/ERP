@@ -154,6 +154,49 @@ public sealed class IsolationFixture : IAsyncLifetime
         return result;
     }
 
+    /// <summary>
+    /// The uuid values among <paramref name="values"/> that are stored anywhere (any uuid column of any table) in the
+    /// customer's own database. A value the customer itself stored is its own data, even when it was copied from
+    /// another customer's request body by the probe.
+    /// </summary>
+    public async Task<IReadOnlySet<Guid>> StoredInAsync(string code, IReadOnlyCollection<Guid> values, CancellationToken cancellationToken)
+    {
+        var found = new HashSet<Guid>();
+        if (values.Count == 0)
+        {
+            return found;
+        }
+
+        await using var connection = await OpenAdminAsync(code, cancellationToken);
+        var columns = new List<(string Table, string Column)>();
+        await using (var list = new NpgsqlCommand("""
+            select format('%I.%I', c.table_schema, c.table_name), format('%I', c.column_name)
+            from information_schema.columns c join information_schema.tables t on t.table_schema = c.table_schema and t.table_name = c.table_name
+            where c.data_type = 'uuid' and t.table_type = 'BASE TABLE' and c.table_schema not in ('pg_catalog', 'information_schema')
+            """, connection))
+        await using (var reader = await list.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                columns.Add((reader.GetString(0), reader.GetString(1)));
+            }
+        }
+
+        // Identifiers come from the database catalogue (quoted by format('%I')); the values are one array parameter.
+        var sql = string.Join(" union ", columns.Select(c => $"select {c.Column} from {c.Table} where {c.Column} = any(@v)"));
+#pragma warning disable CA2100
+        await using var command = new NpgsqlCommand(sql, connection);
+#pragma warning restore CA2100
+        command.Parameters.Add(new NpgsqlParameter("v", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Uuid) { Value = values.ToArray() });
+        await using var rows = await command.ExecuteReaderAsync(cancellationToken);
+        while (await rows.ReadAsync(cancellationToken))
+        {
+            found.Add(rows.GetGuid(0));
+        }
+
+        return found;
+    }
+
     /// <summary>The tables whose fingerprint differs.</summary>
     public static IReadOnlyList<string> Changed(IReadOnlyDictionary<string, string> before, IReadOnlyDictionary<string, string> after) =>
         [.. before.Keys.Union(after.Keys).Where(t => !before.TryGetValue(t, out var b) || !after.TryGetValue(t, out var a) || a != b).Order(StringComparer.Ordinal)];

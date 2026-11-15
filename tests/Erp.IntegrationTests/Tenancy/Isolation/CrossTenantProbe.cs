@@ -90,7 +90,7 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
                 case EndpointKind.List:
                     Expect(failures, endpoint, label, response, HttpStatusCode.OK);
                     var pages = await PageAsync(fx.HostB, tokenB, endpoint.BasePath, hints, ct);
-                    Leaks(failures, endpoint, label + ", unfiltered list", string.Concat(pages.Bodies), markers, null);
+                    await LeaksAsync(failures, endpoint, label + ", unfiltered list", fx.CodeB, string.Concat(pages.Bodies), markers, null, ct);
                     break;
                 case EndpointKind.Create when response.Status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden:
                     failures.Add($"{endpoint} [{label}]: B was refused on its own host ({(int)response.Status}); the create path was not exercised.");
@@ -98,7 +98,7 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
             }
 
             // An echo of what the caller itself sent is not a leak; anything else of A's is.
-            Leaks(failures, endpoint, label, response.Body, markers, sendsBody ? body + path : null);
+            await LeaksAsync(failures, endpoint, label, fx.CodeB, response.Body, markers, sendsBody ? body + path : null, ct);
         }
 
         // 3 and 4: crossed host and token, wrong or missing tokens, unknown host.
@@ -115,7 +115,7 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
         {
             var response = await SendAsync(host, token, method, path, sendsBody ? body : null, hints: false, ct);
             Expect(failures, endpoint, label, response, expected);
-            Leaks(failures, endpoint, label, response.Body, markers, null);
+            await LeaksAsync(failures, endpoint, label, null, response.Body, markers, null, ct);
         }
 
         // 5: nothing of A's changed.
@@ -176,12 +176,24 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
         }
     }
 
-    private static void Leaks(List<string> failures, ApiEndpoint endpoint, string label, string body, IReadOnlySet<string> markers, string? sent)
+    /// <summary>
+    /// A's ids in a response are a leak unless the caller sent them itself (an echo) or the caller's own database
+    /// stores them: the probe's own cross-customer creates can store a copied reference in B (a plain id without a
+    /// foreign key), and B listing that row later shows B's data, not A's. A's seeded row ids are never written to B,
+    /// because no write request accepts an id, so reading A's rows through any path is still reported.
+    /// </summary>
+    private async Task LeaksAsync(List<string> failures, ApiEndpoint endpoint, string label, string? caller, string body, IReadOnlySet<string> markers, string? sent, CancellationToken ct)
     {
-        var leaked = markers.Where(m => body.Contains(m, StringComparison.OrdinalIgnoreCase) && (sent is null || !sent.Contains(m, StringComparison.OrdinalIgnoreCase))).ToList();
-        if (leaked.Count > 0)
+        var suspects = markers.Where(m => body.Contains(m, StringComparison.OrdinalIgnoreCase) && (sent is null || !sent.Contains(m, StringComparison.OrdinalIgnoreCase))).ToList();
+        if (suspects.Count > 0 && caller is not null)
         {
-            failures.Add($"{endpoint} [{label}]: LEAK: the response contains customer A's id(s) {string.Join(", ", leaked)}. {Short(body)}");
+            var own = await fx.StoredInAsync(caller, [.. suspects.Select(Guid.Parse)], ct);
+            suspects = [.. suspects.Where(m => !own.Contains(Guid.Parse(m)))];
+        }
+
+        if (suspects.Count > 0)
+        {
+            failures.Add($"{endpoint} [{label}]: LEAK: the response contains customer A's id(s) {string.Join(", ", suspects)}. {Short(body)}");
         }
     }
 
