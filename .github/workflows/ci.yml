@@ -1,0 +1,80 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  TESTINGPLATFORM_TELEMETRY_OPTOUT: "1"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+  # Integration tests use the PostgreSQL 16 service container below (real database, never mocked).
+  ERP_TEST_PG: "Host=localhost;Port=5432;Username=erp;Password=erp-ci-only;Database=erp_test"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: erp
+          POSTGRES_PASSWORD: erp-ci-only
+          POSTGRES_DB: erp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U erp -d erp_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Prepare log folder
+        run: mkdir -p logs
+
+      - name: Restore
+        run: dotnet restore Erp.sln -v q "-flp:logfile=logs/restore.log;verbosity=normal"
+
+      - name: Build
+        run: dotnet build Erp.sln --no-restore -c Release -v q "-flp:logfile=logs/build.log;verbosity=normal"
+
+      - name: Unit tests
+        run: dotnet test --project tests/Erp.UnitTests --no-build -c Release --report-xunit-trx --results-directory logs/test-results
+
+      - name: Architecture tests
+        run: dotnet test --project tests/Erp.ArchitectureTests --no-build -c Release --report-xunit-trx --results-directory logs/test-results
+
+      - name: Integration tests (PostgreSQL 16)
+        run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --report-xunit-trx --results-directory logs/test-results
+
+      - name: Licence gate (D-09)
+        run: |
+          python3 build/licence-gate.py --self-test
+          python3 build/licence-gate.py | tee logs/licence-report.txt
+          exit "${PIPESTATUS[0]}"
+
+      - name: Upload full logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs
+          path: logs/
+          if-no-files-found: warn
+          retention-days: 14
