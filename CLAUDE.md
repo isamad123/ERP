@@ -110,7 +110,9 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
   Backup and restore drill: `docs/runbooks/tenant-backup-restore.md` (needs pg_dump/pg_restore of the server's major version, 16).
 - CI: `.github/workflows/ci.yml` runs restore, build, generator drift, TypeScript type-check, unit, architecture, integration
   (PostgreSQL 16 service), data-dictionary drift and the licence gate.
-- Not yet automated: secret scan, tenant-isolation suite over every endpoint (S1.04; S1.03 provides `tests/Erp.IntegrationTests/Tenancy/TenancyFixture.cs`), invariant tests.
+- Tenant-isolation suite (S1.04): `dotnet test --project tests/Erp.IntegrationTests --no-build --filter-trait "Suite=TenantIsolation"`; CI job `tenant-isolation`.
+  Every endpoint is found automatically; one the suite cannot probe fails it (see `docs/handoff/2026-11-15-S1.04.md`).
+- Not yet automated: secret scan, invariant tests.
 
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.

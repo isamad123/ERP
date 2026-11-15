@@ -84,8 +84,8 @@ jobs:
           "$RUNNER_TEMP/pg16/pg_dump" --version
           "$RUNNER_TEMP/pg16/pg_restore" --version
 
-      - name: Integration tests (PostgreSQL 16)
-        run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --report-xunit-trx --results-directory logs/test-results
+      - name: Integration tests (PostgreSQL 16; the tenant-isolation suite runs in its own job below)
+        run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-not-trait "Suite=TenantIsolation" --report-xunit-trx --results-directory logs/test-results
 
       - name: Data dictionary drift (live database must match the committed dictionary)
         run: |
@@ -103,6 +103,56 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ci-logs
+          path: logs/
+          if-no-files-found: warn
+          retention-days: 14
+
+  # S1.04: the tenant-isolation suite (FR-KRN-TEN-03, FR-KRN-TEN-04, spec 03 section 10 invariant 10). Every API endpoint
+  # is called as one customer with another customer's ids, hosts and tokens; any success fails this job. It is its own
+  # job so it shows by name on every pull request and can be made a required check in the branch protection of main.
+  tenant-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: erp
+          POSTGRES_PASSWORD: erp-ci-only
+          POSTGRES_DB: erp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U erp -d erp_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Prepare log folder
+        run: mkdir -p logs
+
+      - name: Restore
+        run: dotnet restore Erp.sln -v q "-flp:logfile=logs/restore.log;verbosity=normal"
+
+      - name: Build
+        run: dotnet build tests/Erp.IntegrationTests --no-restore -c Release -v q "-flp:logfile=logs/build.log;verbosity=normal"
+
+      - name: Tenant-isolation suite (every endpoint, crossed customers)
+        run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-trait "Suite=TenantIsolation" --report-xunit-trx --results-directory logs/test-results
+
+      - name: Upload full logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenant-isolation-logs
           path: logs/
           if-no-files-found: warn
           retention-days: 14
