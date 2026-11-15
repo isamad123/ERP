@@ -4,8 +4,9 @@ Each customer has its own database, so each is backed up and restored on its own
 (key `ERP_BACKUP_KEY`, base64 of 32 random bytes, kept in the operations vault, never with the backup files). Losing the key
 means losing the backups.
 
-Requirements: the settings of tenant-operations.md, and PostgreSQL 16 (or newer) `pg_dump` and `pg_restore` on `PATH`
-(or `ERP_PG_BIN` pointing at their folder). `ERP_MIGRATOR` points at `Erp.Host.Migrator.dll` if it is not the local Release build.
+Requirements: the settings of tenant-operations.md, and `pg_dump` and `pg_restore` of the SAME major version as the database
+server (16 in Release 1.0) on `PATH`, or `ERP_PG_BIN` pointing at their folder. A newer tool writes archives the server cannot
+restore, so the commands refuse a version mismatch before doing anything. `ERP_MIGRATOR` points at `Erp.Host.Migrator.dll` if it is not the local Release build.
 
 ## Back up
 `scripts/tenant-backup.sh acme /backups/acme-2026-11-15.dump.enc`

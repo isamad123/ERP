@@ -29,6 +29,11 @@ public sealed partial class TenantBackup(ControlPlaneOptions options, ISecretSto
     {
         var tenant = await FindAsync(code, cancellationToken).ConfigureAwait(false);
         var credential = await CredentialAsync(tenant, TenantLogins.Backup, cancellationToken).ConfigureAwait(false);
+        await using (var check = await OpenAsync(tenant.ClusterHost, tenant.ClusterPort, tenant.DatabaseName, credential, cancellationToken).ConfigureAwait(false))
+        {
+            await EnsureToolMatchesServerAsync("pg_dump", check, cancellationToken).ConfigureAwait(false);
+        }
+
         var process = Start("pg_dump", ["--format=custom", "--no-password", "--host", tenant.ClusterHost, "--port", tenant.ClusterPort.ToString(System.Globalization.CultureInfo.InvariantCulture), "--username", credential.Username, "--dbname", tenant.DatabaseName], credential.Password);
         long bytes;
         try
@@ -68,6 +73,7 @@ public sealed partial class TenantBackup(ControlPlaneOptions options, ISecretSto
         var admin = new ClusterAdministrator(secrets);
         await using (var connection = await admin.OpenAdminAsync(cluster, "postgres", cancellationToken).ConfigureAwait(false))
         {
+            await EnsureToolMatchesServerAsync("pg_restore", connection, cancellationToken).ConfigureAwait(false);
             if (await Sql.ScalarAsync<bool>(connection, null, "select exists (select 1 from pg_database where datname = $1)", cancellationToken, targetDatabase).ConfigureAwait(false))
             {
                 throw new InvalidOperationException($"Database {targetDatabase} already exists; a restore never overwrites a database.");
@@ -97,9 +103,16 @@ public sealed partial class TenantBackup(ControlPlaneOptions options, ISecretSto
         catch
         {
             // Remove the half-restored database this call created; the source is never touched.
-            if (!process.Process.HasExited)
+            try
             {
-                process.Process.Kill();
+                if (!process.Process.HasExited)
+                {
+                    process.Process.Kill();
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // already exited and released by FinishAsync
             }
 
             await using var connection = await admin.OpenAdminAsync(cluster, "postgres", CancellationToken.None).ConfigureAwait(false);
@@ -158,6 +171,32 @@ public sealed partial class TenantBackup(ControlPlaneOptions options, ISecretSto
         return result;
     }
 
+    /// <summary>
+    /// The client tools must have the server's major version: a newer pg_dump writes archives that an older server cannot
+    /// restore (for example settings that do not exist there), and an older one cannot dump a newer server.
+    /// </summary>
+    private async Task EnsureToolMatchesServerAsync(string tool, NpgsqlConnection connection, CancellationToken cancellationToken)
+    {
+        var serverMajor = int.Parse((await Sql.ScalarAsync<string>(connection, null, "show server_version_num", cancellationToken).ConfigureAwait(false))!, System.Globalization.CultureInfo.InvariantCulture) / 10000;
+        var run = Start(tool, ["--version"], string.Empty, captureOutput: true);
+        var version = await run.Process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        await FinishAsync(run, tool, cancellationToken).ConfigureAwait(false);
+        var match = ToolVersion().Match(version);
+        if (!match.Success || int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) != serverMajor)
+        {
+            throw new InvalidOperationException(
+                $"{tool} reports '{version.Trim()}' but the server is PostgreSQL {serverMajor}; install the PostgreSQL {serverMajor} client tools and point ERP_PG_BIN at them.");
+        }
+    }
+
+    private static async Task<NpgsqlConnection> OpenAsync(string host, int port, string database, DatabaseCredential credential, CancellationToken cancellationToken)
+    {
+        var builder = new NpgsqlConnectionStringBuilder { Host = host, Port = port, Database = database, Username = credential.Username, Password = credential.Password, Pooling = false };
+        var connection = new NpgsqlConnection(builder.ConnectionString);
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return connection;
+    }
+
     private async Task<ResolvedTenant> FindAsync(string code, CancellationToken cancellationToken)
     {
         TenantCodes.Validate(code);
@@ -171,11 +210,11 @@ public sealed partial class TenantBackup(ControlPlaneOptions options, ISecretSto
         DatabaseCredential.Parse(await secrets.GetAsync(TenantLogins.SecretRef(tenant.AppSecretRef, kind), cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"No {kind} credential is stored for customer {tenant.Code}."));
 
-    private (Process Process, Task<string> Errors) Start(string tool, IEnumerable<string> arguments, string password, bool redirectInput = false)
+    private (Process Process, Task<string> Errors) Start(string tool, IEnumerable<string> arguments, string password, bool redirectInput = false, bool captureOutput = false)
     {
         var info = new ProcessStartInfo(postgresBinFolder is null ? tool : Path.Combine(postgresBinFolder, tool))
         {
-            RedirectStandardOutput = !redirectInput,
+            RedirectStandardOutput = !redirectInput || captureOutput,
             RedirectStandardInput = redirectInput,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -206,4 +245,7 @@ public sealed partial class TenantBackup(ControlPlaneOptions options, ISecretSto
 
     [GeneratedRegex("^[a-z][a-z0-9_]{1,62}$")]
     private static partial Regex TargetName();
+
+    [GeneratedRegex(@"\) (\d+)(\.|\s)")]
+    private static partial Regex ToolVersion();
 }

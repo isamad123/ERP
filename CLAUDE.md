@@ -107,7 +107,7 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
   change is a new file (rules.yaml `implemented` entries and grants are emitted as new files, S1.03).
 - Migrator and operator commands (S1.03): `dotnet run --project src/Host/Erp.Host.Migrator -- help` (migrate, cluster add, signing-key add,
   entitlement sign, tenant provision/list/suspend/resume/backup/restore). Settings are environment variables: `docs/runbooks/tenant-operations.md`.
-  Backup and restore drill: `docs/runbooks/tenant-backup-restore.md` (needs pg_dump/pg_restore 16).
+  Backup and restore drill: `docs/runbooks/tenant-backup-restore.md` (needs pg_dump/pg_restore of the server's major version, 16).
 - CI: `.github/workflows/ci.yml` runs restore, build, generator drift, TypeScript type-check, unit, architecture, integration
   (PostgreSQL 16 service), data-dictionary drift and the licence gate.
 - Not yet automated: secret scan, tenant-isolation suite over every endpoint (S1.04; S1.03 provides `tests/Erp.IntegrationTests/Tenancy/TenancyFixture.cs`), invariant tests.
