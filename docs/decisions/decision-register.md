@@ -55,6 +55,7 @@ Status values: **Approved**, **Superseded** (by the decision named), **Rejected*
 | D-45 | Opus 5.5 for design and integrity-critical work with fresh-session review; Sonnet 5.5 for routine; no Fable | Approved 15 Nov 2026 |
 | D-46 | Conditions to start Phase 1 (spec 16 section 14.7) | Approved 15 Nov 2026 |
 | D-48 | Phase 1 splits into Release 1.0 (HRMIS web only: core HR, attendance, leave, Pakistan payroll, self-service web) and Release 1.1 (Android ESS app, offline sync, geo-attendance, field tasks, workspaces, and the remaining HRMIS features: recruitment, performance, learning, employee relations, asset custody, Should-have items), both before Phase 2. Saudi and US packs, AI and analytics stay later | Approved 15 Nov 2026 (product owner) |
+| D-49 | Performance management (PRF) and learning and development (LND) move from Release 1.1 to Release 1.0 | Approved 15 Nov 2026 (product owner) |
 | D-47 | Separate database for every customer; no `tenant_id` on business tables; no shared-database hosting | Approved 15 Nov 2026 |
 
 ## Working assumptions (not yet confirmed)

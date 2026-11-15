@@ -9,8 +9,8 @@ Pre-development. Phase 1 (HRMIS) is being prepared: requirement scope tagging, t
 ## Phases (decisions D-41, D-48)
 | Phase | Modules | Release |
 | --- | --- | --- |
-| 1.0 | Minimum platform kernel + HRMIS web (HR, attendance, leave, Pakistan payroll, self-service web) | 1.0 HR and Payroll |
-| 1.1 | Android ESS app, offline sync, geo-attendance, field tasks, workspaces, recruitment, performance, learning, employee relations | 1.1 |
+| 1.0 | Minimum platform kernel + HRMIS web (HR, attendance, leave, Pakistan payroll, performance appraisal, training, self-service web) | 1.0 HR and Payroll |
+| 1.1 | Android ESS app, offline sync, geo-attendance, field tasks, workspaces, recruitment, employee relations | 1.1 |
 | 2 | Inventory and Asset Management | 2.0 |
 | 3 | Finance | 3.0 |
 | 4 | Procurement, Supply Chain, core Sales | 4.0 |
