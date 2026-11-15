@@ -1,6 +1,6 @@
 # Release 1.0 build plan (proposed)
 
-Status: proposed, for approval together with the data design. Slice files (`S1.n-*.md`) are written one batch ahead.
+Status: approved 15 November 2026 (D-50). Slice files (`S1.n-*.md`) are written one batch ahead.
 
 Each slice is one fresh session. **Model** is what to select with `/model` before starting the batch. Classes follow
 `docs/token-strategy.md`: A and B use Opus 5.5 at high effort, C and D use Sonnet 5.5 unless stated.

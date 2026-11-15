@@ -56,6 +56,7 @@ Status values: **Approved**, **Superseded** (by the decision named), **Rejected*
 | D-46 | Conditions to start Phase 1 (spec 16 section 14.7) | Approved 15 Nov 2026 |
 | D-48 | Phase 1 splits into Release 1.0 (HRMIS web only: core HR, attendance, leave, Pakistan payroll, self-service web) and Release 1.1 (Android ESS app, offline sync, geo-attendance, field tasks, workspaces, and the remaining HRMIS features: recruitment, performance, learning, employee relations, asset custody, Should-have items), both before Phase 2. Saudi and US packs, AI and analytics stay later | Approved 15 Nov 2026 (product owner) |
 | D-49 | Performance management (PRF) and learning and development (LND) move from Release 1.1 to Release 1.0 | Approved 15 Nov 2026 (product owner) |
+| D-50 | Release 1.0 data design (204 tables, `docs/data-design/`) and build plan (53 slices) approved; development runs in Claude Code cloud sessions | Approved 15 Nov 2026 (product owner) |
 | D-47 | Separate database for every customer; no `tenant_id` on business tables; no shared-database hosting | Approved 15 Nov 2026 |
 
 ## Working assumptions (not yet confirmed)

@@ -1,6 +1,6 @@
 # Release 1.0 data design (D-35 gate)
 
-Status: **proposed, awaiting product-owner approval**. No migration may be written before approval.
+Status: **approved by the product owner on 15 November 2026** (D-50). Changes need a change request (D-39).
 
 This is the column-level design for the shared foundation (kernel) and HRMIS tables needed by the 369 requirements
 tagged Release 1.0 (204 tables in all). It follows `docs/specs/03-…` sections 3 to 10, with section 14 as amended by D-47
