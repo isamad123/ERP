@@ -1,0 +1,200 @@
+# HRMIS: forms, performance management, learning. Spec 06a sections 19 and 20 (1.0 items only).
+# Calibration, 9-box, continuous feedback, improvement plans, needs analysis and cost reports are Release 1.1.
+
+- table: hrm.form_definitions
+  purpose: Configurable forms for appraisals and probation reviews (PRF-03, ONB-12)
+  traits: [std, co, soft, name]
+  columns:
+    - [purpose, "enum(appraisal,probation_review,goal_review,custom)", req]
+    - [active_version_id, uuid, opt, fk hrm.form_versions]
+  unique: [[company_id, lower(code)]]
+  reqs: [PRF-03, ONB-12]
+
+- table: hrm.form_versions
+  traits: [std]
+  status: [draft, active, retired]
+  columns:
+    - [form_id, uuid, req, fk hrm.form_definitions]
+    - [version, int, req]
+    - [schema, json, req, "sections, questions, competencies, rating scales, weights, visibility per reviewer type"]
+  unique: [[form_id, version]]
+  reqs: [PRF-03]
+
+- table: hrm.form_responses
+  traits: [std, co]
+  status: [draft, submitted, locked]
+  columns:
+    - [form_version_id, uuid, req, fk hrm.form_versions]
+    - [subject_employment_id, uuid, req, fk hrm.employments]
+    - [respondent_employment_id, uuid, opt, fk hrm.employments]
+    - [context_type, text, req, "review, probation"]
+    - [context_id, uuid, req]
+    - [answers, json, req]
+    - [score, qty, opt]
+    - [submitted_at, ts, opt]
+  indexes: [[context_type, context_id], [subject_employment_id]]
+  reqs: [PRF-03, PRF-04, ONB-12]
+
+- table: hrm.review_cycles
+  traits: [std, co]
+  status: [draft, goal_setting, in_progress, reviewing, closed]
+  columns:
+    - [name, text, req]
+    - [cycle_type, "enum(annual,half_yearly,quarterly,continuous)", req]
+    - [period_start, date, req]
+    - [period_end, date, req]
+    - [form_id, uuid, req, fk hrm.form_definitions]
+    - [eligibility_rule, json, req]
+    - [phases, json, req, "dates for goal setting, self review, manager review, sign-off"]
+    - [review_types, "text[]", req, "self, manager, skip_level, peer, 360"]
+  reqs: [PRF-01, PRF-04]
+
+- table: hrm.review_participants
+  traits: [std, co]
+  status: [not_started, goals_set, self_review, manager_review, signed_off, excluded]
+  columns:
+    - [cycle_id, uuid, req, fk hrm.review_cycles]
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [manager_employment_id, uuid, opt, fk hrm.employments]
+    - [final_rating, text, opt]
+    - [final_score, qty, opt]
+    - [signed_off_at, ts, opt]
+    - [acknowledged_at, ts, opt]
+  unique: [[cycle_id, employment_id]]
+  reqs: [PRF-01, PRF-09]
+
+- table: hrm.review_assignments
+  purpose: Who reviews whom in a cycle (self, manager, skip-level, peer, 360)
+  traits: [std, co]
+  status: [pending, submitted, declined]
+  columns:
+    - [participant_id, uuid, req, fk hrm.review_participants]
+    - [reviewer_employment_id, uuid, req, fk hrm.employments]
+    - [review_type, "enum(self,manager,skip_level,peer,360)", req]
+    - [is_anonymous, bool, req]
+    - [form_response_id, uuid, opt, fk hrm.form_responses]
+    - [due_date, date, opt]
+  unique: [[participant_id, reviewer_employment_id, review_type]]
+  reqs: [PRF-04]
+
+- table: hrm.goals
+  traits: [std, co]
+  status: [draft, agreed, in_progress, achieved, partially_achieved, missed, cancelled]
+  columns:
+    - [cycle_id, uuid, opt, fk hrm.review_cycles]
+    - [owner_employment_id, uuid, opt, "fk hrm.employments; null for unit goals"]
+    - [org_unit_id, uuid, opt, fk org.org_units]
+    - [parent_goal_id, uuid, opt, "fk hrm.goals (cascading)"]
+    - [framework, "enum(kpi,okr,scorecard)", req]
+    - [title, text, req]
+    - [description, text, opt]
+    - [weight, pct, opt]
+    - [target, json, req, "value, unit, direction"]
+    - [actual, json, opt]
+    - [due_date, date, opt]
+  indexes: [[owner_employment_id, cycle_id], [parent_goal_id]]
+  reqs: [PRF-02]
+
+- table: hrm.goal_updates
+  traits: [app, co]
+  columns:
+    - [goal_id, uuid, req, fk hrm.goals]
+    - [progress_pct, pct, opt]
+    - [actual, json, opt]
+    - [comment, text, opt]
+  indexes: [[goal_id, created_at]]
+  reqs: [PRF-02]
+
+# ---------------- learning ----------------
+- table: hrm.courses
+  traits: [std, co, soft, name]
+  columns:
+    - [delivery, "enum(classroom,online,external,on_the_job,blended)", req]
+    - [provider, text, opt]
+    - [duration_hours, qty, opt]
+    - [description_i18n, i18n, opt]
+    - [cost_per_participant, money, opt]
+    - [currency_code, char(3), opt]
+    - [awards_certification, text, opt]
+    - [certification_valid_months, int, opt]
+  unique: [[company_id, lower(code)]]
+  reqs: [LND-01, LND-05]
+
+- table: hrm.course_sessions
+  traits: [std, co]
+  status: [planned, open, full, in_progress, completed, cancelled]
+  columns:
+    - [course_id, uuid, req, fk hrm.courses]
+    - [start_at, ts, req]
+    - [end_at, ts, req]
+    - [venue, text, opt]
+    - [location_id, uuid, opt, fk org.locations]
+    - [trainer, text, opt]
+    - [capacity, int, opt]
+  indexes: [[course_id, start_at]]
+  reqs: [LND-02]
+
+- table: hrm.session_enrollments
+  traits: [std, co]
+  status: [nominated, enrolled, waitlisted, attended, no_show, completed, failed, withdrawn]
+  columns:
+    - [session_id, uuid, req, fk hrm.course_sessions]
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [nominated_by, uuid, opt]
+    - [attendance_pct, pct, opt]
+    - [assessment_score, qty, opt]
+    - [feedback, json, opt]
+    - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+  unique: [[session_id, employment_id]]
+  reqs: [LND-02, LND-03]
+
+- table: hrm.learning_records
+  purpose: Completed learning per employee, including external training and certificates
+  traits: [std, co]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [course_id, uuid, opt, fk hrm.courses]
+    - [enrollment_id, uuid, opt, fk hrm.session_enrollments]
+    - [title, text, req]
+    - [completed_on, date, req]
+    - [hours, qty, opt]
+    - [result, text, opt]
+    - [certificate_file_id, uuid, opt, fk doc.files]
+    - [expires_on, date, opt]
+  indexes: [[employment_id, completed_on], [expires_on]]
+  reqs: [LND-03, LND-05]
+
+- table: hrm.mandatory_training_rules
+  traits: [std, co]
+  status: [active, inactive]
+  columns:
+    - [course_id, uuid, req, fk hrm.courses]
+    - [applies_rule, json, req, "role, location, grade, unit"]
+    - [due_within_days, int, req, "from joining or rule start"]
+    - [recurrence_months, int, opt]
+  reqs: [LND-04]
+
+- table: hrm.training_requirements
+  purpose: Materialized due items per employee for compliance reporting and reminders
+  traits: [std, co]
+  status: [due, overdue, completed, waived]
+  columns:
+    - [rule_id, uuid, req, fk hrm.mandatory_training_rules]
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [due_date, date, req]
+    - [learning_record_id, uuid, opt, fk hrm.learning_records]
+  unique: [[rule_id, employment_id, due_date]]
+  reqs: [LND-04]
+
+- table: hrm.training_bonds
+  traits: [std, co]
+  status: [active, fulfilled, recovered, waived]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [enrollment_id, uuid, opt, fk hrm.session_enrollments]
+    - [bond_amount, money, req]
+    - [currency_code, char(3), req]
+    - [obligation_until, date, req]
+    - [recovery_rule, "enum(full,pro_rata)", req]
+  notes: "Active bonds appear in final settlement as bond_recovery (LND-06)."
+  reqs: [LND-06]

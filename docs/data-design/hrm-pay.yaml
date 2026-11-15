@@ -1,0 +1,604 @@
+# HRMIS: payroll, statutory tables, tax, payments, final settlement, loans, expenses, compensation and benefits,
+# compliance. Spec 06a sections 14 to 17. Multi-currency payroll is Release 1.1: each pay group has one currency.
+
+# ---------------- payroll set-up ----------------
+- table: hrm.pay_groups
+  traits: [std, co, soft, name]
+  columns:
+    - [frequency, "enum(monthly,semi_monthly,bi_weekly,weekly)", req]
+    - [currency_code, char(3), req, fk ref.currencies]
+    - [tax_year_start_month, int, req, "7 for Pakistan, from pack"]
+    - [cut_off_day, int, opt]
+    - [payment_day, int, opt]
+    - [company_bank_account_id, uuid, opt, fk org.company_bank_accounts]
+    - [approval_threshold, money, opt, "dual approval above this total (PAY-13)"]
+  unique: [[company_id, lower(code)]]
+  reqs: [PAY-01, PAY-13]
+
+- table: hrm.pay_periods
+  purpose: Payroll calendar per pay group
+  traits: [std, co]
+  status: [future, open, processing, closed]
+  columns:
+    - [pay_group_id, uuid, req, fk hrm.pay_groups]
+    - [period_no, int, req]
+    - [tax_year, int, req, "year in which the tax year starts"]
+    - [start_date, date, req]
+    - [end_date, date, req]
+    - [cut_off_date, date, req]
+    - [payment_date, date, req]
+  unique: [[pay_group_id, start_date]]
+  reqs: [PAY-01, PAY-38]
+
+- table: hrm.pay_components
+  traits: [std, co, soft, name]
+  columns:
+    - [kind, "enum(earning,deduction,employer_contribution,reimbursement,informational)", req]
+    - [method, "enum(fixed,percent_of,formula,table_lookup,per_day,per_hour,attendance_linked,manual)", req]
+    - [formula, text, opt, "expression over named inputs; validated and versioned"]
+    - [base_component_codes, "text[]", req]
+    - [table_code, code, opt, "statutory or tenant table for table_lookup"]
+    - [pro_rata_rule, "enum(none,calendar_days,working_days,fixed_30,custom)", req]
+    - [statutory_flags, json, req, "taxable, eobi_base, social_security_base, pf_base, gratuity_base ... set by pack"]
+    - [tax_treatment, code, opt, "regular, irregular (bonus, arrears, encashment), exempt"]
+    - [payslip_order, int, req]
+    - [is_recurring, bool, req]
+    - [is_one_time_allowed, bool, req]
+    - [source, "enum(pack,tenant)", req]
+  unique: [[company_id, lower(code)]]
+  reqs: [PAY-02, PAY-03, PAY-05, PAY-08, PAY-18, CMP-03]
+
+- table: hrm.salary_structures
+  traits: [std, co, soft, name]
+  columns:
+    - [assign_rule, json, opt, "default by grade or employee type"]
+  unique: [[company_id, lower(code)]]
+  reqs: [PAY-04]
+
+- table: hrm.salary_structure_components
+  traits: [std, eff]
+  eff_key: [structure_id, component_id]
+  columns:
+    - [structure_id, uuid, req, fk hrm.salary_structures]
+    - [component_id, uuid, req, fk hrm.pay_components]
+    - [evaluation_order, int, req]
+    - [default_amount, money, opt]
+    - [default_percent, pct, opt]
+    - [is_mandatory, bool, req]
+  reqs: [PAY-04]
+
+- table: hrm.compensation_assignments
+  purpose: An employee's salary structure, effective-dated; a revision closes one row and opens another (PAY-06)
+  traits: [std, co, eff]
+  eff_key: [employment_id]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [structure_id, uuid, req, fk hrm.salary_structures]
+    - [event_id, uuid, req, fk hrm.employment_events]
+    - [currency_code, char(3), req]
+    - [gross_amount, money, opt, "informational; lines are authoritative"]
+    - [increment_proposal_id, uuid, opt, fk hrm.increment_proposals]
+  indexes: [[employment_id, valid_from]]
+  reqs: [PAY-04, PAY-06, CMP-02]
+
+- table: hrm.compensation_lines
+  purpose: Amounts per component for an assignment, including allowances and perquisites (CMP-03)
+  traits: [std, co]
+  columns:
+    - [assignment_id, uuid, req, fk hrm.compensation_assignments]
+    - [component_id, uuid, req, fk hrm.pay_components]
+    - [amount, money, opt]
+    - [percent, pct, opt]
+    - [units, qty, opt]
+  unique: [[assignment_id, component_id]]
+  reqs: [PAY-04, CMP-03]
+
+- table: hrm.statutory_tables
+  purpose: Pack-supplied, tenant-overridable rate and slab tables (income tax slabs, EOBI, PESSI/SESSI, WWF, minimum wage)
+  traits: [std, eff]
+  eff_key: [company_scope, code]
+  columns:
+    - [code, code, req, "e.g. pk.income_tax.salaried"]
+    - [company_id, uuid, opt, "fk org.companies; null = pack or tenant-wide value"]
+    - [source, "enum(pack,tenant)", req]
+    - [kind, "enum(slab,rate,ceiling,lookup)", req]
+    - [description_i18n, i18n, req]
+    - [pack_version, text, opt]
+  notes: "company_scope = coalesce(company_id, nil uuid). Pack updates are staged (POL-05 is 1.1; in 1.0 a pack update creates new rows with a future valid_from)."
+  reqs: [PAY-17, PAY-20, PAY-21, POL-04, CPL-04]
+
+- table: hrm.statutory_table_rows
+  traits: [std]
+  columns:
+    - [table_id, uuid, req, fk hrm.statutory_tables]
+    - [seq, int, req]
+    - [lower_bound, money, opt]
+    - [upper_bound, money, opt]
+    - [fixed_amount, money, opt]
+    - [rate, rate, opt]
+    - [key, code, opt, "for lookups, e.g. province code"]
+    - [attributes, json, req]
+  unique: [[table_id, seq]]
+  reqs: [PAY-17, PAY-20, PAY-21]
+
+# ---------------- payroll runs ----------------
+- table: hrm.pay_runs
+  traits: [std, co]
+  status: [created, inputs_imported, calculated, validated, in_review, approved, locked, paid, posted, closed, cancelled]
+  columns:
+    - [run_no, text, req]
+    - [pay_group_id, uuid, req, fk hrm.pay_groups]
+    - [pay_period_id, uuid, req, fk hrm.pay_periods]
+    - [kind, "enum(regular,bonus,correction,final_settlement,advance)", req]
+    - [currency_code, char(3), req]
+    - [snapshot_taken_at, ts, opt]
+    - [calc_job_run_id, uuid, opt, fk job.runs]
+    - [total_gross, money, opt]
+    - [total_net, money, opt]
+    - [total_employer, money, opt]
+    - [employee_count, int, opt]
+    - [stage_log, json, req, "user and time per stage (PAY-10)"]
+    - [reopened_reason, text, opt]
+    - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+  unique: [[company_id, run_no]]
+  indexes: [[pay_group_id, pay_period_id]]
+  reqs: [PAY-10, PAY-14, PAY-15, PAY-34]
+
+- table: hrm.pay_run_employees
+  purpose: Who is in a run, the frozen input snapshot, status and validation flags
+  traits: [std, co]
+  status: [included, excluded, held, calculated, error]
+  columns:
+    - [pay_run_id, uuid, req, fk hrm.pay_runs]
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [snapshot, json, req, "frozen assignment, compensation lines, attendance summary, leave, loans, tables and policy versions (PAY-31)"]
+    - [snapshot_hash, bytea, req]
+    - [validation_flags, "text[]", req, "negative_net, missing_bank, missing_tax_id, variance_above_threshold, duplicate, no_attendance"]
+    - [hold_id, uuid, opt, fk hrm.salary_holds]
+  unique: [[pay_run_id, employment_id]]
+  reqs: [PAY-09, PAY-11, PAY-31]
+
+- table: hrm.pay_inputs
+  purpose: One-time inputs to a period (bonus, incentive, deduction, adjustment, imported file rows)
+  traits: [std, co]
+  status: [pending, consumed, cancelled]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [pay_period_id, uuid, req, fk hrm.pay_periods]
+    - [component_id, uuid, req, fk hrm.pay_components]
+    - [amount, money, opt]
+    - [units, qty, opt]
+    - [source_type, text, req, "manual, import, expense_claim, overtime, loan, bonus"]
+    - [source_id, uuid, opt]
+    - [consumed_by_run_id, uuid, opt, fk hrm.pay_runs]
+    - [import_batch_id, uuid, opt, fk itg.import_batches]
+  indexes: [[employment_id, pay_period_id]]
+  reqs: [PAY-07, PAY-08]
+
+- table: hrm.pay_results
+  purpose: Net result per employee per run; append-only once the run is locked (PAY-33)
+  traits: [std, co]
+  columns:
+    - [pay_run_id, uuid, req, fk hrm.pay_runs]
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [gross, money, req]
+    - [deductions, money, req]
+    - [net, money, req]
+    - [employer_cost, money, req]
+    - [taxable_income_ytd, money, req]
+    - [tax_ytd, money, req]
+    - [worked_days, qty, req]
+    - [paid_days, qty, req]
+    - [is_reversed, bool, req, "payslip reversed before payment (FR-XM-27)"]
+    - [corrects_result_id, uuid, opt, fk hrm.pay_results]
+  unique: [[pay_run_id, employment_id]]
+  notes: "Trigger refuses update and delete when the run status is locked or later."
+  reqs: [PAY-12, PAY-28, PAY-33, FR-XM-27]
+
+- table: hrm.pay_result_lines
+  traits: [std, co]
+  columns:
+    - [result_id, uuid, req, fk hrm.pay_results]
+    - [component_id, uuid, req, fk hrm.pay_components]
+    - [amount, money, req]
+    - [units, qty, opt]
+    - [rate, rate, opt]
+    - [period_start, date, opt, "arrears: the period it relates to"]
+    - [cost_allocation, json, req, "split by cost centre or department for the journal"]
+  indexes: [[result_id]]
+  reqs: [PAY-06, PAY-29, PAY-30]
+
+- table: hrm.pay_traces
+  purpose: Calculation trace per result (PAY-32)
+  key: [result_id]
+  columns:
+    - [result_id, uuid, req, "pk, fk hrm.pay_results"]
+    - [trace, json, req, "inputs, formulas, rule and table versions, rounding steps"]
+    - [engine_version, text, req]
+  reqs: [PAY-32]
+
+- table: hrm.retro_adjustments
+  purpose: Changes discovered after lock (attendance, salary, leave) carried to the next open run (PAY-16, FR-XM-26)
+  traits: [std, co]
+  status: [pending, applied, cancelled]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [original_run_id, uuid, req, fk hrm.pay_runs]
+    - [cause_type, text, req]
+    - [cause_id, uuid, opt]
+    - [component_id, uuid, req, fk hrm.pay_components]
+    - [amount, money, req]
+    - [applied_in_run_id, uuid, opt, fk hrm.pay_runs]
+  reqs: [PAY-06, PAY-16, FR-XM-26]
+
+- table: hrm.salary_holds
+  traits: [std, co]
+  status: [active, released]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [reason, text, req]
+    - [held_from_run_id, uuid, req, fk hrm.pay_runs]
+    - [released_in_run_id, uuid, opt, fk hrm.pay_runs]
+  reqs: [PAY-09]
+
+# ---------------- tax ----------------
+- table: hrm.tax_declarations
+  traits: [std, co]
+  status: [draft, submitted, verified, rejected]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [tax_year, int, req]
+  unique: [[employment_id, tax_year]]
+  reqs: [PAY-19]
+
+- table: hrm.tax_declaration_lines
+  traits: [std]
+  columns:
+    - [declaration_id, uuid, req, fk hrm.tax_declarations]
+    - [kind, code, req, "exemption or credit type from pack, e.g. zakat, donation, pension fund"]
+    - [declared_amount, money, req]
+    - [verified_amount, money, opt]
+    - [file_ids, "uuid[]", req]
+  reqs: [PAY-19]
+
+- table: hrm.previous_employer_income
+  traits: [std, co]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [tax_year, int, req]
+    - [employer_name, text, req]
+    - [taxable_income, money, req]
+    - [tax_deducted, money, req]
+    - [file_id, uuid, opt, fk doc.files]
+  unique: [[employment_id, tax_year, employer_name]]
+  reqs: [PAY-22]
+
+# ---------------- payments ----------------
+- table: hrm.payment_batches
+  traits: [std, co]
+  status: [generated, validated, downloaded, partially_paid, paid, cancelled]
+  columns:
+    - [pay_run_id, uuid, req, fk hrm.pay_runs]
+    - [company_bank_account_id, uuid, opt, fk org.company_bank_accounts]
+    - [payment_mode, "enum(bank_transfer,cheque,cash,mobile_wallet)", req]
+    - [template_id, uuid, opt, "fk doc.templates (bank file format)"]
+    - [file_id, uuid, opt, fk doc.files]
+    - [total_amount, money, req]
+    - [line_count, int, req]
+  reqs: [PAY-23, PAY-24]
+
+- table: hrm.payment_lines
+  traits: [std, co]
+  status: [pending, paid, failed, reissued]
+  columns:
+    - [batch_id, uuid, req, fk hrm.payment_batches]
+    - [result_id, uuid, req, fk hrm.pay_results]
+    - [bank_account_id, uuid, opt, fk hrm.employee_bank_accounts]
+    - [amount, money, req]
+    - [bank_reference, text, opt]
+    - [failure_reason, text, opt]
+    - [reissued_in_line_id, uuid, opt, fk hrm.payment_lines]
+  indexes: [[batch_id], [result_id]]
+  reqs: [PAY-23, PAY-25]
+
+# ---------------- final settlement ----------------
+- table: hrm.final_settlements
+  traits: [std, co]
+  status: [draft, calculated, blocked, approved, paid, cancelled]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [separation_id, uuid, req, fk hrm.separations]
+    - [pay_run_id, uuid, opt, "fk hrm.pay_runs (off-cycle run that pays it)"]
+    - [clearance_status, "enum(pending,cleared,waived)", req]
+    - [open_items, json, req, "from the clearance check: loans, advances, items, claims, approvals (FR-XM-29)"]
+    - [net_amount, money, opt]
+    - [statement_document_id, uuid, opt, fk doc.generated_documents]
+    - [acknowledged_at, ts, opt]
+    - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+  unique: [[employment_id, "where status <> 'cancelled'"]]
+  checks: ["status may become approved only when clearance_status in (cleared, waived) (FR-XM-29)"]
+  reqs: [PAY-26, PAY-27, ONB-17, FR-XM-29]
+
+- table: hrm.final_settlement_lines
+  traits: [std, co]
+  columns:
+    - [settlement_id, uuid, req, fk hrm.final_settlements]
+    - [kind, "enum(pending_salary,leave_encashment,gratuity,notice_pay,notice_recovery,loan_recovery,advance_recovery,bond_recovery,bonus,tax_adjustment,pf_payout,other)", req]
+    - [component_id, uuid, opt, fk hrm.pay_components]
+    - [amount, money, req]
+    - [basis, json, req]
+  reqs: [PAY-26, LND-06, CMP-04]
+
+# ---------------- loans and advances ----------------
+- table: hrm.loan_types
+  traits: [std, co, soft, name]
+  columns:
+    - [kind, "enum(loan,advance,pf_loan)", req]
+    - [policy_id, uuid, opt, "fk hrm.policies (eligibility, limits, interest)"]
+    - [deduction_component_id, uuid, req, fk hrm.pay_components]
+  unique: [[company_id, lower(code)]]
+  reqs: [LON-01]
+
+- table: hrm.loans
+  traits: [std, co]
+  status: [applied, approved, rejected, disbursed, active, settled, written_off, cancelled]
+  columns:
+    - [loan_no, text, req]
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [loan_type_id, uuid, req, fk hrm.loan_types]
+    - [principal, money, req]
+    - [interest_rate, pct, req, "default 0"]
+    - [installments, int, req]
+    - [start_period_id, uuid, opt, fk hrm.pay_periods]
+    - [guarantor_employment_id, uuid, opt, fk hrm.employments]
+    - [disbursed_on, date, opt]
+    - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+  unique: [[company_id, loan_no]]
+  reqs: [LON-01, LON-02, LON-03, LON-05]
+
+- table: hrm.loan_installments
+  traits: [std, co]
+  status: [scheduled, deducted, skipped, settled_early]
+  columns:
+    - [loan_id, uuid, req, fk hrm.loans]
+    - [seq, int, req]
+    - [pay_period_id, uuid, req, fk hrm.pay_periods]
+    - [principal_amount, money, req]
+    - [interest_amount, money, req]
+    - [pay_result_line_id, uuid, opt, fk hrm.pay_result_lines]
+  unique: [[loan_id, seq]]
+  reqs: [LON-03]
+
+- table: hrm.loan_transactions
+  purpose: Loan ledger (disbursement, recovery, adjustment, write-off); balance is the sum
+  traits: [app, co]
+  columns:
+    - [loan_id, uuid, req, fk hrm.loans]
+    - [kind, "enum(disbursement,recovery,early_settlement,adjustment,write_off,settlement_recovery)", req]
+    - [amount, money, req, "positive increases balance"]
+    - [txn_date, date, req]
+    - [source_type, text, opt]
+    - [source_id, uuid, opt]
+  indexes: [[loan_id, txn_date]]
+  reqs: [LON-03, LON-05, LON-07]
+
+# ---------------- expenses ----------------
+- table: hrm.expense_categories
+  traits: [std, co, soft, name]
+  columns:
+    - [policy_id, uuid, opt, "fk hrm.policies (limits by grade, per diem, mileage)"]
+    - [requires_receipt, bool, req]
+    - [reimbursement_component_id, uuid, opt, fk hrm.pay_components]
+  unique: [[company_id, lower(code)]]
+  reqs: [EXP-01]
+
+- table: hrm.expense_claims
+  traits: [std, co, br]
+  status: [draft, submitted, approved, rejected, reimbursed, cancelled]
+  columns:
+    - [claim_no, text, req]
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [currency_code, char(3), req]
+    - [total_amount, money, req]
+    - [reimburse_via, "enum(payroll,payment_batch)", req]
+    - [pay_input_id, uuid, opt, fk hrm.pay_inputs]
+    - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+  unique: [[company_id, claim_no]]
+  reqs: [EXP-02, EXP-05, EXP-06]
+
+- table: hrm.expense_claim_lines
+  traits: [std, co]
+  columns:
+    - [claim_id, uuid, req, fk hrm.expense_claims]
+    - [category_id, uuid, req, fk hrm.expense_categories]
+    - [expense_date, date, req]
+    - [amount, money, req]
+    - [description, text, opt]
+    - [receipt_file_id, uuid, opt, fk doc.files]
+    - [receipt_hash, text, opt, "duplicate receipt check (EXP-03)"]
+    - [cost_allocation, json, req]
+    - [policy_flags, "text[]", req, "over_limit, duplicate, missing_receipt, out_of_policy"]
+  indexes: [[claim_id], [receipt_hash]]
+  reqs: [EXP-02, EXP-03]
+
+# ---------------- compensation and benefits ----------------
+- table: hrm.salary_bands
+  traits: [std, co, eff]
+  eff_key: [grade_id, currency_code]
+  columns:
+    - [grade_id, uuid, req, fk hrm.grades]
+    - [currency_code, char(3), req]
+    - [minimum, money, req]
+    - [midpoint, money, req]
+    - [maximum, money, req]
+  checks: ["minimum <= midpoint and midpoint <= maximum"]
+  reqs: [CMP-01, POS-06]
+
+- table: hrm.increment_cycles
+  traits: [std, co]
+  status: [draft, open, in_review, approved, applied, closed]
+  columns:
+    - [name, text, req]
+    - [effective_date, date, req]
+    - [budget_amount, money, opt]
+    - [currency_code, char(3), req]
+    - [eligibility_rule, json, req]
+    - [guidelines, json, req, "e.g. percent by rating and compa-ratio"]
+    - [review_cycle_id, uuid, opt, "fk hrm.review_cycles (PRF-09)"]
+  reqs: [CMP-02, PRF-09]
+
+- table: hrm.increment_proposals
+  traits: [std, co]
+  status: [proposed, recommended, hr_reviewed, approved, rejected, applied]
+  columns:
+    - [cycle_id, uuid, req, fk hrm.increment_cycles]
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [current_amount, money, req]
+    - [proposed_amount, money, req]
+    - [proposed_percent, pct, opt]
+    - [promotion_grade_id, uuid, opt, fk hrm.grades]
+    - [rating, text, opt]
+    - [compa_ratio, rate, opt]
+    - [recommended_by, uuid, opt]
+    - [notes, text, opt]
+  unique: [[cycle_id, employment_id]]
+  reqs: [CMP-01, CMP-02]
+
+- table: hrm.benefit_plans
+  traits: [std, co, soft, name]
+  columns:
+    - [kind, "enum(medical,life_insurance,other_insurance,other)", req]
+    - [provider, text, opt]
+    - [eligibility_rule, json, req]
+    - [coverage, json, req, "limits, dependents allowed"]
+    - [employee_premium_component_id, uuid, opt, fk hrm.pay_components]
+    - [employer_premium_component_id, uuid, opt, fk hrm.pay_components]
+  unique: [[company_id, lower(code)]]
+  reqs: [CMP-05]
+
+- table: hrm.benefit_enrollments
+  traits: [std, co, eff]
+  eff_key: [employment_id, plan_id]
+  columns:
+    - [plan_id, uuid, req, fk hrm.benefit_plans]
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [coverage_level, code, opt]
+    - [covered_relation_ids, "uuid[]", req, "hrm.person_relations"]
+    - [employee_premium, money, opt]
+    - [employer_premium, money, opt]
+    - [policy_number, text, opt]
+  reqs: [CMP-05]
+
+- table: hrm.benefit_claims
+  traits: [std, co]
+  status: [submitted, approved, rejected, paid]
+  columns:
+    - [enrollment_id, uuid, req, fk hrm.benefit_enrollments]
+    - [claim_date, date, req]
+    - [patient_relation_id, uuid, opt, fk hrm.person_relations]
+    - [amount_claimed, money, req]
+    - [amount_approved, money, opt]
+    - [file_ids, "uuid[]", req]
+  reqs: [CMP-05]
+
+- table: hrm.provident_fund_accounts
+  traits: [std, co]
+  status: [active, closed]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [scheme_code, code, req, "statutory table or policy"]
+    - [opened_on, date, req]
+    - [closed_on, date, opt]
+  unique: [[employment_id, scheme_code]]
+  reqs: [CMP-04]
+
+- table: hrm.provident_fund_ledger
+  traits: [app, co]
+  columns:
+    - [account_id, uuid, req, fk hrm.provident_fund_accounts]
+    - [entry_date, date, req]
+    - [kind, "enum(employee_contribution,employer_contribution,profit,loan,loan_repayment,withdrawal,payout,adjustment)", req]
+    - [amount, money, req]
+    - [source_type, text, opt]
+    - [source_id, uuid, opt]
+  indexes: [[account_id, entry_date]]
+  reqs: [CMP-04]
+
+- table: hrm.liability_accruals
+  purpose: Gratuity, leave encashment and similar liabilities computed per period (CMP-07, LVE-13 basis)
+  traits: [app, co]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [pay_period_id, uuid, req, fk hrm.pay_periods]
+    - [kind, "enum(gratuity,leave_encashment,other)", req]
+    - [balance, money, req]
+    - [movement, money, req]
+    - [basis, json, req]
+    - [accounting_event_id, uuid, opt, fk itg.accounting_events]
+  unique: [[employment_id, pay_period_id, kind]]
+  reqs: [CMP-04, CMP-07]
+
+# ---------------- compliance ----------------
+- table: hrm.compliance_obligations
+  purpose: Statutory deadlines per company (CPL-01), from pack and tenant
+  traits: [std, co, name]
+  columns:
+    - [authority, text, req]
+    - [recurrence, json, req]
+    - [owner_role_id, uuid, opt, fk iam.roles]
+    - [return_template_id, uuid, opt, fk doc.templates]
+  unique: [[company_id, lower(code)]]
+  reqs: [CPL-01]
+
+- table: hrm.compliance_tasks
+  traits: [std, co]
+  status: [upcoming, due, filed, overdue, not_applicable]
+  columns:
+    - [obligation_id, uuid, req, fk hrm.compliance_obligations]
+    - [period_label, text, req]
+    - [due_date, date, req]
+    - [owner_user_id, uuid, opt, fk iam.users]
+    - [filed_on, date, opt]
+    - [evidence_file_id, uuid, opt, fk doc.files]
+  unique: [[obligation_id, period_label]]
+  reqs: [CPL-01]
+
+- table: hrm.statutory_returns
+  purpose: Generated registers and returns (EOBI, social security, withholding statements, tax certificates)
+  traits: [app, co]
+  columns:
+    - [return_code, code, req]
+    - [period_label, text, req]
+    - [compliance_task_id, uuid, opt, fk hrm.compliance_tasks]
+    - [employment_id, uuid, opt, "fk hrm.employments for per-employee certificates (CPL-05)"]
+    - [generated_document_id, uuid, req, fk doc.generated_documents]
+    - [source_run_ids, "uuid[]", req]
+  indexes: [[company_id, return_code, period_label], [employment_id]]
+  reqs: [CPL-02, CPL-04, CPL-05]
+
+# ---------------- parallel run (PAY-35) ----------------
+- table: hrm.parallel_runs
+  purpose: Compare a pay run with the customer's legacy payroll results before go-live
+  traits: [std, co]
+  status: [imported, compared, signed_off]
+  columns:
+    - [pay_run_id, uuid, req, fk hrm.pay_runs]
+    - [import_batch_id, uuid, req, fk itg.import_batches]
+    - [tolerance, money, req, "differences at or below are treated as matching"]
+    - [summary, json, opt, "matched, mismatched, missing counts by component"]
+    - [signed_off_by, uuid, opt]
+  reqs: [PAY-35]
+
+- table: hrm.parallel_run_lines
+  traits: [std, co]
+  columns:
+    - [parallel_run_id, uuid, req, fk hrm.parallel_runs]
+    - [employment_id, uuid, opt, fk hrm.employments]
+    - [legacy_employee_no, text, req]
+    - [component_code, code, req]
+    - [legacy_amount, money, opt]
+    - [new_amount, money, opt]
+    - [difference, money, req]
+    - [explanation, text, opt]
+  indexes: [[parallel_run_id, employment_id]]
+  reqs: [PAY-35]

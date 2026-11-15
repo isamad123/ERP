@@ -1,8 +1,8 @@
-# Phase 1 release scope (proposed, awaiting approval under D-34)
+# Phase 1 release scope (approved 15 November 2026)
 
 ## Release split (D-48, D-49 and scope reductions of 15 November 2026)
 
-The `release` column in `requirements.csv` is authoritative. Status: proposed, awaiting product-owner approval.
+The `release` column in `requirements.csv` is authoritative. Status: **approved by the product owner on 15 November 2026** (D-34).
 
 | Source | 1.0 | 1.1 | Later | Not planned |
 | --- | --- | --- | --- | --- |
