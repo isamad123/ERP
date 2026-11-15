@@ -1,0 +1,91 @@
+# Release 1.0 build plan (proposed)
+
+Status: proposed, for approval together with the data design. Slice files (`S1.n-*.md`) are written one batch ahead.
+
+Each slice is one fresh session. **Model** is what to select with `/model` before starting the batch. Classes follow
+`docs/token-strategy.md`: A and B use Opus 5.5 at high effort, C and D use Sonnet 5.5 unless stated.
+
+## Batch 1 — Foundation (Opus)
+| Slice | Work | Class | Model |
+| --- | --- | --- | --- |
+| S1.01 | Repository skeleton: solution, projects, CI on GitHub Actions, licence gate, architecture tests | A | Opus |
+| S1.02 | Code generator: reads `docs/data-design/*.yaml`, emits migrations, entities, repositories, APIs, permission registration, list and form screens, tests | A | Opus |
+| S1.03 | Control plane, tenant resolution, database-per-customer provisioning, migrator | B | Opus |
+| S1.04 | Tenant-isolation test suite running against every endpoint | B | Opus |
+| S1.05 | Identity: users, passwords, MFA, sessions, lockout | B | Opus |
+| S1.06 | Roles, permissions, data scopes, field security, maker-checker | B | Opus |
+| S1.07 | Audit log with hash chain, access log, per-person keys | B | Opus |
+| S1.08 | Numbering (gap-free and gap-allowed) | B | Opus |
+| S1.09 | Settings, feature flags, entitlements and licence states | B | Opus |
+| S1.10 | Workflow engine: linear and conditional approvals, delegation, escalation, inbox | B | Opus |
+| S1.11 | Jobs (chunked, resumable, run-once), notifications (in-app, email), documents and templates (PDF) | C | Opus |
+| S1.12 | Web shell and design system: login, navigation, first list screen, first form screen, first approval screen (the patterns Sonnet copies) | C | Opus |
+
+## Batch 2 — Foundation screens (Sonnet)
+| Slice | Work | Class | Model |
+| --- | --- | --- | --- |
+| S1.13 | Admin console: users, groups, roles, permissions, data scopes, field security screens | D | Sonnet |
+| S1.14 | Organization screens: companies, branches, locations, units, hierarchies, org chart | D | Sonnet |
+| S1.15 | Settings centre, labels, custom fields, option lists, numbering screens | D | Sonnet |
+| S1.16 | Import and export centre, job centre, notification log, system health, licence page | D | Sonnet |
+| S1.17 | Vendor platform console: customer list, provisioning wizard, entitlements | C | Sonnet |
+| S1.18 | First-run wizard and readiness checklist | C | Sonnet |
+| S1.19 | English and Urdu translations, right-to-left checks | D | Sonnet |
+
+## Batch 3 — HR core (mixed)
+| Slice | Work | Class | Model |
+| --- | --- | --- | --- |
+| S1.20 | Person and employment model, effective-dated assignments, events with reason codes, transfers between companies | B | Opus |
+| S1.21 | Employee screens: profile sections, timeline, bulk import, duplicate check | D | Sonnet |
+| S1.22 | Positions, grades, headcount, org chart by position | C | Sonnet |
+| S1.23 | Policy framework: types, versions, attribute-rule assignment, resolution view, Pakistan pack loader | B | Opus |
+| S1.24 | Documents vault, letters from templates with approval, policy acknowledgements | C | Sonnet |
+| S1.25 | Onboarding and offboarding checklists, separations, clearance | C | Sonnet |
+| S1.26 | Self-service web: profile change requests, service requests, home page | D | Sonnet |
+
+## Batch 4 — Time and leave (mixed)
+| Slice | Work | Class | Model |
+| --- | --- | --- | --- |
+| S1.27 | Biometric device connector and import (one reference device type first) | C | Opus |
+| S1.28 | Shifts, rosters, Ramzan timings | D | Sonnet |
+| S1.29 | Attendance engine: punches to daily results with explanation, exceptions, overtime | B | Opus |
+| S1.30 | Regularization and duty requests, attendance dashboard and reports | D | Sonnet |
+| S1.31 | Attendance period lock and retro adjustments (FR-XM-26) | B | Opus |
+| S1.32 | Leave engine: ledger, accrual, carry-forward, encashment, sandwich rules, year-end | B | Opus |
+| S1.33 | Leave screens: types, requests, calendars, balances | D | Sonnet |
+
+## Batch 5 — Payroll (Opus, then Sonnet) — needs the validated Pakistan rules
+| Slice | Work | Class | Model |
+| --- | --- | --- | --- |
+| S1.34 | Pay set-up: groups, periods, components, structures, compensation assignments | C | Sonnet |
+| S1.35 | Payroll engine: snapshot, calculation, trace, chunked job, determinism tests | B | Opus |
+| S1.36 | Pakistan income tax (salaried slabs, irregular income, declarations, previous employer) | B | Opus |
+| S1.37 | Statutory contributions: EOBI, provincial social security, WWF, provident fund, gratuity accrual | B | Opus |
+| S1.38 | Run stages, validation flags, variance report, maker-checker approval, lock and reopen | B | Opus |
+| S1.39 | Arrears and retro corrections, off-cycle runs, salary hold | B | Opus |
+| S1.40 | Payslips (bilingual PDF), bank salary files, payment status import | C | Sonnet |
+| S1.41 | Loans and advances with payroll recovery | C | Sonnet |
+| S1.42 | Expense claims with policy checks and reimbursement | C | Sonnet |
+| S1.43 | Final settlement with clearance blocking (FR-XM-29) | B | Opus |
+| S1.44 | Compensation: bands, increment cycles, benefits, provident fund ledger, liabilities | C | Sonnet |
+| S1.45 | Journal export (accounting events, account mapping, file formats) | C | Sonnet |
+| S1.46 | Compliance calendar, statutory returns, tax certificates | C | Sonnet |
+| S1.47 | Parallel-run comparison tool | C | Sonnet |
+
+## Batch 6 — Performance and learning (Sonnet)
+| Slice | Work | Class | Model |
+| --- | --- | --- | --- |
+| S1.48 | Form designer and responses | C | Sonnet |
+| S1.49 | Review cycles, goals, reviews, sign-off | C | Sonnet |
+| S1.50 | Courses, sessions, enrolments, learning records, mandatory training, bonds | D | Sonnet |
+
+## Batch 7 — Hardening (Opus)
+| Slice | Work | Class | Model |
+| --- | --- | --- | --- |
+| S1.51 | Standard reports and dashboards (HR, attendance, leave, payroll) | D | Sonnet |
+| S1.52 | Load test: payroll for 50,000 employees, attendance volume, isolation under load | B | Opus |
+| S1.53 | Security review checklist, backup and restore drill, release packaging | B | Opus |
+
+## Count
+53 slices: 25 on Opus (mostly foundation, engines and payroll), 28 on Sonnet (screens, set-up, reports, routine modules).
+Once the code generator (S1.02) exists, many Sonnet slices are short, because the generator writes the repetitive part.
