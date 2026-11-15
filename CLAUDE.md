@@ -75,6 +75,12 @@ higher one is a defect in the lower one: stop and report it.
 - No stub code that pretends to work. TODOs only with an issue id, listed in the report.
 - Seed data is idempotent and keyed by stable codes.
 
+## Branches and merging (product owner, 2026-11-15)
+- `main` is the single line of development. Every slice starts from the latest `main`.
+- Work on the session's branch, then open a pull request to `main` and merge it once CI is green
+  and the slice report is done. Do not leave finished work on side branches.
+- Never merge with failing CI. If `main` moved on, update the branch from `main` and rerun CI before merging.
+
 ## Slice report (always end with this)
 1. What was built, in plain language. 2. Requirement IDs covered. 3. Evidence: commands run and results.
 4. Tables, endpoints and events added or changed. 5. What is not done. 6. Risks and open questions.

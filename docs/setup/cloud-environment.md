@@ -12,5 +12,6 @@
 1. At https://claude.ai/code choose repository **isamad123/ERP**, environment **ERP**, permission mode **Accept edits**.
 2. Pick the model named in the build plan for that slice (`/model` or the model menu): Opus 5.5 or Sonnet 5.5.
 3. Type: `Do slice S1.01. Follow CLAUDE.md.` (change the slice number each time).
-4. When it finishes, it pushes a branch and writes a handoff note. Review the slice report, then create the pull
-   request from the session (or ask it to). Start a **new session** for the next slice.
+4. When it finishes, it pushes a branch, writes a handoff note, opens a pull request to `main` and merges it once
+   CI is green (CLAUDE.md, "Branches and merging"). Review the slice report. Start a **new session** for the next
+   slice; it starts from the latest `main`.
