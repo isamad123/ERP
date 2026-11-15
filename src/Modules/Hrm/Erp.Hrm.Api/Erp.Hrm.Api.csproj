@@ -3,6 +3,9 @@
     <OutputType>Library</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../Erp.Hrm.Application/Erp.Hrm.Application.csproj" />
     <ProjectReference Include="../Erp.Hrm.Contracts/Erp.Hrm.Contracts.csproj" />
   </ItemGroup>
