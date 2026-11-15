@@ -64,6 +64,8 @@ higher one is a defect in the lower one: stop and report it.
   licence and secret scans.
 
 ## Models and token use (D-45, docs/token-strategy.md)
+- **Model check first:** read the `Model:` line of the slice file. If you are not running that model, stop at once
+  and tell the product owner which model to select. Do no other work.
 - Default to **Sonnet 5.5**. Use **Opus 5.5, high effort** only for slices marked class A or B (design, tenancy,
   permissions, payroll and tax, attendance locking, final settlement, audit, licensing).
 - Generated code first: extend the code generator rather than hand-writing repeated code.
