@@ -374,11 +374,8 @@ export interface UserWrite
     defaultCompanyId?: string | null;
     language: string;
     timeZone: string;
-    lastLoginAt?: string | null;
     employeeRef?: string | null;
-    isSystem?: boolean;
     accessValidTo?: string | null;
-    status: 'invited' | 'active' | 'locked' | 'disabled' | 'archived';
 }
 
 export interface UserListQuery

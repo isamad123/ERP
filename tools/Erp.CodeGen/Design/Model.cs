@@ -62,6 +62,18 @@ public sealed class Column
     /// <summary>Where the column came from: a trait name, "status", or "design".</summary>
     public required string Origin { get; init; }
 
+    /// <summary>
+    /// Slice that added the column after the release's first migrations were merged (design key <c>added_in</c>). The
+    /// frozen schema file leaves it out; the slice's design migration adds it.
+    /// </summary>
+    public string? AddedIn { get; set; }
+
+    /// <summary>
+    /// Column the generated API returns but never accepts (design key <c>api_read_only</c>, CR-012). Only purpose-built
+    /// services change it; on create a status column starts at its first listed value.
+    /// </summary>
+    public bool ApiReadOnly { get; set; }
+
     public bool IsSensitive => Kind is ColumnKind.Encrypted or ColumnKind.Hmac;
 
     public bool IsGenerated => GeneratedExpression is not null;
@@ -149,6 +161,26 @@ public sealed class Table
 
     /// <summary>Columns the append-only trigger still allows to change (documented exception, e.g. iam.sessions).</summary>
     public List<string> AppendOnlyUpdatable { get; } = [];
+
+    /// <summary>
+    /// Slice that added the whole table after the release's first migrations were merged (design key <c>added_in</c>).
+    /// The frozen files leave it out; the slice's design migration creates it.
+    /// </summary>
+    public string? AddedIn { get; init; }
+
+    /// <summary>Updatable exceptions added later (design key <c>updatable_added_in</c>): slice → columns.</summary>
+    public List<(string Slice, string Column)> UpdatableAddedIn { get; } = [];
+
+    /// <summary>Table comments added later (with an <c>updatable_added_in</c> change): slice → text.</summary>
+    public List<(string Slice, string Text)> CommentsAddedIn { get; } = [];
+
+    /// <summary>The append-only exceptions as the release's first (frozen) migration created them.</summary>
+    public IEnumerable<string> BaseAppendOnlyUpdatable => AppendOnlyUpdatable.Where(c => !UpdatableAddedIn.Exists(u => u.Column == c));
+
+    /// <summary>Slices whose design migration changes this table (added table, columns or exceptions).</summary>
+    public IEnumerable<string> ChangedIn =>
+        new[] { AddedIn }.Concat(Columns.Select(c => c.AddedIn)).Concat(UpdatableAddedIn.Select(u => u.Slice)).Concat(CommentsAddedIn.Select(c => c.Slice))
+            .Where(s => s is not null).Select(s => s!).Distinct(StringComparer.Ordinal);
 
     public bool IsSoftDeleted => Traits.Contains("soft");
 

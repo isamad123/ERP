@@ -17,6 +17,8 @@
     - [is_system, bool, req, reserved job and system users]
     - [access_valid_to, date, opt, automatic disable date]
   unique: [[lower(username)], [lower(email)]]
+  # CR-012 (S1.05): status changes only through the user status service (transitions, user limit, session revocation).
+  api_read_only: [status, is_system, last_login_at]
   reqs: [KRN-IAM-01, ADM-USR-01, ADM-USR-03, ADM-USR-07]
 
 - table: iam.user_credentials
@@ -63,8 +65,15 @@
     - [user_agent, text, opt]
     - [revoked_at, ts, opt]
     - [revoked_reason, text, opt]
+    - [refresh_token_hash, text, opt, "SHA-256 (hex) of the current refresh token; replaced on every refresh"]
   indexes: [[user_id, issued_at]]
   notes: "Not strictly append-only: last_seen_at and revoked_* are updatable by the session service role only."
+  # CR-010 (S1.05): refresh-token hash on the session; rotation on every refresh (product owner, S1.05 plan P6).
+  added_in: {S1.05: [refresh_token_hash]}
+  updatable_added_in:
+    S1.05:
+      columns: [refresh_token_hash]
+      note: "From S1.05 the session service also replaces refresh_token_hash on every refresh (rotation, CR-010)."
   reqs: [KRN-IAM-04, ADM-USR-24]
 
 - table: iam.login_attempts
@@ -77,6 +86,30 @@
     - [ip_address, inet, opt]
   indexes: [[username, occurred_at]]
   reqs: [KRN-AUD-02]
+
+# CR-010 (S1.05): tokens and recovery codes are stored only as hashes.
+- table: iam.one_time_tokens
+  purpose: "Single-use, expiring tokens for account activation and sign-in steps"
+  traits: [std]
+  added_in: S1.05
+  columns:
+    - [user_id, uuid, req, fk iam.users]
+    - [purpose, "enum(activation,mfa_challenge,password_change,mfa_enrolment)", req]
+    - [token_hash, text, req, SHA-256 (hex) of the token; the token itself is never stored]
+    - [expires_at, ts, req]
+    - [used_at, ts, opt]
+  unique: [[token_hash]]
+  reqs: [KRN-IAM-01, KRN-IAM-02, ADM-USR-05]
+
+- table: iam.mfa_recovery_codes
+  purpose: "One-time recovery codes for a user's second factor"
+  traits: [std]
+  added_in: S1.05
+  columns:
+    - [user_id, uuid, req, fk iam.users]
+    - [code_hash, text, req, Argon2id hash of the code; the code is shown once]
+    - [used_at, ts, opt]
+  reqs: [KRN-IAM-02, ADM-USR-21]
 
 - table: iam.permissions
   purpose: Registered from module manifests at start-up

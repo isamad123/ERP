@@ -25,6 +25,7 @@ internal sealed class SessionConfiguration : IEntityTypeConfiguration<global::Er
         builder.Property(e => e.UserAgent).HasColumnName("user_agent").HasColumnType("text");
         builder.Property(e => e.RevokedAt).HasColumnName("revoked_at").HasColumnType("timestamptz");
         builder.Property(e => e.RevokedReason).HasColumnName("revoked_reason").HasColumnType("text");
+        builder.Property(e => e.RefreshTokenHash).HasColumnName("refresh_token_hash").HasColumnType("text");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
     }

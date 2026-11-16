@@ -44,11 +44,8 @@ public sealed class UserWriteRequest
     public global::System.Guid? DefaultCompanyId { get; init; }
     public string? Language { get; init; }
     public string? TimeZone { get; init; }
-    public global::System.DateTimeOffset? LastLoginAt { get; init; }
     public global::System.Guid? EmployeeRef { get; init; }
-    public bool? IsSystem { get; init; }
     public global::System.DateOnly? AccessValidTo { get; init; }
-    public string? Status { get; init; }
 
     /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
     public long? RowVersion { get; init; }
@@ -190,10 +187,6 @@ internal static class UserEndpoints
         {
             errors.Add("timeZone");
         }
-        if (request.Status is null)
-        {
-            errors.Add("status");
-        }
         if (update && request.RowVersion is null)
         {
             errors.Add("rowVersion");
@@ -209,14 +202,11 @@ internal static class UserEndpoints
         row.DefaultCompanyId = request.DefaultCompanyId;
         row.Language = request.Language!;
         row.TimeZone = request.TimeZone!;
-        row.LastLoginAt = request.LastLoginAt;
         row.EmployeeRef = request.EmployeeRef;
-        if (request.IsSystem is not null)
-        {
-            row.IsSystem = request.IsSystem!.Value;
-        }
         row.AccessValidTo = request.AccessValidTo;
-        row.Status = request.Status!;
-        _ = update;
+        if (!update)
+        {
+            row.Status = "invited";
+        }
     }
 }
