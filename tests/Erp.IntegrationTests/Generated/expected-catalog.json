@@ -34511,6 +34511,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "previous_refresh_hash",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [],
@@ -34539,7 +34549,8 @@
         "last_seen_at",
         "revoked_at",
         "revoked_reason",
-        "refresh_token_hash"
+        "refresh_token_hash",
+        "previous_refresh_hash"
       ],
       "has_api": false,
       "full_name": "iam.sessions"

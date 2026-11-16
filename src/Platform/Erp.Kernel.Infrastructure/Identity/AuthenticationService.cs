@@ -27,23 +27,30 @@ public sealed class AuthenticationService(
     private const int MaxLoginLength = 320;
     private const int MaxPasswordLength = 1024;
 
-    private static readonly Lazy<string> DummyHash = new(() => new Argon2idPasswordHasher().Hash(Convert.ToBase64String(RandomNumberGenerator.GetBytes(24))));
+    private static readonly Lock DummyGate = new();
+    private static string? dummyHash;
 
     public async Task<AuthResult> SignInAsync(string? login, string? password, ClientInfo client, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(client);
-        if (string.IsNullOrWhiteSpace(login) || string.IsNullOrEmpty(password) || login.Length > MaxLoginLength || password.Length > MaxPasswordLength)
-        {
-            return AuthResult.Failed;
-        }
-
         var now = clock.UtcNow;
         await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(login) || string.IsNullOrEmpty(password) || login.Length > MaxLoginLength || password.Length > MaxPasswordLength)
+        {
+            // Malformed attempts are recorded too (every attempt is written, S1.05 review finding 9).
+            return await FailAsync(connection, tx, login ?? string.Empty, "bad_password", client, now, cancellationToken).ConfigureAwait(false);
+        }
+
         var account = await IdentityDb.FindForSignInAsync(connection, tx, login.Trim(), cancellationToken).ConfigureAwait(false);
+
+        // The same work on every path (policy read, one Argon2id check, one credential statement), so an unknown user
+        // takes about as long as a known one (slice build item 3, review finding 9).
+        var policy = await IdentitySettings.ReadAsync(connection, tx, account?.Id, cancellationToken).ConfigureAwait(false);
         if (account is null || !account.HasCredential)
         {
-            hasher.Verify(password, DummyHash.Value, hasher.Algorithm, out _); // same work as a real check
+            hasher.Verify(password, DummyHash(), hasher.Algorithm, out _);
+            await IdentityDb.ExecuteAsync(connection, tx, "update iam.user_credentials set failed_attempts = failed_attempts where false", cancellationToken).ConfigureAwait(false);
             return await FailAsync(connection, tx, login, "bad_password", client, now, cancellationToken).ConfigureAwait(false);
         }
 
@@ -53,7 +60,6 @@ public sealed class AuthenticationService(
             return await FailAsync(connection, tx, login, "disabled", client, now, cancellationToken).ConfigureAwait(false);
         }
 
-        var policy = await IdentitySettings.ReadAsync(connection, tx, account.Id, cancellationToken).ConfigureAwait(false);
         if (account.Status == UserStatuses.Locked)
         {
             if (account.LockedUntil is not { } until || until > now)
@@ -79,11 +85,8 @@ public sealed class AuthenticationService(
             await IdentityDb.RehashAsync(connection, tx, account.Id, hasher.Hash(password), hasher.Algorithm, cancellationToken).ConfigureAwait(false);
         }
 
-        if (account.FailedAttempts > 0)
-        {
-            await IdentityDb.SetFailuresAsync(connection, tx, account.Id, 0, null, cancellationToken).ConfigureAwait(false);
-        }
-
+        // The failure count is NOT reset here: only issuing a session resets it (ContinueAsync), so a known password
+        // cannot be used to wipe failed second-factor guesses (S1.05 review finding 1).
         var result = await ContinueAsync(connection, tx, account, policy, mfaDone: false, client, now, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return result;
@@ -129,11 +132,6 @@ public sealed class AuthenticationService(
         }
 
         await IdentityDb.UseTokenAsync(connection, tx, token.Id, account.Id, now, cancellationToken).ConfigureAwait(false);
-        if (account.FailedAttempts > 0)
-        {
-            await IdentityDb.SetFailuresAsync(connection, tx, account.Id, 0, null, cancellationToken).ConfigureAwait(false);
-        }
-
         var result = await ContinueAsync(connection, tx, account, policy, mfaDone: true, client, now, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return result;
@@ -160,7 +158,8 @@ public sealed class AuthenticationService(
 
         await IdentityDb.SetPasswordAsync(connection, tx, account.Id, hasher.Hash(newPassword!), hasher.Algorithm, account.Id, now, cancellationToken).ConfigureAwait(false);
         await IdentityDb.UseTokenAsync(connection, tx, token.Id, account.Id, now, cancellationToken).ConfigureAwait(false);
-        await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.PasswordChanged, account.Id, account.Id, now, new { reason = "required" }, cancellationToken).ConfigureAwait(false);
+        var ended = await IdentityDb.RevokeAllSessionsAsync(connection, tx, account.Id, "password_changed", now, cancellationToken).ConfigureAwait(false);
+        await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.PasswordChanged, account.Id, account.Id, now, new { reason = "required", sessions_revoked = ended }, cancellationToken).ConfigureAwait(false);
 
         // The change token is only issued after the second factor (or when the user has none), so MFA is done here.
         var result = await ContinueAsync(connection, tx, account with { MustChange = false, PasswordChangedAt = now }, policy, mfaDone: true, client, now, cancellationToken).ConfigureAwait(false);
@@ -223,6 +222,14 @@ public sealed class AuthenticationService(
         var now = clock.UtcNow;
         await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+        // Lock order user → session, as in sign-in and the administrator actions (S1.05 review finding 3).
+        if (await IdentityDb.SessionOwnerAsync(connection, tx, sessionId, cancellationToken).ConfigureAwait(false) is not { } owner)
+        {
+            return AuthResult.Failed;
+        }
+
+        var account = await IdentityDb.GetAccountAsync(connection, tx, owner, cancellationToken).ConfigureAwait(false);
         var session = await IdentityDb.GetSessionAsync(connection, tx, sessionId, cancellationToken).ConfigureAwait(false);
         if (session is null || session.RevokedAt is not null)
         {
@@ -236,10 +243,16 @@ public sealed class AuthenticationService(
             return AuthResult.Failed;
         }
 
-        if (session.RefreshTokenHash is null || !CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(session.RefreshTokenHash), Encoding.ASCII.GetBytes(OpaqueTokens.Hash(refreshToken!))))
+        var presented = OpaqueTokens.Hash(refreshToken!);
+        if (!Matches(session.RefreshTokenHash, presented))
         {
-            // An old (already rotated) refresh token was presented: it may have been stolen, so the session ends (ruling P6).
-            await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.SessionsRevoked, session.UserId, session.UserId, now, new { reason = "refresh_reuse", session = session.Id }, cancellationToken).ConfigureAwait(false);
+            if (!Matches(session.PreviousRefreshHash, presented))
+            {
+                return AuthResult.Failed; // a wrong secret is a plain failure; knowing a session id cannot end it (finding 6)
+            }
+
+            // The token replaced by the last rotation came back: it may have been stolen, so the session ends (ruling P6, CR-016).
+            await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.SessionsRevoked, session.UserId, ControlPlane.Provisioning.BaselineSeed.SystemUserId, now, new { reason = "refresh_reuse", session = session.Id }, cancellationToken).ConfigureAwait(false);
             return await EndAsync("refresh_reuse").ConfigureAwait(false);
         }
 
@@ -253,8 +266,6 @@ public sealed class AuthenticationService(
         {
             return await EndAsync("idle_timeout").ConfigureAwait(false);
         }
-
-        var account = await IdentityDb.GetAccountAsync(connection, tx, session.UserId, cancellationToken).ConfigureAwait(false);
 
         // An automatic lock (it has an end time) stops new sign-ins but does not end open sessions, so a stranger
         // guessing passwords cannot sign the real user out. Every other status but active ends the session.
@@ -280,7 +291,11 @@ public sealed class AuthenticationService(
         var now = clock.UtcNow;
         await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        await IdentityDb.RevokeSessionAsync(connection, tx, sessionId, userId, "sign_out", now, cancellationToken).ConfigureAwait(false);
+        if (await IdentityDb.RevokeSessionAsync(connection, tx, sessionId, userId, "sign_out", now, cancellationToken).ConfigureAwait(false) == 1)
+        {
+            await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.SessionsRevoked, userId, userId, now, new { reason = "sign_out", session = sessionId }, cancellationToken).ConfigureAwait(false);
+        }
+
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -349,10 +364,11 @@ public sealed class AuthenticationService(
             enrolBy = graceEnd;
         }
 
+        await IdentityDb.ResetFailuresAsync(connection, tx, account.Id, cancellationToken).ConfigureAwait(false);
         var sessionId = Guid.CreateVersion7(now);
         var refresh = SessionTokens.New(sessionId);
         await IdentityDb.InsertSessionAsync(connection, tx, sessionId, account.Id, now, now.AddMinutes(policy.Session.AbsoluteMinutes), client, OpaqueTokens.Hash(refresh), cancellationToken).ConfigureAwait(false);
-        await IdentityDb.EnforceConcurrentLimitAsync(connection, tx, account.Id, policy.Session.MaxConcurrent, TimeSpan.FromMinutes(policy.Session.IdleMinutes), now, cancellationToken).ConfigureAwait(false);
+        await IdentityDb.EnforceConcurrentLimitAsync(connection, tx, account.Id, sessionId, policy.Session.MaxConcurrent, TimeSpan.FromMinutes(policy.Session.IdleMinutes), now, cancellationToken).ConfigureAwait(false);
         await IdentityDb.ExecuteAsync(connection, tx, "update iam.users set last_login_at = $2 where id = $1", cancellationToken, account.Id, now).ConfigureAwait(false);
         await IdentityDb.LogAttemptAsync(connection, tx, account.Username, "success", client, account.Id, now, cancellationToken).ConfigureAwait(false);
         var (access, expires) = issuer.Issue(account.Id, tenant.TenantCode, sessionId, now);
@@ -367,16 +383,18 @@ public sealed class AuthenticationService(
         return account is { Status: UserStatuses.Active, HasCredential: true } ? (token, account) : (null, null);
     }
 
-    /// <summary>Counts a failed password or code; at the threshold the account locks until the lock time (ruling P3).</summary>
-    private static async Task CountFailureAsync(NpgsqlConnection connection, NpgsqlTransaction tx, UserAccount account, IdentityPolicy policy, DateTimeOffset now, CancellationToken cancellationToken)
+    private static Task CountFailureAsync(NpgsqlConnection connection, NpgsqlTransaction tx, UserAccount account, IdentityPolicy policy, DateTimeOffset now, CancellationToken cancellationToken) =>
+        Lockouts.CountFailureAsync(connection, tx, account.Id, policy, now, cancellationToken);
+
+    private static bool Matches(string? storedHash, string presentedHash) =>
+        storedHash is not null && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(storedHash), Encoding.ASCII.GetBytes(presentedHash));
+
+    /// <summary>A fixed Argon2id hash for unknown users, made once with the injected hasher (same parameters and gate).</summary>
+    private string DummyHash()
     {
-        var failed = account.FailedAttempts + 1;
-        var lockedUntil = Lockout.AfterFailure(failed, now, policy.Password);
-        await IdentityDb.SetFailuresAsync(connection, tx, account.Id, failed, lockedUntil, cancellationToken).ConfigureAwait(false);
-        if (lockedUntil is { } until)
+        lock (DummyGate)
         {
-            await IdentityDb.SetStatusAsync(connection, tx, account.Id, UserStatuses.Locked, account.Id, now, cancellationToken).ConfigureAwait(false);
-            await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.UserLocked, account.Id, account.Id, now, new { automatic = true, locked_until = until }, cancellationToken).ConfigureAwait(false);
+            return dummyHash ??= hasher.Hash(Convert.ToBase64String(RandomNumberGenerator.GetBytes(24)));
         }
     }
 
@@ -385,6 +403,28 @@ public sealed class AuthenticationService(
         await IdentityDb.LogAttemptAsync(connection, tx, login, outcome, client, ControlPlane.Provisioning.BaselineSeed.SystemUserId, now, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return AuthResult.Failed;
+    }
+}
+
+/// <summary>Failed passwords and codes, counted towards the automatic lock (FR-KRN-IAM-01; ruling P3).</summary>
+internal static class Lockouts
+{
+    /// <summary>
+    /// Adds one failure atomically (review finding 2); at the threshold the account locks until the lock time. The lock
+    /// event is raised once, by the request that reaches the threshold.
+    /// </summary>
+    public static async Task CountFailureAsync(NpgsqlConnection connection, NpgsqlTransaction tx, Guid userId, IdentityPolicy policy, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var failed = await IdentityDb.IncrementFailuresAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
+        if (Lockout.AfterFailure(failed, now, policy.Password) is { } until)
+        {
+            await IdentityDb.SetLockedUntilAsync(connection, tx, userId, until, cancellationToken).ConfigureAwait(false);
+            await IdentityDb.SetStatusAsync(connection, tx, userId, UserStatuses.Locked, userId, now, cancellationToken).ConfigureAwait(false);
+            if (failed == policy.Password.LockoutThreshold)
+            {
+                await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.UserLocked, userId, userId, now, new { automatic = true, locked_until = until }, cancellationToken).ConfigureAwait(false);
+            }
+        }
     }
 }
 

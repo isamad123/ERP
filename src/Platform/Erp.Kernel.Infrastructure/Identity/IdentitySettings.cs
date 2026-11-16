@@ -74,39 +74,86 @@ public static class IdentitySettings
         }
     }
 
-    /// <summary>The effective values for one user: user layer, then tenant layer, then the shipped default.</summary>
+    /// <summary>
+    /// The effective values for one user: user layer, then tenant layer, then the shipped default. Values are kept within
+    /// each definition's minimum, and a value that is not a whole number falls back to the default, so a bad stored
+    /// value can never break sign-in (S1.05 review finding 10). MFA is required when the customer OR the user's own
+    /// setting requires it: a user setting can tighten the customer's rule but never relax it (product owner, 2026-11-16).
+    /// </summary>
     public static async Task<IdentityPolicy> ReadAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, Guid? userId, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(connection);
         await using var command = new NpgsqlCommand("""
-            select s.key, coalesce(u.value, t.value, s.default_value), coalesce(u.updated_at, t.updated_at)
+            select s.key, s.default_value, t.value, t.updated_at, u.value, u.updated_at
             from cfg.settings s
             left join cfg.setting_values t on t.setting_key = s.key and t.layer = 'tenant' and t.scope_id is null
             left join cfg.setting_values u on u.setting_key = s.key and u.layer = 'user' and u.scope_id = $1 and 'user' = any (s.allowed_layers)
             where s.module_id = 'iam'
             """, connection, transaction);
         command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid, Value = (object?)userId ?? DBNull.Value });
-        var values = new Dictionary<string, (JsonElement Value, DateTimeOffset? Since)>(StringComparer.Ordinal);
+        var rows = new Dictionary<string, Layers>(StringComparer.Ordinal);
         await using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
         {
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
-                using var doc = JsonDocument.Parse(reader.GetString(1));
-                values[reader.GetString(0)] = (doc.RootElement.Clone(), reader.IsDBNull(2) ? null : reader.GetFieldValue<DateTimeOffset>(2));
+                rows[reader.GetString(0)] = new Layers(
+                    Parse(reader.GetString(1)),
+                    reader.IsDBNull(2) ? null : Parse(reader.GetString(2)),
+                    reader.IsDBNull(3) ? null : reader.GetFieldValue<DateTimeOffset>(3),
+                    reader.IsDBNull(4) ? null : Parse(reader.GetString(4)),
+                    reader.IsDBNull(5) ? null : reader.GetFieldValue<DateTimeOffset>(5));
             }
         }
 
-        int Int(string key) => values.TryGetValue(key, out var v) && v.Value.ValueKind == JsonValueKind.Number ? v.Value.GetInt32() : int.Parse(All.First(d => d.Key == key).DefaultJson, System.Globalization.CultureInfo.InvariantCulture);
-        var mfaRequired = values.TryGetValue(MfaRequired, out var m) && m.Value.ValueKind == JsonValueKind.True;
-        var methods = values.TryGetValue(MfaAllowedMethods, out var am) && am.Value.ValueKind == JsonValueKind.Array
-            ? am.Value.EnumerateArray().Select(e => e.GetString() ?? string.Empty).ToList()
+        int Int(string key)
+        {
+            var definition = All.First(d => d.Key == key);
+            var fallback = int.Parse(definition.DefaultJson, System.Globalization.CultureInfo.InvariantCulture);
+            var value = rows.TryGetValue(key, out var layers) && layers.Effective is { ValueKind: JsonValueKind.Number } number && number.TryGetInt32(out var parsed)
+                ? parsed
+                : fallback;
+            return definition.Min is { } min ? Math.Max(min, value) : value;
+        }
+
+        var (mfaRequired, mfaSince) = MfaRequirement(rows.GetValueOrDefault(MfaRequired));
+        var methods = rows.TryGetValue(MfaAllowedMethods, out var am) && am.Effective is { ValueKind: JsonValueKind.Array } list
+            ? list.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String).Select(e => e.GetString()!).ToList()
             : ["totp"];
         return new IdentityPolicy(
             new PasswordPolicy(Int(PasswordMinLength), Int(PasswordMinCharacterKinds), Int(PasswordHistoryCount), Int(PasswordExpiryDays), Int(LockoutThreshold), Int(LockoutMinutes)),
             new SessionPolicy(Int(SessionIdleMinutes), Int(SessionAbsoluteMinutes), Int(SessionMaxConcurrent), Int(SessionRememberDeviceDays)),
-            new MfaPolicy(mfaRequired, mfaRequired ? m.Since : null, Int(MfaGraceDays), Int(MfaRecoveryCodes), methods),
+            new MfaPolicy(mfaRequired, mfaSince, Int(MfaGraceDays), Int(MfaRecoveryCodes), methods),
             TimeSpan.FromHours(Int(ActivationTokenHours)),
             TimeSpan.FromMinutes(Int(ChallengeMinutes)));
+    }
+
+    /// <summary>
+    /// Required when the customer's value (or the shipped default) or the user's own value is true. The grace period
+    /// starts at the earliest time a layer that requires it was set (null when only the default requires it).
+    /// </summary>
+    private static (bool Required, DateTimeOffset? Since) MfaRequirement(Layers? layers)
+    {
+        if (layers is null)
+        {
+            return (false, null);
+        }
+
+        var byCustomer = (layers.Tenant ?? layers.Default).ValueKind == JsonValueKind.True;
+        var byUser = layers.User is { ValueKind: JsonValueKind.True };
+        var since = new[] { byCustomer && layers.Tenant is not null ? layers.TenantSince : null, byUser ? layers.UserSince : null }
+            .Where(d => d is not null).Min();
+        return (byCustomer || byUser, since);
+    }
+
+    private static JsonElement Parse(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        return doc.RootElement.Clone();
+    }
+
+    private sealed record Layers(JsonElement Default, JsonElement? Tenant, DateTimeOffset? TenantSince, JsonElement? User, DateTimeOffset? UserSince)
+    {
+        public JsonElement Effective => User ?? Tenant ?? Default;
     }
 }
 

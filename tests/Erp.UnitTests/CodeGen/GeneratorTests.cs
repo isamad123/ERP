@@ -199,6 +199,20 @@ public sealed class GeneratorTests
     }
 
     [Fact]
+    public void S105_CR016_a_revision_slice_writes_its_own_file_and_leaves_the_merged_design_file_unchanged()
+    {
+        var files = Generator.Generate(Root).Files;
+        const string Merged = "V202611150302__kernel__design_s1_05.sql";
+        Assert.Equal(File.ReadAllText(Path.Combine(Root, SqlEmitter.KernelMigrations, Merged)), files[SqlEmitter.KernelMigrations + "/" + Merged]);
+        Assert.DoesNotContain("previous_refresh_hash", files[SqlEmitter.KernelMigrations + "/" + Merged], StringComparison.Ordinal);
+
+        var revision = files[SqlEmitter.KernelMigrations + "/V202611150402__kernel__design_s1_05_r1.sql"];
+        Assert.Contains("alter table iam.sessions add column if not exists previous_refresh_hash text;", revision, StringComparison.Ordinal);
+        Assert.Contains("tg_refuse_change('last_seen_at', 'revoked_at', 'revoked_reason', 'refresh_token_hash', 'previous_refresh_hash')", revision, StringComparison.Ordinal);
+        Assert.Contains("grant update (previous_refresh_hash) on iam.sessions to app_rw;", revision, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void S105_CR012_api_read_only_columns_are_returned_but_never_accepted_by_the_generated_api()
     {
         var files = Generator.Generate(Root).Files;
