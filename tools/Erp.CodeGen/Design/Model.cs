@@ -198,6 +198,18 @@ public sealed class Table
     public List<string> ScopeAttributes { get; } = [];
 
     /// <summary>
+    /// Foreign-key column through whose parent row this table's rows are located (design key <c>scope: {via: column}</c>,
+    /// review S1.06 finding 1, CR-025); the parent must be directly scoped. Null for other tables.
+    /// </summary>
+    public string? ScopeVia { get; set; }
+
+    /// <summary>The parent table named by <see cref="ScopeVia"/> (resolved after the foreign keys).</summary>
+    public Table? ScopeViaTable { get; set; }
+
+    /// <summary>True when data scopes apply to the table (its own locators or its parent's).</summary>
+    public bool IsDataScoped => ScopeLocators.Count > 0 || ScopeVia is not null;
+
+    /// <summary>
     /// Generated API actions allowed (design key <c>api_actions</c>, CR-020/CR-021); null means every action the table's
     /// shape supports. Purpose-built services replace the closed ones.
     /// </summary>

@@ -1,6 +1,8 @@
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Erp.BuildingBlocks.Domain.Entities;
 
 namespace Erp.BuildingBlocks.Application.Security;
 
@@ -70,6 +72,99 @@ public sealed class FieldAccessMap
     }
 
     public bool CanEdit(string key) => Of(key) == FieldAccessLevel.Editable;
+
+    /// <summary>The most open access of several maps, field by field (ruling Q4); no map: every field hidden.</summary>
+    public static FieldAccessMap Merge(IReadOnlyCollection<FieldAccessMap> maps)
+    {
+        ArgumentNullException.ThrowIfNull(maps);
+        var keys = maps.SelectMany(m => m._levels.Keys).Distinct(StringComparer.Ordinal);
+        return new FieldAccessMap(keys.ToDictionary(k => k, k => maps.Max(m => m.Of(k)), StringComparer.Ordinal));
+    }
+
+    /// <summary>True when both maps give every field the same access.</summary>
+    public bool SameAs(FieldAccessMap other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        return _levels.Keys.Union(other._levels.Keys, StringComparer.Ordinal).All(k => Of(k) == other.Of(k));
+    }
+}
+
+/// <summary>
+/// One role assignment's part in a field-access decision: the rows its data scope covers (null: every row) and the
+/// fields as that role alone sees them.
+/// </summary>
+public sealed record FieldAccessPart<T>(Expression<Func<T, bool>>? Covers, FieldAccessMap Map)
+    where T : class;
+
+/// <summary>
+/// Field access per row (review S1.06 finding 3, CR-025): a row's fields are the most open access among the roles that
+/// grant the action <b>and whose data scope covers that row</b>, so a rule written for one's own records (the Employee
+/// role's salary rule) never opens the fields of rows seen through another role. <see cref="Uniform"/> is set when the
+/// answer is the same for every row, which needs no query.
+/// </summary>
+public sealed class FieldAccessPlan<T>(FieldAccessMap? uniform, IReadOnlyList<FieldAccessPart<T>> parts)
+    where T : class
+{
+    public FieldAccessMap? Uniform { get; } = uniform;
+
+    public IReadOnlyList<FieldAccessPart<T>> Parts { get; } = parts;
+}
+
+/// <summary>Resolves a <see cref="FieldAccessPlan{T}"/> for stored rows.</summary>
+public static class FieldAccessPlans
+{
+    /// <summary>A plan with the same answer for every row.</summary>
+    public static FieldAccessPlan<T> Same<T>(FieldAccessMap map)
+        where T : class => new(map, []);
+
+    /// <summary>
+    /// The field access of each stored row: one id query per part whose scope is not "every row". A row no part covers
+    /// (outside the caller's scope, so the scope check answers for it) is judged by all parts together.
+    /// </summary>
+    public static async Task<IReadOnlyList<FieldAccessMap>> ResolveAsync<T>(this FieldAccessPlan<T> plan, IReadOnlyList<T> rows, IScopeQuerySource source, CancellationToken cancellationToken)
+        where T : class, IEntity
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(rows);
+        ArgumentNullException.ThrowIfNull(source);
+        if (plan.Uniform is { } uniform)
+        {
+            return rows.Select(_ => uniform).ToList();
+        }
+
+        var ids = rows.Select(r => r.Id).Distinct().ToArray();
+        var covered = new List<HashSet<Guid>?>(plan.Parts.Count);
+        foreach (var part in plan.Parts)
+        {
+            covered.Add(part.Covers is null || ids.Length == 0
+                ? null
+                : (await source.IdsAsync(source.Rows<T>().Where(part.Covers).Where(e => ids.Contains(e.Id)), cancellationToken).ConfigureAwait(false)).ToHashSet());
+        }
+
+        var all = FieldAccessMap.Merge(plan.Parts.Select(p => p.Map).ToList());
+        var cache = new Dictionary<string, FieldAccessMap>(StringComparer.Ordinal);
+        var result = new List<FieldAccessMap>(rows.Count);
+        foreach (var row in rows)
+        {
+            var hits = Enumerable.Range(0, plan.Parts.Count).Where(i => covered[i] is null || covered[i]!.Contains(row.Id)).ToList();
+            if (hits.Count == 0)
+            {
+                result.Add(all);
+                continue;
+            }
+
+            var key = string.Join(',', hits);
+            if (!cache.TryGetValue(key, out var map))
+            {
+                map = FieldAccessMap.Merge(hits.Select(i => plan.Parts[i].Map).ToList());
+                cache[key] = map;
+            }
+
+            result.Add(map);
+        }
+
+        return result;
+    }
 }
 
 /// <summary>
@@ -78,7 +173,15 @@ public sealed class FieldAccessMap
 /// </summary>
 public interface IFieldAccess
 {
+    /// <summary>
+    /// The merged access of the roles granting the action that are valid for the company (all companies when null).
+    /// Used for new rows (create) and for "what may the caller open" checks; stored rows use <see cref="PlanAsync"/>.
+    /// </summary>
     ValueTask<FieldAccessMap> ForAsync(FieldCatalog catalog, string action, Guid? companyId, CancellationToken cancellationToken);
+
+    /// <summary>Field access per stored row: only roles whose data scope covers the row count (review S1.06 finding 3).</summary>
+    ValueTask<FieldAccessPlan<T>> PlanAsync<T>(FieldCatalog catalog, ScopeTarget<T> target, string action, IScopeQuerySource? source, CancellationToken cancellationToken)
+        where T : class;
 }
 
 /// <summary>

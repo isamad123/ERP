@@ -297,18 +297,6 @@
       "sensitive": false
     },
     {
-      "code": "iam.data_scopes.create",
-      "module": "iam",
-      "descriptionKey": "permissions.iam.data_scopes.create",
-      "sensitive": false
-    },
-    {
-      "code": "iam.data_scopes.update",
-      "module": "iam",
-      "descriptionKey": "permissions.iam.data_scopes.update",
-      "sensitive": false
-    },
-    {
       "code": "iam.delegations.read",
       "module": "iam",
       "descriptionKey": "permissions.iam.delegations.read",

@@ -346,6 +346,8 @@
     - [file_ids, "uuid[]", req]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   field_class: {declared_amount: salary, verified_amount: salary}
+  # CR-025 (S1.06 review finding 1): lines are located through their declaration (own, team, company ... of its employment).
+  scope: {via: declaration_id}
   reqs: [PAY-19]
 
 - table: hrm.previous_employer_income

@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Erp.BuildingBlocks.Domain.Entities;
 
 namespace Erp.BuildingBlocks.Application.Security;
 
@@ -20,12 +21,105 @@ public interface IPermissionChecker
 /// </summary>
 public interface IDataScopeFilter
 {
-    ValueTask<IQueryable<T>> ApplyAsync<T>(IQueryable<T> query, ScopeTarget<T> target, string action, CancellationToken cancellationToken)
+    /// <summary>
+    /// The query restricted to the rows in scope. <paramref name="source"/> gives the parent table of a target located
+    /// through its parent (<see cref="ScopeTarget{T}.Via"/>); it may be null for other targets.
+    /// </summary>
+    ValueTask<IQueryable<T>> ApplyAsync<T>(IQueryable<T> query, ScopeTarget<T> target, string action, IScopeQuerySource? source, CancellationToken cancellationToken)
         where T : class;
 
-    /// <summary>True when the row (as it is in memory) is inside the user's scope for the action.</summary>
-    ValueTask<bool> AllowsAsync<T>(T row, ScopeTarget<T> target, string action, CancellationToken cancellationToken)
+    /// <summary>True when the row (as it is in memory; its parent as stored) is inside the user's scope for the action.</summary>
+    ValueTask<bool> AllowsAsync<T>(T row, ScopeTarget<T> target, string action, IScopeQuerySource? source, CancellationToken cancellationToken)
         where T : class;
+}
+
+/// <summary>
+/// Query roots of the caller's database context, for targets located through a parent table (design key
+/// <c>scope: {via: column}</c>, review S1.06 finding 1) and for per-row field access (finding 3).
+/// </summary>
+public interface IScopeQuerySource
+{
+    IQueryable<T> Rows<T>()
+        where T : class;
+
+    Task<bool> AnyAsync<T>(IQueryable<T> query, CancellationToken cancellationToken);
+
+    Task<List<Guid>> IdsAsync<T>(IQueryable<T> query, CancellationToken cancellationToken)
+        where T : class, IEntity;
+}
+
+/// <summary>Builds the scope filter of a parent table for the grant or grants being evaluated (double dispatch on the parent type).</summary>
+public interface IScopeParentPredicates
+{
+    /// <summary>The filter over the parent's rows; null means every parent row.</summary>
+    Task<LambdaExpression?> BuildAsync<TParent>(ScopeTarget<TParent> parent)
+        where TParent : class;
+}
+
+/// <summary>A table whose rows are located through a parent row (design key <c>scope: {via: column}</c>).</summary>
+public abstract class ScopeVia<T>
+    where T : class
+{
+    /// <summary>The parent's filter for the grant(s) the caller evaluates.</summary>
+    public abstract Task<LambdaExpression?> ParentPredicateAsync(IScopeParentPredicates predicates);
+
+    /// <summary>The child filter: rows whose parent passes <paramref name="parentPredicate"/> (null: every row).</summary>
+    public abstract Expression<Func<T, bool>>? Compose(LambdaExpression? parentPredicate, IScopeQuerySource source);
+
+    /// <summary>True when the stored parent of the row passes <paramref name="parentPredicate"/> (null: always).</summary>
+    public abstract Task<bool> AllowsAsync(T row, LambdaExpression? parentPredicate, IScopeQuerySource source, CancellationToken cancellationToken);
+}
+
+/// <summary>Rows of <typeparamref name="T"/> located through the parent <typeparamref name="TParent"/> named by a foreign key.</summary>
+public sealed class ScopeVia<T, TParent>(Expression<Func<T, Guid?>> foreignKey, ScopeTarget<TParent> parent) : ScopeVia<T>
+    where T : class
+    where TParent : class, IEntity
+{
+    private static readonly System.Reflection.MethodInfo Contains = typeof(Queryable).GetMethods()
+        .Single(m => m.Name == nameof(Queryable.Contains) && m.GetParameters().Length == 2).MakeGenericMethod(typeof(Guid?));
+
+    private readonly Func<T, Guid?> _key = foreignKey.Compile();
+
+    public Expression<Func<T, Guid?>> ForeignKey { get; } = foreignKey;
+
+    /// <summary>The parent's own locators (its resource name is not used: the child's resource and action decide).</summary>
+    public ScopeTarget<TParent> Parent { get; } = parent;
+
+    public override Task<LambdaExpression?> ParentPredicateAsync(IScopeParentPredicates predicates)
+    {
+        ArgumentNullException.ThrowIfNull(predicates);
+        return predicates.BuildAsync(Parent);
+    }
+
+    public override Expression<Func<T, bool>>? Compose(LambdaExpression? parentPredicate, IScopeQuerySource source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (parentPredicate is null)
+        {
+            return null;
+        }
+
+        var ids = source.Rows<TParent>().Where((Expression<Func<TParent, bool>>)parentPredicate).Select(p => (Guid?)p.Id);
+        var child = ForeignKey.Parameters[0];
+        return Expression.Lambda<Func<T, bool>>(Expression.Call(Contains, ids.Expression, ForeignKey.Body), child);
+    }
+
+    public override async Task<bool> AllowsAsync(T row, LambdaExpression? parentPredicate, IScopeQuerySource source, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (parentPredicate is null)
+        {
+            return true;
+        }
+
+        if (_key(row) is not { } key)
+        {
+            return false;
+        }
+
+        var parents = source.Rows<TParent>().Where((Expression<Func<TParent, bool>>)parentPredicate).Where(p => p.Id == key);
+        return await source.AnyAsync(parents, cancellationToken).ConfigureAwait(false);
+    }
 }
 
 /// <summary>
@@ -68,12 +162,16 @@ public enum ScopeDimension
 public sealed class ScopeTarget<T>
     where T : class
 {
-    public ScopeTarget(string resource, IReadOnlyDictionary<ScopeDimension, Expression<Func<T, Guid?>>> locators, IReadOnlyDictionary<string, Expression<Func<T, string?>>> attributes)
+    public ScopeTarget(string resource, IReadOnlyDictionary<ScopeDimension, Expression<Func<T, Guid?>>> locators, IReadOnlyDictionary<string, Expression<Func<T, string?>>> attributes, ScopeVia<T>? via = null)
     {
         Resource = resource;
         Locators = locators;
         Attributes = attributes;
+        Via = via;
     }
+
+    /// <summary>Set when rows are located through a parent row (design key <c>scope: {via: column}</c>); then there are no locators.</summary>
+    public ScopeVia<T>? Via { get; }
 
     /// <summary>Resource name, for example <c>hrm.leave_requests</c>; permissions are <c>resource.action</c>.</summary>
     public string Resource { get; }
@@ -83,7 +181,7 @@ public sealed class ScopeTarget<T>
     /// <summary>Text columns attribute conditions may test, by column name (Q5: "equals / is one of").</summary>
     public IReadOnlyDictionary<string, Expression<Func<T, string?>>> Attributes { get; }
 
-    public bool IsScoped => Locators.Count > 0;
+    public bool IsScoped => Locators.Count > 0 || Via is not null;
 }
 
 /// <summary>The signed-in user (or reserved system user) whose id is written to created_by, updated_by and deleted_by.</summary>

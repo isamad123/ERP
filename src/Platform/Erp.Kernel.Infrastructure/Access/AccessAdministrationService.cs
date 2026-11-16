@@ -59,6 +59,7 @@ public sealed partial class AccessAdministrationService(
     public const string NotPending = "errors.maker_checker.not_pending";
     public const string Expired = "errors.maker_checker.expired";
     public const string OwnRequest = "errors.maker_checker.own_request";
+    public const string OwnGain = "errors.maker_checker.own_gain";
     public const string Duplicate = "errors.data.duplicate";
     public const string Overlap = "errors.data.overlap";
     public const string ConcurrencyConflict = "errors.data.concurrency_conflict";
@@ -190,11 +191,11 @@ public sealed partial class AccessAdministrationService(
                 return AccessResult.Invalid(ProtectedRoles.ProtectedRole); // CR-024: the Tenant Admin role is never archived
             }
 
-            var admins = await TenantAdminGuard.CountAsync(c, tx, cancellationToken).ConfigureAwait(false);
+            var admins = await TenantAdminGuard.CountAsync(c, tx, Today(now), cancellationToken).ConfigureAwait(false);
             await IdentityDb.ExecuteAsync(c, tx, """
                 update iam.roles set is_deleted = true, deleted_at = $2, deleted_by = $3, updated_at = $2, updated_by = $3, row_version = row_version + 1 where id = $1
                 """, cancellationToken, roleId, now, by).ConfigureAwait(false);
-            if (await TenantAdminGuard.RemovedLastAsync(c, tx, admins, cancellationToken).ConfigureAwait(false))
+            if (await TenantAdminGuard.RemovedLastAsync(c, tx, admins, Today(now), cancellationToken).ConfigureAwait(false))
             {
                 return AccessResult.Invalid(TenantAdminGuard.LastAdmin);
             }
@@ -216,7 +217,18 @@ public sealed partial class AccessAdministrationService(
                 return AccessResult.NotFound;
             }
 
-            var change = new AccessChange { Kind = AccessChange.SetPermissions, RoleId = roleId, Permissions = permissions.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList(), Reason = reason };
+            // Stored as what is added and removed, so a request approved later never undoes a change made meanwhile
+            // (review S1.06 finding 7, CR-025).
+            var wanted = permissions.Distinct(StringComparer.Ordinal).ToList();
+            var current = await AccessDb.RolePermissionsAsync(c, tx, roleId, cancellationToken).ConfigureAwait(false);
+            var change = new AccessChange
+            {
+                Kind = AccessChange.SetPermissions,
+                RoleId = roleId,
+                Added = wanted.Except(current, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList(),
+                Removed = current.Except(wanted, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList(),
+                Reason = reason,
+            };
             return await ValidateThenSubmitAsync(c, tx, change, now, by, cancellationToken).ConfigureAwait(false);
         }, cancellationToken);
 
@@ -410,17 +422,22 @@ public sealed partial class AccessAdministrationService(
         {
             case AccessChange.SetPermissions:
             {
-                var codes = change.Permissions!;
-                var known = await IdentityDb.ScalarAsync<long>(c, tx, "select count(*) from iam.permissions where code = any($1) and retired_at is null", ct, (object)codes.ToArray()).ConfigureAwait(false); // (object): one array parameter, not a params list
-                if (known != codes.Count)
+                var current = await AccessDb.RolePermissionsAsync(c, tx, change.RoleId!.Value, ct).ConfigureAwait(false);
+                var (added, removed) = change.PermissionDelta(current);
+                var known = await IdentityDb.ScalarAsync<long>(c, tx, "select count(*) from iam.permissions where code = any($1) and retired_at is null", ct, (object)added.Distinct(StringComparer.Ordinal).ToArray()).ConfigureAwait(false); // (object): one array parameter, not a params list
+                if (known != added.Distinct(StringComparer.Ordinal).Count())
                 {
                     return AccessResult.Invalid(UnknownPermission);
                 }
 
                 // The protected Tenant Admin role keeps Manage Roles and Assign Roles (CR-024), also when a held change is approved.
                 var role = await IdentityDb.ScalarAsync<string>(c, tx, "select code from iam.roles where id = $1", ct, change.RoleId).ConfigureAwait(false);
-                return role is not null && !ProtectedRoles.Keeps(role, codes) ? AccessResult.Invalid(ProtectedRoles.MandatoryPermissionMissing) : null;
+                var after = current.Concat(added).Except(removed, StringComparer.Ordinal).ToList();
+                return role is not null && !ProtectedRoles.Keeps(role, after) ? AccessResult.Invalid(ProtectedRoles.MandatoryPermissionMissing) : null;
             }
+
+            case AccessChange.SetSetting:
+                return await ValidateSettingAsync(c, tx, change, ct).ConfigureAwait(false);
 
             case AccessChange.SetDataScopes:
                 foreach (var scope in change.Scopes!)
@@ -517,7 +534,7 @@ public sealed partial class AccessAdministrationService(
             case AccessChange.SetPermissions:
             {
                 var current = await AccessDb.RolePermissionsAsync(c, tx, change.RoleId!.Value, ct).ConfigureAwait(false);
-                return change.Permissions!.Except(current, StringComparer.Ordinal).ToList();
+                return change.PermissionDelta(current).Added;
             }
 
             case AccessChange.SetDataScopes:
@@ -616,8 +633,13 @@ public sealed partial class AccessAdministrationService(
             return true;
         }
 
-        return change.Kind == AccessChange.SetPermissions
-            && await IdentityDb.ScalarAsync<bool>(c, tx, "select exists (select 1 from iam.permissions where code = any($1) and is_sensitive and retired_at is null)", ct, (object)change.Permissions!.ToArray()).ConfigureAwait(false);
+        if (change.Kind != AccessChange.SetPermissions)
+        {
+            return false;
+        }
+
+        var added = change.PermissionDelta(await AccessDb.RolePermissionsAsync(c, tx, change.RoleId!.Value, ct).ConfigureAwait(false)).Added;
+        return await IdentityDb.ScalarAsync<bool>(c, tx, "select exists (select 1 from iam.permissions where code = any($1) and is_sensitive and retired_at is null)", ct, (object)added.ToArray()).ConfigureAwait(false);
     }
 
     /// <summary>Roles a group gives today or later (assignments not yet ended).</summary>

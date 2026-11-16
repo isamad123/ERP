@@ -31,6 +31,10 @@ public sealed record CreateGroupRequest(string? Code, Dictionary<string, string>
 
 public sealed record MemberRequest(Guid? UserId);
 
+public sealed record CreateScopeRequest(string? Code, Dictionary<string, string>? Name, string? Kind, System.Text.Json.JsonElement? Definition);
+
+public sealed record SettingRequest(string? Layer, Guid? ScopeId, System.Text.Json.JsonElement? Value, string? Reason);
+
 /// <summary>The answer of a change: the record it created or changed, or the maker-checker request it is waiting in.</summary>
 public sealed record AccessChangeResponse(string Outcome, Guid? Id, Guid? RequestId);
 
@@ -107,6 +111,15 @@ public static class AccessEndpoints
             Answer(s.ApproveAsync(id, body.Reason, ct))), "record_action", requests, AccessControlPermissions.ApproveChanges);
         Tag(decisions.MapPost("/{id:guid}/reject", (Guid id, ReasonBody body, IMakerCheckerService s, CancellationToken ct) =>
             Answer(s.RejectAsync(id, body.Reason, ct))), "record_action", requests, AccessControlPermissions.ApproveChanges);
+
+        // Data scopes are created here only; the generated create and update are closed (review S1.06 finding 2, CR-025).
+        Tag(app.MapPost("/api/iam/data-scopes", (CreateScopeRequest body, IRoleService s, CancellationToken ct) =>
+            Answer(s.CreateDataScopeAsync(body.Code, body.Name, body.Kind, body.Definition, ct), created: "/api/iam/data-scopes/")).WithTags("iam.data_scopes"), "create", "iam.data_scopes", manage);
+
+        // Identity and access settings (iam.*): recorded, and switching off maker-checker or privileged MFA can need a
+        // second administrator (review S1.06 finding 5, CR-025).
+        Tag(app.MapPut("/api/iam/settings/{key}", (string key, SettingRequest body, IAccessSettingsService s, CancellationToken ct) =>
+            Answer(s.SetAsync(key, body.Layer, body.ScopeId, body.Value, body.Reason, ct))).WithTags("iam.settings"), "create", "cfg.setting_values", "cfg.setting_values.update");
 
         Tag(app.MapGet("/api/iam/data-scope-preview", async ([FromQuery] Guid? userId, [FromQuery] string? resource, [FromQuery] int? limit, IAccessPreviewService s, IPermissionChecker p, CancellationToken ct) =>
             !await p.HasPermissionAsync(AccessControlPermissions.Preview, ct).ConfigureAwait(false) ? ForbiddenResult()

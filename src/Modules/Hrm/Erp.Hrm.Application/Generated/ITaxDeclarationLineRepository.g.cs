@@ -24,7 +24,8 @@ public static class TaxDeclarationLineAccess
     public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.TaxDeclarationLine> Scope { get; } = new(
         "hrm.tax_declaration_lines",
         new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.TaxDeclarationLine, global::System.Guid?>>>(),
-        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.TaxDeclarationLine, string?>>>());
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.TaxDeclarationLine, string?>>>(),
+        new global::Erp.BuildingBlocks.Application.Security.ScopeVia<global::Erp.Hrm.Domain.Generated.TaxDeclarationLine, global::Erp.Hrm.Domain.Generated.TaxDeclaration>(e => e.DeclarationId, global::Erp.Hrm.Application.Generated.TaxDeclarationAccess.Scope));
 
     public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.tax_declaration_lines",
     [

@@ -278,9 +278,9 @@ public sealed class UserAdministrationService(ITenantConnectionProvider database
             }
 
             // The last tenant admin cannot be disabled or archived (spec 02 BR; slice S1.06 item 9).
-            var admins = await Access.TenantAdminGuard.CountAsync(c, tx, cancellationToken).ConfigureAwait(false);
+            var admins = await Access.TenantAdminGuard.CountAsync(c, tx, DateOnly.FromDateTime(now.UtcDateTime), cancellationToken).ConfigureAwait(false);
             await IdentityDb.SetStatusAsync(c, tx, userId, status, by, now, cancellationToken).ConfigureAwait(false);
-            if (await Access.TenantAdminGuard.RemovedLastAsync(c, tx, admins, cancellationToken).ConfigureAwait(false))
+            if (await Access.TenantAdminGuard.RemovedLastAsync(c, tx, admins, DateOnly.FromDateTime(now.UtcDateTime), cancellationToken).ConfigureAwait(false))
             {
                 return new AdminResult(AdminOutcome.Invalid, Access.TenantAdminGuard.LastAdmin);
             }

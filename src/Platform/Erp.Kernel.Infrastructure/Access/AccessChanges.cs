@@ -21,6 +21,7 @@ internal sealed record AccessChange
     public const string EndGroupRole = "iam.group.end_role";
     public const string AddMember = "iam.group.add_member";
     public const string RemoveMember = "iam.group.remove_member";
+    public const string SetSetting = "iam.setting.set";
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
@@ -43,13 +44,39 @@ internal sealed record AccessChange
 
     public DateOnly? EndDate { get; init; }
 
+    /// <summary>
+    /// The full permission list of a request stored before the S1.06 review follow-up; new requests carry
+    /// <see cref="Added"/> and <see cref="Removed"/> instead, so approving never undoes a change made meanwhile (finding 7).
+    /// </summary>
     public IReadOnlyList<string>? Permissions { get; init; }
+
+    public IReadOnlyList<string>? Added { get; init; }
+
+    public IReadOnlyList<string>? Removed { get; init; }
+
+    public string? SettingKey { get; init; }
+
+    public string? SettingLayer { get; init; }
+
+    public Guid? SettingScopeId { get; init; }
+
+    /// <summary>The new value as JSON text.</summary>
+    public string? SettingValue { get; init; }
+
+    /// <summary>The cfg.setting_values row the setting is written to (an existing row, or the id a new one gets).</summary>
+    public Guid? SettingRowId { get; init; }
 
     public IReadOnlyList<RoleScopeChange>? Scopes { get; init; }
 
     public IReadOnlyList<RoleFieldChange>? Fields { get; init; }
 
     public string? Reason { get; init; }
+
+    /// <summary>The permissions this change adds and removes on a role whose current permissions are <paramref name="current"/>.</summary>
+    public (IReadOnlyList<string> Added, IReadOnlyList<string> Removed) PermissionDelta(IReadOnlyCollection<string> current) =>
+        Permissions is { } full
+            ? (full.Except(current, StringComparer.Ordinal).ToList(), current.Except(full, StringComparer.Ordinal).ToList())
+            : ((Added ?? []).Except(current, StringComparer.Ordinal).ToList(), (Removed ?? []).Intersect(current, StringComparer.Ordinal).ToList());
 
     public string ToJson() => JsonSerializer.Serialize(this, Json);
 
@@ -62,6 +89,7 @@ internal sealed record AccessChange
         EndGroupRole => ("iam.user_group_roles", AssignmentId!.Value),
         AddMember or RemoveMember or AssignGroup => ("iam.user_groups", GroupId!.Value),
         Assign => ("iam.users", UserId!.Value),
+        SetSetting => ("cfg.setting_values", SettingRowId!.Value),
         _ => ("iam.roles", RoleId!.Value),
     };
 }

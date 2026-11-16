@@ -60,8 +60,6 @@ public static class KernelPermissions
         new("doc.templates.create", "doc", "permissions.doc.templates.create", false),
         new("doc.templates.update", "doc", "permissions.doc.templates.update", false),
         new("iam.data_scopes.read", "iam", "permissions.iam.data_scopes.read", false),
-        new("iam.data_scopes.create", "iam", "permissions.iam.data_scopes.create", false),
-        new("iam.data_scopes.update", "iam", "permissions.iam.data_scopes.update", false),
         new("iam.delegations.read", "iam", "permissions.iam.delegations.read", false),
         new("iam.delegations.create", "iam", "permissions.iam.delegations.create", false),
         new("iam.delegations.update", "iam", "permissions.iam.delegations.update", false),

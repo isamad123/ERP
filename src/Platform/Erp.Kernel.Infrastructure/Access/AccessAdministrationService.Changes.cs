@@ -64,6 +64,11 @@ public sealed partial class AccessAdministrationService
                 return refused;
             }
 
+            if (await ApproverProblemAsync(c, tx, change, by, cancellationToken).ConfigureAwait(false) is { } problem)
+            {
+                return problem;
+            }
+
             var applied = await ApplyAsync(c, tx, change, now, by, cancellationToken).ConfigureAwait(false);
             if (applied.Outcome != AccessOutcome.Done)
             {
@@ -111,6 +116,28 @@ public sealed partial class AccessAdministrationService
             await AccessDb.RaiseAsync(c, tx, AccessEvents.ChangeRejected, "iam.maker_checker_request", requestId, by, now, new { action = request.ActionType, requested_by = request.RequestedBy, reason }, cancellationToken).ConfigureAwait(false);
             return AccessResult.Done(requestId);
         }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Review S1.06 finding 6 (CR-025): an approver of an assignment change must cover its company, like the requester
+    /// (ruling A), and nobody approves a change that gives themselves a role (FR-XM-32: no approval of one's own gain).
+    /// </summary>
+    private async Task<AccessResult?> ApproverProblemAsync(NpgsqlConnection c, NpgsqlTransaction tx, AccessChange change, Guid approver, CancellationToken ct)
+    {
+        if (change.Kind is AccessChange.Assign or AccessChange.AssignGroup or AccessChange.EndAssignment or AccessChange.EndGroupRole
+            && !(await caller.CoversCompanyAsync(AccessControlPermissions.ApproveChanges, change.CompanyId, ct).ConfigureAwait(false)
+                 && await caller.CoversCompanyAsync(AccessControlPermissions.AssignRoles, change.CompanyId, ct).ConfigureAwait(false)))
+        {
+            return AccessResult.Forbidden(CompanyNotCovered);
+        }
+
+        var ownGain = change.Kind switch
+        {
+            AccessChange.Assign or AccessChange.AddMember => change.UserId == approver,
+            AccessChange.AssignGroup => await IdentityDb.ScalarAsync<bool>(c, tx, "select exists (select 1 from iam.user_group_members where group_id = $1 and user_id = $2)", ct, change.GroupId, approver).ConfigureAwait(false),
+            _ => false,
+        };
+        return ownGain ? AccessResult.Forbidden(OwnGain) : null;
     }
 
     private sealed record PendingRequest(string ActionType, string Status, Guid RequestedBy, string Payload);
@@ -164,6 +191,7 @@ public sealed partial class AccessAdministrationService
             AccessChange.EndGroupRole => await ApplyEndAsync(c, tx, change, now, by, group: true, ct).ConfigureAwait(false),
             AccessChange.AddMember => await ApplyAddMemberAsync(c, tx, change, now, by, ct).ConfigureAwait(false),
             AccessChange.RemoveMember => await ApplyRemoveMemberAsync(c, tx, change, now, by, ct).ConfigureAwait(false),
+            AccessChange.SetSetting => await ApplySettingAsync(c, tx, change, now, by, ct).ConfigureAwait(false),
             _ => AccessResult.Invalid("errors.data.invalid_request"),
         };
 
@@ -176,8 +204,9 @@ public sealed partial class AccessAdministrationService
         }
 
         var current = await AccessDb.RolePermissionsAsync(c, tx, roleId, ct).ConfigureAwait(false);
-        var added = change.Permissions!.Except(current, StringComparer.Ordinal).ToArray();
-        var removed = current.Except(change.Permissions!, StringComparer.Ordinal).ToArray();
+        var (addedList, removedList) = change.PermissionDelta(current);
+        var added = addedList.ToArray();
+        var removed = removedList.ToArray();
         await IdentityDb.ExecuteAsync(c, tx, """
             delete from iam.role_permissions rp using iam.permissions p where rp.permission_id = p.id and rp.role_id = $1 and p.code = any($2)
             """, ct, roleId, removed).ConfigureAwait(false);
@@ -297,7 +326,7 @@ public sealed partial class AccessAdministrationService
             }
         }
 
-        var admins = await TenantAdminGuard.CountAsync(c, tx, ct).ConfigureAwait(false);
+        var admins = await TenantAdminGuard.CountAsync(c, tx, Today(now), ct).ConfigureAwait(false);
 
         // An assignment that would end on or before its first day never applied: it is removed (the event keeps the record).
         var removed = await IdentityDb.ExecuteAsync(c, tx, $"delete from {table} where id = $1 and valid_from >= $2", ct, id, end).ConfigureAwait(false) > 0;
@@ -306,7 +335,7 @@ public sealed partial class AccessAdministrationService
             await IdentityDb.ExecuteAsync(c, tx, $"update {table} set valid_to = $2, updated_at = $3, updated_by = $4, row_version = row_version + 1 where id = $1", ct, id, end, now, by).ConfigureAwait(false);
         }
 
-        if (await TenantAdminGuard.RemovedLastAsync(c, tx, admins, ct).ConfigureAwait(false))
+        if (await TenantAdminGuard.RemovedLastAsync(c, tx, admins, Today(now), ct).ConfigureAwait(false))
         {
             return AccessResult.Invalid(TenantAdminGuard.LastAdmin);
         }
@@ -335,14 +364,14 @@ public sealed partial class AccessAdministrationService
 
     private static async Task<AccessResult> ApplyRemoveMemberAsync(NpgsqlConnection c, NpgsqlTransaction tx, AccessChange change, DateTimeOffset now, Guid by, CancellationToken ct)
     {
-        var admins = await TenantAdminGuard.CountAsync(c, tx, ct).ConfigureAwait(false);
+        var admins = await TenantAdminGuard.CountAsync(c, tx, Today(now), ct).ConfigureAwait(false);
         var removed = await IdentityDb.ExecuteAsync(c, tx, "delete from iam.user_group_members where group_id = $1 and user_id = $2", ct, change.GroupId, change.UserId).ConfigureAwait(false);
         if (removed == 0)
         {
             return AccessResult.NotFound;
         }
 
-        if (await TenantAdminGuard.RemovedLastAsync(c, tx, admins, ct).ConfigureAwait(false))
+        if (await TenantAdminGuard.RemovedLastAsync(c, tx, admins, Today(now), ct).ConfigureAwait(false))
         {
             return AccessResult.Invalid(TenantAdminGuard.LastAdmin);
         }
@@ -505,7 +534,7 @@ public sealed partial class AccessAdministrationService
                 return AccessResult.Invalid(ReasonRequired);
             }
 
-            var admins = await TenantAdminGuard.CountAsync(c, tx, cancellationToken).ConfigureAwait(false);
+            var admins = await TenantAdminGuard.CountAsync(c, tx, Today(now), cancellationToken).ConfigureAwait(false);
             var archived = await IdentityDb.ExecuteAsync(c, tx, """
                 update iam.user_groups set is_deleted = true, deleted_at = $2, deleted_by = $3, updated_at = $2, updated_by = $3, row_version = row_version + 1
                 where id = $1 and not is_deleted
@@ -515,7 +544,7 @@ public sealed partial class AccessAdministrationService
                 return AccessResult.NotFound;
             }
 
-            if (await TenantAdminGuard.RemovedLastAsync(c, tx, admins, cancellationToken).ConfigureAwait(false))
+            if (await TenantAdminGuard.RemovedLastAsync(c, tx, admins, Today(now), cancellationToken).ConfigureAwait(false))
             {
                 return AccessResult.Invalid(TenantAdminGuard.LastAdmin);
             }

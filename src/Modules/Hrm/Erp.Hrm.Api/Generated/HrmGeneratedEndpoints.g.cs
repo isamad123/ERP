@@ -171,35 +171,21 @@ internal static class GeneratedEndpointSupport
     public static IResult NotEditable(global::System.Collections.Generic.List<string> fields) =>
         TypedResults.ValidationProblem(fields.ToDictionary(f => f, _ => new[] { global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable }), title: global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable);
 
-    /// <summary>The answer for one row with hidden fields left out and masked fields masked (field security of the row's company).</summary>
-    public static async global::System.Threading.Tasks.Task<global::System.Text.Json.Nodes.JsonObject> ShapeOneAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, TRow row, global::System.Func<TRow, global::System.Guid?> companyOf, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken) =>
-        (await ShapeAsync(fields, catalog, [row], companyOf, toResponse, cancellationToken).ConfigureAwait(false))[0];
+    /// <summary>The answer for one row with hidden fields left out and masked fields masked (field security of the roles whose scope covers it).</summary>
+    public static async global::System.Threading.Tasks.Task<global::System.Text.Json.Nodes.JsonObject> ShapeOneAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Data.IRepository<TRow> repository, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, TRow row, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)
+        where TRow : class, global::Erp.BuildingBlocks.Domain.Entities.IEntity =>
+        (await ShapeAsync(repository, fields, catalog, [row], toResponse, cancellationToken).ConfigureAwait(false))[0];
 
-    /// <summary>The answers for rows, each shaped by the field access of its company (read once per company).</summary>
-    public static async global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>> ShapeAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, global::System.Collections.Generic.IReadOnlyList<TRow> rows, global::System.Func<TRow, global::System.Guid?> companyOf, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)
+    /// <summary>The answers for rows, each shaped by the roles whose data scope covers that row (slice S1.06, review finding 3).</summary>
+    public static async global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>> ShapeAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Data.IRepository<TRow> repository, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, global::System.Collections.Generic.IReadOnlyList<TRow> rows, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)
+        where TRow : class, global::Erp.BuildingBlocks.Domain.Entities.IEntity
     {
-        var byCompany = new global::System.Collections.Generic.Dictionary<global::System.Guid, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap>();
-        global::Erp.BuildingBlocks.Application.Security.FieldAccessMap? noCompany = null;
+        var access = await repository.FieldAccessAsync(rows, catalog, fields, "read", cancellationToken).ConfigureAwait(false);
         var shaped = new global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>(rows.Count);
-        foreach (var row in rows)
+        for (var i = 0; i < rows.Count; i++)
         {
-            var company = companyOf(row);
-            global::Erp.BuildingBlocks.Application.Security.FieldAccessMap? access;
-            if (company is { } id)
-            {
-                if (!byCompany.TryGetValue(id, out access))
-                {
-                    access = await fields.ForAsync(catalog, "read", id, cancellationToken).ConfigureAwait(false);
-                    byCompany[id] = access;
-                }
-            }
-            else
-            {
-                access = noCompany ??= await fields.ForAsync(catalog, "read", null, cancellationToken).ConfigureAwait(false);
-            }
-
-            var node = global::System.Text.Json.JsonSerializer.SerializeToNode(toResponse(row), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();
-            shaped.Add(global::Erp.BuildingBlocks.Application.Security.FieldShaping.Shape(node, catalog, access));
+            var node = global::System.Text.Json.JsonSerializer.SerializeToNode(toResponse(rows[i]), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();
+            shaped.Add(global::Erp.BuildingBlocks.Application.Security.FieldShaping.Shape(node, catalog, access[i]));
         }
 
         return shaped;

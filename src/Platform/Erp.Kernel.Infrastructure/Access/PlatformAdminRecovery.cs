@@ -172,7 +172,7 @@ public sealed class PlatformAdminRecovery(ControlPlaneOptions options, ISecretSt
                 messages.Add($"{email} still receives the role through group(s) {string.Join(", ", groups)}: remove them from the group as well");
             }
 
-            var left = await TenantAdminGuard.CountAsync(c, tx, cancellationToken).ConfigureAwait(false);
+            var left = await TenantAdminGuard.CountAsync(c, tx, today, cancellationToken).ConfigureAwait(false);
             if (left.Any == 0)
             {
                 messages.Add($"WARNING: {tenantCode} now has no tenant administrator; give the role to someone with `tenant admin-grant`");

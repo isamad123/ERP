@@ -111,11 +111,12 @@ Every table also follows: primary key on `id` (or the composite key given); ever
 14. **Idempotency.** Anything that can be fed twice into payroll, leave or loans has a unique source key
     (`source_type, source_id, ...`), so retries never double-count.
 
-## Access-control keys (slice S1.06, CR-018, CR-020, CR-021)
+## Access-control keys (slice S1.06, CR-018, CR-020, CR-021, CR-025)
 
 | Key | Example | Meaning |
 | --- | --- | --- |
 | `scope` | `scope: {company: company_id, employment: employment_id, attributes: [status]}` | The uuid columns that locate a row for data scopes: `company`, `branch`, `org_unit`, `employment`, `person`, `user`; `attributes` lists text columns that scope conditions ("equals / is one of") may test. A table without `scope` is not scoped: the permission alone decides. |
+| `scope: {via: …}` | `scope: {via: declaration_id}` | The row is located through its parent (a foreign key to a table of the same schema with its own `scope`): the child's permission and the role's scope for the child's resource apply to the parent's locators (CR-025). Used for detail lines without their own employment or company column. |
 | `field_class` | `field_class: {gross_amount: salary}` | `salary`, `personal` or `restricted`. Salary fields are hidden from every role unless a field rule opens them (GHR-06); in Release 1.0 only salary is marked (ruling B, CR-022). |
 | `api_actions` | `api_actions: [read]` | The generated API actions kept (read is required); the closed ones are replaced by purpose-built services. |
 

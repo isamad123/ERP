@@ -66,28 +66,48 @@ public sealed class AccessEngine(ITenantConnectionProvider tenant, IClock clock,
 
     // ------------------------------------------------------------------ data scopes
 
-    public async ValueTask<IQueryable<T>> ApplyAsync<T>(IQueryable<T> query, ScopeTarget<T> target, string action, CancellationToken cancellationToken)
+    public async ValueTask<IQueryable<T>> ApplyAsync<T>(IQueryable<T> query, ScopeTarget<T> target, string action, IScopeQuerySource? source, CancellationToken cancellationToken)
         where T : class
     {
         ArgumentNullException.ThrowIfNull(query);
-        var predicate = await PredicateAsync(target, action, cancellationToken).ConfigureAwait(false);
+        var predicate = await PredicateAsync(target, action, source, cancellationToken).ConfigureAwait(false);
         return predicate is null ? query : query.Where(predicate);
     }
 
-    public async ValueTask<bool> AllowsAsync<T>(T row, ScopeTarget<T> target, string action, CancellationToken cancellationToken)
+    public async ValueTask<bool> AllowsAsync<T>(T row, ScopeTarget<T> target, string action, IScopeQuerySource? source, CancellationToken cancellationToken)
         where T : class
     {
-        var predicate = await PredicateAsync(target, action, cancellationToken).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(target);
+        if (target.Via is { } via)
+        {
+            var grants = (await SnapshotAsync(cancellationToken).ConfigureAwait(false)).Granting(target.Resource + "." + action).ToList();
+            if (grants.Count == 0)
+            {
+                return false;
+            }
+
+            var parent = await via.ParentPredicateAsync(new ParentPredicates(this, target.Resource, grants, cancellationToken)).ConfigureAwait(false);
+            return await via.AllowsAsync(row, parent, SourceOf(source), cancellationToken).ConfigureAwait(false);
+        }
+
+        var predicate = await PredicateAsync(target, action, source, cancellationToken).ConfigureAwait(false);
         return predicate is null || predicate.Compile()(row);
     }
 
     /// <summary>The row filter for the user, resource and action; null means every row (no filter needed).</summary>
-    public async Task<Expression<Func<T, bool>>?> PredicateAsync<T>(ScopeTarget<T> target, string action, CancellationToken cancellationToken)
+    public async Task<Expression<Func<T, bool>>?> PredicateAsync<T>(ScopeTarget<T> target, string action, IScopeQuerySource? source, CancellationToken cancellationToken)
         where T : class
     {
         ArgumentNullException.ThrowIfNull(target);
         var snapshot = await SnapshotAsync(cancellationToken).ConfigureAwait(false);
         var grants = snapshot.Granting(target.Resource + "." + action).ToList();
+        return await GrantsPredicateAsync(target, grants, source, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>The rows the given grants open together (null: every row; deny by default when none).</summary>
+    private async Task<Expression<Func<T, bool>>?> GrantsPredicateAsync<T>(ScopeTarget<T> target, List<(Assignment Assignment, RoleRules Role)> grants, IScopeQuerySource? source, CancellationToken cancellationToken)
+        where T : class
+    {
         var e = Expression.Parameter(typeof(T), "e");
         if (grants.Count == 0)
         {
@@ -99,11 +119,35 @@ public sealed class AccessEngine(ITenantConnectionProvider tenant, IClock clock,
             return null;
         }
 
+        if (target.Via is { } via)
+        {
+            // Located through the parent (scope: {via: column}): the child's resource and action pick the grants and their
+            // scopes; the parent's locators place the rows (review S1.06 finding 1).
+            var parent = await via.ParentPredicateAsync(new ParentPredicates(this, target.Resource, grants, cancellationToken)).ConfigureAwait(false);
+            if (parent is { Body: ConstantExpression { Value: false } })
+            {
+                return Expression.Lambda<Func<T, bool>>(Expression.Constant(false), e);
+            }
+
+            return via.Compose(parent, SourceOf(source));
+        }
+
+        var clause = await ClauseAsync(target, target.Resource, grants, e, cancellationToken).ConfigureAwait(false);
+        return clause is null ? null : Expression.Lambda<Func<T, bool>>(clause, e);
+    }
+
+    /// <summary>
+    /// The OR of the grants' clauses over a directly located target; null when a grant opens every row. The data scope
+    /// of each grant is the one its role sets for <paramref name="resource"/> (deny by default without one).
+    /// </summary>
+    private async Task<Expression?> ClauseAsync<T>(ScopeTarget<T> target, string resource, IEnumerable<(Assignment Assignment, RoleRules Role)> grants, ParameterExpression e, CancellationToken cancellationToken)
+        where T : class
+    {
         var builder = new PredicateBuilder<T>(this, target, e);
         Expression? any = null;
         foreach (var (assignment, role) in grants)
         {
-            var scope = role.ScopeFor(target.Resource);
+            var scope = role.ScopeFor(resource);
             if (scope is null)
             {
                 continue; // deny by default: a role without a scope for a scoped resource adds no rows
@@ -123,7 +167,29 @@ public sealed class AccessEngine(ITenantConnectionProvider tenant, IClock clock,
             any = any is null ? clause : Expression.OrElse(any, clause);
         }
 
-        return Expression.Lambda<Func<T, bool>>(any ?? Expression.Constant(false), e);
+        return any ?? Expression.Constant(false);
+    }
+
+    private static IScopeQuerySource SourceOf(IScopeQuerySource? source) =>
+        source ?? throw new InvalidOperationException("A table located through its parent needs the caller's query source.");
+
+    /// <summary>Builds a parent table's filter for the child's grants (double dispatch on the parent type).</summary>
+    private sealed class ParentPredicates(AccessEngine engine, string resource, IReadOnlyList<(Assignment Assignment, RoleRules Role)> grants, CancellationToken cancellationToken)
+        : IScopeParentPredicates
+    {
+        public async Task<LambdaExpression?> BuildAsync<TParent>(ScopeTarget<TParent> parent)
+            where TParent : class
+        {
+            if (parent.Via is not null || !parent.IsScoped)
+            {
+                // The generator allows "via" only to a directly scoped parent; anything else matches nothing.
+                return Expression.Lambda<Func<TParent, bool>>(Expression.Constant(false), Expression.Parameter(typeof(TParent), "p"));
+            }
+
+            var p = Expression.Parameter(typeof(TParent), "p");
+            var clause = await engine.ClauseAsync(parent, resource, grants, p, cancellationToken).ConfigureAwait(false);
+            return clause is null ? null : Expression.Lambda<Func<TParent, bool>>(clause, p);
+        }
     }
 
     // ------------------------------------------------------------------ field security
@@ -142,6 +208,56 @@ public sealed class AccessEngine(ITenantConnectionProvider tenant, IClock clock,
         // No role covers that company: the row is outside the caller's scope and the data-scope check refuses the write
         // (403 out of scope); judging its fields by the caller's other roles keeps that the answer, not a field error.
         return Merge(catalog, roles.Count > 0 ? roles : granting.Select(g => g.Role).Distinct().ToList());
+    }
+
+    /// <summary>
+    /// Field access per stored row (review S1.06 finding 3, CR-025): one part per assignment granting the action, with the
+    /// rows its scope covers and the fields as its role alone sees them. When every part covers every row, or every part
+    /// sees the fields alike, the answer is uniform and costs no query.
+    /// </summary>
+    public async ValueTask<FieldAccessPlan<T>> PlanAsync<T>(FieldCatalog catalog, ScopeTarget<T> target, string action, IScopeQuerySource? source, CancellationToken cancellationToken)
+        where T : class
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(target);
+        var snapshot = await SnapshotAsync(cancellationToken).ConfigureAwait(false);
+        var grants = snapshot.Granting(catalog.Resource + "." + action).DistinctBy(g => (g.Assignment.RoleId, g.Assignment.CompanyId)).ToList();
+        if (grants.Count == 0)
+        {
+            return FieldAccessPlans.Same<T>(Merge(catalog, []));
+        }
+
+        var parts = new List<FieldAccessPart<T>>();
+        foreach (var grant in grants)
+        {
+            var map = Merge(catalog, [grant.Role]);
+            if (!target.IsScoped)
+            {
+                parts.Add(new FieldAccessPart<T>(null, map));
+                continue;
+            }
+
+            var covers = await GrantsPredicateAsync(target, [grant], source, cancellationToken).ConfigureAwait(false);
+            if (covers is { Body: ConstantExpression { Value: false } })
+            {
+                continue; // this assignment opens no row
+            }
+
+            parts.Add(new FieldAccessPart<T>(covers, map));
+        }
+
+        if (parts.Count == 0)
+        {
+            // No assignment opens a row: the scope check answers for the row (403 or not found), not the field rules.
+            return FieldAccessPlans.Same<T>(Merge(catalog, grants.Select(g => g.Role).Distinct().ToList()));
+        }
+
+        if (parts.TrueForAll(p => p.Covers is null))
+        {
+            return FieldAccessPlans.Same<T>(FieldAccessMap.Merge(parts.Select(p => p.Map).ToList()));
+        }
+
+        return parts.TrueForAll(p => p.Map.SameAs(parts[0].Map)) ? FieldAccessPlans.Same<T>(parts[0].Map) : new FieldAccessPlan<T>(null, parts);
     }
 
     /// <summary>The fields of a resource as the given roles see them together (most open wins, Q4).</summary>
