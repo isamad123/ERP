@@ -225,8 +225,11 @@ public sealed class AccessHarness
 
     // ------------------------------------------------------------------ business rows (any generated table, as RowFactory writes them)
 
-    /// <summary>The customer's default company (created by provisioning).</summary>
-    public Task<Guid> DefaultCompanyAsync(CancellationToken ct) => ScalarAsync<Guid>("select id from org.companies where not is_deleted order by created_at, id limit 1", ct);
+    /// <summary>
+    /// The customer's default company, created by provisioning with the customer's code. (Not "the oldest company": rows
+    /// written by <see cref="RowFactory"/> carry a fixed creation date in the past.)
+    /// </summary>
+    public Task<Guid> DefaultCompanyAsync(CancellationToken ct) => ScalarAsync<Guid>("select id from org.companies where lower(code) = lower($1) and not is_deleted", ct, Code);
 
     /// <summary>One committed row of a table with chosen values; company-scoped rows belong to <paramref name="company"/>.</summary>
     public async Task<IReadOnlyDictionary<string, object?>> RowAsync(string table, Guid company, IReadOnlyDictionary<string, object?>? overrides, CancellationToken ct)
