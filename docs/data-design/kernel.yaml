@@ -66,14 +66,19 @@
     - [revoked_at, ts, opt]
     - [revoked_reason, text, opt]
     - [refresh_token_hash, text, opt, "SHA-256 (hex) of the current refresh token; replaced on every refresh"]
+    - [previous_refresh_hash, text, opt, "SHA-256 (hex) of the refresh token replaced by the last rotation; only a match with it counts as reuse"]
   indexes: [[user_id, issued_at]]
   notes: "Not strictly append-only: last_seen_at and revoked_* are updatable by the session service role only."
   # CR-010 (S1.05): refresh-token hash on the session; rotation on every refresh (product owner, S1.05 plan P6).
-  added_in: {S1.05: [refresh_token_hash]}
+  # CR-016 (S1.05 review finding 6): the previous hash, so a wrong secret is a plain failure and only a reused old token ends the session.
+  added_in: {S1.05: [refresh_token_hash], S1.05-r1: [previous_refresh_hash]}
   updatable_added_in:
     S1.05:
       columns: [refresh_token_hash]
       note: "From S1.05 the session service also replaces refresh_token_hash on every refresh (rotation, CR-010)."
+    S1.05-r1:
+      columns: [previous_refresh_hash]
+      note: "From S1.05-r1 it also keeps previous_refresh_hash, the token replaced by the last rotation (reuse detection, CR-016)."
   reqs: [KRN-IAM-04, ADM-USR-24]
 
 - table: iam.login_attempts

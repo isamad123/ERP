@@ -182,7 +182,7 @@ public sealed class IdentityHarness(TenancyFixture fx, WebApplication app, TestC
     /// <summary>Enrols and confirms an authenticator app through self-service; returns the secret and the recovery codes.</summary>
     public async Task<(string Secret, List<string> RecoveryCodes)> EnrolAsync(string code, string accessToken, CancellationToken ct)
     {
-        var start = await PostAsync(code, "/api/iam/me/mfa-devices", new { label = "phone" }, accessToken, ct);
+        var start = await PostAsync(code, "/api/iam/me/mfa-devices", new { label = "phone", currentPassword = Password }, accessToken, ct);
         Assert.Equal(HttpStatusCode.OK, start.Status);
         var secret = start.Text("secret")!;
         var confirm = await PostAsync(code, $"/api/iam/me/mfa-devices/{start.Text("deviceId")}/confirm", new { code = Code(secret) }, accessToken, ct);

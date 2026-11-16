@@ -22,7 +22,7 @@ internal sealed record UserAccount(
     int FailedAttempts,
     DateTimeOffset? LockedUntil);
 
-internal sealed record SessionRow(Guid Id, Guid UserId, DateTimeOffset IssuedAt, DateTimeOffset LastSeenAt, DateTimeOffset ExpiresAt, DateTimeOffset? RevokedAt, string? RefreshTokenHash);
+internal sealed record SessionRow(Guid Id, Guid UserId, DateTimeOffset IssuedAt, DateTimeOffset LastSeenAt, DateTimeOffset ExpiresAt, DateTimeOffset? RevokedAt, string? RefreshTokenHash, string? PreviousRefreshHash);
 
 internal sealed record OneTimeToken(Guid Id, Guid UserId, string Purpose);
 
@@ -77,7 +77,9 @@ internal static class IdentityDb
 
     /// <summary>
     /// The person signing in, by username first and then by e-mail (case-insensitive). System users never sign in.
-    /// The credential row is locked for the transaction so concurrent failures are counted exactly.
+    /// The user row is locked, so concurrent sign-ins of one user run one after another and each sees the status the
+    /// previous one left. The credential columns come from the statement's snapshot and may be stale under
+    /// concurrency: failures are therefore counted with <see cref="IncrementFailuresAsync"/>, never from this value.
     /// </summary>
     public static Task<UserAccount?> FindForSignInAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, string login, CancellationToken cancellationToken) =>
         ReadAccountAsync(connection, transaction, $"""
@@ -119,6 +121,20 @@ internal static class IdentityDb
 
     public static Task SetFailuresAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, int failed, DateTimeOffset? lockedUntil, CancellationToken ct) =>
         ExecuteAsync(c, tx, "update iam.user_credentials set failed_attempts = $2, locked_until = $3 where user_id = $1", ct, userId, failed, lockedUntil);
+
+    /// <summary>
+    /// Adds one failure in the database itself and returns the new count, so failures of concurrent requests are all
+    /// counted (S1.05 review finding 2). 0 when the user has no credential.
+    /// </summary>
+    public static async Task<int> IncrementFailuresAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, CancellationToken ct) =>
+        await ScalarAsync<int?>(c, tx, "update iam.user_credentials set failed_attempts = failed_attempts + 1 where user_id = $1 returning failed_attempts", ct, userId).ConfigureAwait(false) ?? 0;
+
+    /// <summary>Clears the failure count and any automatic lock end; only called when a session is actually issued (finding 1).</summary>
+    public static Task ResetFailuresAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, CancellationToken ct) =>
+        ExecuteAsync(c, tx, "update iam.user_credentials set failed_attempts = 0, locked_until = null where user_id = $1 and (failed_attempts <> 0 or locked_until is not null)", ct, userId);
+
+    public static Task SetLockedUntilAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, DateTimeOffset? lockedUntil, CancellationToken ct) =>
+        ExecuteAsync(c, tx, "update iam.user_credentials set locked_until = $2 where user_id = $1", ct, userId, lockedUntil);
 
     /// <summary>Sets a new password: credential row (created on activation), history row, must_change cleared.</summary>
     public static async Task SetPasswordAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, string hash, string algorithm, Guid actor, DateTimeOffset now, CancellationToken ct)
@@ -206,13 +222,21 @@ internal static class IdentityDb
 
     public static async Task<SessionRow?> GetSessionAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid sessionId, CancellationToken ct)
     {
-        await using var command = Command(c, tx, "select id, user_id, issued_at, last_seen_at, expires_at, revoked_at, refresh_token_hash from iam.sessions where id = $1 for update", sessionId);
+        await using var command = Command(c, tx, "select id, user_id, issued_at, last_seen_at, expires_at, revoked_at, refresh_token_hash, previous_refresh_hash from iam.sessions where id = $1 for update", sessionId);
         await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
         return await reader.ReadAsync(ct).ConfigureAwait(false)
             ? new SessionRow(reader.GetGuid(0), reader.GetGuid(1), reader.GetFieldValue<DateTimeOffset>(2), reader.GetFieldValue<DateTimeOffset>(3),
-                reader.GetFieldValue<DateTimeOffset>(4), reader.IsDBNull(5) ? null : reader.GetFieldValue<DateTimeOffset>(5), reader.IsDBNull(6) ? null : reader.GetString(6))
+                reader.GetFieldValue<DateTimeOffset>(4), reader.IsDBNull(5) ? null : reader.GetFieldValue<DateTimeOffset>(5), reader.IsDBNull(6) ? null : reader.GetString(6),
+                reader.IsDBNull(7) ? null : reader.GetString(7))
             : null;
     }
+
+    /// <summary>
+    /// The owner of a session, read without a lock. Refresh locks the user first and the session second, the same order
+    /// as sign-in and the administrator actions, so they cannot deadlock (S1.05 review finding 3).
+    /// </summary>
+    public static Task<Guid?> SessionOwnerAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid sessionId, CancellationToken ct) =>
+        ScalarAsync<Guid?>(c, tx, "select user_id from iam.sessions where id = $1", ct, sessionId);
 
     public static Task InsertSessionAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid sessionId, Guid userId, DateTimeOffset now, DateTimeOffset expiresAt, ClientInfo client, string refreshHash, CancellationToken ct) =>
         ExecuteAsync(c, tx, """
@@ -220,8 +244,9 @@ internal static class IdentityDb
             values ($1, $2, $3, $3, $4, $5, $6, null, null, $7, $3, $2)
             """, ct, sessionId, userId, now, expiresAt, ParseIp(client.IpAddress), Truncate(client.UserAgent, 500), refreshHash);
 
+    /// <summary>New refresh token; the replaced one is kept so only its reuse ends the session (CR-016).</summary>
     public static Task RotateRefreshAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid sessionId, string refreshHash, DateTimeOffset now, CancellationToken ct) =>
-        ExecuteAsync(c, tx, "update iam.sessions set refresh_token_hash = $2, last_seen_at = $3 where id = $1", ct, sessionId, refreshHash, now);
+        ExecuteAsync(c, tx, "update iam.sessions set previous_refresh_hash = refresh_token_hash, refresh_token_hash = $2, last_seen_at = $3 where id = $1", ct, sessionId, refreshHash, now);
 
     public static Task<int> RevokeSessionAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid sessionId, Guid? userId, string reason, DateTimeOffset now, CancellationToken ct) =>
         ExecuteAsync(c, tx, "update iam.sessions set revoked_at = $3, revoked_reason = $4 where id = $1 and ($2::uuid is null or user_id = $2) and revoked_at is null",
@@ -231,16 +256,23 @@ internal static class IdentityDb
     public static Task<int> RevokeAllSessionsAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, string reason, DateTimeOffset now, CancellationToken ct) =>
         ExecuteAsync(c, tx, "update iam.sessions set revoked_at = $2, revoked_reason = $3 where user_id = $1 and revoked_at is null and expires_at > $2", ct, userId, now, reason);
 
-    /// <summary>Revokes the oldest live sessions so that at most <paramref name="keep"/> remain (FR-KRN-IAM-04 concurrent limit).</summary>
-    public static Task<int> EnforceConcurrentLimitAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, int keep, TimeSpan idle, DateTimeOffset now, CancellationToken ct) =>
+    /// <summary>Revokes every open session of the user except <paramref name="keep"/> (after a self-service password change).</summary>
+    public static Task<int> RevokeOtherSessionsAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, Guid keep, string reason, DateTimeOffset now, CancellationToken ct) =>
+        ExecuteAsync(c, tx, "update iam.sessions set revoked_at = $3, revoked_reason = $4 where user_id = $1 and id <> $2 and revoked_at is null and expires_at > $3", ct, userId, keep, now, reason);
+
+    /// <summary>
+    /// Revokes the oldest live sessions so that at most <paramref name="keep"/> remain (FR-KRN-IAM-04 concurrent limit).
+    /// The session just issued is always kept, even when another one was issued in the same instant.
+    /// </summary>
+    public static Task<int> EnforceConcurrentLimitAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, Guid newSessionId, int keep, TimeSpan idle, DateTimeOffset now, CancellationToken ct) =>
         ExecuteAsync(c, tx, """
-            update iam.sessions set revoked_at = $3, revoked_reason = 'concurrent_limit'
+            update iam.sessions set revoked_at = $4, revoked_reason = 'concurrent_limit'
             where id in (
                 select id from iam.sessions
-                where user_id = $1 and revoked_at is null and expires_at > $3 and last_seen_at > $4
+                where user_id = $1 and id <> $2 and revoked_at is null and expires_at > $4 and last_seen_at > $5
                 order by issued_at desc, id desc
-                offset $2)
-            """, ct, userId, keep, now, now - idle);
+                offset greatest($3 - 1, 0))
+            """, ct, userId, newSessionId, keep, now, now - idle);
 
     public static async Task<List<SessionView>> LiveSessionsAsync(NpgsqlConnection c, NpgsqlTransaction? tx, Guid userId, Guid? current, TimeSpan idle, DateTimeOffset now, CancellationToken ct)
     {
@@ -392,4 +424,5 @@ public static class IdentityEvents
     public const string MfaReset = "iam.mfa_reset";
     public const string SessionsRevoked = "iam.sessions_revoked";
     public const string ActivationTokenIssued = "iam.activation_token_issued";
+    public const string RecoveryCodesRegenerated = "iam.recovery_codes_regenerated";
 }

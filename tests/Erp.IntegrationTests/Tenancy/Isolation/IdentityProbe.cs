@@ -147,10 +147,10 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
     private static (string Path, string? Body, HttpStatusCode? Expected, string? Token) SelfTarget(string pattern, Material a, string tokenB) => pattern switch
     {
         "/api/iam/me/sessions/{id:guid}" => (pattern.Replace("{id:guid}", a.SessionId.ToString(), StringComparison.Ordinal), null, HttpStatusCode.NotFound, tokenB),
-        "/api/iam/me/mfa-devices/{id:guid}" => (pattern.Replace("{id:guid}", a.PendingDeviceId.ToString(), StringComparison.Ordinal), null, HttpStatusCode.NotFound, tokenB),
+        "/api/iam/me/mfa-devices/{id:guid}/remove" => (pattern.Replace("{id:guid}", a.PendingDeviceId.ToString(), StringComparison.Ordinal), Json(new { currentPassword = Password }), HttpStatusCode.NotFound, tokenB),
         "/api/iam/me/mfa-devices/{id:guid}/confirm" => (pattern.Replace("{id:guid}", a.PendingDeviceId.ToString(), StringComparison.Ordinal), Json(new { code = "123456" }), HttpStatusCode.BadRequest, tokenB),
         "/api/iam/me/password" => (pattern, Json(new { currentPassword = Password, newPassword = "Probe-New-Pass-22" }), null, tokenB),
-        _ when !pattern.Contains('{', StringComparison.Ordinal) => (pattern, "{}", null, tokenB),
+        _ when !pattern.Contains('{', StringComparison.Ordinal) => (pattern, Json(new { currentPassword = Password, label = "probe" }), null, tokenB),
         _ => throw new InvalidOperationException($"No probe target for self-service endpoint {pattern}; extend IdentityProbe."),
     };
 
@@ -182,7 +182,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
                     "/api/iam/me/password" => Json(new { currentPassword = Password, newPassword = "Probe-Own-Pass-33" }),
                     "/api/iam/me/mfa-devices/{id:guid}/confirm" => Json(new { code = "123456" }),
                     _ when method == HttpMethod.Get || method == HttpMethod.Delete => null,
-                    _ => "{}",
+                    _ => Json(new { currentPassword = Password, label = "probe" }),
                 };
                 reply = await SendAsync(fx.HostA, session.Access, method, path, body, false, ct);
                 if (endpoint.Pattern == "/api/iam/me/sessions" && !reply.Body.Contains(session.SessionId.ToString(), StringComparison.Ordinal))
@@ -204,7 +204,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
     /// <summary>Writes a fresh, complete set of identity material into the customer's database (as the database owner would).</summary>
     private async Task<Material> MaterialAsync(string code, CancellationToken ct)
     {
-        var hasher = new Argon2idPasswordHasher();
+        using var hasher = new Argon2idPasswordHasher();
         var actor = BaselineSeed.SystemUserId;
         var user = Guid.CreateVersion7();
         var invited = Guid.CreateVersion7();

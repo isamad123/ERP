@@ -87,7 +87,9 @@ public static class ApiHost
                 RequireExpirationTime = true,
                 ValidAlgorithms = [SecurityAlgorithms.EcdsaSha256],
                 IssuerSigningKeys = keys, // no keys configured: every token is refused
-                ClockSkew = TimeSpan.FromMinutes(1),
+                // The API issues and checks its own tokens on the same clock, so no skew is allowed: a revoked session's last
+                // access token is refused at most 5 minutes later, as ruled (Q3; S1.05 review finding 7).
+                ClockSkew = TimeSpan.Zero,
             };
         });
         services.AddAuthorization();

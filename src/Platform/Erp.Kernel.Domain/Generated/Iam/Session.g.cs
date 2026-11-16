@@ -42,6 +42,9 @@ public sealed partial class Session : global::Erp.BuildingBlocks.Domain.Entities
     /// <summary>refresh_token_hash: SHA-256 (hex) of the current refresh token; replaced on every refresh</summary>
     public string? RefreshTokenHash { get; set; }
 
+    /// <summary>previous_refresh_hash: SHA-256 (hex) of the refresh token replaced by the last rotation; only a match with it counts as reuse</summary>
+    public string? PreviousRefreshHash { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

@@ -13,8 +13,8 @@ namespace Erp.IntegrationTests.Identity;
 [Collection(TenancyGroup.Name)]
 public sealed class IdentityTests(TenancyFixture fx) : IAsyncLifetime
 {
-    private static readonly SemaphoreSlim ProvisionGate = new(1, 1);
-    private static string? provisionedFor;
+    internal static readonly SemaphoreSlim ProvisionGate = new(1, 1);
+    internal static string? provisionedFor;
 
     private IdentityHarness h = null!;
 

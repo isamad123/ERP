@@ -16,7 +16,7 @@ public sealed class IdentityCryptoTests
     [Fact]
     public void FR_KRN_IAM_01_argon2id_hashes_are_salted_verifiable_and_record_their_parameters()
     {
-        var hasher = new Argon2idPasswordHasher();
+        using var hasher = new Argon2idPasswordHasher();
         var one = hasher.Hash("Correct-Horse-7");
         var two = hasher.Hash("Correct-Horse-7");
         Assert.NotEqual(one, two); // per-user salt
@@ -31,13 +31,41 @@ public sealed class IdentityCryptoTests
     [Fact]
     public void FR_KRN_IAM_01_a_hash_made_with_weaker_parameters_is_accepted_and_flagged_for_rehash()
     {
-        var hasher = new Argon2idPasswordHasher();
+        using var hasher = new Argon2idPasswordHasher();
         var salt = RandomNumberGenerator.GetBytes(16);
         var parameters = new NSec.Cryptography.Argon2Parameters { DegreeOfParallelism = 1, MemorySize = 12 * 1024, NumberOfPasses = 1 };
         var hash = NSec.Cryptography.PasswordBasedKeyDerivationAlgorithm.Argon2id(in parameters).DeriveBytes("Old-Password-1", salt, 32);
         var phc = $"$argon2id$v=19$m={12 * 1024},t=1,p=1${Convert.ToBase64String(salt).TrimEnd('=')}${Convert.ToBase64String(hash).TrimEnd('=')}";
         Assert.True(hasher.Verify("Old-Password-1", phc, "argon2id-v1", out var rehash));
         Assert.True(rehash);
+    }
+
+    [Fact]
+    public void S105_review5_password_hashing_is_capped_and_refuses_with_busy_instead_of_exhausting_memory()
+    {
+        // Eight real threads released together, so the calls truly overlap; only one may hash at a time.
+        using var hasher = new Argon2idPasswordHasher(maxConcurrent: 1, maxWait: TimeSpan.FromMilliseconds(1));
+        using var start = new Barrier(8);
+        var outcomes = new string[8];
+        var threads = Enumerable.Range(0, 8).Select(i => new Thread(() =>
+        {
+            start.SignalAndWait();
+            try
+            {
+                hasher.Hash("Correct-Horse-7");
+                outcomes[i] = "ok";
+            }
+            catch (Erp.Kernel.Application.Identity.PasswordHasherBusyException)
+            {
+                outcomes[i] = "busy";
+            }
+        })).ToList();
+        threads.ForEach(t => t.Start());
+        threads.ForEach(t => t.Join());
+
+        Assert.Contains("ok", outcomes);
+        Assert.Contains("busy", outcomes);
+        Assert.True(hasher.Verify("Correct-Horse-7", hasher.Hash("Correct-Horse-7"), "argon2id-v1", out _)); // the gate is released again
     }
 
     [Fact]

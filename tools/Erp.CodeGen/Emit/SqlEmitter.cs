@@ -52,8 +52,11 @@ public static class SqlEmitter
         // Design changes after the first migrations (data design key added_in): one new file per slice, never an edit.
         foreach (var slice in kernelTables.SelectMany(t => t.ChangedIn).Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal))
         {
-            var sequence = 180 + RuleSliceOrder(slice);
-            output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "design_" + slice.Replace(".", "_", StringComparison.Ordinal).ToLowerInvariant())}", DesignChanges(model, slice));
+            // A follow-up revision (S1.05-r1) gets its own file one hour later in the sequence, because the slice's
+            // own design file is frozen once merged: S1.05 → 0302, S1.05-r1 → 0402.
+            var revision = slice.Contains("-r", StringComparison.Ordinal) ? int.Parse(slice[^1..], CultureInfo.InvariantCulture) : 0;
+            var sequence = 180 + (60 * revision) + RuleSliceOrder(slice.Split('-')[0]);
+            output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "design_" + slice.Replace(".", "_", StringComparison.Ordinal).Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant())}", DesignChanges(model, slice));
         }
 
         if (model.ImplementedStubs.Any(st => model.Table(st.Table).Module != "kernel"))
@@ -173,7 +176,8 @@ public static class SqlEmitter
 
         foreach (var table in tables.Where(t => t.AddedIn != slice && t.UpdatableAddedIn.Exists(u => u.Slice == slice)))
         {
-            var args = string.Join(", ", table.AppendOnlyUpdatable.Select(Naming.SqlString));
+            var asOf = table.AppendOnlyUpdatable.Where(c => table.UpdatableAddedIn.Find(u => u.Column == c) is not { Slice: { } later } || UpTo(later, slice));
+            var args = string.Join(", ", asOf.Select(Naming.SqlString));
             b.Append(CultureInfo.InvariantCulture, $"create or replace trigger tg_{table.Name}_append_only before update or delete on {table.FullName} for each row execute function {table.Schema}.tg_refuse_change({args});\n");
             b.Append(CultureInfo.InvariantCulture, $"grant update ({string.Join(", ", table.UpdatableAddedIn.Where(u => u.Slice == slice).Select(u => u.Column))}) on {table.FullName} to app_rw;\n");
         }
@@ -191,7 +195,7 @@ public static class SqlEmitter
         b.Append('\n');
         foreach (var table in tables)
         {
-            b.Append(Comments(table, baseOnly: false));
+            b.Append(Comments(table, baseOnly: false, asOfSlice: slice));
         }
 
         return b.ToString().TrimEnd('\n') + "\n";
@@ -454,7 +458,18 @@ public static class SqlEmitter
 
         """.Replace("\r", string.Empty, StringComparison.Ordinal);
 
-    private static string Comments(Table table, Func<string, string>? rewrite = null, bool baseOnly = true)
+    /// <summary>
+    /// True when <paramref name="item"/> (a slice id, optionally with a revision such as S1.05-r1) comes no later than
+    /// <paramref name="slice"/>, so a design file describes the database exactly as of its own slice.
+    /// </summary>
+    private static bool UpTo(string item, string slice)
+    {
+        static (int Order, int Revision) Key(string id) =>
+            (RuleSliceOrder(id.Split('-')[0]), id.Contains("-r", StringComparison.Ordinal) ? int.Parse(id[^1..], CultureInfo.InvariantCulture) : 0);
+        return Key(item).CompareTo(Key(slice)) <= 0;
+    }
+
+    private static string Comments(Table table, Func<string, string>? rewrite = null, bool baseOnly = true, string? asOfSlice = null)
     {
         var b = new StringBuilder();
         var text = new List<string>();
@@ -471,12 +486,12 @@ public static class SqlEmitter
         text.AddRange(rewrite is null ? table.Comments : table.Comments.Select(rewrite));
         if (!baseOnly)
         {
-            text.AddRange(table.CommentsAddedIn.Select(c => c.Text));
+            text.AddRange(table.CommentsAddedIn.Where(c => asOfSlice is null || UpTo(c.Slice, asOfSlice)).Select(c => c.Text));
         }
 
         text.Add("Source: " + table.SourceFile + ".");
         b.Append(CultureInfo.InvariantCulture, $"comment on table {table.FullName} is {Naming.SqlString(string.Join(" ", text))};\n");
-        foreach (var column in table.Columns.Where(c => c.Comment is not null && (!baseOnly || c.AddedIn is null)))
+        foreach (var column in table.Columns.Where(c => c.Comment is not null && (baseOnly ? c.AddedIn is null : c.AddedIn is null || asOfSlice is null || UpTo(c.AddedIn, asOfSlice))))
         {
             b.Append(CultureInfo.InvariantCulture, $"comment on column {table.FullName}.{column.Name} is {Naming.SqlString(column.Comment!)};\n");
         }

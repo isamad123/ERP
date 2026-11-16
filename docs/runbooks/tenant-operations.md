@@ -32,6 +32,9 @@ refuses to start when no key exists. `Auth__SigningPublicKeys__0` may add a furt
 4. `M migrate` also creates the first access-token signing key in the secret store (S1.05). Rotate it with
    `M auth-key rotate`, then restart the API hosts; the previous two keys keep validating tokens already issued
    (access tokens live 5 minutes, so a key can be dropped soon after a rotation).
+   With more than one API host, restart them all within a few minutes: a host still on the old key list refuses tokens
+   signed with the new key until it restarts (users may see a sign-in prompt in that window). Do rotations at a quiet
+   time; a two-phase rotation without restarts is planned with the hosting slice (S1.05 review finding 8).
 
 ## Provision a customer (FR-KRN-TEN-02)
 1. Issuer signs the entitlement (payload: `tenant`, `version`, `edition`, `effective_from`, `expires_at`, `claims.modules`, limits):

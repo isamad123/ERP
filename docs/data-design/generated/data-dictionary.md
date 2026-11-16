@@ -5562,7 +5562,7 @@ Indexes:
 
 ### iam.sessions
 
-Durable record of sign-in sessions (active copies cached in Valkey). Requirements: KRN-IAM-04, ADM-USR-24. Not strictly append-only: last_seen_at and revoked_* are updatable by the session service role only. From S1.05 the session service also replaces refresh_token_hash on every refresh (rotation, CR-010). Source: kernel.yaml.
+Durable record of sign-in sessions (active copies cached in Valkey). Requirements: KRN-IAM-04, ADM-USR-24. Not strictly append-only: last_seen_at and revoked_* are updatable by the session service role only. From S1.05 the session service also replaces refresh_token_hash on every refresh (rotation, CR-010). From S1.05-r1 it also keeps previous_refresh_hash, the token replaced by the last rotation (reuse detection, CR-016). Source: kernel.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -5578,6 +5578,7 @@ Durable record of sign-in sessions (active copies cached in Valkey). Requirement
 | created_at | timestamp with time zone | no |  |  |
 | created_by | uuid | no |  |  |
 | refresh_token_hash | text | yes |  | SHA-256 (hex) of the current refresh token; replaced on every refresh |
+| previous_refresh_hash | text | yes |  | SHA-256 (hex) of the refresh token replaced by the last rotation; only a match with it counts as reuse |
 
 Constraints:
 
@@ -5590,7 +5591,7 @@ Indexes:
 
 Triggers:
 
-- `tg_sessions_append_only` CREATE TRIGGER tg_sessions_append_only BEFORE DELETE OR UPDATE ON iam.sessions FOR EACH ROW EXECUTE FUNCTION iam.tg_refuse_change('last_seen_at', 'revoked_at', 'revoked_reason', 'refresh_token_hash')
+- `tg_sessions_append_only` CREATE TRIGGER tg_sessions_append_only BEFORE DELETE OR UPDATE ON iam.sessions FOR EACH ROW EXECUTE FUNCTION iam.tg_refuse_change('last_seen_at', 'revoked_at', 'revoked_reason', 'refresh_token_hash', 'previous_refresh_hash')
 - `tg_sessions_no_truncate` CREATE TRIGGER tg_sessions_no_truncate BEFORE TRUNCATE ON iam.sessions FOR EACH STATEMENT EXECUTE FUNCTION iam.tg_refuse_change()
 
 ### iam.user_credentials

@@ -78,11 +78,18 @@ public interface IAuthenticationService
     Task<AuthResult> ActivateAsync(string? activationToken, string? newPassword, ClientInfo client, CancellationToken cancellationToken);
 }
 
-/// <summary>Self-service of the signed-in user (FR-ADM-USR-10: password, sessions, MFA devices).</summary>
+/// <summary>
+/// Self-service of the signed-in user (FR-ADM-USR-10: password, sessions, MFA devices). Adding or removing an
+/// authenticator and making new recovery codes need the current password or a current code (S1.05 review finding 4,
+/// product owner 2026-11-16); a wrong one counts towards lockout and raises <see cref="ReauthenticationFailedException"/>.
+/// </summary>
 public interface IAccountService
 {
-    /// <summary>Empty when changed; otherwise localization keys of the problems.</summary>
-    Task<IReadOnlyList<string>> ChangePasswordAsync(Guid userId, string? currentPassword, string? newPassword, CancellationToken cancellationToken);
+    /// <summary>
+    /// Empty when changed; otherwise localization keys of the problems. A wrong current password counts towards lockout;
+    /// a successful change ends the user's other sessions (the current one stays).
+    /// </summary>
+    Task<IReadOnlyList<string>> ChangePasswordAsync(Guid userId, Guid currentSessionId, string? currentPassword, string? newPassword, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<SessionView>> ListSessionsAsync(Guid userId, Guid currentSessionId, CancellationToken cancellationToken);
 
@@ -90,15 +97,15 @@ public interface IAccountService
 
     Task<IReadOnlyList<MfaDeviceView>> ListMfaDevicesAsync(Guid userId, CancellationToken cancellationToken);
 
-    Task<MfaEnrolment> StartMfaEnrolmentAsync(Guid userId, string? label, CancellationToken cancellationToken);
+    Task<MfaEnrolment> StartMfaEnrolmentAsync(Guid userId, string? label, Reauthentication proof, CancellationToken cancellationToken);
 
     /// <summary>Recovery codes (shown once) when the first device is confirmed, empty for a further device, null when the code is wrong.</summary>
     Task<IReadOnlyList<string>?> ConfirmMfaEnrolmentAsync(Guid userId, Guid deviceId, string? code, CancellationToken cancellationToken);
 
-    Task<bool> RemoveMfaDeviceAsync(Guid userId, Guid deviceId, CancellationToken cancellationToken);
+    Task<bool> RemoveMfaDeviceAsync(Guid userId, Guid deviceId, Reauthentication proof, CancellationToken cancellationToken);
 
     /// <summary>New recovery codes replacing the old ones; null when the user has no active device.</summary>
-    Task<IReadOnlyList<string>?> RegenerateRecoveryCodesAsync(Guid userId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<string>?> RegenerateRecoveryCodesAsync(Guid userId, Reauthentication proof, CancellationToken cancellationToken);
 }
 
 public enum AdminOutcome
@@ -156,3 +163,50 @@ public interface IPasswordHasher
     /// <summary>True when the password matches; <paramref name="needsRehash"/> is true when the stored hash uses older settings.</summary>
     bool Verify(string password, string storedHash, string algorithm, out bool needsRehash);
 }
+
+/// <summary>
+/// The server is already running as many password checks as it allows; the request is refused without counting a
+/// failure (S1.05 review finding 5). Answered 503 with <c>errors.auth.busy</c>.
+/// </summary>
+public sealed class PasswordHasherBusyException : Exception
+{
+    public PasswordHasherBusyException()
+        : base("Too many password checks are running; try again shortly.")
+    {
+    }
+
+    public PasswordHasherBusyException(string message)
+        : base(message)
+    {
+    }
+
+    public PasswordHasherBusyException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}
+
+/// <summary>
+/// A sensitive self-service action was refused because the current password or authenticator code was wrong or missing
+/// (S1.05 review finding 4). The failure is counted towards lockout. Answered 400 with <c>errors.auth.reauthentication_failed</c>.
+/// </summary>
+public sealed class ReauthenticationFailedException : Exception
+{
+    public ReauthenticationFailedException()
+        : base("The current password or authenticator code is required and was not correct.")
+    {
+    }
+
+    public ReauthenticationFailedException(string message)
+        : base(message)
+    {
+    }
+
+    public ReauthenticationFailedException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}
+
+/// <summary>Proof that the signed-in person is present: the current password or a current authenticator code.</summary>
+public sealed record Reauthentication(string? CurrentPassword, string? Code);

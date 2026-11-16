@@ -18,7 +18,9 @@ namespace Erp.Kernel.Infrastructure.Identity;
 /// (19 MiB, 2 passes, 1 lane) and are written into the PHC string, so stronger settings can be introduced later and
 /// old hashes upgraded at the next successful sign-in (<see cref="Verify"/> reports <c>needsRehash</c>).
 /// </summary>
-public sealed class Argon2idPasswordHasher : IPasswordHasher
+/// Each hash takes 19 MiB, so at most a few run at once per process (S1.05 review finding 5): beyond that a call waits
+/// up to <c>maxWait</c> and then fails with <see cref="PasswordHasherBusyException"/> instead of exhausting memory.
+public sealed class Argon2idPasswordHasher : IPasswordHasher, IDisposable
 {
     public const string AlgorithmLabel = "argon2id-v1";
     private const int MemoryKib = 19 * 1024;
@@ -26,7 +28,24 @@ public sealed class Argon2idPasswordHasher : IPasswordHasher
     private const int SaltBytes = 16;
     private const int HashBytes = 32;
 
+    private readonly SemaphoreSlim _gate;
+    private readonly TimeSpan _maxWait;
+
+    public Argon2idPasswordHasher()
+        : this(Math.Max(2, Environment.ProcessorCount), TimeSpan.FromSeconds(10))
+    {
+    }
+
+    public Argon2idPasswordHasher(int maxConcurrent, TimeSpan maxWait)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxConcurrent, 1);
+        _gate = new SemaphoreSlim(maxConcurrent, maxConcurrent);
+        _maxWait = maxWait;
+    }
+
     public string Algorithm => AlgorithmLabel;
+
+    public void Dispose() => _gate.Dispose();
 
     public string Hash(string password)
     {
@@ -52,11 +71,23 @@ public sealed class Argon2idPasswordHasher : IPasswordHasher
         return ok;
     }
 
-    private static byte[] Derive(string password, byte[] salt, int memoryKib, int passes)
+    private byte[] Derive(string password, byte[] salt, int memoryKib, int passes)
     {
-        var parameters = new Argon2Parameters { DegreeOfParallelism = 1, MemorySize = memoryKib, NumberOfPasses = passes };
-        var algorithm = PasswordBasedKeyDerivationAlgorithm.Argon2id(in parameters);
-        return algorithm.DeriveBytes(password, salt, HashBytes);
+        if (!_gate.Wait(_maxWait))
+        {
+            throw new PasswordHasherBusyException();
+        }
+
+        try
+        {
+            var parameters = new Argon2Parameters { DegreeOfParallelism = 1, MemorySize = memoryKib, NumberOfPasses = passes };
+            var algorithm = PasswordBasedKeyDerivationAlgorithm.Argon2id(in parameters);
+            return algorithm.DeriveBytes(password, salt, HashBytes);
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     private static bool TryParse(string phc, out int memory, out int passes, out byte[] salt, out byte[] hash)

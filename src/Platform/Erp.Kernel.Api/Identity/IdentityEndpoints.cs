@@ -25,7 +25,10 @@ public sealed record ActivateRequest(string? Token, string? NewPassword);
 
 public sealed record ChangePasswordRequest(string? CurrentPassword, string? NewPassword);
 
-public sealed record StartMfaRequest(string? Label);
+public sealed record StartMfaRequest(string? Label, string? CurrentPassword, string? Code);
+
+/// <summary>Proof of presence for sensitive self-service actions: the current password or a current authenticator code.</summary>
+public sealed record ReauthRequest(string? CurrentPassword, string? Code);
 
 public sealed record ConfirmMfaRequest(string? Code);
 
@@ -56,6 +59,8 @@ public static class IdentityEndpoints
     public const string InvalidRequest = "errors.auth.invalid_request";
     public const string Forbidden = "errors.access.forbidden";
     public const string NotFound = "errors.data.not_found";
+    public const string Busy = "errors.auth.busy";
+    public const string ReauthenticationFailed = "errors.auth.reauthentication_failed";
 
     /// <summary>Maps the anonymous sign-in steps and sign-out (outside the authorization group).</summary>
     public static IEndpointRouteBuilder MapIdentityAuthEndpoints(this IEndpointRouteBuilder app)
@@ -99,7 +104,7 @@ public static class IdentityEndpoints
         Self(me.MapPost("/password", (ChangePasswordRequest body, IAccountService s, IPermissionChecker p, HttpContext http, CancellationToken ct) =>
             AsSelfAsync(p, http, ct: ct, action: async c =>
             {
-                var errors = await s.ChangePasswordAsync(c.UserId, body.CurrentPassword, body.NewPassword, ct).ConfigureAwait(false);
+                var errors = await s.ChangePasswordAsync(c.UserId, c.SessionId, body.CurrentPassword, body.NewPassword, ct).ConfigureAwait(false);
                 return errors.Count == 0 ? Results.NoContent() : Problem(StatusCodes.Status400BadRequest, InvalidRequest, errors);
             })));
         Self(me.MapGet("/sessions", (IAccountService s, IPermissionChecker p, HttpContext http, CancellationToken ct) =>
@@ -109,15 +114,15 @@ public static class IdentityEndpoints
         Self(me.MapGet("/mfa-devices", (IAccountService s, IPermissionChecker p, HttpContext http, CancellationToken ct) =>
             AsSelfAsync(p, http, ct: ct, action: async c => Results.Ok(await s.ListMfaDevicesAsync(c.UserId, ct).ConfigureAwait(false)))));
         Self(me.MapPost("/mfa-devices", (StartMfaRequest body, IAccountService s, IPermissionChecker p, HttpContext http, CancellationToken ct) =>
-            AsSelfAsync(p, http, ct: ct, action: async c => Results.Ok(await s.StartMfaEnrolmentAsync(c.UserId, body.Label, ct).ConfigureAwait(false)))));
+            AsSelfAsync(p, http, ct: ct, action: async c => Results.Ok(await s.StartMfaEnrolmentAsync(c.UserId, body.Label, new Reauthentication(body.CurrentPassword, body.Code), ct).ConfigureAwait(false)))));
         Self(me.MapPost("/mfa-devices/{id:guid}/confirm", (Guid id, ConfirmMfaRequest body, IAccountService s, IPermissionChecker p, HttpContext http, CancellationToken ct) =>
             AsSelfAsync(p, http, ct: ct, action: async c => await s.ConfirmMfaEnrolmentAsync(c.UserId, id, body.Code, ct).ConfigureAwait(false) is { } codes
                 ? Results.Ok(new RecoveryCodesResponse(codes))
                 : Problem(StatusCodes.Status400BadRequest, InvalidRequest, ["errors.mfa.code_invalid"]))));
-        Self(me.MapDelete("/mfa-devices/{id:guid}", (Guid id, IAccountService s, IPermissionChecker p, HttpContext http, CancellationToken ct) =>
-            AsSelfAsync(p, http, ct: ct, action: async c => await s.RemoveMfaDeviceAsync(c.UserId, id, ct).ConfigureAwait(false) ? Results.NoContent() : NotFoundResult())));
-        Self(me.MapPost("/recovery-codes", (IAccountService s, IPermissionChecker p, HttpContext http, CancellationToken ct) =>
-            AsSelfAsync(p, http, ct: ct, action: async c => await s.RegenerateRecoveryCodesAsync(c.UserId, ct).ConfigureAwait(false) is { } codes
+        Self(me.MapPost("/mfa-devices/{id:guid}/remove", (Guid id, ReauthRequest body, IAccountService s, IPermissionChecker p, HttpContext http, CancellationToken ct) =>
+            AsSelfAsync(p, http, ct: ct, action: async c => await s.RemoveMfaDeviceAsync(c.UserId, id, new Reauthentication(body.CurrentPassword, body.Code), ct).ConfigureAwait(false) ? Results.NoContent() : NotFoundResult())));
+        Self(me.MapPost("/recovery-codes", (ReauthRequest body, IAccountService s, IPermissionChecker p, HttpContext http, CancellationToken ct) =>
+            AsSelfAsync(p, http, ct: ct, action: async c => await s.RegenerateRecoveryCodesAsync(c.UserId, new Reauthentication(body.CurrentPassword, body.Code), ct).ConfigureAwait(false) is { } codes
                 ? Results.Ok(new RecoveryCodesResponse(codes))
                 : Problem(StatusCodes.Status400BadRequest, InvalidRequest, ["errors.mfa.no_active_device"]))));
 
@@ -167,9 +172,23 @@ public static class IdentityEndpoints
             return Results.Unauthorized();
         }
 
-        return await permissions.HasPermissionAsync(IdentityPermissions.SelfManage, ct).ConfigureAwait(false)
-            ? await action(caller).ConfigureAwait(false)
-            : ForbiddenResult();
+        if (!await permissions.HasPermissionAsync(IdentityPermissions.SelfManage, ct).ConfigureAwait(false))
+        {
+            return ForbiddenResult();
+        }
+
+        try
+        {
+            return await action(caller).ConfigureAwait(false);
+        }
+        catch (ReauthenticationFailedException)
+        {
+            return Problem(StatusCodes.Status400BadRequest, InvalidRequest, [ReauthenticationFailed]);
+        }
+        catch (PasswordHasherBusyException)
+        {
+            return BusyResult();
+        }
     }
 
     private static async Task<IResult> AdminAsync(IPermissionChecker permissions, string permission, Func<Task<AdminResult>> action, CancellationToken ct)
@@ -190,7 +209,16 @@ public static class IdentityEndpoints
 
     private static async Task<IResult> Answer(Task<AuthResult> step)
     {
-        var result = await step.ConfigureAwait(false);
+        AuthResult result;
+        try
+        {
+            result = await step.ConfigureAwait(false);
+        }
+        catch (PasswordHasherBusyException)
+        {
+            return BusyResult();
+        }
+
         return result.Outcome switch
         {
             AuthOutcome.Failed => FailedResult(),
@@ -209,6 +237,10 @@ public static class IdentityEndpoints
 
     /// <summary>The one answer for every failed sign-in step (no account enumeration, ruling P5).</summary>
     private static IResult FailedResult() => Results.Problem(statusCode: StatusCodes.Status401Unauthorized, title: SignInFailed);
+
+    /// <summary>The password checks of this server are all in use (review finding 5); nothing was counted, try again.</summary>
+    private static IResult BusyResult() =>
+        Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: Busy, extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = 5 });
 
     private static IResult ForbiddenResult() => Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: Forbidden);
 

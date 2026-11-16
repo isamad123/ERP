@@ -17,18 +17,25 @@ public sealed class AccountService(
 {
     public const string CurrentPasswordWrong = "errors.password.current_wrong";
 
-    public async Task<IReadOnlyList<string>> ChangePasswordAsync(Guid userId, string? currentPassword, string? newPassword, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<string>> ChangePasswordAsync(Guid userId, Guid currentSessionId, string? currentPassword, string? newPassword, CancellationToken cancellationToken)
     {
         var now = clock.UtcNow;
         await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var account = await IdentityDb.GetAccountAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
-        if (account is not { HasCredential: true } || string.IsNullOrEmpty(currentPassword) || !hasher.Verify(currentPassword, account.PasswordHash!, account.HashAlgorithm!, out _))
+        var policy = await IdentitySettings.ReadAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
+        if (account is not { HasCredential: true, Status: UserStatuses.Active } || string.IsNullOrEmpty(currentPassword) || !hasher.Verify(currentPassword, account.PasswordHash!, account.HashAlgorithm!, out _))
         {
+            if (account is { HasCredential: true })
+            {
+                // A wrong current password counts like a failed sign-in (review finding 4).
+                await Lockouts.CountFailureAsync(connection, tx, userId, policy, now, cancellationToken).ConfigureAwait(false);
+                await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             return [CurrentPasswordWrong];
         }
 
-        var policy = await IdentitySettings.ReadAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
         var errors = await Passwords.ValidateNewAsync(connection, tx, userId, newPassword, policy.Password, hasher, cancellationToken).ConfigureAwait(false);
         if (errors.Count > 0)
         {
@@ -36,7 +43,8 @@ public sealed class AccountService(
         }
 
         await IdentityDb.SetPasswordAsync(connection, tx, userId, hasher.Hash(newPassword!), hasher.Algorithm, userId, now, cancellationToken).ConfigureAwait(false);
-        await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.PasswordChanged, userId, userId, now, new { reason = "self" }, cancellationToken).ConfigureAwait(false);
+        var ended = await IdentityDb.RevokeOtherSessionsAsync(connection, tx, userId, currentSessionId, "password_changed", now, cancellationToken).ConfigureAwait(false);
+        await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.PasswordChanged, userId, userId, now, new { reason = "self", sessions_revoked = ended }, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return [];
     }
@@ -54,6 +62,11 @@ public sealed class AccountService(
         await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var revoked = await IdentityDb.RevokeSessionAsync(connection, tx, sessionId, userId, "self_revoked", now, cancellationToken).ConfigureAwait(false) == 1;
+        if (revoked)
+        {
+            await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.SessionsRevoked, userId, userId, now, new { reason = "self_revoked", session = sessionId }, cancellationToken).ConfigureAwait(false);
+        }
+
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return revoked;
     }
@@ -74,13 +87,12 @@ public sealed class AccountService(
         return list;
     }
 
-    public async Task<MfaEnrolment> StartMfaEnrolmentAsync(Guid userId, string? label, CancellationToken cancellationToken)
+    public async Task<MfaEnrolment> StartMfaEnrolmentAsync(Guid userId, string? label, Reauthentication proof, CancellationToken cancellationToken)
     {
         var now = clock.UtcNow;
         await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var account = await IdentityDb.GetAccountAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException("The signed-in user does not exist.");
+        var account = await ReauthenticateAsync(connection, tx, userId, proof, now, cancellationToken).ConfigureAwait(false);
         var encryptor = await encryptors.GetAsync(cancellationToken).ConfigureAwait(false);
         var enrolment = await MfaEnrolments.StartAsync(connection, tx, account, label, tenant.TenantCode, encryptor, now, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -99,11 +111,12 @@ public sealed class AccountService(
         return codes;
     }
 
-    public async Task<bool> RemoveMfaDeviceAsync(Guid userId, Guid deviceId, CancellationToken cancellationToken)
+    public async Task<bool> RemoveMfaDeviceAsync(Guid userId, Guid deviceId, Reauthentication proof, CancellationToken cancellationToken)
     {
         var now = clock.UtcNow;
         await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await ReauthenticateAsync(connection, tx, userId, proof, now, cancellationToken).ConfigureAwait(false);
         var removed = await IdentityDb.ExecuteAsync(connection, tx, """
             update iam.mfa_devices set status = 'revoked', secret = null, updated_at = $3, updated_by = $2, row_version = row_version + 1
             where id = $1 and user_id = $2 and status <> 'revoked'
@@ -122,7 +135,7 @@ public sealed class AccountService(
         return removed;
     }
 
-    public async Task<IReadOnlyList<string>?> RegenerateRecoveryCodesAsync(Guid userId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<string>?> RegenerateRecoveryCodesAsync(Guid userId, Reauthentication proof, CancellationToken cancellationToken)
     {
         var now = clock.UtcNow;
         await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
@@ -132,10 +145,58 @@ public sealed class AccountService(
             return null;
         }
 
+        await ReauthenticateAsync(connection, tx, userId, proof, now, cancellationToken).ConfigureAwait(false);
         var policy = await IdentitySettings.ReadAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
         var codes = await IdentityDb.NewRecoveryCodesAsync(connection, tx, userId, policy.Mfa.RecoveryCodeCount, hasher, userId, now, cancellationToken).ConfigureAwait(false);
+        await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.RecoveryCodesRegenerated, userId, userId, now, new { count = codes.Count }, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return codes;
+    }
+
+    /// <summary>
+    /// Proves the person is present (review finding 4): a current authenticator code when one is given, otherwise the
+    /// current password. A wrong or missing proof counts towards lockout, is committed, and raises
+    /// <see cref="ReauthenticationFailedException"/>; the rest of the action does not run.
+    /// </summary>
+    private async Task<UserAccount> ReauthenticateAsync(NpgsqlConnection connection, NpgsqlTransaction tx, Guid userId, Reauthentication proof, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var account = await IdentityDb.GetAccountAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false)
+            ?? throw new ReauthenticationFailedException();
+        var ok = false;
+        if (account is { Status: UserStatuses.Active, HasCredential: true })
+        {
+            if (!string.IsNullOrWhiteSpace(proof.Code))
+            {
+                var encryptor = await encryptors.GetAsync(cancellationToken).ConfigureAwait(false);
+                foreach (var device in await IdentityDb.MfaDevicesAsync(connection, tx, userId, "active", cancellationToken).ConfigureAwait(false))
+                {
+                    var step = Totp.Verify(encryptor.Decrypt(device.Secret, IdentityDb.MfaSecretPurpose), proof.Code, now, device.LastUsedAt is { } used ? Totp.StepAt(used) : null);
+                    if (step is { } accepted && await IdentityDb.MarkMfaUsedAsync(connection, tx, device.Id, accepted, userId, now, null, cancellationToken).ConfigureAwait(false))
+                    {
+                        ok = true;
+                        break;
+                    }
+                }
+            }
+            else if (!string.IsNullOrEmpty(proof.CurrentPassword))
+            {
+                ok = hasher.Verify(proof.CurrentPassword, account.PasswordHash!, account.HashAlgorithm!, out _);
+            }
+        }
+
+        if (!ok)
+        {
+            if (account.HasCredential)
+            {
+                var policy = await IdentitySettings.ReadAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
+                await Lockouts.CountFailureAsync(connection, tx, userId, policy, now, cancellationToken).ConfigureAwait(false);
+                await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            throw new ReauthenticationFailedException();
+        }
+
+        return account;
     }
 }
 

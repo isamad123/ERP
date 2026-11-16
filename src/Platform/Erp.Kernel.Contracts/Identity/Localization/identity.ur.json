@@ -1,6 +1,8 @@
 {
   "errors.access.forbidden": "آپ کو یہ کام کرنے کی اجازت نہیں ہے۔",
+  "errors.auth.busy": "سرور مصروف ہے۔ براہ کرم چند سیکنڈ بعد دوبارہ کوشش کریں۔",
   "errors.auth.invalid_request": "درخواست مکمل نہیں ہو سکی۔ تفصیلات دیکھ کر دوبارہ کوشش کریں۔",
+  "errors.auth.reauthentication_failed": "اس تبدیلی کی تصدیق کے لیے اپنا موجودہ پاس ورڈ یا تصدیقی ایپ کا موجودہ کوڈ درج کریں۔",
   "errors.auth.sign_in_failed": "سائن ان ناکام رہا۔ اپنا صارف نام اور پاس ورڈ دیکھیں یا اپنے منتظم سے مدد لیں۔",
   "errors.auth.token_for_another_tenant": "یہ سائن ان کسی دوسرے ادارے کے پتے کا ہے۔",
   "errors.data.not_found": "ریکارڈ نہیں ملا۔",

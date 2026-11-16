@@ -150,9 +150,9 @@ public static partial class DesignLoader
     }
 
     private static string SliceId(string slice, string where) =>
-        SlicePattern().IsMatch(slice) ? slice : throw new DesignException(where, $"'{slice}' is not a slice id such as S1.05");
+        SlicePattern().IsMatch(slice) ? slice : throw new DesignException(where, $"'{slice}' is not a slice id such as S1.05 (or S1.05-r1 for a follow-up after that slice's design file was merged)");
 
-    [GeneratedRegex(@"^S\d\.\d{2}$")]
+    [GeneratedRegex(@"^S\d\.\d{2}(-r[1-3])?$")]
     private static partial Regex SlicePattern();
 
     // ---------------------------------------------------------------- columns
