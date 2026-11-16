@@ -8,6 +8,17 @@ Requirements: the settings of tenant-operations.md, and `pg_dump` and `pg_restor
 server (16 in Release 1.0) on `PATH`, or `ERP_PG_BIN` pointing at their folder. A newer tool writes archives the server cannot
 restore, so the commands refuse a version mismatch before doing anything. `ERP_MIGRATOR` points at `Erp.Host.Migrator.dll` if it is not the local Release build.
 
+## Back up the secret store too (S1.05, risk R-006)
+A database backup alone is not enough. The secret store file (`ERP_SECRETS_FILE`) holds, for every customer, the
+database logins, the field-encryption key (`tenants/<code>/field-key-v1`, needed to read authenticator-app secrets) and
+the platform's access-token signing keys (`platform/token-signing/*`). Without it a restored database works, but every
+enrolled authenticator app is unreadable (each user then needs an MFA reset) and the logins must be re-created.
+- Copy `ERP_SECRETS_FILE` to the operations vault after every change: after `M migrate`, `M tenant provision`,
+  `M cluster add` and `M auth-key rotate`. The file is already encrypted with `ERP_SECRETS_KEY`; keep that key in the vault
+  as well, but never in the same place as the file copies or the database backups.
+- A restore drill should also check that the restored customer's authenticator secrets can be read with the restored
+  secret store (sign in with a test user that has an authenticator app enrolled).
+
 ## Back up
 `scripts/tenant-backup.sh acme /backups/acme-2026-11-15.dump.enc`
 
