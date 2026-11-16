@@ -77,11 +77,22 @@ higher one is a defect in the lower one: stop and report it.
 - No stub code that pretends to work. TODOs only with an issue id, listed in the report.
 - Seed data is idempotent and keyed by stable codes.
 
-## Branches and merging (product owner, 2026-11-15)
+## Branches and merging (product owner, 2026-11-15; amended 2026-11-16 to cut CI waiting)
 - `main` is the single line of development. Every slice starts from the latest `main`.
-- Work on the session's branch, then open a pull request to `main` and merge it once CI is green
-  and the slice report is done. Do not leave finished work on side branches.
-- Never merge with failing CI. If `main` moved on, update the branch from `main` and rerun CI before merging.
+- **One pull request per slice.** The slice file goes in the same pull request as the build: write the draft slice
+  file on the session's branch, get the product owner's approval in the session (plan mode), then build on the same
+  branch. No separate pull request just for the slice file.
+- Push to the session's branch whenever useful (it is the backup of the work). Branch pushes do not run CI; CI runs
+  on the pull request and again on `main` after the merge. So **run the full local checks before opening the pull
+  request** (build, unit, architecture, integration and tenant-isolation suites against local PostgreSQL, generator
+  and dictionary drift, licence gate) and do not push a pull request you have not seen pass locally.
+- When the slice report is done, open the pull request to `main` and **turn on auto-merge (squash)**. GitHub merges
+  it by itself once the required checks pass; do not sit in the session waiting for CI. If auto-merge cannot be
+  turned on, say so in the report and leave the pull request open; never merge by hand while CI is pending or red.
+- Pull requests that change only prose documents (see `build/ci-changes.py`) skip the build and test jobs.
+- If CI fails after the session ended, the merge stays blocked; fix it on the same branch (same or new session).
+  If `main` moved on and the branch conflicts, update the branch from `main`; CI reruns on the update.
+- Do not leave finished work on side branches.
 
 ## Slice report (always end with this)
 1. What was built, in plain language. 2. Requirement IDs covered. 3. Evidence: commands run and results.
@@ -108,8 +119,9 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
 - Migrator and operator commands (S1.03, S1.05): `dotnet run --project src/Host/Erp.Host.Migrator -- help` (migrate, cluster add, signing-key add,
   entitlement sign, tenant provision/list/suspend/resume/backup/restore/admin-activation-link, auth-key rotate; Super Admin recovery: tenant admin-role-repair/admin-grant/admin-revoke, S1.06-r1). Settings are environment variables: `docs/runbooks/tenant-operations.md`.
   Backup and restore drill: `docs/runbooks/tenant-backup-restore.md` (needs pg_dump/pg_restore of the server's major version, 16).
-- CI: `.github/workflows/ci.yml` runs restore, build, generator drift, TypeScript type-check, unit, architecture, integration
-  (PostgreSQL 16 service), data-dictionary drift and the licence gate.
+- CI: `.github/workflows/ci.yml` runs on pull requests and on pushes to `main` (not on branch pushes): restore, build,
+  generator drift, TypeScript type-check, unit, architecture, integration (PostgreSQL 16 service), data-dictionary drift
+  and the licence gate. A `changes` job skips them when only prose documents changed: `python3 build/ci-changes.py --self-test`.
 - Tenant-isolation suite (S1.04): `dotnet test --project tests/Erp.IntegrationTests --no-build --filter-trait "Suite=TenantIsolation"`; CI job `tenant-isolation`.
   Every endpoint is found automatically; one the suite cannot probe fails it (see `docs/handoff/2026-11-15-S1.04.md`).
 - Access control (S1.06): `generate` also writes each module's permission manifest (`*/Access/permissions.g.json`); baseline roles are

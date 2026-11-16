@@ -1,8 +1,12 @@
 name: ci
 
+# Each commit is tested once (product owner, 2026-11-16): on its pull request, and again only when it lands on main.
+# Pushes to a session branch without a pull request are not tested here; the session runs the full checks locally.
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -20,7 +24,48 @@ env:
   ERP_TEST_PG: "Host=localhost;Port=5432;Username=erp;Password=erp-ci-only;Database=erp_test"
 
 jobs:
+  # Decides whether the change can affect the build. A change made only of prose documents skips the two jobs below;
+  # a skipped job counts as passed for a required check, so a documents-only pull request can still merge.
+  # Documents the build or tests read are NOT prose and always run CI: docs/data-design/** (generator input and the
+  # data dictionary), docs/handoff/** (finished-slice check in GeneratorTests) and docs/registers/todo-stubs.md
+  # (generated). Anything outside docs/ other than a top-level *.md file also runs CI.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Changed files
+        id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          case "$EVENT" in
+            pull_request) range="$(git merge-base "$PR_BASE" "$PR_HEAD")...$PR_HEAD" ;;
+            push) range="$PUSH_BEFORE..$PUSH_AFTER" ;;
+            *) range="" ;;
+          esac
+          if [ -z "$range" ] || [ "$PUSH_BEFORE" = "0000000000000000000000000000000000000000" ] \
+             || ! files="$(git diff --name-only "$range")"; then
+            echo "No usable range: run everything."; echo "code=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "$files"
+          code="$(echo "$files" | python3 build/ci-changes.py)"
+          echo "Build and tests needed: $code"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
   build-and-test:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -111,6 +156,8 @@ jobs:
   # is called as one customer with another customer's ids, hosts and tokens; any success fails this job. It is its own
   # job so it shows by name on every pull request and can be made a required check in the branch protection of main.
   tenant-isolation:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
