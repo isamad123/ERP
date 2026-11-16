@@ -13,6 +13,8 @@ Only permissive licences (MIT, Apache-2.0, BSD, ISC, PostgreSQL, Zlib). Anything
 | YamlDotNet | 16.3.0 | MIT | tools/Erp.CodeGen (reads docs/data-design/*.yaml) | S1.02 |
 | Microsoft.AspNetCore.TestHost | 10.0.4 | MIT | Erp.IntegrationTests (in-process API tests of the generated endpoints) | S1.02 |
 | Microsoft.AspNetCore.Authentication.JwtBearer | 10.0.4 | MIT | Erp.Host.Api (validates signed tokens; the token's customer must match the host, FR-KRN-TEN-04); brings Microsoft.IdentityModel.* and System.IdentityModel.Tokens.Jwt 8.0.1 (MIT) | S1.03 |
+| NSec.Cryptography | 26.4.0 | MIT | Erp.Kernel.Infrastructure (Argon2id password and recovery-code hashing, S1.05 build item 1); brings libsodium 1.0.22 (ISC, native library) | S1.05 |
+| Microsoft.IdentityModel.JsonWebTokens | 8.0.1 | MIT | Erp.Kernel.Infrastructure (issues ES256 access tokens, S1.05); same version JwtBearer already brought in S1.03 | S1.05 |
 | TypeScript (npm `typescript`) | 6.0.2 | Apache-2.0 | CI only: type-checks web/generated (`npx --yes typescript@6.0.2 tsc`); not shipped | S1.02 |
 
 Transitive packages (S1.01, all test-only; full list printed by `build/licence-gate.py`): xunit.v3.* and xunit.analyzers
