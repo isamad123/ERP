@@ -47,7 +47,7 @@ public sealed class SubscriptionListQuery
     public int? Limit { get; init; }
 }
 
-/// <summary>Generated endpoints of ntf.subscriptions: read, create, update.</summary>
+/// <summary>Generated endpoints of ntf.subscriptions: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class SubscriptionEndpoints
 {
     private const string Resource = "ntf.subscriptions";
@@ -61,55 +61,70 @@ internal static class SubscriptionEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("ntf.subscriptions.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "ntf.subscriptions.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] SubscriptionListQuery query, global::Erp.Kernel.Application.Generated.Ntf.ISubscriptionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] SubscriptionListQuery query, global::Erp.Kernel.Application.Generated.Ntf.ISubscriptionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "ntf.subscriptions.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Ntf.SubscriptionFilter {  }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<SubscriptionResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Ntf.SubscriptionAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Ntf.ISubscriptionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Ntf.ISubscriptionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "ntf.subscriptions.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Ntf.SubscriptionAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(SubscriptionWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.ISubscriptionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(SubscriptionWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.ISubscriptionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "ntf.subscriptions.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Ntf.SubscriptionAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Ntf.Subscription();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/ntf/subscriptions/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, SubscriptionWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.ISubscriptionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "ntf.subscriptions.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/ntf/subscriptions/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Ntf.SubscriptionAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, SubscriptionWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.ISubscriptionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "ntf.subscriptions.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Ntf.SubscriptionAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Ntf.SubscriptionAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Ntf.Subscription row) => row.CompanyId;
 
     private static SubscriptionResponse ToResponse(global::Erp.Kernel.Domain.Generated.Ntf.Subscription row) => new()
     {
@@ -126,14 +141,15 @@ internal static class SubscriptionEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(SubscriptionWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(SubscriptionWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.EventCode is null)
+        if (request.EventCode is null && (!update || access.CanEdit("event_code")))
         {
             errors.Add("eventCode");
         }
-        if (request.Audience is null)
+        if (request.Audience is null && (!update || access.CanEdit("audience")))
         {
             errors.Add("audience");
         }
@@ -144,21 +160,59 @@ internal static class SubscriptionEndpoints
         return errors;
     }
 
-    private static void Apply(SubscriptionWriteRequest request, global::Erp.Kernel.Domain.Generated.Ntf.Subscription row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(SubscriptionWriteRequest request, global::Erp.Kernel.Domain.Generated.Ntf.Subscription row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.EventCode = request.EventCode!;
-        row.Audience = GeneratedEndpointSupport.ToDocument(request.Audience)!;
-        if (request.Channels is not null)
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("event_code"))
         {
-            row.Channels = request.Channels ?? [];
+            row.EventCode = request.EventCode!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EventCode, row.EventCode, update))
+        {
+            denied.Add("eventCode");
+        }
+        if (access.CanEdit("audience"))
+        {
+            row.Audience = GeneratedEndpointSupport.ToDocument(request.Audience)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Audience, row.Audience, update))
+        {
+            denied.Add("audience");
+        }
+        if (access.CanEdit("channels"))
+        {
+            if (request.Channels is not null)
+            {
+                row.Channels = request.Channels ?? [];
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Channels, row.Channels, update))
+        {
+            denied.Add("channels");
         }
         if (!update)
         {
-            row.CompanyId = request.CompanyId;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        if (request.IsMandatory is not null)
+        if (access.CanEdit("is_mandatory"))
         {
-            row.IsMandatory = request.IsMandatory!.Value;
+            if (request.IsMandatory is not null)
+            {
+                row.IsMandatory = request.IsMandatory!.Value;
+            }
         }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsMandatory, row.IsMandatory, update))
+        {
+            denied.Add("isMandatory");
+        }
+        return denied;
     }
 }

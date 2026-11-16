@@ -63,7 +63,7 @@ public sealed class AttendancePeriodListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.attendance_periods: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.attendance_periods: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class AttendancePeriodEndpoints
 {
     private const string Resource = "hrm.attendance_periods";
@@ -77,55 +77,70 @@ internal static class AttendancePeriodEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.attendance_periods.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.attendance_periods.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] AttendancePeriodListQuery query, global::Erp.Hrm.Application.Generated.IAttendancePeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] AttendancePeriodListQuery query, global::Erp.Hrm.Application.Generated.IAttendancePeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_periods.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.AttendancePeriodFilter { CompanyId = query.CompanyId, PayGroupId = query.PayGroupId, PayPeriodId = query.PayPeriodId, LockedByRunId = query.LockedByRunId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<AttendancePeriodResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.AttendancePeriodAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IAttendancePeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IAttendancePeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_periods.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.AttendancePeriodAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(AttendancePeriodWriteRequest request, global::Erp.Hrm.Application.Generated.IAttendancePeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(AttendancePeriodWriteRequest request, global::Erp.Hrm.Application.Generated.IAttendancePeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_periods.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.AttendancePeriodAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.AttendancePeriod();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/attendance-periods/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, AttendancePeriodWriteRequest request, global::Erp.Hrm.Application.Generated.IAttendancePeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_periods.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/attendance-periods/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.AttendancePeriodAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, AttendancePeriodWriteRequest request, global::Erp.Hrm.Application.Generated.IAttendancePeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_periods.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.AttendancePeriodAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.AttendancePeriodAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.AttendancePeriod row) => row.CompanyId;
 
     private static AttendancePeriodResponse ToResponse(global::Erp.Hrm.Domain.Generated.AttendancePeriod row) => new()
     {
@@ -145,30 +160,31 @@ internal static class AttendancePeriodEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(AttendancePeriodWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(AttendancePeriodWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.PayGroupId is null)
+        if (request.PayGroupId is null && (!update || access.CanEdit("pay_group_id")))
         {
             errors.Add("payGroupId");
         }
-        if (request.PayPeriodId is null)
+        if (request.PayPeriodId is null && (!update || access.CanEdit("pay_period_id")))
         {
             errors.Add("payPeriodId");
         }
-        if (request.PeriodStart is null)
+        if (request.PeriodStart is null && (!update || access.CanEdit("period_start")))
         {
             errors.Add("periodStart");
         }
-        if (request.PeriodEnd is null)
+        if (request.PeriodEnd is null && (!update || access.CanEdit("period_end")))
         {
             errors.Add("periodEnd");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -179,18 +195,77 @@ internal static class AttendancePeriodEndpoints
         return errors;
     }
 
-    private static void Apply(AttendancePeriodWriteRequest request, global::Erp.Hrm.Domain.Generated.AttendancePeriod row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(AttendancePeriodWriteRequest request, global::Erp.Hrm.Domain.Generated.AttendancePeriod row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.PayGroupId = request.PayGroupId!.Value;
-        row.PayPeriodId = request.PayPeriodId!.Value;
-        row.PeriodStart = request.PeriodStart!.Value;
-        row.PeriodEnd = request.PeriodEnd!.Value;
-        row.LockedAt = request.LockedAt;
-        row.LockedByRunId = request.LockedByRunId;
-        row.Status = request.Status!;
+        if (access.CanEdit("pay_group_id"))
+        {
+            row.PayGroupId = request.PayGroupId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PayGroupId, row.PayGroupId, update))
+        {
+            denied.Add("payGroupId");
+        }
+        if (access.CanEdit("pay_period_id"))
+        {
+            row.PayPeriodId = request.PayPeriodId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PayPeriodId, row.PayPeriodId, update))
+        {
+            denied.Add("payPeriodId");
+        }
+        if (access.CanEdit("period_start"))
+        {
+            row.PeriodStart = request.PeriodStart!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodStart, row.PeriodStart, update))
+        {
+            denied.Add("periodStart");
+        }
+        if (access.CanEdit("period_end"))
+        {
+            row.PeriodEnd = request.PeriodEnd!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodEnd, row.PeriodEnd, update))
+        {
+            denied.Add("periodEnd");
+        }
+        if (access.CanEdit("locked_at"))
+        {
+            row.LockedAt = request.LockedAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LockedAt, row.LockedAt, update))
+        {
+            denied.Add("lockedAt");
+        }
+        if (access.CanEdit("locked_by_run_id"))
+        {
+            row.LockedByRunId = request.LockedByRunId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LockedByRunId, row.LockedByRunId, update))
+        {
+            denied.Add("lockedByRunId");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

@@ -30,23 +30,6 @@ public sealed class MakerCheckerRequestResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for iam.maker_checker_requests. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class MakerCheckerRequestWriteRequest
-{
-    public string? ActionType { get; init; }
-    public string? SubjectType { get; init; }
-    public global::System.Guid? SubjectId { get; init; }
-    public global::System.Text.Json.JsonElement? Payload { get; init; }
-    public global::System.Guid? RequestedBy { get; init; }
-    public global::System.Guid? DecidedBy { get; init; }
-    public global::System.DateTimeOffset? DecidedAt { get; init; }
-    public string? Reason { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for iam.maker_checker_requests.</summary>
 public sealed class MakerCheckerRequestListQuery
 {
@@ -61,7 +44,7 @@ public sealed class MakerCheckerRequestListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of iam.maker_checker_requests: read, create, update.</summary>
+/// <summary>Generated endpoints of iam.maker_checker_requests: read. Answers pass through field security (S1.06).</summary>
 internal static class MakerCheckerRequestEndpoints
 {
     private const string Resource = "iam.maker_checker_requests";
@@ -71,59 +54,25 @@ internal static class MakerCheckerRequestEndpoints
         var group = app.MapGroup("/api/iam/maker-checker-requests").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("iam.maker_checker_requests.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.maker_checker_requests.read"));
         group.MapGet("/{id:guid}", GetAsync).WithName("iam.maker_checker_requests.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.maker_checker_requests.read"));
-        group.MapPost("/", CreateAsync).WithName("iam.maker_checker_requests.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "iam.maker_checker_requests.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("iam.maker_checker_requests.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "iam.maker_checker_requests.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] MakerCheckerRequestListQuery query, global::Erp.Kernel.Application.Generated.Iam.IMakerCheckerRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] MakerCheckerRequestListQuery query, global::Erp.Kernel.Application.Generated.Iam.IMakerCheckerRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "iam.maker_checker_requests.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.MakerCheckerRequestFilter { RequestedBy = query.RequestedBy, DecidedBy = query.DecidedBy, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<MakerCheckerRequestResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Iam.MakerCheckerRequestAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Iam.IMakerCheckerRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Iam.IMakerCheckerRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "iam.maker_checker_requests.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Iam.MakerCheckerRequestAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(MakerCheckerRequestWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IMakerCheckerRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.maker_checker_requests.create", async () =>
-        {
-            var errors = Validate(request, update: false);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Iam.MakerCheckerRequest();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/iam/maker-checker-requests/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, MakerCheckerRequestWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IMakerCheckerRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.maker_checker_requests.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            Apply(request, row, update: true);
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
-        }, cancellationToken);
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Iam.MakerCheckerRequest row) => null;
 
     private static MakerCheckerRequestResponse ToResponse(global::Erp.Kernel.Domain.Generated.Iam.MakerCheckerRequest row) => new()
     {
@@ -143,52 +92,4 @@ internal static class MakerCheckerRequestEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    private static global::System.Collections.Generic.List<string> Validate(MakerCheckerRequestWriteRequest request, bool update)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.ActionType is null)
-        {
-            errors.Add("actionType");
-        }
-        if (request.SubjectType is null)
-        {
-            errors.Add("subjectType");
-        }
-        if (request.SubjectId is null)
-        {
-            errors.Add("subjectId");
-        }
-        if (request.Payload is null)
-        {
-            errors.Add("payload");
-        }
-        if (request.RequestedBy is null)
-        {
-            errors.Add("requestedBy");
-        }
-        if (request.Status is null)
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    private static void Apply(MakerCheckerRequestWriteRequest request, global::Erp.Kernel.Domain.Generated.Iam.MakerCheckerRequest row, bool update)
-    {
-        row.ActionType = request.ActionType!;
-        row.SubjectType = request.SubjectType!;
-        row.SubjectId = request.SubjectId!.Value;
-        row.Payload = GeneratedEndpointSupport.ToDocument(request.Payload)!;
-        row.RequestedBy = request.RequestedBy!.Value;
-        row.DecidedBy = request.DecidedBy;
-        row.DecidedAt = request.DecidedAt;
-        row.Reason = request.Reason;
-        row.Status = request.Status!;
-        _ = update;
-    }
 }

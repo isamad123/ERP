@@ -37,22 +37,23 @@ internal sealed class BankRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Ref.Bank>(context, clock, actor, scope, "ref.banks"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Ref.Bank>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Ref.BankAccess.Scope),
     global::Erp.Kernel.Application.Generated.Ref.IBankRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ref.Bank>> ListAsync(global::Erp.Kernel.Application.Generated.Ref.BankFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ref.Bank>> ListAsync(global::Erp.Kernel.Application.Generated.Ref.BankFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.CountryCode is { } countryCodeFilter)
         {
             query = query.Where(e => e.CountryCode == countryCodeFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ref.Bank>> FindByCountryCodeAndCodeAsync(string countryCode, string code, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.CountryCode == countryCode && e.Code!.ToLower() == code!.ToLower()).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.CountryCode == countryCode && e.Code!.ToLower() == code!.ToLower()).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

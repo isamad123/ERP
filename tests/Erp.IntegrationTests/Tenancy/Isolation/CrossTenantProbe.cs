@@ -35,6 +35,11 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
             return await new IdentityProbe(fx, app).RunAsync(endpoint, ct);
         }
 
+        if (endpoint.Kind is EndpointKind.AccessCreate or EndpointKind.AccessRecordAction or EndpointKind.AccessQuery or EndpointKind.AccessCatalog)
+        {
+            return await new AccessProbe(fx, app).RunAsync(endpoint, ct);
+        }
+
         var failures = new List<string>();
         if (endpoint.Kind == EndpointKind.Unclassified || endpoint.Resource is null)
         {

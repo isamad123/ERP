@@ -19,3 +19,33 @@ public interface ICompanyBankAccountRepository : global::Erp.BuildingBlocks.Appl
 
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Org.CompanyBankAccount>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of org.company_bank_accounts and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class CompanyBankAccountAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Org.CompanyBankAccount> Scope { get; } = new(
+        "org.company_bank_accounts",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Org.CompanyBankAccount, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Org.CompanyBankAccount, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("org.company_bank_accounts",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("bank_code", "BankCode", null),
+        new("account_title", "AccountTitle", null),
+        new("currency_code", "CurrencyCode", null),
+        new("salary_file_format", "SalaryFileFormat", null),
+        new("is_deleted", "IsDeleted", null),
+        new("deleted_at", "DeletedAt", null),
+        new("deleted_by", "DeletedBy", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

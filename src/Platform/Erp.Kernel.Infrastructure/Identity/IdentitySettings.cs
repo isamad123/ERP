@@ -29,6 +29,12 @@ public static class IdentitySettings
     public const string ActivationTokenHours = "iam.activation.token_hours";
     public const string ChallengeMinutes = "iam.sign_in.challenge_minutes";
 
+    // Slice S1.06 (rulings Q6, Q10): privileged roles and maker-checker.
+    public const string MfaRequiredForPrivileged = "iam.mfa.required_for_privileged";
+    public const string PrivilegedPasswordMinLength = "iam.password.privileged_min_length";
+    public const string MakerCheckerSensitiveRoles = "iam.maker_checker.sensitive_roles";
+    public const string MakerCheckerExpiryDays = "iam.maker_checker.expiry_days";
+
     /// <summary>Definition of one setting: key, type, default (JSON), minimum, layers and descriptions (en, ur).</summary>
     public sealed record Definition(string Key, string DataType, string DefaultJson, int? Min, string[] Layers, string English, string Urdu);
 
@@ -44,12 +50,16 @@ public static class IdentitySettings
         new(SessionAbsoluteMinutes, "int", "720", 5, ["tenant"], "Maximum session length in minutes", "سیشن کی زیادہ سے زیادہ مدت منٹوں میں"),
         new(SessionMaxConcurrent, "int", "3", 1, ["tenant"], "Sessions a user may hold at once", "ایک صارف کے بیک وقت سیشن"),
         new(SessionRememberDeviceDays, "int", "0", 0, ["tenant"], "Days a trusted device is remembered (0 = off; used from slice S1.12)", "قابل اعتماد آلہ یاد رکھنے کے دن (0 = بند)"),
-        new(MfaRequired, "bool", "false", null, ["tenant", "user"], "Second factor required at sign-in", "سائن ان پر دوسرا مرحلہ لازمی"),
+        new(MfaRequired, "bool", "false", null, ["tenant", "role", "user"], "Second factor required at sign-in", "سائن ان پر دوسرا مرحلہ لازمی"),
         new(MfaGraceDays, "int", "7", 0, ["tenant"], "Days allowed to enrol a second factor once required", "لازمی ہونے کے بعد دوسرا مرحلہ اندراج کرنے کے دن"),
         new(MfaRecoveryCodes, "int", "10", 1, ["tenant"], "Recovery codes issued at enrolment", "اندراج پر جاری کردہ بحالی کوڈ"),
         new(MfaAllowedMethods, "list", "[\"totp\"]", null, ["tenant"], "Allowed second-factor methods", "دوسرے مرحلے کے اجازت یافتہ طریقے"),
         new(ActivationTokenHours, "int", "72", 1, ["tenant"], "Hours an account activation link stays valid", "اکاؤنٹ فعال کرنے کا لنک کتنے گھنٹے درست رہتا ہے"),
         new(ChallengeMinutes, "int", "10", 1, ["tenant"], "Minutes to complete a sign-in step (second factor, password change)", "سائن ان کا اگلا مرحلہ مکمل کرنے کے منٹ"),
+        new(MfaRequiredForPrivileged, "bool", "true", null, ["tenant"], "Second factor required for users holding a privileged role", "مراعات یافتہ کردار رکھنے والے صارفین کے لیے دوسرا مرحلہ لازمی"),
+        new(PrivilegedPasswordMinLength, "int", "14", 6, ["tenant"], "Minimum password length for users holding a privileged role", "مراعات یافتہ کردار رکھنے والے صارفین کے پاس ورڈ کی کم از کم لمبائی"),
+        new(MakerCheckerSensitiveRoles, "bool", "true", null, ["tenant"], "Changes to roles with sensitive permissions need a second person's approval", "حساس اجازتوں والے کرداروں میں تبدیلی کے لیے دوسرے شخص کی منظوری درکار"),
+        new(MakerCheckerExpiryDays, "int", "7", 1, ["tenant"], "Days a change waiting for approval stays open", "منظوری کی منتظر تبدیلی کتنے دن کھلی رہتی ہے"),
     ];
 
     /// <summary>Registers or refreshes the definitions; customer values in cfg.setting_values are never touched.</summary>
@@ -80,7 +90,14 @@ public static class IdentitySettings
     /// value can never break sign-in (S1.05 review finding 10). MFA is required when the customer OR the user's own
     /// setting requires it: a user setting can tighten the customer's rule but never relax it (product owner, 2026-11-16).
     /// </summary>
-    public static async Task<IdentityPolicy> ReadAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, Guid? userId, CancellationToken cancellationToken)
+    /// <remarks>
+    /// Role layer (slice S1.06 item 9, FR-ADM-USR-20, FR-ADM-USR-21, ruling Q10): MFA is also required when a role the
+    /// user holds on <paramref name="now"/>'s date requires it (role-layer value of <c>iam.mfa.required</c>), or when the
+    /// user holds a privileged role (one with a sensitive permission) and <c>iam.mfa.required_for_privileged</c> is on; the
+    /// grace period then starts when that assignment was made. Privileged users need passwords of at least
+    /// <c>iam.password.privileged_min_length</c> characters.
+    /// </remarks>
+    public static async Task<IdentityPolicy> ReadAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, Guid? userId, DateTimeOffset now, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(connection);
         await using var command = new NpgsqlCommand("""
@@ -115,12 +132,38 @@ public static class IdentitySettings
             return definition.Min is { } min ? Math.Max(min, value) : value;
         }
 
+        bool Bool(string key)
+        {
+            var definition = All.First(d => d.Key == key);
+            return rows.TryGetValue(key, out var layers) && layers.Effective.ValueKind is JsonValueKind.True or JsonValueKind.False
+                ? layers.Effective.ValueKind == JsonValueKind.True
+                : definition.DefaultJson == "true";
+        }
+
         var (mfaRequired, mfaSince) = MfaRequirement(rows.GetValueOrDefault(MfaRequired));
+        var roles = userId is { } user ? await RoleFactsAsync(connection, transaction, user, DateOnly.FromDateTime(now.UtcDateTime), cancellationToken).ConfigureAwait(false) : RoleFacts.None;
+        var since = new List<DateTimeOffset?> { mfaRequired ? mfaSince : null };
+        if (roles.MfaSince is { } byRole)
+        {
+            mfaRequired = true;
+            since.Add(byRole);
+        }
+
+        if (roles.PrivilegedSince is { } privileged && Bool(MfaRequiredForPrivileged))
+        {
+            mfaRequired = true;
+            var setAt = rows.GetValueOrDefault(MfaRequiredForPrivileged)?.TenantSince;
+            since.Add(setAt is { } t && t > privileged ? t : privileged);
+        }
+
+        // Null when only the shipped default requires it (grace counts from activation), else the earliest applying start.
+        mfaSince = since.Where(d => d is not null).Min();
+        var minLength = roles.PrivilegedSince is null ? Int(PasswordMinLength) : Math.Max(Int(PasswordMinLength), Int(PrivilegedPasswordMinLength));
         var methods = rows.TryGetValue(MfaAllowedMethods, out var am) && am.Effective is { ValueKind: JsonValueKind.Array } list
             ? list.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String).Select(e => e.GetString()!).ToList()
             : ["totp"];
         return new IdentityPolicy(
-            new PasswordPolicy(Int(PasswordMinLength), Int(PasswordMinCharacterKinds), Int(PasswordHistoryCount), Int(PasswordExpiryDays), Int(LockoutThreshold), Int(LockoutMinutes)),
+            new PasswordPolicy(minLength, Int(PasswordMinCharacterKinds), Int(PasswordHistoryCount), Int(PasswordExpiryDays), Int(LockoutThreshold), Int(LockoutMinutes)),
             new SessionPolicy(Int(SessionIdleMinutes), Int(SessionAbsoluteMinutes), Int(SessionMaxConcurrent), Int(SessionRememberDeviceDays)),
             new MfaPolicy(mfaRequired, mfaSince, Int(MfaGraceDays), Int(MfaRecoveryCodes), methods),
             TimeSpan.FromHours(Int(ActivationTokenHours)),
@@ -143,6 +186,35 @@ public static class IdentitySettings
         var since = new[] { byCustomer && layers.Tenant is not null ? layers.TenantSince : null, byUser ? layers.UserSince : null }
             .Where(d => d is not null).Min();
         return (byCustomer || byUser, since);
+    }
+
+    /// <summary>
+    /// The user's roles valid on the date (own and group assignments, slice S1.06): since when they hold a privileged role
+    /// and since when a role requires MFA (null when none does).
+    /// </summary>
+    private static async Task<RoleFacts> RoleFactsAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, Guid userId, DateOnly today, CancellationToken cancellationToken)
+    {
+        await using var command = new NpgsqlCommand(Access.AccessSnapshot.AssignmentsCte + """
+            select
+                min(v.created_at) filter (where exists (
+                    select 1 from iam.role_permissions rp join iam.permissions p on p.id = rp.permission_id and p.retired_at is null and p.is_sensitive
+                    where rp.role_id = v.role_id)),
+                min(greatest(v.created_at, sv.updated_at)) filter (where sv.value = 'true'::jsonb)
+            from valid v
+            left join cfg.setting_values sv on sv.setting_key = 'iam.mfa.required' and sv.layer = 'role' and sv.scope_id = v.role_id
+            """, connection, transaction);
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid, Value = userId });
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Date, Value = today });
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+        return new RoleFacts(
+            reader.IsDBNull(0) ? null : reader.GetFieldValue<DateTimeOffset>(0),
+            reader.IsDBNull(1) ? null : reader.GetFieldValue<DateTimeOffset>(1));
+    }
+
+    private sealed record RoleFacts(DateTimeOffset? PrivilegedSince, DateTimeOffset? MfaSince)
+    {
+        public static RoleFacts None { get; } = new(null, null);
     }
 
     private static JsonElement Parse(string json)

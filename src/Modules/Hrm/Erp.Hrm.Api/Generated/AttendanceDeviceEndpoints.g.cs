@@ -70,7 +70,7 @@ public sealed class AttendanceDeviceListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.attendance_devices: read, create, update, delete.</summary>
+/// <summary>Generated endpoints of hrm.attendance_devices: read, create, update, delete. Answers pass through field security (S1.06).</summary>
 internal static class AttendanceDeviceEndpoints
 {
     private const string Resource = "hrm.attendance_devices";
@@ -85,54 +85,67 @@ internal static class AttendanceDeviceEndpoints
         group.MapDelete("/{id:guid}", DeleteAsync).WithName("hrm.attendance_devices.delete").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "delete", "hrm.attendance_devices.delete"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] AttendanceDeviceListQuery query, global::Erp.Hrm.Application.Generated.IAttendanceDeviceRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] AttendanceDeviceListQuery query, global::Erp.Hrm.Application.Generated.IAttendanceDeviceRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_devices.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.AttendanceDeviceFilter { CompanyId = query.CompanyId, LocationId = query.LocationId, ConnectorId = query.ConnectorId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<AttendanceDeviceResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.AttendanceDeviceAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IAttendanceDeviceRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IAttendanceDeviceRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_devices.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.AttendanceDeviceAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(AttendanceDeviceWriteRequest request, global::Erp.Hrm.Application.Generated.IAttendanceDeviceRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(AttendanceDeviceWriteRequest request, global::Erp.Hrm.Application.Generated.IAttendanceDeviceRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_devices.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.AttendanceDeviceAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.AttendanceDevice();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/attendance-devices/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, AttendanceDeviceWriteRequest request, global::Erp.Hrm.Application.Generated.IAttendanceDeviceRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_devices.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/attendance-devices/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.AttendanceDeviceAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, AttendanceDeviceWriteRequest request, global::Erp.Hrm.Application.Generated.IAttendanceDeviceRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_devices.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.AttendanceDeviceAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.AttendanceDeviceAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> DeleteAsync(global::System.Guid id, long? rowVersion, global::Erp.Hrm.Application.Generated.IAttendanceDeviceRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
@@ -146,6 +159,8 @@ internal static class AttendanceDeviceEndpoints
             var deleted = await repository.SoftDeleteAsync(id, rowVersion.Value, cancellationToken).ConfigureAwait(false);
             return deleted ? TypedResults.NoContent() : GeneratedEndpointSupport.NotFound();
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.AttendanceDevice row) => row.CompanyId;
 
     private static AttendanceDeviceResponse ToResponse(global::Erp.Hrm.Domain.Generated.AttendanceDevice row) => new()
     {
@@ -171,30 +186,31 @@ internal static class AttendanceDeviceEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(AttendanceDeviceWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(AttendanceDeviceWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.LocationId is null)
+        if (request.LocationId is null && (!update || access.CanEdit("location_id")))
         {
             errors.Add("locationId");
         }
-        if (request.ConnectorId is null)
+        if (request.ConnectorId is null && (!update || access.CanEdit("connector_id")))
         {
             errors.Add("connectorId");
         }
-        if (request.SerialNo is null)
+        if (request.SerialNo is null && (!update || access.CanEdit("serial_no")))
         {
             errors.Add("serialNo");
         }
-        if (request.Connection is null)
+        if (request.Connection is null && (!update || access.CanEdit("connection")))
         {
             errors.Add("connection");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -205,21 +221,101 @@ internal static class AttendanceDeviceEndpoints
         return errors;
     }
 
-    private static void Apply(AttendanceDeviceWriteRequest request, global::Erp.Hrm.Domain.Generated.AttendanceDevice row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(AttendanceDeviceWriteRequest request, global::Erp.Hrm.Domain.Generated.AttendanceDevice row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.LocationId = request.LocationId!.Value;
-        row.ConnectorId = request.ConnectorId!.Value;
-        row.SerialNo = request.SerialNo!;
-        row.Model = request.Model;
-        row.Connection = GeneratedEndpointSupport.ToDocument(request.Connection)!;
-        row.CredentialsRef = request.CredentialsRef;
-        row.LastSeenAt = request.LastSeenAt;
-        row.LastSyncAt = request.LastSyncAt;
-        row.LastError = request.LastError;
-        row.Status = request.Status!;
+        if (access.CanEdit("location_id"))
+        {
+            row.LocationId = request.LocationId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LocationId, row.LocationId, update))
+        {
+            denied.Add("locationId");
+        }
+        if (access.CanEdit("connector_id"))
+        {
+            row.ConnectorId = request.ConnectorId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ConnectorId, row.ConnectorId, update))
+        {
+            denied.Add("connectorId");
+        }
+        if (access.CanEdit("serial_no"))
+        {
+            row.SerialNo = request.SerialNo!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SerialNo, row.SerialNo, update))
+        {
+            denied.Add("serialNo");
+        }
+        if (access.CanEdit("model"))
+        {
+            row.Model = request.Model;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Model, row.Model, update))
+        {
+            denied.Add("model");
+        }
+        if (access.CanEdit("connection"))
+        {
+            row.Connection = GeneratedEndpointSupport.ToDocument(request.Connection)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Connection, row.Connection, update))
+        {
+            denied.Add("connection");
+        }
+        if (access.CanEdit("credentials_ref"))
+        {
+            row.CredentialsRef = request.CredentialsRef;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CredentialsRef, row.CredentialsRef, update))
+        {
+            denied.Add("credentialsRef");
+        }
+        if (access.CanEdit("last_seen_at"))
+        {
+            row.LastSeenAt = request.LastSeenAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LastSeenAt, row.LastSeenAt, update))
+        {
+            denied.Add("lastSeenAt");
+        }
+        if (access.CanEdit("last_sync_at"))
+        {
+            row.LastSyncAt = request.LastSyncAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LastSyncAt, row.LastSyncAt, update))
+        {
+            denied.Add("lastSyncAt");
+        }
+        if (access.CanEdit("last_error"))
+        {
+            row.LastError = request.LastError;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LastError, row.LastError, update))
+        {
+            denied.Add("lastError");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

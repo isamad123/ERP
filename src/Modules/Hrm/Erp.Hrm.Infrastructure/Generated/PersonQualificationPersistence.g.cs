@@ -45,13 +45,13 @@ internal sealed class PersonQualificationRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedSoftDeleteRepository<global::Erp.Hrm.Domain.Generated.PersonQualification>(context, clock, actor, scope, "hrm.person_qualifications"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedSoftDeleteRepository<global::Erp.Hrm.Domain.Generated.PersonQualification>(context, clock, actor, scope, global::Erp.Hrm.Application.Generated.PersonQualificationAccess.Scope),
     global::Erp.Hrm.Application.Generated.IPersonQualificationRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PersonQualification>> ListAsync(global::Erp.Hrm.Application.Generated.PersonQualificationFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PersonQualification>> ListAsync(global::Erp.Hrm.Application.Generated.PersonQualificationFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.PersonId is { } personIdFilter)
         {
             query = query.Where(e => e.PersonId == personIdFilter);
@@ -64,16 +64,18 @@ internal sealed class PersonQualificationRepository(
         {
             query = query.Where(e => e.LearningRecordId == learningRecordIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PersonQualification>> FindByPersonIdAndKindAsync(global::System.Guid personId, string kind, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.PersonId == personId && e.Kind == kind).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.PersonId == personId && e.Kind == kind).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PersonQualification>> FindByExpiryDateAsync(global::System.DateOnly? expiryDate, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.ExpiryDate == expiryDate).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.ExpiryDate == expiryDate).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

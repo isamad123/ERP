@@ -71,7 +71,7 @@ public sealed class IncrementProposalListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.increment_proposals: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.increment_proposals: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class IncrementProposalEndpoints
 {
     private const string Resource = "hrm.increment_proposals";
@@ -85,55 +85,70 @@ internal static class IncrementProposalEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.increment_proposals.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.increment_proposals.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] IncrementProposalListQuery query, global::Erp.Hrm.Application.Generated.IIncrementProposalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] IncrementProposalListQuery query, global::Erp.Hrm.Application.Generated.IIncrementProposalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.increment_proposals.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.IncrementProposalFilter { CompanyId = query.CompanyId, CycleId = query.CycleId, EmploymentId = query.EmploymentId, PromotionGradeId = query.PromotionGradeId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<IncrementProposalResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IIncrementProposalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IIncrementProposalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.increment_proposals.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(IncrementProposalWriteRequest request, global::Erp.Hrm.Application.Generated.IIncrementProposalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(IncrementProposalWriteRequest request, global::Erp.Hrm.Application.Generated.IIncrementProposalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.increment_proposals.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.IncrementProposal();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/increment-proposals/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, IncrementProposalWriteRequest request, global::Erp.Hrm.Application.Generated.IIncrementProposalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.increment_proposals.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/increment-proposals/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, IncrementProposalWriteRequest request, global::Erp.Hrm.Application.Generated.IIncrementProposalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.increment_proposals.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.IncrementProposal row) => row.CompanyId;
 
     private static IncrementProposalResponse ToResponse(global::Erp.Hrm.Domain.Generated.IncrementProposal row) => new()
     {
@@ -157,30 +172,31 @@ internal static class IncrementProposalEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(IncrementProposalWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(IncrementProposalWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.CycleId is null)
+        if (request.CycleId is null && (!update || access.CanEdit("cycle_id")))
         {
             errors.Add("cycleId");
         }
-        if (request.EmploymentId is null)
+        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
         {
             errors.Add("employmentId");
         }
-        if (request.CurrentAmount is null)
+        if (request.CurrentAmount is null && (!update || access.CanEdit("current_amount")))
         {
             errors.Add("currentAmount");
         }
-        if (request.ProposedAmount is null)
+        if (request.ProposedAmount is null && (!update || access.CanEdit("proposed_amount")))
         {
             errors.Add("proposedAmount");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -191,22 +207,109 @@ internal static class IncrementProposalEndpoints
         return errors;
     }
 
-    private static void Apply(IncrementProposalWriteRequest request, global::Erp.Hrm.Domain.Generated.IncrementProposal row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(IncrementProposalWriteRequest request, global::Erp.Hrm.Domain.Generated.IncrementProposal row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.CycleId = request.CycleId!.Value;
-        row.EmploymentId = request.EmploymentId!.Value;
-        row.CurrentAmount = request.CurrentAmount!.Value;
-        row.ProposedAmount = request.ProposedAmount!.Value;
-        row.ProposedPercent = request.ProposedPercent;
-        row.PromotionGradeId = request.PromotionGradeId;
-        row.Rating = request.Rating;
-        row.CompaRatio = request.CompaRatio;
-        row.RecommendedBy = request.RecommendedBy;
-        row.Notes = request.Notes;
-        row.Status = request.Status!;
+        if (access.CanEdit("cycle_id"))
+        {
+            row.CycleId = request.CycleId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CycleId, row.CycleId, update))
+        {
+            denied.Add("cycleId");
+        }
+        if (access.CanEdit("employment_id"))
+        {
+            row.EmploymentId = request.EmploymentId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
+        {
+            denied.Add("employmentId");
+        }
+        if (access.CanEdit("current_amount"))
+        {
+            row.CurrentAmount = request.CurrentAmount!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CurrentAmount, row.CurrentAmount, update))
+        {
+            denied.Add("currentAmount");
+        }
+        if (access.CanEdit("proposed_amount"))
+        {
+            row.ProposedAmount = request.ProposedAmount!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ProposedAmount, row.ProposedAmount, update))
+        {
+            denied.Add("proposedAmount");
+        }
+        if (access.CanEdit("proposed_percent"))
+        {
+            row.ProposedPercent = request.ProposedPercent;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ProposedPercent, row.ProposedPercent, update))
+        {
+            denied.Add("proposedPercent");
+        }
+        if (access.CanEdit("promotion_grade_id"))
+        {
+            row.PromotionGradeId = request.PromotionGradeId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PromotionGradeId, row.PromotionGradeId, update))
+        {
+            denied.Add("promotionGradeId");
+        }
+        if (access.CanEdit("rating"))
+        {
+            row.Rating = request.Rating;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Rating, row.Rating, update))
+        {
+            denied.Add("rating");
+        }
+        if (access.CanEdit("compa_ratio"))
+        {
+            row.CompaRatio = request.CompaRatio;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CompaRatio, row.CompaRatio, update))
+        {
+            denied.Add("compaRatio");
+        }
+        if (access.CanEdit("recommended_by"))
+        {
+            row.RecommendedBy = request.RecommendedBy;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RecommendedBy, row.RecommendedBy, update))
+        {
+            denied.Add("recommendedBy");
+        }
+        if (access.CanEdit("notes"))
+        {
+            row.Notes = request.Notes;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Notes, row.Notes, update))
+        {
+            denied.Add("notes");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

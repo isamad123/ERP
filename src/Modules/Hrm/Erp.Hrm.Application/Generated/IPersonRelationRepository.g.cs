@@ -17,3 +17,36 @@ public interface IPersonRelationRepository : global::Erp.BuildingBlocks.Applicat
 {
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PersonRelation>> ListAsync(PersonRelationFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.person_relations and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PersonRelationAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.PersonRelation> Scope { get; } = new(
+        "hrm.person_relations",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PersonRelation, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Person] = e => e.PersonId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PersonRelation, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.person_relations",
+    [
+        new("id", "Id", null),
+        new("person_id", "PersonId", null),
+        new("relation", "Relation", null),
+        new("full_name", "FullName", null),
+        new("date_of_birth", "DateOfBirth", null),
+        new("gender", "Gender", null),
+        new("phone", "Phone", null),
+        new("is_dependent", "IsDependent", null),
+        new("is_emergency_contact", "IsEmergencyContact", null),
+        new("is_deleted", "IsDeleted", null),
+        new("deleted_at", "DeletedAt", null),
+        new("deleted_by", "DeletedBy", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

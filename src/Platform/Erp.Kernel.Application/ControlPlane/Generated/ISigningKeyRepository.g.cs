@@ -19,3 +19,28 @@ public interface ISigningKeyRepository : global::Erp.BuildingBlocks.Application.
     /// <summary>Rows matching (key_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.SigningKey>> FindByKeyIdAsync(string keyId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cp.signing_keys and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class SigningKeyAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.ControlPlane.Generated.SigningKey> Scope { get; } = new(
+        "cp.signing_keys",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.SigningKey, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.SigningKey, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cp.signing_keys",
+    [
+        new("id", "Id", null),
+        new("key_id", "KeyId", null),
+        new("purpose", "Purpose", null),
+        new("public_key", "PublicKey", null),
+        new("valid_from", "ValidFrom", null),
+        new("valid_to", "ValidTo", null),
+        new("revoked_at", "RevokedAt", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

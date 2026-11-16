@@ -35,22 +35,23 @@ internal sealed class FieldPolicyRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Iam.FieldPolicy>(context, clock, actor, scope, "iam.field_policies"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Iam.FieldPolicy>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Iam.FieldPolicyAccess.Scope),
     global::Erp.Kernel.Application.Generated.Iam.IFieldPolicyRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.FieldPolicy>> ListAsync(global::Erp.Kernel.Application.Generated.Iam.FieldPolicyFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.FieldPolicy>> ListAsync(global::Erp.Kernel.Application.Generated.Iam.FieldPolicyFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.RoleId is { } roleIdFilter)
         {
             query = query.Where(e => e.RoleId == roleIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.FieldPolicy>> FindByRoleIdAndResourceTypeAndFieldKeyAsync(global::System.Guid roleId, string resourceType, string fieldKey, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.RoleId == roleId && e.ResourceType == resourceType && e.FieldKey == fieldKey).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.RoleId == roleId && e.ResourceType == resourceType && e.FieldKey == fieldKey).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

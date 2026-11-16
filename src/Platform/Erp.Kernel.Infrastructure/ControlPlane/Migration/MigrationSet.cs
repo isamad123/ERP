@@ -29,11 +29,23 @@ public sealed record MigrationScript(string Path, string Name, string Module, st
 
 /// <summary>
 /// The migration folders of each module of the customer database and of the control plane. The kernel is always
-/// installed; business modules only when licensed (FR-KRN-TEN-02).
+/// installed; business modules only when licensed (FR-KRN-TEN-02). Each module may also ship an access manifest folder
+/// (slice S1.06: <c>permissions.g.json</c> and <c>baseline-roles.json</c>), registered after its migrations.
 /// </summary>
-public sealed class MigrationSet(IReadOnlyDictionary<string, IReadOnlyList<string>> tenantModuleFolders, IReadOnlyList<string> controlPlaneFolders)
+public sealed class MigrationSet(
+    IReadOnlyDictionary<string, IReadOnlyList<string>> tenantModuleFolders,
+    IReadOnlyList<string> controlPlaneFolders,
+    IReadOnlyDictionary<string, string>? accessFolders = null)
 {
     public const string Kernel = "kernel";
+
+    /// <summary>The access manifest folders of the given modules (kernel first), where they exist.</summary>
+    public IReadOnlyList<string> AccessFolders(IEnumerable<string> modules)
+    {
+        ArgumentNullException.ThrowIfNull(modules);
+        var wanted = new[] { Kernel }.Concat(modules).Distinct(StringComparer.Ordinal);
+        return accessFolders is null ? [] : wanted.Where(accessFolders.ContainsKey).Select(m => accessFolders[m]).Where(Directory.Exists).ToList();
+    }
 
     public IReadOnlyCollection<string> Modules => tenantModuleFolders.Keys.ToList();
 
@@ -63,5 +75,10 @@ public sealed class MigrationSet(IReadOnlyDictionary<string, IReadOnlyList<strin
                 [Kernel] = [System.IO.Path.Combine(root, "src/Platform/Erp.Kernel.Infrastructure/Migrations"), .. extraKernelFolders ?? []],
                 ["hrm"] = [System.IO.Path.Combine(root, "src/Modules/Hrm/Erp.Hrm.Infrastructure/Migrations")],
             },
-            [System.IO.Path.Combine(root, "src/Platform/Erp.Kernel.Infrastructure/ControlPlane/Migrations")]);
+            [System.IO.Path.Combine(root, "src/Platform/Erp.Kernel.Infrastructure/ControlPlane/Migrations")],
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [Kernel] = System.IO.Path.Combine(root, "src/Platform/Erp.Kernel.Infrastructure/Access"),
+                ["hrm"] = System.IO.Path.Combine(root, "src/Modules/Hrm/Erp.Hrm.Infrastructure/Access"),
+            });
 }

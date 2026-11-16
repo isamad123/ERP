@@ -22,3 +22,33 @@ public interface IBenefitClaimRepository : global::Erp.BuildingBlocks.Applicatio
 
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.BenefitClaim>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.benefit_claims and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class BenefitClaimAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.BenefitClaim> Scope { get; } = new(
+        "hrm.benefit_claims",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.BenefitClaim, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.BenefitClaim, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.benefit_claims",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("enrollment_id", "EnrollmentId", null),
+        new("claim_date", "ClaimDate", null),
+        new("patient_relation_id", "PatientRelationId", null),
+        new("amount_claimed", "AmountClaimed", null),
+        new("amount_approved", "AmountApproved", null),
+        new("file_ids", "FileIds", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

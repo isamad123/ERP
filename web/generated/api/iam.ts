@@ -3,7 +3,7 @@
 // </auto-generated>
 import { request, type PagedResult } from './http';
 
-/** iam.data_scopes: Reusable record filters (own, team, subtree, company, branch, department list) */
+/** iam.data_scopes: Reusable record filters (own, team, subtree, company, branch, department list). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface DataScope
 {
     id: string;
@@ -42,7 +42,7 @@ export const dataScopes =
     update: (id: string, body: DataScopeWrite & { rowVersion: number }) => request<DataScope>('PUT', `/api/iam/data-scopes/${id}`, { body }),
 };
 
-/** iam.delegations: Approval delegation and out-of-office substitution */
+/** iam.delegations: Approval delegation and out-of-office substitution. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Delegation
 {
     id: string;
@@ -88,7 +88,7 @@ export const delegations =
     update: (id: string, body: DelegationWrite & { rowVersion: number }) => request<Delegation>('PUT', `/api/iam/delegations/${id}`, { body }),
 };
 
-/** iam.field_policies: Field-level security per role */
+/** iam.field_policies: Field-level security per role. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface FieldPolicy
 {
     id: string;
@@ -103,14 +103,6 @@ export interface FieldPolicy
     rowVersion: number;
 }
 
-export interface FieldPolicyWrite
-{
-    roleId: string;
-    resourceType: string;
-    fieldKey: string;
-    access: 'hidden' | 'masked' | 'read_only' | 'editable';
-}
-
 export interface FieldPolicyListQuery
 {
     after?: string;
@@ -122,11 +114,9 @@ export const fieldPolicies =
 {
     list: (query: FieldPolicyListQuery = {}) => request<PagedResult<FieldPolicy>>('GET', '/api/iam/field-policies', { query }),
     get: (id: string) => request<FieldPolicy>('GET', `/api/iam/field-policies/${id}`),
-    create: (body: FieldPolicyWrite) => request<FieldPolicy>('POST', '/api/iam/field-policies', { body }),
-    update: (id: string, body: FieldPolicyWrite & { rowVersion: number }) => request<FieldPolicy>('PUT', `/api/iam/field-policies/${id}`, { body }),
 };
 
-/** iam.maker_checker_requests: Sensitive changes held for a second person */
+/** iam.maker_checker_requests: Sensitive changes held for a second person. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface MakerCheckerRequest
 {
     id: string;
@@ -146,19 +136,6 @@ export interface MakerCheckerRequest
     rowVersion: number;
 }
 
-export interface MakerCheckerRequestWrite
-{
-    actionType: string;
-    subjectType: string;
-    subjectId: string;
-    payload: unknown;
-    requestedBy: string;
-    decidedBy?: string | null;
-    decidedAt?: string | null;
-    reason?: string | null;
-    status: 'pending' | 'approved' | 'rejected' | 'expired';
-}
-
 export interface MakerCheckerRequestListQuery
 {
     after?: string;
@@ -172,11 +149,9 @@ export const makerCheckerRequests =
 {
     list: (query: MakerCheckerRequestListQuery = {}) => request<PagedResult<MakerCheckerRequest>>('GET', '/api/iam/maker-checker-requests', { query }),
     get: (id: string) => request<MakerCheckerRequest>('GET', `/api/iam/maker-checker-requests/${id}`),
-    create: (body: MakerCheckerRequestWrite) => request<MakerCheckerRequest>('POST', '/api/iam/maker-checker-requests', { body }),
-    update: (id: string, body: MakerCheckerRequestWrite & { rowVersion: number }) => request<MakerCheckerRequest>('PUT', `/api/iam/maker-checker-requests/${id}`, { body }),
 };
 
-/** iam.permissions: Registered from module manifests at start-up */
+/** iam.permissions: Registered from module manifests at start-up. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Permission
 {
     id: string;
@@ -184,19 +159,12 @@ export interface Permission
     moduleId: string;
     descriptionI18n: Record<string, string>;
     isSensitive: boolean;
+    retiredAt: string | null;
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface PermissionWrite
-{
-    code: string;
-    moduleId: string;
-    descriptionI18n: Record<string, string>;
-    isSensitive?: boolean;
 }
 
 export interface PermissionListQuery
@@ -209,11 +177,9 @@ export const permissions =
 {
     list: (query: PermissionListQuery = {}) => request<PagedResult<Permission>>('GET', '/api/iam/permissions', { query }),
     get: (id: string) => request<Permission>('GET', `/api/iam/permissions/${id}`),
-    create: (body: PermissionWrite) => request<Permission>('POST', '/api/iam/permissions', { body }),
-    update: (id: string, body: PermissionWrite & { rowVersion: number }) => request<Permission>('PUT', `/api/iam/permissions/${id}`, { body }),
 };
 
-/** iam.roles: Role */
+/** iam.roles: Role. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Role
 {
     id: string;
@@ -233,16 +199,6 @@ export interface Role
     rowVersion: number;
 }
 
-export interface RoleWrite
-{
-    code: string;
-    nameI18n: Record<string, string>;
-    descriptionI18n?: Record<string, string> | null;
-    source: 'module' | 'pack' | 'tenant';
-    baselineCode?: string | null;
-    isActive?: boolean;
-}
-
 export interface RoleListQuery
 {
     after?: string;
@@ -253,12 +209,41 @@ export const roles =
 {
     list: (query: RoleListQuery = {}) => request<PagedResult<Role>>('GET', '/api/iam/roles', { query }),
     get: (id: string) => request<Role>('GET', `/api/iam/roles/${id}`),
-    create: (body: RoleWrite) => request<Role>('POST', '/api/iam/roles', { body }),
-    update: (id: string, body: RoleWrite & { rowVersion: number }) => request<Role>('PUT', `/api/iam/roles/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/iam/roles/${id}`, { query: { rowVersion } }),
 };
 
-/** iam.user_groups: UserGroup */
+/** iam.user_group_roles: Roles given to every member of a user group (FR-ADM-USR-06). Field rules (S1.06) may leave a field out or mask it as text. */
+export interface UserGroupRole
+{
+    id: string;
+    groupId: string;
+    roleId: string;
+    companyId: string | null;
+    reason: string | null;
+    validFrom: string;
+    validTo: string | null;
+    createdAt: string;
+    createdBy: string;
+    updatedAt: string;
+    updatedBy: string;
+    rowVersion: number;
+}
+
+export interface UserGroupRoleListQuery
+{
+    after?: string;
+    limit?: number;
+    groupId?: string;
+    roleId?: string;
+    companyId?: string;
+}
+
+export const userGroupRoles =
+{
+    list: (query: UserGroupRoleListQuery = {}) => request<PagedResult<UserGroupRole>>('GET', '/api/iam/user-group-roles', { query }),
+    get: (id: string) => request<UserGroupRole>('GET', `/api/iam/user-group-roles/${id}`),
+};
+
+/** iam.user_groups: UserGroup. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface UserGroup
 {
     id: string;
@@ -275,13 +260,6 @@ export interface UserGroup
     rowVersion: number;
 }
 
-export interface UserGroupWrite
-{
-    code: string;
-    nameI18n: Record<string, string>;
-    isActive?: boolean;
-}
-
 export interface UserGroupListQuery
 {
     after?: string;
@@ -292,12 +270,9 @@ export const userGroups =
 {
     list: (query: UserGroupListQuery = {}) => request<PagedResult<UserGroup>>('GET', '/api/iam/user-groups', { query }),
     get: (id: string) => request<UserGroup>('GET', `/api/iam/user-groups/${id}`),
-    create: (body: UserGroupWrite) => request<UserGroup>('POST', '/api/iam/user-groups', { body }),
-    update: (id: string, body: UserGroupWrite & { rowVersion: number }) => request<UserGroup>('PUT', `/api/iam/user-groups/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/iam/user-groups/${id}`, { query: { rowVersion } }),
 };
 
-/** iam.user_roles: UserRole */
+/** iam.user_roles: UserRole. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface UserRole
 {
     id: string;
@@ -314,16 +289,6 @@ export interface UserRole
     rowVersion: number;
 }
 
-export interface UserRoleWrite
-{
-    userId: string;
-    roleId: string;
-    companyId?: string | null;
-    reason?: string | null;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface UserRoleListQuery
 {
     after?: string;
@@ -337,11 +302,9 @@ export const userRoles =
 {
     list: (query: UserRoleListQuery = {}) => request<PagedResult<UserRole>>('GET', '/api/iam/user-roles', { query }),
     get: (id: string) => request<UserRole>('GET', `/api/iam/user-roles/${id}`),
-    create: (body: UserRoleWrite) => request<UserRole>('POST', '/api/iam/user-roles', { body }),
-    update: (id: string, body: UserRoleWrite & { rowVersion: number }) => request<UserRole>('PUT', `/api/iam/user-roles/${id}`, { body }),
 };
 
-/** iam.users: People who sign in (employees, HR, admins) */
+/** iam.users: People who sign in (employees, HR, admins). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface User
 {
     id: string;
@@ -392,5 +355,4 @@ export const users =
     get: (id: string) => request<User>('GET', `/api/iam/users/${id}`),
     create: (body: UserWrite) => request<User>('POST', '/api/iam/users', { body }),
     update: (id: string, body: UserWrite & { rowVersion: number }) => request<User>('PUT', `/api/iam/users/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/iam/users/${id}`, { query: { rowVersion } }),
 };

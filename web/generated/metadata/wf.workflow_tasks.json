@@ -29,6 +29,9 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "user": "assigneeUserId"
+  },
   "listFields": [
     "instanceId",
     "stepKey",

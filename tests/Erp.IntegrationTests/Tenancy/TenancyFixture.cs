@@ -2,7 +2,6 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.Json.Nodes;
-using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.BuildingBlocks.Infrastructure.Time;
 using Erp.CodeGen.Dictionary;
@@ -20,7 +19,6 @@ using Erp.Kernel.Infrastructure.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -31,7 +29,7 @@ namespace Erp.IntegrationTests.Tenancy;
 /// <summary>
 /// A real control plane, a real PostgreSQL cluster registered in it, and two customers provisioned end to end
 /// (slice S1.03), served through the real API pipeline (<see cref="ApiHost"/>) on an in-process test server.
-/// Permission checks and data scopes are test doubles here because their implementations are slice S1.06.
+/// Permission checks, data scopes and field access are allow-all doubles unless a test asks for the real engine (S1.06).
 /// </summary>
 public sealed class TenancyFixture : IAsyncLifetime
 {
@@ -96,7 +94,8 @@ public sealed class TenancyFixture : IAsyncLifetime
     /// plane. <paramref name="configure"/> may map extra endpoints before the host starts (the S1.04 leak self-test).
     /// The caller disposes the returned host, except <see cref="App"/>, which the fixture disposes.
     /// </summary>
-    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken, Action<IServiceCollection>? extra = null)
+    /// <remarks><paramref name="realAccess"/>: keep the real access engine (slice S1.06) instead of the allow-all doubles.</remarks>
+    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken, Action<IServiceCollection>? extra = null, bool realAccess = false)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
@@ -112,10 +111,11 @@ public sealed class TenancyFixture : IAsyncLifetime
         builder.Configuration["Auth:SigningPublicKeys:0"] = _tokenKey.ExportSubjectPublicKeyInfoPem();
         var app = ApiHost.Build(builder, Secrets, services =>
         {
-            services.RemoveAll<IPermissionChecker>();
-            services.AddSingleton<IPermissionChecker, AllowAll>();
-            services.RemoveAll<IDataScopeFilter>();
-            services.AddSingleton<IDataScopeFilter, AllRows>();
+            if (!realAccess)
+            {
+                services.UseAllowAllAccess();
+            }
+
             extra?.Invoke(services);
         });
         configure?.Invoke(app);
@@ -260,17 +260,6 @@ public sealed class TenancyFixture : IAsyncLifetime
         }
 
         await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    private sealed class AllowAll : IPermissionChecker
-    {
-        public ValueTask<bool> HasPermissionAsync(string permission, CancellationToken cancellationToken) => ValueTask.FromResult(true);
-    }
-
-    private sealed class AllRows : IDataScopeFilter
-    {
-        public IQueryable<T> Apply<T>(IQueryable<T> query, string resource)
-            where T : class => query;
     }
 }
 

@@ -27,3 +27,35 @@ public interface IAttendanceEventRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (employment_id, event_date); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendanceEvent>> FindByEmploymentIdAndEventDateAsync(global::System.Guid employmentId, global::System.DateOnly eventDate, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.attendance_events and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class AttendanceEventAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.AttendanceEvent> Scope { get; } = new(
+        "hrm.attendance_events",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.AttendanceEvent, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.AttendanceEvent, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.attendance_events",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("employment_id", "EmploymentId", null),
+        new("event_date", "EventDate", null),
+        new("event_at", "EventAt", null),
+        new("direction", "Direction", null),
+        new("source", "Source", null),
+        new("device_id", "DeviceId", null),
+        new("received_at", "ReceivedAt", null),
+        new("idempotency_key", "IdempotencyKey", null),
+        new("ip_address", "IpAddress", null),
+        new("is_duplicate", "IsDuplicate", null),
+        new("supersedes_event_id", "SupersedesEventId", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

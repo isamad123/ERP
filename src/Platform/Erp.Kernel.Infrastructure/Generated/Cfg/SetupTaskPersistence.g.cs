@@ -38,13 +38,13 @@ internal sealed class SetupTaskRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Cfg.SetupTask>(context, clock, actor, scope, "cfg.setup_tasks"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Cfg.SetupTask>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Cfg.SetupTaskAccess.Scope),
     global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.SetupTask>> ListAsync(global::Erp.Kernel.Application.Generated.Cfg.SetupTaskFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.SetupTask>> ListAsync(global::Erp.Kernel.Application.Generated.Cfg.SetupTaskFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.CompanyId is { } companyIdFilter)
         {
             query = query.Where(e => e.CompanyId == companyIdFilter);
@@ -53,11 +53,12 @@ internal sealed class SetupTaskRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.SetupTask>> FindByModuleIdAndTaskKeyAndCompanyIdAsync(string moduleId, string taskKey, global::System.Guid? companyId, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.ModuleId == moduleId && e.TaskKey == taskKey && e.CompanyId == companyId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.ModuleId == moduleId && e.TaskKey == taskKey && e.CompanyId == companyId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

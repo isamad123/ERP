@@ -65,7 +65,7 @@ public sealed class ExpenseClaimLineListQuery
     public global::System.Guid? ReceiptFileId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.expense_claim_lines: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.expense_claim_lines: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class ExpenseClaimLineEndpoints
 {
     private const string Resource = "hrm.expense_claim_lines";
@@ -79,55 +79,70 @@ internal static class ExpenseClaimLineEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.expense_claim_lines.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.expense_claim_lines.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ExpenseClaimLineListQuery query, global::Erp.Hrm.Application.Generated.IExpenseClaimLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ExpenseClaimLineListQuery query, global::Erp.Hrm.Application.Generated.IExpenseClaimLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.expense_claim_lines.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ExpenseClaimLineFilter { CompanyId = query.CompanyId, ClaimId = query.ClaimId, CategoryId = query.CategoryId, ReceiptFileId = query.ReceiptFileId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<ExpenseClaimLineResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.ExpenseClaimLineAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IExpenseClaimLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IExpenseClaimLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.expense_claim_lines.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ExpenseClaimLineAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ExpenseClaimLineWriteRequest request, global::Erp.Hrm.Application.Generated.IExpenseClaimLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ExpenseClaimLineWriteRequest request, global::Erp.Hrm.Application.Generated.IExpenseClaimLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.expense_claim_lines.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ExpenseClaimLineAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.ExpenseClaimLine();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/expense-claim-lines/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ExpenseClaimLineWriteRequest request, global::Erp.Hrm.Application.Generated.IExpenseClaimLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.expense_claim_lines.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/expense-claim-lines/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ExpenseClaimLineAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ExpenseClaimLineWriteRequest request, global::Erp.Hrm.Application.Generated.IExpenseClaimLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.expense_claim_lines.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ExpenseClaimLineAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ExpenseClaimLineAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.ExpenseClaimLine row) => row.CompanyId;
 
     private static ExpenseClaimLineResponse ToResponse(global::Erp.Hrm.Domain.Generated.ExpenseClaimLine row) => new()
     {
@@ -149,30 +164,31 @@ internal static class ExpenseClaimLineEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(ExpenseClaimLineWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(ExpenseClaimLineWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.ClaimId is null)
+        if (request.ClaimId is null && (!update || access.CanEdit("claim_id")))
         {
             errors.Add("claimId");
         }
-        if (request.CategoryId is null)
+        if (request.CategoryId is null && (!update || access.CanEdit("category_id")))
         {
             errors.Add("categoryId");
         }
-        if (request.ExpenseDate is null)
+        if (request.ExpenseDate is null && (!update || access.CanEdit("expense_date")))
         {
             errors.Add("expenseDate");
         }
-        if (request.Amount is null)
+        if (request.Amount is null && (!update || access.CanEdit("amount")))
         {
             errors.Add("amount");
         }
-        if (request.CostAllocation is null)
+        if (request.CostAllocation is null && (!update || access.CanEdit("cost_allocation")))
         {
             errors.Add("costAllocation");
         }
@@ -183,23 +199,96 @@ internal static class ExpenseClaimLineEndpoints
         return errors;
     }
 
-    private static void Apply(ExpenseClaimLineWriteRequest request, global::Erp.Hrm.Domain.Generated.ExpenseClaimLine row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(ExpenseClaimLineWriteRequest request, global::Erp.Hrm.Domain.Generated.ExpenseClaimLine row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.ClaimId = request.ClaimId!.Value;
-        row.CategoryId = request.CategoryId!.Value;
-        row.ExpenseDate = request.ExpenseDate!.Value;
-        row.Amount = request.Amount!.Value;
-        row.Description = request.Description;
-        row.ReceiptFileId = request.ReceiptFileId;
-        row.ReceiptHash = request.ReceiptHash;
-        row.CostAllocation = GeneratedEndpointSupport.ToDocument(request.CostAllocation)!;
-        if (request.PolicyFlags is not null)
+        if (access.CanEdit("claim_id"))
         {
-            row.PolicyFlags = request.PolicyFlags ?? [];
+            row.ClaimId = request.ClaimId!.Value;
         }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ClaimId, row.ClaimId, update))
+        {
+            denied.Add("claimId");
+        }
+        if (access.CanEdit("category_id"))
+        {
+            row.CategoryId = request.CategoryId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CategoryId, row.CategoryId, update))
+        {
+            denied.Add("categoryId");
+        }
+        if (access.CanEdit("expense_date"))
+        {
+            row.ExpenseDate = request.ExpenseDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ExpenseDate, row.ExpenseDate, update))
+        {
+            denied.Add("expenseDate");
+        }
+        if (access.CanEdit("amount"))
+        {
+            row.Amount = request.Amount!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Amount, row.Amount, update))
+        {
+            denied.Add("amount");
+        }
+        if (access.CanEdit("description"))
+        {
+            row.Description = request.Description;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Description, row.Description, update))
+        {
+            denied.Add("description");
+        }
+        if (access.CanEdit("receipt_file_id"))
+        {
+            row.ReceiptFileId = request.ReceiptFileId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReceiptFileId, row.ReceiptFileId, update))
+        {
+            denied.Add("receiptFileId");
+        }
+        if (access.CanEdit("receipt_hash"))
+        {
+            row.ReceiptHash = request.ReceiptHash;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReceiptHash, row.ReceiptHash, update))
+        {
+            denied.Add("receiptHash");
+        }
+        if (access.CanEdit("cost_allocation"))
+        {
+            row.CostAllocation = GeneratedEndpointSupport.ToDocument(request.CostAllocation)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CostAllocation, row.CostAllocation, update))
+        {
+            denied.Add("costAllocation");
+        }
+        if (access.CanEdit("policy_flags"))
+        {
+            if (request.PolicyFlags is not null)
+            {
+                row.PolicyFlags = request.PolicyFlags ?? [];
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PolicyFlags, row.PolicyFlags, update))
+        {
+            denied.Add("policyFlags");
+        }
+        return denied;
     }
 }

@@ -27,20 +27,6 @@ public sealed class UserRoleResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for iam.user_roles. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class UserRoleWriteRequest
-{
-    public global::System.Guid? UserId { get; init; }
-    public global::System.Guid? RoleId { get; init; }
-    public global::System.Guid? CompanyId { get; init; }
-    public string? Reason { get; init; }
-    public global::System.DateOnly? ValidFrom { get; init; }
-    public global::System.DateOnly? ValidTo { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for iam.user_roles.</summary>
 public sealed class UserRoleListQuery
 {
@@ -55,7 +41,7 @@ public sealed class UserRoleListQuery
     public global::System.Guid? CompanyId { get; init; }
 }
 
-/// <summary>Generated endpoints of iam.user_roles: read, create, update.</summary>
+/// <summary>Generated endpoints of iam.user_roles: read. Answers pass through field security (S1.06).</summary>
 internal static class UserRoleEndpoints
 {
     private const string Resource = "iam.user_roles";
@@ -65,59 +51,25 @@ internal static class UserRoleEndpoints
         var group = app.MapGroup("/api/iam/user-roles").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("iam.user_roles.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.user_roles.read"));
         group.MapGet("/{id:guid}", GetAsync).WithName("iam.user_roles.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.user_roles.read"));
-        group.MapPost("/", CreateAsync).WithName("iam.user_roles.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "iam.user_roles.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("iam.user_roles.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "iam.user_roles.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] UserRoleListQuery query, global::Erp.Kernel.Application.Generated.Iam.IUserRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] UserRoleListQuery query, global::Erp.Kernel.Application.Generated.Iam.IUserRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "iam.user_roles.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.UserRoleFilter { UserId = query.UserId, RoleId = query.RoleId, CompanyId = query.CompanyId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<UserRoleResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Iam.UserRoleAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Iam.IUserRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Iam.IUserRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "iam.user_roles.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Iam.UserRoleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(UserRoleWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IUserRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.user_roles.create", async () =>
-        {
-            var errors = Validate(request, update: false);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Iam.UserRole();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/iam/user-roles/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, UserRoleWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IUserRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.user_roles.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            Apply(request, row, update: true);
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
-        }, cancellationToken);
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Iam.UserRole row) => row.CompanyId;
 
     private static UserRoleResponse ToResponse(global::Erp.Kernel.Domain.Generated.Iam.UserRole row) => new()
     {
@@ -134,39 +86,4 @@ internal static class UserRoleEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    private static global::System.Collections.Generic.List<string> Validate(UserRoleWriteRequest request, bool update)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.UserId is null)
-        {
-            errors.Add("userId");
-        }
-        if (request.RoleId is null)
-        {
-            errors.Add("roleId");
-        }
-        if (request.ValidFrom is null)
-        {
-            errors.Add("validFrom");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    private static void Apply(UserRoleWriteRequest request, global::Erp.Kernel.Domain.Generated.Iam.UserRole row, bool update)
-    {
-        row.UserId = request.UserId!.Value;
-        row.RoleId = request.RoleId!.Value;
-        if (!update)
-        {
-            row.CompanyId = request.CompanyId;
-        }
-        row.Reason = request.Reason;
-        row.ValidFrom = request.ValidFrom!.Value;
-        row.ValidTo = request.ValidTo;
-    }
 }

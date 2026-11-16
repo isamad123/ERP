@@ -3,7 +3,7 @@
 // </auto-generated>
 import { request, type PagedResult } from './http';
 
-/** wf.workflow_definitions: WorkflowDefinition */
+/** wf.workflow_definitions: WorkflowDefinition. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface WorkflowDefinition
 {
     id: string;
@@ -47,7 +47,7 @@ export const workflowDefinitions =
     update: (id: string, body: WorkflowDefinitionWrite & { rowVersion: number }) => request<WorkflowDefinition>('PUT', `/api/wf/workflow-definitions/${id}`, { body }),
 };
 
-/** wf.workflow_history: WorkflowHistory */
+/** wf.workflow_history: WorkflowHistory. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface WorkflowHistory
 {
     id: string;
@@ -86,7 +86,7 @@ export const workflowHistory =
     create: (body: WorkflowHistoryWrite) => request<WorkflowHistory>('POST', '/api/wf/workflow-history', { body }),
 };
 
-/** wf.workflow_instances: WorkflowInstance */
+/** wf.workflow_instances: WorkflowInstance. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface WorkflowInstance
 {
     id: string;
@@ -137,7 +137,7 @@ export const workflowInstances =
     update: (id: string, body: WorkflowInstanceWrite & { rowVersion: number }) => request<WorkflowInstance>('PUT', `/api/wf/workflow-instances/${id}`, { body }),
 };
 
-/** wf.workflow_tasks: WorkflowTask */
+/** wf.workflow_tasks: WorkflowTask. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface WorkflowTask
 {
     id: string;
@@ -193,7 +193,7 @@ export const workflowTasks =
     update: (id: string, body: WorkflowTaskWrite & { rowVersion: number }) => request<WorkflowTask>('PUT', `/api/wf/workflow-tasks/${id}`, { body }),
 };
 
-/** wf.workflow_versions: Immutable once active */
+/** wf.workflow_versions: Immutable once active. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface WorkflowVersion
 {
     id: string;

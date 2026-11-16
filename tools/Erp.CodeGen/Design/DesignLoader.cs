@@ -13,7 +13,14 @@ public static partial class DesignLoader
 
     private static readonly string[] KnownKeys =
         ["table", "purpose", "traits", "status", "columns", "unique", "indexes", "eff_key", "key", "checks", "notes", "partition", "reqs",
-         "added_in", "updatable_added_in", "api_read_only"];
+         "added_in", "updatable_added_in", "api_read_only", "scope", "field_class", "api_actions"];
+
+    /// <summary>Data-scope dimensions a table may declare in <c>scope:</c> (CR-018).</summary>
+    public static readonly string[] ScopeDimensions = ["company", "branch", "org_unit", "employment", "person", "user"];
+
+    public static readonly string[] FieldClasses = ["salary", "personal", "restricted"];
+
+    public static readonly string[] ApiActionNames = ["read", "create", "update", "delete"];
 
     private static readonly string[] KnownTraits = ["std", "app", "co", "br", "soft", "eff", "cust", "name"];
 
@@ -95,6 +102,7 @@ public static partial class DesignLoader
         ReadChecks(table, map, tableRules, rules);
         ReadNotes(table, map, tableRules, rules);
         ReadLaterChanges(table, map);
+        ReadAccessKeys(table, map);
         return table;
     }
 
@@ -146,6 +154,68 @@ public static partial class DesignLoader
         foreach (var name in YamlNode.Texts(map.GetValueOrDefault("api_read_only"), table.FullName + ".api_read_only"))
         {
             table.Column(name).ApiReadOnly = true;
+        }
+    }
+
+    /// <summary>
+    /// Access-control keys (slice S1.06): <c>scope: {company: company_id, employment: employment_id, attributes: [status]}</c>
+    /// (CR-018), <c>field_class: {gross_amount: salary}</c> (CR-018) and <c>api_actions: [read]</c> (CR-020, CR-021).
+    /// </summary>
+    private static void ReadAccessKeys(Table table, IReadOnlyDictionary<string, object?> map)
+    {
+        foreach (var (dimension, raw) in YamlNode.Map(map.GetValueOrDefault("scope"), table.FullName + ".scope"))
+        {
+            if (dimension == "attributes")
+            {
+                foreach (var name in YamlNode.Texts(raw, table.FullName + ".scope.attributes"))
+                {
+                    var column = table.Column(name);
+                    if (column.Kind is not (ColumnKind.Text or ColumnKind.Code or ColumnKind.Enum))
+                    {
+                        throw new DesignException(table.FullName, $"scope attribute {name} must be a text, code or enum column");
+                    }
+
+                    table.ScopeAttributes.Add(name);
+                }
+
+                continue;
+            }
+
+            if (!ScopeDimensions.Contains(dimension))
+            {
+                throw new DesignException(table.FullName, $"unknown scope dimension '{dimension}' (allowed: {string.Join(", ", ScopeDimensions)}, attributes)");
+            }
+
+            var locator = table.Column(YamlNode.Text(raw, table.FullName + ".scope." + dimension));
+            if (locator.Kind is not ColumnKind.Uuid)
+            {
+                throw new DesignException(table.FullName, $"scope {dimension} must name a uuid column, not {locator.Name}");
+            }
+
+            table.ScopeLocators[dimension] = locator.Name;
+        }
+
+        foreach (var (name, raw) in YamlNode.Map(map.GetValueOrDefault("field_class"), table.FullName + ".field_class"))
+        {
+            var fieldClass = YamlNode.Text(raw, table.FullName + ".field_class." + name);
+            if (!FieldClasses.Contains(fieldClass))
+            {
+                throw new DesignException(table.FullName, $"unknown field class '{fieldClass}' (allowed: {string.Join(", ", FieldClasses)})");
+            }
+
+            table.Column(name).FieldClass = fieldClass;
+        }
+
+        if (map.ContainsKey("api_actions"))
+        {
+            var actions = YamlNode.Texts(map["api_actions"], table.FullName + ".api_actions");
+            var unknown = actions.Except(ApiActionNames).ToList();
+            if (unknown.Count > 0 || !actions.Contains("read"))
+            {
+                throw new DesignException(table.FullName, $"api_actions must list read and only {string.Join(", ", ApiActionNames)}");
+            }
+
+            table.ApiActions = actions;
         }
     }
 

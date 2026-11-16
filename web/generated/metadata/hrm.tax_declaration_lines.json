@@ -25,6 +25,7 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {},
   "listFields": [
     "declarationId",
     "kind",
@@ -72,7 +73,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.tax_declaration_lines.declared_amount"
+      "labelKey": "fields.hrm.tax_declaration_lines.declared_amount",
+      "fieldClass": "salary"
     },
     {
       "column": "verified_amount",
@@ -82,7 +84,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.tax_declaration_lines.verified_amount"
+      "labelKey": "fields.hrm.tax_declaration_lines.verified_amount",
+      "fieldClass": "salary"
     },
     {
       "column": "file_ids",

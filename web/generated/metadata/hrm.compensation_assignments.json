@@ -27,6 +27,10 @@
   "effectiveDated": true,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId",
+    "employment": "employmentId"
+  },
   "listFields": [
     "companyId",
     "employmentId",
@@ -110,7 +114,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.compensation_assignments.gross_amount"
+      "labelKey": "fields.hrm.compensation_assignments.gross_amount",
+      "fieldClass": "salary"
     },
     {
       "column": "increment_proposal_id",

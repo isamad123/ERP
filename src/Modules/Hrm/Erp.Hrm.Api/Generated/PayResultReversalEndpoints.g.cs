@@ -47,7 +47,7 @@ public sealed class PayResultReversalListQuery
     public global::System.Guid? ApprovedBy { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.pay_result_reversals: read, create.</summary>
+/// <summary>Generated endpoints of hrm.pay_result_reversals: read, create. Answers pass through field security (S1.06).</summary>
 internal static class PayResultReversalEndpoints
 {
     private const string Resource = "hrm.pay_result_reversals";
@@ -60,35 +60,44 @@ internal static class PayResultReversalEndpoints
         group.MapPost("/", CreateAsync).WithName("hrm.pay_result_reversals.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.pay_result_reversals.create"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PayResultReversalListQuery query, global::Erp.Hrm.Application.Generated.IPayResultReversalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PayResultReversalListQuery query, global::Erp.Hrm.Application.Generated.IPayResultReversalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_result_reversals.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PayResultReversalFilter { CompanyId = query.CompanyId, ResultId = query.ResultId, ApprovedBy = query.ApprovedBy }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<PayResultReversalResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.PayResultReversalAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPayResultReversalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPayResultReversalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_result_reversals.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PayResultReversalAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PayResultReversalWriteRequest request, global::Erp.Hrm.Application.Generated.IPayResultReversalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PayResultReversalWriteRequest request, global::Erp.Hrm.Application.Generated.IPayResultReversalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_result_reversals.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PayResultReversalAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.PayResultReversal();
-            Apply(request, row, update: false);
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/pay-result-reversals/" + row.Id.ToString(), ToResponse(row));
+            return TypedResults.Created("/api/hrm/pay-result-reversals/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PayResultReversalAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.PayResultReversal row) => row.CompanyId;
 
     private static PayResultReversalResponse ToResponse(global::Erp.Hrm.Domain.Generated.PayResultReversal row) => new()
     {
@@ -102,42 +111,80 @@ internal static class PayResultReversalEndpoints
         CreatedBy = row.CreatedBy,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(PayResultReversalWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(PayResultReversalWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.ResultId is null)
+        if (request.ResultId is null && (!update || access.CanEdit("result_id")))
         {
             errors.Add("resultId");
         }
-        if (request.Reason is null)
+        if (request.Reason is null && (!update || access.CanEdit("reason")))
         {
             errors.Add("reason");
         }
-        if (request.ApprovedBy is null)
+        if (request.ApprovedBy is null && (!update || access.CanEdit("approved_by")))
         {
             errors.Add("approvedBy");
         }
-        if (request.ReversedAt is null)
+        if (request.ReversedAt is null && (!update || access.CanEdit("reversed_at")))
         {
             errors.Add("reversedAt");
         }
-        _ = update;
         return errors;
     }
 
-    private static void Apply(PayResultReversalWriteRequest request, global::Erp.Hrm.Domain.Generated.PayResultReversal row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(PayResultReversalWriteRequest request, global::Erp.Hrm.Domain.Generated.PayResultReversal row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.ResultId = request.ResultId!.Value;
-        row.Reason = request.Reason!;
-        row.ApprovedBy = request.ApprovedBy!.Value;
-        row.ReversedAt = request.ReversedAt!.Value;
+        if (access.CanEdit("result_id"))
+        {
+            row.ResultId = request.ResultId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ResultId, row.ResultId, update))
+        {
+            denied.Add("resultId");
+        }
+        if (access.CanEdit("reason"))
+        {
+            row.Reason = request.Reason!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Reason, row.Reason, update))
+        {
+            denied.Add("reason");
+        }
+        if (access.CanEdit("approved_by"))
+        {
+            row.ApprovedBy = request.ApprovedBy!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ApprovedBy, row.ApprovedBy, update))
+        {
+            denied.Add("approvedBy");
+        }
+        if (access.CanEdit("reversed_at"))
+        {
+            row.ReversedAt = request.ReversedAt!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReversedAt, row.ReversedAt, update))
+        {
+            denied.Add("reversedAt");
+        }
+        return denied;
     }
 }

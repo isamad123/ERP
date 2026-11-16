@@ -22,3 +22,26 @@ public interface IAccessLogRepository : global::Erp.BuildingBlocks.Application.D
     /// <summary>Rows matching (entity_type, entity_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Aud.AccessLog>> FindByEntityTypeAndEntityIdAsync(string entityType, global::System.Guid? entityId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of aud.access_log and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class AccessLogAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Aud.AccessLog> Scope { get; } = new(
+        "aud.access_log",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Aud.AccessLog, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Aud.AccessLog, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("aud.access_log",
+    [
+        new("id", "Id", null),
+        new("occurred_at", "OccurredAt", null),
+        new("actor_user_id", "ActorUserId", null),
+        new("entity_type", "EntityType", null),
+        new("entity_id", "EntityId", null),
+        new("fields", "Fields", null),
+        new("action", "Action", null),
+        new("row_count", "RowCount", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

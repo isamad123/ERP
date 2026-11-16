@@ -35,18 +35,19 @@ internal sealed class RetentionRuleRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Doc.RetentionRule>(context, clock, actor, scope, "doc.retention_rules"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Doc.RetentionRule>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Doc.RetentionRuleAccess.Scope),
     global::Erp.Kernel.Application.Generated.Doc.IRetentionRuleRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.RetentionRule>> ListAsync(global::Erp.Kernel.Application.Generated.Doc.RetentionRuleFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.RetentionRule>> ListAsync(global::Erp.Kernel.Application.Generated.Doc.RetentionRuleFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
-        return PageAsync(query, page, cancellationToken);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.RetentionRule>> FindByDocumentTypeAsync(string documentType, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.DocumentType == documentType).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.DocumentType == documentType).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

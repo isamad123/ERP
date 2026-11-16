@@ -30,3 +30,41 @@ public interface IPayRunRepository : global::Erp.BuildingBlocks.Application.Data
     /// <summary>Rows matching (pay_group_id, pay_period_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PayRun>> FindByPayGroupIdAndPayPeriodIdAsync(global::System.Guid payGroupId, global::System.Guid payPeriodId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.pay_runs and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PayRunAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.PayRun> Scope { get; } = new(
+        "hrm.pay_runs",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PayRun, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PayRun, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.pay_runs",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("run_no", "RunNo", null),
+        new("pay_group_id", "PayGroupId", null),
+        new("pay_period_id", "PayPeriodId", null),
+        new("kind", "Kind", null),
+        new("currency_code", "CurrencyCode", null),
+        new("snapshot_taken_at", "SnapshotTakenAt", null),
+        new("calc_job_run_id", "CalcJobRunId", null),
+        new("total_gross", "TotalGross", null),
+        new("total_net", "TotalNet", null),
+        new("total_employer", "TotalEmployer", null),
+        new("employee_count", "EmployeeCount", null),
+        new("stage_log", "StageLog", null),
+        new("reopened_reason", "ReopenedReason", null),
+        new("workflow_instance_id", "WorkflowInstanceId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

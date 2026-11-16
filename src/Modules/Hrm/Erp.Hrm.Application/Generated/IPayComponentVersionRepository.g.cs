@@ -17,3 +17,32 @@ public interface IPayComponentVersionRepository : global::Erp.BuildingBlocks.App
 {
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PayComponentVersion>> ListAsync(PayComponentVersionFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.pay_component_versions and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PayComponentVersionAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.PayComponentVersion> Scope { get; } = new(
+        "hrm.pay_component_versions",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PayComponentVersion, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PayComponentVersion, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.pay_component_versions",
+    [
+        new("id", "Id", null),
+        new("component_id", "ComponentId", null),
+        new("method", "Method", null),
+        new("formula", "Formula", null),
+        new("base_component_ids", "BaseComponentIds", null),
+        new("statutory_table_code", "StatutoryTableCode", null),
+        new("pro_rata_rule", "ProRataRule", null),
+        new("statutory_flags", "StatutoryFlags", null),
+        new("tax_treatment", "TaxTreatment", null),
+        new("valid_from", "ValidFrom", null),
+        new("valid_to", "ValidTo", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

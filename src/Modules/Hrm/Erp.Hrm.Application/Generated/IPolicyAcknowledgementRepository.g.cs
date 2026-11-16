@@ -24,3 +24,27 @@ public interface IPolicyAcknowledgementRepository : global::Erp.BuildingBlocks.A
     /// <summary>Rows matching (publication_id, employment_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PolicyAcknowledgement>> FindByPublicationIdAndEmploymentIdAsync(global::System.Guid publicationId, global::System.Guid employmentId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.policy_acknowledgements and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PolicyAcknowledgementAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.PolicyAcknowledgement> Scope { get; } = new(
+        "hrm.policy_acknowledgements",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PolicyAcknowledgement, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PolicyAcknowledgement, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.policy_acknowledgements",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("publication_id", "PublicationId", null),
+        new("employment_id", "EmploymentId", null),
+        new("acknowledged_at", "AcknowledgedAt", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

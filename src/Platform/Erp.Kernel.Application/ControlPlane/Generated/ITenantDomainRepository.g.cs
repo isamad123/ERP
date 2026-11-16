@@ -20,3 +20,26 @@ public interface ITenantDomainRepository : global::Erp.BuildingBlocks.Applicatio
     /// <summary>Rows matching (host); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.TenantDomain>> FindByHostAsync(string host, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cp.tenant_domains and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class TenantDomainAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.ControlPlane.Generated.TenantDomain> Scope { get; } = new(
+        "cp.tenant_domains",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.TenantDomain, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.TenantDomain, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cp.tenant_domains",
+    [
+        new("id", "Id", null),
+        new("tenant_id", "TenantId", null),
+        new("host", "Host", null),
+        new("is_primary", "IsPrimary", null),
+        new("verified_at", "VerifiedAt", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

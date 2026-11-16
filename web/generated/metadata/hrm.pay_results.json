@@ -28,6 +28,10 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId",
+    "employment": "employmentId"
+  },
   "listFields": [
     "companyId",
     "payRunId",
@@ -111,7 +115,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_results.gross"
+      "labelKey": "fields.hrm.pay_results.gross",
+      "fieldClass": "salary"
     },
     {
       "column": "deductions",
@@ -121,7 +126,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_results.deductions"
+      "labelKey": "fields.hrm.pay_results.deductions",
+      "fieldClass": "salary"
     },
     {
       "column": "net",
@@ -131,7 +137,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_results.net"
+      "labelKey": "fields.hrm.pay_results.net",
+      "fieldClass": "salary"
     },
     {
       "column": "employer_cost",
@@ -141,7 +148,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_results.employer_cost"
+      "labelKey": "fields.hrm.pay_results.employer_cost",
+      "fieldClass": "salary"
     },
     {
       "column": "taxable_income_ytd",
@@ -151,7 +159,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_results.taxable_income_ytd"
+      "labelKey": "fields.hrm.pay_results.taxable_income_ytd",
+      "fieldClass": "salary"
     },
     {
       "column": "tax_ytd",
@@ -161,7 +170,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_results.tax_ytd"
+      "labelKey": "fields.hrm.pay_results.tax_ytd",
+      "fieldClass": "salary"
     },
     {
       "column": "worked_days",

@@ -28,3 +28,37 @@ public interface IServiceRequestRepository : global::Erp.BuildingBlocks.Applicat
     /// <summary>Rows matching (company_id, request_no); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ServiceRequest>> FindByCompanyIdAndRequestNoAsync(global::System.Guid companyId, string requestNo, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.service_requests and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ServiceRequestAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.ServiceRequest> Scope { get; } = new(
+        "hrm.service_requests",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ServiceRequest, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Branch] = e => e.BranchId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ServiceRequest, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.service_requests",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("branch_id", "BranchId", null),
+        new("request_no", "RequestNo", null),
+        new("employment_id", "EmploymentId", null),
+        new("kind", "Kind", null),
+        new("template_id", "TemplateId", null),
+        new("details", "Details", null),
+        new("generated_document_id", "GeneratedDocumentId", null),
+        new("workflow_instance_id", "WorkflowInstanceId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

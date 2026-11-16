@@ -21,3 +21,32 @@ public interface ISetupTaskRepository : global::Erp.BuildingBlocks.Application.D
     /// <summary>Rows matching (module_id, task_key, company_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.SetupTask>> FindByModuleIdAndTaskKeyAndCompanyIdAsync(string moduleId, string taskKey, global::System.Guid? companyId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cfg.setup_tasks and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class SetupTaskAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Cfg.SetupTask> Scope { get; } = new(
+        "cfg.setup_tasks",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.SetupTask, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.SetupTask, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cfg.setup_tasks",
+    [
+        new("id", "Id", null),
+        new("module_id", "ModuleId", null),
+        new("task_key", "TaskKey", null),
+        new("company_id", "CompanyId", null),
+        new("is_required", "IsRequired", null),
+        new("completed_by", "CompletedBy", null),
+        new("completed_at", "CompletedAt", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

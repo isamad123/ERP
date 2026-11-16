@@ -63,7 +63,7 @@ public sealed class ReviewCycleListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.review_cycles: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.review_cycles: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class ReviewCycleEndpoints
 {
     private const string Resource = "hrm.review_cycles";
@@ -77,55 +77,70 @@ internal static class ReviewCycleEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.review_cycles.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.review_cycles.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ReviewCycleListQuery query, global::Erp.Hrm.Application.Generated.IReviewCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ReviewCycleListQuery query, global::Erp.Hrm.Application.Generated.IReviewCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.review_cycles.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ReviewCycleFilter { CompanyId = query.CompanyId, FormId = query.FormId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<ReviewCycleResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.ReviewCycleAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IReviewCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IReviewCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.review_cycles.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ReviewCycleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ReviewCycleWriteRequest request, global::Erp.Hrm.Application.Generated.IReviewCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ReviewCycleWriteRequest request, global::Erp.Hrm.Application.Generated.IReviewCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.review_cycles.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ReviewCycleAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.ReviewCycle();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/review-cycles/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ReviewCycleWriteRequest request, global::Erp.Hrm.Application.Generated.IReviewCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.review_cycles.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/review-cycles/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ReviewCycleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ReviewCycleWriteRequest request, global::Erp.Hrm.Application.Generated.IReviewCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.review_cycles.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ReviewCycleAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ReviewCycleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.ReviewCycle row) => row.CompanyId;
 
     private static ReviewCycleResponse ToResponse(global::Erp.Hrm.Domain.Generated.ReviewCycle row) => new()
     {
@@ -147,42 +162,43 @@ internal static class ReviewCycleEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(ReviewCycleWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(ReviewCycleWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.Name is null)
+        if (request.Name is null && (!update || access.CanEdit("name")))
         {
             errors.Add("name");
         }
-        if (request.CycleType is null)
+        if (request.CycleType is null && (!update || access.CanEdit("cycle_type")))
         {
             errors.Add("cycleType");
         }
-        if (request.PeriodStart is null)
+        if (request.PeriodStart is null && (!update || access.CanEdit("period_start")))
         {
             errors.Add("periodStart");
         }
-        if (request.PeriodEnd is null)
+        if (request.PeriodEnd is null && (!update || access.CanEdit("period_end")))
         {
             errors.Add("periodEnd");
         }
-        if (request.FormId is null)
+        if (request.FormId is null && (!update || access.CanEdit("form_id")))
         {
             errors.Add("formId");
         }
-        if (request.EligibilityRule is null)
+        if (request.EligibilityRule is null && (!update || access.CanEdit("eligibility_rule")))
         {
             errors.Add("eligibilityRule");
         }
-        if (request.Phases is null)
+        if (request.Phases is null && (!update || access.CanEdit("phases")))
         {
             errors.Add("phases");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -193,23 +209,96 @@ internal static class ReviewCycleEndpoints
         return errors;
     }
 
-    private static void Apply(ReviewCycleWriteRequest request, global::Erp.Hrm.Domain.Generated.ReviewCycle row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(ReviewCycleWriteRequest request, global::Erp.Hrm.Domain.Generated.ReviewCycle row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.Name = request.Name!;
-        row.CycleType = request.CycleType!;
-        row.PeriodStart = request.PeriodStart!.Value;
-        row.PeriodEnd = request.PeriodEnd!.Value;
-        row.FormId = request.FormId!.Value;
-        row.EligibilityRule = GeneratedEndpointSupport.ToDocument(request.EligibilityRule)!;
-        row.Phases = GeneratedEndpointSupport.ToDocument(request.Phases)!;
-        if (request.ReviewTypes is not null)
+        if (access.CanEdit("name"))
         {
-            row.ReviewTypes = request.ReviewTypes ?? [];
+            row.Name = request.Name!;
         }
-        row.Status = request.Status!;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Name, row.Name, update))
+        {
+            denied.Add("name");
+        }
+        if (access.CanEdit("cycle_type"))
+        {
+            row.CycleType = request.CycleType!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CycleType, row.CycleType, update))
+        {
+            denied.Add("cycleType");
+        }
+        if (access.CanEdit("period_start"))
+        {
+            row.PeriodStart = request.PeriodStart!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodStart, row.PeriodStart, update))
+        {
+            denied.Add("periodStart");
+        }
+        if (access.CanEdit("period_end"))
+        {
+            row.PeriodEnd = request.PeriodEnd!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodEnd, row.PeriodEnd, update))
+        {
+            denied.Add("periodEnd");
+        }
+        if (access.CanEdit("form_id"))
+        {
+            row.FormId = request.FormId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FormId, row.FormId, update))
+        {
+            denied.Add("formId");
+        }
+        if (access.CanEdit("eligibility_rule"))
+        {
+            row.EligibilityRule = GeneratedEndpointSupport.ToDocument(request.EligibilityRule)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EligibilityRule, row.EligibilityRule, update))
+        {
+            denied.Add("eligibilityRule");
+        }
+        if (access.CanEdit("phases"))
+        {
+            row.Phases = GeneratedEndpointSupport.ToDocument(request.Phases)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Phases, row.Phases, update))
+        {
+            denied.Add("phases");
+        }
+        if (access.CanEdit("review_types"))
+        {
+            if (request.ReviewTypes is not null)
+            {
+                row.ReviewTypes = request.ReviewTypes ?? [];
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReviewTypes, row.ReviewTypes, update))
+        {
+            denied.Add("reviewTypes");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

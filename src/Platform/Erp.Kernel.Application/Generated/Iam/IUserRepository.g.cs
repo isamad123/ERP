@@ -24,3 +24,39 @@ public interface IUserRepository : global::Erp.BuildingBlocks.Application.Data.I
     /// <summary>Rows matching (lower(email)); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.User>> FindByEmailAsync(string email, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of iam.users and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class UserAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Iam.User> Scope { get; } = new(
+        "iam.users",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.User, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.User] = e => e.Id,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.User, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("iam.users",
+    [
+        new("id", "Id", null),
+        new("username", "Username", null),
+        new("email", "Email", null),
+        new("display_name", "DisplayName", null),
+        new("default_company_id", "DefaultCompanyId", null),
+        new("language", "Language", null),
+        new("time_zone", "TimeZone", null),
+        new("last_login_at", "LastLoginAt", null),
+        new("employee_ref", "EmployeeRef", null),
+        new("is_system", "IsSystem", null),
+        new("access_valid_to", "AccessValidTo", null),
+        new("status", "Status", null),
+        new("is_deleted", "IsDeleted", null),
+        new("deleted_at", "DeletedAt", null),
+        new("deleted_by", "DeletedBy", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

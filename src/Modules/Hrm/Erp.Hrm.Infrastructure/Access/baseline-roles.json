@@ -1,0 +1,254 @@
+{
+  "_comment": "Baseline HR roles of spec 06a section 28.1 (slice S1.06 ruling Q2): read permissions only; each HR slice adds the business actions of section 28.2. Seeded into every customer with the HR module by provisioning and the migrator's migrate command, then editable by the customer (FR-ADM-ROL-03). Urdu names to be reviewed by a native speaker.",
+  "module": "hrm",
+  "roles": [
+    {
+      "code": "employee",
+      "name": {
+        "en": "Employee",
+        "ur": "ملازم"
+      },
+      "permissions": [
+        "iam.self.manage",
+        "org.companies.read",
+        "org.branches.read",
+        "org.locations.read",
+        "org.org_units.read",
+        "ref.*.read",
+        "hrm.employments.read",
+        "hrm.employment_assignments.read",
+        "hrm.persons.read",
+        "hrm.person_contacts.read",
+        "hrm.person_addresses.read",
+        "hrm.person_qualifications.read",
+        "hrm.nominations.read",
+        "hrm.employee_documents.read",
+        "hrm.employee_letters.read",
+        "hrm.contracts.read",
+        "hrm.leave_requests.read",
+        "hrm.leave_request_days.read",
+        "hrm.leave_ledger.read",
+        "hrm.attendance_days.read",
+        "hrm.attendance_events.read",
+        "hrm.attendance_exceptions.read",
+        "hrm.regularization_requests.read",
+        "hrm.overtime_entries.read",
+        "hrm.pay_results.read",
+        "hrm.pay_result_lines.read",
+        "hrm.loans.read",
+        "hrm.loan_installments.read",
+        "hrm.expense_claims.read",
+        "hrm.expense_claim_lines.read",
+        "hrm.tax_declarations.read",
+        "hrm.tax_declaration_lines.read",
+        "hrm.service_requests.read",
+        "hrm.policy_acknowledgements.read",
+        "hrm.goals.read",
+        "hrm.learning_records.read",
+        "hrm.leave_types.read",
+        "hrm.shifts.read"
+      ],
+      "scopes": {
+        "*": "own",
+        "hrm.leave_types": "all",
+        "hrm.shifts": "all",
+        "org.companies": "all",
+        "org.branches": "all",
+        "org.locations": "all",
+        "org.org_units": "all"
+      },
+      "fields": [
+        {
+          "resource": "*",
+          "field": "class:salary",
+          "access": "read_only"
+        }
+      ]
+    },
+    {
+      "code": "line_manager",
+      "name": {
+        "en": "Line Manager",
+        "ur": "لائن مینیجر"
+      },
+      "permissions": [
+        "iam.self.manage",
+        "hrm.employments.read",
+        "hrm.employment_assignments.read",
+        "hrm.persons.read",
+        "hrm.person_contacts.read",
+        "hrm.attendance_days.read",
+        "hrm.attendance_exceptions.read",
+        "hrm.regularization_requests.read",
+        "hrm.overtime_entries.read",
+        "hrm.leave_requests.read",
+        "hrm.leave_request_days.read",
+        "hrm.leave_ledger.read"
+      ],
+      "scopes": {
+        "*": "direct_team"
+      },
+      "fields": []
+    },
+    {
+      "code": "hr_admin",
+      "name": {
+        "en": "HR Admin",
+        "ur": "ایچ آر ایڈمن"
+      },
+      "permissions": [
+        "iam.self.manage",
+        "hrm.persons.read",
+        "hrm.person_identifiers.read",
+        "hrm.person_contacts.read",
+        "hrm.person_addresses.read",
+        "hrm.person_relations.read",
+        "hrm.nominations.read",
+        "hrm.person_qualifications.read",
+        "hrm.employments.read",
+        "hrm.employment_assignments.read",
+        "hrm.employment_events.read",
+        "hrm.contracts.read",
+        "hrm.probation_records.read",
+        "hrm.employee_bank_accounts.read",
+        "hrm.employment_statutory_registrations.read",
+        "hrm.change_requests.read",
+        "hrm.service_requests.read",
+        "hrm.employee_letters.read",
+        "hrm.grades.read",
+        "hrm.positions.read",
+        "hrm.headcount_budgets.read",
+        "hrm.policies.read",
+        "hrm.policy_versions.read",
+        "hrm.policy_assignments.read",
+        "hrm.employee_documents.read",
+        "hrm.policy_publications.read",
+        "hrm.policy_acknowledgements.read",
+        "hrm.checklist_templates.read",
+        "hrm.checklist_template_items.read",
+        "hrm.checklists.read",
+        "hrm.checklist_items.read",
+        "hrm.separations.read",
+        "hrm.attendance_devices.read",
+        "hrm.device_user_maps.read",
+        "hrm.shifts.read",
+        "hrm.rosters.read",
+        "hrm.roster_lines.read",
+        "hrm.attendance_events.read",
+        "hrm.attendance_periods.read",
+        "hrm.attendance_days.read",
+        "hrm.attendance_exceptions.read",
+        "hrm.regularization_requests.read",
+        "hrm.duty_requests.read",
+        "hrm.overtime_entries.read",
+        "hrm.leave_types.read",
+        "hrm.leave_ledger.read",
+        "hrm.leave_requests.read",
+        "hrm.leave_request_days.read",
+        "hrm.leave_year_end_runs.read",
+        "hrm.form_definitions.read",
+        "hrm.form_versions.read",
+        "hrm.form_responses.read",
+        "hrm.review_cycles.read",
+        "hrm.review_participants.read",
+        "hrm.review_assignments.read",
+        "hrm.goals.read",
+        "hrm.goal_updates.read",
+        "hrm.courses.read",
+        "hrm.course_sessions.read",
+        "hrm.session_enrollments.read",
+        "hrm.learning_records.read",
+        "hrm.mandatory_training_rules.read",
+        "hrm.training_requirements.read",
+        "hrm.training_bonds.read"
+      ],
+      "scopes": {
+        "*": "all"
+      },
+      "fields": []
+    },
+    {
+      "code": "payroll_officer",
+      "name": {
+        "en": "Payroll Officer",
+        "ur": "پے رول آفیسر"
+      },
+      "permissions": [
+        "iam.self.manage",
+        "hrm.employments.read",
+        "hrm.employment_assignments.read",
+        "hrm.persons.read",
+        "hrm.pay_groups.read",
+        "hrm.pay_periods.read",
+        "hrm.pay_components.read",
+        "hrm.pay_component_versions.read",
+        "hrm.salary_structures.read",
+        "hrm.salary_structure_components.read",
+        "hrm.compensation_assignments.read",
+        "hrm.compensation_lines.read",
+        "hrm.statutory_tables.read",
+        "hrm.statutory_table_rows.read",
+        "hrm.pay_runs.read",
+        "hrm.pay_run_employees.read",
+        "hrm.pay_inputs.read",
+        "hrm.pay_results.read",
+        "hrm.pay_result_lines.read",
+        "hrm.pay_result_reversals.read",
+        "hrm.retro_adjustments.read",
+        "hrm.salary_holds.read",
+        "hrm.tax_declarations.read",
+        "hrm.tax_declaration_lines.read",
+        "hrm.previous_employer_income.read",
+        "hrm.payment_batches.read",
+        "hrm.payment_lines.read",
+        "hrm.final_settlements.read",
+        "hrm.final_settlement_lines.read",
+        "hrm.loan_types.read",
+        "hrm.loans.read",
+        "hrm.loan_installments.read",
+        "hrm.loan_transactions.read",
+        "hrm.expense_categories.read",
+        "hrm.expense_claims.read",
+        "hrm.expense_claim_lines.read",
+        "hrm.salary_bands.read",
+        "hrm.increment_cycles.read",
+        "hrm.increment_proposals.read",
+        "hrm.benefit_plans.read",
+        "hrm.benefit_enrollments.read",
+        "hrm.benefit_claims.read",
+        "hrm.provident_fund_accounts.read",
+        "hrm.provident_fund_ledger.read",
+        "hrm.liability_accruals.read",
+        "hrm.compliance_obligations.read",
+        "hrm.compliance_tasks.read",
+        "hrm.statutory_returns.read",
+        "hrm.parallel_runs.read",
+        "hrm.parallel_run_lines.read"
+      ],
+      "scopes": {
+        "*": "all"
+      },
+      "fields": [
+        {
+          "resource": "*",
+          "field": "class:salary",
+          "access": "read_only"
+        }
+      ]
+    },
+    {
+      "code": "auditor",
+      "extends": true,
+      "permissions": [
+        "hrm.*.read"
+      ],
+      "fields": [
+        {
+          "resource": "*",
+          "field": "class:salary",
+          "access": "read_only"
+        }
+      ]
+    }
+  ]
+}

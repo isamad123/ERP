@@ -25,6 +25,10 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": true,
+  "scope": {
+    "company": "companyId",
+    "employment": "employmentId"
+  },
   "listFields": [
     "companyId",
     "employmentId",

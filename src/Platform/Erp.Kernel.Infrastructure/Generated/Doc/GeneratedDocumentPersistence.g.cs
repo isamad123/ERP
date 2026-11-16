@@ -34,13 +34,13 @@ internal sealed class GeneratedDocumentRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument>(context, clock, actor, scope, "doc.generated_documents"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentAccess.Scope),
     global::Erp.Kernel.Application.Generated.Doc.IGeneratedDocumentRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument>> ListAsync(global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument>> ListAsync(global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.CompanyId is { } companyIdFilter)
         {
             query = query.Where(e => e.CompanyId == companyIdFilter);
@@ -53,14 +53,15 @@ internal sealed class GeneratedDocumentRepository(
         {
             query = query.Where(e => e.FileId == fileIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
-        PageAsync(Query().Where(e => e.CompanyId == companyId), page, cancellationToken);
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
+        await PageAsync((await QueryAsync(cancellationToken).ConfigureAwait(false)).Where(e => e.CompanyId == companyId), page, cancellationToken).ConfigureAwait(false);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument>> FindByOwnerTypeAndOwnerIdAsync(string ownerType, global::System.Guid ownerId, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.OwnerType == ownerType && e.OwnerId == ownerId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.OwnerType == ownerType && e.OwnerId == ownerId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

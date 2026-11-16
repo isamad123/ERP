@@ -27,6 +27,9 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId"
+  },
   "listFields": [
     "companyId",
     "settlementId",
@@ -146,7 +149,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.final_settlement_lines.amount"
+      "labelKey": "fields.hrm.final_settlement_lines.amount",
+      "fieldClass": "salary"
     },
     {
       "column": "basis",

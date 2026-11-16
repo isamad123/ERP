@@ -12,20 +12,16 @@
     {
       "action": "read",
       "permission": "iam.user_roles.read"
-    },
-    {
-      "action": "create",
-      "permission": "iam.user_roles.create"
-    },
-    {
-      "action": "update",
-      "permission": "iam.user_roles.update"
     }
   ],
   "companyScoped": false,
   "effectiveDated": true,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId",
+    "user": "userId"
+  },
   "listFields": [
     "userId",
     "roleId",

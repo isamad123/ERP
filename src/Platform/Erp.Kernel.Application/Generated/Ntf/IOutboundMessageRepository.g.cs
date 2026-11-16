@@ -24,3 +24,32 @@ public interface IOutboundMessageRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (status, next_attempt_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage>> FindByStatusAndNextAttemptAtAsync(string status, global::System.DateTimeOffset? nextAttemptAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of ntf.outbound_messages and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class OutboundMessageAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage> Scope { get; } = new(
+        "ntf.outbound_messages",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("ntf.outbound_messages",
+    [
+        new("id", "Id", null),
+        new("channel", "Channel", null),
+        new("recipient", "Recipient", null),
+        new("template_id", "TemplateId", null),
+        new("payload", "Payload", null),
+        new("dedup_key", "DedupKey", null),
+        new("attempts", "Attempts", null),
+        new("next_attempt_at", "NextAttemptAt", null),
+        new("provider_ref", "ProviderRef", null),
+        new("error", "Error", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

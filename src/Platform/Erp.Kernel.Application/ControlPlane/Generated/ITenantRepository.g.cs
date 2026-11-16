@@ -20,3 +20,31 @@ public interface ITenantRepository : global::Erp.BuildingBlocks.Application.Data
     /// <summary>Rows matching (code); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.Tenant>> FindByCodeAsync(string code, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cp.tenants and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class TenantAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.ControlPlane.Generated.Tenant> Scope { get; } = new(
+        "cp.tenants",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.Tenant, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.Tenant, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cp.tenants",
+    [
+        new("id", "Id", null),
+        new("code", "Code", null),
+        new("name", "Name", null),
+        new("region_code", "RegionCode", null),
+        new("deployment_type", "DeploymentType", null),
+        new("country_code", "CountryCode", null),
+        new("size_profile", "SizeProfile", null),
+        new("legal_hold", "LegalHold", null),
+        new("hibernated_at", "HibernatedAt", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

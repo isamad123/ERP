@@ -21,3 +21,36 @@ public interface IRunRepository : global::Erp.BuildingBlocks.Application.Data.IM
     /// <summary>Rows matching (status, created_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Job.Run>> FindByStatusAndCreatedAtAsync(string status, global::System.DateTimeOffset createdAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of job.runs and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class RunAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Job.Run> Scope { get; } = new(
+        "job.runs",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Job.Run, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Job.Run, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("job.runs",
+    [
+        new("id", "Id", null),
+        new("definition_id", "DefinitionId", null),
+        new("company_id", "CompanyId", null),
+        new("progress_pct", "ProgressPct", null),
+        new("checkpoint", "Checkpoint", null),
+        new("started_at", "StartedAt", null),
+        new("finished_at", "FinishedAt", null),
+        new("error", "Error", null),
+        new("requested_by", "RequestedBy", null),
+        new("lease_owner", "LeaseOwner", null),
+        new("lease_expires_at", "LeaseExpiresAt", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

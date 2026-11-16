@@ -24,3 +24,39 @@ public interface IPayGroupRepository : global::Erp.BuildingBlocks.Application.Da
     /// <summary>Rows matching (company_id, lower(code)); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PayGroup>> FindByCompanyIdAndCodeAsync(global::System.Guid companyId, string code, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.pay_groups and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PayGroupAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.PayGroup> Scope { get; } = new(
+        "hrm.pay_groups",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PayGroup, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PayGroup, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.pay_groups",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("code", "Code", null),
+        new("name_i18n", "NameI18n", null),
+        new("frequency", "Frequency", null),
+        new("currency_code", "CurrencyCode", null),
+        new("tax_year_start_month", "TaxYearStartMonth", null),
+        new("cut_off_day", "CutOffDay", null),
+        new("payment_day", "PaymentDay", null),
+        new("company_bank_account_id", "CompanyBankAccountId", null),
+        new("approval_threshold", "ApprovalThreshold", null),
+        new("is_active", "IsActive", null),
+        new("is_deleted", "IsDeleted", null),
+        new("deleted_at", "DeletedAt", null),
+        new("deleted_by", "DeletedBy", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

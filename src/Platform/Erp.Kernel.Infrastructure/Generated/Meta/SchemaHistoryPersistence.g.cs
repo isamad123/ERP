@@ -33,18 +33,19 @@ internal sealed class SchemaHistoryRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Kernel.Domain.Generated.Meta.SchemaHistory>(context, clock, actor, scope, "meta.schema_history"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Kernel.Domain.Generated.Meta.SchemaHistory>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Meta.SchemaHistoryAccess.Scope),
     global::Erp.Kernel.Application.Generated.Meta.ISchemaHistoryRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Meta.SchemaHistory>> ListAsync(global::Erp.Kernel.Application.Generated.Meta.SchemaHistoryFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Meta.SchemaHistory>> ListAsync(global::Erp.Kernel.Application.Generated.Meta.SchemaHistoryFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
-        return PageAsync(query, page, cancellationToken);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Meta.SchemaHistory>> FindByModuleIdAndScriptNameAsync(string moduleId, string scriptName, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.ModuleId == moduleId && e.ScriptName == scriptName).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.ModuleId == moduleId && e.ScriptName == scriptName).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

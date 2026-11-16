@@ -31,3 +31,38 @@ public interface IPayInputRepository : global::Erp.BuildingBlocks.Application.Da
     /// <summary>Rows matching (employment_id, pay_period_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PayInput>> FindByEmploymentIdAndPayPeriodIdAsync(global::System.Guid employmentId, global::System.Guid payPeriodId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.pay_inputs and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PayInputAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.PayInput> Scope { get; } = new(
+        "hrm.pay_inputs",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PayInput, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PayInput, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.pay_inputs",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("employment_id", "EmploymentId", null),
+        new("pay_period_id", "PayPeriodId", null),
+        new("component_id", "ComponentId", null),
+        new("amount", "Amount", "salary"),
+        new("currency_code", "CurrencyCode", null),
+        new("units", "Units", null),
+        new("source_type", "SourceType", null),
+        new("source_id", "SourceId", null),
+        new("consumed_by_run_id", "ConsumedByRunId", null),
+        new("import_batch_id", "ImportBatchId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

@@ -42,14 +42,14 @@ refuses to start when no key exists. `Auth__SigningPublicKeys__0` may add a furt
 2. `M tenant provision --code acme --name "Acme Textiles" --host acme.example.com --region pk-1 --country PK --currency PKR --size-profile sme --cluster pk-main --legal-name "Acme Textiles (Private) Limited" --admin-email hr.admin@acme.example --admin-name "Acme HR Admin" --entitlement acme-entitlement.json`
 
 Steps: register → database (own logins, own database) → migrate (kernel + licensed modules) → entitlement (signature checked)
-→ seed (country, currency, default company and branch, five baseline roles, system user, invited first admin) → smoke_test →
+→ seed (country, currency, default company and branch, permission registry and baseline roles from the access manifests (S1.06), system user, invited first admin) → smoke_test →
 activate. If a step fails the customer stays `provisioning` and the error is in `cp.platform_audit`; fix the cause and run the
 same command again: it resumes and never duplicates anything. On an active customer it changes nothing.
 
 When provisioning finishes, the command prints the first administrator's **activation link** (valid 72 hours by default,
 setting `iam.activation.token_hours`; works once). It is a secret: hand it to the customer privately. E-mail delivery comes
 with S1.11. To issue a new link (the old one stops working): `M tenant admin-activation-link --code acme`.
-Provisioning and `M migrate` also register the identity settings (`cfg.settings`, keys `iam.*`, ruling Q5 defaults) and
+Provisioning and `M migrate` also register the identity and access settings (`cfg.settings`, keys `iam.*`, rulings Q5, Q6, Q10), the permission catalogue and the baseline roles (S1.06; `migrate` adds new permissions only to baseline roles the customer never edited), and
 create the customer's field-encryption key in the secret store (`tenants/<code>/field-key-v1`). Back up the secret store:
 without that key the customer's authenticator secrets cannot be read.
 

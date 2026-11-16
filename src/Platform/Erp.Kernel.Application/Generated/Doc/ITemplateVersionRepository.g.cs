@@ -24,3 +24,27 @@ public interface ITemplateVersionRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (template_id, id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.TemplateVersion>> FindByTemplateIdAndIdAsync(global::System.Guid templateId, global::System.Guid id, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of doc.template_versions and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class TemplateVersionAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Doc.TemplateVersion> Scope { get; } = new(
+        "doc.template_versions",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Doc.TemplateVersion, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Doc.TemplateVersion, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("doc.template_versions",
+    [
+        new("id", "Id", null),
+        new("template_id", "TemplateId", null),
+        new("version", "Version", null),
+        new("body", "Body", null),
+        new("output_format", "OutputFormat", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

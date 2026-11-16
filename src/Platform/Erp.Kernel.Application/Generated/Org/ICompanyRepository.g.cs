@@ -23,3 +23,39 @@ public interface ICompanyRepository : global::Erp.BuildingBlocks.Application.Dat
     /// <summary>Rows matching (lower(code)); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Org.Company>> FindByCodeAsync(string code, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of org.companies and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class CompanyAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Org.Company> Scope { get; } = new(
+        "org.companies",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Org.Company, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.Id,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Org.Company, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("org.companies",
+    [
+        new("id", "Id", null),
+        new("code", "Code", null),
+        new("name_i18n", "NameI18n", null),
+        new("legal_name", "LegalName", null),
+        new("country_code", "CountryCode", null),
+        new("base_currency_code", "BaseCurrencyCode", null),
+        new("default_language", "DefaultLanguage", null),
+        new("holiday_calendar_id", "HolidayCalendarId", null),
+        new("logo_file_id", "LogoFileId", null),
+        new("cost_center_model", "CostCenterModel", null),
+        new("status", "Status", null),
+        new("is_active", "IsActive", null),
+        new("is_deleted", "IsDeleted", null),
+        new("deleted_at", "DeletedAt", null),
+        new("deleted_by", "DeletedBy", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

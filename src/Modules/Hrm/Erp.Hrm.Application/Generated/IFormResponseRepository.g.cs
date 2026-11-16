@@ -29,3 +29,36 @@ public interface IFormResponseRepository : global::Erp.BuildingBlocks.Applicatio
     /// <summary>Rows matching (subject_employment_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.FormResponse>> FindBySubjectEmploymentIdAsync(global::System.Guid subjectEmploymentId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.form_responses and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class FormResponseAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.FormResponse> Scope { get; } = new(
+        "hrm.form_responses",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.FormResponse, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.SubjectEmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.FormResponse, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.form_responses",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("form_version_id", "FormVersionId", null),
+        new("subject_employment_id", "SubjectEmploymentId", null),
+        new("respondent_employment_id", "RespondentEmploymentId", null),
+        new("context_type", "ContextType", null),
+        new("context_id", "ContextId", null),
+        new("answers", "Answers", null),
+        new("score", "Score", null),
+        new("submitted_at", "SubmittedAt", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

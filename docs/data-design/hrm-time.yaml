@@ -16,6 +16,8 @@
     - [last_sync_at, ts, opt]
     - [last_error, text, opt]
   unique: [[company_id, serial_no]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [ATT-02, ATT-03]
 
 - table: hrm.device_user_maps
@@ -27,6 +29,8 @@
     - [device_user_no, text, req]
     - [employment_id, uuid, req, fk hrm.employments]
     - [consent_at, ts, opt, biometric consent (ATT-20)]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [ATT-03, ATT-20]
   eff_key: [company_id, device_scope, device_user_no]
   notes: Punches resolve the employee by mapping valid on the punch date.
@@ -44,6 +48,8 @@
     - [min_full_day_minutes, int, req]
     - [policy_id, uuid, opt, "fk hrm.policies (attendance policy: grace, thresholds, rounding)"]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [ATT-06, ATT-09, ATT-16]
 
 - table: hrm.rosters
@@ -54,6 +60,8 @@
     - [org_unit_id, uuid, opt, fk org.org_units]
     - [period_start, date, req]
     - [period_end, date, req]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, org_unit: org_unit_id}
   reqs: [ATT-07]
 
 - table: hrm.roster_lines
@@ -68,6 +76,8 @@
     - [roster_status, text, req, copy of rosters.status]
   unique: [[employment_id, work_date, "where roster_status = 'published'"]]
   indexes: [[employment_id, work_date]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [ATT-07]
 
 - table: hrm.attendance_events
@@ -88,6 +98,8 @@
     - [supersedes_event_id, uuid, opt, correction of an earlier event]
   unique: [[company_id, idempotency_key, event_date]]
   indexes: [[employment_id, event_date]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [ATT-01, ATT-03, DAT-01, DAT-02, DAT-04]
 
 - table: hrm.attendance_periods
@@ -102,6 +114,8 @@
     - [locked_at, ts, opt]
     - [locked_by_run_id, uuid, opt, fk hrm.pay_runs]
   unique: [[pay_period_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [ATT-17, ATT-21, FR-XM-26]
   checks: ["exclusion: (pay_group_id with =, daterange(period_start, period_end, '[]') with &&)"]
   notes: "A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments."
@@ -130,6 +144,8 @@
   unique: [[employment_id, work_date]]
   indexes: [[company_id, work_date, result]]
   notes: Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26).
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [ATT-10, ATT-13, ATT-18, ATT-19, FR-XM-26]
   partition: "range (work_date) monthly; key (id, work_date)"
 
@@ -142,6 +158,8 @@
     - [kind, "enum(missing_in,missing_out,late,early,absent,unscheduled)", req]
     - [attendance_day_id, uuid, req, fk hrm.attendance_days]
   indexes: [[employment_id, work_date], [company_id, status]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [ATT-11]
 
 - table: hrm.regularization_requests
@@ -156,6 +174,8 @@
     - [reason, text, req]
     - [file_ids, "uuid[]", req]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [ATT-11]
 
 - table: hrm.duty_requests
@@ -169,6 +189,8 @@
     - [end_at, ts, req]
     - [purpose, text, req]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [ATT-14]
 
 - table: hrm.overtime_entries
@@ -186,6 +208,8 @@
     - [comp_off_entry_id, uuid, opt, fk hrm.leave_ledger]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   indexes: [[employment_id, work_date]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [ATT-12, LVE-08]
   unique: [[employment_id, work_date, "where status <> 'rejected'"]]
 
@@ -200,6 +224,8 @@
     - [is_unpaid_deduction, bool, req, flows to payroll as leave without pay (LVE-07)]
     - [source, "enum(pack,tenant)", req]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [LVE-01, LVE-12]
   notes: "Entitlement, accrual, carry-forward, encashment, eligibility and sandwich rules are a leave policy (hrm.policies type leave) assigned per leave type."
 
@@ -220,6 +246,8 @@
     - [reverses_entry_id, uuid, opt, fk hrm.leave_ledger]
     - [reason, text, opt]
   indexes: [[employment_id, leave_type_id, leave_year]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [LVE-02, LVE-03, LVE-08, LVE-10, LVE-14]
   unique: [[source_type, source_id, kind, leave_type_id, where source_id is not null], [reverses_entry_id, where reverses_entry_id is not null]]
   notes: Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30).
@@ -243,6 +271,8 @@
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   unique: [[company_id, request_no]]
   indexes: [[employment_id, start_date], [company_id, status]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, branch: branch_id, employment: employment_id}
   reqs: [LVE-04, LVE-05, LVE-06, LVE-15, LVE-16]
 
 - table: hrm.leave_request_days
@@ -257,6 +287,8 @@
     - [request_status, text, req, copy of leave_requests.status]
   unique: [[leave_request_id, leave_date]]
   indexes: [[employment_id, leave_date]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [LVE-04, LVE-07]
   checks: ["trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave)"]
 
@@ -269,4 +301,6 @@
     - [job_run_id, uuid, opt, fk job.runs]
     - [summary, json, req]
   unique: [[company_id, leave_year, "where status='applied'"]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [LVE-11]

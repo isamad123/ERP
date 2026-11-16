@@ -40,13 +40,13 @@ internal sealed class ChecklistItemRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Hrm.Domain.Generated.ChecklistItem>(context, clock, actor, scope, "hrm.checklist_items"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Hrm.Domain.Generated.ChecklistItem>(context, clock, actor, scope, global::Erp.Hrm.Application.Generated.ChecklistItemAccess.Scope),
     global::Erp.Hrm.Application.Generated.IChecklistItemRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ChecklistItem>> ListAsync(global::Erp.Hrm.Application.Generated.ChecklistItemFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ChecklistItem>> ListAsync(global::Erp.Hrm.Application.Generated.ChecklistItemFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.ChecklistId is { } checklistIdFilter)
         {
             query = query.Where(e => e.ChecklistId == checklistIdFilter);
@@ -63,16 +63,18 @@ internal sealed class ChecklistItemRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ChecklistItem>> FindByChecklistIdAsync(global::System.Guid checklistId, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.ChecklistId == checklistId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.ChecklistId == checklistId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ChecklistItem>> FindByOwnerUserIdAndStatusAsync(global::System.Guid? ownerUserId, string status, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.OwnerUserId == ownerUserId && e.Status == status).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.OwnerUserId == ownerUserId && e.Status == status).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

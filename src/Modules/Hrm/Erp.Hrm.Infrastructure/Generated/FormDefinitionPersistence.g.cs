@@ -40,13 +40,13 @@ internal sealed class FormDefinitionRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedSoftDeleteRepository<global::Erp.Hrm.Domain.Generated.FormDefinition>(context, clock, actor, scope, "hrm.form_definitions"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedSoftDeleteRepository<global::Erp.Hrm.Domain.Generated.FormDefinition>(context, clock, actor, scope, global::Erp.Hrm.Application.Generated.FormDefinitionAccess.Scope),
     global::Erp.Hrm.Application.Generated.IFormDefinitionRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.FormDefinition>> ListAsync(global::Erp.Hrm.Application.Generated.FormDefinitionFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.FormDefinition>> ListAsync(global::Erp.Hrm.Application.Generated.FormDefinitionFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.Id is { } idFilter)
         {
             query = query.Where(e => e.Id == idFilter);
@@ -59,14 +59,15 @@ internal sealed class FormDefinitionRepository(
         {
             query = query.Where(e => e.ActiveVersionId == activeVersionIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.FormDefinition>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
-        PageAsync(Query().Where(e => e.CompanyId == companyId), page, cancellationToken);
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.FormDefinition>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
+        await PageAsync((await QueryAsync(cancellationToken).ConfigureAwait(false)).Where(e => e.CompanyId == companyId), page, cancellationToken).ConfigureAwait(false);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.FormDefinition>> FindByCompanyIdAndCodeAsync(global::System.Guid companyId, string code, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.CompanyId == companyId && e.Code!.ToLower() == code!.ToLower()).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.CompanyId == companyId && e.Code!.ToLower() == code!.ToLower()).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

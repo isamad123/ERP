@@ -20,3 +20,31 @@ public interface IInAppItemRepository : global::Erp.BuildingBlocks.Application.D
     /// <summary>Rows matching (user_id, read_at, created_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.InAppItem>> FindByUserIdAndReadAtAndCreatedAtAsync(global::System.Guid userId, global::System.DateTimeOffset? readAt, global::System.DateTimeOffset createdAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of ntf.in_app_items and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class InAppItemAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Ntf.InAppItem> Scope { get; } = new(
+        "ntf.in_app_items",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Ntf.InAppItem, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.User] = e => e.UserId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Ntf.InAppItem, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("ntf.in_app_items",
+    [
+        new("id", "Id", null),
+        new("user_id", "UserId", null),
+        new("event_code", "EventCode", null),
+        new("title", "Title", null),
+        new("body", "Body", null),
+        new("link", "Link", null),
+        new("read_at", "ReadAt", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

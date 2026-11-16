@@ -24,3 +24,35 @@ public interface IParallelRunLineRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (parallel_run_id, employment_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ParallelRunLine>> FindByParallelRunIdAndEmploymentIdAsync(global::System.Guid parallelRunId, global::System.Guid? employmentId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.parallel_run_lines and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ParallelRunLineAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.ParallelRunLine> Scope { get; } = new(
+        "hrm.parallel_run_lines",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ParallelRunLine, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ParallelRunLine, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.parallel_run_lines",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("parallel_run_id", "ParallelRunId", null),
+        new("employment_id", "EmploymentId", null),
+        new("legacy_employee_no", "LegacyEmployeeNo", null),
+        new("component_code", "ComponentCode", null),
+        new("legacy_amount", "LegacyAmount", null),
+        new("new_amount", "NewAmount", null),
+        new("difference", "Difference", null),
+        new("explanation", "Explanation", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

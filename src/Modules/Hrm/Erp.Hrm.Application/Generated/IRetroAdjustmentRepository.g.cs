@@ -28,3 +28,37 @@ public interface IRetroAdjustmentRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (employment_id, status); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.RetroAdjustment>> FindByEmploymentIdAndStatusAsync(global::System.Guid employmentId, string status, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.retro_adjustments and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class RetroAdjustmentAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.RetroAdjustment> Scope { get; } = new(
+        "hrm.retro_adjustments",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.RetroAdjustment, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.RetroAdjustment, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.retro_adjustments",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("employment_id", "EmploymentId", null),
+        new("original_run_id", "OriginalRunId", null),
+        new("original_pay_period_id", "OriginalPayPeriodId", null),
+        new("cause_type", "CauseType", null),
+        new("cause_id", "CauseId", null),
+        new("component_id", "ComponentId", null),
+        new("amount", "Amount", "salary"),
+        new("currency_code", "CurrencyCode", null),
+        new("applied_in_run_id", "AppliedInRunId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

@@ -20,3 +20,27 @@ public interface IHolidayRepository : global::Erp.BuildingBlocks.Application.Dat
     /// <summary>Rows matching (calendar_id, holiday_date); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ref.Holiday>> FindByCalendarIdAndHolidayDateAsync(global::System.Guid calendarId, global::System.DateOnly holidayDate, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of ref.holidays and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class HolidayAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Ref.Holiday> Scope { get; } = new(
+        "ref.holidays",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Ref.Holiday, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Ref.Holiday, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("ref.holidays",
+    [
+        new("id", "Id", null),
+        new("calendar_id", "CalendarId", null),
+        new("holiday_date", "HolidayDate", null),
+        new("name_i18n", "NameI18n", null),
+        new("kind", "Kind", null),
+        new("is_tentative", "IsTentative", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

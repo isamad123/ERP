@@ -3,7 +3,7 @@
 // </auto-generated>
 import { request, type PagedResult } from './http';
 
-/** org.branches: Branch */
+/** org.branches: Branch. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Branch
 {
     id: string;
@@ -45,7 +45,7 @@ export const branches =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/org/branches/${id}`, { query: { rowVersion } }),
 };
 
-/** org.companies: Legal entities */
+/** org.companies: Legal entities. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Company
 {
     id: string;
@@ -104,7 +104,7 @@ export const companies =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/org/companies/${id}`, { query: { rowVersion } }),
 };
 
-/** org.company_bank_accounts: Company accounts used to pay salaries */
+/** org.company_bank_accounts: Company accounts used to pay salaries. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface CompanyBankAccount
 {
     id: string;
@@ -137,7 +137,7 @@ export const companyBankAccounts =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/org/company-bank-accounts/${id}`, { query: { rowVersion } }),
 };
 
-/** org.company_registrations: Tax and statutory registration numbers of a company (NTN, EOBI, social security) */
+/** org.company_registrations: Tax and statutory registration numbers of a company (NTN, EOBI, social security). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface CompanyRegistration
 {
     id: string;
@@ -166,7 +166,7 @@ export const companyRegistrations =
     get: (id: string) => request<CompanyRegistration>('GET', `/api/org/company-registrations/${id}`),
 };
 
-/** org.locations: Physical sites (office, factory, warehouse) */
+/** org.locations: Physical sites (office, factory, warehouse). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Location
 {
     id: string;
@@ -224,7 +224,7 @@ export const locations =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/org/locations/${id}`, { query: { rowVersion } }),
 };
 
-/** org.org_hierarchies: OrgHierarchy */
+/** org.org_hierarchies: OrgHierarchy. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface OrgHierarchy
 {
     id: string;
@@ -261,7 +261,7 @@ export const orgHierarchies =
     update: (id: string, body: OrgHierarchyWrite & { rowVersion: number }) => request<OrgHierarchy>('PUT', `/api/org/org-hierarchies/${id}`, { body }),
 };
 
-/** org.org_unit_links: Parent of each unit per hierarchy, effective-dated */
+/** org.org_unit_links: Parent of each unit per hierarchy, effective-dated. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface OrgUnitLink
 {
     id: string;
@@ -303,7 +303,7 @@ export const orgUnitLinks =
     update: (id: string, body: OrgUnitLinkWrite & { rowVersion: number }) => request<OrgUnitLink>('PUT', `/api/org/org-unit-links/${id}`, { body }),
 };
 
-/** org.org_unit_types: OrgUnitType */
+/** org.org_unit_types: OrgUnitType. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface OrgUnitType
 {
     id: string;
@@ -340,7 +340,7 @@ export const orgUnitTypes =
     update: (id: string, body: OrgUnitTypeWrite & { rowVersion: number }) => request<OrgUnitType>('PUT', `/api/org/org-unit-types/${id}`, { body }),
 };
 
-/** org.org_units: OrgUnit */
+/** org.org_units: OrgUnit. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface OrgUnit
 {
     id: string;

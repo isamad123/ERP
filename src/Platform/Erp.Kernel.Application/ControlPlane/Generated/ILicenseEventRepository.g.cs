@@ -20,3 +20,25 @@ public interface ILicenseEventRepository : global::Erp.BuildingBlocks.Applicatio
     /// <summary>Rows matching (tenant_id, occurred_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.LicenseEvent>> FindByTenantIdAndOccurredAtAsync(global::System.Guid tenantId, global::System.DateTimeOffset occurredAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cp.license_events and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class LicenseEventAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.ControlPlane.Generated.LicenseEvent> Scope { get; } = new(
+        "cp.license_events",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.LicenseEvent, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.LicenseEvent, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cp.license_events",
+    [
+        new("id", "Id", null),
+        new("tenant_id", "TenantId", null),
+        new("event_type", "EventType", null),
+        new("from_state", "FromState", null),
+        new("to_state", "ToState", null),
+        new("occurred_at", "OccurredAt", null),
+        new("details", "Details", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

@@ -27,3 +27,37 @@ public interface IExpenseClaimRepository : global::Erp.BuildingBlocks.Applicatio
     /// <summary>Rows matching (company_id, claim_no); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ExpenseClaim>> FindByCompanyIdAndClaimNoAsync(global::System.Guid companyId, string claimNo, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.expense_claims and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ExpenseClaimAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.ExpenseClaim> Scope { get; } = new(
+        "hrm.expense_claims",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ExpenseClaim, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Branch] = e => e.BranchId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ExpenseClaim, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.expense_claims",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("branch_id", "BranchId", null),
+        new("claim_no", "ClaimNo", null),
+        new("employment_id", "EmploymentId", null),
+        new("currency_code", "CurrencyCode", null),
+        new("total_amount", "TotalAmount", null),
+        new("reimburse_via", "ReimburseVia", null),
+        new("pay_input_id", "PayInputId", null),
+        new("workflow_instance_id", "WorkflowInstanceId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

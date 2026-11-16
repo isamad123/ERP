@@ -28,3 +28,35 @@ public interface IEmployeeDocumentRepository : global::Erp.BuildingBlocks.Applic
     /// <summary>Rows matching (expiry_date); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.EmployeeDocument>> FindByExpiryDateAsync(global::System.DateOnly? expiryDate, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.employee_documents and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class EmployeeDocumentAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.EmployeeDocument> Scope { get; } = new(
+        "hrm.employee_documents",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.EmployeeDocument, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.EmployeeDocument, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.employee_documents",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("employment_id", "EmploymentId", null),
+        new("document_type", "DocumentType", null),
+        new("file_id", "FileId", null),
+        new("issue_date", "IssueDate", null),
+        new("expiry_date", "ExpiryDate", null),
+        new("requested_due_date", "RequestedDueDate", null),
+        new("verified_by", "VerifiedBy", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

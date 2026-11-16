@@ -30,3 +30,40 @@ public interface IPositionRepository : global::Erp.BuildingBlocks.Application.Da
     /// <summary>Rows matching (reports_to_position_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Position>> FindByReportsToPositionIdAsync(global::System.Guid? reportsToPositionId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.positions and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PositionAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.Position> Scope { get; } = new(
+        "hrm.positions",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.Position, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.OrgUnit] = e => e.OrgUnitId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.Position, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.positions",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("position_code", "PositionCode", null),
+        new("position_code_lower", "PositionCodeLower", null),
+        new("title", "Title", null),
+        new("org_unit_id", "OrgUnitId", null),
+        new("grade_id", "GradeId", null),
+        new("reports_to_position_id", "ReportsToPositionId", null),
+        new("location_id", "LocationId", null),
+        new("cost_center_ref", "CostCenterRef", null),
+        new("budgeted_fte", "BudgetedFte", null),
+        new("status", "Status", null),
+        new("valid_from", "ValidFrom", null),
+        new("valid_to", "ValidTo", null),
+        new("custom", "Custom", null, IsCustom: true),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

@@ -53,7 +53,7 @@ public sealed class StatutoryReturnListQuery
     public global::System.Guid? GeneratedDocumentId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.statutory_returns: read, create.</summary>
+/// <summary>Generated endpoints of hrm.statutory_returns: read, create. Answers pass through field security (S1.06).</summary>
 internal static class StatutoryReturnEndpoints
 {
     private const string Resource = "hrm.statutory_returns";
@@ -66,35 +66,44 @@ internal static class StatutoryReturnEndpoints
         group.MapPost("/", CreateAsync).WithName("hrm.statutory_returns.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.statutory_returns.create"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] StatutoryReturnListQuery query, global::Erp.Hrm.Application.Generated.IStatutoryReturnRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] StatutoryReturnListQuery query, global::Erp.Hrm.Application.Generated.IStatutoryReturnRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.statutory_returns.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.StatutoryReturnFilter { CompanyId = query.CompanyId, ComplianceTaskId = query.ComplianceTaskId, EmploymentId = query.EmploymentId, GeneratedDocumentId = query.GeneratedDocumentId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<StatutoryReturnResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.StatutoryReturnAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IStatutoryReturnRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IStatutoryReturnRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.statutory_returns.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.StatutoryReturnAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(StatutoryReturnWriteRequest request, global::Erp.Hrm.Application.Generated.IStatutoryReturnRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(StatutoryReturnWriteRequest request, global::Erp.Hrm.Application.Generated.IStatutoryReturnRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.statutory_returns.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.StatutoryReturnAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.StatutoryReturn();
-            Apply(request, row, update: false);
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/statutory-returns/" + row.Id.ToString(), ToResponse(row));
+            return TypedResults.Created("/api/hrm/statutory-returns/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.StatutoryReturnAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.StatutoryReturn row) => row.CompanyId;
 
     private static StatutoryReturnResponse ToResponse(global::Erp.Hrm.Domain.Generated.StatutoryReturn row) => new()
     {
@@ -110,43 +119,95 @@ internal static class StatutoryReturnEndpoints
         CreatedBy = row.CreatedBy,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(StatutoryReturnWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(StatutoryReturnWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.ReturnCode is null)
+        if (request.ReturnCode is null && (!update || access.CanEdit("return_code")))
         {
             errors.Add("returnCode");
         }
-        if (request.PeriodLabel is null)
+        if (request.PeriodLabel is null && (!update || access.CanEdit("period_label")))
         {
             errors.Add("periodLabel");
         }
-        if (request.GeneratedDocumentId is null)
+        if (request.GeneratedDocumentId is null && (!update || access.CanEdit("generated_document_id")))
         {
             errors.Add("generatedDocumentId");
         }
-        _ = update;
         return errors;
     }
 
-    private static void Apply(StatutoryReturnWriteRequest request, global::Erp.Hrm.Domain.Generated.StatutoryReturn row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(StatutoryReturnWriteRequest request, global::Erp.Hrm.Domain.Generated.StatutoryReturn row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.ReturnCode = request.ReturnCode!;
-        row.PeriodLabel = request.PeriodLabel!;
-        row.ComplianceTaskId = request.ComplianceTaskId;
-        row.EmploymentId = request.EmploymentId;
-        row.GeneratedDocumentId = request.GeneratedDocumentId!.Value;
-        if (request.SourceRunIds is not null)
+        if (access.CanEdit("return_code"))
         {
-            row.SourceRunIds = request.SourceRunIds ?? [];
+            row.ReturnCode = request.ReturnCode!;
         }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReturnCode, row.ReturnCode, update))
+        {
+            denied.Add("returnCode");
+        }
+        if (access.CanEdit("period_label"))
+        {
+            row.PeriodLabel = request.PeriodLabel!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodLabel, row.PeriodLabel, update))
+        {
+            denied.Add("periodLabel");
+        }
+        if (access.CanEdit("compliance_task_id"))
+        {
+            row.ComplianceTaskId = request.ComplianceTaskId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ComplianceTaskId, row.ComplianceTaskId, update))
+        {
+            denied.Add("complianceTaskId");
+        }
+        if (access.CanEdit("employment_id"))
+        {
+            row.EmploymentId = request.EmploymentId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
+        {
+            denied.Add("employmentId");
+        }
+        if (access.CanEdit("generated_document_id"))
+        {
+            row.GeneratedDocumentId = request.GeneratedDocumentId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.GeneratedDocumentId, row.GeneratedDocumentId, update))
+        {
+            denied.Add("generatedDocumentId");
+        }
+        if (access.CanEdit("source_run_ids"))
+        {
+            if (request.SourceRunIds is not null)
+            {
+                row.SourceRunIds = request.SourceRunIds ?? [];
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SourceRunIds, row.SourceRunIds, update))
+        {
+            denied.Add("sourceRunIds");
+        }
+        return denied;
     }
 }

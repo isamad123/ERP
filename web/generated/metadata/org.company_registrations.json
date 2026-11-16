@@ -18,6 +18,9 @@
   "effectiveDated": true,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId"
+  },
   "listFields": [
     "companyId",
     "kind",

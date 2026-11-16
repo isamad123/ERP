@@ -1,0 +1,184 @@
+{
+  "_comment": "Baseline kernel roles of spec 02 section 23 and spec 06a HRM-ROL-06 (slice S1.06 ruling Q2). Seeded into every customer by provisioning and the migrator's migrate command, then editable by the customer (FR-ADM-ROL-03). Permission entries are codes or patterns where * stands for any text. Scopes name a baseline data scope per resource (* = every resource of the role). Urdu names to be reviewed by a native speaker.",
+  "module": "kernel",
+  "data_scopes": [
+    {
+      "code": "all",
+      "kind": "all",
+      "name": {
+        "en": "All records",
+        "ur": "تمام ریکارڈ"
+      }
+    },
+    {
+      "code": "own",
+      "kind": "own",
+      "name": {
+        "en": "Own records",
+        "ur": "اپنے ریکارڈ"
+      }
+    },
+    {
+      "code": "direct_team",
+      "kind": "direct_team",
+      "name": {
+        "en": "My direct team",
+        "ur": "میری براہ راست ٹیم"
+      }
+    },
+    {
+      "code": "subtree",
+      "kind": "subtree",
+      "name": {
+        "en": "My department and below",
+        "ur": "میرا شعبہ اور اس کے ذیلی شعبے"
+      }
+    }
+  ],
+  "roles": [
+    {
+      "code": "tenant_admin",
+      "name": {
+        "en": "Tenant Admin",
+        "ur": "ٹیننٹ ایڈمن"
+      },
+      "permissions": [
+        "cfg.*",
+        "doc.*",
+        "iam.*",
+        "itg.*",
+        "job.*",
+        "ntf.*",
+        "org.*",
+        "ref.*",
+        "wf.*"
+      ],
+      "scopes": {
+        "*": "all"
+      },
+      "fields": []
+    },
+    {
+      "code": "company_admin",
+      "name": {
+        "en": "Company Admin",
+        "ur": "کمپنی ایڈمن"
+      },
+      "permissions": [
+        "iam.self.manage",
+        "org.*",
+        "cfg.numbering_schemes.*",
+        "cfg.numbering_voids.*",
+        "cfg.setting_values.read",
+        "cfg.custom_field_defs.read",
+        "doc.templates.*",
+        "doc.template_versions.*",
+        "wf.workflow_definitions.read",
+        "wf.workflow_versions.read",
+        "ref.*.read",
+        "iam.permissions.read",
+        "iam.roles.read",
+        "iam.user_roles.read",
+        "iam.users.read",
+        "iam.users.create",
+        "iam.users.update",
+        "iam.users.unlock",
+        "iam.users.read_sessions",
+        "iam.roles.assign"
+      ],
+      "scopes": {
+        "*": "all"
+      },
+      "fields": []
+    },
+    {
+      "code": "business_user",
+      "name": {
+        "en": "Business User",
+        "ur": "بزنس صارف"
+      },
+      "permissions": [
+        "iam.self.manage",
+        "ref.*.read",
+        "org.companies.read",
+        "org.branches.read",
+        "org.locations.read",
+        "org.org_units.read",
+        "org.org_unit_types.read",
+        "ntf.in_app_items.read",
+        "ntf.in_app_items.update"
+      ],
+      "scopes": {
+        "*": "all",
+        "ntf.in_app_items": "own"
+      },
+      "fields": []
+    },
+    {
+      "code": "approver",
+      "name": {
+        "en": "Approver",
+        "ur": "منظور کنندہ"
+      },
+      "permissions": [
+        "iam.self.manage",
+        "ref.*.read",
+        "org.companies.read",
+        "org.branches.read",
+        "org.locations.read",
+        "org.org_units.read",
+        "org.org_unit_types.read",
+        "ntf.in_app_items.read",
+        "ntf.in_app_items.update",
+        "wf.workflow_tasks.read",
+        "wf.workflow_tasks.update"
+      ],
+      "scopes": {
+        "*": "all",
+        "ntf.in_app_items": "own",
+        "wf.workflow_tasks": "own"
+      },
+      "fields": []
+    },
+    {
+      "code": "auditor",
+      "name": {
+        "en": "Auditor",
+        "ur": "آڈیٹر"
+      },
+      "permissions": [
+        "iam.self.manage",
+        "cfg.*.read",
+        "doc.*.read",
+        "iam.*.read",
+        "itg.*.read",
+        "job.*.read",
+        "ntf.*.read",
+        "org.*.read",
+        "ref.*.read",
+        "wf.*.read"
+      ],
+      "scopes": {
+        "*": "all"
+      },
+      "fields": []
+    },
+    {
+      "code": "system_admin",
+      "name": {
+        "en": "System Administrator",
+        "ur": "سسٹم ایڈمنسٹریٹر"
+      },
+      "permissions": [
+        "iam.self.manage",
+        "job.*",
+        "itg.connectors.*",
+        "ntf.outbound_messages.read"
+      ],
+      "scopes": {
+        "*": "all"
+      },
+      "fields": []
+    }
+  ]
+}

@@ -35,23 +35,25 @@ internal sealed class AccessLogRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Kernel.Domain.Generated.Aud.AccessLog>(context, clock, actor, scope, "aud.access_log"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Kernel.Domain.Generated.Aud.AccessLog>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Aud.AccessLogAccess.Scope),
     global::Erp.Kernel.Application.Generated.Aud.IAccessLogRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Aud.AccessLog>> ListAsync(global::Erp.Kernel.Application.Generated.Aud.AccessLogFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Aud.AccessLog>> ListAsync(global::Erp.Kernel.Application.Generated.Aud.AccessLogFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
-        return PageAsync(query, page, cancellationToken);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Aud.AccessLog>> FindByActorUserIdAndOccurredAtAsync(global::System.Guid actorUserId, global::System.DateTimeOffset occurredAt, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.ActorUserId == actorUserId && e.OccurredAt == occurredAt).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.ActorUserId == actorUserId && e.OccurredAt == occurredAt).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Aud.AccessLog>> FindByEntityTypeAndEntityIdAsync(string entityType, global::System.Guid? entityId, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.EntityType == entityType && e.EntityId == entityId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.EntityType == entityType && e.EntityId == entityId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

@@ -20,3 +20,28 @@ public interface IBankRepository : global::Erp.BuildingBlocks.Application.Data.I
     /// <summary>Rows matching (country_code, lower(code)); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ref.Bank>> FindByCountryCodeAndCodeAsync(string countryCode, string code, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of ref.banks and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class BankAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Ref.Bank> Scope { get; } = new(
+        "ref.banks",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Ref.Bank, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Ref.Bank, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("ref.banks",
+    [
+        new("id", "Id", null),
+        new("code", "Code", null),
+        new("name_i18n", "NameI18n", null),
+        new("country_code", "CountryCode", null),
+        new("swift_code", "SwiftCode", null),
+        new("iban_prefix", "IbanPrefix", null),
+        new("is_active", "IsActive", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

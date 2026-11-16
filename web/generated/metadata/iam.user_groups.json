@@ -11,24 +11,13 @@
     {
       "action": "read",
       "permission": "iam.user_groups.read"
-    },
-    {
-      "action": "create",
-      "permission": "iam.user_groups.create"
-    },
-    {
-      "action": "update",
-      "permission": "iam.user_groups.update"
-    },
-    {
-      "action": "delete",
-      "permission": "iam.user_groups.delete"
     }
   ],
   "companyScoped": false,
   "effectiveDated": false,
   "softDelete": true,
   "appendOnly": false,
+  "scope": {},
   "listFields": [
     "code",
     "nameI18n",

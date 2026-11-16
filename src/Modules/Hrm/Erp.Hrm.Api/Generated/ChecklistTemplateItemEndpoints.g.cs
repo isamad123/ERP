@@ -55,7 +55,7 @@ public sealed class ChecklistTemplateItemListQuery
     public global::System.Guid? OwnerRoleId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.checklist_template_items: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.checklist_template_items: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class ChecklistTemplateItemEndpoints
 {
     private const string Resource = "hrm.checklist_template_items";
@@ -69,55 +69,70 @@ internal static class ChecklistTemplateItemEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.checklist_template_items.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.checklist_template_items.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ChecklistTemplateItemListQuery query, global::Erp.Hrm.Application.Generated.IChecklistTemplateItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ChecklistTemplateItemListQuery query, global::Erp.Hrm.Application.Generated.IChecklistTemplateItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.checklist_template_items.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ChecklistTemplateItemFilter { TemplateId = query.TemplateId, OwnerRoleId = query.OwnerRoleId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<ChecklistTemplateItemResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.ChecklistTemplateItemAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IChecklistTemplateItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IChecklistTemplateItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.checklist_template_items.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ChecklistTemplateItemAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ChecklistTemplateItemWriteRequest request, global::Erp.Hrm.Application.Generated.IChecklistTemplateItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ChecklistTemplateItemWriteRequest request, global::Erp.Hrm.Application.Generated.IChecklistTemplateItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.checklist_template_items.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ChecklistTemplateItemAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.ChecklistTemplateItem();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/checklist-template-items/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ChecklistTemplateItemWriteRequest request, global::Erp.Hrm.Application.Generated.IChecklistTemplateItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.checklist_template_items.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/checklist-template-items/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ChecklistTemplateItemAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ChecklistTemplateItemWriteRequest request, global::Erp.Hrm.Application.Generated.IChecklistTemplateItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.checklist_template_items.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ChecklistTemplateItemAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ChecklistTemplateItemAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.ChecklistTemplateItem row) => null;
 
     private static ChecklistTemplateItemResponse ToResponse(global::Erp.Hrm.Domain.Generated.ChecklistTemplateItem row) => new()
     {
@@ -136,26 +151,27 @@ internal static class ChecklistTemplateItemEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(ChecklistTemplateItemWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(ChecklistTemplateItemWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.TemplateId is null)
+        if (request.TemplateId is null && (!update || access.CanEdit("template_id")))
         {
             errors.Add("templateId");
         }
-        if (request.Seq is null)
+        if (request.Seq is null && (!update || access.CanEdit("seq")))
         {
             errors.Add("seq");
         }
-        if (request.TitleI18n is null)
+        if (request.TitleI18n is null && (!update || access.CanEdit("title_i18n")))
         {
             errors.Add("titleI18n");
         }
-        if (request.OwnerKind is null)
+        if (request.OwnerKind is null && (!update || access.CanEdit("owner_kind")))
         {
             errors.Add("ownerKind");
         }
-        if (request.DueOffsetDays is null)
+        if (request.DueOffsetDays is null && (!update || access.CanEdit("due_offset_days")))
         {
             errors.Add("dueOffsetDays");
         }
@@ -166,18 +182,69 @@ internal static class ChecklistTemplateItemEndpoints
         return errors;
     }
 
-    private static void Apply(ChecklistTemplateItemWriteRequest request, global::Erp.Hrm.Domain.Generated.ChecklistTemplateItem row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(ChecklistTemplateItemWriteRequest request, global::Erp.Hrm.Domain.Generated.ChecklistTemplateItem row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.TemplateId = request.TemplateId!.Value;
-        row.Seq = request.Seq!.Value;
-        row.TitleI18n = GeneratedEndpointSupport.ToDocument(request.TitleI18n)!;
-        row.OwnerKind = request.OwnerKind!;
-        row.OwnerRoleId = request.OwnerRoleId;
-        row.DueOffsetDays = request.DueOffsetDays!.Value;
-        if (request.IsClearance is not null)
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("template_id"))
         {
-            row.IsClearance = request.IsClearance!.Value;
+            row.TemplateId = request.TemplateId!.Value;
         }
-        _ = update;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TemplateId, row.TemplateId, update))
+        {
+            denied.Add("templateId");
+        }
+        if (access.CanEdit("seq"))
+        {
+            row.Seq = request.Seq!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Seq, row.Seq, update))
+        {
+            denied.Add("seq");
+        }
+        if (access.CanEdit("title_i18n"))
+        {
+            row.TitleI18n = GeneratedEndpointSupport.ToDocument(request.TitleI18n)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TitleI18n, row.TitleI18n, update))
+        {
+            denied.Add("titleI18n");
+        }
+        if (access.CanEdit("owner_kind"))
+        {
+            row.OwnerKind = request.OwnerKind!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OwnerKind, row.OwnerKind, update))
+        {
+            denied.Add("ownerKind");
+        }
+        if (access.CanEdit("owner_role_id"))
+        {
+            row.OwnerRoleId = request.OwnerRoleId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OwnerRoleId, row.OwnerRoleId, update))
+        {
+            denied.Add("ownerRoleId");
+        }
+        if (access.CanEdit("due_offset_days"))
+        {
+            row.DueOffsetDays = request.DueOffsetDays!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DueOffsetDays, row.DueOffsetDays, update))
+        {
+            denied.Add("dueOffsetDays");
+        }
+        if (access.CanEdit("is_clearance"))
+        {
+            if (request.IsClearance is not null)
+            {
+                row.IsClearance = request.IsClearance!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsClearance, row.IsClearance, update))
+        {
+            denied.Add("isClearance");
+        }
+        return denied;
     }
 }

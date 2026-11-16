@@ -57,7 +57,7 @@ public sealed class AccountingEventListQuery
     public global::System.Guid? SupersedesEventId { get; init; }
 }
 
-/// <summary>Generated endpoints of itg.accounting_events: read, create.</summary>
+/// <summary>Generated endpoints of itg.accounting_events: read, create. Answers pass through field security (S1.06).</summary>
 internal static class AccountingEventEndpoints
 {
     private const string Resource = "itg.accounting_events";
@@ -70,35 +70,44 @@ internal static class AccountingEventEndpoints
         group.MapPost("/", CreateAsync).WithName("itg.accounting_events.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "itg.accounting_events.create"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] AccountingEventListQuery query, global::Erp.Kernel.Application.Generated.Itg.IAccountingEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] AccountingEventListQuery query, global::Erp.Kernel.Application.Generated.Itg.IAccountingEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "itg.accounting_events.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Itg.AccountingEventFilter { CompanyId = query.CompanyId, SupersedesEventId = query.SupersedesEventId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<AccountingEventResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Itg.AccountingEventAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Itg.IAccountingEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Itg.IAccountingEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "itg.accounting_events.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Itg.AccountingEventAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(AccountingEventWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IAccountingEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(AccountingEventWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IAccountingEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "itg.accounting_events.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Itg.AccountingEventAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Itg.AccountingEvent();
-            Apply(request, row, update: false);
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/itg/accounting-events/" + row.Id.ToString(), ToResponse(row));
+            return TypedResults.Created("/api/itg/accounting-events/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Itg.AccountingEventAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Itg.AccountingEvent row) => row.CompanyId;
 
     private static AccountingEventResponse ToResponse(global::Erp.Kernel.Domain.Generated.Itg.AccountingEvent row) => new()
     {
@@ -118,68 +127,148 @@ internal static class AccountingEventEndpoints
         CreatedBy = row.CreatedBy,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(AccountingEventWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(AccountingEventWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.SourceModule is null)
+        if (request.SourceModule is null && (!update || access.CanEdit("source_module")))
         {
             errors.Add("sourceModule");
         }
-        if (request.SourceType is null)
+        if (request.SourceType is null && (!update || access.CanEdit("source_type")))
         {
             errors.Add("sourceType");
         }
-        if (request.SourceId is null)
+        if (request.SourceId is null && (!update || access.CanEdit("source_id")))
         {
             errors.Add("sourceId");
         }
-        if (request.PostingVersion is null)
+        if (request.PostingVersion is null && (!update || access.CanEdit("posting_version")))
         {
             errors.Add("postingVersion");
         }
-        if (request.EventDate is null)
+        if (request.EventDate is null && (!update || access.CanEdit("event_date")))
         {
             errors.Add("eventDate");
         }
-        if (request.CurrencyCode is null)
+        if (request.CurrencyCode is null && (!update || access.CanEdit("currency_code")))
         {
             errors.Add("currencyCode");
         }
-        if (request.Lines is null)
+        if (request.Lines is null && (!update || access.CanEdit("lines")))
         {
             errors.Add("lines");
         }
-        if (request.TotalDebit is null)
+        if (request.TotalDebit is null && (!update || access.CanEdit("total_debit")))
         {
             errors.Add("totalDebit");
         }
-        if (request.TotalCredit is null)
+        if (request.TotalCredit is null && (!update || access.CanEdit("total_credit")))
         {
             errors.Add("totalCredit");
         }
-        _ = update;
         return errors;
     }
 
-    private static void Apply(AccountingEventWriteRequest request, global::Erp.Kernel.Domain.Generated.Itg.AccountingEvent row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(AccountingEventWriteRequest request, global::Erp.Kernel.Domain.Generated.Itg.AccountingEvent row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.SourceModule = request.SourceModule!;
-        row.SourceType = request.SourceType!;
-        row.SourceId = request.SourceId!.Value;
-        row.PostingVersion = request.PostingVersion!.Value;
-        row.EventDate = request.EventDate!.Value;
-        row.CurrencyCode = request.CurrencyCode!;
-        row.Lines = GeneratedEndpointSupport.ToDocument(request.Lines)!;
-        row.TotalDebit = request.TotalDebit!.Value;
-        row.TotalCredit = request.TotalCredit!.Value;
-        row.SupersedesEventId = request.SupersedesEventId;
+        if (access.CanEdit("source_module"))
+        {
+            row.SourceModule = request.SourceModule!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SourceModule, row.SourceModule, update))
+        {
+            denied.Add("sourceModule");
+        }
+        if (access.CanEdit("source_type"))
+        {
+            row.SourceType = request.SourceType!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SourceType, row.SourceType, update))
+        {
+            denied.Add("sourceType");
+        }
+        if (access.CanEdit("source_id"))
+        {
+            row.SourceId = request.SourceId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SourceId, row.SourceId, update))
+        {
+            denied.Add("sourceId");
+        }
+        if (access.CanEdit("posting_version"))
+        {
+            row.PostingVersion = request.PostingVersion!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PostingVersion, row.PostingVersion, update))
+        {
+            denied.Add("postingVersion");
+        }
+        if (access.CanEdit("event_date"))
+        {
+            row.EventDate = request.EventDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EventDate, row.EventDate, update))
+        {
+            denied.Add("eventDate");
+        }
+        if (access.CanEdit("currency_code"))
+        {
+            row.CurrencyCode = request.CurrencyCode!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CurrencyCode, row.CurrencyCode, update))
+        {
+            denied.Add("currencyCode");
+        }
+        if (access.CanEdit("lines"))
+        {
+            row.Lines = GeneratedEndpointSupport.ToDocument(request.Lines)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Lines, row.Lines, update))
+        {
+            denied.Add("lines");
+        }
+        if (access.CanEdit("total_debit"))
+        {
+            row.TotalDebit = request.TotalDebit!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TotalDebit, row.TotalDebit, update))
+        {
+            denied.Add("totalDebit");
+        }
+        if (access.CanEdit("total_credit"))
+        {
+            row.TotalCredit = request.TotalCredit!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TotalCredit, row.TotalCredit, update))
+        {
+            denied.Add("totalCredit");
+        }
+        if (access.CanEdit("supersedes_event_id"))
+        {
+            row.SupersedesEventId = request.SupersedesEventId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SupersedesEventId, row.SupersedesEventId, update))
+        {
+            denied.Add("supersedesEventId");
+        }
+        return denied;
     }
 }

@@ -20,3 +20,26 @@ public interface ISettingValueRepository : global::Erp.BuildingBlocks.Applicatio
     /// <summary>Rows matching (setting_key, layer, scope_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.SettingValue>> FindBySettingKeyAndLayerAndScopeIdAsync(string settingKey, string layer, global::System.Guid? scopeId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cfg.setting_values and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class SettingValueAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Cfg.SettingValue> Scope { get; } = new(
+        "cfg.setting_values",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.SettingValue, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.SettingValue, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cfg.setting_values",
+    [
+        new("id", "Id", null),
+        new("setting_key", "SettingKey", null),
+        new("layer", "Layer", null),
+        new("scope_id", "ScopeId", null),
+        new("value", "Value", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

@@ -36,13 +36,13 @@ internal sealed class SubscriptionRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Ntf.Subscription>(context, clock, actor, scope, "ntf.subscriptions"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Ntf.Subscription>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Ntf.SubscriptionAccess.Scope),
     global::Erp.Kernel.Application.Generated.Ntf.ISubscriptionRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.Subscription>> ListAsync(global::Erp.Kernel.Application.Generated.Ntf.SubscriptionFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.Subscription>> ListAsync(global::Erp.Kernel.Application.Generated.Ntf.SubscriptionFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
-        return PageAsync(query, page, cancellationToken);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 }

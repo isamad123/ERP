@@ -27,6 +27,9 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "user": "ownerUserId"
+  },
   "listFields": [
     "checklistId",
     "templateItemId",

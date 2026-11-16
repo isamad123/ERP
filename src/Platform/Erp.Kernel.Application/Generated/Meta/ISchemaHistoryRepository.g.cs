@@ -19,3 +19,24 @@ public interface ISchemaHistoryRepository : global::Erp.BuildingBlocks.Applicati
     /// <summary>Rows matching (module_id, script_name); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Meta.SchemaHistory>> FindByModuleIdAndScriptNameAsync(string moduleId, string scriptName, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of meta.schema_history and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class SchemaHistoryAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Meta.SchemaHistory> Scope { get; } = new(
+        "meta.schema_history",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Meta.SchemaHistory, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Meta.SchemaHistory, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("meta.schema_history",
+    [
+        new("id", "Id", null),
+        new("module_id", "ModuleId", null),
+        new("version", "Version", null),
+        new("script_name", "ScriptName", null),
+        new("checksum", "Checksum", null),
+        new("duration_ms", "DurationMs", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

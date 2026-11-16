@@ -22,3 +22,40 @@ public interface ICourseRepository : global::Erp.BuildingBlocks.Application.Data
     /// <summary>Rows matching (company_id, lower(code)); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Course>> FindByCompanyIdAndCodeAsync(global::System.Guid companyId, string code, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.courses and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class CourseAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.Course> Scope { get; } = new(
+        "hrm.courses",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.Course, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.Course, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.courses",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("code", "Code", null),
+        new("name_i18n", "NameI18n", null),
+        new("delivery", "Delivery", null),
+        new("provider", "Provider", null),
+        new("duration_hours", "DurationHours", null),
+        new("description_i18n", "DescriptionI18n", null),
+        new("cost_per_participant", "CostPerParticipant", null),
+        new("currency_code", "CurrencyCode", null),
+        new("awards_certification", "AwardsCertification", null),
+        new("certification_valid_months", "CertificationValidMonths", null),
+        new("is_active", "IsActive", null),
+        new("is_deleted", "IsDeleted", null),
+        new("deleted_at", "DeletedAt", null),
+        new("deleted_by", "DeletedBy", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

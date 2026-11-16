@@ -69,7 +69,7 @@ public sealed class CustomFieldDefListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of cfg.custom_field_defs: read, create, update.</summary>
+/// <summary>Generated endpoints of cfg.custom_field_defs: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class CustomFieldDefEndpoints
 {
     private const string Resource = "cfg.custom_field_defs";
@@ -83,55 +83,70 @@ internal static class CustomFieldDefEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("cfg.custom_field_defs.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "cfg.custom_field_defs.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] CustomFieldDefListQuery query, global::Erp.Kernel.Application.Generated.Cfg.ICustomFieldDefRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] CustomFieldDefListQuery query, global::Erp.Kernel.Application.Generated.Cfg.ICustomFieldDefRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.custom_field_defs.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.CustomFieldDefFilter { OptionListId = query.OptionListId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<CustomFieldDefResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.CustomFieldDefAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.ICustomFieldDefRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.ICustomFieldDefRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.custom_field_defs.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.CustomFieldDefAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(CustomFieldDefWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ICustomFieldDefRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(CustomFieldDefWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ICustomFieldDefRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.custom_field_defs.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.CustomFieldDefAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/custom-field-defs/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, CustomFieldDefWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ICustomFieldDefRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.custom_field_defs.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/cfg/custom-field-defs/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.CustomFieldDefAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, CustomFieldDefWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ICustomFieldDefRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "cfg.custom_field_defs.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.CustomFieldDefAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.CustomFieldDefAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef row) => null;
 
     private static CustomFieldDefResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef row) => new()
     {
@@ -157,38 +172,39 @@ internal static class CustomFieldDefEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(CustomFieldDefWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(CustomFieldDefWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.EntityType is null)
+        if (request.EntityType is null && (!update || access.CanEdit("entity_type")))
         {
             errors.Add("entityType");
         }
-        if (request.FieldKey is null)
+        if (request.FieldKey is null && (!update || access.CanEdit("field_key")))
         {
             errors.Add("fieldKey");
         }
-        if (request.DataType is null)
+        if (request.DataType is null && (!update || access.CanEdit("data_type")))
         {
             errors.Add("dataType");
         }
-        if (request.LabelI18n is null)
+        if (request.LabelI18n is null && (!update || access.CanEdit("label_i18n")))
         {
             errors.Add("labelI18n");
         }
-        if (request.Validation is null)
+        if (request.Validation is null && (!update || access.CanEdit("validation")))
         {
             errors.Add("validation");
         }
-        if (request.Seq is null)
+        if (request.Seq is null && (!update || access.CanEdit("seq")))
         {
             errors.Add("seq");
         }
-        if (request.Version is null)
+        if (request.Version is null && (!update || access.CanEdit("version")))
         {
             errors.Add("version");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -199,28 +215,128 @@ internal static class CustomFieldDefEndpoints
         return errors;
     }
 
-    private static void Apply(CustomFieldDefWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(CustomFieldDefWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.EntityType = request.EntityType!;
-        row.FieldKey = request.FieldKey!;
-        row.DataType = request.DataType!;
-        row.LabelI18n = GeneratedEndpointSupport.ToDocument(request.LabelI18n)!;
-        row.HelpI18n = GeneratedEndpointSupport.ToDocument(request.HelpI18n);
-        row.Validation = GeneratedEndpointSupport.ToDocument(request.Validation)!;
-        row.DefaultValue = GeneratedEndpointSupport.ToDocument(request.DefaultValue);
-        if (request.IsRequired is not null)
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("entity_type"))
         {
-            row.IsRequired = request.IsRequired!.Value;
+            row.EntityType = request.EntityType!;
         }
-        if (request.IsUnique is not null)
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EntityType, row.EntityType, update))
         {
-            row.IsUnique = request.IsUnique!.Value;
+            denied.Add("entityType");
         }
-        row.OptionListId = request.OptionListId;
-        row.Section = request.Section;
-        row.Seq = request.Seq!.Value;
-        row.Version = request.Version!.Value;
-        row.Status = request.Status!;
-        _ = update;
+        if (access.CanEdit("field_key"))
+        {
+            row.FieldKey = request.FieldKey!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FieldKey, row.FieldKey, update))
+        {
+            denied.Add("fieldKey");
+        }
+        if (access.CanEdit("data_type"))
+        {
+            row.DataType = request.DataType!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DataType, row.DataType, update))
+        {
+            denied.Add("dataType");
+        }
+        if (access.CanEdit("label_i18n"))
+        {
+            row.LabelI18n = GeneratedEndpointSupport.ToDocument(request.LabelI18n)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LabelI18n, row.LabelI18n, update))
+        {
+            denied.Add("labelI18n");
+        }
+        if (access.CanEdit("help_i18n"))
+        {
+            row.HelpI18n = GeneratedEndpointSupport.ToDocument(request.HelpI18n);
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.HelpI18n, row.HelpI18n, update))
+        {
+            denied.Add("helpI18n");
+        }
+        if (access.CanEdit("validation"))
+        {
+            row.Validation = GeneratedEndpointSupport.ToDocument(request.Validation)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Validation, row.Validation, update))
+        {
+            denied.Add("validation");
+        }
+        if (access.CanEdit("default_value"))
+        {
+            row.DefaultValue = GeneratedEndpointSupport.ToDocument(request.DefaultValue);
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DefaultValue, row.DefaultValue, update))
+        {
+            denied.Add("defaultValue");
+        }
+        if (access.CanEdit("is_required"))
+        {
+            if (request.IsRequired is not null)
+            {
+                row.IsRequired = request.IsRequired!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsRequired, row.IsRequired, update))
+        {
+            denied.Add("isRequired");
+        }
+        if (access.CanEdit("is_unique"))
+        {
+            if (request.IsUnique is not null)
+            {
+                row.IsUnique = request.IsUnique!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsUnique, row.IsUnique, update))
+        {
+            denied.Add("isUnique");
+        }
+        if (access.CanEdit("option_list_id"))
+        {
+            row.OptionListId = request.OptionListId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OptionListId, row.OptionListId, update))
+        {
+            denied.Add("optionListId");
+        }
+        if (access.CanEdit("section"))
+        {
+            row.Section = request.Section;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Section, row.Section, update))
+        {
+            denied.Add("section");
+        }
+        if (access.CanEdit("seq"))
+        {
+            row.Seq = request.Seq!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Seq, row.Seq, update))
+        {
+            denied.Add("seq");
+        }
+        if (access.CanEdit("version"))
+        {
+            row.Version = request.Version!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Version, row.Version, update))
+        {
+            denied.Add("version");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

@@ -38,13 +38,13 @@ internal sealed class DelegationRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Iam.Delegation>(context, clock, actor, scope, "iam.delegations"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Iam.Delegation>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Iam.DelegationAccess.Scope),
     global::Erp.Kernel.Application.Generated.Iam.IDelegationRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.Delegation>> ListAsync(global::Erp.Kernel.Application.Generated.Iam.DelegationFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.Delegation>> ListAsync(global::Erp.Kernel.Application.Generated.Iam.DelegationFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.FromUserId is { } fromUserIdFilter)
         {
             query = query.Where(e => e.FromUserId == fromUserIdFilter);
@@ -57,11 +57,12 @@ internal sealed class DelegationRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.Delegation>> FindByToUserIdAndValidFromAsync(global::System.Guid toUserId, global::System.DateTimeOffset validFrom, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.ToUserId == toUserId && e.ValidFrom == validFrom).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.ToUserId == toUserId && e.ValidFrom == validFrom).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

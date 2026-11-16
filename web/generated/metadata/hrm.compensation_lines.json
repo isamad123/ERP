@@ -26,6 +26,9 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId"
+  },
   "listFields": [
     "companyId",
     "assignmentId",
@@ -86,7 +89,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.compensation_lines.amount"
+      "labelKey": "fields.hrm.compensation_lines.amount",
+      "fieldClass": "salary"
     },
     {
       "column": "percent",

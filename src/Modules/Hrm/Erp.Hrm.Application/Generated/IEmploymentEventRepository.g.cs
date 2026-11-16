@@ -26,3 +26,36 @@ public interface IEmploymentEventRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (employment_id, effective_date); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.EmploymentEvent>> FindByEmploymentIdAndEffectiveDateAsync(global::System.Guid employmentId, global::System.DateOnly effectiveDate, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.employment_events and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class EmploymentEventAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.EmploymentEvent> Scope { get; } = new(
+        "hrm.employment_events",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.EmploymentEvent, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.EmploymentEvent, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.employment_events",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("employment_id", "EmploymentId", null),
+        new("kind", "Kind", null),
+        new("reason_code", "ReasonCode", null),
+        new("effective_date", "EffectiveDate", null),
+        new("notes", "Notes", null),
+        new("carry_over", "CarryOver", null),
+        new("workflow_instance_id", "WorkflowInstanceId", null),
+        new("letter_document_id", "LetterDocumentId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

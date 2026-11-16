@@ -24,3 +24,26 @@ public interface IFormVersionRepository : global::Erp.BuildingBlocks.Application
     /// <summary>Rows matching (form_id, id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.FormVersion>> FindByFormIdAndIdAsync(global::System.Guid formId, global::System.Guid id, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.form_versions and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class FormVersionAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.FormVersion> Scope { get; } = new(
+        "hrm.form_versions",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.FormVersion, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.FormVersion, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.form_versions",
+    [
+        new("id", "Id", null),
+        new("form_id", "FormId", null),
+        new("version", "Version", null),
+        new("schema", "Schema", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

@@ -24,3 +24,32 @@ public interface IEntitlementRepository : global::Erp.BuildingBlocks.Application
     /// <summary>Rows matching (tenant_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.Entitlement>> FindByTenantIdAsync(global::System.Guid tenantId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cp.entitlements and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class EntitlementAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.ControlPlane.Generated.Entitlement> Scope { get; } = new(
+        "cp.entitlements",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.Entitlement, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.Entitlement, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cp.entitlements",
+    [
+        new("id", "Id", null),
+        new("tenant_id", "TenantId", null),
+        new("version", "Version", null),
+        new("edition", "Edition", null),
+        new("claims", "Claims", null),
+        new("signature", "Signature", null),
+        new("signing_key_id", "SigningKeyId", null),
+        new("effective_from", "EffectiveFrom", null),
+        new("expires_at", "ExpiresAt", null),
+        new("state_since", "StateSince", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

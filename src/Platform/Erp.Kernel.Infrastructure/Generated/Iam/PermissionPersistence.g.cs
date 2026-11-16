@@ -21,6 +21,7 @@ internal sealed class PermissionConfiguration : IEntityTypeConfiguration<global:
         builder.Property(e => e.ModuleId).HasColumnName("module_id").HasColumnType("text").IsRequired();
         builder.Property(e => e.DescriptionI18n).HasColumnName("description_i18n").HasColumnType("jsonb").IsRequired();
         builder.Property(e => e.IsSensitive).HasColumnName("is_sensitive").HasColumnType("boolean");
+        builder.Property(e => e.RetiredAt).HasColumnName("retired_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");
@@ -35,18 +36,19 @@ internal sealed class PermissionRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Iam.Permission>(context, clock, actor, scope, "iam.permissions"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Iam.Permission>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Iam.PermissionAccess.Scope),
     global::Erp.Kernel.Application.Generated.Iam.IPermissionRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.Permission>> ListAsync(global::Erp.Kernel.Application.Generated.Iam.PermissionFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.Permission>> ListAsync(global::Erp.Kernel.Application.Generated.Iam.PermissionFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
-        return PageAsync(query, page, cancellationToken);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.Permission>> FindByCodeAsync(string code, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.Code == code).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.Code == code).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

@@ -30,6 +30,10 @@
   "effectiveDated": false,
   "softDelete": true,
   "appendOnly": false,
+  "scope": {
+    "branch": "branchId",
+    "company": "companyId"
+  },
   "listFields": [
     "companyId",
     "code",

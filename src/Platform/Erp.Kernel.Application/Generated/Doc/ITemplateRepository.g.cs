@@ -22,3 +22,34 @@ public interface ITemplateRepository : global::Erp.BuildingBlocks.Application.Da
     /// <summary>Rows matching (lower(code), company_id, language); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.Template>> FindByCodeAndCompanyIdAndLanguageAsync(string code, global::System.Guid? companyId, string language, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of doc.templates and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class TemplateAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Doc.Template> Scope { get; } = new(
+        "doc.templates",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Doc.Template, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Doc.Template, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("doc.templates",
+    [
+        new("id", "Id", null),
+        new("code", "Code", null),
+        new("name_i18n", "NameI18n", null),
+        new("kind", "Kind", null),
+        new("entity_type", "EntityType", null),
+        new("company_id", "CompanyId", null),
+        new("language", "Language", null),
+        new("source", "Source", null),
+        new("active_version_id", "ActiveVersionId", null),
+        new("is_active", "IsActive", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

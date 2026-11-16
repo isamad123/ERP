@@ -23,3 +23,33 @@ public interface IImportBatchRepository : global::Erp.BuildingBlocks.Application
 
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Itg.ImportBatch>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of itg.import_batches and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ImportBatchAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Itg.ImportBatch> Scope { get; } = new(
+        "itg.import_batches",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Itg.ImportBatch, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Itg.ImportBatch, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("itg.import_batches",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("template_id", "TemplateId", null),
+        new("file_id", "FileId", null),
+        new("total_rows", "TotalRows", null),
+        new("ok_rows", "OkRows", null),
+        new("error_rows", "ErrorRows", null),
+        new("job_run_id", "JobRunId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

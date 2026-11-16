@@ -61,7 +61,7 @@ public sealed class PayPeriodListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.pay_periods: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.pay_periods: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class PayPeriodEndpoints
 {
     private const string Resource = "hrm.pay_periods";
@@ -75,55 +75,70 @@ internal static class PayPeriodEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.pay_periods.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.pay_periods.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PayPeriodListQuery query, global::Erp.Hrm.Application.Generated.IPayPeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PayPeriodListQuery query, global::Erp.Hrm.Application.Generated.IPayPeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_periods.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PayPeriodFilter { CompanyId = query.CompanyId, PayGroupId = query.PayGroupId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<PayPeriodResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.PayPeriodAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPayPeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPayPeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_periods.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PayPeriodAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PayPeriodWriteRequest request, global::Erp.Hrm.Application.Generated.IPayPeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PayPeriodWriteRequest request, global::Erp.Hrm.Application.Generated.IPayPeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_periods.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PayPeriodAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.PayPeriod();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/pay-periods/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PayPeriodWriteRequest request, global::Erp.Hrm.Application.Generated.IPayPeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_periods.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/pay-periods/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PayPeriodAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PayPeriodWriteRequest request, global::Erp.Hrm.Application.Generated.IPayPeriodRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_periods.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PayPeriodAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PayPeriodAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.PayPeriod row) => row.CompanyId;
 
     private static PayPeriodResponse ToResponse(global::Erp.Hrm.Domain.Generated.PayPeriod row) => new()
     {
@@ -144,42 +159,43 @@ internal static class PayPeriodEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(PayPeriodWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(PayPeriodWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.PayGroupId is null)
+        if (request.PayGroupId is null && (!update || access.CanEdit("pay_group_id")))
         {
             errors.Add("payGroupId");
         }
-        if (request.PeriodNo is null)
+        if (request.PeriodNo is null && (!update || access.CanEdit("period_no")))
         {
             errors.Add("periodNo");
         }
-        if (request.TaxYear is null)
+        if (request.TaxYear is null && (!update || access.CanEdit("tax_year")))
         {
             errors.Add("taxYear");
         }
-        if (request.StartDate is null)
+        if (request.StartDate is null && (!update || access.CanEdit("start_date")))
         {
             errors.Add("startDate");
         }
-        if (request.EndDate is null)
+        if (request.EndDate is null && (!update || access.CanEdit("end_date")))
         {
             errors.Add("endDate");
         }
-        if (request.CutOffDate is null)
+        if (request.CutOffDate is null && (!update || access.CanEdit("cut_off_date")))
         {
             errors.Add("cutOffDate");
         }
-        if (request.PaymentDate is null)
+        if (request.PaymentDate is null && (!update || access.CanEdit("payment_date")))
         {
             errors.Add("paymentDate");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -190,19 +206,85 @@ internal static class PayPeriodEndpoints
         return errors;
     }
 
-    private static void Apply(PayPeriodWriteRequest request, global::Erp.Hrm.Domain.Generated.PayPeriod row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(PayPeriodWriteRequest request, global::Erp.Hrm.Domain.Generated.PayPeriod row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.PayGroupId = request.PayGroupId!.Value;
-        row.PeriodNo = request.PeriodNo!.Value;
-        row.TaxYear = request.TaxYear!.Value;
-        row.StartDate = request.StartDate!.Value;
-        row.EndDate = request.EndDate!.Value;
-        row.CutOffDate = request.CutOffDate!.Value;
-        row.PaymentDate = request.PaymentDate!.Value;
-        row.Status = request.Status!;
+        if (access.CanEdit("pay_group_id"))
+        {
+            row.PayGroupId = request.PayGroupId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PayGroupId, row.PayGroupId, update))
+        {
+            denied.Add("payGroupId");
+        }
+        if (access.CanEdit("period_no"))
+        {
+            row.PeriodNo = request.PeriodNo!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodNo, row.PeriodNo, update))
+        {
+            denied.Add("periodNo");
+        }
+        if (access.CanEdit("tax_year"))
+        {
+            row.TaxYear = request.TaxYear!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TaxYear, row.TaxYear, update))
+        {
+            denied.Add("taxYear");
+        }
+        if (access.CanEdit("start_date"))
+        {
+            row.StartDate = request.StartDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StartDate, row.StartDate, update))
+        {
+            denied.Add("startDate");
+        }
+        if (access.CanEdit("end_date"))
+        {
+            row.EndDate = request.EndDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EndDate, row.EndDate, update))
+        {
+            denied.Add("endDate");
+        }
+        if (access.CanEdit("cut_off_date"))
+        {
+            row.CutOffDate = request.CutOffDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CutOffDate, row.CutOffDate, update))
+        {
+            denied.Add("cutOffDate");
+        }
+        if (access.CanEdit("payment_date"))
+        {
+            row.PaymentDate = request.PaymentDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PaymentDate, row.PaymentDate, update))
+        {
+            denied.Add("paymentDate");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

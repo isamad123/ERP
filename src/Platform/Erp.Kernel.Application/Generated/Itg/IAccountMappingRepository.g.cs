@@ -22,3 +22,31 @@ public interface IAccountMappingRepository : global::Erp.BuildingBlocks.Applicat
     /// <summary>Rows matching (company_id, source_kind, source_key, allocation_key); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Itg.AccountMapping>> FindByCompanyIdAndSourceKindAndSourceKeyAndAllocationKeyAsync(global::System.Guid companyId, string sourceKind, string sourceKey, string? allocationKey, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of itg.account_mappings and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class AccountMappingAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Itg.AccountMapping> Scope { get; } = new(
+        "itg.account_mappings",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Itg.AccountMapping, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Itg.AccountMapping, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("itg.account_mappings",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("source_kind", "SourceKind", null),
+        new("source_key", "SourceKey", null),
+        new("allocation_key", "AllocationKey", null),
+        new("debit_account", "DebitAccount", null),
+        new("credit_account", "CreditAccount", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

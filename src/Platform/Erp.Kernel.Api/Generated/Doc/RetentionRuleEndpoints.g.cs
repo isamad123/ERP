@@ -45,7 +45,7 @@ public sealed class RetentionRuleListQuery
     public int? Limit { get; init; }
 }
 
-/// <summary>Generated endpoints of doc.retention_rules: read, create, update.</summary>
+/// <summary>Generated endpoints of doc.retention_rules: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class RetentionRuleEndpoints
 {
     private const string Resource = "doc.retention_rules";
@@ -59,55 +59,70 @@ internal static class RetentionRuleEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("doc.retention_rules.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "doc.retention_rules.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] RetentionRuleListQuery query, global::Erp.Kernel.Application.Generated.Doc.IRetentionRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] RetentionRuleListQuery query, global::Erp.Kernel.Application.Generated.Doc.IRetentionRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "doc.retention_rules.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Doc.RetentionRuleFilter {  }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<RetentionRuleResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Doc.RetentionRuleAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Doc.IRetentionRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Doc.IRetentionRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "doc.retention_rules.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Doc.RetentionRuleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(RetentionRuleWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.IRetentionRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(RetentionRuleWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.IRetentionRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "doc.retention_rules.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Doc.RetentionRuleAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Doc.RetentionRule();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/doc/retention-rules/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, RetentionRuleWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.IRetentionRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "doc.retention_rules.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/doc/retention-rules/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Doc.RetentionRuleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, RetentionRuleWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.IRetentionRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "doc.retention_rules.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Doc.RetentionRuleAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Doc.RetentionRuleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Doc.RetentionRule row) => null;
 
     private static RetentionRuleResponse ToResponse(global::Erp.Kernel.Domain.Generated.Doc.RetentionRule row) => new()
     {
@@ -123,18 +138,19 @@ internal static class RetentionRuleEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(RetentionRuleWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(RetentionRuleWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.DocumentType is null)
+        if (request.DocumentType is null && (!update || access.CanEdit("document_type")))
         {
             errors.Add("documentType");
         }
-        if (request.KeepMonths is null)
+        if (request.KeepMonths is null && (!update || access.CanEdit("keep_months")))
         {
             errors.Add("keepMonths");
         }
-        if (request.ActionAfter is null)
+        if (request.ActionAfter is null && (!update || access.CanEdit("action_after")))
         {
             errors.Add("actionAfter");
         }
@@ -145,12 +161,42 @@ internal static class RetentionRuleEndpoints
         return errors;
     }
 
-    private static void Apply(RetentionRuleWriteRequest request, global::Erp.Kernel.Domain.Generated.Doc.RetentionRule row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(RetentionRuleWriteRequest request, global::Erp.Kernel.Domain.Generated.Doc.RetentionRule row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.DocumentType = request.DocumentType!;
-        row.KeepMonths = request.KeepMonths!.Value;
-        row.ActionAfter = request.ActionAfter!;
-        row.LegalMinimumMonths = request.LegalMinimumMonths;
-        _ = update;
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("document_type"))
+        {
+            row.DocumentType = request.DocumentType!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DocumentType, row.DocumentType, update))
+        {
+            denied.Add("documentType");
+        }
+        if (access.CanEdit("keep_months"))
+        {
+            row.KeepMonths = request.KeepMonths!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.KeepMonths, row.KeepMonths, update))
+        {
+            denied.Add("keepMonths");
+        }
+        if (access.CanEdit("action_after"))
+        {
+            row.ActionAfter = request.ActionAfter!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ActionAfter, row.ActionAfter, update))
+        {
+            denied.Add("actionAfter");
+        }
+        if (access.CanEdit("legal_minimum_months"))
+        {
+            row.LegalMinimumMonths = request.LegalMinimumMonths;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LegalMinimumMonths, row.LegalMinimumMonths, update))
+        {
+            denied.Add("legalMinimumMonths");
+        }
+        return denied;
     }
 }

@@ -20,3 +20,23 @@ public interface IImportBatchErrorRepository : global::Erp.BuildingBlocks.Applic
     /// <summary>Rows matching (batch_id, row_no); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Itg.ImportBatchError>> FindByBatchIdAndRowNoAsync(global::System.Guid batchId, int rowNo, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of itg.import_batch_errors and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ImportBatchErrorAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Itg.ImportBatchError> Scope { get; } = new(
+        "itg.import_batch_errors",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Itg.ImportBatchError, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Itg.ImportBatchError, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("itg.import_batch_errors",
+    [
+        new("id", "Id", null),
+        new("batch_id", "BatchId", null),
+        new("row_no", "RowNo", null),
+        new("field", "Field", null),
+        new("message", "Message", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

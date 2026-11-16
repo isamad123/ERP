@@ -79,7 +79,7 @@ public sealed class EmployeeLetterListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.employee_letters: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.employee_letters: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class EmployeeLetterEndpoints
 {
     private const string Resource = "hrm.employee_letters";
@@ -93,55 +93,70 @@ internal static class EmployeeLetterEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.employee_letters.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.employee_letters.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] EmployeeLetterListQuery query, global::Erp.Hrm.Application.Generated.IEmployeeLetterRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] EmployeeLetterListQuery query, global::Erp.Hrm.Application.Generated.IEmployeeLetterRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.employee_letters.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.EmployeeLetterFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, TemplateId = query.TemplateId, GeneratedDocumentId = query.GeneratedDocumentId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<EmployeeLetterResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.EmployeeLetterAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IEmployeeLetterRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IEmployeeLetterRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.employee_letters.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.EmployeeLetterAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(EmployeeLetterWriteRequest request, global::Erp.Hrm.Application.Generated.IEmployeeLetterRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(EmployeeLetterWriteRequest request, global::Erp.Hrm.Application.Generated.IEmployeeLetterRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.employee_letters.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.EmployeeLetterAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.EmployeeLetter();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/employee-letters/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, EmployeeLetterWriteRequest request, global::Erp.Hrm.Application.Generated.IEmployeeLetterRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.employee_letters.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/employee-letters/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.EmployeeLetterAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, EmployeeLetterWriteRequest request, global::Erp.Hrm.Application.Generated.IEmployeeLetterRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.employee_letters.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.EmployeeLetterAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.EmployeeLetterAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.EmployeeLetter row) => row.CompanyId;
 
     private static EmployeeLetterResponse ToResponse(global::Erp.Hrm.Domain.Generated.EmployeeLetter row) => new()
     {
@@ -168,34 +183,35 @@ internal static class EmployeeLetterEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(EmployeeLetterWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(EmployeeLetterWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.LetterNo is null)
+        if (request.LetterNo is null && (!update || access.CanEdit("letter_no")))
         {
             errors.Add("letterNo");
         }
-        if (request.EmploymentId is null)
+        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
         {
             errors.Add("employmentId");
         }
-        if (request.TemplateId is null)
+        if (request.TemplateId is null && (!update || access.CanEdit("template_id")))
         {
             errors.Add("templateId");
         }
-        if (request.LetterType is null)
+        if (request.LetterType is null && (!update || access.CanEdit("letter_type")))
         {
             errors.Add("letterType");
         }
-        if (request.Data is null)
+        if (request.Data is null && (!update || access.CanEdit("data")))
         {
             errors.Add("data");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -206,28 +222,136 @@ internal static class EmployeeLetterEndpoints
         return errors;
     }
 
-    private static void Apply(EmployeeLetterWriteRequest request, global::Erp.Hrm.Domain.Generated.EmployeeLetter row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(EmployeeLetterWriteRequest request, global::Erp.Hrm.Domain.Generated.EmployeeLetter row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.LetterNo = request.LetterNo!;
-        row.EmploymentId = request.EmploymentId!.Value;
-        row.TemplateId = request.TemplateId!.Value;
-        row.LetterType = request.LetterType!;
-        row.Data = GeneratedEndpointSupport.ToDocument(request.Data)!;
-        if (request.ContainsSalary is not null)
+        if (access.CanEdit("letter_no"))
         {
-            row.ContainsSalary = request.ContainsSalary!.Value;
+            row.LetterNo = request.LetterNo!;
         }
-        row.GeneratedDocumentId = request.GeneratedDocumentId;
-        row.IssuedAt = request.IssuedAt;
-        row.EmailedAt = request.EmailedAt;
-        row.AcknowledgedAt = request.AcknowledgedAt;
-        row.SourceType = request.SourceType;
-        row.SourceId = request.SourceId;
-        row.WorkflowInstanceId = request.WorkflowInstanceId;
-        row.Status = request.Status!;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LetterNo, row.LetterNo, update))
+        {
+            denied.Add("letterNo");
+        }
+        if (access.CanEdit("employment_id"))
+        {
+            row.EmploymentId = request.EmploymentId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
+        {
+            denied.Add("employmentId");
+        }
+        if (access.CanEdit("template_id"))
+        {
+            row.TemplateId = request.TemplateId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TemplateId, row.TemplateId, update))
+        {
+            denied.Add("templateId");
+        }
+        if (access.CanEdit("letter_type"))
+        {
+            row.LetterType = request.LetterType!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LetterType, row.LetterType, update))
+        {
+            denied.Add("letterType");
+        }
+        if (access.CanEdit("data"))
+        {
+            row.Data = GeneratedEndpointSupport.ToDocument(request.Data)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Data, row.Data, update))
+        {
+            denied.Add("data");
+        }
+        if (access.CanEdit("contains_salary"))
+        {
+            if (request.ContainsSalary is not null)
+            {
+                row.ContainsSalary = request.ContainsSalary!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ContainsSalary, row.ContainsSalary, update))
+        {
+            denied.Add("containsSalary");
+        }
+        if (access.CanEdit("generated_document_id"))
+        {
+            row.GeneratedDocumentId = request.GeneratedDocumentId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.GeneratedDocumentId, row.GeneratedDocumentId, update))
+        {
+            denied.Add("generatedDocumentId");
+        }
+        if (access.CanEdit("issued_at"))
+        {
+            row.IssuedAt = request.IssuedAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IssuedAt, row.IssuedAt, update))
+        {
+            denied.Add("issuedAt");
+        }
+        if (access.CanEdit("emailed_at"))
+        {
+            row.EmailedAt = request.EmailedAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmailedAt, row.EmailedAt, update))
+        {
+            denied.Add("emailedAt");
+        }
+        if (access.CanEdit("acknowledged_at"))
+        {
+            row.AcknowledgedAt = request.AcknowledgedAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.AcknowledgedAt, row.AcknowledgedAt, update))
+        {
+            denied.Add("acknowledgedAt");
+        }
+        if (access.CanEdit("source_type"))
+        {
+            row.SourceType = request.SourceType;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SourceType, row.SourceType, update))
+        {
+            denied.Add("sourceType");
+        }
+        if (access.CanEdit("source_id"))
+        {
+            row.SourceId = request.SourceId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SourceId, row.SourceId, update))
+        {
+            denied.Add("sourceId");
+        }
+        if (access.CanEdit("workflow_instance_id"))
+        {
+            row.WorkflowInstanceId = request.WorkflowInstanceId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkflowInstanceId, row.WorkflowInstanceId, update))
+        {
+            denied.Add("workflowInstanceId");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

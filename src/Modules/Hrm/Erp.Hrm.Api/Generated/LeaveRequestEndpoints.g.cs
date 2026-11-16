@@ -85,7 +85,7 @@ public sealed class LeaveRequestListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.leave_requests: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.leave_requests: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class LeaveRequestEndpoints
 {
     private const string Resource = "hrm.leave_requests";
@@ -99,55 +99,70 @@ internal static class LeaveRequestEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.leave_requests.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.leave_requests.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] LeaveRequestListQuery query, global::Erp.Hrm.Application.Generated.ILeaveRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] LeaveRequestListQuery query, global::Erp.Hrm.Application.Generated.ILeaveRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.leave_requests.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.LeaveRequestFilter { CompanyId = query.CompanyId, BranchId = query.BranchId, EmploymentId = query.EmploymentId, LeaveTypeId = query.LeaveTypeId, ModifiesRequestId = query.ModifiesRequestId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<LeaveRequestResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.LeaveRequestAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.ILeaveRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.ILeaveRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.leave_requests.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.LeaveRequestAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LeaveRequestWriteRequest request, global::Erp.Hrm.Application.Generated.ILeaveRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LeaveRequestWriteRequest request, global::Erp.Hrm.Application.Generated.ILeaveRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.leave_requests.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.LeaveRequestAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.LeaveRequest();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/leave-requests/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, LeaveRequestWriteRequest request, global::Erp.Hrm.Application.Generated.ILeaveRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.leave_requests.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/leave-requests/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.LeaveRequestAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, LeaveRequestWriteRequest request, global::Erp.Hrm.Application.Generated.ILeaveRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.leave_requests.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.LeaveRequestAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.LeaveRequestAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.LeaveRequest row) => row.CompanyId;
 
     private static LeaveRequestResponse ToResponse(global::Erp.Hrm.Domain.Generated.LeaveRequest row) => new()
     {
@@ -176,46 +191,47 @@ internal static class LeaveRequestEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(LeaveRequestWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(LeaveRequestWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.RequestNo is null)
+        if (request.RequestNo is null && (!update || access.CanEdit("request_no")))
         {
             errors.Add("requestNo");
         }
-        if (request.EmploymentId is null)
+        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
         {
             errors.Add("employmentId");
         }
-        if (request.LeaveTypeId is null)
+        if (request.LeaveTypeId is null && (!update || access.CanEdit("leave_type_id")))
         {
             errors.Add("leaveTypeId");
         }
-        if (request.StartDate is null)
+        if (request.StartDate is null && (!update || access.CanEdit("start_date")))
         {
             errors.Add("startDate");
         }
-        if (request.EndDate is null)
+        if (request.EndDate is null && (!update || access.CanEdit("end_date")))
         {
             errors.Add("endDate");
         }
-        if (request.StartPart is null)
+        if (request.StartPart is null && (!update || access.CanEdit("start_part")))
         {
             errors.Add("startPart");
         }
-        if (request.EndPart is null)
+        if (request.EndPart is null && (!update || access.CanEdit("end_part")))
         {
             errors.Add("endPart");
         }
-        if (request.Days is null)
+        if (request.Days is null && (!update || access.CanEdit("days")))
         {
             errors.Add("days");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -226,33 +242,145 @@ internal static class LeaveRequestEndpoints
         return errors;
     }
 
-    private static void Apply(LeaveRequestWriteRequest request, global::Erp.Hrm.Domain.Generated.LeaveRequest row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(LeaveRequestWriteRequest request, global::Erp.Hrm.Domain.Generated.LeaveRequest row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.BranchId = request.BranchId;
-        row.RequestNo = request.RequestNo!;
-        row.EmploymentId = request.EmploymentId!.Value;
-        row.LeaveTypeId = request.LeaveTypeId!.Value;
-        row.StartDate = request.StartDate!.Value;
-        row.EndDate = request.EndDate!.Value;
-        row.StartPart = request.StartPart!;
-        row.EndPart = request.EndPart!;
-        row.Hours = request.Hours;
-        row.Days = request.Days!.Value;
-        row.Reason = request.Reason;
-        if (request.FileIds is not null)
+        if (access.CanEdit("branch_id"))
         {
-            row.FileIds = request.FileIds ?? [];
+            row.BranchId = request.BranchId;
         }
-        row.ModifiesRequestId = request.ModifiesRequestId;
-        row.WorkflowInstanceId = request.WorkflowInstanceId;
-        row.Status = request.Status!;
-        if (request.Custom is not null)
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.BranchId, row.BranchId, update))
         {
-            row.Custom = GeneratedEndpointSupport.ToDocument(request.Custom)!;
+            denied.Add("branchId");
         }
+        if (access.CanEdit("request_no"))
+        {
+            row.RequestNo = request.RequestNo!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RequestNo, row.RequestNo, update))
+        {
+            denied.Add("requestNo");
+        }
+        if (access.CanEdit("employment_id"))
+        {
+            row.EmploymentId = request.EmploymentId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
+        {
+            denied.Add("employmentId");
+        }
+        if (access.CanEdit("leave_type_id"))
+        {
+            row.LeaveTypeId = request.LeaveTypeId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LeaveTypeId, row.LeaveTypeId, update))
+        {
+            denied.Add("leaveTypeId");
+        }
+        if (access.CanEdit("start_date"))
+        {
+            row.StartDate = request.StartDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StartDate, row.StartDate, update))
+        {
+            denied.Add("startDate");
+        }
+        if (access.CanEdit("end_date"))
+        {
+            row.EndDate = request.EndDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EndDate, row.EndDate, update))
+        {
+            denied.Add("endDate");
+        }
+        if (access.CanEdit("start_part"))
+        {
+            row.StartPart = request.StartPart!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StartPart, row.StartPart, update))
+        {
+            denied.Add("startPart");
+        }
+        if (access.CanEdit("end_part"))
+        {
+            row.EndPart = request.EndPart!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EndPart, row.EndPart, update))
+        {
+            denied.Add("endPart");
+        }
+        if (access.CanEdit("hours"))
+        {
+            row.Hours = request.Hours;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Hours, row.Hours, update))
+        {
+            denied.Add("hours");
+        }
+        if (access.CanEdit("days"))
+        {
+            row.Days = request.Days!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Days, row.Days, update))
+        {
+            denied.Add("days");
+        }
+        if (access.CanEdit("reason"))
+        {
+            row.Reason = request.Reason;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Reason, row.Reason, update))
+        {
+            denied.Add("reason");
+        }
+        if (access.CanEdit("file_ids"))
+        {
+            if (request.FileIds is not null)
+            {
+                row.FileIds = request.FileIds ?? [];
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileIds, row.FileIds, update))
+        {
+            denied.Add("fileIds");
+        }
+        if (access.CanEdit("modifies_request_id"))
+        {
+            row.ModifiesRequestId = request.ModifiesRequestId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ModifiesRequestId, row.ModifiesRequestId, update))
+        {
+            denied.Add("modifiesRequestId");
+        }
+        if (access.CanEdit("workflow_instance_id"))
+        {
+            row.WorkflowInstanceId = request.WorkflowInstanceId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkflowInstanceId, row.WorkflowInstanceId, update))
+        {
+            denied.Add("workflowInstanceId");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        row.Custom = global::Erp.BuildingBlocks.Application.Security.FieldShaping.MergeCustom(request.Custom, update ? row.Custom : null, access, denied);
+        return denied;
     }
 }

@@ -12,6 +12,8 @@
     - [company_bank_account_id, uuid, opt, fk org.company_bank_accounts]
     - [approval_threshold, money, opt, dual approval above this total (PAY-13)]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [PAY-01, PAY-13]
 
 - table: hrm.pay_periods
@@ -27,6 +29,8 @@
     - [cut_off_date, date, req]
     - [payment_date, date, req]
   unique: [[pay_group_id, start_date], [pay_group_id, tax_year, period_no]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [PAY-01, PAY-38]
   checks: ["exclusion: (pay_group_id with =, daterange(start_date, end_date, '[]') with &&)", start_date <= cut_off_date and start_date <= end_date]
   notes: "Trigger refuses new pay_inputs, retro_adjustments or installments targeting a closed period."
@@ -40,6 +44,8 @@
     - [is_one_time_allowed, bool, req]
     - [source, "enum(pack,tenant)", req]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [PAY-02, PAY-03, PAY-05, PAY-08, PAY-18, CMP-03]
 
 - table: hrm.pay_component_versions
@@ -62,6 +68,8 @@
   columns:
     - [assign_rule, json, opt, default by grade or employee type]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [PAY-04]
 
 - table: hrm.salary_structure_components
@@ -89,6 +97,9 @@
     - [gross_amount, money, opt, informational; lines are authoritative]
     - [increment_proposal_id, uuid, opt, fk hrm.increment_proposals]
   indexes: [[employment_id, valid_from]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
+  field_class: {gross_amount: salary}
   reqs: [PAY-04, PAY-06, CMP-02]
 
 - table: hrm.compensation_lines
@@ -101,6 +112,9 @@
     - [percent, pct, opt]
     - [units, qty, opt]
   unique: [[assignment_id, component_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
+  field_class: {amount: salary}
   reqs: [PAY-04, CMP-03]
 
 - table: hrm.statutory_tables
@@ -116,6 +130,8 @@
     - [description_i18n, i18n, req]
     - [pack_version, text, opt]
   notes: Pack updates create new versions with a future valid_from.
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [PAY-17, PAY-20, PAY-21, POL-04, CPL-04]
 
 - table: hrm.statutory_table_rows
@@ -155,6 +171,8 @@
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   unique: [[company_id, run_no], [pay_group_id, pay_period_id, "where kind = 'regular' and status <> 'cancelled'"]]
   indexes: [[pay_group_id, pay_period_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [PAY-10, PAY-14, PAY-15, PAY-34]
   notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33); status column may still advance (paid, posted, closed) through the run service only."
 
@@ -174,6 +192,8 @@
     - [validation_flags, "text[]", req, "negative_net, missing_bank, missing_tax_id, variance_above_threshold, duplicate, no_attendance"]
     - [hold_id, uuid, opt, fk hrm.salary_holds]
   unique: [[pay_run_id, employment_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [PAY-09, PAY-11, PAY-31]
   notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
   checks: ["exclusion: (employment_id with =, daterange(period_start, period_end, '[]') with &&) where run_kind in ('regular','final_settlement') and run_status <> 'cancelled'"]
@@ -194,6 +214,9 @@
     - [consumed_by_run_id, uuid, opt, fk hrm.pay_runs]
     - [import_batch_id, uuid, opt, fk itg.import_batches]
   indexes: [[employment_id, pay_period_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
+  field_class: {amount: salary}
   reqs: [PAY-07, PAY-08]
   unique: [[source_type, source_id, component_id, "where status <> 'cancelled' and source_id is not null"]]
 
@@ -216,6 +239,9 @@
     - [corrects_result_id, uuid, opt, fk hrm.pay_results]
   unique: [[pay_run_id, employment_id]]
   notes: "Trigger refuses update and delete when the run status is locked or later. Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
+  field_class: {gross: salary, deductions: salary, net: salary, employer_cost: salary, taxable_income_ytd: salary, tax_ytd: salary}
   reqs: [PAY-12, PAY-28, PAY-33, FR-XM-27]
   indexes: [[employment_id, tax_year]]
 
@@ -232,6 +258,9 @@
     - [period_start, date, opt, "arrears: the period it relates to"]
     - [cost_allocation, json, req, split by cost centre or department for the journal]
   indexes: [[result_id], [company_id, component_id, pay_period_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
+  field_class: {amount: salary}
   reqs: [PAY-06, PAY-29, PAY-30]
   notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
   partition: range on pay_period start (yearly) once volume requires; key includes partition column
@@ -256,6 +285,8 @@
     - [reversed_at, ts, req]
   unique: [[result_id]]
   checks: [allowed only while no non-failed payment line exists for the result]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [FR-XM-27, PAY-14]
 
 - table: hrm.retro_adjustments
@@ -272,6 +303,9 @@
     - [amount, money, req]
     - [currency_code, char(3), req]
     - [applied_in_run_id, uuid, opt, fk hrm.pay_runs]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
+  field_class: {amount: salary}
   reqs: [PAY-06, PAY-16, FR-XM-26]
   notes: "applied_in_run_id may be set once (trigger); status pending -> applied is one-way."
   indexes: [[employment_id, status, "partial where status='pending'"]]
@@ -285,6 +319,8 @@
     - [held_from_run_id, uuid, req, fk hrm.pay_runs]
     - [released_at, ts, opt]
     - [released_by, uuid, opt]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [PAY-09]
   notes: A release pays the original result of the held run through a payment batch; the salary is never recalculated. Each result is paid once (hrm.payment_lines unique key).
   indexes: [[employment_id, status, "partial where status='active'"]]
@@ -296,6 +332,8 @@
     - [employment_id, uuid, req, fk hrm.employments]
     - [tax_year, int, req]
   unique: [[employment_id, tax_year]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [PAY-19]
 
 - table: hrm.tax_declaration_lines
@@ -306,6 +344,8 @@
     - [declared_amount, money, req]
     - [verified_amount, money, opt]
     - [file_ids, "uuid[]", req]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  field_class: {declared_amount: salary, verified_amount: salary}
   reqs: [PAY-19]
 
 - table: hrm.previous_employer_income
@@ -318,6 +358,9 @@
     - [tax_deducted, money, req]
     - [file_id, uuid, opt, fk doc.files]
   unique: [[employment_id, tax_year, employer_name]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
+  field_class: {taxable_income: salary, tax_deducted: salary}
   reqs: [PAY-22]
 
 - table: hrm.payment_batches
@@ -334,6 +377,8 @@
     - [value_date, date, opt]
     - [file_checksum, text, opt, sha-256 of the downloaded file]
     - [currency_code, char(3), req]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [PAY-23, PAY-24]
   unique: [[pay_run_id, payment_mode, company_bank_account_id, "where status <> 'cancelled' (NULLS NOT DISTINCT)"]]
 
@@ -357,6 +402,9 @@
     - [failure_reason, text, opt]
     - [reissued_in_line_id, uuid, opt, fk hrm.payment_lines]
   indexes: [[batch_id], [result_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
+  field_class: {amount: salary}
   reqs: [PAY-23, PAY-25]
   unique: [[result_id, bank_account_id, "where status not in ('failed','reissued') and batch not cancelled (maintained via denormalized batch_status)"]]
   checks: ["deferred: sum of active lines per result equals pay_results.net"]
@@ -377,6 +425,9 @@
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   unique: [[employment_id, "where status <> 'cancelled'"]]
   checks: ["status may become approved only when clearance_status in (cleared, waived) (FR-XM-29)", pay_run_id required before status = paid]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
+  field_class: {net_amount: salary}
   reqs: [PAY-26, PAY-27, ONB-17, FR-XM-29]
   notes: Header and lines locked by trigger from approved onward; correction by cancel and reissue (FR-XM-05).
 
@@ -388,6 +439,9 @@
     - [component_id, uuid, opt, fk hrm.pay_components]
     - [amount, money, req]
     - [basis, json, req]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
+  field_class: {amount: salary}
   reqs: [PAY-26, LND-06, CMP-04]
 
 - table: hrm.loan_types
@@ -397,6 +451,8 @@
     - [policy_id, uuid, opt, "fk hrm.policies (eligibility, limits, interest)"]
     - [deduction_component_id, uuid, req, fk hrm.pay_components]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [LON-01]
 
 - table: hrm.loans
@@ -415,6 +471,9 @@
     - [disbursed_on, date, opt]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   unique: [[company_id, loan_no]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
+  field_class: {principal: salary}
   reqs: [LON-01, LON-02, LON-03, LON-05]
 
 - table: hrm.loan_installments
@@ -428,6 +487,9 @@
     - [interest_amount, money, req]
     - [pay_result_line_id, uuid, opt, fk hrm.pay_result_lines]
   unique: [[loan_id, seq]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
+  field_class: {principal_amount: salary, interest_amount: salary}
   reqs: [LON-03]
   notes: Frozen by trigger once status = deducted.
 
@@ -442,6 +504,9 @@
     - [source_type, text, opt]
     - [source_id, uuid, opt]
   indexes: [[loan_id, txn_date]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
+  field_class: {amount: salary}
   reqs: [LON-03, LON-05, LON-07]
   unique: [[loan_id, source_type, source_id, kind, where source_id is not null]]
   checks: ["trigger: a recovery cannot exceed the outstanding balance"]
@@ -454,6 +519,8 @@
     - [requires_receipt, bool, req]
     - [reimbursement_component_id, uuid, opt, fk hrm.pay_components]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [EXP-01]
 
 - table: hrm.expense_claims
@@ -468,6 +535,8 @@
     - [pay_input_id, uuid, opt, fk hrm.pay_inputs]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   unique: [[company_id, claim_no]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, branch: branch_id, employment: employment_id}
   reqs: [EXP-02, EXP-05, EXP-06]
 
 - table: hrm.expense_claim_lines
@@ -483,6 +552,8 @@
     - [cost_allocation, json, req]
     - [policy_flags, "text[]", req, "over_limit, duplicate, missing_receipt, out_of_policy"]
   indexes: [[claim_id], [receipt_hash]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [EXP-02, EXP-03]
 
 - table: hrm.salary_bands
@@ -495,6 +566,8 @@
     - [midpoint, money, req]
     - [maximum, money, req]
   checks: [minimum <= midpoint and midpoint <= maximum]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [CMP-01, POS-06]
 
 - table: hrm.increment_cycles
@@ -508,6 +581,8 @@
     - [eligibility_rule, json, req]
     - [guidelines, json, req, e.g. percent by rating and compa-ratio]
     - [review_cycle_id, uuid, opt, fk hrm.review_cycles (PRF-09)]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [CMP-02, PRF-09]
 
 - table: hrm.increment_proposals
@@ -525,6 +600,9 @@
     - [recommended_by, uuid, opt]
     - [notes, text, opt]
   unique: [[cycle_id, employment_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
+  field_class: {current_amount: salary, proposed_amount: salary}
   reqs: [CMP-01, CMP-02]
 
 - table: hrm.benefit_plans
@@ -538,6 +616,8 @@
     - [employer_premium_component_id, uuid, opt, fk hrm.pay_components]
     - [currency_code, char(3), req]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [CMP-05]
 
 - table: hrm.benefit_enrollments
@@ -551,6 +631,8 @@
     - [employee_premium, money, opt]
     - [employer_premium, money, opt]
     - [policy_number, text, opt]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [CMP-05]
 
 - table: hrm.benefit_claims
@@ -563,6 +645,8 @@
     - [amount_claimed, money, req]
     - [amount_approved, money, opt]
     - [file_ids, "uuid[]", req]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [CMP-05]
 
 - table: hrm.provident_fund_accounts
@@ -575,6 +659,8 @@
     - [closed_on, date, opt]
     - [currency_code, char(3), req]
   unique: [[employment_id, scheme_code]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [CMP-04]
   notes: On intra-group transfer the old account closes with a transfer entry and the new account opens with the balance (employment_events.carry_over).
 
@@ -588,6 +674,9 @@
     - [source_type, text, opt]
     - [source_id, uuid, opt]
   indexes: [[account_id, entry_date]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
+  field_class: {amount: salary}
   reqs: [CMP-04]
 
 - table: hrm.liability_accruals
@@ -605,6 +694,8 @@
     - [accounting_event_id, uuid, opt, fk itg.accounting_events]
     - [reverses_accrual_id, uuid, opt, fk hrm.liability_accruals]
   unique: [[employment_id, pay_period_id, kind, seq]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [CMP-04, CMP-07]
 
 - table: hrm.compliance_obligations
@@ -616,6 +707,8 @@
     - [owner_role_id, uuid, opt, fk iam.roles]
     - [return_template_id, uuid, opt, fk doc.templates]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [CPL-01]
 
 - table: hrm.compliance_tasks
@@ -629,6 +722,8 @@
     - [filed_on, date, opt]
     - [evidence_file_id, uuid, opt, fk doc.files]
   unique: [[obligation_id, period_label]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, user: owner_user_id}
   reqs: [CPL-01]
 
 - table: hrm.statutory_returns
@@ -642,6 +737,8 @@
     - [generated_document_id, uuid, req, fk doc.generated_documents]
     - [source_run_ids, "uuid[]", req]
   indexes: [[company_id, return_code, period_label], [employment_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [CPL-02, CPL-04, CPL-05]
 
 - table: hrm.parallel_runs
@@ -655,6 +752,8 @@
     - [summary, json, opt, "matched, mismatched, missing counts by component"]
     - [signed_off_by, uuid, opt]
     - [currency_code, char(3), req]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [PAY-35]
 
 - table: hrm.parallel_run_lines
@@ -669,4 +768,6 @@
     - [difference, money, req]
     - [explanation, text, opt]
   indexes: [[parallel_run_id, employment_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [PAY-35]

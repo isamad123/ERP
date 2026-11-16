@@ -29,3 +29,38 @@ public interface IOvertimeEntryRepository : global::Erp.BuildingBlocks.Applicati
     /// <summary>Rows matching (employment_id, work_date); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.OvertimeEntry>> FindByEmploymentIdAndWorkDateAsync(global::System.Guid employmentId, global::System.DateOnly workDate, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.overtime_entries and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class OvertimeEntryAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.OvertimeEntry> Scope { get; } = new(
+        "hrm.overtime_entries",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.OvertimeEntry, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.OvertimeEntry, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.overtime_entries",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("employment_id", "EmploymentId", null),
+        new("work_date", "WorkDate", null),
+        new("day_type", "DayType", null),
+        new("minutes", "Minutes", null),
+        new("approved_minutes", "ApprovedMinutes", null),
+        new("rate_multiplier", "RateMultiplier", null),
+        new("pay_input_id", "PayInputId", null),
+        new("attendance_day_id", "AttendanceDayId", null),
+        new("comp_off_entry_id", "CompOffEntryId", null),
+        new("workflow_instance_id", "WorkflowInstanceId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

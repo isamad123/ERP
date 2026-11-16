@@ -19,3 +19,26 @@ public interface ISettingValueHistoryRepository : global::Erp.BuildingBlocks.App
     /// <summary>Rows matching (setting_key, created_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.SettingValueHistory>> FindBySettingKeyAndCreatedAtAsync(string settingKey, global::System.DateTimeOffset createdAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cfg.setting_value_history and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class SettingValueHistoryAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Cfg.SettingValueHistory> Scope { get; } = new(
+        "cfg.setting_value_history",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.SettingValueHistory, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.SettingValueHistory, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cfg.setting_value_history",
+    [
+        new("id", "Id", null),
+        new("setting_value_id", "SettingValueId", null),
+        new("setting_key", "SettingKey", null),
+        new("layer", "Layer", null),
+        new("scope_id", "ScopeId", null),
+        new("old_value", "OldValue", null),
+        new("new_value", "NewValue", null),
+        new("reason", "Reason", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

@@ -22,3 +22,27 @@ public interface IOrgUnitLinkRepository : global::Erp.BuildingBlocks.Application
     /// <summary>Rows matching (hierarchy_id, parent_unit_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink>> FindByHierarchyIdAndParentUnitIdAsync(global::System.Guid hierarchyId, global::System.Guid? parentUnitId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of org.org_unit_links and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class OrgUnitLinkAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink> Scope { get; } = new(
+        "org.org_unit_links",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("org.org_unit_links",
+    [
+        new("id", "Id", null),
+        new("hierarchy_id", "HierarchyId", null),
+        new("unit_id", "UnitId", null),
+        new("parent_unit_id", "ParentUnitId", null),
+        new("valid_from", "ValidFrom", null),
+        new("valid_to", "ValidTo", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

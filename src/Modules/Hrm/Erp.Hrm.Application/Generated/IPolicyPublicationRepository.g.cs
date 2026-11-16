@@ -21,3 +21,33 @@ public interface IPolicyPublicationRepository : global::Erp.BuildingBlocks.Appli
 
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PolicyPublication>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.policy_publications and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PolicyPublicationAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.PolicyPublication> Scope { get; } = new(
+        "hrm.policy_publications",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PolicyPublication, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PolicyPublication, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.policy_publications",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("title_i18n", "TitleI18n", null),
+        new("version", "Version", null),
+        new("file_id", "FileId", null),
+        new("audience_rule", "AudienceRule", null),
+        new("requires_ack", "RequiresAck", null),
+        new("published_at", "PublishedAt", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

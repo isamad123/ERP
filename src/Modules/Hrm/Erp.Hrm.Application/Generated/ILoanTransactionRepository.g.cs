@@ -26,3 +26,29 @@ public interface ILoanTransactionRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (loan_id, txn_date); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.LoanTransaction>> FindByLoanIdAndTxnDateAsync(global::System.Guid loanId, global::System.DateOnly txnDate, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.loan_transactions and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class LoanTransactionAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.LoanTransaction> Scope { get; } = new(
+        "hrm.loan_transactions",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.LoanTransaction, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.LoanTransaction, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.loan_transactions",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("loan_id", "LoanId", null),
+        new("kind", "Kind", null),
+        new("amount", "Amount", "salary"),
+        new("txn_date", "TxnDate", null),
+        new("source_type", "SourceType", null),
+        new("source_id", "SourceId", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

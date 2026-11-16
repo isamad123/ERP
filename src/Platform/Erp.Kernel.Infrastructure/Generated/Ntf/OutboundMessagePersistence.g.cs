@@ -41,13 +41,13 @@ internal sealed class OutboundMessageRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage>(context, clock, actor, scope, "ntf.outbound_messages"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Ntf.OutboundMessageAccess.Scope),
     global::Erp.Kernel.Application.Generated.Ntf.IOutboundMessageRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage>> ListAsync(global::Erp.Kernel.Application.Generated.Ntf.OutboundMessageFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage>> ListAsync(global::Erp.Kernel.Application.Generated.Ntf.OutboundMessageFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.TemplateId is { } templateIdFilter)
         {
             query = query.Where(e => e.TemplateId == templateIdFilter);
@@ -56,16 +56,18 @@ internal sealed class OutboundMessageRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage>> FindByDedupKeyAndCreatedAtAsync(string? dedupKey, global::System.DateTimeOffset createdAt, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.DedupKey == dedupKey && e.CreatedAt == createdAt).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.DedupKey == dedupKey && e.CreatedAt == createdAt).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage>> FindByStatusAndNextAttemptAtAsync(string status, global::System.DateTimeOffset? nextAttemptAt, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.Status == status && e.NextAttemptAt == nextAttemptAt).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.Status == status && e.NextAttemptAt == nextAttemptAt).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

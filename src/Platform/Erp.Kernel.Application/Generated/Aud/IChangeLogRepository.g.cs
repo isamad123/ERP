@@ -22,3 +22,35 @@ public interface IChangeLogRepository : global::Erp.BuildingBlocks.Application.D
     /// <summary>Rows matching (actor_user_id, occurred_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Aud.ChangeLog>> FindByActorUserIdAndOccurredAtAsync(global::System.Guid? actorUserId, global::System.DateTimeOffset occurredAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of aud.change_log and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ChangeLogAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Aud.ChangeLog> Scope { get; } = new(
+        "aud.change_log",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Aud.ChangeLog, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Aud.ChangeLog, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("aud.change_log",
+    [
+        new("id", "Id", null),
+        new("occurred_at", "OccurredAt", null),
+        new("actor_user_id", "ActorUserId", null),
+        new("actor_kind", "ActorKind", null),
+        new("entity_type", "EntityType", null),
+        new("entity_id", "EntityId", null),
+        new("company_id", "CompanyId", null),
+        new("action", "Action", null),
+        new("changes", "Changes", null),
+        new("subject_person_id", "SubjectPersonId", null),
+        new("correlation_id", "CorrelationId", null),
+        new("ip_address", "IpAddress", null),
+        new("prev_hash", "PrevHash", null),
+        new("row_hash", "RowHash", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

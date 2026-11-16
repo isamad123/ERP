@@ -19,3 +19,27 @@ public interface IDataScopeRepository : global::Erp.BuildingBlocks.Application.D
     /// <summary>Rows matching (lower(code)); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.DataScope>> FindByCodeAsync(string code, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of iam.data_scopes and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class DataScopeAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Iam.DataScope> Scope { get; } = new(
+        "iam.data_scopes",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.DataScope, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.DataScope, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("iam.data_scopes",
+    [
+        new("id", "Id", null),
+        new("code", "Code", null),
+        new("name_i18n", "NameI18n", null),
+        new("kind", "Kind", null),
+        new("definition", "Definition", null),
+        new("is_active", "IsActive", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

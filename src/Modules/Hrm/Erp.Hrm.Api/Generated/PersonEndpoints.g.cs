@@ -72,7 +72,7 @@ public sealed class PersonListQuery
     public global::System.Guid? PhotoFileId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.persons: read, create, update, delete.</summary>
+/// <summary>Generated endpoints of hrm.persons: read, create, update, delete. Answers pass through field security (S1.06).</summary>
 internal static class PersonEndpoints
 {
     private const string Resource = "hrm.persons";
@@ -87,54 +87,67 @@ internal static class PersonEndpoints
         group.MapDelete("/{id:guid}", DeleteAsync).WithName("hrm.persons.delete").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "delete", "hrm.persons.delete"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PersonListQuery query, global::Erp.Hrm.Application.Generated.IPersonRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PersonListQuery query, global::Erp.Hrm.Application.Generated.IPersonRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.persons.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PersonFilter { NationalityCode = query.NationalityCode, PhotoFileId = query.PhotoFileId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<PersonResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.PersonAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPersonRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPersonRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.persons.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PersonAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PersonWriteRequest request, global::Erp.Hrm.Application.Generated.IPersonRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PersonWriteRequest request, global::Erp.Hrm.Application.Generated.IPersonRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.persons.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PersonAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.Person();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/persons/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PersonWriteRequest request, global::Erp.Hrm.Application.Generated.IPersonRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.persons.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/persons/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PersonAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PersonWriteRequest request, global::Erp.Hrm.Application.Generated.IPersonRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.persons.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PersonAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PersonAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> DeleteAsync(global::System.Guid id, long? rowVersion, global::Erp.Hrm.Application.Generated.IPersonRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
@@ -148,6 +161,8 @@ internal static class PersonEndpoints
             var deleted = await repository.SoftDeleteAsync(id, rowVersion.Value, cancellationToken).ConfigureAwait(false);
             return deleted ? TypedResults.NoContent() : GeneratedEndpointSupport.NotFound();
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.Person row) => null;
 
     private static PersonResponse ToResponse(global::Erp.Hrm.Domain.Generated.Person row) => new()
     {
@@ -176,18 +191,19 @@ internal static class PersonEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(PersonWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(PersonWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.PersonNo is null)
+        if (request.PersonNo is null && (!update || access.CanEdit("person_no")))
         {
             errors.Add("personNo");
         }
-        if (request.FirstName is null)
+        if (request.FirstName is null && (!update || access.CanEdit("first_name")))
         {
             errors.Add("firstName");
         }
-        if (request.Gender is null)
+        if (request.Gender is null && (!update || access.CanEdit("gender")))
         {
             errors.Add("gender");
         }
@@ -198,25 +214,115 @@ internal static class PersonEndpoints
         return errors;
     }
 
-    private static void Apply(PersonWriteRequest request, global::Erp.Hrm.Domain.Generated.Person row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(PersonWriteRequest request, global::Erp.Hrm.Domain.Generated.Person row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.PersonNo = request.PersonNo!;
-        row.FirstName = request.FirstName!;
-        row.MiddleName = request.MiddleName;
-        row.LastName = request.LastName;
-        row.NameLocal = request.NameLocal;
-        row.FatherOrSpouseName = request.FatherOrSpouseName;
-        row.Gender = request.Gender!;
-        row.DateOfBirth = request.DateOfBirth;
-        row.MaritalStatus = request.MaritalStatus;
-        row.NationalityCode = request.NationalityCode;
-        row.Religion = request.Religion;
-        row.PhotoFileId = request.PhotoFileId;
-        row.PartyRef = request.PartyRef;
-        if (request.Custom is not null)
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("person_no"))
         {
-            row.Custom = GeneratedEndpointSupport.ToDocument(request.Custom)!;
+            row.PersonNo = request.PersonNo!;
         }
-        _ = update;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PersonNo, row.PersonNo, update))
+        {
+            denied.Add("personNo");
+        }
+        if (access.CanEdit("first_name"))
+        {
+            row.FirstName = request.FirstName!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FirstName, row.FirstName, update))
+        {
+            denied.Add("firstName");
+        }
+        if (access.CanEdit("middle_name"))
+        {
+            row.MiddleName = request.MiddleName;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.MiddleName, row.MiddleName, update))
+        {
+            denied.Add("middleName");
+        }
+        if (access.CanEdit("last_name"))
+        {
+            row.LastName = request.LastName;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LastName, row.LastName, update))
+        {
+            denied.Add("lastName");
+        }
+        if (access.CanEdit("name_local"))
+        {
+            row.NameLocal = request.NameLocal;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.NameLocal, row.NameLocal, update))
+        {
+            denied.Add("nameLocal");
+        }
+        if (access.CanEdit("father_or_spouse_name"))
+        {
+            row.FatherOrSpouseName = request.FatherOrSpouseName;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FatherOrSpouseName, row.FatherOrSpouseName, update))
+        {
+            denied.Add("fatherOrSpouseName");
+        }
+        if (access.CanEdit("gender"))
+        {
+            row.Gender = request.Gender!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Gender, row.Gender, update))
+        {
+            denied.Add("gender");
+        }
+        if (access.CanEdit("date_of_birth"))
+        {
+            row.DateOfBirth = request.DateOfBirth;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DateOfBirth, row.DateOfBirth, update))
+        {
+            denied.Add("dateOfBirth");
+        }
+        if (access.CanEdit("marital_status"))
+        {
+            row.MaritalStatus = request.MaritalStatus;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.MaritalStatus, row.MaritalStatus, update))
+        {
+            denied.Add("maritalStatus");
+        }
+        if (access.CanEdit("nationality_code"))
+        {
+            row.NationalityCode = request.NationalityCode;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.NationalityCode, row.NationalityCode, update))
+        {
+            denied.Add("nationalityCode");
+        }
+        if (access.CanEdit("religion"))
+        {
+            row.Religion = request.Religion;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Religion, row.Religion, update))
+        {
+            denied.Add("religion");
+        }
+        if (access.CanEdit("photo_file_id"))
+        {
+            row.PhotoFileId = request.PhotoFileId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PhotoFileId, row.PhotoFileId, update))
+        {
+            denied.Add("photoFileId");
+        }
+        if (access.CanEdit("party_ref"))
+        {
+            row.PartyRef = request.PartyRef;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PartyRef, row.PartyRef, update))
+        {
+            denied.Add("partyRef");
+        }
+        row.Custom = global::Erp.BuildingBlocks.Application.Security.FieldShaping.MergeCustom(request.Custom, update ? row.Custom : null, access, denied);
+        return denied;
     }
 }

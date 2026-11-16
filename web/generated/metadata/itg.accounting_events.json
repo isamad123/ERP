@@ -24,6 +24,9 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": true,
+  "scope": {
+    "company": "companyId"
+  },
   "listFields": [
     "companyId",
     "sourceModule",

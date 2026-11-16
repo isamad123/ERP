@@ -37,22 +37,23 @@ internal sealed class OptionListItemRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Cfg.OptionListItem>(context, clock, actor, scope, "cfg.option_list_items"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Cfg.OptionListItem>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Scope),
     global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.OptionListItem>> ListAsync(global::Erp.Kernel.Application.Generated.Cfg.OptionListItemFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.OptionListItem>> ListAsync(global::Erp.Kernel.Application.Generated.Cfg.OptionListItemFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.ListId is { } listIdFilter)
         {
             query = query.Where(e => e.ListId == listIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.OptionListItem>> FindByListIdAndCodeAsync(global::System.Guid listId, string code, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.ListId == listId && e.Code!.ToLower() == code!.ToLower()).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.ListId == listId && e.Code!.ToLower() == code!.ToLower()).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

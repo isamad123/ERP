@@ -17,3 +17,11 @@ public sealed record PagedResult<T>(IReadOnlyList<T> Items, Guid? Next);
 /// nobody could read the data the mode keeps visible.
 /// </summary>
 public sealed record IdentityEndpointMetadata(string Kind, string? Permission, bool AllowedWhenReadOnly);
+
+/// <summary>
+/// Metadata of the purpose-built access-control endpoints (slice S1.06), so the tenant-isolation suite (S1.04) can find
+/// and probe them. <see cref="Resource"/> is the table whose ids the route or body carries. <see cref="Kind"/>:
+/// <c>create</c> (POST to the collection), <c>record_action</c> (a route with the record's <c>{id}</c>), <c>query</c>
+/// (a GET whose query string names records) or <c>catalog</c> (a GET of the customer's catalogue).
+/// </summary>
+public sealed record AccessEndpointMetadata(string Kind, string Resource, string Permission);

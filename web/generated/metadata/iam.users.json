@@ -22,16 +22,15 @@
     {
       "action": "update",
       "permission": "iam.users.update"
-    },
-    {
-      "action": "delete",
-      "permission": "iam.users.delete"
     }
   ],
   "companyScoped": false,
   "effectiveDated": false,
   "softDelete": true,
   "appendOnly": false,
+  "scope": {
+    "user": "id"
+  },
   "listFields": [
     "username",
     "email",

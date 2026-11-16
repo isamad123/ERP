@@ -18,3 +18,29 @@ public interface IChecklistTemplateItemRepository : global::Erp.BuildingBlocks.A
 {
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ChecklistTemplateItem>> ListAsync(ChecklistTemplateItemFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.checklist_template_items and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ChecklistTemplateItemAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.ChecklistTemplateItem> Scope { get; } = new(
+        "hrm.checklist_template_items",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ChecklistTemplateItem, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ChecklistTemplateItem, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.checklist_template_items",
+    [
+        new("id", "Id", null),
+        new("template_id", "TemplateId", null),
+        new("seq", "Seq", null),
+        new("title_i18n", "TitleI18n", null),
+        new("owner_kind", "OwnerKind", null),
+        new("owner_role_id", "OwnerRoleId", null),
+        new("due_offset_days", "DueOffsetDays", null),
+        new("is_clearance", "IsClearance", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

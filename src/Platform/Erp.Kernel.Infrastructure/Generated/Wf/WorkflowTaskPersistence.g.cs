@@ -42,13 +42,13 @@ internal sealed class WorkflowTaskRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Wf.WorkflowTask>(context, clock, actor, scope, "wf.workflow_tasks"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Wf.WorkflowTask>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Wf.WorkflowTaskAccess.Scope),
     global::Erp.Kernel.Application.Generated.Wf.IWorkflowTaskRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Wf.WorkflowTask>> ListAsync(global::Erp.Kernel.Application.Generated.Wf.WorkflowTaskFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Wf.WorkflowTask>> ListAsync(global::Erp.Kernel.Application.Generated.Wf.WorkflowTaskFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.InstanceId is { } instanceIdFilter)
         {
             query = query.Where(e => e.InstanceId == instanceIdFilter);
@@ -69,16 +69,18 @@ internal sealed class WorkflowTaskRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Wf.WorkflowTask>> FindByAssigneeUserIdAndStatusAsync(global::System.Guid? assigneeUserId, string status, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.AssigneeUserId == assigneeUserId && e.Status == status).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.AssigneeUserId == assigneeUserId && e.Status == status).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Wf.WorkflowTask>> FindByInstanceIdAsync(global::System.Guid instanceId, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.InstanceId == instanceId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.InstanceId == instanceId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

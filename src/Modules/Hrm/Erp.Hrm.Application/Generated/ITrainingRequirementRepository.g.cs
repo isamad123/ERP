@@ -26,3 +26,32 @@ public interface ITrainingRequirementRepository : global::Erp.BuildingBlocks.App
     /// <summary>Rows matching (rule_id, employment_id, due_date); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.TrainingRequirement>> FindByRuleIdAndEmploymentIdAndDueDateAsync(global::System.Guid ruleId, global::System.Guid employmentId, global::System.DateOnly dueDate, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.training_requirements and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class TrainingRequirementAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.TrainingRequirement> Scope { get; } = new(
+        "hrm.training_requirements",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.TrainingRequirement, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.TrainingRequirement, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.training_requirements",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("rule_id", "RuleId", null),
+        new("employment_id", "EmploymentId", null),
+        new("due_date", "DueDate", null),
+        new("learning_record_id", "LearningRecordId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

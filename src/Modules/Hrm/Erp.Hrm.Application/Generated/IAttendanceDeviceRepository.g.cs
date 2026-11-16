@@ -25,3 +25,39 @@ public interface IAttendanceDeviceRepository : global::Erp.BuildingBlocks.Applic
     /// <summary>Rows matching (company_id, serial_no); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendanceDevice>> FindByCompanyIdAndSerialNoAsync(global::System.Guid companyId, string serialNo, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.attendance_devices and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class AttendanceDeviceAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.AttendanceDevice> Scope { get; } = new(
+        "hrm.attendance_devices",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.AttendanceDevice, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.AttendanceDevice, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.attendance_devices",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("location_id", "LocationId", null),
+        new("connector_id", "ConnectorId", null),
+        new("serial_no", "SerialNo", null),
+        new("model", "Model", null),
+        new("connection", "Connection", null),
+        new("credentials_ref", "CredentialsRef", null),
+        new("last_seen_at", "LastSeenAt", null),
+        new("last_sync_at", "LastSyncAt", null),
+        new("last_error", "LastError", null),
+        new("status", "Status", null),
+        new("is_deleted", "IsDeleted", null),
+        new("deleted_at", "DeletedAt", null),
+        new("deleted_by", "DeletedBy", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

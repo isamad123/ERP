@@ -24,3 +24,28 @@ public interface IWorkflowVersionRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (definition_id, id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Wf.WorkflowVersion>> FindByDefinitionIdAndIdAsync(global::System.Guid definitionId, global::System.Guid id, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of wf.workflow_versions and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class WorkflowVersionAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Wf.WorkflowVersion> Scope { get; } = new(
+        "wf.workflow_versions",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Wf.WorkflowVersion, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Wf.WorkflowVersion, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("wf.workflow_versions",
+    [
+        new("id", "Id", null),
+        new("definition_id", "DefinitionId", null),
+        new("version", "Version", null),
+        new("definition", "Definition", null),
+        new("activated_at", "ActivatedAt", null),
+        new("activated_by", "ActivatedBy", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

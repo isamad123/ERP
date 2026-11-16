@@ -19,3 +19,27 @@ public interface IPackItemRepository : global::Erp.BuildingBlocks.Application.Da
     /// <summary>Rows matching (pack_id, object_type, object_key); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.PackItem>> FindByPackIdAndObjectTypeAndObjectKeyAsync(string packId, string objectType, string objectKey, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cfg.pack_items and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PackItemAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Cfg.PackItem> Scope { get; } = new(
+        "cfg.pack_items",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.PackItem, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.PackItem, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cfg.pack_items",
+    [
+        new("id", "Id", null),
+        new("pack_id", "PackId", null),
+        new("object_type", "ObjectType", null),
+        new("object_key", "ObjectKey", null),
+        new("version", "Version", null),
+        new("is_overridden", "IsOverridden", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

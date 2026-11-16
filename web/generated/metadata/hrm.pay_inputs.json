@@ -26,6 +26,10 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId",
+    "employment": "employmentId"
+  },
   "listFields": [
     "companyId",
     "employmentId",
@@ -99,7 +103,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_inputs.amount"
+      "labelKey": "fields.hrm.pay_inputs.amount",
+      "fieldClass": "salary"
     },
     {
       "column": "currency_code",

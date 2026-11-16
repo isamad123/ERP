@@ -35,22 +35,23 @@ internal sealed class FeatureFlagOverrideRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride>(context, clock, actor, scope, "cfg.feature_flag_overrides"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Cfg.FeatureFlagOverrideAccess.Scope),
     global::Erp.Kernel.Application.Generated.Cfg.IFeatureFlagOverrideRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride>> ListAsync(global::Erp.Kernel.Application.Generated.Cfg.FeatureFlagOverrideFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride>> ListAsync(global::Erp.Kernel.Application.Generated.Cfg.FeatureFlagOverrideFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.FlagKey is { } flagKeyFilter)
         {
             query = query.Where(e => e.FlagKey == flagKeyFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride>> FindByFlagKeyAndLayerAndScopeIdAsync(string flagKey, string layer, global::System.Guid? scopeId, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.FlagKey == flagKey && e.Layer == layer && e.ScopeId == scopeId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.FlagKey == flagKey && e.Layer == layer && e.ScopeId == scopeId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

@@ -28,6 +28,10 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId",
+    "employment": "employmentId"
+  },
   "listFields": [
     "companyId",
     "employmentId",
@@ -135,7 +139,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.final_settlements.net_amount"
+      "labelKey": "fields.hrm.final_settlements.net_amount",
+      "fieldClass": "salary"
     },
     {
       "column": "currency_code",
