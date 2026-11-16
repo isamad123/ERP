@@ -213,6 +213,7 @@ public sealed class AccessReviewFixTests(TenancyFixture fx) : IAsyncLifetime
     {
         var admin = await _h.UserAsync(Ct, null, "tenant_admin");
         var checker = await _h.UserAsync(Ct, null, "tenant_admin");
+        await SetMakerCheckerAsync(null, on: true); // a stored tenant value, whichever test ran first
 
         // The generated settings API refuses iam.* keys (create and update).
         var generated = await _h.PostAsync(admin, "/api/cfg/setting-values", new { settingKey = "iam.maker_checker.sensitive_roles", layer = "user", scopeId = admin, value = false }, Ct);
