@@ -66,6 +66,27 @@ internal sealed record AccessChange
     };
 }
 
+/// <summary>
+/// The protected Tenant Admin role (product-owner ruling on R-008, CR-024): through tenant administration it can never
+/// lose Manage Roles or Assign Roles, and it cannot be archived (it can be renamed). A platform Super Admin repairs it
+/// with the migrator's <c>tenant admin-role-repair</c>; nobody removes the mandatory permissions.
+/// </summary>
+internal static class ProtectedRoles
+{
+    public const string MandatoryPermissionMissing = "errors.tenant_admin.mandatory_permission";
+    public const string ProtectedRole = "errors.tenant_admin.protected_role";
+
+    public static string TenantAdmin => ControlPlane.Provisioning.BaselineSeed.Current.AdminRole;
+
+    public static IReadOnlyList<string> Mandatory { get; } = [Contracts.Access.AccessControlPermissions.ManageRoles, Contracts.Access.AccessControlPermissions.AssignRoles];
+
+    public static bool IsProtected(string roleCode) => string.Equals(roleCode, TenantAdmin, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>True when a new permission list for the role keeps every mandatory permission (always true for other roles).</summary>
+    public static bool Keeps(string roleCode, IEnumerable<string> permissions) =>
+        !IsProtected(roleCode) || Mandatory.All(m => permissions.Contains(m, StringComparer.Ordinal));
+}
+
 /// <summary>Parameterized SQL shared by the access-control services.</summary>
 internal static class AccessDb
 {

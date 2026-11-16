@@ -30,6 +30,8 @@
   "errors.role.unknown_resource": "The resource was not found.",
   "errors.role.unknown_scope": "The data scope was not found.",
   "errors.tenant_admin.last_admin": "This would leave the organization without a tenant administrator. Give another user the Tenant Admin role first.",
+  "errors.tenant_admin.mandatory_permission": "The Tenant Admin role must keep the Manage Roles and Assign Roles permissions.",
+  "errors.tenant_admin.protected_role": "The Tenant Admin role is protected and cannot be archived. It can be renamed.",
   "permissions.iam.access.preview": "Preview the records a user sees and the fields a role sees",
   "permissions.iam.maker_checker.approve": "Approve or reject changes waiting for a second person",
   "permissions.iam.roles.assign": "Give roles to users and end assignments",

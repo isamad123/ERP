@@ -30,6 +30,8 @@
   "errors.role.unknown_resource": "وسیلہ نہیں ملا۔",
   "errors.role.unknown_scope": "ڈیٹا کا دائرہ نہیں ملا۔",
   "errors.tenant_admin.last_admin": "اس سے ادارہ ٹیننٹ ایڈمنسٹریٹر کے بغیر رہ جائے گا۔ پہلے کسی دوسرے صارف کو ٹیننٹ ایڈمن کا کردار دیں۔",
+  "errors.tenant_admin.mandatory_permission": "ٹیننٹ ایڈمن کے کردار میں کردار سنبھالنے اور کردار دینے کی اجازتیں لازماً رہیں گی۔",
+  "errors.tenant_admin.protected_role": "ٹیننٹ ایڈمن کا کردار محفوظ ہے اور اسے آرکائیو نہیں کیا جا سکتا۔ اس کا نام بدلا جا سکتا ہے۔",
   "permissions.iam.access.preview": "دیکھیں کہ کوئی صارف کون سے ریکارڈ اور کوئی کردار کون سے خانے دیکھتا ہے",
   "permissions.iam.maker_checker.approve": "دوسرے شخص کی منظوری کی منتظر تبدیلیوں کو منظور یا مسترد کریں",
   "permissions.iam.roles.assign": "صارفین کو کردار دیں اور تفویض ختم کریں",

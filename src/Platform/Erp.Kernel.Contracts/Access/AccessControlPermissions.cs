@@ -57,4 +57,9 @@ public static class AccessEvents
     public const string ChangeRejected = "iam.maker_checker_rejected";
     public const string ChangeExpired = "iam.maker_checker_expired";
     public const string PermissionsRegistered = "iam.permissions_registered";
+
+    // Platform Super Admin recovery and override (CR-024); payload names the platform user and the reason.
+    public const string PlatformAdminRoleRepaired = "iam.platform_admin_role_repaired";
+    public const string PlatformAdminGranted = "iam.platform_admin_granted";
+    public const string PlatformAdminRevoked = "iam.platform_admin_revoked";
 }

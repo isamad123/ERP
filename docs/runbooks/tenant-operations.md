@@ -55,6 +55,24 @@ without that key the customer's authenticator secrets cannot be read.
 
 Customer codes are 2 to 30 lower-case letters or digits, starting with a letter (they become host, database and login names).
 
+## Tenant admin recovery and override (S1.06-r1, CR-024)
+Inside a customer, the Tenant Admin role always keeps Manage Roles and Assign Roles, cannot be archived, and the last
+active tenant admin cannot lose it. When a customer is locked out anyway (or an administrator account is compromised),
+a **platform Super Admin** (platform user with role `platform_admin`; set `ERP_PLATFORM_ACTOR` to their e-mail) can act.
+A reason is mandatory. Every run is recorded in `cp.platform_audit` and as an `iam.platform_admin_*` event in the
+customer's database.
+- `M tenant admin-role-repair --code acme --reason "..."`: restores the Tenant Admin role (un-archives or recreates it)
+  and adds back its mandatory and shipped permissions. It never removes the customer's additions.
+- `M tenant admin-grant --code acme --email person@acme.example --reason "..."`: gives that user the Tenant Admin role
+  (all companies, from today). For an invited user, then issue `tenant admin-activation-link`.
+- `M tenant admin-revoke --code acme --email person@acme.example --reason "..."`: ends that user's Tenant Admin role
+  today and ends their sessions, even if they are the last tenant admin (it warns; then grant the role to someone
+  else). Groups that still give them the role are listed: remove them from the group as well.
+
+When a customer's Tenant Admin role lacks a mandatory permission (only a direct database edit can cause this),
+`M migrate` adds it back if the customer never edited the role (the normal baseline top-up). Otherwise it prints a
+WARNING and changes nothing: run `tenant admin-role-repair`.
+
 ## Migrate all customers (S1.03 build item 5)
 `M migrate` (or `M migrate --tenant acme`). Customers are migrated one at a time. A customer whose migration fails is put in
 `maintenance` (its API answers 503 `errors.tenant.unavailable`) and the others continue; exit code 3 means at least one
