@@ -59,7 +59,7 @@ internal static class ImportBatchErrorEndpoints
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorFilter { BatchId = query.BatchId }, page, cancellationToken).ConfigureAwait(false);
-            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
@@ -67,7 +67,7 @@ internal static class ImportBatchErrorEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "itg.import_batch_errors.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ImportBatchErrorWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IImportBatchErrorRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
@@ -88,10 +88,8 @@ internal static class ImportBatchErrorEndpoints
             }
 
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/itg/import-batch-errors/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Created("/api/itg/import-batch-errors/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
-
-    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Itg.ImportBatchError row) => null;
 
     private static ImportBatchErrorResponse ToResponse(global::Erp.Kernel.Domain.Generated.Itg.ImportBatchError row) => new()
     {

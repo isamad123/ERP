@@ -90,7 +90,7 @@ internal static class IncrementProposalEndpoints
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.IncrementProposalFilter { CompanyId = query.CompanyId, CycleId = query.CycleId, EmploymentId = query.EmploymentId, PromotionGradeId = query.PromotionGradeId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
@@ -98,7 +98,7 @@ internal static class IncrementProposalEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.increment_proposals.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> CreateAsync(IncrementProposalWriteRequest request, global::Erp.Hrm.Application.Generated.IIncrementProposalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
@@ -119,7 +119,7 @@ internal static class IncrementProposalEndpoints
             }
 
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/increment-proposals/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Created("/api/hrm/increment-proposals/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, IncrementProposalWriteRequest request, global::Erp.Hrm.Application.Generated.IIncrementProposalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
@@ -131,7 +131,7 @@ internal static class IncrementProposalEndpoints
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
             var errors = Validate(request, update: true, access);
             if (errors.Count > 0)
             {
@@ -145,10 +145,8 @@ internal static class IncrementProposalEndpoints
             }
 
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.IncrementProposalAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
-
-    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.IncrementProposal row) => row.CompanyId;
 
     private static IncrementProposalResponse ToResponse(global::Erp.Hrm.Domain.Generated.IncrementProposal row) => new()
     {

@@ -90,7 +90,7 @@ internal static class PayRunEmployeeEndpoints
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PayRunEmployeeFilter { CompanyId = query.CompanyId, PayRunId = query.PayRunId, EmploymentId = query.EmploymentId, HoldId = query.HoldId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
@@ -98,7 +98,7 @@ internal static class PayRunEmployeeEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_run_employees.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PayRunEmployeeWriteRequest request, global::Erp.Hrm.Application.Generated.IPayRunEmployeeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
@@ -119,7 +119,7 @@ internal static class PayRunEmployeeEndpoints
             }
 
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/pay-run-employees/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Created("/api/hrm/pay-run-employees/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PayRunEmployeeWriteRequest request, global::Erp.Hrm.Application.Generated.IPayRunEmployeeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
@@ -131,7 +131,7 @@ internal static class PayRunEmployeeEndpoints
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
             var errors = Validate(request, update: true, access);
             if (errors.Count > 0)
             {
@@ -145,10 +145,8 @@ internal static class PayRunEmployeeEndpoints
             }
 
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
-
-    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.PayRunEmployee row) => row.CompanyId;
 
     private static PayRunEmployeeResponse ToResponse(global::Erp.Hrm.Domain.Generated.PayRunEmployee row) => new()
     {

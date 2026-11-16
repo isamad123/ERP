@@ -67,6 +67,7 @@ public static class ApiHost
         services.AddScoped<IAssignmentService>(sp => sp.GetRequiredService<AccessAdministrationService>());
         services.AddScoped<IMakerCheckerService>(sp => sp.GetRequiredService<AccessAdministrationService>());
         services.AddScoped<IAccessPreviewService>(sp => sp.GetRequiredService<AccessAdministrationService>());
+        services.AddScoped<IAccessSettingsService>(sp => sp.GetRequiredService<AccessAdministrationService>());
 
         // Identity (S1.05): the API trusts only tokens signed with the keys in the secret store (created by the migrator's
         // `migrate` command). Auth:SigningPublicKeys may add further public keys (the integration tests use one).

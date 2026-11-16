@@ -78,7 +78,7 @@ internal static class TrainingRequirementEndpoints
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.TrainingRequirementFilter { CompanyId = query.CompanyId, RuleId = query.RuleId, EmploymentId = query.EmploymentId, LearningRecordId = query.LearningRecordId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.TrainingRequirementAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, global::Erp.Hrm.Application.Generated.TrainingRequirementAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
@@ -86,7 +86,7 @@ internal static class TrainingRequirementEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.training_requirements.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.TrainingRequirementAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.TrainingRequirementAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> CreateAsync(TrainingRequirementWriteRequest request, global::Erp.Hrm.Application.Generated.ITrainingRequirementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
@@ -107,7 +107,7 @@ internal static class TrainingRequirementEndpoints
             }
 
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/training-requirements/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.TrainingRequirementAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Created("/api/hrm/training-requirements/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.TrainingRequirementAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, TrainingRequirementWriteRequest request, global::Erp.Hrm.Application.Generated.ITrainingRequirementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
@@ -119,7 +119,7 @@ internal static class TrainingRequirementEndpoints
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.TrainingRequirementAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.TrainingRequirementAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
             var errors = Validate(request, update: true, access);
             if (errors.Count > 0)
             {
@@ -133,10 +133,8 @@ internal static class TrainingRequirementEndpoints
             }
 
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.TrainingRequirementAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.TrainingRequirementAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
-
-    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.TrainingRequirement row) => row.CompanyId;
 
     private static TrainingRequirementResponse ToResponse(global::Erp.Hrm.Domain.Generated.TrainingRequirement row) => new()
     {

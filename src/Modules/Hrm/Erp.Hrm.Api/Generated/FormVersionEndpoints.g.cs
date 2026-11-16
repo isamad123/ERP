@@ -68,7 +68,7 @@ internal static class FormVersionEndpoints
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.FormVersionFilter { FormId = query.FormId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.FormVersionAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, global::Erp.Hrm.Application.Generated.FormVersionAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
@@ -76,7 +76,7 @@ internal static class FormVersionEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.form_versions.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.FormVersionAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.FormVersionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> CreateAsync(FormVersionWriteRequest request, global::Erp.Hrm.Application.Generated.IFormVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
@@ -97,7 +97,7 @@ internal static class FormVersionEndpoints
             }
 
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/form-versions/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.FormVersionAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Created("/api/hrm/form-versions/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.FormVersionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, FormVersionWriteRequest request, global::Erp.Hrm.Application.Generated.IFormVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
@@ -109,7 +109,7 @@ internal static class FormVersionEndpoints
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.FormVersionAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.FormVersionAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
             var errors = Validate(request, update: true, access);
             if (errors.Count > 0)
             {
@@ -123,10 +123,8 @@ internal static class FormVersionEndpoints
             }
 
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.FormVersionAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.FormVersionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
-
-    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.FormVersion row) => null;
 
     private static FormVersionResponse ToResponse(global::Erp.Hrm.Domain.Generated.FormVersion row) => new()
     {

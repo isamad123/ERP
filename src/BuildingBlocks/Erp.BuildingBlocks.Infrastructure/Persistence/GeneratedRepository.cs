@@ -26,7 +26,11 @@ public abstract class GeneratedRepository<TEntity> : IRepository<TEntity>
         Actor = actor;
         Scope = scope;
         Target = target;
+        Source = new DbContextScopeSource(context);
     }
+
+    /// <summary>Query roots of this repository's context, for parent-located scopes and per-row field access.</summary>
+    protected IScopeQuerySource Source { get; }
 
     protected DbContext Context { get; }
 
@@ -48,7 +52,7 @@ public abstract class GeneratedRepository<TEntity> : IRepository<TEntity>
 
     private async ValueTask<IQueryable<TEntity>> VisibleAsync(IQueryable<TEntity> query, CancellationToken cancellationToken)
     {
-        var scoped = await Scope.ApplyAsync(query, Target, "read", cancellationToken).ConfigureAwait(false);
+        var scoped = await Scope.ApplyAsync(query, Target, "read", Source, cancellationToken).ConfigureAwait(false);
         return IsSoftDeletable ? scoped.Where(e => !EF.Property<bool>(e, "IsDeleted")) : scoped;
     }
 
@@ -61,10 +65,17 @@ public abstract class GeneratedRepository<TEntity> : IRepository<TEntity>
     /// <summary>Refuses a write when the row is outside the caller's data scope for the action.</summary>
     protected async Task EnsureInScopeAsync(TEntity entity, string action, CancellationToken cancellationToken)
     {
-        if (!await Scope.AllowsAsync(entity, Target, action, cancellationToken).ConfigureAwait(false))
+        if (!await Scope.AllowsAsync(entity, Target, action, Source, cancellationToken).ConfigureAwait(false))
         {
             throw new AccessDeniedException();
         }
+    }
+
+    public async Task<IReadOnlyList<FieldAccessMap>> FieldAccessAsync(IReadOnlyList<TEntity> rows, FieldCatalog catalog, IFieldAccess fields, string action, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(fields);
+        var plan = await fields.PlanAsync(catalog, Target, action, Source, cancellationToken).ConfigureAwait(false);
+        return await plan.ResolveAsync(rows, Source, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>The row as it was read from the database (before the caller's changes), for the "before" scope check.</summary>
@@ -220,7 +231,7 @@ public static class ScopePreviewQuery
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(filter);
-        var query = await filter.ApplyAsync(context.Set<TEntity>().AsNoTracking(), target, "read", cancellationToken).ConfigureAwait(false);
+        var query = await filter.ApplyAsync(context.Set<TEntity>().AsNoTracking(), target, "read", new DbContextScopeSource(context), cancellationToken).ConfigureAwait(false);
         if (typeof(ISoftDeletable).IsAssignableFrom(typeof(TEntity)))
         {
             query = query.Where(e => !EF.Property<bool>(e, "IsDeleted"));
@@ -230,4 +241,16 @@ public static class ScopePreviewQuery
         var ids = await query.OrderBy(e => e.Id).Take(Math.Clamp(limit, 1, PageRequest.MaxLimit)).Select(e => e.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
         return new ScopePreviewResult(count, ids);
     }
+}
+
+/// <summary>The query roots of one EF Core context (parent-located scopes and per-row field access, slice S1.06).</summary>
+public sealed class DbContextScopeSource(DbContext context) : IScopeQuerySource
+{
+    public IQueryable<T> Rows<T>()
+        where T : class => context.Set<T>().AsNoTracking();
+
+    public Task<bool> AnyAsync<T>(IQueryable<T> query, CancellationToken cancellationToken) => query.AnyAsync(cancellationToken);
+
+    public Task<List<Guid>> IdsAsync<T>(IQueryable<T> query, CancellationToken cancellationToken)
+        where T : class, IEntity => query.Select(e => e.Id).ToListAsync(cancellationToken);
 }

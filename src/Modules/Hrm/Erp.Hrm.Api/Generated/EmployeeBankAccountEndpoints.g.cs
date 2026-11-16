@@ -82,7 +82,7 @@ internal static class EmployeeBankAccountEndpoints
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.EmployeeBankAccountFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, BankId = query.BankId }, page, cancellationToken).ConfigureAwait(false);
-            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
@@ -90,7 +90,7 @@ internal static class EmployeeBankAccountEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.employee_bank_accounts.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> CreateAsync(EmployeeBankAccountWriteRequest request, global::Erp.Hrm.Application.Generated.IEmployeeBankAccountRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
@@ -111,7 +111,7 @@ internal static class EmployeeBankAccountEndpoints
             }
 
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/employee-bank-accounts/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Created("/api/hrm/employee-bank-accounts/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, EmployeeBankAccountWriteRequest request, global::Erp.Hrm.Application.Generated.IEmployeeBankAccountRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
@@ -123,7 +123,7 @@ internal static class EmployeeBankAccountEndpoints
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
             var errors = Validate(request, update: true, access);
             if (errors.Count > 0)
             {
@@ -137,10 +137,8 @@ internal static class EmployeeBankAccountEndpoints
             }
 
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
-
-    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.EmployeeBankAccount row) => row.CompanyId;
 
     private static EmployeeBankAccountResponse ToResponse(global::Erp.Hrm.Domain.Generated.EmployeeBankAccount row) => new()
     {

@@ -35,10 +35,10 @@ public static class AllowAllAccess
 
     public sealed class AllRows : IDataScopeFilter
     {
-        public ValueTask<IQueryable<T>> ApplyAsync<T>(IQueryable<T> query, ScopeTarget<T> target, string action, CancellationToken cancellationToken)
+        public ValueTask<IQueryable<T>> ApplyAsync<T>(IQueryable<T> query, ScopeTarget<T> target, string action, IScopeQuerySource? source, CancellationToken cancellationToken)
             where T : class => ValueTask.FromResult(query);
 
-        public ValueTask<bool> AllowsAsync<T>(T row, ScopeTarget<T> target, string action, CancellationToken cancellationToken)
+        public ValueTask<bool> AllowsAsync<T>(T row, ScopeTarget<T> target, string action, IScopeQuerySource? source, CancellationToken cancellationToken)
             where T : class => ValueTask.FromResult(true);
     }
 
@@ -46,5 +46,8 @@ public static class AllowAllAccess
     {
         public ValueTask<FieldAccessMap> ForAsync(FieldCatalog catalog, string action, Guid? companyId, CancellationToken cancellationToken) =>
             ValueTask.FromResult(FieldAccessMap.Unrestricted(catalog));
+
+        public ValueTask<FieldAccessPlan<T>> PlanAsync<T>(FieldCatalog catalog, ScopeTarget<T> target, string action, IScopeQuerySource? source, CancellationToken cancellationToken)
+            where T : class => ValueTask.FromResult(FieldAccessPlans.Same<T>(FieldAccessMap.Unrestricted(catalog)));
     }
 }

@@ -25,7 +25,9 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
-  "scope": {},
+  "scope": {
+    "via": "declarationId"
+  },
   "listFields": [
     "declarationId",
     "kind",

@@ -228,7 +228,8 @@ public static class TypeScriptEmitter
             ["effectiveDated"] = t.IsEffectiveDated,
             ["softDelete"] = t.IsSoftDeleted,
             ["appendOnly"] = t.IsAppendOnly,
-            ["scope"] = new JsonObject(t.ScopeLocators.Select(kv => KeyValuePair.Create(kv.Key, (JsonNode?)Naming.Camel(kv.Value)))),
+            ["scope"] = new JsonObject(t.ScopeLocators.Select(kv => KeyValuePair.Create(kv.Key, (JsonNode?)Naming.Camel(kv.Value)))
+                .Concat(t.ScopeVia is { } via ? [KeyValuePair.Create("via", (JsonNode?)Naming.Camel(via))] : [])),
             ["listFields"] = new JsonArray(listFields),
             ["fields"] = fields,
         };

@@ -55,6 +55,7 @@ public static partial class DesignLoader
 
         var model = new DesignModel { Tables = tables.OrderBy(t => t.FullName, StringComparer.Ordinal).ToList(), Settings = settings };
         ResolveForeignKeys(model, pending, rules);
+        ResolveScopeParents(model);
         AddForeignKeyIndexes(model);
         Validator.Validate(model, rules);
         return model;
@@ -178,6 +179,18 @@ public static partial class DesignLoader
                     table.ScopeAttributes.Add(name);
                 }
 
+                continue;
+            }
+
+            if (dimension == "via")
+            {
+                var parentKey = table.Column(YamlNode.Text(raw, table.FullName + ".scope.via"));
+                if (parentKey.Kind is not ColumnKind.Uuid)
+                {
+                    throw new DesignException(table.FullName, $"scope via must name a uuid foreign-key column, not {parentKey.Name}");
+                }
+
+                table.ScopeVia = parentKey.Name;
                 continue;
             }
 
@@ -781,6 +794,35 @@ public static partial class DesignLoader
     }
 
     // ---------------------------------------------------------------- foreign keys
+
+    /// <summary>
+    /// <c>scope: {via: column}</c> (CR-025): the column is a foreign key to a table of the same schema with an id key and
+    /// its own locators; the child declares nothing else in <c>scope</c> (its rows are placed by the parent's).
+    /// </summary>
+    private static void ResolveScopeParents(DesignModel model)
+    {
+        foreach (var table in model.Tables.Where(t => t.ScopeVia is not null))
+        {
+            if (table.ScopeLocators.Count > 0 || table.ScopeAttributes.Count > 0)
+            {
+                throw new DesignException(table.FullName, "scope via cannot be combined with other scope keys");
+            }
+
+            var fk = table.ForeignKeys.Find(f => f.Columns.Count == 1 && f.Columns[0] == table.ScopeVia)
+                ?? throw new DesignException(table.FullName, $"scope via column {table.ScopeVia} must be a foreign key");
+            if (!model.TryGetTable(fk.TargetTable, out var parent) || fk.CrossesSchema(table.Schema))
+            {
+                throw new DesignException(table.FullName, $"scope via must point at a table of schema {table.Schema}");
+            }
+
+            if (!parent.HasIdKey || parent.ScopeLocators.Count == 0 || parent.ScopeVia is not null)
+            {
+                throw new DesignException(table.FullName, $"scope via parent {parent.FullName} must have an id key and its own scope locators");
+            }
+
+            table.ScopeViaTable = parent;
+        }
+    }
 
     private static void ResolveForeignKeys(DesignModel model, List<PendingFk> pending, RuleBook rules)
     {

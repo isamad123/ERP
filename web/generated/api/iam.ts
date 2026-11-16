@@ -19,15 +19,6 @@ export interface DataScope
     rowVersion: number;
 }
 
-export interface DataScopeWrite
-{
-    code: string;
-    nameI18n: Record<string, string>;
-    kind: 'own' | 'direct_team' | 'subtree' | 'org_units' | 'branches' | 'companies' | 'all';
-    definition: unknown;
-    isActive?: boolean;
-}
-
 export interface DataScopeListQuery
 {
     after?: string;
@@ -38,8 +29,6 @@ export const dataScopes =
 {
     list: (query: DataScopeListQuery = {}) => request<PagedResult<DataScope>>('GET', '/api/iam/data-scopes', { query }),
     get: (id: string) => request<DataScope>('GET', `/api/iam/data-scopes/${id}`),
-    create: (body: DataScopeWrite) => request<DataScope>('POST', '/api/iam/data-scopes', { body }),
-    update: (id: string, body: DataScopeWrite & { rowVersion: number }) => request<DataScope>('PUT', `/api/iam/data-scopes/${id}`, { body }),
 };
 
 /** iam.delegations: Approval delegation and out-of-office substitution. Field rules (S1.06) may leave a field out or mask it as text. */

@@ -134,6 +134,8 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
             "POST /api/iam/user-groups/{id:guid}/members" => (path, Json(new { userId = m.User2Id })),
             "POST /api/iam/user-groups/{id:guid}/members/{userId:guid}/remove" => (path, null),
             "POST /api/iam/user-groups/{id:guid}/roles" => (path, Json(new { roleId = m.Role2Id, reason = "probe" })),
+            "POST /api/iam/data-scopes" => (path, Json(new { code = "probe_s_" + unique, name = new { en = "Probe scope" }, kind = "own", definition = new { } })),
+            "PUT /api/iam/settings/{key}" => (path.Replace("{key}", "iam.session.idle_minutes", StringComparison.Ordinal), Json(new { value = 30, reason = "probe" })),
             _ when endpoint.Kind == EndpointKind.AccessRecordAction => (path, Json(new { reason = "probe" })),
             _ => throw new InvalidOperationException($"No probe target for access endpoint {key}; extend AccessProbe."),
         };

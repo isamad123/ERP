@@ -171,6 +171,8 @@
     - [kind, "enum(own,direct_team,subtree,org_units,branches,companies,all)", req]
     - [definition, json, req, parameters for the kind]
   unique: [[lower(code)]]
+  # CR-025 (S1.06 review finding 2): scopes are shared by roles; created by the access service, never edited in place.
+  api_actions: [read]
   reqs: [KRN-IAM-12, ADM-ROL-06]
 
 - table: iam.role_data_scopes

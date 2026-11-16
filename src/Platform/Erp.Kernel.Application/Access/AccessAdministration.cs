@@ -87,6 +87,24 @@ public interface IRoleService
     Task<RoleSummary?> SummaryAsync(Guid roleId, CancellationToken cancellationToken);
 
     Task<RoleComparison?> CompareAsync(Guid left, Guid right, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// A new reusable data scope (FR-KRN-IAM-12, FR-ADM-ROL-06). Scopes are shared by every role that uses them, so they
+    /// are created only, never edited in place: a role is repointed to another scope through its data scopes, where the
+    /// grant rules and maker-checker apply (review S1.06 finding 2, CR-025).
+    /// </summary>
+    Task<AccessResult> CreateDataScopeAsync(string? code, IReadOnlyDictionary<string, string>? name, string? kind, System.Text.Json.JsonElement? definition, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// The identity and access settings (keys <c>iam.*</c>): changed only here, never through the generated settings API,
+/// so each change is recorded and switching off maker-checker or privileged MFA can need a second person (review S1.06
+/// finding 5, CR-025).
+/// </summary>
+public interface IAccessSettingsService
+{
+    /// <summary>Sets one value; <paramref name="layer"/> defaults to tenant, <paramref name="scopeId"/> names the role or user of those layers.</summary>
+    Task<AccessResult> SetAsync(string key, string? layer, Guid? scopeId, System.Text.Json.JsonElement? value, string? reason, CancellationToken cancellationToken);
 }
 
 /// <summary>Giving a role to a user or a group, per company or all companies, with dates and a reason (FR-ADM-ROL-04, FR-ADM-USR-06).</summary>

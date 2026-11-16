@@ -26,19 +26,6 @@ public sealed class DataScopeResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for iam.data_scopes. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class DataScopeWriteRequest
-{
-    public string? Code { get; init; }
-    public global::System.Text.Json.JsonElement? NameI18n { get; init; }
-    public string? Kind { get; init; }
-    public global::System.Text.Json.JsonElement? Definition { get; init; }
-    public bool? IsActive { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for iam.data_scopes.</summary>
 public sealed class DataScopeListQuery
 {
@@ -47,7 +34,7 @@ public sealed class DataScopeListQuery
     public int? Limit { get; init; }
 }
 
-/// <summary>Generated endpoints of iam.data_scopes: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of iam.data_scopes: read. Answers pass through field security (S1.06).</summary>
 internal static class DataScopeEndpoints
 {
     private const string Resource = "iam.data_scopes";
@@ -57,8 +44,6 @@ internal static class DataScopeEndpoints
         var group = app.MapGroup("/api/iam/data-scopes").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("iam.data_scopes.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.data_scopes.read"));
         group.MapGet("/{id:guid}", GetAsync).WithName("iam.data_scopes.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.data_scopes.read"));
-        group.MapPost("/", CreateAsync).WithName("iam.data_scopes.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "iam.data_scopes.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("iam.data_scopes.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "iam.data_scopes.update"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] DataScopeListQuery query, global::Erp.Kernel.Application.Generated.Iam.IDataScopeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
@@ -66,7 +51,7 @@ internal static class DataScopeEndpoints
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.DataScopeFilter {  }, page, cancellationToken).ConfigureAwait(false);
-            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Iam.DataScopeAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, global::Erp.Kernel.Application.Generated.Iam.DataScopeAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
@@ -74,57 +59,8 @@ internal static class DataScopeEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "iam.data_scopes.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Iam.DataScopeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Iam.DataScopeAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(DataScopeWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IDataScopeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.data_scopes.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Iam.DataScopeAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Iam.DataScope();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/iam/data-scopes/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Iam.DataScopeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, DataScopeWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IDataScopeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.data_scopes.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Iam.DataScopeAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Iam.DataScopeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Iam.DataScope row) => null;
 
     private static DataScopeResponse ToResponse(global::Erp.Kernel.Domain.Generated.Iam.DataScope row) => new()
     {
@@ -140,81 +76,4 @@ internal static class DataScopeEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(DataScopeWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.Code is null && (!update || access.CanEdit("code")))
-        {
-            errors.Add("code");
-        }
-        if (request.NameI18n is null && (!update || access.CanEdit("name_i18n")))
-        {
-            errors.Add("nameI18n");
-        }
-        if (request.Kind is null && (!update || access.CanEdit("kind")))
-        {
-            errors.Add("kind");
-        }
-        if (request.Definition is null && (!update || access.CanEdit("definition")))
-        {
-            errors.Add("definition");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(DataScopeWriteRequest request, global::Erp.Kernel.Domain.Generated.Iam.DataScope row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("code"))
-        {
-            row.Code = request.Code!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Code, row.Code, update))
-        {
-            denied.Add("code");
-        }
-        if (access.CanEdit("name_i18n"))
-        {
-            row.NameI18n = GeneratedEndpointSupport.ToDocument(request.NameI18n)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.NameI18n, row.NameI18n, update))
-        {
-            denied.Add("nameI18n");
-        }
-        if (access.CanEdit("kind"))
-        {
-            row.Kind = request.Kind!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Kind, row.Kind, update))
-        {
-            denied.Add("kind");
-        }
-        if (access.CanEdit("definition"))
-        {
-            row.Definition = GeneratedEndpointSupport.ToDocument(request.Definition)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Definition, row.Definition, update))
-        {
-            denied.Add("definition");
-        }
-        if (access.CanEdit("is_active"))
-        {
-            if (request.IsActive is not null)
-            {
-                row.IsActive = request.IsActive!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsActive, row.IsActive, update))
-        {
-            denied.Add("isActive");
-        }
-        return denied;
-    }
 }

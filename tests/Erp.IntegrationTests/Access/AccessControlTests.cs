@@ -348,7 +348,9 @@ public sealed class AccessControlTests(TenancyFixture fx) : IAsyncLifetime
         var folders = fx.Migrations.AccessFolders(["hrm"]);
         var again = await AccessSetup.EnsureAsync(owner, null, folders, _h.Clock.UtcNow, Ct);
         Assert.Equal((0, 0, 0, 0), (again.PermissionsAdded, again.PermissionsRetired, again.RolesAdded, again.GrantsAdded));
-        Assert.True(await AccessHarness.ScalarAsync<long>(owner, "select count(*) from iam.permissions where retired_at is null", Ct) > 500);
+        var declared = AccessSetup.HandWritten.Select(p => p.Code).Concat(folders.Select(AccessManifest.Load).SelectMany(m => m.Permissions).Select(p => p.Code)).Distinct(StringComparer.Ordinal).Count();
+        Assert.True(declared > 450, $"{declared} codes declared");
+        Assert.Equal((long)declared, await AccessHarness.ScalarAsync<long>(owner, "select count(*) from iam.permissions where retired_at is null", Ct)); // every declared code, nothing else
         foreach (var code in new[] { "iam.self.manage", "iam.roles.manage", "hrm.employments.read", "org.companies.read" })
         {
             Assert.Equal(1L, await AccessHarness.ScalarAsync<long>(owner, "select count(*) from iam.permissions where code = $1", Ct, code));

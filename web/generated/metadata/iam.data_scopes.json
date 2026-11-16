@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "iam.data_scopes.read"
-    },
-    {
-      "action": "create",
-      "permission": "iam.data_scopes.create"
-    },
-    {
-      "action": "update",
-      "permission": "iam.data_scopes.update"
     }
   ],
   "companyScoped": false,

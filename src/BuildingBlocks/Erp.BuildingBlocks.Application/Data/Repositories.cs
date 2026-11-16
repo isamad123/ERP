@@ -24,6 +24,12 @@ public interface IRepository<TEntity>
 
     /// <summary>Stamps id (UUIDv7), created_at/by (and updated_at/by, row_version 1) and inserts.</summary>
     Task AddAsync(TEntity entity, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The caller's field access to each stored row for the action (slice S1.06, review finding 3): only the roles whose
+    /// data scope covers a row decide its fields.
+    /// </summary>
+    Task<IReadOnlyList<Erp.BuildingBlocks.Application.Security.FieldAccessMap>> FieldAccessAsync(IReadOnlyList<TEntity> rows, Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, Erp.BuildingBlocks.Application.Security.IFieldAccess fields, string action, CancellationToken cancellationToken);
 }
 
 /// <summary>Updates guarded by row_version (spec 03 R-13): a lost update raises <see cref="ConcurrencyConflictException"/>.</summary>
