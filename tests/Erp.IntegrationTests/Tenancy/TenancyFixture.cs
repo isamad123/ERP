@@ -16,6 +16,7 @@ using Erp.Kernel.Infrastructure.ControlPlane.Platform;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Erp.Kernel.Infrastructure.ControlPlane.Tenancy;
+using Erp.Kernel.Infrastructure.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -76,6 +77,7 @@ public sealed class TenancyFixture : IAsyncLifetime
         _folder = Directory.CreateTempSubdirectory("erp-s103-").FullName;
         Options = new ControlPlaneOptions { ConnectionString = _controlPlane.ConnectionString, HostCacheSeconds = 0, StatementTimeoutSeconds = 30 };
         Secrets = new EncryptedFileSecretStore(Path.Combine(_folder, "secrets.bin"), RandomNumberGenerator.GetBytes(32));
+        await TokenSigningKeys.EnsureAsync(Secrets, "it-" + Suffix, ct); // as the migrator's `migrate` command does (S1.05)
 
         var admin = new ControlPlaneAdmin(Options, Secrets, Clock);
         Admin = await admin.BootstrapAsync(Migrations, "platform.admin@example.test", "Platform Admin", ct);
@@ -94,7 +96,7 @@ public sealed class TenancyFixture : IAsyncLifetime
     /// plane. <paramref name="configure"/> may map extra endpoints before the host starts (the S1.04 leak self-test).
     /// The caller disposes the returned host, except <see cref="App"/>, which the fixture disposes.
     /// </summary>
-    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken)
+    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken, Action<IServiceCollection>? extra = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
@@ -114,6 +116,7 @@ public sealed class TenancyFixture : IAsyncLifetime
             services.AddSingleton<IPermissionChecker, AllowAll>();
             services.RemoveAll<IDataScopeFilter>();
             services.AddSingleton<IDataScopeFilter, AllRows>();
+            extra?.Invoke(services);
         });
         configure?.Invoke(app);
         await app.StartAsync(cancellationToken);

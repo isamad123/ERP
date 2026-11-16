@@ -49,6 +49,13 @@ public static class SqlEmitter
             output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "rules_" + slice.Key.Replace(".", "_", StringComparison.Ordinal).ToLowerInvariant())}", RuleImplementations(model, slice.Key, slice));
         }
 
+        // Design changes after the first migrations (data design key added_in): one new file per slice, never an edit.
+        foreach (var slice in kernelTables.SelectMany(t => t.ChangedIn).Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal))
+        {
+            var sequence = 180 + RuleSliceOrder(slice);
+            output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "design_" + slice.Replace(".", "_", StringComparison.Ordinal).ToLowerInvariant())}", DesignChanges(model, slice));
+        }
+
         if (model.ImplementedStubs.Any(st => model.Table(st.Table).Module != "kernel"))
         {
             throw new DesignException("rules.yaml", "implemented rules outside the kernel need their module's rules migration (not built yet)");
@@ -88,7 +95,7 @@ public static class SqlEmitter
         b.Append("end $do$;\n\n");
         foreach (var schema in schemas)
         {
-            var tables = model.Tables.Where(t => t.Schema == schema && t.Database == DatabaseKind.Tenant).OrderBy(t => t.Name, StringComparer.Ordinal).ToList();
+            var tables = model.Tables.Where(t => t.Schema == schema && t.Database == DatabaseKind.Tenant && t.AddedIn is null).OrderBy(t => t.Name, StringComparer.Ordinal).ToList();
             if (tables.Count == 0)
             {
                 continue;
@@ -97,27 +104,94 @@ public static class SqlEmitter
             b.Append(CultureInfo.InvariantCulture, $"grant usage on schema {schema} to {string.Join(", ", GroupRoles)};\n");
             foreach (var table in tables)
             {
-                if (schema == "aud")
-                {
-                    b.Append(CultureInfo.InvariantCulture, $"grant select on {table.FullName} to app_rw;\n");
-                    b.Append(CultureInfo.InvariantCulture, $"grant insert on {table.FullName} to app_audit;\n");
-                }
-                else if (table.IsAppendOnly)
-                {
-                    b.Append(CultureInfo.InvariantCulture, $"grant select, insert on {table.FullName} to app_rw;\n");
-                    if (table.AppendOnlyUpdatable.Count > 0)
-                    {
-                        b.Append(CultureInfo.InvariantCulture, $"grant update ({string.Join(", ", table.AppendOnlyUpdatable)}) on {table.FullName} to app_rw;\n");
-                    }
-                }
-                else
-                {
-                    b.Append(CultureInfo.InvariantCulture, $"grant select, insert, update, delete on {table.FullName} to app_rw;\n");
-                }
+                b.Append(TableGrants(table, table.BaseAppendOnlyUpdatable.ToList()));
             }
 
             b.Append(CultureInfo.InvariantCulture, $"grant select on all tables in schema {schema} to app_ro, backup;\n");
             b.Append(CultureInfo.InvariantCulture, $"grant usage, select on all sequences in schema {schema} to app_rw, app_ro, backup;\n\n");
+        }
+
+        return b.ToString().TrimEnd('\n') + "\n";
+    }
+
+    private static string TableGrants(Table table, List<string> updatable)
+    {
+        if (table.Schema == "aud")
+        {
+            return $"grant select on {table.FullName} to app_rw;\ngrant insert on {table.FullName} to app_audit;\n";
+        }
+
+        if (!table.IsAppendOnly)
+        {
+            return $"grant select, insert, update, delete on {table.FullName} to app_rw;\n";
+        }
+
+        var b = new StringBuilder($"grant select, insert on {table.FullName} to app_rw;\n");
+        if (updatable.Count > 0)
+        {
+            b.Append(CultureInfo.InvariantCulture, $"grant update ({string.Join(", ", updatable)}) on {table.FullName} to app_rw;\n");
+        }
+
+        return b.ToString();
+    }
+
+    /// <summary>
+    /// Design changes of one slice after the release's first migrations were merged (data design key <c>added_in</c>,
+    /// CR-010): new tables with their keys, foreign keys, grants and comments; new nullable columns; more columns an
+    /// append-only table may update. Expand only, idempotent, and the frozen files stay byte-for-byte unchanged.
+    /// </summary>
+    private static string DesignChanges(DesignModel model, string slice)
+    {
+        var tables = model.Tables.Where(t => t.Module == "kernel" && t.ChangedIn.Contains(slice)).OrderBy(t => t.FullName, StringComparer.Ordinal).ToList();
+        var added = tables.Where(t => t.AddedIn == slice).ToList();
+        var b = new StringBuilder(Header($"Data design changes of slice {slice} (expand only; earlier migrations are frozen)"));
+        foreach (var schema in added.Where(t => t.IsAppendOnly).Select(t => t.Schema).Distinct(StringComparer.Ordinal))
+        {
+            b.Append(AppendOnlyFunction(schema));
+        }
+
+        foreach (var table in added)
+        {
+            b.Append(CreateTable(table, model.Settings, baseOnly: false));
+        }
+
+        foreach (var table in tables)
+        {
+            foreach (var column in table.Columns.Where(c => c.AddedIn == slice))
+            {
+                b.Append(CultureInfo.InvariantCulture, $"alter table {table.FullName} add column if not exists {column.Name} {column.SqlType};\n");
+            }
+        }
+
+        foreach (var table in added)
+        {
+            foreach (var fk in table.ForeignKeys)
+            {
+                b.Append(AddForeignKey(table, fk));
+            }
+        }
+
+        foreach (var table in tables.Where(t => t.AddedIn != slice && t.UpdatableAddedIn.Exists(u => u.Slice == slice)))
+        {
+            var args = string.Join(", ", table.AppendOnlyUpdatable.Select(Naming.SqlString));
+            b.Append(CultureInfo.InvariantCulture, $"create or replace trigger tg_{table.Name}_append_only before update or delete on {table.FullName} for each row execute function {table.Schema}.tg_refuse_change({args});\n");
+            b.Append(CultureInfo.InvariantCulture, $"grant update ({string.Join(", ", table.UpdatableAddedIn.Where(u => u.Slice == slice).Select(u => u.Column))}) on {table.FullName} to app_rw;\n");
+        }
+
+        foreach (var schema in added.Select(t => t.Schema).Distinct(StringComparer.Ordinal))
+        {
+            foreach (var table in added.Where(t => t.Schema == schema))
+            {
+                b.Append(TableGrants(table, table.AppendOnlyUpdatable));
+            }
+
+            b.Append(CultureInfo.InvariantCulture, $"grant select on all tables in schema {schema} to app_ro, backup;\n");
+        }
+
+        b.Append('\n');
+        foreach (var table in tables)
+        {
+            b.Append(Comments(table, baseOnly: false));
         }
 
         return b.ToString().TrimEnd('\n') + "\n";
@@ -184,7 +258,7 @@ public static class SqlEmitter
 
     private static string SchemaFile(DesignModel model, string schema, bool crossSchemaForeignKeys)
     {
-        var tables = model.Tables.Where(t => t.Schema == schema).OrderBy(t => t.Name, StringComparer.Ordinal).ToList();
+        var tables = model.Tables.Where(t => t.Schema == schema && t.AddedIn is null).OrderBy(t => t.Name, StringComparer.Ordinal).ToList();
         var b = new StringBuilder();
         if (model.Settings.KernelSchemas.Contains(schema))
         {
@@ -199,7 +273,7 @@ public static class SqlEmitter
 
         foreach (var table in tables)
         {
-            b.Append(CreateTable(table, model.Settings));
+            b.Append(CreateTable(table, model.Settings, baseOnly: true));
         }
 
         foreach (var table in tables)
@@ -226,7 +300,7 @@ public static class SqlEmitter
     private static string CrossSchemaForeignKeys(IReadOnlyList<Table> tables)
     {
         var b = new StringBuilder(Header("Foreign keys between kernel schemas, added after every kernel table exists"));
-        foreach (var table in tables.OrderBy(t => t.FullName, StringComparer.Ordinal))
+        foreach (var table in tables.Where(t => t.AddedIn is null).OrderBy(t => t.FullName, StringComparer.Ordinal))
         {
             foreach (var fk in table.ForeignKeys.Where(f => f.CrossesSchema(table.Schema)))
             {
@@ -255,7 +329,8 @@ public static class SqlEmitter
 
         """.Replace("\r", string.Empty, StringComparison.Ordinal);
 
-    private static string CreateTable(Table table, Settings settings)
+    // baseOnly: true for the frozen first migration; columns and exceptions added later are left out.
+    private static string CreateTable(Table table, Settings settings, bool baseOnly)
     {
         var b = new StringBuilder();
         b.Append(CultureInfo.InvariantCulture, $"-- {table.FullName}: {table.Purpose ?? Naming.Pascal(table.Name)}");
@@ -266,7 +341,7 @@ public static class SqlEmitter
 
         b.Append(CultureInfo.InvariantCulture, $"\ncreate table if not exists {table.FullName} (\n");
         var lines = new List<string>();
-        foreach (var column in table.Columns)
+        foreach (var column in table.Columns.Where(c => !baseOnly || c.AddedIn is null))
         {
             var line = new StringBuilder($"    {column.Name} {column.SqlType}");
             if (column.GeneratedExpression is not null)
@@ -328,7 +403,7 @@ public static class SqlEmitter
 
         if (table.IsAppendOnly)
         {
-            var args = string.Join(", ", table.AppendOnlyUpdatable.Select(Naming.SqlString));
+            var args = string.Join(", ", (baseOnly ? table.BaseAppendOnlyUpdatable : table.AppendOnlyUpdatable).Select(Naming.SqlString));
             b.Append(CultureInfo.InvariantCulture, $"create or replace trigger tg_{table.Name}_append_only before update or delete on {table.FullName} for each row execute function {table.Schema}.tg_refuse_change({args});\n");
             b.Append(CultureInfo.InvariantCulture, $"create or replace trigger tg_{table.Name}_no_truncate before truncate on {table.FullName} for each statement execute function {table.Schema}.tg_refuse_change();\n");
         }
@@ -379,7 +454,7 @@ public static class SqlEmitter
 
         """.Replace("\r", string.Empty, StringComparison.Ordinal);
 
-    private static string Comments(Table table, Func<string, string>? rewrite = null)
+    private static string Comments(Table table, Func<string, string>? rewrite = null, bool baseOnly = true)
     {
         var b = new StringBuilder();
         var text = new List<string>();
@@ -394,9 +469,14 @@ public static class SqlEmitter
         }
 
         text.AddRange(rewrite is null ? table.Comments : table.Comments.Select(rewrite));
+        if (!baseOnly)
+        {
+            text.AddRange(table.CommentsAddedIn.Select(c => c.Text));
+        }
+
         text.Add("Source: " + table.SourceFile + ".");
         b.Append(CultureInfo.InvariantCulture, $"comment on table {table.FullName} is {Naming.SqlString(string.Join(" ", text))};\n");
-        foreach (var column in table.Columns.Where(c => c.Comment is not null))
+        foreach (var column in table.Columns.Where(c => c.Comment is not null && (!baseOnly || c.AddedIn is null)))
         {
             b.Append(CultureInfo.InvariantCulture, $"comment on column {table.FullName}.{column.Name} is {Naming.SqlString(column.Comment!)};\n");
         }

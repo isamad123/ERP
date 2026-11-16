@@ -119,7 +119,7 @@
       "field": "lastLoginAt",
       "kind": "Timestamp",
       "required": false,
-      "readOnly": false,
+      "readOnly": true,
       "system": false,
       "filter": false,
       "labelKey": "fields.iam.users.last_login_at"
@@ -139,7 +139,7 @@
       "field": "isSystem",
       "kind": "Bool",
       "required": true,
-      "readOnly": false,
+      "readOnly": true,
       "system": false,
       "filter": false,
       "labelKey": "fields.iam.users.is_system"
@@ -159,7 +159,7 @@
       "field": "status",
       "kind": "Enum",
       "required": true,
-      "readOnly": false,
+      "readOnly": true,
       "system": false,
       "filter": true,
       "labelKey": "fields.iam.users.status",

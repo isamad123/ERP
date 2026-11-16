@@ -30,6 +30,11 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
     public async Task<IReadOnlyList<string>> RunAsync(ApiEndpoint endpoint, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(endpoint);
+        if (endpoint.Kind is EndpointKind.IdentityAnonymous or EndpointKind.IdentitySelf or EndpointKind.IdentityUserAction)
+        {
+            return await new IdentityProbe(fx, app).RunAsync(endpoint, ct);
+        }
+
         var failures = new List<string>();
         if (endpoint.Kind == EndpointKind.Unclassified || endpoint.Resource is null)
         {

@@ -54,6 +54,8 @@ public sealed partial class KernelDbContext(DbContextOptions<KernelDbContext> op
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.LoginAttemptConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.MakerCheckerRequestConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.MfaDeviceConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.MfaRecoveryCodeConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.OneTimeTokenConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.OutboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.PasswordHistoryConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.PermissionConfiguration());
@@ -153,6 +155,8 @@ public static class KernelGeneratedServices
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.ILoginAttemptRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.LoginAttemptRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IMakerCheckerRequestRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.MakerCheckerRequestRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IMfaDeviceRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.MfaDeviceRepository>();
+        services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IMfaRecoveryCodeRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.MfaRecoveryCodeRepository>();
+        services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IOneTimeTokenRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.OneTimeTokenRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IPasswordHistoryRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.PasswordHistoryRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IPermissionRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.PermissionRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IRoleRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.RoleRepository>();

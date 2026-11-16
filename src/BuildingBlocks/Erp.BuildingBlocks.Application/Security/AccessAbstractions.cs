@@ -39,3 +39,12 @@ public interface IFieldEncryptor
     /// <summary>Blind index (<c>hmac</c> column) for exact-match lookup of an encrypted value.</summary>
     byte[] BlindIndex(ReadOnlySpan<byte> normalizedPlaintext, string purpose);
 }
+
+/// <summary>
+/// The field encryptor of the bound customer (one data key per customer, slice S1.05 ruling P7). Async because the key
+/// is read from the secret store on first use.
+/// </summary>
+public interface IFieldEncryptorProvider
+{
+    ValueTask<IFieldEncryptor> GetAsync(CancellationToken cancellationToken);
+}

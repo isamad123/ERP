@@ -2,7 +2,7 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 215 tables. Control-plane database: 13 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 217 tables. Control-plane database: 13 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
@@ -10,7 +10,7 @@ Release 1.0. Customer database: 215 tables. Control-plane database: 13 tables. E
 | customer | cfg | 17 |
 | customer | doc | 7 |
 | customer | hrm | 112 |
-| customer | iam | 20 |
+| customer | iam | 22 |
 | customer | itg | 11 |
 | customer | job | 5 |
 | customer | meta | 4 |
@@ -5359,6 +5359,60 @@ Indexes:
 
 - `ix_mfa_devices_user_id` CREATE INDEX ix_mfa_devices_user_id ON iam.mfa_devices USING btree (user_id)
 
+### iam.mfa_recovery_codes
+
+One-time recovery codes for a user's second factor. Requirements: KRN-IAM-02, ADM-USR-21. Source: kernel.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| user_id | uuid | no |  | fk iam.users |
+| code_hash | text | no |  | Argon2id hash of the code; the code is shown once |
+| used_at | timestamp with time zone | yes |  |  |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `fk_mfa_recovery_codes_user_id` FOREIGN KEY (user_id) REFERENCES iam.users(id)
+- `pk_mfa_recovery_codes` PRIMARY KEY (id)
+
+Indexes:
+
+- `ix_mfa_recovery_codes_user_id` CREATE INDEX ix_mfa_recovery_codes_user_id ON iam.mfa_recovery_codes USING btree (user_id)
+
+### iam.one_time_tokens
+
+Single-use, expiring tokens for account activation and sign-in steps. Requirements: KRN-IAM-01, KRN-IAM-02, ADM-USR-05. Source: kernel.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| user_id | uuid | no |  | fk iam.users |
+| purpose | text | no |  |  |
+| token_hash | text | no |  | SHA-256 (hex) of the token; the token itself is never stored |
+| expires_at | timestamp with time zone | no |  |  |
+| used_at | timestamp with time zone | yes |  |  |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `ck_one_time_tokens_purpose` CHECK ((purpose = ANY (ARRAY['activation'::text, 'mfa_challenge'::text, 'password_change'::text, 'mfa_enrolment'::text])))
+- `fk_one_time_tokens_user_id` FOREIGN KEY (user_id) REFERENCES iam.users(id)
+- `pk_one_time_tokens` PRIMARY KEY (id)
+- `uq_one_time_tokens_token_hash` UNIQUE (token_hash)
+
+Indexes:
+
+- `ix_one_time_tokens_user_id` CREATE INDEX ix_one_time_tokens_user_id ON iam.one_time_tokens USING btree (user_id)
+
 ### iam.outbox_messages
 
 Events written in the business transaction; the dispatcher publishes them (spec 03 section 7.5). Source: spec 03 section 7.5.
@@ -5508,7 +5562,7 @@ Indexes:
 
 ### iam.sessions
 
-Durable record of sign-in sessions (active copies cached in Valkey). Requirements: KRN-IAM-04, ADM-USR-24. Not strictly append-only: last_seen_at and revoked_* are updatable by the session service role only. Source: kernel.yaml.
+Durable record of sign-in sessions (active copies cached in Valkey). Requirements: KRN-IAM-04, ADM-USR-24. Not strictly append-only: last_seen_at and revoked_* are updatable by the session service role only. From S1.05 the session service also replaces refresh_token_hash on every refresh (rotation, CR-010). Source: kernel.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -5523,6 +5577,7 @@ Durable record of sign-in sessions (active copies cached in Valkey). Requirement
 | revoked_reason | text | yes |  |  |
 | created_at | timestamp with time zone | no |  |  |
 | created_by | uuid | no |  |  |
+| refresh_token_hash | text | yes |  | SHA-256 (hex) of the current refresh token; replaced on every refresh |
 
 Constraints:
 
@@ -5535,7 +5590,7 @@ Indexes:
 
 Triggers:
 
-- `tg_sessions_append_only` CREATE TRIGGER tg_sessions_append_only BEFORE DELETE OR UPDATE ON iam.sessions FOR EACH ROW EXECUTE FUNCTION iam.tg_refuse_change('last_seen_at', 'revoked_at', 'revoked_reason')
+- `tg_sessions_append_only` CREATE TRIGGER tg_sessions_append_only BEFORE DELETE OR UPDATE ON iam.sessions FOR EACH ROW EXECUTE FUNCTION iam.tg_refuse_change('last_seen_at', 'revoked_at', 'revoked_reason', 'refresh_token_hash')
 - `tg_sessions_no_truncate` CREATE TRIGGER tg_sessions_no_truncate BEFORE TRUNCATE ON iam.sessions FOR EACH STATEMENT EXECUTE FUNCTION iam.tg_refuse_change()
 
 ### iam.user_credentials

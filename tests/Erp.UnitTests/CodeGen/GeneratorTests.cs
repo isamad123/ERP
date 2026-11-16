@@ -40,8 +40,10 @@ public sealed class GeneratorTests
     [Fact]
     public void D50_design_has_204_tables_in_six_files()
     {
+        // 204 tables approved by D-50, plus the two added by CR-010 in slice S1.05 (added_in), which are not part of the D-50 files.
         var design = Model.Value.DesignTables.ToList();
-        Assert.Equal(204, design.Count);
+        Assert.Equal(204, design.Count(t => t.AddedIn is null));
+        Assert.Equal(["iam.mfa_recovery_codes", "iam.one_time_tokens"], design.Where(t => t.AddedIn == "S1.05").Select(t => t.FullName).Order(StringComparer.Ordinal));
         Assert.Equal(6, design.Select(t => t.SourceFile).Distinct().Count());
     }
 
@@ -162,7 +164,8 @@ public sealed class GeneratorTests
     public void S103_spec03_roles_app_rw_cannot_update_or_delete_append_only_tables()
     {
         var files = Generator.Generate(Root).Files;
-        var grants = files[SqlEmitter.KernelMigrations + "/V202611150200__kernel__grants.sql"] + files[SqlEmitter.HrmMigrations + "/V202611150101__hrm__grants.sql"];
+        var grants = files[SqlEmitter.KernelMigrations + "/V202611150200__kernel__grants.sql"] + files[SqlEmitter.HrmMigrations + "/V202611150101__hrm__grants.sql"]
+            + string.Concat(files.Where(f => f.Key.Contains("__kernel__design_", StringComparison.Ordinal)).Select(f => f.Value));
         foreach (var table in Model.Value.Tables.Where(t => t.Database == DatabaseKind.Tenant))
         {
             var lines = grants.Split('\n').Where(l => l.EndsWith($" on {table.FullName} to app_rw;", StringComparison.Ordinal)).ToList();
@@ -172,6 +175,40 @@ public sealed class GeneratorTests
                 Assert.DoesNotContain(lines, l => l.Contains("delete", StringComparison.Ordinal) || l.StartsWith("grant select, insert, update", StringComparison.Ordinal));
             }
         }
+    }
+
+    [Fact]
+    public void S105_CR010_later_design_changes_go_to_a_new_migration_and_leave_the_frozen_files_unchanged()
+    {
+        var files = Generator.Generate(Root).Files;
+        var frozenIam = files[SqlEmitter.KernelMigrations + "/V202611150003__kernel__iam.sql"];
+        var frozenGrants = files[SqlEmitter.KernelMigrations + "/V202611150200__kernel__grants.sql"];
+        var design = files[SqlEmitter.KernelMigrations + "/V202611150302__kernel__design_s1_05.sql"];
+
+        // The merged files are byte-for-byte what is committed (merged migrations are never edited).
+        Assert.Equal(File.ReadAllText(Path.Combine(Root, SqlEmitter.KernelMigrations, "V202611150003__kernel__iam.sql")), frozenIam);
+        Assert.DoesNotContain("one_time_tokens", frozenIam, StringComparison.Ordinal);
+        Assert.DoesNotContain("refresh_token_hash", frozenIam, StringComparison.Ordinal);
+        Assert.DoesNotContain("one_time_tokens", frozenGrants, StringComparison.Ordinal);
+
+        Assert.Contains("create table if not exists iam.one_time_tokens (", design, StringComparison.Ordinal);
+        Assert.Contains("create table if not exists iam.mfa_recovery_codes (", design, StringComparison.Ordinal);
+        Assert.Contains("alter table iam.sessions add column if not exists refresh_token_hash text;", design, StringComparison.Ordinal);
+        Assert.Contains("tg_refuse_change('last_seen_at', 'revoked_at', 'revoked_reason', 'refresh_token_hash')", design, StringComparison.Ordinal);
+        Assert.Contains("grant update (refresh_token_hash) on iam.sessions to app_rw;", design, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void S105_CR012_api_read_only_columns_are_returned_but_never_accepted_by_the_generated_api()
+    {
+        var files = Generator.Generate(Root).Files;
+        var users = files["src/Platform/Erp.Kernel.Api/Generated/Iam/UserEndpoints.g.cs"];
+        var request = users[users.IndexOf("public sealed class UserWriteRequest", StringComparison.Ordinal)..users.IndexOf("public sealed class UserListQuery", StringComparison.Ordinal)];
+        Assert.DoesNotContain("Status", request, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsSystem", request, StringComparison.Ordinal);
+        Assert.DoesNotContain("LastLoginAt", request, StringComparison.Ordinal);
+        Assert.Contains("row.Status = \"invited\";", users, StringComparison.Ordinal);
+        Assert.Contains("public string Status { get; init; }", users, StringComparison.Ordinal);
     }
 
     [Theory]

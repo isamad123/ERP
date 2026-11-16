@@ -12,7 +12,8 @@ public static partial class DesignLoader
     public const string NilUuid = "'00000000-0000-0000-0000-000000000000'::uuid";
 
     private static readonly string[] KnownKeys =
-        ["table", "purpose", "traits", "status", "columns", "unique", "indexes", "eff_key", "key", "checks", "notes", "partition", "reqs"];
+        ["table", "purpose", "traits", "status", "columns", "unique", "indexes", "eff_key", "key", "checks", "notes", "partition", "reqs",
+         "added_in", "updatable_added_in", "api_read_only"];
 
     private static readonly string[] KnownTraits = ["std", "app", "co", "br", "soft", "eff", "cust", "name"];
 
@@ -81,6 +82,7 @@ public static partial class DesignLoader
             Purpose = YamlNode.OptionalText(map, "purpose", fullName),
             Traits = traits,
             Requirements = YamlNode.Texts(map.GetValueOrDefault("reqs"), fullName),
+            AddedIn = map.GetValueOrDefault("added_in") is string slice ? SliceId(slice, fullName) : null,
         };
         var tableRules = rules.For(fullName);
 
@@ -92,8 +94,66 @@ public static partial class DesignLoader
         ReadEffectiveDating(table, map, tableRules, rules);
         ReadChecks(table, map, tableRules, rules);
         ReadNotes(table, map, tableRules, rules);
+        ReadLaterChanges(table, map);
         return table;
     }
+
+    // ---------------------------------------------------------------- changes after the first migrations (S1.05)
+
+    /// <summary>
+    /// Changes made after the release's first migrations were merged. Those files are frozen, so the generator leaves
+    /// these items out of them and writes them to the owning slice's design migration instead:
+    /// <c>added_in: S1.05</c> (whole table) or <c>added_in: {S1.05: [column, ...]}</c> (new nullable columns);
+    /// <c>updatable_added_in: {S1.05: {columns: [...], note: "..."}}</c> (more columns an append-only table may update);
+    /// <c>api_read_only: [column, ...]</c> (generated API returns the column but never accepts it, CR-012).
+    /// </summary>
+    private static void ReadLaterChanges(Table table, IReadOnlyDictionary<string, object?> map)
+    {
+        if (map.GetValueOrDefault("added_in") is Dictionary<object, object?> columns)
+        {
+            foreach (var (slice, names) in YamlNode.Map(columns, table.FullName + ".added_in"))
+            {
+                foreach (var name in YamlNode.Texts(names, table.FullName + ".added_in"))
+                {
+                    table.Column(name).AddedIn = SliceId(slice, table.FullName);
+                }
+            }
+        }
+        else if (map.GetValueOrDefault("added_in") is not (null or string))
+        {
+            throw new DesignException(table.FullName, "added_in must be a slice id or a map of slice id to column names");
+        }
+
+        foreach (var (slice, raw) in YamlNode.Map(map.GetValueOrDefault("updatable_added_in"), table.FullName + ".updatable_added_in"))
+        {
+            if (!table.IsAppendOnly)
+            {
+                throw new DesignException(table.FullName, "updatable_added_in applies to append-only tables only");
+            }
+
+            var entry = YamlNode.Map(raw, table.FullName + ".updatable_added_in");
+            var note = YamlNode.OptionalText(entry, "note", table.FullName) ?? throw new DesignException(table.FullName, "updatable_added_in needs a note");
+            foreach (var name in YamlNode.Texts(entry.GetValueOrDefault("columns"), table.FullName + ".updatable_added_in"))
+            {
+                var column = table.Column(name).Name;
+                table.AppendOnlyUpdatable.Add(column);
+                table.UpdatableAddedIn.Add((SliceId(slice, table.FullName), column));
+            }
+
+            table.CommentsAddedIn.Add((SliceId(slice, table.FullName), note));
+        }
+
+        foreach (var name in YamlNode.Texts(map.GetValueOrDefault("api_read_only"), table.FullName + ".api_read_only"))
+        {
+            table.Column(name).ApiReadOnly = true;
+        }
+    }
+
+    private static string SliceId(string slice, string where) =>
+        SlicePattern().IsMatch(slice) ? slice : throw new DesignException(where, $"'{slice}' is not a slice id such as S1.05");
+
+    [GeneratedRegex(@"^S\d\.\d{2}$")]
+    private static partial Regex SlicePattern();
 
     // ---------------------------------------------------------------- columns
 

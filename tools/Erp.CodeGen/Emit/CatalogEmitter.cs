@@ -68,7 +68,7 @@ public static class CatalogEmitter
             t.Requirements,
             t.Partition?.Column,
             t.PrimaryKey,
-            t.Columns.Select(c => new ExpectedColumn(c.Name, c.Kind.ToString(), FormatType(c), c.Required, c.Default is not null, c.IsGenerated, c.IsSensitive, c.EnumValues)).ToList(),
+            t.Columns.OrderBy(c => c.AddedIn ?? string.Empty, StringComparer.Ordinal).Select(c => new ExpectedColumn(c.Name, c.Kind.ToString(), FormatType(c), c.Required, c.Default is not null, c.IsGenerated, c.IsSensitive, c.EnumValues)).ToList(),
             t.Uniques.Select(u => u.Name).ToList(),
             t.Checks.Select(c => c.Name).ToList(),
             t.Exclusions.Select(e => e.Name).ToList(),

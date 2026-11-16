@@ -24,6 +24,8 @@ api_excluded:
   - iam.mfa_devices
   - iam.sessions
   - iam.login_attempts
+  - iam.one_time_tokens
+  - iam.mfa_recovery_codes
   - iam.api_clients
   - aud.change_log
   - aud.access_log

@@ -39,6 +39,9 @@ public sealed partial class Session : global::Erp.BuildingBlocks.Domain.Entities
     /// <summary>revoked_reason</summary>
     public string? RevokedReason { get; set; }
 
+    /// <summary>refresh_token_hash: SHA-256 (hex) of the current refresh token; replaced on every refresh</summary>
+    public string? RefreshTokenHash { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

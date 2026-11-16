@@ -33414,6 +33414,298 @@
     {
       "database": "tenant",
       "schema": "iam",
+      "name": "mfa_recovery_codes",
+      "module": "kernel",
+      "traits": [
+        "std"
+      ],
+      "requirements": [
+        "KRN-IAM-02",
+        "ADM-USR-21"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "user_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "code_hash",
+          "kind": "Text",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "used_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [],
+      "checks": [],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_mfa_recovery_codes_user_id",
+          "columns": [
+            "user_id"
+          ],
+          "target": "iam.users",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_mfa_recovery_codes_user_id"
+      ],
+      "triggers": [],
+      "append_only_updatable": [],
+      "has_api": false,
+      "full_name": "iam.mfa_recovery_codes"
+    },
+    {
+      "database": "tenant",
+      "schema": "iam",
+      "name": "one_time_tokens",
+      "module": "kernel",
+      "traits": [
+        "std"
+      ],
+      "requirements": [
+        "KRN-IAM-01",
+        "KRN-IAM-02",
+        "ADM-USR-05"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "user_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "purpose",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "activation",
+            "mfa_challenge",
+            "password_change",
+            "mfa_enrolment"
+          ]
+        },
+        {
+          "name": "token_hash",
+          "kind": "Text",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "expires_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "used_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [
+        "uq_one_time_tokens_token_hash"
+      ],
+      "checks": [
+        "ck_one_time_tokens_purpose"
+      ],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_one_time_tokens_user_id",
+          "columns": [
+            "user_id"
+          ],
+          "target": "iam.users",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_one_time_tokens_user_id"
+      ],
+      "triggers": [],
+      "append_only_updatable": [],
+      "has_api": false,
+      "full_name": "iam.one_time_tokens"
+    },
+    {
+      "database": "tenant",
+      "schema": "iam",
       "name": "outbox_messages",
       "module": "kernel",
       "traits": [],
@@ -34209,6 +34501,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "refresh_token_hash",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [],
@@ -34236,7 +34538,8 @@
       "append_only_updatable": [
         "last_seen_at",
         "revoked_at",
-        "revoked_reason"
+        "revoked_reason",
+        "refresh_token_hash"
       ],
       "has_api": false,
       "full_name": "iam.sessions"

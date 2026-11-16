@@ -50,7 +50,7 @@ public static class CSharpEmitter
     }
 
     public static IReadOnlyList<Column> WritableColumns(Table t, bool update) =>
-        t.Columns.Where(c => !AuditColumns.Contains(c.Name) && !c.IsGenerated && !c.IsSensitive && !(update && c.Name == "company_id")).ToList();
+        t.Columns.Where(c => !AuditColumns.Contains(c.Name) && !c.IsGenerated && !c.IsSensitive && !c.ApiReadOnly && !(update && c.Name == "company_id")).ToList();
 
     public static IReadOnlyList<Column> ResponseColumns(Table t) => t.Columns.Where(c => !c.IsSensitive).ToList();
 
@@ -649,7 +649,16 @@ public static class CSharpEmitter
                 }
             }
 
-            if (!WritableColumns(t, update: false).Any(c => c.Name == "company_id"))
+            // Columns the API never accepts (api_read_only, CR-012): a status starts at its first listed value on create.
+            var initialStatus = t.Columns.Find(c => c.ApiReadOnly && c.Name == "status");
+            if (initialStatus is not null)
+            {
+                w.Open("if (!update)");
+                w.Line($"row.{N.Property(t, initialStatus)} = {CodeWriter.CSharpString(initialStatus.EnumValues[0])};");
+                w.Close();
+            }
+
+            if (initialStatus is null && !WritableColumns(t, update: false).Any(c => c.Name == "company_id"))
             {
                 w.Line("_ = update;");
             }
