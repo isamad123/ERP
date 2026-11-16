@@ -30,7 +30,17 @@ public sealed class PlatformAdminRecoveryTests(TenancyFixture fx)
 
         // Only a platform_admin may do this, and only with a reason.
         var support = await SupportOperatorAsync();
-        await Assert.ThrowsAsync<InvalidOperationException>(() => Recovery.RepairRoleAsync(support, code, "needed", Ct));
+        try
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => Recovery.RepairRoleAsync(support, code, "needed", Ct));
+        }
+        finally
+        {
+            // Other tests count the platform users of the shared control plane; the refused operator wrote nothing else.
+            await using var cpCleanup = await fx.OpenControlPlaneAsync(CancellationToken.None);
+            await TenancyFixture.ExecAsync(cpCleanup, "delete from cp.platform_users where id = $1", CancellationToken.None, support.Id);
+        }
+
         await Assert.ThrowsAsync<ArgumentException>(() => Recovery.RepairRoleAsync(superAdmin, code, " ", Ct));
 
         // Damage done outside tenant administration (a direct database edit): a mandatory permission gone, the role archived.
