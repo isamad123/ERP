@@ -14,7 +14,8 @@ namespace Erp.Kernel.Infrastructure.ControlPlane.Audit;
 public sealed record AnchorPublishResult(string TenantCode, int Copied, int AlreadyCopied, IReadOnlyList<string> Mismatches);
 
 /// <summary>
-/// Copies the daily audit-chain anchors of finished days (before today, UTC) of every customer into
+/// Copies the daily audit-chain anchors of finished days (UTC: the chain has moved past the day, or a full day has passed
+/// since it ended; review S1.07 finding 2) of every customer into
 /// <c>cp.audit_anchors</c> (CR-027, ruling P5), so a customer-side database owner cannot rewrite the chain unnoticed. A copy
 /// is written once and never changed; an anchor that differs from its earlier copy is a critical finding, recorded as a
 /// security event in the customer's database and in the platform audit. Run by the migrator command
@@ -66,9 +67,19 @@ public sealed class AnchorPublisher(ControlPlaneOptions options, ISecretStore se
         var today = DateOnly.FromDateTime(now.UtcDateTime);
         await using var db = await new TenantProvisioner(options, secrets, clock, migrations).OpenTenantAsync(tenant, TenantLogins.ReadWrite, cancellationToken).ConfigureAwait(false);
         var anchors = new List<(DateOnly Day, byte[] Hash)>();
-        await using (var command = new NpgsqlCommand("select day, last_hash from aud.chain_anchors where day < $1 order by day", db))
+        // A day is final (review S1.07 finding 2) once the chain has moved on to a later day: from then on ruling P2 places
+        // every new entry after the head, never on that day. A day the head still sits on can take an entry stamped before
+        // midnight (a clock slightly behind, a writer waiting for the chain lock), so it is copied only a full day after it
+        // ended. A copy taken earlier could differ from the final anchor and would read as tampering for good.
+        await using (var command = new NpgsqlCommand("""
+            select a.day, a.last_hash from aud.chain_anchors a
+            where a.day < $1
+              and (a.day < $2 or a.day < (select (max(c.occurred_at) at time zone 'UTC')::date from aud.change_log c))
+            order by a.day
+            """, db))
         {
             command.Parameters.Add(new NpgsqlParameter { Value = today });
+            command.Parameters.Add(new NpgsqlParameter { Value = today.AddDays(-1) });
             await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {

@@ -179,6 +179,15 @@ public interface IFieldAccess
     /// </summary>
     ValueTask<FieldAccessMap> ForAsync(FieldCatalog catalog, string action, Guid? companyId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Field access for a search over many records of the company (audit change search and export, review S1.07 finding
+    /// 1): only roles granting the action whose data scope covers every record of <paramref name="catalog"/>'s resource in
+    /// that company count (scope "all" or the company itself, without conditions; every role when the resource is not
+    /// <paramref name="isScoped"/>). A role that opens a field on some records only (the Employee's own salary) opens it
+    /// in the record's history, never in a search across records.
+    /// </summary>
+    ValueTask<FieldAccessMap> ForEveryRowAsync(FieldCatalog catalog, bool isScoped, string action, Guid? companyId, CancellationToken cancellationToken);
+
     /// <summary>Field access per stored row: only roles whose data scope covers the row count (review S1.06 finding 3).</summary>
     ValueTask<FieldAccessPlan<T>> PlanAsync<T>(FieldCatalog catalog, ScopeTarget<T> target, string action, IScopeQuerySource? source, CancellationToken cancellationToken)
         where T : class;
@@ -212,18 +221,7 @@ public static class FieldShaping
             {
                 if (answer[field.JsonName] is JsonObject custom)
                 {
-                    foreach (var key in custom.Select(p => p.Key).ToList())
-                    {
-                        var keyLevel = access.Of(FieldAccessMap.CustomPrefix + key);
-                        if (keyLevel == FieldAccessLevel.Hidden)
-                        {
-                            custom.Remove(key);
-                        }
-                        else if (keyLevel == FieldAccessLevel.Masked)
-                        {
-                            custom[key] = Mask(custom[key]);
-                        }
-                    }
+                    ShapeCustom(custom, access);
                 }
 
                 continue;
@@ -236,6 +234,28 @@ public static class FieldShaping
         }
 
         return answer;
+    }
+
+    /// <summary>
+    /// Applies the rules of each custom field (<c>custom.&lt;key&gt;</c>, FR-KRN-MET-02) to a custom-field object in place:
+    /// hidden keys are removed and masked keys masked. Also used for custom values before and after in the audit history.
+    /// </summary>
+    public static void ShapeCustom(JsonObject custom, FieldAccessMap access)
+    {
+        ArgumentNullException.ThrowIfNull(custom);
+        ArgumentNullException.ThrowIfNull(access);
+        foreach (var key in custom.Select(p => p.Key).ToList())
+        {
+            var keyLevel = access.Of(FieldAccessMap.CustomPrefix + key);
+            if (keyLevel == FieldAccessLevel.Hidden)
+            {
+                custom.Remove(key);
+            }
+            else if (keyLevel == FieldAccessLevel.Masked)
+            {
+                custom[key] = Mask(custom[key]);
+            }
+        }
     }
 
     /// <summary>
