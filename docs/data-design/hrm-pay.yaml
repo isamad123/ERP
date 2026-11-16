@@ -287,6 +287,9 @@
   checks: [allowed only while no non-failed payment line exists for the result]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [FR-XM-27, PAY-14]
 
 - table: hrm.retro_adjustments
@@ -509,6 +512,9 @@
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
   field_class: {amount: salary}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [LON-03, LON-05, LON-07]
   unique: [[loan_id, source_type, source_id, kind, where source_id is not null]]
   checks: ["trigger: a recovery cannot exceed the outstanding balance"]
@@ -679,6 +685,9 @@
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
   field_class: {amount: salary}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [CMP-04]
 
 - table: hrm.liability_accruals
@@ -698,6 +707,9 @@
   unique: [[employment_id, pay_period_id, kind, seq]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [CMP-04, CMP-07]
 
 - table: hrm.compliance_obligations
@@ -741,6 +753,9 @@
   indexes: [[company_id, return_code, period_label], [employment_id]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [CPL-02, CPL-04, CPL-05]
 
 - table: hrm.parallel_runs

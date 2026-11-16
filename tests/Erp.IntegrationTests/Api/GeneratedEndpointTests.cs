@@ -56,6 +56,7 @@ public sealed class GeneratedEndpointTests : IAsyncLifetime
         builder.Services.AddSingleton<IDataScopeFilter, AllowAllAccess.AllRows>();
         builder.Services.AddSingleton<IFieldAccess, AllowAllAccess.AllFields>();
         builder.Services.AddSingleton<IPermissionChecker>(_permissions);
+        builder.Services.AddSingleton<ISensitiveAccessLog>(new RecordingAccessLog()); // S1.07: generated reads log sensitive views
         _app = builder.Build();
         _app.MapKernelGeneratedEndpoints();
         _app.MapHrmGeneratedEndpoints();

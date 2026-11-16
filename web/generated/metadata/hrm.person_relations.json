@@ -95,7 +95,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.person_relations.date_of_birth"
+      "labelKey": "fields.hrm.person_relations.date_of_birth",
+      "fieldClass": "personal"
     },
     {
       "column": "gender",
@@ -105,7 +106,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.person_relations.gender"
+      "labelKey": "fields.hrm.person_relations.gender",
+      "fieldClass": "personal"
     },
     {
       "column": "phone",
@@ -115,7 +117,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.person_relations.phone"
+      "labelKey": "fields.hrm.person_relations.phone",
+      "fieldClass": "personal"
     },
     {
       "column": "is_dependent",

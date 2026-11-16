@@ -36,6 +36,9 @@ public sealed partial class AccessLog : global::Erp.BuildingBlocks.Domain.Entiti
     /// <summary>row_count</summary>
     public int? RowCount { get; set; }
 
+    /// <summary>correlation_id: the request that showed the fields (spec 03 section 6.2; CR-028 P4)</summary>
+    public global::System.Guid? CorrelationId { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

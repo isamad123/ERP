@@ -53,20 +53,20 @@ internal static class UserGroupRoleEndpoints
         group.MapGet("/{id:guid}", GetAsync).WithName("iam.user_group_roles.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.user_group_roles.read"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] UserGroupRoleListQuery query, global::Erp.Kernel.Application.Generated.Iam.IUserGroupRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] UserGroupRoleListQuery query, global::Erp.Kernel.Application.Generated.Iam.IUserGroupRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "iam.user_group_roles.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.UserGroupRoleFilter { GroupId = query.GroupId, RoleId = query.RoleId, CompanyId = query.CompanyId }, page, cancellationToken).ConfigureAwait(false);
-            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, global::Erp.Kernel.Application.Generated.Iam.UserGroupRoleAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
+            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Iam.UserGroupRoleAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Iam.IUserGroupRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Iam.IUserGroupRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "iam.user_group_roles.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Iam.UserGroupRoleAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Iam.UserGroupRoleAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static UserGroupRoleResponse ToResponse(global::Erp.Kernel.Domain.Generated.Iam.UserGroupRole row) => new()

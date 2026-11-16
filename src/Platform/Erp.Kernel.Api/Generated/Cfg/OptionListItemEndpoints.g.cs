@@ -65,23 +65,23 @@ internal static class OptionListItemEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("cfg.option_list_items.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "cfg.option_list_items.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] OptionListItemListQuery query, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] OptionListItemListQuery query, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.option_list_items.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.OptionListItemFilter { ListId = query.ListId }, page, cancellationToken).ConfigureAwait(false);
-            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
+            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.option_list_items.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(OptionListItemWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(OptionListItemWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.option_list_items.create", async () =>
         {
             var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
@@ -99,10 +99,10 @@ internal static class OptionListItemEndpoints
             }
 
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/option-list-items/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Created("/api/cfg/option-list-items/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, OptionListItemWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, OptionListItemWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.option_list_items.update", async () =>
         {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
@@ -125,7 +125,7 @@ internal static class OptionListItemEndpoints
             }
 
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static OptionListItemResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.OptionListItem row) => new()

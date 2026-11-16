@@ -106,7 +106,7 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
 - Migrations are generated SQL under `*/Migrations` (kernel, hrm) and `ControlPlane/Migrations`. Merged files are frozen: a later
   change is a new file (rules.yaml `implemented` entries and grants are emitted as new files, S1.03).
 - Migrator and operator commands (S1.03, S1.05): `dotnet run --project src/Host/Erp.Host.Migrator -- help` (migrate, cluster add, signing-key add,
-  entitlement sign, tenant provision/list/suspend/resume/backup/restore/admin-activation-link, auth-key rotate; Super Admin recovery: tenant admin-role-repair/admin-grant/admin-revoke, S1.06-r1). Settings are environment variables: `docs/runbooks/tenant-operations.md`.
+  entitlement sign, tenant provision/list/suspend/resume/backup/restore/admin-activation-link, auth-key rotate; Super Admin recovery: tenant admin-role-repair/admin-grant/admin-revoke, S1.06-r1; audit anchors-publish and audit verify, S1.07). Settings are environment variables: `docs/runbooks/tenant-operations.md`.
   Backup and restore drill: `docs/runbooks/tenant-backup-restore.md` (needs pg_dump/pg_restore of the server's major version, 16).
 - CI: `.github/workflows/ci.yml` runs restore, build, generator drift, TypeScript type-check, unit, architecture, integration
   (PostgreSQL 16 service), data-dictionary drift and the licence gate.

@@ -91,11 +91,13 @@ public sealed record UniqueKey(string Name, IReadOnlyList<string> Items, string?
     public bool IsPlain => Where is null && Items.All(Naming.IsIdentifier);
 }
 
-public sealed record IndexDef(string Name, IReadOnlyList<string> Items, string? Where, string Purpose);
+/// <summary>An index. <see cref="AddedIn"/>: slice whose design migration creates it (design key <c>indexes_added_in</c>, S1.07).</summary>
+public sealed record IndexDef(string Name, IReadOnlyList<string> Items, string? Where, string Purpose, string? AddedIn = null);
 
 public sealed record ExclusionDef(string Name, IReadOnlyList<string> Elements, string? Where);
 
-public sealed record CheckDef(string Name, string Sql);
+/// <summary>A check constraint. <see cref="AddedIn"/>: slice whose design migration adds it (the check of an enum column added later).</summary>
+public sealed record CheckDef(string Name, string Sql, string? AddedIn = null);
 
 public sealed record ForeignKey(string Name, IReadOnlyList<string> Columns, string TargetTable, IReadOnlyList<string> TargetColumns)
 {
@@ -186,6 +188,7 @@ public sealed class Table
     /// <summary>Slices whose design migration changes this table (added table, columns or exceptions).</summary>
     public IEnumerable<string> ChangedIn =>
         new[] { AddedIn }.Concat(Columns.Select(c => c.AddedIn)).Concat(UpdatableAddedIn.Select(u => u.Slice)).Concat(CommentsAddedIn.Select(c => c.Slice))
+            .Concat(Indexes.Select(i => i.AddedIn)).Concat(Checks.Select(c => c.AddedIn))
             .Where(s => s is not null).Select(s => s!).Distinct(StringComparer.Ordinal);
 
     /// <summary>
@@ -217,6 +220,22 @@ public sealed class Table
 
     public bool AllowsApi(string action) => ApiActions is null || ApiActions.Contains(action);
 
+    /// <summary>
+    /// False when the change log skips the table (design keys <c>audit: false</c> and <c>audit_reason</c>, slice S1.07
+    /// Q4, CR-026): append-only tables, where the row itself is the record, and machinery. Every other table is audited.
+    /// </summary>
+    public bool Audited { get; set; } = true;
+
+    /// <summary>Why the table is not change-logged (required with <c>audit: false</c>).</summary>
+    public string? AuditReason { get; set; }
+
+    /// <summary>
+    /// The uuid column that identifies a row in the change log (<c>entity_id</c>): <c>id</c>, else the first uuid column
+    /// of the primary key; null when the key has no uuid column (such tables must be <c>audit: false</c>).
+    /// </summary>
+    public string? AuditKeyColumn =>
+        HasIdKey ? "id" : PrimaryKey.FirstOrDefault(k => Columns.Exists(c => c.Name == k && c.Kind == ColumnKind.Uuid));
+
     public bool IsSoftDeleted => Traits.Contains("soft");
 
     public bool IsCompanyScoped => Traits.Contains("co");
@@ -241,9 +260,15 @@ public sealed class Table
     public override string ToString() => FullName;
 }
 
+/// <summary>A database function a slice writes (rules.yaml <c>functions</c>, slice S1.07): reviewed SQL, emitted as a migration.</summary>
+public sealed record FunctionDef(string Slice, string Name, string Purpose, string Sql);
+
 public sealed class DesignModel
 {
     public required IReadOnlyList<Table> Tables { get; init; }
+
+    /// <summary>Database functions written by slices (rules.yaml <c>functions</c>).</summary>
+    public IReadOnlyList<FunctionDef> Functions { get; init; } = [];
 
     public required Settings Settings { get; init; }
 

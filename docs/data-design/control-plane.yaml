@@ -173,3 +173,16 @@
     - [details, json, req]
   indexes: [[tenant_id, occurred_at], [platform_user_id, occurred_at]]
   reqs: [ADM-PLT-10, ADM-PLT-11]
+
+- table: cp.audit_anchors
+  purpose: Copy of each customer's daily audit-chain anchor kept outside the customer database, so a customer-side database owner cannot rewrite the chain unnoticed (CR-027)
+  traits: [app]
+  columns:
+    - [tenant_id, uuid, req, fk cp.tenants]
+    - [day, date, req]
+    - [last_hash, bytea, req]
+    - [recorded_at, ts, req]
+  unique: [[tenant_id, day]]
+  # S1.07 (CR-027): added after the release's first control-plane migration; created by the slice's design migration.
+  added_in: S1.07
+  reqs: [KRN-AUD-03]

@@ -51,3 +51,15 @@ public static class AllowAllAccess
             where T : class => ValueTask.FromResult(FieldAccessPlans.Same<T>(FieldAccessMap.Unrestricted(catalog)));
     }
 }
+
+/// <summary>Test double of the access log (slice S1.07) for hosts without a customer database: keeps the calls in memory.</summary>
+public sealed class RecordingAccessLog : ISensitiveAccessLog
+{
+    public System.Collections.Concurrent.ConcurrentQueue<(string Resource, Guid? EntityId, IReadOnlyList<string> Fields, string Action, int Rows)> Calls { get; } = new();
+
+    public Task RecordAsync(string resource, Guid? entityId, IReadOnlyList<string> fields, string action, int rowCount, CancellationToken cancellationToken)
+    {
+        Calls.Enqueue((resource, entityId, fields, action, rowCount));
+        return Task.CompletedTask;
+    }
+}

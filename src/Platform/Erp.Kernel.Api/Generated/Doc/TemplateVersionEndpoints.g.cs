@@ -65,23 +65,23 @@ internal static class TemplateVersionEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("doc.template_versions.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "doc.template_versions.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] TemplateVersionListQuery query, global::Erp.Kernel.Application.Generated.Doc.ITemplateVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] TemplateVersionListQuery query, global::Erp.Kernel.Application.Generated.Doc.ITemplateVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "doc.template_versions.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Doc.TemplateVersionFilter { TemplateId = query.TemplateId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, global::Erp.Kernel.Application.Generated.Doc.TemplateVersionAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
+            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Doc.TemplateVersionAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Doc.ITemplateVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Doc.ITemplateVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "doc.template_versions.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Doc.TemplateVersionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Doc.TemplateVersionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(TemplateVersionWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.ITemplateVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(TemplateVersionWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.ITemplateVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "doc.template_versions.create", async () =>
         {
             var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Doc.TemplateVersionAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
@@ -99,10 +99,10 @@ internal static class TemplateVersionEndpoints
             }
 
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/doc/template-versions/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Doc.TemplateVersionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Created("/api/doc/template-versions/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Doc.TemplateVersionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, TemplateVersionWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.ITemplateVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, TemplateVersionWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.ITemplateVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "doc.template_versions.update", async () =>
         {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
@@ -125,7 +125,7 @@ internal static class TemplateVersionEndpoints
             }
 
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Doc.TemplateVersionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Doc.TemplateVersionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static TemplateVersionResponse ToResponse(global::Erp.Kernel.Domain.Generated.Doc.TemplateVersion row) => new()

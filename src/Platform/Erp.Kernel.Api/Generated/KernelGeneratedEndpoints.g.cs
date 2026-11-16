@@ -122,12 +122,15 @@ internal static class GeneratedEndpointSupport
         TypedResults.ValidationProblem(fields.ToDictionary(f => f, _ => new[] { global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable }), title: global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable);
 
     /// <summary>The answer for one row with hidden fields left out and masked fields masked (field security of the roles whose scope covers it).</summary>
-    public static async global::System.Threading.Tasks.Task<global::System.Text.Json.Nodes.JsonObject> ShapeOneAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Data.IRepository<TRow> repository, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, TRow row, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)
+    public static async global::System.Threading.Tasks.Task<global::System.Text.Json.Nodes.JsonObject> ShapeOneAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Data.IRepository<TRow> repository, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, TRow row, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)
         where TRow : class, global::Erp.BuildingBlocks.Domain.Entities.IEntity =>
-        (await ShapeAsync(repository, fields, catalog, [row], toResponse, cancellationToken).ConfigureAwait(false))[0];
+        (await ShapeAsync(repository, fields, accessLog, catalog, [row], toResponse, cancellationToken, single: true).ConfigureAwait(false))[0];
 
-    /// <summary>The answers for rows, each shaped by the roles whose data scope covers that row (slice S1.06, review finding 3).</summary>
-    public static async global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>> ShapeAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Data.IRepository<TRow> repository, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, global::System.Collections.Generic.IReadOnlyList<TRow> rows, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)
+    /// <summary>
+    /// The answers for rows, each shaped by the roles whose data scope covers that row (slice S1.06, review finding 3). When the
+    /// answer shows a salary, personal or restricted field unmasked, one access-log row is written before it is returned (S1.07).
+    /// </summary>
+    public static async global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>> ShapeAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Data.IRepository<TRow> repository, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, global::System.Collections.Generic.IReadOnlyList<TRow> rows, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken, bool single = false)
         where TRow : class, global::Erp.BuildingBlocks.Domain.Entities.IEntity
     {
         var access = await repository.FieldAccessAsync(rows, catalog, fields, "read", cancellationToken).ConfigureAwait(false);
@@ -136,6 +139,12 @@ internal static class GeneratedEndpointSupport
         {
             var node = global::System.Text.Json.JsonSerializer.SerializeToNode(toResponse(rows[i]), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();
             shaped.Add(global::Erp.BuildingBlocks.Application.Security.FieldShaping.Shape(node, catalog, access[i]));
+        }
+
+        var shown = global::Erp.BuildingBlocks.Application.Security.FieldShaping.SensitiveShown(shaped, catalog, access);
+        if (shown.Count > 0)
+        {
+            await accessLog.RecordAsync(catalog.Resource, single ? rows[0].Id : null, shown, "view", rows.Count, cancellationToken).ConfigureAwait(false);
         }
 
         return shaped;

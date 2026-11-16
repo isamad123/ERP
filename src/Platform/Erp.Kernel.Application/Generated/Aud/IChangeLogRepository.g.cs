@@ -50,6 +50,7 @@ public static class ChangeLogAccess
         new("ip_address", "IpAddress", null),
         new("prev_hash", "PrevHash", null),
         new("row_hash", "RowHash", null),
+        new("source", "Source", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
     ]);

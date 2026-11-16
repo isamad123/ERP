@@ -61,23 +61,23 @@ internal static class InstalledPackEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("cfg.installed_packs.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "cfg.installed_packs.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] InstalledPackListQuery query, global::Erp.Kernel.Application.Generated.Cfg.IInstalledPackRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] InstalledPackListQuery query, global::Erp.Kernel.Application.Generated.Cfg.IInstalledPackRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.installed_packs.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.InstalledPackFilter { Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
+            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.IInstalledPackRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.IInstalledPackRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.installed_packs.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(InstalledPackWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IInstalledPackRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(InstalledPackWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IInstalledPackRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.installed_packs.create", async () =>
         {
             var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
@@ -95,10 +95,10 @@ internal static class InstalledPackEndpoints
             }
 
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/installed-packs/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Created("/api/cfg/installed-packs/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, InstalledPackWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IInstalledPackRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, InstalledPackWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IInstalledPackRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.installed_packs.update", async () =>
         {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
@@ -121,7 +121,7 @@ internal static class InstalledPackEndpoints
             }
 
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static InstalledPackResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.InstalledPack row) => new()

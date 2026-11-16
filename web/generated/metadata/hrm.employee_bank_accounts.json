@@ -120,7 +120,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.employee_bank_accounts.account_title"
+      "labelKey": "fields.hrm.employee_bank_accounts.account_title",
+      "fieldClass": "personal"
     },
     {
       "column": "split_kind",

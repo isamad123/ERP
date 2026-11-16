@@ -46,7 +46,8 @@
         "hrm.goals.read",
         "hrm.learning_records.read",
         "hrm.leave_types.read",
-        "hrm.shifts.read"
+        "hrm.shifts.read",
+        "aud.history.view"
       ],
       "scopes": {
         "*": "own",
@@ -83,7 +84,8 @@
         "hrm.overtime_entries.read",
         "hrm.leave_requests.read",
         "hrm.leave_request_days.read",
-        "hrm.leave_ledger.read"
+        "hrm.leave_ledger.read",
+        "aud.history.view"
       ],
       "scopes": {
         "*": "direct_team"
@@ -160,7 +162,8 @@
         "hrm.learning_records.read",
         "hrm.mandatory_training_rules.read",
         "hrm.training_requirements.read",
-        "hrm.training_bonds.read"
+        "hrm.training_bonds.read",
+        "aud.history.view"
       ],
       "scopes": {
         "*": "all"
@@ -223,7 +226,8 @@
         "hrm.compliance_tasks.read",
         "hrm.statutory_returns.read",
         "hrm.parallel_runs.read",
-        "hrm.parallel_run_lines.read"
+        "hrm.parallel_run_lines.read",
+        "aud.history.view"
       ],
       "scopes": {
         "*": "all"

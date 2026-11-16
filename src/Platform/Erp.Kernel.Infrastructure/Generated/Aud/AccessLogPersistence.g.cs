@@ -24,6 +24,7 @@ internal sealed class AccessLogConfiguration : IEntityTypeConfiguration<global::
         builder.Property(e => e.Fields).HasColumnName("fields").HasColumnType("text[]").IsRequired();
         builder.Property(e => e.Action).HasColumnName("action").HasColumnType("text").IsRequired();
         builder.Property(e => e.RowCount).HasColumnName("row_count").HasColumnType("integer");
+        builder.Property(e => e.CorrelationId).HasColumnName("correlation_id").HasColumnType("uuid");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
     }

@@ -54,23 +54,23 @@ internal static class ImportBatchErrorEndpoints
         group.MapPost("/", CreateAsync).WithName("itg.import_batch_errors.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "itg.import_batch_errors.create"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ImportBatchErrorListQuery query, global::Erp.Kernel.Application.Generated.Itg.IImportBatchErrorRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ImportBatchErrorListQuery query, global::Erp.Kernel.Application.Generated.Itg.IImportBatchErrorRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "itg.import_batch_errors.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorFilter { BatchId = query.BatchId }, page, cancellationToken).ConfigureAwait(false);
-            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
+            var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Itg.IImportBatchErrorRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Itg.IImportBatchErrorRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "itg.import_batch_errors.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ImportBatchErrorWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IImportBatchErrorRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ImportBatchErrorWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IImportBatchErrorRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "itg.import_batch_errors.create", async () =>
         {
             var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
@@ -88,7 +88,7 @@ internal static class ImportBatchErrorEndpoints
             }
 
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/itg/import-batch-errors/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+            return TypedResults.Created("/api/itg/import-batch-errors/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static ImportBatchErrorResponse ToResponse(global::Erp.Kernel.Domain.Generated.Itg.ImportBatchError row) => new()

@@ -4,6 +4,8 @@ using System.Text.Json.Nodes;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.BuildingBlocks.Infrastructure.Time;
 using Erp.Kernel.Infrastructure.Access;
+using Erp.Kernel.Infrastructure.Audit;
+using Erp.Kernel.Infrastructure.ControlPlane.Audit;
 using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Backup;
 using Erp.Kernel.Infrastructure.ControlPlane.Entitlements;
@@ -45,6 +47,10 @@ public static class OperatorCommands
           tenant suspend|resume --code <c> --reason <text>
           tenant backup --code <c> --out <file>          (key from ERP_BACKUP_KEY)
           tenant restore --code <c> --file <file> --target-database <name>
+          audit anchors-publish [--tenant <code>]        copies finished days' audit-chain anchors to the control plane (S1.07 P5);
+                                                         exit code 3 when an anchor differs from its earlier copy
+          audit verify --tenant <code> --from <yyyy-mm-dd> --to <yyyy-mm-dd>
+                                                         recomputes the audit hash chain; exit code 3 names the first broken row
         """;
 
     public static async Task<int> RunAsync(string[] args, TextWriter output, TextWriter errors, CancellationToken cancellationToken)
@@ -80,6 +86,8 @@ public static class OperatorCommands
                 "tenant resume" => await LifecycleAsync(context, suspend: false, cancellationToken).ConfigureAwait(false),
                 "tenant backup" => await BackupAsync(context, cancellationToken).ConfigureAwait(false),
                 "tenant restore" => await RestoreAsync(context, cancellationToken).ConfigureAwait(false),
+                "audit anchors-publish" => await AnchorsPublishAsync(context, cancellationToken).ConfigureAwait(false),
+                "audit verify" => await AuditVerifyAsync(context, cancellationToken).ConfigureAwait(false),
                 _ => throw new ArgumentException($"Unknown command '{command}'.\n{Usage}"),
             };
         }
@@ -235,6 +243,45 @@ public static class OperatorCommands
     }
 
     private static string NewTokenKeyId(IClock clock) => "tk-" + clock.UtcNow.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
+
+    /// <summary>Slice S1.07 ruling P5: copy daily anchors to cp.audit_anchors; a changed anchor is a critical finding.</summary>
+    private static async Task<int> AnchorsPublishAsync(Context c, CancellationToken cancellationToken)
+    {
+        var actor = await c.ActorAsync(cancellationToken).ConfigureAwait(false);
+        var results = await new AnchorPublisher(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations).PublishAsync(actor, c.OptionalOption("tenant"), cancellationToken).ConfigureAwait(false);
+        foreach (var r in results)
+        {
+            await c.Output.WriteLineAsync(r.Mismatches.Count == 0
+                ? $"{r.TenantCode}: {r.Copied} anchor(s) copied, {r.AlreadyCopied} already copied and unchanged"
+                : $"{r.TenantCode}: CRITICAL: anchor(s) changed since they were copied: {string.Join(", ", r.Mismatches)}").ConfigureAwait(false);
+        }
+
+        return results.Any(r => r.Mismatches.Count > 0) ? 3 : 0;
+    }
+
+    /// <summary>Slice S1.07 build item 2: the chain check as an operator command.</summary>
+    private static async Task<int> AuditVerifyAsync(Context c, CancellationToken cancellationToken)
+    {
+        await c.ActorAsync(cancellationToken).ConfigureAwait(false);
+        var code = c.Option("tenant");
+        var from = DateOnly.ParseExact(c.Option("from"), "yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var to = DateOnly.ParseExact(c.Option("to"), "yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var host = await Erp.Kernel.Infrastructure.ControlPlane.Tenancy.TenantHosts.PrimaryAsync(Context.ControlPlane, code, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Customer {code} is not registered.");
+        var tenant = await new Erp.Kernel.Infrastructure.ControlPlane.Tenancy.TenantDirectory(Context.ControlPlane, c.Clock).FindByHostAsync(host, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Customer {code} has no database yet.");
+        var copies = await AuditAnchorCopies.ReadAsync(Context.ControlPlane, code, from, to, cancellationToken).ConfigureAwait(false);
+        await using var db = await new TenantProvisioner(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations).OpenTenantAsync(tenant, TenantLogins.ReadWrite, cancellationToken).ConfigureAwait(false);
+        var result = await ChainVerifier.VerifyAsync(db, copies, from, to, markVerified: true, c.Clock, cancellationToken).ConfigureAwait(false);
+        await c.Output.WriteLineAsync($"{code}: {result.RowsChecked} row(s) on {result.DaysChecked} day(s) checked; control-plane copies compared: {(result.ControlPlaneCompared ? "yes" : "no")}").ConfigureAwait(false);
+        await c.Output.WriteLineAsync(result.Intact ? $"{code}: intact" : $"{code}: BROKEN at row {result.BrokenRowId?.ToString() ?? "-"} ({result.BrokenAt:O}): {result.Problem}").ConfigureAwait(false);
+        foreach (var finding in result.Findings)
+        {
+            await c.Output.WriteLineAsync("  " + finding).ConfigureAwait(false);
+        }
+
+        return result.Intact ? 0 : 3;
+    }
 
     private static async Task<int> ListAsync(Context c, CancellationToken cancellationToken)
     {

@@ -34,7 +34,7 @@ public static class PersonAddressAccess
         new("id", "Id", null),
         new("person_id", "PersonId", null),
         new("kind", "Kind", null),
-        new("address", "Address", null),
+        new("address", "Address", "personal"),
         new("valid_from", "ValidFrom", null),
         new("valid_to", "ValidTo", null),
         new("created_at", "CreatedAt", null),

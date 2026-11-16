@@ -96,7 +96,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.person_contacts.value"
+      "labelKey": "fields.hrm.person_contacts.value",
+      "fieldClass": "personal"
     },
     {
       "column": "is_primary",

@@ -37,7 +37,14 @@ public sealed class RuleBook
     private readonly Dictionary<string, TableRules> _tables;
     private readonly HashSet<string> _used = new(StringComparer.Ordinal);
 
-    private RuleBook(Dictionary<string, TableRules> tables) => _tables = tables;
+    private RuleBook(Dictionary<string, TableRules> tables, IReadOnlyList<FunctionDef> functions)
+    {
+        _tables = tables;
+        Functions = functions;
+    }
+
+    /// <summary>Database functions written by slices (top-level <c>functions</c>, slice S1.07).</summary>
+    public IReadOnlyList<FunctionDef> Functions { get; }
 
     public TableRules For(string table) => _tables.TryGetValue(table, out var rules) ? rules : new TableRules();
 
@@ -89,7 +96,17 @@ public sealed class RuleBook
             tables[table] = rules;
         }
 
-        return new RuleBook(tables);
+        var functions = new List<FunctionDef>();
+        foreach (var entry in YamlNode.List(root.GetValueOrDefault("functions"), "functions"))
+        {
+            var map = YamlNode.Map(entry, "rules.yaml functions");
+            var name = YamlNode.Text(map.GetValueOrDefault("name"), "rules.yaml functions name");
+            var where = "rules.yaml function " + name;
+            functions.Add(new FunctionDef(YamlNode.Text(map.GetValueOrDefault("slice"), where + " slice"), name,
+                YamlNode.Text(map.GetValueOrDefault("purpose"), where + " purpose"), YamlNode.Text(map.GetValueOrDefault("sql"), where + " sql")));
+        }
+
+        return new RuleBook(tables, functions);
     }
 
     private static IEnumerable<ColumnRule> ReadColumnRules(object? node, string where)

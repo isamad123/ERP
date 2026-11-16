@@ -73,6 +73,36 @@ When a customer's Tenant Admin role lacks a mandatory permission (only a direct 
 `M migrate` adds it back if the customer never edited the role (the normal baseline top-up). Otherwise it prints a
 WARNING and changes nothing: run `tenant admin-role-repair`.
 
+## Audit chain: anchor copies and checks (S1.07, CR-027, rulings P3 and P5)
+
+Every change-log entry of a customer is linked to the one before it by a SHA-256 hash; each day's last hash is that
+day's anchor (`aud.chain_anchors`). Copy the anchors of finished days to the control plane once a day (a scheduled job
+comes with S1.11; until then run it by hand or from the host's scheduler):
+
+```bash
+dotnet run --project src/Host/Erp.Host.Migrator -- audit anchors-publish                 # every customer
+dotnet run --project src/Host/Erp.Host.Migrator -- audit anchors-publish --tenant <code> # one customer
+```
+
+A copy is written once and never changed. Exit code 3 and a line starting `CRITICAL` mean a customer's anchor differs
+from the copy taken earlier: someone with database owner rights rewrote that day. It is also a critical security event
+in the customer's database (`aud.anchor_copy_mismatch`) and an entry in the platform audit. Treat it as a security
+incident: keep the database as it is, take a backup for evidence, and check the PostgreSQL server log.
+
+To check one customer's chain for a period (also available to auditors as `POST /api/aud/verify`):
+
+```bash
+dotnet run --project src/Host/Erp.Host.Migrator -- audit verify --tenant <code> --from 2026-11-01 --to 2026-11-16
+```
+
+Exit code 3 names the first broken row and the problem: `row_changed` (a row's values were changed), `link_broken` (a
+row before it was removed or inserted), `anchor_mismatch`, `rows_missing` or `control_plane_mismatch`.
+
+What the application can and cannot see (ruling Q9): an attempt through the application to change or delete audit rows
+is refused by the database and recorded as a critical security event (`aud.tamper_attempt`). An attempt made directly in
+the database by its owner is not seen by the application: it shows in the PostgreSQL server log and is found by the
+chain check and the anchor copies above.
+
 ## Migrate all customers (S1.03 build item 5)
 `M migrate` (or `M migrate --tenant acme`). Customers are migrated one at a time. A customer whose migration fails is put in
 `maintenance` (its API answers 503 `errors.tenant.unavailable`) and the others continue; exit code 3 means at least one

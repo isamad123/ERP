@@ -243,6 +243,31 @@ public static class ScopePreviewQuery
     }
 }
 
+/// <summary>
+/// The caller's field access to one record for <c>read</c> (slice S1.07, record history): null when the record does not
+/// exist or is outside the caller's data scope. Soft-deleted records are included so their history stays visible.
+/// </summary>
+public static class RecordReadAccess
+{
+    public static async Task<FieldAccessMap?> ForAsync<TEntity>(DbContext context, IDataScopeFilter filter, IFieldAccess fields, ScopeTarget<TEntity> target, FieldCatalog catalog, Guid id, CancellationToken cancellationToken)
+        where TEntity : class, IEntity
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(filter);
+        ArgumentNullException.ThrowIfNull(fields);
+        var source = new DbContextScopeSource(context);
+        var query = await filter.ApplyAsync(context.Set<TEntity>().AsNoTracking(), target, "read", source, cancellationToken).ConfigureAwait(false);
+        var row = await query.FirstOrDefaultAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
+        if (row is null)
+        {
+            return null;
+        }
+
+        var plan = await fields.PlanAsync(catalog, target, "read", source, cancellationToken).ConfigureAwait(false);
+        return (await plan.ResolveAsync([row], source, cancellationToken).ConfigureAwait(false))[0];
+    }
+}
+
 /// <summary>The query roots of one EF Core context (parent-located scopes and per-row field access, slice S1.06).</summary>
 public sealed class DbContextScopeSource(DbContext context) : IScopeQuerySource
 {

@@ -15,6 +15,7 @@ public sealed partial class ControlPlaneDbContext(DbContextOptions<ControlPlaneD
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         global::System.ArgumentNullException.ThrowIfNull(modelBuilder);
+        modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.ControlPlane.Generated.AuditAnchorConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.ControlPlane.Generated.DbClusterConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.ControlPlane.Generated.EntitlementConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.ControlPlane.Generated.LicenseEventConfiguration());
@@ -36,6 +37,7 @@ public static class ControlPlaneGeneratedServices
 {
     public static IServiceCollection AddControlPlaneGeneratedRepositories(this IServiceCollection services)
     {
+        services.AddScoped<global::Erp.Kernel.Application.ControlPlane.Generated.IAuditAnchorRepository, global::Erp.Kernel.Infrastructure.ControlPlane.Generated.AuditAnchorRepository>();
         services.AddScoped<global::Erp.Kernel.Application.ControlPlane.Generated.IDbClusterRepository, global::Erp.Kernel.Infrastructure.ControlPlane.Generated.DbClusterRepository>();
         services.AddScoped<global::Erp.Kernel.Application.ControlPlane.Generated.IEntitlementRepository, global::Erp.Kernel.Infrastructure.ControlPlane.Generated.EntitlementRepository>();
         services.AddScoped<global::Erp.Kernel.Application.ControlPlane.Generated.ILicenseEventRepository, global::Erp.Kernel.Infrastructure.ControlPlane.Generated.LicenseEventRepository>();

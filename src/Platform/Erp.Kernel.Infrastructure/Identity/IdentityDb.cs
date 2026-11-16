@@ -370,20 +370,28 @@ internal static class IdentityDb
     // ------------------------------------------------------------------ attempts, events, limits
 
     /// <summary>One row per sign-in attempt (FR-KRN-AUD-02). Outcomes: success, bad_password, locked, mfa_failed, disabled.</summary>
-    public static Task LogAttemptAsync(NpgsqlConnection c, NpgsqlTransaction? tx, string login, string outcome, ClientInfo client, Guid actor, DateTimeOffset now, CancellationToken ct) =>
-        ExecuteAsync(c, tx, "insert into iam.login_attempts (id, occurred_at, username, outcome, ip_address, created_at, created_by) values ($1, $2, $3, $4, $5, $2, $6)",
-            ct, Guid.CreateVersion7(now), now, Truncate(login.Trim().ToLowerInvariant(), 320) ?? string.Empty, outcome, ParseIp(client.IpAddress), actor);
+    /// <remarks>Slice S1.07 (ruling Q7): each attempt is also a security event, in the same transaction.</remarks>
+    public static async Task LogAttemptAsync(NpgsqlConnection c, NpgsqlTransaction? tx, string login, string outcome, ClientInfo client, Guid actor, DateTimeOffset now, CancellationToken ct)
+    {
+        await ExecuteAsync(c, tx, "insert into iam.login_attempts (id, occurred_at, username, outcome, ip_address, created_at, created_by) values ($1, $2, $3, $4, $5, $2, $6)",
+            ct, Guid.CreateVersion7(now), now, Truncate(login.Trim().ToLowerInvariant(), 320) ?? string.Empty, outcome, ParseIp(client.IpAddress), actor).ConfigureAwait(false);
+        await Audit.AuditTrail.RecordSignInAsync(c, tx, login, outcome, ParseIp(client.IpAddress)?.ToString(), actor, now, ct).ConfigureAwait(false);
+    }
 
     /// <summary>
     /// A domain event in the transactional outbox (architecture reference section 3; ruling Q4). The dispatcher and the
     /// audit log that records these events come with later slices (S1.07).
     /// </summary>
-    public static Task RaiseAsync(NpgsqlConnection c, NpgsqlTransaction tx, string eventType, Guid userId, Guid actor, DateTimeOffset now, object payload, CancellationToken ct) =>
-        ExecuteAsync(c, tx, """
+    /// <remarks>Slice S1.07: the audit rows of the event are written in the same transaction (<see cref="Audit.AuditTrail"/>).</remarks>
+    public static async Task RaiseAsync(NpgsqlConnection c, NpgsqlTransaction tx, string eventType, Guid userId, Guid actor, DateTimeOffset now, object payload, CancellationToken ct)
+    {
+        await ExecuteAsync(c, tx, """
             insert into iam.outbox_messages (id, occurred_at, event_type, aggregate_type, aggregate_id, payload, headers, published_at)
             values ($1, $2, $3, 'iam.user', $4, $5, $6, null)
             """, ct, Guid.CreateVersion7(now), now, eventType, userId,
-            new JsonPayload(JsonSerializer.Serialize(payload)), new JsonPayload(JsonSerializer.Serialize(new { actor })));
+            new JsonPayload(JsonSerializer.Serialize(payload)), new JsonPayload(JsonSerializer.Serialize(new { actor }))).ConfigureAwait(false);
+        await Audit.AuditTrail.RecordEventAsync(c, tx, eventType, "iam.user", userId, actor, now, payload, ct).ConfigureAwait(false);
+    }
 
     /// <summary>
     /// The entitlement's user limit (<c>claims.limits.users</c>, ruling P4) and the users counting against it. Takes a
