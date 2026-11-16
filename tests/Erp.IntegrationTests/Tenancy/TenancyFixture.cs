@@ -96,7 +96,7 @@ public sealed class TenancyFixture : IAsyncLifetime
     /// plane. <paramref name="configure"/> may map extra endpoints before the host starts (the S1.04 leak self-test).
     /// The caller disposes the returned host, except <see cref="App"/>, which the fixture disposes.
     /// </summary>
-    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken)
+    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken, Action<IServiceCollection>? extra = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
@@ -116,6 +116,7 @@ public sealed class TenancyFixture : IAsyncLifetime
             services.AddSingleton<IPermissionChecker, AllowAll>();
             services.RemoveAll<IDataScopeFilter>();
             services.AddSingleton<IDataScopeFilter, AllRows>();
+            extra?.Invoke(services);
         });
         configure?.Invoke(app);
         await app.StartAsync(cancellationToken);

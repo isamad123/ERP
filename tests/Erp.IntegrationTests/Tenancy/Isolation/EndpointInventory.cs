@@ -1,6 +1,7 @@
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Contracts.Api;
 using Erp.Host.Api;
+using Erp.Kernel.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -17,10 +18,19 @@ public enum EndpointKind
     Create,
     Update,
     Delete,
+
+    /// <summary>Anonymous sign-in step (S1.05): the customer comes from the host; A's credentials and tokens must fail on B.</summary>
+    IdentityAnonymous,
+
+    /// <summary>Acts only on the signed-in user (S1.05): B's session never sees or changes A's sessions or devices.</summary>
+    IdentitySelf,
+
+    /// <summary>Administrator action on <c>/api/iam/users/{id}/...</c> (S1.05): A's user id on B's host is 404.</summary>
+    IdentityUserAction,
 }
 
 /// <summary>One API endpoint as the API host maps it: method, route and the table it serves.</summary>
-public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous)
+public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null)
 {
     private const string IdSegment = "/{id:guid}";
 
@@ -34,6 +44,14 @@ public sealed record ApiEndpoint(string Method, string Pattern, string? Resource
     {
         get
         {
+            switch (IdentityKind)
+            {
+                case "anonymous": return EndpointKind.IdentityAnonymous;
+                case "self": return EndpointKind.IdentitySelf;
+                case "user_action": return EndpointKind.IdentityUserAction;
+                case not null: return EndpointKind.Unclassified;
+            }
+
             var byId = Pattern.EndsWith(IdSegment, StringComparison.Ordinal) && Pattern.IndexOf('{', StringComparison.Ordinal) == Pattern.Length - IdSegment.Length + 1;
             var hasParameter = Pattern.Contains('{', StringComparison.Ordinal);
             return (Method, byId, hasParameter) switch
@@ -63,6 +81,22 @@ public static class EndpointInventory
     /// </summary>
     public static readonly IReadOnlySet<string> TenantFree = new HashSet<string>(StringComparer.Ordinal) { "* /health" };
 
+    /// <summary>
+    /// Sign-in steps that answer without a login (slice S1.05). They are customer endpoints: the customer comes from the
+    /// host, and the suite probes each with customer A's credentials and tokens on B's host. Reviewed list: a new
+    /// anonymous endpoint fails the suite until it is added here (security decision, noted in the slice report).
+    /// </summary>
+    public static readonly IReadOnlySet<string> AnonymousSignIn = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "POST /api/iam/auth/sign-in",
+        "POST /api/iam/auth/mfa",
+        "POST /api/iam/auth/password-change",
+        "POST /api/iam/auth/mfa-enrolment",
+        "POST /api/iam/auth/mfa-enrolment/confirm",
+        "POST /api/iam/auth/refresh",
+        "POST /api/iam/auth/activate",
+    };
+
     private static readonly Lazy<IReadOnlyList<ApiEndpoint>> Discovered = new(DiscoverFromHost);
 
     /// <summary>The endpoints of <see cref="ApiHost"/> as built for production (not started, no database needed).</summary>
@@ -91,10 +125,11 @@ public static class EndpointInventory
         {
             var methods = endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods;
             var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource;
+            var identity = endpoint.Metadata.GetMetadata<IdentityEndpointMetadata>()?.Kind;
             var anonymous = endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null || endpoint.Metadata.GetMetadata<IAuthorizeData>() is null;
             foreach (var method in methods is { Count: > 0 } ? methods : ["*"])
             {
-                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous));
+                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity));
             }
         }
 
@@ -106,15 +141,31 @@ public static class EndpointInventory
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
         builder.Configuration["ConnectionStrings:ControlPlane"] = "Host=discovery.invalid;Database=unused";
-        var app = ApiHost.Build(builder, new NoSecrets());
+        builder.Configuration["Auth:Issuer"] = "https://discovery.invalid";
+        builder.Configuration["Auth:Audience"] = "discovery";
+        var secrets = new SigningKeyOnly();
+        TokenSigningKeys.EnsureAsync(secrets, "discovery", CancellationToken.None).GetAwaiter().GetResult();
+        var app = ApiHost.Build(builder, secrets);
         return Read(app);
     }
 
-    /// <summary>Discovery never opens a database, so no secret is ever read.</summary>
-    private sealed class NoSecrets : ISecretStore
+    /// <summary>
+    /// Discovery never opens a database. The host only reads its token signing key at start-up (S1.05), so this store
+    /// holds a throw-away key in memory and nothing else.
+    /// </summary>
+    private sealed class SigningKeyOnly : ISecretStore
     {
-        public Task<string?> GetAsync(string reference, CancellationToken cancellationToken) => throw new InvalidOperationException("not used during discovery");
+        private readonly Dictionary<string, string> _values = new(StringComparer.Ordinal);
 
-        public Task PutAsync(string reference, string value, CancellationToken cancellationToken) => throw new InvalidOperationException("not used during discovery");
+        public Task<string?> GetAsync(string reference, CancellationToken cancellationToken) =>
+            reference.StartsWith("platform/token-signing/", StringComparison.Ordinal)
+                ? Task.FromResult(_values.GetValueOrDefault(reference))
+                : throw new InvalidOperationException("not used during discovery");
+
+        public Task PutAsync(string reference, string value, CancellationToken cancellationToken)
+        {
+            _values[reference] = value;
+            return Task.CompletedTask;
+        }
     }
 }

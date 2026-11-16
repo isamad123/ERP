@@ -51,18 +51,25 @@ public sealed class TenantIsolationSuiteTests(IsolationFixture fx)
                 continue;
             }
 
-            if (endpoint.Anonymous)
+            if (endpoint.Anonymous && !(EndpointInventory.AnonymousSignIn.Contains(endpoint.Key) && endpoint.Kind == EndpointKind.IdentityAnonymous))
             {
-                problems.Add($"{endpoint}: answers without a login. Every customer endpoint needs authorization (or a reviewed entry in TenantFree).");
+                problems.Add($"{endpoint}: answers without a login. Every customer endpoint needs authorization (or a reviewed entry in TenantFree or AnonymousSignIn).");
             }
 
-            if (endpoint.Kind == EndpointKind.Unclassified || endpoint.Resource is null)
+            if (!endpoint.Anonymous && EndpointInventory.AnonymousSignIn.Contains(endpoint.Key))
             {
-                problems.Add($"{endpoint}: cannot be probed (no GeneratedEndpointMetadata or an unknown route shape).");
+                problems.Add($"{endpoint}: listed as an anonymous sign-in step but needs a login; remove it from AnonymousSignIn.");
+            }
+
+            var identity = endpoint.Kind is EndpointKind.IdentityAnonymous or EndpointKind.IdentitySelf or EndpointKind.IdentityUserAction;
+            if (endpoint.Kind == EndpointKind.Unclassified || (endpoint.Resource is null && !identity))
+            {
+                problems.Add($"{endpoint}: cannot be probed (no GeneratedEndpointMetadata or IdentityEndpointMetadata, or an unknown route shape).");
             }
         }
 
         Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
+        Assert.Equal(EndpointInventory.AnonymousSignIn.Count, EndpointInventory.All.Count(e => e.Kind == EndpointKind.IdentityAnonymous));
     }
 
     [Fact]

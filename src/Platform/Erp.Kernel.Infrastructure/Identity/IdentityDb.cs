@@ -156,8 +156,12 @@ internal static class IdentityDb
     }
 
     /// <summary>When the user first set a password (activation): the oldest history row.</summary>
-    public static Task<DateTimeOffset?> ActivatedAtAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, CancellationToken ct) =>
-        ScalarAsync<DateTimeOffset?>(c, tx, "select min(created_at) from iam.password_history where user_id = $1", ct, userId);
+    public static async Task<DateTimeOffset?> ActivatedAtAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, CancellationToken ct)
+    {
+        await using var command = Command(c, tx, "select min(created_at) from iam.password_history where user_id = $1", userId);
+        await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        return await reader.ReadAsync(ct).ConfigureAwait(false) && !reader.IsDBNull(0) ? reader.GetFieldValue<DateTimeOffset>(0) : null;
+    }
 
     // ------------------------------------------------------------------ one-time tokens
 
