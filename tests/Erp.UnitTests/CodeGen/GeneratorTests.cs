@@ -250,6 +250,22 @@ public sealed class GeneratorTests
     }
 
     [Fact]
+    public void S107_r1_CR031_CR032_the_revision_writes_its_own_functions_file_and_the_merged_one_stays()
+    {
+        var files = Generator.Generate(Root).Files;
+        const string Merged = "V202611150334__kernel__functions_s1_07.sql";
+        Assert.Equal(File.ReadAllText(Path.Combine(Root, SqlEmitter.KernelMigrations, Merged)), files[SqlEmitter.KernelMigrations + "/" + Merged]);
+        var revision = files[SqlEmitter.KernelMigrations + "/V202611150434__kernel__functions_s1_07_r1.sql"];
+        Assert.Contains("revoke insert on all tables in schema aud from app_audit;", revision, StringComparison.Ordinal);
+        Assert.Contains("if at > db_now + interval '5 minutes' then", revision, StringComparison.Ordinal);
+        Assert.Contains("'aud.clock_ahead'", revision, StringComparison.Ordinal);
+
+        // The frozen S1.03 grants file keeps its text; later design files never grant INSERT on audit tables to app_audit.
+        Assert.Equal(File.ReadAllText(Path.Combine(Root, SqlEmitter.KernelMigrations, "V202611150200__kernel__grants.sql")), files[SqlEmitter.KernelMigrations + "/V202611150200__kernel__grants.sql"]);
+        Assert.All(files.Where(f => f.Key.Contains("__kernel__design_", StringComparison.Ordinal)), f => Assert.DoesNotContain("to app_audit", f.Value, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void S107_Q4_append_only_tables_and_machinery_opt_out_of_the_change_log_with_a_reason()
     {
         var m = Model.Value;

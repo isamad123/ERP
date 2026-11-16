@@ -8,6 +8,7 @@ using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.Kernel.Contracts.Access;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
+using Erp.Kernel.Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -298,6 +299,49 @@ public static class TamperAttempt
         && (pg.SqlState == PostgresErrorCodes.InsufficientPrivilege || pg.SqlState == "ER001")
         && sql is not null
         && System.Text.RegularExpressions.Regex.IsMatch(sql, @"\b(update|delete\s+from|insert\s+into|truncate(\s+table)?)\s+(only\s+)?""?aud""?\.", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Runs one statement of hand-written SQL (identity and access helpers, risk R-012): a refused write to an audit table
+    /// is recorded as a critical security event on a fresh connection of the same login, then the error is passed on.
+    /// </summary>
+    public static async Task<T> GuardAsync<T>(NpgsqlConnection connection, string sql, Func<Task<T>> action)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(action);
+        try
+        {
+            return await action().ConfigureAwait(false);
+        }
+        catch (PostgresException error) when (Matches(error, sql))
+        {
+            await RecordOnCloneAsync(connection, sql, error).ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    private static async Task RecordOnCloneAsync(NpgsqlConnection connection, string sql, PostgresException error)
+    {
+        try
+        {
+            await using var fresh = (NpgsqlConnection)((ICloneable)connection).Clone();
+            await fresh.OpenAsync(CancellationToken.None).ConfigureAwait(false);
+            var request = AuditAmbient.Current;
+            var details = new JsonObject
+            {
+                ["statement"] = sql.Length <= 500 ? sql : sql[..500],
+                ["sql_state"] = error.SqlState,
+                ["correlation_id"] = request?.CorrelationId,
+                ["ip_address"] = request?.IpAddress,
+            };
+            // No injected clock reaches these static helpers: the event takes the database's clock.
+            await IdentityDb.ExecuteAsync(fresh, null, "select aud.append_security_event(gen_random_uuid(), clock_timestamp(), $1, null, 'aud', 'critical', $2, $3)", CancellationToken.None,
+                EventType, new JsonPayload(details.ToJsonString()), BaselineSeed.SystemUserId).ConfigureAwait(false);
+        }
+        catch (NpgsqlException)
+        {
+            // Recording is best effort here: the refusal itself stands and is passed on to the caller.
+        }
+    }
 
     /// <summary>Writes the critical event on its own connection (the failed transaction is gone).</summary>
     public static async Task RecordAsync(IServiceProvider services, string sql, Exception error, CancellationToken cancellationToken)

@@ -139,15 +139,76 @@ public sealed class AuditTests(TenancyFixture fx) : IAsyncLifetime
             }
         }
 
-        // The application login cannot write the chain directly either: only through aud.append_changes (Q1).
-        if (login == TenantLogins.ReadWrite)
+        // Neither login can write the chain directly: only through aud.append_changes (Q1; app_audit since CR-031, R-011).
+        var forged = await Assert.ThrowsAsync<PostgresException>(() => AccessHarness.ExecAsync(c, """
+            insert into aud.change_log (id, occurred_at, actor_kind, entity_type, entity_id, action, changes, prev_hash, row_hash, created_at, created_by)
+            values (gen_random_uuid(), now(), 'system', 'x', gen_random_uuid(), 'create', '[]', '\x00', '\x00', now(), gen_random_uuid())
+            """, Ct));
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, forged.SqlState);
+        foreach (var table in new[] { "aud.security_events", "aud.access_log", "aud.chain_anchors", "aud.subject_keys" })
         {
-            var forged = await Assert.ThrowsAsync<PostgresException>(() => AccessHarness.ExecAsync(c, """
-                insert into aud.change_log (id, occurred_at, actor_kind, entity_type, entity_id, action, changes, prev_hash, row_hash, created_at, created_by)
-                values (gen_random_uuid(), now(), 'system', 'x', gen_random_uuid(), 'create', '[]', '\x00', '\x00', now(), gen_random_uuid())
-                """, Ct));
-            Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, forged.SqlState);
+            var direct = await Assert.ThrowsAsync<PostgresException>(() => AccessHarness.ExecAsync(c, $"insert into {table} select * from {table} limit 0", Ct));
+            Assert.True(direct.SqlState == PostgresErrorCodes.InsufficientPrivilege, $"{login}: insert into {table}: {direct.SqlState}");
         }
+    }
+
+    [Fact]
+    public async Task FR_KRN_AUD_03_CR031_the_audit_login_appends_only_through_the_functions_and_the_chain_holds()
+    {
+        var code = await _h.ProvisionAsync("al", Ct);
+        await using (var audit = await fx.OpenTenantAsync(code, TenantLogins.Audit, Ct))
+        {
+            var now = DateTimeOffset.UtcNow;
+            Assert.Equal(1, await AuditDb.AppendChangesAsync(audit, null, [new ChangeEntry(Guid.CreateVersion7(now), now, null, "system", "org.companies", Guid.CreateVersion7(now), null, "update",
+                [new System.Text.Json.Nodes.JsonObject { ["field"] = "code", ["after"] = "x" }], null, null, null, "system", BaselineSeed.SystemUserId)], Ct));
+        }
+
+        await using var rw = await fx.OpenTenantAsync(code, TenantLogins.ReadWrite, Ct);
+        var today = AccessHarness.Day(DateTimeOffset.UtcNow);
+        var result = await ChainVerifier.VerifyAsync(rw, null, today.AddDays(-1), today.AddDays(1), markVerified: false, _h.Clock, Ct);
+        Assert.True(result.Intact, string.Join(Environment.NewLine, result.Findings));
+        Assert.Equal(1, result.RowsChecked);
+    }
+
+    [Fact]
+    public async Task FR_KRN_AUD_03_CR032_an_entry_stamped_ahead_of_the_database_clock_takes_the_database_time_and_raises_a_warning()
+    {
+        var code = await _h.ProvisionAsync("ak", Ct);
+        await using var rw = await fx.OpenTenantAsync(code, TenantLogins.ReadWrite, Ct);
+        var ahead = DateTimeOffset.UtcNow.AddDays(2);
+        var entity = Guid.CreateVersion7();
+        await AuditDb.AppendChangesAsync(rw, null, [new ChangeEntry(Guid.CreateVersion7(ahead), ahead, null, "system", "org.companies", entity, null, "update",
+            [new System.Text.Json.Nodes.JsonObject { ["field"] = "code", ["after"] = "x" }], null, null, null, "system", BaselineSeed.SystemUserId)], Ct);
+
+        var stored = await AccessHarness.ScalarAsync<DateTime>(rw, "select occurred_at from aud.change_log where entity_id = $1", Ct, entity);
+        var databaseNow = await AccessHarness.ScalarAsync<DateTime>(rw, "select now()", Ct);
+        Assert.True(stored <= databaseNow.AddMinutes(1), $"stored {stored:O}, database {databaseNow:O}");
+        Assert.Equal(1L, await AccessHarness.ScalarAsync<long>(rw, "select count(*) from aud.security_events where event_type = 'aud.clock_ahead' and severity = 'warning'", Ct));
+
+        // A small difference (under 5 minutes) is kept as it is, and the chain still verifies.
+        var slightly = DateTimeOffset.UtcNow.AddMinutes(2);
+        var second = Guid.CreateVersion7();
+        await AuditDb.AppendChangesAsync(rw, null, [new ChangeEntry(Guid.CreateVersion7(slightly), slightly, null, "system", "org.companies", second, null, "update",
+            [new System.Text.Json.Nodes.JsonObject { ["field"] = "code", ["after"] = "y" }], null, null, null, "system", BaselineSeed.SystemUserId)], Ct);
+        var kept = await AccessHarness.ScalarAsync<DateTime>(rw, "select occurred_at from aud.change_log where entity_id = $1", Ct, second);
+        Assert.True(Math.Abs((kept - slightly.UtcDateTime).TotalMilliseconds) < 1, $"kept {kept:O}, offered {slightly:O}");
+        var today = AccessHarness.Day(DateTimeOffset.UtcNow);
+        Assert.True((await ChainVerifier.VerifyAsync(rw, null, today.AddDays(-1), today.AddDays(1), markVerified: false, _h.Clock, Ct)).Intact);
+    }
+
+    [Fact]
+    public async Task FR_KRN_AUD_03_R012_a_refused_audit_write_in_hand_written_sql_is_a_critical_security_event()
+    {
+        var code = await _h.ProvisionAsync("at", Ct);
+        await using var rw = await fx.OpenTenantAsync(code, TenantLogins.ReadWrite, Ct);
+        const string Sql = "update aud.change_log set action = 'update'";
+        var error = await Assert.ThrowsAsync<PostgresException>(() => TamperAttempt.GuardAsync(rw, Sql, async () =>
+        {
+            await AccessHarness.ExecAsync(rw, Sql, Ct);
+            return 0;
+        }));
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, error.SqlState);
+        Assert.Equal(1L, await AccessHarness.ScalarAsync<long>(rw, "select count(*) from aud.security_events where event_type = 'aud.tamper_attempt' and severity = 'critical'", Ct));
     }
 
     [Fact]

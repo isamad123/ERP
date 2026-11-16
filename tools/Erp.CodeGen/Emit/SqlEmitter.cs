@@ -62,8 +62,10 @@ public static class SqlEmitter
         // Database functions written by a slice (rules.yaml `functions`, S1.07): after that slice's design file.
         foreach (var group in model.Functions.GroupBy(f => f.Slice).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
-            var sequence = 180 + 30 + RuleSliceOrder(group.Key);
-            output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "functions_" + group.Key.Replace(".", "_", StringComparison.Ordinal).ToLowerInvariant())}", Functions(group.Key, group));
+            // A revision (S1.07-r1) gets its own file one hour later, like design revisions: S1.07 → 0334, S1.07-r1 → 0434.
+            var revision = group.Key.Contains("-r", StringComparison.Ordinal) ? int.Parse(group.Key[^1..], CultureInfo.InvariantCulture) : 0;
+            var sequence = 180 + (60 * revision) + 30 + RuleSliceOrder(group.Key.Split('-')[0]);
+            output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "functions_" + group.Key.Replace(".", "_", StringComparison.Ordinal).Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant())}", Functions(group.Key, group));
         }
 
         if (model.ImplementedStubs.Any(st => model.Table(st.Table).Module != "kernel"))
@@ -121,7 +123,7 @@ public static class SqlEmitter
             b.Append(CultureInfo.InvariantCulture, $"grant usage on schema {schema} to {string.Join(", ", GroupRoles)};\n");
             foreach (var table in tables)
             {
-                b.Append(TableGrants(table, table.BaseAppendOnlyUpdatable.ToList()));
+                b.Append(TableGrants(table, table.BaseAppendOnlyUpdatable.ToList(), auditInsert: true));
             }
 
             b.Append(CultureInfo.InvariantCulture, $"grant select on all tables in schema {schema} to app_ro, backup;\n");
@@ -131,11 +133,15 @@ public static class SqlEmitter
         return b.ToString().TrimEnd('\n') + "\n";
     }
 
-    private static string TableGrants(Table table, List<string> updatable)
+    /// <remarks>
+    /// <paramref name="auditInsert"/>: the frozen S1.03 grants file gave app_audit INSERT on audit tables; CR-031 (S1.07-r1)
+    /// took it away, so audit tables added later are written only through the audit functions.
+    /// </remarks>
+    private static string TableGrants(Table table, List<string> updatable, bool auditInsert = false)
     {
         if (table.Schema == "aud")
         {
-            return $"grant select on {table.FullName} to app_rw;\ngrant insert on {table.FullName} to app_audit;\n";
+            return auditInsert ? $"grant select on {table.FullName} to app_rw;\ngrant insert on {table.FullName} to app_audit;\n" : $"grant select on {table.FullName} to app_rw;\n";
         }
 
         if (!table.IsAppendOnly)

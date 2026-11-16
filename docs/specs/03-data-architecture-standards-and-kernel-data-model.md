@@ -96,7 +96,7 @@ Posted journal entries and lines, stock movements, audit log, AI tool-call log, 
 | app\_owner | Owns schemas; used only by the Migrator |
 | app\_rw | Read and write on business tables; no DDL; no update or delete on append-only tables |
 | app\_ro | Read-only, used by reporting and replicas |
-| app\_audit | Insert on audit tables only |
+| app\_audit | Execute the audit append functions only (amended by CR-031: no direct insert on audit tables) |
 | backup | Read for logical backups |
 
 Row-level security is not used for tenant isolation in this design (databases are isolated), but may be used for data scopes in reporting views if the semantic layer cannot enforce them alone. A reporting\_ext role, limited to the reporting schema and scoped views, is created only on request for on-premise and private-cloud tenants (document 9, ADH-11); it has read access to reporting views only, with network allow lists and audit.
