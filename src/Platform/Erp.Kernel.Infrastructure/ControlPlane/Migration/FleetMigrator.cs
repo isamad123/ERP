@@ -9,7 +9,11 @@ using Npgsql;
 namespace Erp.Kernel.Infrastructure.ControlPlane.Migration;
 
 /// <summary>Outcome for one customer database.</summary>
-public sealed record TenantMigrationOutcome(string Code, bool Succeeded, int Applied, string? SchemaVersion, string? Error);
+public sealed record TenantMigrationOutcome(string Code, bool Succeeded, int Applied, string? SchemaVersion, string? Error)
+{
+    /// <summary>Problems found but not repaired, for example the protected Tenant Admin role missing a mandatory permission (CR-024).</summary>
+    public IReadOnlyList<string> Warnings { get; init; } = [];
+}
 
 /// <summary>
 /// The migrator command (S1.03 build item 5): applies pending migrations to every customer database one at a time.
@@ -32,17 +36,18 @@ public sealed class FleetMigrator(ControlPlaneOptions options, ISecretStore secr
             {
                 IEnumerable<string> modules = tenant.InstalledModules.Count == 0 ? [MigrationSet.Kernel] : tenant.InstalledModules;
                 SchemaMigrationResult result;
+                Access.AccessSetupResult access;
                 await using (var owner = await provisioner.OpenTenantAsync(tenant, TenantLogins.Owner, cancellationToken).ConfigureAwait(false))
                 {
                     result = await TenantSchemaMigrator.ApplyAsync(owner, migrations.TenantScripts(modules), clock, BaselineSeed.SystemUserId, cancellationToken).ConfigureAwait(false);
                     await Identity.IdentitySetup.EnsureAsync(owner, secrets, tenant.Code, cancellationToken).ConfigureAwait(false);
-                    await Access.AccessSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), clock.UtcNow, cancellationToken).ConfigureAwait(false);
+                    access = await Access.AccessSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), clock.UtcNow, cancellationToken).ConfigureAwait(false);
                 }
 
                 await provisioner.RecordVersionsAsync(actor, tenant, result, cancellationToken).ConfigureAwait(false);
                 await SetStatusAsync(tenant, "ready", actor, cancellationToken).ConfigureAwait(false);
-                await AuditAsync(actor, "tenant.migrate", tenant, new { code = tenant.Code, applied = result.Applied, schema_version = result.SchemaVersion }, cancellationToken).ConfigureAwait(false);
-                outcomes.Add(new TenantMigrationOutcome(tenant.Code, true, result.Applied, result.SchemaVersion, null));
+                await AuditAsync(actor, "tenant.migrate", tenant, new { code = tenant.Code, applied = result.Applied, schema_version = result.SchemaVersion, warnings = access.ProtectedRoleProblems }, cancellationToken).ConfigureAwait(false);
+                outcomes.Add(new TenantMigrationOutcome(tenant.Code, true, result.Applied, result.SchemaVersion, null) { Warnings = access.ProtectedRoleProblems });
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

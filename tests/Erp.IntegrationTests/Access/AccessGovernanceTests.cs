@@ -137,7 +137,9 @@ public sealed class AccessGovernanceTests(TenancyFixture fx) : IAsyncLifetime
         await Refused(await _h.PostAsync(actor, $"/api/iam/users/{first}/status", new { status = "disabled", reason = "test" }, Ct, code));
         await Refused(await _h.PostAsync(actor, $"/api/iam/users/{first}/status", new { status = "locked", reason = "test" }, Ct, code)); // archiving needs disabling first, refused above
         await Refused(await _h.PostAsync(actor, $"/api/iam/user-roles/{firstAssignment}/end", new { reason = "test" }, Ct, code));
-        await Refused(await _h.PostAsync(actor, $"/api/iam/roles/{adminRole}/archive", new { reason = "test" }, Ct, code));
+        var archive = await _h.PostAsync(actor, $"/api/iam/roles/{adminRole}/archive", new { reason = "test" }, Ct, code);
+        Assert.Equal(HttpStatusCode.BadRequest, archive.Status);
+        Assert.Equal("errors.tenant_admin.protected_role", archive.Text("title")); // CR-024: the role is never archived, admins or not
         Assert.Equal("active", await AccessHarness.ScalarAsync<string>(owner, "select status from iam.users where id = $1", Ct, first));
 
         // A second tenant admin through a group: now the first may lose the role, and the group carries the last one.
@@ -153,5 +155,49 @@ public sealed class AccessGovernanceTests(TenancyFixture fx) : IAsyncLifetime
         await Refused(await _h.PostAsync(actor, $"/api/iam/user-group-roles/{groupRole.Json.GetProperty("id").GetGuid()}/end", new { reason = "test" }, Ct, code));
         await Refused(await _h.PostAsync(actor, $"/api/iam/users/{second}/status", new { status = "disabled", reason = "test" }, Ct, code));
         Assert.Equal(1L, await AccessHarness.ScalarAsync<long>(owner, "select count(*) from iam.user_group_members where group_id = $1", Ct, group));
+    }
+
+    [Fact]
+    public async Task CR_024_R_008_the_protected_Tenant_Admin_role_keeps_Manage_Roles_and_Assign_Roles_and_cannot_be_archived()
+    {
+        var maker = await _h.UserAsync(Ct, null, "tenant_admin");
+        var checker = await _h.UserAsync(Ct, null, "tenant_admin");
+        var role = await _h.RoleIdAsync("tenant_admin", Ct);
+        var current = (await _h.GetAsync(maker, $"/api/iam/roles/{role}/summary", Ct)).Json.GetProperty("permissions").EnumerateArray().Select(p => p.GetString()!).ToList();
+        Assert.Contains("iam.roles.manage", current);
+
+        // Removing a mandatory permission is refused at once (before maker-checker), for each of the two.
+        foreach (var mandatory in new[] { "iam.roles.manage", "iam.roles.assign" })
+        {
+            var refused = await _h.PutAsync(maker, $"/api/iam/roles/{role}/permissions", new { permissions = current.Where(p => p != mandatory).ToArray(), reason = "test" }, Ct);
+            Assert.Equal(HttpStatusCode.BadRequest, refused.Status);
+            Assert.Equal("errors.tenant_admin.mandatory_permission", refused.Text("title"));
+        }
+
+        // A held change that would remove one (stored before the rule, or written by hand) is refused at approval too.
+        var held = Guid.CreateVersion7();
+        await _h.ExecAsync("""
+            insert into iam.maker_checker_requests (id, action_type, subject_type, subject_id, payload, requested_by, status, created_at, created_by, updated_at, updated_by)
+            values ($1, 'iam.role.set_permissions', 'iam.roles', $2, jsonb_build_object('kind', 'iam.role.set_permissions', 'roleId', $2::text, 'permissions', '["iam.self.manage"]'::jsonb), $3, 'pending', now(), $3, now(), $3)
+            """, Ct, held, role, maker);
+        var approval = await _h.PostAsync(checker, $"/api/iam/maker-checker-requests/{held}/approve", new { reason = "test" }, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, approval.Status);
+        Assert.Equal("errors.tenant_admin.mandatory_permission", approval.Text("title"));
+        Assert.Equal(2L, await _h.ScalarAsync<long>("select count(*) from iam.role_permissions rp join iam.permissions p on p.id = rp.permission_id where rp.role_id = $1 and p.code in ('iam.roles.manage', 'iam.roles.assign')", Ct, role));
+
+        // Other permissions of the role can still change (it is sensitive, so through a second administrator).
+        var lighter = await _h.PutAsync(maker, $"/api/iam/roles/{role}/permissions", new { permissions = current.Where(p => p != "cfg.labels.update").ToArray(), reason = "labels are managed centrally" }, Ct);
+        Assert.Equal(HttpStatusCode.Accepted, lighter.Status);
+        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(checker, $"/api/iam/maker-checker-requests/{lighter.Json.GetProperty("requestId").GetGuid()}/approve", new { reason = "ok" }, Ct)).Status);
+
+        // Archiving the role is refused; renaming it works.
+        var archive = await _h.PostAsync(maker, $"/api/iam/roles/{role}/archive", new { reason = "test" }, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, archive.Status);
+        Assert.Equal("errors.tenant_admin.protected_role", archive.Text("title"));
+        var version = (await _h.GetAsync(maker, $"/api/iam/roles/{role}", Ct)).Json.GetProperty("rowVersion").GetInt64();
+        Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(maker, $"/api/iam/roles/{role}", new { name = new { en = "Tenant Administrator", ur = "ٹیننٹ ایڈمنسٹریٹر" }, rowVersion = version }, Ct)).Status);
+
+        await using var owner = await _h.OwnerAsync(null, Ct);
+        Assert.Empty(await Erp.Kernel.Infrastructure.Access.AccessSetup.ProtectedRoleProblemsAsync(owner, null, Ct));
     }
 }

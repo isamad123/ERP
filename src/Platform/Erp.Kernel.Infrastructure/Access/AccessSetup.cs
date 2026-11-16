@@ -124,7 +124,15 @@ public sealed class BaselineScope
 }
 
 /// <summary>What one run of <see cref="AccessSetup.EnsureAsync"/> changed (for the migrator's output and the tests).</summary>
-public sealed record AccessSetupResult(int PermissionsAdded, int PermissionsRetired, int RolesAdded, int GrantsAdded, IReadOnlyList<string> EditedRolesLeftAlone);
+public sealed record AccessSetupResult(int PermissionsAdded, int PermissionsRetired, int RolesAdded, int GrantsAdded, IReadOnlyList<string> EditedRolesLeftAlone)
+{
+    /// <summary>
+    /// Mandatory permissions the protected Tenant Admin role still lacks after this run (CR-024). Tenant administration
+    /// cannot cause this; only a direct database change can. An unedited role gets them back from the baseline top-up
+    /// above; for an edited one <c>migrate</c> only reports it, and a platform Super Admin runs <c>tenant admin-role-repair</c>.
+    /// </summary>
+    public IReadOnlyList<string> ProtectedRoleProblems { get; init; } = [];
+}
 
 /// <summary>
 /// Access set-up of a customer database, run after its migrations by provisioning and by the migrator's <c>migrate</c>
@@ -159,12 +167,13 @@ public static class AccessSetup
             var (added, retired) = await RegisterAsync(connection, tx, permissions, now, cancellationToken).ConfigureAwait(false);
             await ScopesAsync(connection, tx, manifests.SelectMany(m => m.DataScopes), now, cancellationToken).ConfigureAwait(false);
             var (rolesAdded, grants, edited) = await RolesAsync(connection, tx, manifests, permissions.Select(p => p.Code).ToList(), now, cancellationToken).ConfigureAwait(false);
+            var problems = await ProtectedRoleProblemsAsync(connection, tx, cancellationToken).ConfigureAwait(false);
             if (own)
             {
                 await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            return new AccessSetupResult(added, retired, rolesAdded, grants, edited);
+            return new AccessSetupResult(added, retired, rolesAdded, grants, edited) { ProtectedRoleProblems = problems };
         }
         finally
         {
@@ -292,6 +301,30 @@ public static class AccessSetup
         }
 
         return (rolesAdded, grants, edited);
+    }
+
+    /// <summary>The mandatory permissions (CR-024) the protected Tenant Admin role lacks, as "tenant_admin lacks code" lines.</summary>
+    public static async Task<IReadOnlyList<string>> ProtectedRoleProblemsAsync(NpgsqlConnection c, NpgsqlTransaction? tx, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(c);
+        var problems = new List<string>();
+        foreach (var code in ProtectedRoles.Mandatory)
+        {
+#pragma warning disable CA2100 // constant SQL text; every value is a parameter
+            await using var command = new NpgsqlCommand("""
+                select exists (select 1 from iam.roles r join iam.role_permissions rp on rp.role_id = r.id join iam.permissions p on p.id = rp.permission_id
+                               where lower(r.code) = lower($1) and not r.is_deleted and p.code = $2 and p.retired_at is null)
+                """, c, tx);
+#pragma warning restore CA2100
+            command.Parameters.Add(new NpgsqlParameter { Value = ProtectedRoles.TenantAdmin });
+            command.Parameters.Add(new NpgsqlParameter { Value = code });
+            if (await command.ExecuteScalarAsync(ct).ConfigureAwait(false) is not true)
+            {
+                problems.Add($"{ProtectedRoles.TenantAdmin} lacks {code}");
+            }
+        }
+
+        return problems;
     }
 
     /// <summary>The registered codes a manifest entry names: the code itself, or every code matching a pattern with <c>*</c>.</summary>

@@ -185,6 +185,11 @@ public sealed partial class AccessAdministrationService(
                 return AccessResult.NotFound;
             }
 
+            if (ProtectedRoles.IsProtected(role.Code))
+            {
+                return AccessResult.Invalid(ProtectedRoles.ProtectedRole); // CR-024: the Tenant Admin role is never archived
+            }
+
             var admins = await TenantAdminGuard.CountAsync(c, tx, cancellationToken).ConfigureAwait(false);
             await IdentityDb.ExecuteAsync(c, tx, """
                 update iam.roles set is_deleted = true, deleted_at = $2, deleted_by = $3, updated_at = $2, updated_by = $3, row_version = row_version + 1 where id = $1
@@ -407,7 +412,14 @@ public sealed partial class AccessAdministrationService(
             {
                 var codes = change.Permissions!;
                 var known = await IdentityDb.ScalarAsync<long>(c, tx, "select count(*) from iam.permissions where code = any($1) and retired_at is null", ct, (object)codes.ToArray()).ConfigureAwait(false); // (object): one array parameter, not a params list
-                return known == codes.Count ? null : AccessResult.Invalid(UnknownPermission);
+                if (known != codes.Count)
+                {
+                    return AccessResult.Invalid(UnknownPermission);
+                }
+
+                // The protected Tenant Admin role keeps Manage Roles and Assign Roles (CR-024), also when a held change is approved.
+                var role = await IdentityDb.ScalarAsync<string>(c, tx, "select code from iam.roles where id = $1", ct, change.RoleId).ConfigureAwait(false);
+                return role is not null && !ProtectedRoles.Keeps(role, codes) ? AccessResult.Invalid(ProtectedRoles.MandatoryPermissionMissing) : null;
             }
 
             case AccessChange.SetDataScopes:

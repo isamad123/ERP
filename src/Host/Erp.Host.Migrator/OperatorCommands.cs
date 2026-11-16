@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.BuildingBlocks.Infrastructure.Time;
+using Erp.Kernel.Infrastructure.Access;
 using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Backup;
 using Erp.Kernel.Infrastructure.ControlPlane.Entitlements;
@@ -33,6 +34,12 @@ public static class OperatorCommands
                            --size-profile <micro|sme|mid|enterprise> --cluster <n> --legal-name <n>
                            --admin-email <e> --admin-name <n> --entitlement <file.json>
           tenant admin-activation-link --code <c>        prints a new activation link for the invited first administrator
+          tenant admin-role-repair --code <c> --reason <text>
+                                                         Super Admin: restores the protected Tenant Admin role (CR-024)
+          tenant admin-grant --code <c> --email <e> --reason <text>
+                                                         Super Admin: gives the Tenant Admin role to that user
+          tenant admin-revoke --code <c> --email <e> --reason <text>
+                                                         Super Admin: takes the Tenant Admin role away, even from the last admin
           auth-key rotate                                adds a new access-token signing key and makes it current
           tenant list
           tenant suspend|resume --code <c> --reason <text>
@@ -65,6 +72,9 @@ public static class OperatorCommands
                 "tenant provision" => await ProvisionAsync(context, cancellationToken).ConfigureAwait(false),
                 "tenant list" => await ListAsync(context, cancellationToken).ConfigureAwait(false),
                 "tenant admin-activation-link" => await ActivationLinkAsync(context, cancellationToken).ConfigureAwait(false),
+                "tenant admin-role-repair" => await RecoveryAsync(context, (r, a) => r.RepairRoleAsync(a, context.Option("code"), context.OptionalOption("reason"), cancellationToken)).ConfigureAwait(false),
+                "tenant admin-grant" => await RecoveryAsync(context, (r, a) => r.GrantAsync(a, context.Option("code"), context.Option("email"), context.OptionalOption("reason"), cancellationToken)).ConfigureAwait(false),
+                "tenant admin-revoke" => await RecoveryAsync(context, (r, a) => r.RevokeAsync(a, context.Option("code"), context.Option("email"), context.OptionalOption("reason"), cancellationToken)).ConfigureAwait(false),
                 "auth-key rotate" => await RotateTokenKeyAsync(context, cancellationToken).ConfigureAwait(false),
                 "tenant suspend" => await LifecycleAsync(context, suspend: true, cancellationToken).ConfigureAwait(false),
                 "tenant resume" => await LifecycleAsync(context, suspend: false, cancellationToken).ConfigureAwait(false),
@@ -124,6 +134,10 @@ public static class OperatorCommands
             await c.Output.WriteLineAsync(o.Succeeded
                 ? $"{o.Code}: ok, {o.Applied} applied, schema {o.SchemaVersion}"
                 : $"{o.Code}: FAILED, now in maintenance: {o.Error}").ConfigureAwait(false);
+            foreach (var warning in o.Warnings)
+            {
+                await c.Output.WriteLineAsync($"{o.Code}: WARNING {warning}; a platform Super Admin can run `tenant admin-role-repair --code {o.Code} --reason ...`").ConfigureAwait(false);
+            }
         }
 
         await c.Output.WriteLineAsync($"customers: {outcomes.Count(o => o.Succeeded)} migrated, {outcomes.Count(o => !o.Succeeded)} failed").ConfigureAwait(false);
@@ -183,6 +197,22 @@ public static class OperatorCommands
     {
         await c.ActorAsync(cancellationToken).ConfigureAwait(false); // only a registered platform operator may issue links
         return await PrintActivationLinkAsync(c, c.Option("code"), cancellationToken).ConfigureAwait(false) ? 0 : 4;
+    }
+
+    /// <summary>
+    /// Platform Super Admin recovery and override of a customer's tenant administration (CR-024). The actor must be a
+    /// platform user with role platform_admin; every run is recorded in cp.platform_audit and the customer's iam events.
+    /// </summary>
+    private static async Task<int> RecoveryAsync(Context c, Func<PlatformAdminRecovery, PlatformActor, Task<PlatformAdminRecovery.Outcome>> action)
+    {
+        var actor = await c.ActorAsync(CancellationToken.None).ConfigureAwait(false);
+        var outcome = await action(new PlatformAdminRecovery(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations), actor).ConfigureAwait(false);
+        foreach (var message in outcome.Messages)
+        {
+            await c.Output.WriteLineAsync(c.Option("code") + ": " + message).ConfigureAwait(false);
+        }
+
+        return 0;
     }
 
     /// <summary>Prints the first administrator's activation link (slice S1.05 ruling Q6). The link is a secret: hand it over privately.</summary>

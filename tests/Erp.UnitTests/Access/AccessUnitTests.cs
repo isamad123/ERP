@@ -158,6 +158,17 @@ public sealed partial class AccessUnitTests
         Assert.Equal(("iam.roles", change.RoleId!.Value), back.Subject());
     }
 
+    [Fact]
+    public void CR_024_R_008_the_Tenant_Admin_role_must_keep_Manage_Roles_and_Assign_Roles()
+    {
+        Assert.Equal(["iam.roles.manage", "iam.roles.assign"], ProtectedRoles.Mandatory);
+        Assert.True(ProtectedRoles.IsProtected("TENANT_ADMIN"));
+        Assert.True(ProtectedRoles.Keeps("tenant_admin", ["iam.roles.manage", "iam.roles.assign", "org.companies.read"]));
+        Assert.False(ProtectedRoles.Keeps("tenant_admin", ["iam.roles.manage"]));
+        Assert.False(ProtectedRoles.Keeps("tenant_admin", []));
+        Assert.True(ProtectedRoles.Keeps("company_admin", [])); // only the protected role is bound
+    }
+
     // ------------------------------------------------------------------ generator keys (CR-018, CR-020, CR-021)
 
     [Fact]
