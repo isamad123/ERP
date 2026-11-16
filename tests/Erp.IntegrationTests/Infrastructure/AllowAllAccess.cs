@@ -49,6 +49,9 @@ public static class AllowAllAccess
 
         public ValueTask<FieldAccessPlan<T>> PlanAsync<T>(FieldCatalog catalog, ScopeTarget<T> target, string action, IScopeQuerySource? source, CancellationToken cancellationToken)
             where T : class => ValueTask.FromResult(FieldAccessPlans.Same<T>(FieldAccessMap.Unrestricted(catalog)));
+
+        public ValueTask<FieldAccessMap> ForEveryRowAsync(FieldCatalog catalog, bool isScoped, string action, Guid? companyId, CancellationToken cancellationToken) =>
+            ValueTask.FromResult(FieldAccessMap.Unrestricted(catalog));
     }
 }
 

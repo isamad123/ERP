@@ -14,7 +14,8 @@ namespace Erp.Kernel.Infrastructure.Audit;
 /// wrapped by the customer's field key); destroying that key makes them unreadable while every hash stays valid.</item>
 /// <item><c>salary</c> values are encrypted with the customer's field key: payroll records are kept by law and are not
 /// erased (spec 03 section 14.3).</item>
-/// <item>Ciphertext and blind-index columns (<c>enc</c>, <c>hmac</c>) are never copied: the entry only says they changed.</item>
+/// <item>Ciphertext and blind-index columns (<c>enc</c>, <c>hmac</c>) are never copied: the entry only says they changed. The
+/// same holds for a personal or restricted value whose person is unknown: never the customer key (review S1.07 finding 5).</item>
 /// </list>
 /// A protected field is stored as <c>{"field", "class", "key": "subject"|"customer"|"erased", "before", "after"}</c> with
 /// base64 values; an unprotected one as <c>{"field", "before", "after"}</c>.
@@ -45,10 +46,18 @@ public sealed class AuditValueProtector(NpgsqlConnection connection, NpgsqlTrans
         if (fieldClass is not null)
         {
             change["class"] = fieldClass;
-            if (fieldClass == "salary" || subject is null)
+            if (fieldClass == "salary")
             {
                 key = customerKey;
                 change["key"] = KeyCustomer;
+            }
+            else if (subject is null)
+            {
+                // R-21 (review S1.07 finding 5): a personal value is kept only under its person's key, so erasure can reach
+                // it. When the person cannot be found (for example an employment created in the same, uncommitted
+                // transaction) the entry says the field changed, without values, as for encrypted columns (R-013).
+                change["redacted"] = true;
+                return change;
             }
             else
             {

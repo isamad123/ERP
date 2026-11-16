@@ -210,6 +210,24 @@ public sealed class AccessEngine(ITenantConnectionProvider tenant, IClock clock,
         return Merge(catalog, roles.Count > 0 ? roles : granting.Select(g => g.Role).Distinct().ToList());
     }
 
+    public async ValueTask<FieldAccessMap> ForEveryRowAsync(FieldCatalog catalog, bool isScoped, string action, Guid? companyId, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+        var snapshot = await SnapshotAsync(cancellationToken).ConfigureAwait(false);
+        var roles = snapshot.Granting(catalog.Resource + "." + action)
+            .Where(g => g.Assignment.CompanyId is null || g.Assignment.CompanyId == companyId)
+            .Where(g => !isScoped || CoversEveryRow(g.Role.ScopeFor(catalog.Resource), companyId))
+            .Select(g => g.Role)
+            .Distinct()
+            .ToList();
+        return Merge(catalog, roles);
+    }
+
+    /// <summary>A scope that lets through every row of the company: "all", or "companies" naming it, with no conditions.</summary>
+    private static bool CoversEveryRow(ScopeRule? scope, Guid? companyId) =>
+        scope is { Conditions.Count: 0 }
+        && (scope.Kind == ScopeRule.All || (scope.Kind == ScopeRule.Companies && companyId is { } company && scope.Ids.Contains(company)));
+
     /// <summary>
     /// Field access per stored row (review S1.06 finding 3, CR-025): one part per assignment granting the action, with the
     /// rows its scope covers and the fields as its role alone sees them. When every part covers every row, or every part
