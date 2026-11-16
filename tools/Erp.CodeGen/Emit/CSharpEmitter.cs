@@ -94,6 +94,7 @@ public static class CSharpEmitter
             if (module.Key != "controlplane")
             {
                 output.Add($"{infraRoot}/{N.ModuleProject(sample)}ResourceCatalog.g.cs", ResourceCatalog(module.Key, tables.Where(HasRepository).ToList()));
+                output.Add($"{infraRoot}/{N.ModuleProject(sample)}AuditCatalog.g.cs", AuditCatalog(module.Key, tables));
             }
             if (module.Key == "controlplane")
             {
@@ -595,7 +596,7 @@ public static class CSharpEmitter
         var repo = N.RepositoryInterfaceFull(t);
         var access = AccessFull(t);
         const string permissions = "global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions";
-        const string fields = "global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields";
+        const string fields = "global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog";
         const string ct = "global::System.Threading.CancellationToken cancellationToken";
         const string json = "global::System.Text.Json.Nodes.JsonObject";
 
@@ -607,7 +608,7 @@ public static class CSharpEmitter
         w.Line("    {");
         w.Line($"        var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);");
         w.Line($"        var rows = await repository.ListAsync(new {N.FilterFull(t)} {{ {filterInit} }}, page, cancellationToken).ConfigureAwait(false);");
-        w.Line($"        var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, {access}.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);");
+        w.Line($"        var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, {access}.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);");
         w.Line($"        return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<{json}>(items, rows.Count == page.Limit ? rows[^1].Id : null));");
         w.Line("    }, cancellationToken);");
 
@@ -617,7 +618,7 @@ public static class CSharpEmitter
         w.Line($"    GeneratedEndpointSupport.RunAsync(permissions, {CodeWriter.CSharpString(N.Permission(t, "read"))}, async () =>");
         w.Line("    {");
         w.Line("        var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);");
-        w.Line($"        return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, {access}.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));");
+        w.Line($"        return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, {access}.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));");
         w.Line("    }, cancellationToken);");
 
         if (CanCreate(t))
@@ -645,7 +646,7 @@ public static class CSharpEmitter
             w.Line("        }");
             w.Line();
             w.Line("        await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);");
-            w.Line($"        return TypedResults.Created({CodeWriter.CSharpString(N.Route(t) + "/")} + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, {access}.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));");
+            w.Line($"        return TypedResults.Created({CodeWriter.CSharpString(N.Route(t) + "/")} + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, {access}.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));");
             w.Line("    }, cancellationToken);");
         }
 
@@ -675,7 +676,7 @@ public static class CSharpEmitter
             w.Line("        }");
             w.Line();
             w.Line("        await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);");
-            w.Line($"        return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, {access}.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));");
+            w.Line($"        return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, {access}.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));");
             w.Line("    }, cancellationToken);");
         }
 
@@ -914,12 +915,15 @@ public static class CSharpEmitter
         w.Line("    TypedResults.ValidationProblem(fields.ToDictionary(f => f, _ => new[] { global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable }), title: global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable);");
         w.Line();
         w.Line("/// <summary>The answer for one row with hidden fields left out and masked fields masked (field security of the roles whose scope covers it).</summary>");
-        w.Line("public static async global::System.Threading.Tasks.Task<global::System.Text.Json.Nodes.JsonObject> ShapeOneAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Data.IRepository<TRow> repository, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, TRow row, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)");
+        w.Line("public static async global::System.Threading.Tasks.Task<global::System.Text.Json.Nodes.JsonObject> ShapeOneAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Data.IRepository<TRow> repository, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, TRow row, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)");
         w.Line("    where TRow : class, global::Erp.BuildingBlocks.Domain.Entities.IEntity =>");
-        w.Line("    (await ShapeAsync(repository, fields, catalog, [row], toResponse, cancellationToken).ConfigureAwait(false))[0];");
+        w.Line("    (await ShapeAsync(repository, fields, accessLog, catalog, [row], toResponse, cancellationToken, single: true).ConfigureAwait(false))[0];");
         w.Line();
-        w.Line("/// <summary>The answers for rows, each shaped by the roles whose data scope covers that row (slice S1.06, review finding 3).</summary>");
-        w.Line("public static async global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>> ShapeAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Data.IRepository<TRow> repository, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, global::System.Collections.Generic.IReadOnlyList<TRow> rows, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)");
+        w.Line("/// <summary>");
+        w.Line("/// The answers for rows, each shaped by the roles whose data scope covers that row (slice S1.06, review finding 3). When the");
+        w.Line("/// answer shows a salary, personal or restricted field unmasked, one access-log row is written before it is returned (S1.07).");
+        w.Line("/// </summary>");
+        w.Line("public static async global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>> ShapeAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Data.IRepository<TRow> repository, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, global::System.Collections.Generic.IReadOnlyList<TRow> rows, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken, bool single = false)");
         w.Line("    where TRow : class, global::Erp.BuildingBlocks.Domain.Entities.IEntity");
         w.Line("{");
         w.Line("    var access = await repository.FieldAccessAsync(rows, catalog, fields, \"read\", cancellationToken).ConfigureAwait(false);");
@@ -928,6 +932,12 @@ public static class CSharpEmitter
         w.Line("    {");
         w.Line("        var node = global::System.Text.Json.JsonSerializer.SerializeToNode(toResponse(rows[i]), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();");
         w.Line("        shaped.Add(global::Erp.BuildingBlocks.Application.Security.FieldShaping.Shape(node, catalog, access[i]));");
+        w.Line("    }");
+        w.Line();
+        w.Line("    var shown = global::Erp.BuildingBlocks.Application.Security.FieldShaping.SensitiveShown(shaped, catalog, access);");
+        w.Line("    if (shown.Count > 0)");
+        w.Line("    {");
+        w.Line("        await accessLog.RecordAsync(catalog.Resource, single ? rows[0].Id : null, shown, \"view\", rows.Count, cancellationToken).ConfigureAwait(false);");
         w.Line("    }");
         w.Line();
         w.Line("    return shaped;");
@@ -950,7 +960,8 @@ public static class CSharpEmitter
         foreach (var t in tables)
         {
             var access = AccessFull(t);
-            w.Line($"    new({CodeWriter.CSharpString(N.Resource(t))}, {access}.Fields, {(t.IsDataScoped ? "true" : "false")}, (sp, filter, limit, ct) => global::Erp.BuildingBlocks.Infrastructure.Persistence.ScopePreviewQuery.RunAsync(sp.GetRequiredService<{N.DbContextName(t)}>(), filter, {access}.Scope, limit, ct)),");
+            w.Line($"    new({CodeWriter.CSharpString(N.Resource(t))}, {access}.Fields, {(t.IsDataScoped ? "true" : "false")}, (sp, filter, limit, ct) => global::Erp.BuildingBlocks.Infrastructure.Persistence.ScopePreviewQuery.RunAsync(sp.GetRequiredService<{N.DbContextName(t)}>(), filter, {access}.Scope, limit, ct),");
+            w.Line($"        (sp, id, ct) => global::Erp.BuildingBlocks.Infrastructure.Persistence.RecordReadAccess.ForAsync(sp.GetRequiredService<{N.DbContextName(t)}>(), sp.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter>(), sp.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(), {access}.Scope, {access}.Fields, id, ct)),");
         }
 
         w.Line("];");
@@ -958,7 +969,38 @@ public static class CSharpEmitter
         return w.ToString();
     }
 
-    private static string Sensitive(Table t) => t.Columns.Exists(c => c.IsSensitive || c.Kind is ColumnKind.Money || c.FieldClass is not null) ? "true" : "false";
+    /// <summary>
+    /// The module's audit catalogue (slice S1.07, CR-026): for every table its CLR type, whether the change log records it
+    /// (design key <c>audit</c>), the column that identifies a row, the company and data-subject locators and the field
+    /// classes, so the kernel's change tracker can write entries without referencing the module.
+    /// </summary>
+    private static string AuditCatalog(string module, List<Table> tables)
+    {
+        var sample = tables[0];
+        var project = N.ModuleProject(sample);
+        var w = new CodeWriter();
+        w.Line(Header).Line($"namespace Erp.{project}.Infrastructure.Generated;").Line();
+        w.Line($"/// <summary>How the change log records the {module} tables (slice S1.07): audited or not (with the reason), row key, locators and field classes.</summary>");
+        w.Open($"public static class {project}AuditCatalog");
+        w.Line("public static global::System.Collections.Generic.IReadOnlyList<global::Erp.BuildingBlocks.Application.Audit.AuditedTable> All { get; } =");
+        w.Line("[");
+        foreach (var t in tables)
+        {
+            string Text(string? v) => v is null ? "null" : CodeWriter.CSharpString(v);
+            var company = t.HasColumn("company_id") ? "company_id" : t.ScopeLocators.GetValueOrDefault("company");
+            var classes = t.Columns.Where(c => c.FieldClass is not null).Select(c => $"[{CodeWriter.CSharpString(c.Name)}] = {CodeWriter.CSharpString(c.FieldClass!)}").ToList();
+            var classMap = classes.Count == 0 ? "null" : $"new global::System.Collections.Generic.Dictionary<string, string>(global::System.StringComparer.Ordinal) {{ {string.Join(", ", classes)} }}";
+            w.Line($"    new(typeof({N.EntityFull(t)}), {CodeWriter.CSharpString(t.FullName)}, {(t.Audited ? "true" : "false")}, {Text(t.AuditReason)}, {Text(t.AuditKeyColumn)}, {Text(company)}, {Text(t.ScopeLocators.GetValueOrDefault("person"))}, {Text(t.ScopeLocators.GetValueOrDefault("employment"))}, {classMap}),");
+        }
+
+        w.Line("];");
+        w.Close();
+        return w.ToString();
+    }
+
+    // Product-owner ruling S1.07 P6: only the salary class makes a permission sensitive; personal fields are access-logged
+    // and encrypted per person in the audit log but do not make a role privileged.
+    private static string Sensitive(Table t) => t.Columns.Exists(c => c.IsSensitive || c.Kind is ColumnKind.Money || c.FieldClass == "salary") ? "true" : "false";
 
     private static string ModuleId(Table t) => t.Module == "hrm" ? "hrm" : t.Schema;
 

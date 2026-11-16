@@ -228,3 +228,19 @@ public interface ICallerAccess
     /// </summary>
     ValueTask<bool> CoversCompanyAsync(string permission, Guid? companyId, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// The access log of sensitive fields (FR-KRN-AUD-02, GHR-02, HRM-PRV-05; slice S1.07 Q6): one row per answer that showed
+/// at least one salary, personal or restricted field unmasked. Written before the answer leaves the server; if it cannot
+/// be written the request fails.
+/// </summary>
+public interface ISensitiveAccessLog
+{
+    /// <param name="resource">The table, for example <c>hrm.pay_results</c>.</param>
+    /// <param name="entityId">The record for a single-record answer; null for a list.</param>
+    /// <param name="fields">The sensitive field keys shown unmasked.</param>
+    /// <param name="action"><c>view</c>, <c>export</c> or <c>print</c>.</param>
+    /// <param name="rowCount">Rows in the answer.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    Task RecordAsync(string resource, Guid? entityId, IReadOnlyList<string> fields, string action, int rowCount, CancellationToken cancellationToken);
+}

@@ -82,7 +82,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.person_identifiers.value_last4"
+      "labelKey": "fields.hrm.person_identifiers.value_last4",
+      "fieldClass": "personal"
     },
     {
       "column": "issue_date",

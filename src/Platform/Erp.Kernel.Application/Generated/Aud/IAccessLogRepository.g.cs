@@ -41,6 +41,7 @@ public static class AccessLogAccess
         new("fields", "Fields", null),
         new("action", "Action", null),
         new("row_count", "RowCount", null),
+        new("correlation_id", "CorrelationId", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
     ]);

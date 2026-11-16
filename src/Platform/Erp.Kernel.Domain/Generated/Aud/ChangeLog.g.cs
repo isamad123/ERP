@@ -54,6 +54,9 @@ public sealed partial class ChangeLog : global::Erp.BuildingBlocks.Domain.Entiti
     /// <summary>row_hash</summary>
     public byte[] RowHash { get; set; } = null!;
 
+    /// <summary>source: where the change came from; decided by the server, never from request input (CR-026)</summary>
+    public string? Source { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

@@ -21,6 +21,8 @@
   unique: [[lower(person_no)]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {person: id}
+  # S1.07 (CR-026, Q5): personal fields; the audit log encrypts their values with the person's key (R-21).
+  field_class: {date_of_birth: personal, religion: personal}
   reqs: [EMP-01, EMP-15, FR-XM-28]
 
 - table: hrm.person_identifiers
@@ -39,6 +41,8 @@
   unique: [[kind, country_code, value_hmac]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {person: person_id}
+  # S1.07 (CR-026, Q5): personal fields; the audit log encrypts their values with the person's key (R-21).
+  field_class: {value: personal, value_last4: personal}
   reqs: [EMP-05, EMP-16, EMP-18]
   notes: One row per identifier; renewal updates issue and expiry dates (history in the audit log).
 
@@ -51,6 +55,8 @@
     - [is_primary, bool, req]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {person: person_id}
+  # S1.07 (CR-026, Q5): personal fields; the audit log encrypts their values with the person's key (R-21).
+  field_class: {value: personal}
   reqs: [EMP-01]
 
 - table: hrm.person_addresses
@@ -62,6 +68,8 @@
     - [address, json, req]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {person: person_id}
+  # S1.07 (CR-026, Q5): personal fields; the audit log encrypts their values with the person's key (R-21).
+  field_class: {address: personal}
   reqs: [EMP-01]
 
 - table: hrm.person_relations
@@ -79,6 +87,8 @@
     - [is_emergency_contact, bool, req]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {person: person_id}
+  # S1.07 (CR-026, Q5): personal fields; the audit log encrypts their values with the person's key (R-21).
+  field_class: {date_of_birth: personal, gender: personal, identifier: personal, phone: personal}
   reqs: [EMP-01, CMP-04, CMP-05]
 
 - table: hrm.nominations
@@ -230,6 +240,8 @@
   notes: Changes go through maker-checker (iam.maker_checker_requests).
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.07 (CR-026, Q5): personal fields; the audit log encrypts their values with the person's key (R-21).
+  field_class: {account_title: personal, account_number: personal, iban: personal}
   reqs: [EMP-06, PAY-24]
   eff_key: [employment_id, priority]
 
@@ -246,6 +258,8 @@
     - [registration_no_hmac, hmac, opt]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.07 (CR-026, Q5): personal fields; the audit log encrypts their values with the person's key (R-21).
+  field_class: {registration_no: personal}
   reqs: [PAY-20, CPL-02]
 
 - table: hrm.change_requests
@@ -425,6 +439,9 @@
   unique: [[publication_id, employment_id]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [DOC-06]
 
 - table: hrm.checklist_templates

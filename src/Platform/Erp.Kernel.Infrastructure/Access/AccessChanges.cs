@@ -120,12 +120,16 @@ internal static class AccessDb
 {
     public const string SystemRoleTenantAdmin = "tenant_admin";
 
-    public static Task RaiseAsync(NpgsqlConnection c, NpgsqlTransaction tx, string eventType, string aggregateType, Guid aggregateId, Guid actor, DateTimeOffset now, object payload, CancellationToken ct) =>
-        IdentityDb.ExecuteAsync(c, tx, """
+    /// <summary>The event in the outbox and, in the same transaction, its audit rows (slice S1.07, <see cref="Audit.AuditTrail"/>).</summary>
+    public static async Task RaiseAsync(NpgsqlConnection c, NpgsqlTransaction tx, string eventType, string aggregateType, Guid aggregateId, Guid actor, DateTimeOffset now, object payload, CancellationToken ct)
+    {
+        await IdentityDb.ExecuteAsync(c, tx, """
             insert into iam.outbox_messages (id, occurred_at, event_type, aggregate_type, aggregate_id, payload, headers, published_at)
             values ($1, $2, $3, $4, $5, $6, $7, null)
             """, ct, Guid.CreateVersion7(now), now, eventType, aggregateType, aggregateId,
-            new JsonPayload(JsonSerializer.Serialize(payload, JsonOptions)), new JsonPayload(JsonSerializer.Serialize(new { actor })));
+            new JsonPayload(JsonSerializer.Serialize(payload, JsonOptions)), new JsonPayload(JsonSerializer.Serialize(new { actor }))).ConfigureAwait(false);
+        await Audit.AuditTrail.RecordEventAsync(c, tx, eventType, aggregateType, aggregateId, actor, now, payload, ct).ConfigureAwait(false);
+    }
 
     public static JsonSerializerOptions JsonOptions { get; } = new(JsonSerializerDefaults.Web);
 

@@ -225,6 +225,77 @@ public sealed class GeneratorTests
         Assert.Contains("public string Status { get; init; }", users, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void S107_CR026_CR029_later_columns_index_and_control_plane_table_go_to_new_files_and_frozen_files_stay()
+    {
+        var files = Generator.Generate(Root).Files;
+        const string FrozenAud = "V202611150006__kernel__aud.sql";
+        var frozen = files[SqlEmitter.KernelMigrations + "/" + FrozenAud];
+        Assert.Equal(File.ReadAllText(Path.Combine(Root, SqlEmitter.KernelMigrations, FrozenAud)), frozen);
+        Assert.DoesNotContain("source", frozen, StringComparison.Ordinal);
+        Assert.DoesNotContain("ix_change_log_occurred_at", frozen, StringComparison.Ordinal);
+        Assert.Equal(File.ReadAllText(Path.Combine(Root, SqlEmitter.ControlPlaneMigrations, "V202611150000__controlplane__cp.sql")), files[SqlEmitter.ControlPlaneMigrations + "/V202611150000__controlplane__cp.sql"]);
+
+        var design = files[SqlEmitter.KernelMigrations + "/V202611150304__kernel__design_s1_07.sql"];
+        Assert.Contains("alter table aud.change_log add column if not exists source text;", design, StringComparison.Ordinal);
+        Assert.Contains("add constraint ck_change_log_source check (source in ('ui', 'api', 'import', 'job', 'system'))", design, StringComparison.Ordinal);
+        Assert.Contains("alter table aud.access_log add column if not exists correlation_id uuid;", design, StringComparison.Ordinal);
+        Assert.Contains("create index if not exists ix_change_log_occurred_at on aud.change_log (occurred_at);", design, StringComparison.Ordinal);
+        Assert.Contains("create table if not exists cp.audit_anchors (", files[SqlEmitter.ControlPlaneMigrations + "/V202611150304__controlplane__design_s1_07.sql"], StringComparison.Ordinal);
+
+        var functions = files[SqlEmitter.KernelMigrations + "/V202611150334__kernel__functions_s1_07.sql"];
+        Assert.Contains("create or replace function aud.append_changes(p_entries jsonb)", functions, StringComparison.Ordinal);
+        Assert.Contains("revoke all on function aud.append_changes(jsonb) from public;", functions, StringComparison.Ordinal);
+        Assert.Contains("language plpgsql security definer", functions, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void S107_Q4_append_only_tables_and_machinery_opt_out_of_the_change_log_with_a_reason()
+    {
+        var m = Model.Value;
+        Assert.All(m.Tables.Where(t => t.Database == DatabaseKind.Tenant && t.IsAppendOnly), t => Assert.False(t.Audited, t.FullName));
+        Assert.All(m.Tables.Where(t => !t.Audited && !t.IsOutboxOrInbox), t => Assert.False(string.IsNullOrWhiteSpace(t.AuditReason), t.FullName));
+        Assert.True(m.Table("hrm.persons").Audited);
+        Assert.False(m.Table("iam.sessions").Audited);
+        Assert.Equal("personal", m.Table("hrm.persons").Column("date_of_birth").FieldClass);
+        Assert.Equal("personal", m.Table("hrm.employee_bank_accounts").Column("account_number").FieldClass);
+    }
+
+    [Fact]
+    public void S107_Q4_an_append_only_table_without_an_audit_decision_stops_the_generator()
+    {
+        var root = CopyDesign();
+        try
+        {
+            var file = Path.Combine(root, "docs", "data-design", "hrm-time.yaml");
+            var text = File.ReadAllText(file);
+            var start = text.IndexOf("- table: hrm.leave_ledger", StringComparison.Ordinal);
+            var audit = text.IndexOf("  audit: false\n", start, StringComparison.Ordinal);
+            var end = text.IndexOf('\n', text.IndexOf("  audit_reason:", audit, StringComparison.Ordinal)) + 1;
+            File.WriteAllText(file, text[..audit] + text[end..]);
+
+            var error = Assert.Throws<DesignException>(() => Generator.LoadModel(root));
+            Assert.Contains("hrm.leave_ledger: append-only table must declare audit: false", error.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void S107_P6_personal_fields_do_not_make_a_permission_sensitive_but_salary_fields_do()
+    {
+        var files = Generator.Generate(Root).Files;
+        var manifest = files["src/Modules/Hrm/Erp.Hrm.Infrastructure/Access/permissions.g.json"];
+        using var doc = System.Text.Json.JsonDocument.Parse(manifest);
+        bool Sensitive(string code) => doc.RootElement.GetProperty("permissions").EnumerateArray().Single(p => p.GetProperty("code").GetString() == code).GetProperty("sensitive").GetBoolean();
+        Assert.False(Sensitive("hrm.persons.read"));
+        Assert.False(Sensitive("hrm.person_contacts.read"));
+        Assert.True(Sensitive("hrm.pay_results.read"));
+        Assert.True(Sensitive("hrm.person_identifiers.read")); // encrypted column, as before S1.07
+    }
+
     [Theory]
     [InlineData("ix", "short", new[] { "a" }, "ix_short_a")]
     [InlineData("uq", "employment_statutory_registrations", new[] { "company_id", "lower(code)" }, "uq_employment_statutory_registrations_company_id_code")]

@@ -2,7 +2,7 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 218 tables. Control-plane database: 13 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 218 tables. Control-plane database: 14 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
@@ -18,7 +18,7 @@ Release 1.0. Customer database: 218 tables. Control-plane database: 13 tables. E
 | customer | org | 11 |
 | customer | ref | 7 |
 | customer | wf | 7 |
-| control plane | cp | 13 |
+| control plane | cp | 14 |
 
 ## Customer database
 
@@ -40,6 +40,7 @@ Partitioned by range; 37 partitions.
 | row_count | integer | yes |  |  |
 | created_at | timestamp with time zone | no |  |  |
 | created_by | uuid | no |  |  |
+| correlation_id | uuid | yes |  | the request that showed the fields (spec 03 section 6.2; CR-028 P4) |
 
 Constraints:
 
@@ -94,17 +95,20 @@ Partitioned by range; 37 partitions.
 | row_hash | bytea | no |  |  |
 | created_at | timestamp with time zone | no |  |  |
 | created_by | uuid | no |  |  |
+| source | text | yes |  | where the change came from; decided by the server, never from request input (CR-026) |
 
 Constraints:
 
 - `ck_change_log_action` CHECK ((action = ANY (ARRAY['create'::text, 'update'::text, 'delete'::text, 'status'::text])))
 - `ck_change_log_actor_kind` CHECK ((actor_kind = ANY (ARRAY['user'::text, 'api_client'::text, 'job'::text, 'system'::text])))
+- `ck_change_log_source` CHECK ((source = ANY (ARRAY['ui'::text, 'api'::text, 'import'::text, 'job'::text, 'system'::text])))
 - `pk_change_log` PRIMARY KEY (id, occurred_at)
 
 Indexes:
 
 - `ix_change_log_actor_user_id_occurred_at` CREATE INDEX ix_change_log_actor_user_id_occurred_at ON ONLY aud.change_log USING btree (actor_user_id, occurred_at)
 - `ix_change_log_entity_type_entity_id_occurred_at` CREATE INDEX ix_change_log_entity_type_entity_id_occurred_at ON ONLY aud.change_log USING btree (entity_type, entity_id, occurred_at)
+- `ix_change_log_occurred_at` CREATE INDEX ix_change_log_occurred_at ON ONLY aud.change_log USING btree (occurred_at)
 
 Triggers:
 
@@ -7202,6 +7206,13 @@ Constraints:
 
 ### Functions
 
+- `aud.append_access` 
+- `aud.append_changes` 
+- `aud.append_security_event` 
+- `aud.change_canonical` 
+- `aud.destroy_subject_key` 
+- `aud.ensure_subject_key` 
+- `aud.mark_anchor_verified` 
 - `aud.tg_refuse_change` 
 - `cfg.tg_refuse_change` 
 - `doc.tg_refuse_change` 
@@ -7244,6 +7255,31 @@ Constraints:
 - `wf.todo_workflow_tasks_no_self_approval` Pending rule for wf.workflow_tasks, owned by S1.10: assignee_user_id is distinct from the instance requester (FR-XM-32), enforced by trigger
 
 ## Control-plane database
+
+### cp.audit_anchors
+
+Copy of each customer's daily audit-chain anchor kept outside the customer database, so a customer-side database owner cannot rewrite the chain unnoticed (CR-027). Requirements: KRN-AUD-03. Source: control-plane.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| tenant_id | uuid | no |  | fk cp.tenants |
+| day | date | no |  |  |
+| last_hash | bytea | no |  |  |
+| recorded_at | timestamp with time zone | no |  |  |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+
+Constraints:
+
+- `fk_audit_anchors_tenant_id` FOREIGN KEY (tenant_id) REFERENCES cp.tenants(id)
+- `pk_audit_anchors` PRIMARY KEY (id)
+- `uq_audit_anchors_tenant_id_day` UNIQUE (tenant_id, day)
+
+Triggers:
+
+- `tg_audit_anchors_append_only` CREATE TRIGGER tg_audit_anchors_append_only BEFORE DELETE OR UPDATE ON cp.audit_anchors FOR EACH ROW EXECUTE FUNCTION cp.tg_refuse_change()
+- `tg_audit_anchors_no_truncate` CREATE TRIGGER tg_audit_anchors_no_truncate BEFORE TRUNCATE ON cp.audit_anchors FOR EACH STATEMENT EXECUTE FUNCTION cp.tg_refuse_change()
 
 ### cp.db_clusters
 

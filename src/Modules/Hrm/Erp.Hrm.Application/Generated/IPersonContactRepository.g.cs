@@ -34,7 +34,7 @@ public static class PersonContactAccess
         new("id", "Id", null),
         new("person_id", "PersonId", null),
         new("kind", "Kind", null),
-        new("value", "Value", null),
+        new("value", "Value", "personal"),
         new("is_primary", "IsPrimary", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

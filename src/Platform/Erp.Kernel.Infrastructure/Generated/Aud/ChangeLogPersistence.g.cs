@@ -30,6 +30,7 @@ internal sealed class ChangeLogConfiguration : IEntityTypeConfiguration<global::
         builder.Property(e => e.IpAddress).HasColumnName("ip_address").HasColumnType("inet");
         builder.Property(e => e.PrevHash).HasColumnName("prev_hash").HasColumnType("bytea").IsRequired();
         builder.Property(e => e.RowHash).HasColumnName("row_hash").HasColumnType("bytea").IsRequired();
+        builder.Property(e => e.Source).HasColumnName("source").HasColumnType("text");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
     }

@@ -13,7 +13,7 @@ public static partial class DesignLoader
 
     private static readonly string[] KnownKeys =
         ["table", "purpose", "traits", "status", "columns", "unique", "indexes", "eff_key", "key", "checks", "notes", "partition", "reqs",
-         "added_in", "updatable_added_in", "api_read_only", "scope", "field_class", "api_actions"];
+         "added_in", "updatable_added_in", "api_read_only", "scope", "field_class", "api_actions", "audit", "audit_reason", "indexes_added_in"];
 
     /// <summary>Data-scope dimensions a table may declare in <c>scope:</c> (CR-018).</summary>
     public static readonly string[] ScopeDimensions = ["company", "branch", "org_unit", "employment", "person", "user"];
@@ -44,7 +44,12 @@ public static partial class DesignLoader
 
         foreach (var schema in settings.TenantSchemas)
         {
-            tables.AddRange(OutboxAndInbox(schema, settings));
+            foreach (var machinery in OutboxAndInbox(schema, settings))
+            {
+                machinery.Audited = false;
+                machinery.AuditReason = "machinery: transactional outbox and inbox (S1.07 Q4)";
+                tables.Add(machinery);
+            }
         }
 
         var duplicates = tables.GroupBy(t => t.FullName).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
@@ -53,7 +58,7 @@ public static partial class DesignLoader
             throw new DesignException(string.Join(", ", duplicates), "table defined more than once");
         }
 
-        var model = new DesignModel { Tables = tables.OrderBy(t => t.FullName, StringComparer.Ordinal).ToList(), Settings = settings };
+        var model = new DesignModel { Tables = tables.OrderBy(t => t.FullName, StringComparer.Ordinal).ToList(), Settings = settings, Functions = rules.Functions };
         ResolveForeignKeys(model, pending, rules);
         ResolveScopeParents(model);
         AddForeignKeyIndexes(model);
@@ -104,6 +109,7 @@ public static partial class DesignLoader
         ReadNotes(table, map, tableRules, rules);
         ReadLaterChanges(table, map);
         ReadAccessKeys(table, map);
+        ReadAuditKeys(table, map);
         return table;
     }
 
@@ -124,7 +130,15 @@ public static partial class DesignLoader
             {
                 foreach (var name in YamlNode.Texts(names, table.FullName + ".added_in"))
                 {
-                    table.Column(name).AddedIn = SliceId(slice, table.FullName);
+                    var column = table.Column(name);
+                    column.AddedIn = SliceId(slice, table.FullName);
+                    if (column.Kind == ColumnKind.Enum)
+                    {
+                        // The enum's own check is added with the column by the slice's design migration (S1.07).
+                        var check = Naming.DbName("ck", table.Name, [column.Name]);
+                        var index = table.Checks.FindIndex(c => c.Name == check);
+                        table.Checks[index] = table.Checks[index] with { AddedIn = column.AddedIn };
+                    }
                 }
             }
         }
@@ -156,6 +170,51 @@ public static partial class DesignLoader
         {
             table.Column(name).ApiReadOnly = true;
         }
+
+        // indexes_added_in: {S1.07: [[column, ...], ...]} (S1.07, CR-029): indexes the slice's design migration creates.
+        foreach (var (slice, raw) in YamlNode.Map(map.GetValueOrDefault("indexes_added_in"), table.FullName + ".indexes_added_in"))
+        {
+            foreach (var index in YamlNode.List(raw, table.FullName + ".indexes_added_in"))
+            {
+                var items = YamlNode.Texts(index, table.FullName + ".indexes_added_in").ToList();
+                CheckItems(table, items, "index");
+                table.Indexes.Add(new IndexDef(Naming.DbName("ix", table.Name, items), items, AndNotDeleted(table, null), "added by " + SliceId(slice, table.FullName), SliceId(slice, table.FullName)));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Audit keys (slice S1.07 Q4, CR-026): <c>audit: false</c> with <c>audit_reason: "..."</c> takes the table out of the
+    /// change log. Every table is audited unless it says so.
+    /// </summary>
+    private static void ReadAuditKeys(Table table, IReadOnlyDictionary<string, object?> map)
+    {
+        var reason = YamlNode.OptionalText(map, "audit_reason", table.FullName);
+        switch (map.GetValueOrDefault("audit"))
+        {
+            case null:
+                break;
+            case bool audited:
+                table.Audited = audited;
+                break;
+            case string text when bool.TryParse(text, out var audited):
+                table.Audited = audited;
+                break;
+            default:
+                throw new DesignException(table.FullName, "audit must be true or false");
+        }
+
+        if (!table.Audited && string.IsNullOrWhiteSpace(reason))
+        {
+            throw new DesignException(table.FullName, "audit: false needs an audit_reason");
+        }
+
+        if (table.Audited && reason is not null)
+        {
+            throw new DesignException(table.FullName, "audit_reason is only allowed with audit: false");
+        }
+
+        table.AuditReason = reason;
     }
 
     /// <summary>

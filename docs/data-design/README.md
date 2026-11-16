@@ -124,6 +124,21 @@ The generator emits, per table, `<Entity>Access` (scope locators and field catal
 layer, a resource catalogue in its Infrastructure layer, and the module's permission manifest
 `Infrastructure/Access/permissions.g.json`. None of these keys changes the database.
 
+## Audit keys (slice S1.07, CR-026, CR-029, CR-030)
+
+| Key | Example | Meaning |
+| --- | --- | --- |
+| `audit` + `audit_reason` | `audit: false` / `audit_reason: "append-only: …"` | The change log skips the table. Every table is audited unless it says so; append-only tables and tables without a uuid key must say so, with a reason (the generator stops otherwise). Outbox and inbox tables are never audited. |
+| `field_class: personal` | `field_class: {date_of_birth: personal}` | The audit log encrypts the field's before and after values with the data subject's key (`aud.subject_keys`, R-21); the subject is the row's `person` locator, or its `employment` through the HR module. `salary` values are encrypted with the customer's field key. Only `salary` makes a permission sensitive (CR-030). |
+| `indexes_added_in` | `indexes_added_in: {S1.07: [[occurred_at]]}` | An index added after the release's first migrations; the slice's design migration creates it. |
+| `added_in` on an optional enum column | `added_in: {S1.07: [source]}` | The column and its value check are added by the slice's design migration (NULL passes the check, so existing rows stay valid). |
+
+The generator also writes each module's audit catalogue (`<Module>AuditCatalog.g.cs`: table, audited or not, row key,
+company and subject locators, field classes), which the kernel's change-log writer reads. Database functions a slice
+needs (S1.07: the audit writers) are reviewed SQL in `tools/Erp.CodeGen/rules.yaml` under `functions` and are emitted as
+the slice's `functions_<slice>` migration, so every migration file stays generated. Control-plane tables can be added
+later too (`added_in: <slice>`, file `V…__controlplane__design_<slice>.sql`).
+
 ## Cross-module rules enforced in the data design
 
 | Rule | Where |

@@ -123,6 +123,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "correlation_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [],
@@ -387,18 +397,36 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "source",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "ui",
+            "api",
+            "import",
+            "job",
+            "system"
+          ]
         }
       ],
       "uniques": [],
       "checks": [
         "ck_change_log_actor_kind",
-        "ck_change_log_action"
+        "ck_change_log_action",
+        "ck_change_log_source"
       ],
       "exclusions": [],
       "foreign_keys": [],
       "indexes": [
         "ix_change_log_entity_type_entity_id_occurred_at",
-        "ix_change_log_actor_user_id_occurred_at"
+        "ix_change_log_actor_user_id_occurred_at",
+        "ix_change_log_occurred_at"
       ],
       "triggers": [
         "tg_change_log_append_only",
@@ -3072,6 +3100,119 @@
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "cfg.setup_tasks"
+    },
+    {
+      "database": "control_plane",
+      "schema": "cp",
+      "name": "audit_anchors",
+      "module": "controlplane",
+      "traits": [
+        "app"
+      ],
+      "requirements": [
+        "KRN-AUD-03"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "tenant_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "day",
+          "kind": "Date",
+          "type": "date",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "last_hash",
+          "kind": "Bytea",
+          "type": "bytea",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "recorded_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [
+        "uq_audit_anchors_tenant_id_day"
+      ],
+      "checks": [],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_audit_anchors_tenant_id",
+          "columns": [
+            "tenant_id"
+          ],
+          "target": "cp.tenants",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "indexes": [],
+      "triggers": [
+        "tg_audit_anchors_append_only",
+        "tg_audit_anchors_no_truncate"
+      ],
+      "append_only_updatable": [],
+      "has_api": false,
+      "full_name": "cp.audit_anchors"
     },
     {
       "database": "control_plane",

@@ -238,6 +238,32 @@ public static class FieldShaping
         return answer;
     }
 
+    /// <summary>
+    /// The keys of salary, personal and restricted fields an answer shows unmasked (read-only or editable access and a value
+    /// present in at least one shaped row), sorted; the access log records them (slice S1.07 Q6). Masked and hidden fields
+    /// are not counted.
+    /// </summary>
+    public static IReadOnlyList<string> SensitiveShown(IReadOnlyList<JsonObject> shaped, FieldCatalog catalog, IReadOnlyList<FieldAccessMap> access)
+    {
+        ArgumentNullException.ThrowIfNull(shaped);
+        ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(access);
+        var shown = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (var field in catalog.Fields.Where(f => f.FieldClass is not null && !f.IsCustom))
+        {
+            for (var i = 0; i < shaped.Count; i++)
+            {
+                if (access[i].Of(field.Key) >= FieldAccessLevel.ReadOnly && shaped[i][field.JsonName] is not null)
+                {
+                    shown.Add(field.Key);
+                    break;
+                }
+            }
+        }
+
+        return [.. shown];
+    }
+
     /// <summary>"****" followed by the last four characters of the value's text; null stays null.</summary>
     public static JsonNode? Mask(JsonNode? value)
     {
@@ -320,11 +346,17 @@ public sealed record ScopePreviewResult(long Count, IReadOnlyList<Guid> FirstPag
 /// One resource of a module as access control sees it (generated per table): its fields and a way to count and list the
 /// rows a given data-scope filter lets through. Lets the kernel preview any module's resource without referencing it.
 /// </summary>
+/// <remarks>
+/// <see cref="ReadAccess"/> (slice S1.07): the caller's field access to one record for <c>read</c>, or null when the record
+/// does not exist or is outside the caller's data scope (soft-deleted records count, so their history stays visible). The
+/// record-history endpoint shows before and after values through it.
+/// </remarks>
 public sealed record ResourceAccess(
     string Resource,
     FieldCatalog Fields,
     bool IsScoped,
-    Func<IServiceProvider, IDataScopeFilter, int, CancellationToken, Task<ScopePreviewResult>> Preview);
+    Func<IServiceProvider, IDataScopeFilter, int, CancellationToken, Task<ScopePreviewResult>> Preview,
+    Func<IServiceProvider, Guid, CancellationToken, Task<FieldAccessMap?>>? ReadAccess = null);
 
 /// <summary>Every resource of the modules the host loads (registered by the host from each module's generated catalogue).</summary>
 public sealed class ResourceCatalog(IEnumerable<ResourceAccess> resources)

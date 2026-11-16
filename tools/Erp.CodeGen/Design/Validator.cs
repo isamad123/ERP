@@ -29,6 +29,7 @@ public static class Validator
             }
 
             problems.AddRange(LaterChangeProblems(model, table));
+            problems.AddRange(AuditProblems(table));
         }
 
         // Index and constraint names share one namespace per schema in PostgreSQL.
@@ -62,9 +63,14 @@ public static class Validator
     /// </summary>
     private static IEnumerable<string> LaterChangeProblems(DesignModel model, Table table)
     {
-        if (table.ChangedIn.Any() && table.Module != "kernel")
+        if (table.ChangedIn.Any() && table.Module is not ("kernel" or "controlplane"))
         {
-            yield return $"{table}: added_in is supported for kernel tables only (module design migrations are not built yet)";
+            yield return $"{table}: added_in is supported for kernel and control-plane tables only (module design migrations are not built yet)";
+        }
+
+        if (table.Database == DatabaseKind.ControlPlane && table.ChangedIn.Any() && table.AddedIn is null)
+        {
+            yield return $"{table}: on the control plane only whole tables can be added later (added_in: <slice>)";
         }
 
         if (table.AddedIn is not null && table.Stubs.Count > 0)
@@ -87,21 +93,68 @@ public static class Validator
                 yield return $"{table}.{column.Name}: column added_in on a table that is itself added later";
             }
 
-            if (column.Required || column.Default is not null || column.IsGenerated || column.Kind is ColumnKind.Enum or ColumnKind.Code or ColumnKind.I18n)
+            // An optional enum column may come later with its own value check (NULL passes it, so existing rows stay valid).
+            if (column.Required || column.Default is not null || column.IsGenerated || column.Kind is ColumnKind.Code or ColumnKind.I18n)
             {
                 yield return $"{table}.{column.Name}: a column added later must be optional, without default, generated value or check (expand only)";
             }
 
             if (table.ForeignKeys.Exists(f => f.Columns.Contains(column.Name)) || table.Uniques.Exists(u => u.Items.Contains(column.Name))
-                || table.Indexes.Exists(i => i.Items.Contains(column.Name)) || table.Checks.Exists(c => c.Sql.Contains(column.Name, StringComparison.Ordinal)))
+                || table.Indexes.Exists(i => i.Items.Contains(column.Name)) || table.Checks.Exists(c => c.AddedIn != column.AddedIn && c.Sql.Contains(column.Name, StringComparison.Ordinal)))
             {
                 yield return $"{table}.{column.Name}: a column added later cannot have keys, indexes or checks yet";
             }
         }
 
+        foreach (var index in table.Indexes.Where(i => i.AddedIn is not null && (table.AddedIn is not null || i.Where is not null)))
+        {
+            yield return $"{table}: index {index.Name} added later must be a plain index on an existing table";
+        }
+
         foreach (var column in table.Columns.Where(c => c.ApiReadOnly && c.Required && c.Default is null && c.Name != "status"))
         {
             yield return $"{table}.{column.Name}: api_read_only on a required column needs a database default";
+        }
+    }
+
+    /// <summary>
+    /// Audit keys (slice S1.07 Q4, CR-026): append-only tables and tables without a uuid key must say <c>audit: false</c>
+    /// with a reason, so the list of tables the change log skips is visible and reviewed; personal and restricted fields
+    /// need a person (directly or through an employment) whose key encrypts them (R-21).
+    /// </summary>
+    private static IEnumerable<string> AuditProblems(Table table)
+    {
+        if (table.Database != DatabaseKind.Tenant)
+        {
+            if (!table.Audited || table.AuditReason is not null)
+            {
+                yield return $"{table}: audit keys apply to customer-database tables only";
+            }
+
+            yield break;
+        }
+
+        if (!table.Audited)
+        {
+            yield break;
+        }
+
+        if (table.IsAppendOnly)
+        {
+            yield return $"{table}: append-only table must declare audit: false with audit_reason (the row itself is the record, S1.07 Q4)";
+        }
+
+        if (table.AuditKeyColumn is null)
+        {
+            yield return $"{table}: no uuid key column for the change log's entity_id; declare audit: false with audit_reason";
+        }
+
+        foreach (var column in table.Columns.Where(c => c.FieldClass is "personal" or "restricted"))
+        {
+            if (!table.ScopeLocators.ContainsKey("person") && !table.ScopeLocators.ContainsKey("employment"))
+            {
+                yield return $"{table}.{column.Name}: field class {column.FieldClass} needs a person or employment scope locator (the data subject whose key encrypts it, R-21)";
+            }
         }
     }
 }

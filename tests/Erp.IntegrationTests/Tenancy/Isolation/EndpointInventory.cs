@@ -39,10 +39,22 @@ public enum EndpointKind
 
     /// <summary>Access-control catalogue (S1.06): B's catalogue never shows A's roles.</summary>
     AccessCatalog,
+
+    /// <summary>Audit search or list (S1.07): filters naming A's ids return nothing of A's.</summary>
+    AuditQuery,
+
+    /// <summary>One record's audit history (S1.07): A's record id on B's host is 404.</summary>
+    AuditRecord,
+
+    /// <summary>The signed-in user's own sign-ins (S1.07): B's session never sees A's.</summary>
+    AuditSelf,
+
+    /// <summary>Chain check (S1.07): checks only the bound customer's chain.</summary>
+    AuditVerify,
 }
 
 /// <summary>One API endpoint as the API host maps it: method, route and the table it serves.</summary>
-public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null)
+public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null, string? AuditKind = null)
 {
     private const string IdSegment = "/{id:guid}";
 
@@ -56,6 +68,15 @@ public sealed record ApiEndpoint(string Method, string Pattern, string? Resource
     {
         get
         {
+            switch (AuditKind)
+            {
+                case "query": return EndpointKind.AuditQuery;
+                case "record": return EndpointKind.AuditRecord;
+                case "self": return EndpointKind.AuditSelf;
+                case "verify": return EndpointKind.AuditVerify;
+                case not null: return EndpointKind.Unclassified;
+            }
+
             switch (AccessKind)
             {
                 case "create": return EndpointKind.AccessCreate;
@@ -146,12 +167,13 @@ public static class EndpointInventory
         {
             var methods = endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods;
             var access = endpoint.Metadata.GetMetadata<AccessEndpointMetadata>();
-            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource;
+            var audit = endpoint.Metadata.GetMetadata<AuditEndpointMetadata>();
+            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource ?? audit?.Resource;
             var identity = endpoint.Metadata.GetMetadata<IdentityEndpointMetadata>()?.Kind;
             var anonymous = endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null || endpoint.Metadata.GetMetadata<IAuthorizeData>() is null;
             foreach (var method in methods is { Count: > 0 } ? methods : ["*"])
             {
-                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind));
+                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind, audit?.Kind));
             }
         }
 

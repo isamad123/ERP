@@ -151,7 +151,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.persons.date_of_birth"
+      "labelKey": "fields.hrm.persons.date_of_birth",
+      "fieldClass": "personal"
     },
     {
       "column": "marital_status",
@@ -184,6 +185,7 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.persons.religion",
+      "fieldClass": "personal",
       "maxLength": 40
     },
     {

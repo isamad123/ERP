@@ -56,7 +56,14 @@ public static class SqlEmitter
             // own design file is frozen once merged: S1.05 → 0302, S1.05-r1 → 0402.
             var revision = slice.Contains("-r", StringComparison.Ordinal) ? int.Parse(slice[^1..], CultureInfo.InvariantCulture) : 0;
             var sequence = 180 + (60 * revision) + RuleSliceOrder(slice.Split('-')[0]);
-            output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "design_" + slice.Replace(".", "_", StringComparison.Ordinal).Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant())}", DesignChanges(model, slice));
+            output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "design_" + slice.Replace(".", "_", StringComparison.Ordinal).Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant())}", DesignChanges(model, slice, "kernel"));
+        }
+
+        // Database functions written by a slice (rules.yaml `functions`, S1.07): after that slice's design file.
+        foreach (var group in model.Functions.GroupBy(f => f.Slice).OrderBy(g => g.Key, StringComparer.Ordinal))
+        {
+            var sequence = 180 + 30 + RuleSliceOrder(group.Key);
+            output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "functions_" + group.Key.Replace(".", "_", StringComparison.Ordinal).ToLowerInvariant())}", Functions(group.Key, group));
         }
 
         if (model.ImplementedStubs.Any(st => model.Table(st.Table).Module != "kernel"))
@@ -68,6 +75,13 @@ public static class SqlEmitter
         {
             output.Add($"{ControlPlaneMigrations}/{FileName(s, 0, "controlplane", schema)}",
                 Extensions([schema], model, "controlplane") + SchemaFile(model, schema, crossSchemaForeignKeys: true));
+        }
+
+        // Control-plane tables added after the first migration (S1.07, CR-027): one new file per slice.
+        foreach (var slice in model.Tables.Where(t => t.Module == "controlplane").SelectMany(t => t.ChangedIn).Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal))
+        {
+            var sequence = 180 + RuleSliceOrder(slice.Split('-')[0]);
+            output.Add($"{ControlPlaneMigrations}/{FileName(s, sequence, "controlplane", "design_" + slice.Replace(".", "_", StringComparison.Ordinal).Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant())}", DesignChanges(model, slice, "controlplane"));
         }
     }
 
@@ -143,9 +157,9 @@ public static class SqlEmitter
     /// CR-010): new tables with their keys, foreign keys, grants and comments; new nullable columns; more columns an
     /// append-only table may update. Expand only, idempotent, and the frozen files stay byte-for-byte unchanged.
     /// </summary>
-    private static string DesignChanges(DesignModel model, string slice)
+    private static string DesignChanges(DesignModel model, string slice, string module)
     {
-        var tables = model.Tables.Where(t => t.Module == "kernel" && t.ChangedIn.Contains(slice)).OrderBy(t => t.FullName, StringComparer.Ordinal).ToList();
+        var tables = model.Tables.Where(t => t.Module == module && t.ChangedIn.Contains(slice)).OrderBy(t => t.FullName, StringComparer.Ordinal).ToList();
         var added = tables.Where(t => t.AddedIn == slice).ToList();
         var b = new StringBuilder(Header($"Data design changes of slice {slice} (expand only; earlier migrations are frozen)"));
         foreach (var schema in added.Where(t => t.IsAppendOnly).Select(t => t.Schema).Distinct(StringComparer.Ordinal))
@@ -163,6 +177,22 @@ public static class SqlEmitter
             foreach (var column in table.Columns.Where(c => c.AddedIn == slice))
             {
                 b.Append(CultureInfo.InvariantCulture, $"alter table {table.FullName} add column if not exists {column.Name} {column.SqlType};\n");
+            }
+
+            if (table.AddedIn == slice)
+            {
+                continue;
+            }
+
+            foreach (var check in table.Checks.Where(c => c.AddedIn == slice))
+            {
+                b.Append(CultureInfo.InvariantCulture, $"do $do$ begin\n    if not exists (select 1 from pg_constraint where conname = {Naming.SqlString(check.Name)} and conrelid = {Naming.SqlString(table.FullName)}::regclass) then\n");
+                b.Append(CultureInfo.InvariantCulture, $"        alter table {table.FullName} add constraint {check.Name} check ({check.Sql});\n    end if;\nend $do$;\n");
+            }
+
+            foreach (var index in table.Indexes.Where(i => i.AddedIn == slice))
+            {
+                b.Append(CultureInfo.InvariantCulture, $"create index if not exists {index.Name} on {table.FullName} ({string.Join(", ", index.Items)}); -- {index.Purpose}\n");
             }
         }
 
@@ -182,7 +212,7 @@ public static class SqlEmitter
             b.Append(CultureInfo.InvariantCulture, $"grant update ({string.Join(", ", table.UpdatableAddedIn.Where(u => u.Slice == slice).Select(u => u.Column))}) on {table.FullName} to app_rw;\n");
         }
 
-        foreach (var schema in added.Select(t => t.Schema).Distinct(StringComparer.Ordinal))
+        foreach (var schema in added.Where(_ => module != "controlplane").Select(t => t.Schema).Distinct(StringComparer.Ordinal))
         {
             foreach (var table in added.Where(t => t.Schema == schema))
             {
@@ -233,6 +263,23 @@ public static class SqlEmitter
         "-- change the data design through a change request (D-39) and run the generator.\n" +
         "-- </auto-generated>\n" +
         $"-- {title}\n\n";
+
+    /// <summary>
+    /// Database functions a slice writes (rules.yaml <c>functions</c>, slice S1.07): reviewed SQL kept with the generator
+    /// so every migration file stays generated. One file per slice, after that slice's design file.
+    /// </summary>
+    private static string Functions(string slice, IEnumerable<FunctionDef> functions)
+    {
+        var b = new StringBuilder(Header($"Database functions of slice {slice} (tools/Erp.CodeGen/rules.yaml, functions)"));
+        foreach (var function in functions)
+        {
+            b.Append(CultureInfo.InvariantCulture, $"-- {function.Name}: {function.Purpose}\n");
+            b.Append(function.Sql.Replace("\r", string.Empty, StringComparison.Ordinal).TrimEnd('\n'));
+            b.Append("\n\n");
+        }
+
+        return b.ToString().TrimEnd('\n') + "\n";
+    }
 
     private static string Extensions(IEnumerable<string> schemas, DesignModel model, string module)
     {
@@ -373,7 +420,7 @@ public static class SqlEmitter
             lines.Add($"    constraint {unique.Name} unique{nulls} ({string.Join(", ", unique.Items)})");
         }
 
-        foreach (var check in table.Checks)
+        foreach (var check in table.Checks.Where(c => !baseOnly || c.AddedIn is null))
         {
             lines.Add($"    constraint {check.Name} check ({check.Sql})");
         }
@@ -399,7 +446,7 @@ public static class SqlEmitter
             b.Append(CultureInfo.InvariantCulture, $"create unique index if not exists {unique.Name} on {table.FullName} ({string.Join(", ", unique.Items)}){nulls}{where};\n");
         }
 
-        foreach (var index in table.Indexes)
+        foreach (var index in table.Indexes.Where(i => !baseOnly || i.AddedIn is null))
         {
             var where = index.Where is null ? string.Empty : $" where ({index.Where})";
             b.Append(CultureInfo.InvariantCulture, $"create index if not exists {index.Name} on {table.FullName} ({string.Join(", ", index.Items)}){where}; -- {index.Purpose}\n");

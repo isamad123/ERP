@@ -36,7 +36,7 @@ public static class PersonIdentifierAccess
         new("person_id", "PersonId", null),
         new("kind", "Kind", null),
         new("country_code", "CountryCode", null),
-        new("value_last4", "ValueLast4", null),
+        new("value_last4", "ValueLast4", "personal"),
         new("issue_date", "IssueDate", null),
         new("expiry_date", "ExpiryDate", null),
         new("file_id", "FileId", null),

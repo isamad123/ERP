@@ -51,7 +51,12 @@
         "ntf.*",
         "org.*",
         "ref.*",
-        "wf.*"
+        "wf.*",
+        "aud.changes.view",
+        "aud.history.view",
+        "aud.security_events.view",
+        "aud.export",
+        "aud.verify"
       ],
       "scopes": {
         "*": "all"
@@ -84,7 +89,8 @@
         "iam.users.update",
         "iam.users.unlock",
         "iam.users.read_sessions",
-        "iam.roles.assign"
+        "iam.roles.assign",
+        "aud.history.view"
       ],
       "scopes": {
         "*": "all"
@@ -106,7 +112,8 @@
         "org.org_units.read",
         "org.org_unit_types.read",
         "ntf.in_app_items.read",
-        "ntf.in_app_items.update"
+        "ntf.in_app_items.update",
+        "aud.history.view"
       ],
       "scopes": {
         "*": "all",
@@ -131,7 +138,8 @@
         "ntf.in_app_items.read",
         "ntf.in_app_items.update",
         "wf.workflow_tasks.read",
-        "wf.workflow_tasks.update"
+        "wf.workflow_tasks.update",
+        "aud.history.view"
       ],
       "scopes": {
         "*": "all",
@@ -156,7 +164,8 @@
         "ntf.*.read",
         "org.*.read",
         "ref.*.read",
-        "wf.*.read"
+        "wf.*.read",
+        "aud.*"
       ],
       "scopes": {
         "*": "all"
@@ -173,7 +182,8 @@
         "iam.self.manage",
         "job.*",
         "itg.connectors.*",
-        "ntf.outbound_messages.read"
+        "ntf.outbound_messages.read",
+        "aud.history.view"
       ],
       "scopes": {
         "*": "all"

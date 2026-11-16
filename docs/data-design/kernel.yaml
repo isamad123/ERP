@@ -37,6 +37,9 @@
     - [locked_until, ts, opt]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {user: user_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "secrets and sign-in counters; password, lockout and credential changes are security events (S1.07 Q4, Q7)"
   reqs: [KRN-IAM-01, ADM-USR-05, ADM-USR-20]
 
 - table: iam.password_history
@@ -47,6 +50,9 @@
   indexes: [[user_id, created_at]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {user: user_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [ADM-USR-20]
 
 - table: iam.mfa_devices
@@ -90,6 +96,9 @@
       note: "From S1.05-r1 it also keeps previous_refresh_hash, the token replaced by the last rotation (reuse detection, CR-016)."
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {user: user_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4); last_seen_at is machinery"
   reqs: [KRN-IAM-04, ADM-USR-24]
 
 - table: iam.login_attempts
@@ -101,6 +110,9 @@
     - [outcome, "enum(success,bad_password,locked,mfa_failed,disabled)", req]
     - [ip_address, inet, opt]
   indexes: [[username, occurred_at]]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [KRN-AUD-02]
 
 # CR-010 (S1.05): tokens and recovery codes are stored only as hashes.
@@ -117,6 +129,9 @@
   unique: [[token_hash]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {user: user_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "machinery: single-use token hashes; issuing and using them are security events (S1.07 Q4)"
   reqs: [KRN-IAM-01, KRN-IAM-02, ADM-USR-05]
 
 - table: iam.mfa_recovery_codes
@@ -129,6 +144,9 @@
     - [used_at, ts, opt]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {user: user_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "machinery: one-time code hashes; regeneration is a security event (S1.07 Q4)"
   reqs: [KRN-IAM-02, ADM-USR-21]
 
 - table: iam.permissions
@@ -405,6 +423,9 @@
     - [symbol, text, req]
     - [decimals, int, req]
     - [is_active, bool, req]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "reference data keyed by code, written only by migrations and country packs (no uuid key, no API) (S1.07 Q4)"
   reqs: [KRN-LOC-04]
 
 - table: ref.countries
@@ -413,6 +434,9 @@
     - [code, char(2), req, pk]
     - [name_i18n, i18n, req]
     - [is_active, bool, req]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "reference data keyed by code, written only by migrations and country packs (no uuid key, no API) (S1.07 Q4)"
   reqs: [KRN-LOC-02]
 
 - table: ref.banks
@@ -457,6 +481,9 @@
     - [allowed_layers, "text[]", req, "product, pack, tenant, company, role, user"]
     - [requires_approval, bool, req]
     - [description_i18n, i18n, req]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "setting definitions keyed by code, registered from manifests by migrations (no uuid key, no API); values are audited in cfg.setting_values (S1.07 Q4)"
   reqs: [KRN-SET-01, ADM-SET-01]
 
 - table: cfg.setting_values
@@ -480,6 +507,9 @@
     - [new_value, json, opt]
     - [reason, text, opt]
   indexes: [[setting_key, created_at]]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [KRN-SET-04, ADM-SET-06]
 
 - table: cfg.feature_flags
@@ -488,6 +518,9 @@
     - [key, text, req, pk]
     - [default_enabled, bool, req]
     - [description_i18n, i18n, req]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "flag definitions keyed by code, registered from manifests by migrations (no uuid key, no API) (S1.07 Q4)"
   reqs: [KRN-SET-05]
 
 - table: cfg.feature_flag_overrides
@@ -575,6 +608,9 @@
     - [last_value, big, req]
     - [updated_at, ts, req]
   notes: Gap-free schemes lock this row in the transaction; gap-allowed schemes use a PostgreSQL sequence per scheme.
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "machinery: counters advanced by the numbering service (S1.07 Q4)"
   reqs: [KRN-NUM-02, KRN-NUM-06]
 
 - table: cfg.numbering_voids
@@ -583,6 +619,9 @@
     - [scheme_id, uuid, req, fk cfg.numbering_schemes]
     - [number, text, req]
     - [reason, text, req]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [KRN-NUM-05]
 
 - table: cfg.installed_packs
@@ -692,6 +731,9 @@
     - [acting_for_user_id, uuid, opt]
     - [details, json, req]
   indexes: [[instance_id, created_at]]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [KRN-WFL-05, KRN-WFL-07]
 
 - table: aud.change_log
@@ -711,9 +753,16 @@
     - [ip_address, inet, opt]
     - [prev_hash, bytea, req]
     - [row_hash, bytea, req]
+    - [source, "enum(ui,api,import,job,system)", opt, "where the change came from; decided by the server, never from request input (CR-026)"]
   indexes: [[entity_type, entity_id, occurred_at], [actor_user_id, occurred_at]]
+  # S1.07 (CR-026, CR-029): the source column and an index on occurred_at (chain head and date-range search).
+  added_in: {S1.07: [source]}
+  indexes_added_in: {S1.07: [[occurred_at]]}
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "the audit tables themselves (S1.07 Q4)"
   reqs: [KRN-AUD-01, KRN-AUD-03, KRN-AUD-04, KRN-AUD-07]
 
 - table: aud.access_log
@@ -728,7 +777,13 @@
     - [fields, "text[]", req]
     - [action, "enum(view,export,print)", req]
     - [row_count, int, opt]
+    - [correlation_id, uuid, opt, "the request that showed the fields (spec 03 section 6.2; CR-028 P4)"]
   indexes: [[actor_user_id, occurred_at], [entity_type, entity_id]]
+  # S1.07 (CR-028 P4): correlation_id listed in spec 03 section 6.2 but missing from the first design.
+  added_in: {S1.07: [correlation_id]}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "the audit tables themselves (S1.07 Q4)"
   reqs: [KRN-AUD-02, HRM-PRV-05]
 
 - table: aud.security_events
@@ -741,6 +796,9 @@
     - [severity, "enum(info,warning,critical)", req]
     - [details, json, req]
   indexes: [[occurred_at]]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "the audit tables themselves (S1.07 Q4)"
   reqs: [KRN-AUD-02]
 
 - table: aud.chain_anchors
@@ -749,6 +807,9 @@
     - [day, date, req, pk]
     - [last_hash, bytea, req]
     - [verified_at, ts, opt]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "the audit tables themselves (S1.07 Q4)"
   reqs: [KRN-AUD-03]
 
 - table: aud.subject_keys
@@ -760,6 +821,9 @@
     - [destroyed_at, ts, opt]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {person: person_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "the audit tables themselves: key material (S1.07 Q4)"
   reqs: [HRM-PRV-04]
 
 - table: doc.files
@@ -833,6 +897,9 @@
   indexes: [[owner_type, owner_id]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [KRN-DOC-05, HRM-PAY-28]
 
 - table: ntf.templates
@@ -887,6 +954,9 @@
     - [provider_ref, text, opt]
     - [error, text, opt]
   indexes: [[status, next_attempt_at, "partial where status='queued'"]]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "machinery: delivery queue; delivery audit is HRM-NTF-16 (S1.11) (S1.07 Q4)"
   reqs: [KRN-NTF-05, KRN-NTF-07, ADM-OPS-04]
   key: [id, created_at]
   unique: [[dedup_key, created_at, where dedup_key is not null]]
@@ -937,6 +1007,9 @@
     - [field, text, opt]
     - [message, text, req]
   indexes: [[batch_id, row_no]]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [ADM-DAT-01]
 
 - table: itg.export_jobs
@@ -997,6 +1070,9 @@
   unique: [[company_id, source_module, source_id, posting_version]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [KRN-INT-09, KRN-INT-12, HRM-PAY-30, FR-XM-27]
 
 - table: itg.accounting_event_exports
@@ -1006,6 +1082,9 @@
     - [event_id, uuid, req, fk itg.accounting_events]
     - [export_id, uuid, req, fk itg.journal_exports]
     - [exported_at, ts, req]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "machinery: which events went into which export file (S1.07 Q4)"
   reqs: [KRN-INT-09]
 
 - table: itg.journal_exports
@@ -1053,6 +1132,9 @@
   indexes: [[status, created_at]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "machinery: job run state (S1.07 Q4)"
   reqs: [KRN-JOB-02, KRN-JOB-03, KRN-JOB-05, HRM-PAY-34]
 
 - table: job.run_logs
@@ -1063,6 +1145,9 @@
     - [level, "enum(info,warning,error)", req]
     - [message, text, req]
   indexes: [[run_id, created_at]]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [KRN-JOB-03]
 
 - table: meta.schema_history
@@ -1074,6 +1159,9 @@
     - [checksum, text, req]
     - [duration_ms, int, req]
   unique: [[module_id, script_name]]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [KRN-TEN-02]
 
 - table: meta.local_entitlement
@@ -1085,4 +1173,7 @@
     - [state, text, req]
     - [state_since, ts, req]
     - [highest_time_seen, ts, req, clock roll-back guard]
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "machinery: copy of the signed entitlement; licence changes are security events (S1.07 Q4)"
   reqs: [KRN-ENT-04]

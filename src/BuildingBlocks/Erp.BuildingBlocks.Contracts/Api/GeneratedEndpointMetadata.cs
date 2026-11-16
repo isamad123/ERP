@@ -25,3 +25,10 @@ public sealed record IdentityEndpointMetadata(string Kind, string? Permission, b
 /// (a GET whose query string names records) or <c>catalog</c> (a GET of the customer's catalogue).
 /// </summary>
 public sealed record AccessEndpointMetadata(string Kind, string Resource, string Permission);
+
+/// <summary>
+/// Marks an audit endpoint (slice S1.07) for the tenant-isolation suite: <see cref="Kind"/> is <c>query</c> (search and
+/// lists filtered by ids), <c>record</c> (one record's history by id), <c>self</c> (the signed-in user's own sign-ins) or
+/// <c>verify</c> (chain check of the bound customer).
+/// </summary>
+public sealed record AuditEndpointMetadata(string Kind, string Resource, string Permission);

@@ -100,6 +100,9 @@
   indexes: [[employment_id, event_date]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [ATT-01, ATT-03, DAT-01, DAT-02, DAT-04]
 
 - table: hrm.attendance_periods
@@ -248,6 +251,9 @@
   indexes: [[employment_id, leave_type_id, leave_year]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [LVE-02, LVE-03, LVE-08, LVE-10, LVE-14]
   unique: [[source_type, source_id, kind, leave_type_id, where source_id is not null], [reverses_entry_id, where reverses_entry_id is not null]]
   notes: Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30).

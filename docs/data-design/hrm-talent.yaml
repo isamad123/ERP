@@ -119,6 +119,9 @@
   indexes: [[goal_id, created_at]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [PRF-02]
 
 - table: hrm.courses

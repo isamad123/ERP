@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Erp.BuildingBlocks.Application.Audit;
 using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
@@ -8,8 +9,11 @@ using Erp.Hrm.Infrastructure.Access;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Api.ControlPlane.Tenancy;
 using Erp.Kernel.Api.Access;
+using Erp.Kernel.Api.Audit;
+using Erp.Kernel.Infrastructure.Audit;
 using Erp.Kernel.Api.Identity;
 using Erp.Kernel.Application.Access;
+using Erp.Kernel.Application.Audit;
 using Erp.Kernel.Application.Identity;
 using Erp.Kernel.Api.Generated;
 using Erp.Kernel.Infrastructure.Access;
@@ -52,8 +56,13 @@ public static class ApiHost
         services.AddHttpContextAccessor();
         var secretStore = secrets ?? EncryptedFileSecretStore.FromSettings(config["ERP_SECRETS_FILE"], config["ERP_SECRETS_KEY"]);
         services.AddErpTenancy(options, secretStore);
-        services.AddDbContext<KernelDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource));
-        services.AddDbContext<HrmDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource));
+        // Audit (S1.07): every EF save writes its change-log entries in the same transaction; one correlation id per request.
+        services.AddKernelAudit([.. KernelAuditCatalog.All, .. HrmAuditCatalog.All]);
+        services.AddScoped<IAuditContext, HttpAuditContext>();
+        services.AddScoped<IAuditQueryService, AuditQueryService>();
+        services.AddScoped<IAuditVerifier, AuditVerifier>();
+        services.AddDbContext<KernelDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp));
+        services.AddDbContext<HrmDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp));
         services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
         services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 
@@ -108,6 +117,7 @@ public static class ApiHost
         overrides?.Invoke(services);
 
         var app = builder.Build();
+        app.UseErpAuditCorrelation();
         app.UseRouting();
         app.UseErpTenantResolution();
         app.UseAuthentication();
@@ -118,6 +128,7 @@ public static class ApiHost
         var api = app.MapGroup(string.Empty).RequireAuthorization();
         api.MapIdentityAccountEndpoints();
         api.MapAccessEndpoints();
+        api.MapAuditEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();
         return app;
