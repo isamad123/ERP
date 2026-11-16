@@ -98,6 +98,14 @@ dotnet run --project src/Host/Erp.Host.Migrator -- audit verify --tenant <code> 
 Exit code 3 names the first broken row and the problem: `row_changed` (a row's values were changed), `link_broken` (a
 row before it was removed or inserted), `anchor_mismatch`, `rows_missing` or `control_plane_mismatch`.
 
+**Clock synchronisation is required (CR-032, R-014).** Every application and database server must keep its clock
+synchronised (NTP or chrony, SaaS and on-premises alike). The audit chain never goes back in time; an entry stamped more
+than 5 minutes ahead of the database clock is stored at the database time and raises a warning security event
+`aud.clock_ahead`. If you see that event, fix the server's clock synchronisation.
+
+**Watch the PostgreSQL log (R-012).** Alert on `permission denied for table` or `append-only table` errors that name an
+`aud.` table: someone tried to change audit rows outside the application.
+
 What the application can and cannot see (ruling Q9): an attempt through the application to change or delete audit rows
 is refused by the database and recorded as a critical security event (`aud.tamper_attempt`). An attempt made directly in
 the database by its owner is not seen by the application: it shows in the PostgreSQL server log and is found by the

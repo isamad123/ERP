@@ -57,18 +57,22 @@ internal static class IdentityDb
         return command;
     }
 
-    public static async Task<int> ExecuteAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, string sql, CancellationToken cancellationToken, params object?[] values)
-    {
-        await using var command = Command(connection, transaction, sql, values);
-        return await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-    }
+    /// <remarks>A refused write to an audit table is recorded as a critical security event (S1.07-r1, risk R-012).</remarks>
+    public static Task<int> ExecuteAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, string sql, CancellationToken cancellationToken, params object?[] values) =>
+        Audit.TamperAttempt.GuardAsync(connection, sql, async () =>
+        {
+            await using var command = Command(connection, transaction, sql, values);
+            return await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        });
 
-    public static async Task<T?> ScalarAsync<T>(NpgsqlConnection connection, NpgsqlTransaction? transaction, string sql, CancellationToken cancellationToken, params object?[] values)
-    {
-        await using var command = Command(connection, transaction, sql, values);
-        var result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-        return result is null or DBNull ? default : (T)result;
-    }
+    /// <remarks>A refused write to an audit table is recorded as a critical security event (S1.07-r1, risk R-012).</remarks>
+    public static Task<T?> ScalarAsync<T>(NpgsqlConnection connection, NpgsqlTransaction? transaction, string sql, CancellationToken cancellationToken, params object?[] values) =>
+        Audit.TamperAttempt.GuardAsync(connection, sql, async () =>
+        {
+            await using var command = Command(connection, transaction, sql, values);
+            var result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+            return result is null or DBNull ? default : (T)result;
+        });
 
     private const string AccountColumns = """
         u.id, u.username, u.email, u.status, c.user_id is not null, c.password_hash, c.hash_algorithm, c.password_changed_at,
