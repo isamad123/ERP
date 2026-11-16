@@ -9,7 +9,6 @@ using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Erp.Kernel.Infrastructure.Audit;
 using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Audit;
-using Erp.Kernel.Infrastructure.ControlPlane.Platform;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.Generated;
 using Microsoft.AspNetCore.Builder;
@@ -245,8 +244,7 @@ public sealed class AuditTests(TenancyFixture fx) : IAsyncLifetime
             await AuditDb.AppendChangesAsync(rw, null, entries, Ct);
         }
 
-        var actor = new PlatformActor(Guid.CreateVersion7(), "operator" + Guid.NewGuid().ToString("N")[..8] + "@platform.test", "platform_admin");
-        await InsertPlatformUserAsync(actor);
+        var actor = fx.Admin; // the fixture's platform admin (other tests count the platform users)
         var publisher = new AnchorPublisher(fx.Options, fx.Secrets, _h.Clock, fx.Migrations);
         var first = await publisher.PublishAsync(actor, code, Ct);
         Assert.True(first.Single().Copied >= 1);
@@ -616,16 +614,6 @@ public sealed class AuditTests(TenancyFixture fx) : IAsyncLifetime
 
     private async Task<long> AccessRowsAsync(Guid user, string entityType) =>
         await _h.ScalarAsync<long>("select count(*) from aud.access_log where actor_user_id = $1 and entity_type = $2", Ct, user, entityType);
-
-    private async Task InsertPlatformUserAsync(PlatformActor actor)
-    {
-        await using var cp = new NpgsqlConnection(fx.Options.ConnectionString);
-        await cp.OpenAsync(Ct);
-        await AccessHarness.ExecAsync(cp, """
-            insert into cp.platform_users (id, email, display_name, role, mfa_enrolled, status, created_at, created_by, updated_at, updated_by)
-            values ($1, $2, 'Audit operator', $3, false, 'active', now(), $1, now(), $1)
-            """, Ct, actor.Id, actor.Email, actor.Role);
-    }
 
     private static JsonElement Field(JsonElement item, string field) =>
         item.GetProperty("changes").EnumerateArray().Single(c => c.GetProperty("field").GetString() == field);
