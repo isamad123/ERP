@@ -10,6 +10,7 @@ using Erp.Kernel.Infrastructure.ControlPlane.Migration;
 using Erp.Kernel.Infrastructure.ControlPlane.Platform;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
+using Erp.Kernel.Infrastructure.Identity;
 
 namespace Erp.Host.Migrator;
 
@@ -31,6 +32,8 @@ public static class OperatorCommands
           tenant provision --code <c> --name <n> --host <h[,h2]> --region <r> --country <CC> --currency <CUR>
                            --size-profile <micro|sme|mid|enterprise> --cluster <n> --legal-name <n>
                            --admin-email <e> --admin-name <n> --entitlement <file.json>
+          tenant admin-activation-link --code <c>        prints a new activation link for the invited first administrator
+          auth-key rotate                                adds a new access-token signing key and makes it current
           tenant list
           tenant suspend|resume --code <c> --reason <text>
           tenant backup --code <c> --out <file>          (key from ERP_BACKUP_KEY)
@@ -61,6 +64,8 @@ public static class OperatorCommands
                 "entitlement sign" => await EntitlementSignAsync(context).ConfigureAwait(false),
                 "tenant provision" => await ProvisionAsync(context, cancellationToken).ConfigureAwait(false),
                 "tenant list" => await ListAsync(context, cancellationToken).ConfigureAwait(false),
+                "tenant admin-activation-link" => await ActivationLinkAsync(context, cancellationToken).ConfigureAwait(false),
+                "auth-key rotate" => await RotateTokenKeyAsync(context, cancellationToken).ConfigureAwait(false),
                 "tenant suspend" => await LifecycleAsync(context, suspend: true, cancellationToken).ConfigureAwait(false),
                 "tenant resume" => await LifecycleAsync(context, suspend: false, cancellationToken).ConfigureAwait(false),
                 "tenant backup" => await BackupAsync(context, cancellationToken).ConfigureAwait(false),
@@ -110,7 +115,8 @@ public static class OperatorCommands
     {
         var admin = await c.Admin.BootstrapAsync(Context.Migrations, Required(Env("ERP_PLATFORM_ADMIN_EMAIL"), "ERP_PLATFORM_ADMIN_EMAIL"),
             Required(Env("ERP_PLATFORM_ADMIN_NAME"), "ERP_PLATFORM_ADMIN_NAME"), cancellationToken).ConfigureAwait(false);
-        await c.Output.WriteLineAsync("control plane: up to date").ConfigureAwait(false);
+        await TokenSigningKeys.EnsureAsync(c.Secrets, NewTokenKeyId(c.Clock), cancellationToken).ConfigureAwait(false);
+        await c.Output.WriteLineAsync("control plane: up to date (token signing key present)").ConfigureAwait(false);
         var actor = Env("ERP_PLATFORM_ACTOR") is { } email ? await c.Admin.ActorAsync(email, cancellationToken).ConfigureAwait(false) : admin;
         var outcomes = await new FleetMigrator(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations).MigrateAsync(actor, c.OptionalOption("tenant"), cancellationToken).ConfigureAwait(false);
         foreach (var o in outcomes)
@@ -165,8 +171,40 @@ public static class OperatorCommands
         await c.Output.WriteLineAsync(result.AlreadyProvisioned
             ? $"{result.Code}: already provisioned (database {result.DatabaseName}); nothing changed"
             : $"{result.Code}: provisioned (database {result.DatabaseName})").ConfigureAwait(false);
+        if (!result.AlreadyProvisioned)
+        {
+            await PrintActivationLinkAsync(c, result.Code, cancellationToken).ConfigureAwait(false);
+        }
+
         return 0;
     }
+
+    private static async Task<int> ActivationLinkAsync(Context c, CancellationToken cancellationToken)
+    {
+        await c.ActorAsync(cancellationToken).ConfigureAwait(false); // only a registered platform operator may issue links
+        return await PrintActivationLinkAsync(c, c.Option("code"), cancellationToken).ConfigureAwait(false) ? 0 : 4;
+    }
+
+    /// <summary>Prints the first administrator's activation link (slice S1.05 ruling Q6). The link is a secret: hand it over privately.</summary>
+    private static async Task<bool> PrintActivationLinkAsync(Context c, string code, CancellationToken cancellationToken)
+    {
+        var link = await new FirstAdminActivation(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations).IssueAsync(code, cancellationToken).ConfigureAwait(false);
+        await c.Output.WriteLineAsync(link is null
+            ? $"{code}: no invited tenant administrator is waiting for activation"
+            : $"{code}: activation link for the first administrator (valid until {link.ExpiresAt:yyyy-MM-dd HH:mm} UTC, works once):\n{link.Url}").ConfigureAwait(false);
+        return link is not null;
+    }
+
+    private static async Task<int> RotateTokenKeyAsync(Context c, CancellationToken cancellationToken)
+    {
+        await c.ActorAsync(cancellationToken).ConfigureAwait(false);
+        var id = NewTokenKeyId(c.Clock);
+        await TokenSigningKeys.RotateAsync(c.Secrets, id, cancellationToken).ConfigureAwait(false);
+        await c.Output.WriteLineAsync($"token signing key {id}: current (restart the API hosts to use it)").ConfigureAwait(false);
+        return 0;
+    }
+
+    private static string NewTokenKeyId(IClock clock) => "tk-" + clock.UtcNow.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
 
     private static async Task<int> ListAsync(Context c, CancellationToken cancellationToken)
     {

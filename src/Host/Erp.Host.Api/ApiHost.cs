@@ -6,10 +6,13 @@ using Erp.BuildingBlocks.Infrastructure.Time;
 using Erp.Hrm.Api.Generated;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Api.ControlPlane.Tenancy;
+using Erp.Kernel.Api.Identity;
+using Erp.Kernel.Application.Identity;
 using Erp.Kernel.Api.Generated;
 using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Erp.Kernel.Infrastructure.Generated;
+using Erp.Kernel.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -43,7 +46,8 @@ public static class ApiHost
         services.AddSingleton<IClock, SystemClock>();
         services.AddHealthChecks();
         services.AddHttpContextAccessor();
-        services.AddErpTenancy(options, secrets ?? EncryptedFileSecretStore.FromSettings(config["ERP_SECRETS_FILE"], config["ERP_SECRETS_KEY"]));
+        var secretStore = secrets ?? EncryptedFileSecretStore.FromSettings(config["ERP_SECRETS_FILE"], config["ERP_SECRETS_KEY"]);
+        services.AddErpTenancy(options, secretStore);
         services.AddDbContext<KernelDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource));
         services.AddDbContext<HrmDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource));
         services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
@@ -53,14 +57,29 @@ public static class ApiHost
         services.AddSingleton<IPermissionChecker, NoGrantsPermissionChecker>();
         services.AddSingleton<IDataScopeFilter, DataScopesNotConfigured>();
 
-        var keys = (config.GetSection("Auth:SigningPublicKeys").Get<string[]>() ?? []).Select(ToKey).ToList();
+        // Identity (S1.05): the API trusts only tokens signed with the keys in the secret store (created by the migrator's
+        // `migrate` command). Auth:SigningPublicKeys may add further public keys (the integration tests use one).
+        var signing = TokenSigningKeys.LoadAsync(secretStore, CancellationToken.None).GetAwaiter().GetResult()
+            ?? throw new InvalidOperationException("No token signing key in the secret store. Run the migrator's `migrate` command first (docs/runbooks/tenant-operations.md).");
+        var issuer = config["Auth:Issuer"] ?? throw new InvalidOperationException("Auth:Issuer is not set.");
+        var audience = config["Auth:Audience"] ?? throw new InvalidOperationException("Auth:Audience is not set.");
+        services.AddSingleton(signing);
+        services.AddSingleton<IAccessTokenIssuer>(new JwtAccessTokenIssuer(signing, issuer, audience));
+        services.AddSingleton<IPasswordHasher, Argon2idPasswordHasher>();
+        services.AddSingleton<FieldKeyCache>();
+        services.AddScoped<IFieldEncryptorProvider, TenantFieldEncryptorProvider>();
+        services.AddScoped<IAuthenticationService, AuthenticationService>();
+        services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<IUserAdministrationService, UserAdministrationService>();
+
+        var keys = signing.Validation.Concat((config.GetSection("Auth:SigningPublicKeys").Get<string[]>() ?? []).Select(ToKey)).ToList();
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
         {
             o.MapInboundClaims = false;
             o.TokenValidationParameters = new TokenValidationParameters
             {
-                ValidIssuer = config["Auth:Issuer"],
-                ValidAudience = config["Auth:Audience"],
+                ValidIssuer = issuer,
+                ValidAudience = audience,
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidateLifetime = true,
@@ -81,7 +100,9 @@ public static class ApiHost
         app.UseErpTokenTenantCheck();
         app.UseAuthorization();
         app.MapHealthChecks("/health");
+        app.MapIdentityAuthEndpoints();
         var api = app.MapGroup(string.Empty).RequireAuthorization();
+        api.MapIdentityAccountEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();
         return app;

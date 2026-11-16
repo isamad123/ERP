@@ -63,7 +63,7 @@ public static class TenantResolution
                 TenantAccessMode.NotFound => (StatusCodes.Status404NotFound, NotFound),
                 TenantAccessMode.Unavailable => (StatusCodes.Status503ServiceUnavailable, Unavailable),
                 TenantAccessMode.Locked => (StatusCodes.Status403Forbidden, Locked),
-                TenantAccessMode.ReadOnly when !IsReadOnlyMethod(context.Request.Method) => (StatusCodes.Status403Forbidden, ReadOnly),
+                TenantAccessMode.ReadOnly when !IsReadOnlyMethod(context.Request.Method) && !AllowedWhenReadOnly(context) => (StatusCodes.Status403Forbidden, ReadOnly),
                 _ => ((int Status, string Title)?)null,
             };
             if (refusal is { } r)
@@ -106,6 +106,10 @@ public static class TenantResolution
             await next(context).ConfigureAwait(false);
         });
     }
+
+    /// <summary>Sign-in steps (S1.05) still work in read-only mode, so users can reach the data the mode keeps visible.</summary>
+    private static bool AllowedWhenReadOnly(HttpContext context) =>
+        context.GetEndpoint()?.Metadata.GetMetadata<IdentityEndpointMetadata>() is { AllowedWhenReadOnly: true };
 
     private static bool IsReadOnlyMethod(string method) => HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method);
 
