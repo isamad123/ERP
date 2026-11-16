@@ -13,13 +13,37 @@ namespace Erp.IntegrationTests.Identity;
 [Collection(TenancyGroup.Name)]
 public sealed class IdentityTests(TenancyFixture fx) : IAsyncLifetime
 {
+    private static readonly SemaphoreSlim ProvisionGate = new(1, 1);
+    private static string? provisionedFor;
+
     private IdentityHarness h = null!;
 
-    private string A => fx.CodeA;
+    // Two customers of their own, so identity data (users with passwords, sessions, setting changes) never meets the
+    // S1.03/S1.04 tests that inspect the shared customers A and B.
+    private string A => "i" + fx.Suffix;
 
-    private string B => fx.CodeB;
+    private string B => "j" + fx.Suffix;
 
-    public async ValueTask InitializeAsync() => h = await IdentityHarness.StartAsync(fx, TestContext.Current.CancellationToken);
+    public async ValueTask InitializeAsync()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await ProvisionGate.WaitAsync(ct);
+        try
+        {
+            if (provisionedFor != fx.Suffix)
+            {
+                await fx.ProvisionAsync(A, ct);
+                await fx.ProvisionAsync(B, ct);
+                provisionedFor = fx.Suffix;
+            }
+        }
+        finally
+        {
+            ProvisionGate.Release();
+        }
+
+        h = await IdentityHarness.StartAsync(fx, ct);
+    }
 
     public async ValueTask DisposeAsync() => await h.App.DisposeAsync();
 
