@@ -47,7 +47,7 @@ public sealed class LabelListQuery
     public int? Limit { get; init; }
 }
 
-/// <summary>Generated endpoints of cfg.labels: read, create, update.</summary>
+/// <summary>Generated endpoints of cfg.labels: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class LabelEndpoints
 {
     private const string Resource = "cfg.labels";
@@ -61,55 +61,70 @@ internal static class LabelEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("cfg.labels.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "cfg.labels.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] LabelListQuery query, global::Erp.Kernel.Application.Generated.Cfg.ILabelRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] LabelListQuery query, global::Erp.Kernel.Application.Generated.Cfg.ILabelRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.labels.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.LabelFilter {  }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<LabelResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.LabelAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.ILabelRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.ILabelRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.labels.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.LabelAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LabelWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ILabelRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LabelWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ILabelRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.labels.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.LabelAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Cfg.Label();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/labels/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, LabelWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ILabelRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.labels.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/cfg/labels/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.LabelAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, LabelWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ILabelRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "cfg.labels.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.LabelAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.LabelAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Cfg.Label row) => null;
 
     private static LabelResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.Label row) => new()
     {
@@ -126,22 +141,23 @@ internal static class LabelEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(LabelWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(LabelWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.Key is null)
+        if (request.Key is null && (!update || access.CanEdit("key")))
         {
             errors.Add("key");
         }
-        if (request.Language is null)
+        if (request.Language is null && (!update || access.CanEdit("language")))
         {
             errors.Add("language");
         }
-        if (request.Layer is null)
+        if (request.Layer is null && (!update || access.CanEdit("layer")))
         {
             errors.Add("layer");
         }
-        if (request.Text is null)
+        if (request.Text is null && (!update || access.CanEdit("text")))
         {
             errors.Add("text");
         }
@@ -152,13 +168,50 @@ internal static class LabelEndpoints
         return errors;
     }
 
-    private static void Apply(LabelWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.Label row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(LabelWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.Label row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.Key = request.Key!;
-        row.Language = request.Language!;
-        row.Layer = request.Layer!;
-        row.ScopeId = request.ScopeId;
-        row.Text = request.Text!;
-        _ = update;
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("key"))
+        {
+            row.Key = request.Key!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Key, row.Key, update))
+        {
+            denied.Add("key");
+        }
+        if (access.CanEdit("language"))
+        {
+            row.Language = request.Language!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Language, row.Language, update))
+        {
+            denied.Add("language");
+        }
+        if (access.CanEdit("layer"))
+        {
+            row.Layer = request.Layer!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Layer, row.Layer, update))
+        {
+            denied.Add("layer");
+        }
+        if (access.CanEdit("scope_id"))
+        {
+            row.ScopeId = request.ScopeId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ScopeId, row.ScopeId, update))
+        {
+            denied.Add("scopeId");
+        }
+        if (access.CanEdit("text"))
+        {
+            row.Text = request.Text!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Text, row.Text, update))
+        {
+            denied.Add("text");
+        }
+        return denied;
     }
 }

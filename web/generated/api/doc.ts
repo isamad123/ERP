@@ -3,7 +3,7 @@
 // </auto-generated>
 import { request, type PagedResult } from './http';
 
-/** doc.files: Metadata of stored files; content in the file store under the tenant prefix */
+/** doc.files: Metadata of stored files; content in the file store under the tenant prefix. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface File
 {
     id: string;
@@ -65,7 +65,7 @@ export const files =
     update: (id: string, body: FileWrite & { rowVersion: number }) => request<File>('PUT', `/api/doc/files/${id}`, { body }),
 };
 
-/** doc.generated_documents: GeneratedDocument */
+/** doc.generated_documents: GeneratedDocument. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface GeneratedDocument
 {
     id: string;
@@ -105,7 +105,7 @@ export const generatedDocuments =
     create: (body: GeneratedDocumentWrite) => request<GeneratedDocument>('POST', '/api/doc/generated-documents', { body }),
 };
 
-/** doc.retention_rules: RetentionRule */
+/** doc.retention_rules: RetentionRule. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface RetentionRule
 {
     id: string;
@@ -142,7 +142,7 @@ export const retentionRules =
     update: (id: string, body: RetentionRuleWrite & { rowVersion: number }) => request<RetentionRule>('PUT', `/api/doc/retention-rules/${id}`, { body }),
 };
 
-/** doc.template_versions: TemplateVersion */
+/** doc.template_versions: TemplateVersion. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface TemplateVersion
 {
     id: string;
@@ -183,7 +183,7 @@ export const templateVersions =
     update: (id: string, body: TemplateVersionWrite & { rowVersion: number }) => request<TemplateVersion>('PUT', `/api/doc/template-versions/${id}`, { body }),
 };
 
-/** doc.templates: Letters, payslips, certificates, bank files, statutory forms */
+/** doc.templates: Letters, payslips, certificates, bank files, statutory forms. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Template
 {
     id: string;

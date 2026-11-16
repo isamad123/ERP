@@ -51,7 +51,7 @@ public sealed class OptionListItemListQuery
     public global::System.Guid? ListId { get; init; }
 }
 
-/// <summary>Generated endpoints of cfg.option_list_items: read, create, update.</summary>
+/// <summary>Generated endpoints of cfg.option_list_items: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class OptionListItemEndpoints
 {
     private const string Resource = "cfg.option_list_items";
@@ -65,55 +65,70 @@ internal static class OptionListItemEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("cfg.option_list_items.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "cfg.option_list_items.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] OptionListItemListQuery query, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] OptionListItemListQuery query, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.option_list_items.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.OptionListItemFilter { ListId = query.ListId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<OptionListItemResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.option_list_items.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(OptionListItemWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(OptionListItemWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.option_list_items.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Cfg.OptionListItem();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/option-list-items/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, OptionListItemWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.option_list_items.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/cfg/option-list-items/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, OptionListItemWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "cfg.option_list_items.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.OptionListItemAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Cfg.OptionListItem row) => null;
 
     private static OptionListItemResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.OptionListItem row) => new()
     {
@@ -131,26 +146,27 @@ internal static class OptionListItemEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(OptionListItemWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(OptionListItemWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.ListId is null)
+        if (request.ListId is null && (!update || access.CanEdit("list_id")))
         {
             errors.Add("listId");
         }
-        if (request.Code is null)
+        if (request.Code is null && (!update || access.CanEdit("code")))
         {
             errors.Add("code");
         }
-        if (request.LabelI18n is null)
+        if (request.LabelI18n is null && (!update || access.CanEdit("label_i18n")))
         {
             errors.Add("labelI18n");
         }
-        if (request.Seq is null)
+        if (request.Seq is null && (!update || access.CanEdit("seq")))
         {
             errors.Add("seq");
         }
-        if (request.Attributes is null)
+        if (request.Attributes is null && (!update || access.CanEdit("attributes")))
         {
             errors.Add("attributes");
         }
@@ -161,17 +177,61 @@ internal static class OptionListItemEndpoints
         return errors;
     }
 
-    private static void Apply(OptionListItemWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.OptionListItem row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(OptionListItemWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.OptionListItem row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.ListId = request.ListId!.Value;
-        row.Code = request.Code!;
-        row.LabelI18n = GeneratedEndpointSupport.ToDocument(request.LabelI18n)!;
-        row.Seq = request.Seq!.Value;
-        if (request.IsActive is not null)
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("list_id"))
         {
-            row.IsActive = request.IsActive!.Value;
+            row.ListId = request.ListId!.Value;
         }
-        row.Attributes = GeneratedEndpointSupport.ToDocument(request.Attributes)!;
-        _ = update;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ListId, row.ListId, update))
+        {
+            denied.Add("listId");
+        }
+        if (access.CanEdit("code"))
+        {
+            row.Code = request.Code!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Code, row.Code, update))
+        {
+            denied.Add("code");
+        }
+        if (access.CanEdit("label_i18n"))
+        {
+            row.LabelI18n = GeneratedEndpointSupport.ToDocument(request.LabelI18n)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LabelI18n, row.LabelI18n, update))
+        {
+            denied.Add("labelI18n");
+        }
+        if (access.CanEdit("seq"))
+        {
+            row.Seq = request.Seq!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Seq, row.Seq, update))
+        {
+            denied.Add("seq");
+        }
+        if (access.CanEdit("is_active"))
+        {
+            if (request.IsActive is not null)
+            {
+                row.IsActive = request.IsActive!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsActive, row.IsActive, update))
+        {
+            denied.Add("isActive");
+        }
+        if (access.CanEdit("attributes"))
+        {
+            row.Attributes = GeneratedEndpointSupport.ToDocument(request.Attributes)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Attributes, row.Attributes, update))
+        {
+            denied.Add("attributes");
+        }
+        return denied;
     }
 }

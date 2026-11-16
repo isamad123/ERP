@@ -27,6 +27,10 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId",
+    "employment": "employmentId"
+  },
   "listFields": [
     "companyId",
     "employmentId",
@@ -131,7 +135,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.retro_adjustments.amount"
+      "labelKey": "fields.hrm.retro_adjustments.amount",
+      "fieldClass": "salary"
     },
     {
       "column": "currency_code",

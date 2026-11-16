@@ -3,7 +3,7 @@
 // </auto-generated>
 import { request, type PagedResult } from './http';
 
-/** job.definitions: Definition */
+/** job.definitions: Definition. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Definition
 {
     id: string;
@@ -48,7 +48,7 @@ export const definitions =
     update: (id: string, body: DefinitionWrite & { rowVersion: number }) => request<Definition>('PUT', `/api/job/definitions/${id}`, { body }),
 };
 
-/** job.run_logs: RunLog */
+/** job.run_logs: RunLog. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface RunLog
 {
     id: string;
@@ -79,7 +79,7 @@ export const runLogs =
     create: (body: RunLogWrite) => request<RunLog>('POST', '/api/job/run-logs', { body }),
 };
 
-/** job.runs: Run */
+/** job.runs: Run. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Run
 {
     id: string;

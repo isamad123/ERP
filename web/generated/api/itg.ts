@@ -3,7 +3,7 @@
 // </auto-generated>
 import { request, type PagedResult } from './http';
 
-/** itg.account_mappings: Maps payroll components and cost allocations to the customer's external chart of accounts */
+/** itg.account_mappings: Maps payroll components and cost allocations to the customer's external chart of accounts. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface AccountMapping
 {
     id: string;
@@ -45,7 +45,7 @@ export const accountMappings =
     update: (id: string, body: AccountMappingWrite & { rowVersion: number }) => request<AccountMapping>('PUT', `/api/itg/account-mappings/${id}`, { body }),
 };
 
-/** itg.accounting_events: Posting stub (D-43). One event per finalized payroll run, loan disbursement, approved claim batch or liability accrual per company */
+/** itg.accounting_events: Posting stub (D-43). One event per finalized payroll run, loan disbursement, approved claim batch or liability accrual per company. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface AccountingEvent
 {
     id: string;
@@ -94,7 +94,7 @@ export const accountingEvents =
     create: (body: AccountingEventWrite) => request<AccountingEvent>('POST', '/api/itg/accounting-events', { body }),
 };
 
-/** itg.connectors: Configured connectors (biometric devices, email gateway) in 1.0 */
+/** itg.connectors: Configured connectors (biometric devices, email gateway) in 1.0. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Connector
 {
     id: string;
@@ -142,7 +142,7 @@ export const connectors =
     update: (id: string, body: ConnectorWrite & { rowVersion: number }) => request<Connector>('PUT', `/api/itg/connectors/${id}`, { body }),
 };
 
-/** itg.export_jobs: ExportJob */
+/** itg.export_jobs: ExportJob. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ExportJob
 {
     id: string;
@@ -188,7 +188,7 @@ export const exportJobs =
     update: (id: string, body: ExportJobWrite & { rowVersion: number }) => request<ExportJob>('PUT', `/api/itg/export-jobs/${id}`, { body }),
 };
 
-/** itg.import_batch_errors: ImportBatchError */
+/** itg.import_batch_errors: ImportBatchError. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ImportBatchError
 {
     id: string;
@@ -222,7 +222,7 @@ export const importBatchErrors =
     create: (body: ImportBatchErrorWrite) => request<ImportBatchError>('POST', '/api/itg/import-batch-errors', { body }),
 };
 
-/** itg.import_batches: ImportBatch */
+/** itg.import_batches: ImportBatch. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ImportBatch
 {
     id: string;
@@ -272,7 +272,7 @@ export const importBatches =
     update: (id: string, body: ImportBatchWrite & { rowVersion: number }) => request<ImportBatch>('PUT', `/api/itg/import-batches/${id}`, { body }),
 };
 
-/** itg.import_templates: ImportTemplate */
+/** itg.import_templates: ImportTemplate. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ImportTemplate
 {
     id: string;
@@ -315,7 +315,7 @@ export const importTemplates =
     update: (id: string, body: ImportTemplateWrite & { rowVersion: number }) => request<ImportTemplate>('PUT', `/api/itg/import-templates/${id}`, { body }),
 };
 
-/** itg.journal_exports: A downloadable journal file built from accounting events */
+/** itg.journal_exports: A downloadable journal file built from accounting events. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface JournalExport
 {
     id: string;

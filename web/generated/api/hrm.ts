@@ -3,7 +3,7 @@
 // </auto-generated>
 import { request, type PagedResult } from './http';
 
-/** hrm.attendance_days: Processed daily result per employee with explanation */
+/** hrm.attendance_days: Processed daily result per employee with explanation. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface AttendanceDay
 {
     id: string;
@@ -75,7 +75,7 @@ export const attendanceDays =
     update: (id: string, body: AttendanceDayWrite & { rowVersion: number }) => request<AttendanceDay>('PUT', `/api/hrm/attendance-days/${id}`, { body }),
 };
 
-/** hrm.attendance_devices: Biometric and kiosk devices by site (ATT-02) */
+/** hrm.attendance_devices: Biometric and kiosk devices by site (ATT-02). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface AttendanceDevice
 {
     id: string;
@@ -134,7 +134,7 @@ export const attendanceDevices =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/attendance-devices/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.attendance_events: Raw punches from web check-in, biometric import, kiosk and HR entry (spec name 'punches') */
+/** hrm.attendance_events: Raw punches from web check-in, biometric import, kiosk and HR entry (spec name 'punches'). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface AttendanceEvent
 {
     id: string;
@@ -186,7 +186,7 @@ export const attendanceEvents =
     create: (body: AttendanceEventWrite) => request<AttendanceEvent>('POST', '/api/hrm/attendance-events', { body }),
 };
 
-/** hrm.attendance_exceptions: AttendanceException */
+/** hrm.attendance_exceptions: AttendanceException. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface AttendanceException
 {
     id: string;
@@ -232,7 +232,7 @@ export const attendanceExceptions =
     update: (id: string, body: AttendanceExceptionWrite & { rowVersion: number }) => request<AttendanceException>('PUT', `/api/hrm/attendance-exceptions/${id}`, { body }),
 };
 
-/** hrm.attendance_periods: Lock unit for attendance per company and pay group (FR-XM-26) */
+/** hrm.attendance_periods: Lock unit for attendance per company and pay group (FR-XM-26). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface AttendancePeriod
 {
     id: string;
@@ -282,7 +282,7 @@ export const attendancePeriods =
     update: (id: string, body: AttendancePeriodWrite & { rowVersion: number }) => request<AttendancePeriod>('PUT', `/api/hrm/attendance-periods/${id}`, { body }),
 };
 
-/** hrm.benefit_claims: BenefitClaim */
+/** hrm.benefit_claims: BenefitClaim. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface BenefitClaim
 {
     id: string;
@@ -331,7 +331,7 @@ export const benefitClaims =
     update: (id: string, body: BenefitClaimWrite & { rowVersion: number }) => request<BenefitClaim>('PUT', `/api/hrm/benefit-claims/${id}`, { body }),
 };
 
-/** hrm.benefit_enrollments: BenefitEnrollment */
+/** hrm.benefit_enrollments: BenefitEnrollment. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface BenefitEnrollment
 {
     id: string;
@@ -383,7 +383,7 @@ export const benefitEnrollments =
     update: (id: string, body: BenefitEnrollmentWrite & { rowVersion: number }) => request<BenefitEnrollment>('PUT', `/api/hrm/benefit-enrollments/${id}`, { body }),
 };
 
-/** hrm.benefit_plans: BenefitPlan */
+/** hrm.benefit_plans: BenefitPlan. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface BenefitPlan
 {
     id: string;
@@ -441,7 +441,7 @@ export const benefitPlans =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/benefit-plans/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.change_requests: Employee self-service changes to their own data, approved before applying (EMP-08) */
+/** hrm.change_requests: Employee self-service changes to their own data, approved before applying (EMP-08). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ChangeRequest
 {
     id: string;
@@ -492,7 +492,7 @@ export const changeRequests =
     update: (id: string, body: ChangeRequestWrite & { rowVersion: number }) => request<ChangeRequest>('PUT', `/api/hrm/change-requests/${id}`, { body }),
 };
 
-/** hrm.checklist_items: ChecklistItem */
+/** hrm.checklist_items: ChecklistItem. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ChecklistItem
 {
     id: string;
@@ -543,7 +543,7 @@ export const checklistItems =
     update: (id: string, body: ChecklistItemWrite & { rowVersion: number }) => request<ChecklistItem>('PUT', `/api/hrm/checklist-items/${id}`, { body }),
 };
 
-/** hrm.checklist_template_items: ChecklistTemplateItem */
+/** hrm.checklist_template_items: ChecklistTemplateItem. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ChecklistTemplateItem
 {
     id: string;
@@ -588,7 +588,7 @@ export const checklistTemplateItems =
     update: (id: string, body: ChecklistTemplateItemWrite & { rowVersion: number }) => request<ChecklistTemplateItem>('PUT', `/api/hrm/checklist-template-items/${id}`, { body }),
 };
 
-/** hrm.checklist_templates: ChecklistTemplate */
+/** hrm.checklist_templates: ChecklistTemplate. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ChecklistTemplate
 {
     id: string;
@@ -634,7 +634,7 @@ export const checklistTemplates =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/checklist-templates/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.checklists: Checklist */
+/** hrm.checklists: Checklist. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Checklist
 {
     id: string;
@@ -680,7 +680,7 @@ export const checklists =
     update: (id: string, body: ChecklistWrite & { rowVersion: number }) => request<Checklist>('PUT', `/api/hrm/checklists/${id}`, { body }),
 };
 
-/** hrm.compensation_assignments: An employee's salary structure, effective-dated; a revision closes one row and opens another (PAY-06) */
+/** hrm.compensation_assignments: An employee's salary structure, effective-dated; a revision closes one row and opens another (PAY-06). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface CompensationAssignment
 {
     id: string;
@@ -689,7 +689,7 @@ export interface CompensationAssignment
     structureId: string;
     eventId: string;
     currencyCode: string;
-    grossAmount: number | null;
+    grossAmount?: number | string | null;
     incrementProposalId: string | null;
     validFrom: string;
     validTo: string | null;
@@ -732,14 +732,14 @@ export const compensationAssignments =
     update: (id: string, body: CompensationAssignmentWrite & { rowVersion: number }) => request<CompensationAssignment>('PUT', `/api/hrm/compensation-assignments/${id}`, { body }),
 };
 
-/** hrm.compensation_lines: Amounts per component for an assignment, including allowances and perquisites (CMP-03) */
+/** hrm.compensation_lines: Amounts per component for an assignment, including allowances and perquisites (CMP-03). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface CompensationLine
 {
     id: string;
     companyId: string;
     assignmentId: string;
     componentId: string;
-    amount: number | null;
+    amount?: number | string | null;
     percent: number | null;
     units: number | null;
     createdAt: string;
@@ -776,7 +776,7 @@ export const compensationLines =
     update: (id: string, body: CompensationLineWrite & { rowVersion: number }) => request<CompensationLine>('PUT', `/api/hrm/compensation-lines/${id}`, { body }),
 };
 
-/** hrm.compliance_obligations: Statutory deadlines per company (CPL-01), from pack and tenant */
+/** hrm.compliance_obligations: Statutory deadlines per company (CPL-01), from pack and tenant. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ComplianceObligation
 {
     id: string;
@@ -824,7 +824,7 @@ export const complianceObligations =
     update: (id: string, body: ComplianceObligationWrite & { rowVersion: number }) => request<ComplianceObligation>('PUT', `/api/hrm/compliance-obligations/${id}`, { body }),
 };
 
-/** hrm.compliance_tasks: ComplianceTask */
+/** hrm.compliance_tasks: ComplianceTask. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ComplianceTask
 {
     id: string;
@@ -874,7 +874,7 @@ export const complianceTasks =
     update: (id: string, body: ComplianceTaskWrite & { rowVersion: number }) => request<ComplianceTask>('PUT', `/api/hrm/compliance-tasks/${id}`, { body }),
 };
 
-/** hrm.contracts: Contract */
+/** hrm.contracts: Contract. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Contract
 {
     id: string;
@@ -928,7 +928,7 @@ export const contracts =
     update: (id: string, body: ContractWrite & { rowVersion: number }) => request<Contract>('PUT', `/api/hrm/contracts/${id}`, { body }),
 };
 
-/** hrm.course_sessions: CourseSession */
+/** hrm.course_sessions: CourseSession. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface CourseSession
 {
     id: string;
@@ -979,7 +979,7 @@ export const courseSessions =
     update: (id: string, body: CourseSessionWrite & { rowVersion: number }) => request<CourseSession>('PUT', `/api/hrm/course-sessions/${id}`, { body }),
 };
 
-/** hrm.courses: Course */
+/** hrm.courses: Course. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Course
 {
     id: string;
@@ -1037,7 +1037,7 @@ export const courses =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/courses/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.device_user_maps: Device user number to employee (ATT-03); biometric templates never stored (ATT-20) */
+/** hrm.device_user_maps: Device user number to employee (ATT-03); biometric templates never stored (ATT-20). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface DeviceUserMap
 {
     id: string;
@@ -1084,7 +1084,7 @@ export const deviceUserMaps =
     update: (id: string, body: DeviceUserMapWrite & { rowVersion: number }) => request<DeviceUserMap>('PUT', `/api/hrm/device-user-maps/${id}`, { body }),
 };
 
-/** hrm.duty_requests: On-duty, official visit and work-from-home requests (ATT-14) */
+/** hrm.duty_requests: On-duty, official visit and work-from-home requests (ATT-14). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface DutyRequest
 {
     id: string;
@@ -1133,7 +1133,7 @@ export const dutyRequests =
     update: (id: string, body: DutyRequestWrite & { rowVersion: number }) => request<DutyRequest>('PUT', `/api/hrm/duty-requests/${id}`, { body }),
 };
 
-/** hrm.employee_bank_accounts: EmployeeBankAccount */
+/** hrm.employee_bank_accounts: EmployeeBankAccount. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface EmployeeBankAccount
 {
     id: string;
@@ -1185,7 +1185,7 @@ export const employeeBankAccounts =
     update: (id: string, body: EmployeeBankAccountWrite & { rowVersion: number }) => request<EmployeeBankAccount>('PUT', `/api/hrm/employee-bank-accounts/${id}`, { body }),
 };
 
-/** hrm.employee_documents: Employee document vault entries (file in doc.files) */
+/** hrm.employee_documents: Employee document vault entries (file in doc.files). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface EmployeeDocument
 {
     id: string;
@@ -1236,7 +1236,7 @@ export const employeeDocuments =
     update: (id: string, body: EmployeeDocumentWrite & { rowVersion: number }) => request<EmployeeDocument>('PUT', `/api/hrm/employee-documents/${id}`, { body }),
 };
 
-/** hrm.employee_letters: Letters issued to an employee (offer, appointment, confirmation, increment, promotion, transfer, warning, experience, salary certificate) */
+/** hrm.employee_letters: Letters issued to an employee (offer, appointment, confirmation, increment, promotion, transfer, warning, experience, salary certificate). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface EmployeeLetter
 {
     id: string;
@@ -1301,7 +1301,7 @@ export const employeeLetters =
     update: (id: string, body: EmployeeLetterWrite & { rowVersion: number }) => request<EmployeeLetter>('PUT', `/api/hrm/employee-letters/${id}`, { body }),
 };
 
-/** hrm.employment_assignments: Effective-dated job details; every change closes the current row and opens a new one */
+/** hrm.employment_assignments: Effective-dated job details; every change closes the current row and opens a new one. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface EmploymentAssignment
 {
     id: string;
@@ -1374,7 +1374,7 @@ export const employmentAssignments =
     update: (id: string, body: EmploymentAssignmentWrite & { rowVersion: number }) => request<EmploymentAssignment>('PUT', `/api/hrm/employment-assignments/${id}`, { body }),
 };
 
-/** hrm.employment_events: Why something changed (hire, promotion, transfer ... termination) with reason code */
+/** hrm.employment_events: Why something changed (hire, promotion, transfer ... termination) with reason code. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface EmploymentEvent
 {
     id: string;
@@ -1428,7 +1428,7 @@ export const employmentEvents =
     update: (id: string, body: EmploymentEventWrite & { rowVersion: number }) => request<EmploymentEvent>('PUT', `/api/hrm/employment-events/${id}`, { body }),
 };
 
-/** hrm.employment_statutory_registrations: Per-employee applicability and registration for EOBI, provincial social security and provident fund */
+/** hrm.employment_statutory_registrations: Per-employee applicability and registration for EOBI, provincial social security and provident fund. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface EmploymentStatutoryRegistration
 {
     id: string;
@@ -1473,7 +1473,7 @@ export const employmentStatutoryRegistrations =
     update: (id: string, body: EmploymentStatutoryRegistrationWrite & { rowVersion: number }) => request<EmploymentStatutoryRegistration>('PUT', `/api/hrm/employment-statutory-registrations/${id}`, { body }),
 };
 
-/** hrm.employments: One employment of a person with one company; transfers between companies create a new linked row (FR-XM-30) */
+/** hrm.employments: One employment of a person with one company; transfers between companies create a new linked row (FR-XM-30). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Employment
 {
     id: string;
@@ -1534,7 +1534,7 @@ export const employments =
     update: (id: string, body: EmploymentWrite & { rowVersion: number }) => request<Employment>('PUT', `/api/hrm/employments/${id}`, { body }),
 };
 
-/** hrm.expense_categories: ExpenseCategory */
+/** hrm.expense_categories: ExpenseCategory. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ExpenseCategory
 {
     id: string;
@@ -1584,7 +1584,7 @@ export const expenseCategories =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/expense-categories/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.expense_claim_lines: ExpenseClaimLine */
+/** hrm.expense_claim_lines: ExpenseClaimLine. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ExpenseClaimLine
 {
     id: string;
@@ -1637,7 +1637,7 @@ export const expenseClaimLines =
     update: (id: string, body: ExpenseClaimLineWrite & { rowVersion: number }) => request<ExpenseClaimLine>('PUT', `/api/hrm/expense-claim-lines/${id}`, { body }),
 };
 
-/** hrm.expense_claims: ExpenseClaim */
+/** hrm.expense_claims: ExpenseClaim. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ExpenseClaim
 {
     id: string;
@@ -1692,7 +1692,7 @@ export const expenseClaims =
     update: (id: string, body: ExpenseClaimWrite & { rowVersion: number }) => request<ExpenseClaim>('PUT', `/api/hrm/expense-claims/${id}`, { body }),
 };
 
-/** hrm.final_settlement_lines: FinalSettlementLine */
+/** hrm.final_settlement_lines: FinalSettlementLine. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface FinalSettlementLine
 {
     id: string;
@@ -1700,7 +1700,7 @@ export interface FinalSettlementLine
     settlementId: string;
     kind: 'pending_salary' | 'leave_encashment' | 'gratuity' | 'notice_pay' | 'notice_recovery' | 'loan_recovery' | 'advance_recovery' | 'bond_recovery' | 'bonus' | 'tax_adjustment' | 'pf_payout' | 'other';
     componentId: string | null;
-    amount: number;
+    amount?: number | string;
     basis: unknown;
     createdAt: string;
     createdBy: string;
@@ -1736,7 +1736,7 @@ export const finalSettlementLines =
     update: (id: string, body: FinalSettlementLineWrite & { rowVersion: number }) => request<FinalSettlementLine>('PUT', `/api/hrm/final-settlement-lines/${id}`, { body }),
 };
 
-/** hrm.final_settlements: FinalSettlement */
+/** hrm.final_settlements: FinalSettlement. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface FinalSettlement
 {
     id: string;
@@ -1746,7 +1746,7 @@ export interface FinalSettlement
     payRunId: string | null;
     clearanceStatus: 'pending' | 'cleared' | 'waived';
     openItems: unknown;
-    netAmount: number | null;
+    netAmount?: number | string | null;
     currencyCode: string;
     statementDocumentId: string | null;
     acknowledgedAt: string | null;
@@ -1796,7 +1796,7 @@ export const finalSettlements =
     update: (id: string, body: FinalSettlementWrite & { rowVersion: number }) => request<FinalSettlement>('PUT', `/api/hrm/final-settlements/${id}`, { body }),
 };
 
-/** hrm.form_definitions: Configurable forms for appraisals and probation reviews (PRF-03, ONB-12) */
+/** hrm.form_definitions: Configurable forms for appraisals and probation reviews (PRF-03, ONB-12). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface FormDefinition
 {
     id: string;
@@ -1844,7 +1844,7 @@ export const formDefinitions =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/form-definitions/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.form_responses: FormResponse */
+/** hrm.form_responses: FormResponse. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface FormResponse
 {
     id: string;
@@ -1898,7 +1898,7 @@ export const formResponses =
     update: (id: string, body: FormResponseWrite & { rowVersion: number }) => request<FormResponse>('PUT', `/api/hrm/form-responses/${id}`, { body }),
 };
 
-/** hrm.form_versions: FormVersion */
+/** hrm.form_versions: FormVersion. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface FormVersion
 {
     id: string;
@@ -1937,7 +1937,7 @@ export const formVersions =
     update: (id: string, body: FormVersionWrite & { rowVersion: number }) => request<FormVersion>('PUT', `/api/hrm/form-versions/${id}`, { body }),
 };
 
-/** hrm.goal_updates: GoalUpdate */
+/** hrm.goal_updates: GoalUpdate. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface GoalUpdate
 {
     id: string;
@@ -1974,7 +1974,7 @@ export const goalUpdates =
     create: (body: GoalUpdateWrite) => request<GoalUpdate>('POST', '/api/hrm/goal-updates', { body }),
 };
 
-/** hrm.goals: Goal */
+/** hrm.goals: Goal. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Goal
 {
     id: string;
@@ -2035,7 +2035,7 @@ export const goals =
     update: (id: string, body: GoalWrite & { rowVersion: number }) => request<Goal>('PUT', `/api/hrm/goals/${id}`, { body }),
 };
 
-/** hrm.grades: Grade */
+/** hrm.grades: Grade. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Grade
 {
     id: string;
@@ -2081,7 +2081,7 @@ export const grades =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/grades/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.headcount_budgets: Headcount-based model (POS-01) — sanctioned strength per unit and grade */
+/** hrm.headcount_budgets: Headcount-based model (POS-01) — sanctioned strength per unit and grade. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface HeadcountBudget
 {
     id: string;
@@ -2125,7 +2125,7 @@ export const headcountBudgets =
     update: (id: string, body: HeadcountBudgetWrite & { rowVersion: number }) => request<HeadcountBudget>('PUT', `/api/hrm/headcount-budgets/${id}`, { body }),
 };
 
-/** hrm.increment_cycles: IncrementCycle */
+/** hrm.increment_cycles: IncrementCycle. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface IncrementCycle
 {
     id: string;
@@ -2175,15 +2175,15 @@ export const incrementCycles =
     update: (id: string, body: IncrementCycleWrite & { rowVersion: number }) => request<IncrementCycle>('PUT', `/api/hrm/increment-cycles/${id}`, { body }),
 };
 
-/** hrm.increment_proposals: IncrementProposal */
+/** hrm.increment_proposals: IncrementProposal. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface IncrementProposal
 {
     id: string;
     companyId: string;
     cycleId: string;
     employmentId: string;
-    currentAmount: number;
-    proposedAmount: number;
+    currentAmount?: number | string;
+    proposedAmount?: number | string;
     proposedPercent: number | null;
     promotionGradeId: string | null;
     rating: string | null;
@@ -2233,7 +2233,7 @@ export const incrementProposals =
     update: (id: string, body: IncrementProposalWrite & { rowVersion: number }) => request<IncrementProposal>('PUT', `/api/hrm/increment-proposals/${id}`, { body }),
 };
 
-/** hrm.learning_records: Completed learning per employee, including external training and certificates */
+/** hrm.learning_records: Completed learning per employee, including external training and certificates. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface LearningRecord
 {
     id: string;
@@ -2287,7 +2287,7 @@ export const learningRecords =
     update: (id: string, body: LearningRecordWrite & { rowVersion: number }) => request<LearningRecord>('PUT', `/api/hrm/learning-records/${id}`, { body }),
 };
 
-/** hrm.leave_ledger: Every movement of a leave balance; balances are sums (LVE-10, LVE-14) */
+/** hrm.leave_ledger: Every movement of a leave balance; balances are sums (LVE-10, LVE-14). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface LeaveLedger
 {
     id: string;
@@ -2343,7 +2343,7 @@ export const leaveLedger =
     create: (body: LeaveLedgerWrite) => request<LeaveLedger>('POST', '/api/hrm/leave-ledger', { body }),
 };
 
-/** hrm.leave_request_days: Day-by-day breakdown used by attendance and payroll */
+/** hrm.leave_request_days: Day-by-day breakdown used by attendance and payroll. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface LeaveRequestDay
 {
     id: string;
@@ -2389,7 +2389,7 @@ export const leaveRequestDays =
     update: (id: string, body: LeaveRequestDayWrite & { rowVersion: number }) => request<LeaveRequestDay>('PUT', `/api/hrm/leave-request-days/${id}`, { body }),
 };
 
-/** hrm.leave_requests: LeaveRequest */
+/** hrm.leave_requests: LeaveRequest. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface LeaveRequest
 {
     id: string;
@@ -2459,7 +2459,7 @@ export const leaveRequests =
     update: (id: string, body: LeaveRequestWrite & { rowVersion: number }) => request<LeaveRequest>('PUT', `/api/hrm/leave-requests/${id}`, { body }),
 };
 
-/** hrm.leave_types: LeaveType */
+/** hrm.leave_types: LeaveType. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface LeaveType
 {
     id: string;
@@ -2515,7 +2515,7 @@ export const leaveTypes =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/leave-types/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.leave_year_end_runs: Carry-forward, lapse and encashment with preview and rollback (LVE-11) */
+/** hrm.leave_year_end_runs: Carry-forward, lapse and encashment with preview and rollback (LVE-11). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface LeaveYearEndRun
 {
     id: string;
@@ -2557,7 +2557,7 @@ export const leaveYearEndRuns =
     update: (id: string, body: LeaveYearEndRunWrite & { rowVersion: number }) => request<LeaveYearEndRun>('PUT', `/api/hrm/leave-year-end-runs/${id}`, { body }),
 };
 
-/** hrm.liability_accruals: Gratuity, leave encashment and similar liabilities computed per period (CMP-07, LVE-13 basis) */
+/** hrm.liability_accruals: Gratuity, leave encashment and similar liabilities computed per period (CMP-07, LVE-13 basis). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface LiabilityAccrual
 {
     id: string;
@@ -2609,7 +2609,7 @@ export const liabilityAccruals =
     create: (body: LiabilityAccrualWrite) => request<LiabilityAccrual>('POST', '/api/hrm/liability-accruals', { body }),
 };
 
-/** hrm.loan_installments: LoanInstallment */
+/** hrm.loan_installments: LoanInstallment. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface LoanInstallment
 {
     id: string;
@@ -2617,8 +2617,8 @@ export interface LoanInstallment
     loanId: string;
     seq: number;
     payPeriodId: string;
-    principalAmount: number;
-    interestAmount: number;
+    principalAmount?: number | string;
+    interestAmount?: number | string;
     payResultLineId: string | null;
     status: 'scheduled' | 'deducted' | 'skipped' | 'settled_early';
     createdAt: string;
@@ -2659,14 +2659,14 @@ export const loanInstallments =
     update: (id: string, body: LoanInstallmentWrite & { rowVersion: number }) => request<LoanInstallment>('PUT', `/api/hrm/loan-installments/${id}`, { body }),
 };
 
-/** hrm.loan_transactions: Loan ledger (disbursement, recovery, adjustment, write-off); balance is the sum */
+/** hrm.loan_transactions: Loan ledger (disbursement, recovery, adjustment, write-off); balance is the sum. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface LoanTransaction
 {
     id: string;
     companyId: string;
     loanId: string;
     kind: 'disbursement' | 'recovery' | 'early_settlement' | 'adjustment' | 'write_off' | 'settlement_recovery';
-    amount: number;
+    amount?: number | string;
     txnDate: string;
     sourceType: string | null;
     sourceId: string | null;
@@ -2700,7 +2700,7 @@ export const loanTransactions =
     create: (body: LoanTransactionWrite) => request<LoanTransaction>('POST', '/api/hrm/loan-transactions', { body }),
 };
 
-/** hrm.loan_types: LoanType */
+/** hrm.loan_types: LoanType. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface LoanType
 {
     id: string;
@@ -2750,7 +2750,7 @@ export const loanTypes =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/loan-types/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.loans: Loan */
+/** hrm.loans: Loan. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Loan
 {
     id: string;
@@ -2758,7 +2758,7 @@ export interface Loan
     loanNo: string;
     employmentId: string;
     loanTypeId: string;
-    principal: number;
+    principal?: number | string;
     currencyCode: string;
     interestRate: number;
     installments: number;
@@ -2812,7 +2812,7 @@ export const loans =
     update: (id: string, body: LoanWrite & { rowVersion: number }) => request<Loan>('PUT', `/api/hrm/loans/${id}`, { body }),
 };
 
-/** hrm.mandatory_training_rules: MandatoryTrainingRule */
+/** hrm.mandatory_training_rules: MandatoryTrainingRule. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface MandatoryTrainingRule
 {
     id: string;
@@ -2856,7 +2856,7 @@ export const mandatoryTrainingRules =
     update: (id: string, body: MandatoryTrainingRuleWrite & { rowVersion: number }) => request<MandatoryTrainingRule>('PUT', `/api/hrm/mandatory-training-rules/${id}`, { body }),
 };
 
-/** hrm.nominations: Nominees per scheme (provident fund, gratuity, insurance plan) */
+/** hrm.nominations: Nominees per scheme (provident fund, gratuity, insurance plan). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Nomination
 {
     id: string;
@@ -2899,7 +2899,7 @@ export const nominations =
     update: (id: string, body: NominationWrite & { rowVersion: number }) => request<Nomination>('PUT', `/api/hrm/nominations/${id}`, { body }),
 };
 
-/** hrm.overtime_entries: OvertimeEntry */
+/** hrm.overtime_entries: OvertimeEntry. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface OvertimeEntry
 {
     id: string;
@@ -2960,7 +2960,7 @@ export const overtimeEntries =
     update: (id: string, body: OvertimeEntryWrite & { rowVersion: number }) => request<OvertimeEntry>('PUT', `/api/hrm/overtime-entries/${id}`, { body }),
 };
 
-/** hrm.parallel_run_lines: ParallelRunLine */
+/** hrm.parallel_run_lines: ParallelRunLine. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ParallelRunLine
 {
     id: string;
@@ -3010,7 +3010,7 @@ export const parallelRunLines =
     update: (id: string, body: ParallelRunLineWrite & { rowVersion: number }) => request<ParallelRunLine>('PUT', `/api/hrm/parallel-run-lines/${id}`, { body }),
 };
 
-/** hrm.parallel_runs: Compare a pay run with the customer's legacy payroll results before go-live */
+/** hrm.parallel_runs: Compare a pay run with the customer's legacy payroll results before go-live. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ParallelRun
 {
     id: string;
@@ -3059,7 +3059,7 @@ export const parallelRuns =
     update: (id: string, body: ParallelRunWrite & { rowVersion: number }) => request<ParallelRun>('PUT', `/api/hrm/parallel-runs/${id}`, { body }),
 };
 
-/** hrm.pay_component_versions: Calculation definition of a component, effective-dated; runs record the version used */
+/** hrm.pay_component_versions: Calculation definition of a component, effective-dated; runs record the version used. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PayComponentVersion
 {
     id: string;
@@ -3109,7 +3109,7 @@ export const payComponentVersions =
     update: (id: string, body: PayComponentVersionWrite & { rowVersion: number }) => request<PayComponentVersion>('PUT', `/api/hrm/pay-component-versions/${id}`, { body }),
 };
 
-/** hrm.pay_components: PayComponent */
+/** hrm.pay_components: PayComponent. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PayComponent
 {
     id: string;
@@ -3161,7 +3161,7 @@ export const payComponents =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/pay-components/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.pay_groups: PayGroup */
+/** hrm.pay_groups: PayGroup. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PayGroup
 {
     id: string;
@@ -3219,7 +3219,7 @@ export const payGroups =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/pay-groups/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.pay_inputs: One-time inputs to a period (bonus, incentive, deduction, adjustment, imported file rows) */
+/** hrm.pay_inputs: One-time inputs to a period (bonus, incentive, deduction, adjustment, imported file rows). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PayInput
 {
     id: string;
@@ -3227,7 +3227,7 @@ export interface PayInput
     employmentId: string;
     payPeriodId: string;
     componentId: string;
-    amount: number | null;
+    amount?: number | string | null;
     currencyCode: string;
     units: number | null;
     sourceType: string;
@@ -3279,7 +3279,7 @@ export const payInputs =
     update: (id: string, body: PayInputWrite & { rowVersion: number }) => request<PayInput>('PUT', `/api/hrm/pay-inputs/${id}`, { body }),
 };
 
-/** hrm.pay_periods: Payroll calendar per pay group */
+/** hrm.pay_periods: Payroll calendar per pay group. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PayPeriod
 {
     id: string;
@@ -3329,7 +3329,7 @@ export const payPeriods =
     update: (id: string, body: PayPeriodWrite & { rowVersion: number }) => request<PayPeriod>('PUT', `/api/hrm/pay-periods/${id}`, { body }),
 };
 
-/** hrm.pay_result_lines: PayResultLine */
+/** hrm.pay_result_lines: PayResultLine. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PayResultLine
 {
     id: string;
@@ -3338,7 +3338,7 @@ export interface PayResultLine
     payPeriodId: string;
     employmentId: string;
     componentId: string;
-    amount: number;
+    amount?: number | string;
     units: number | null;
     rate: number | null;
     periodStart: string | null;
@@ -3381,7 +3381,7 @@ export const payResultLines =
     update: (id: string, body: PayResultLineWrite & { rowVersion: number }) => request<PayResultLine>('PUT', `/api/hrm/pay-result-lines/${id}`, { body }),
 };
 
-/** hrm.pay_result_reversals: Reversal of a single payslip after approval and before payment (FR-XM-27); after payment correct by adjustment or off-cycle run */
+/** hrm.pay_result_reversals: Reversal of a single payslip after approval and before payment (FR-XM-27); after payment correct by adjustment or off-cycle run. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PayResultReversal
 {
     id: string;
@@ -3419,7 +3419,7 @@ export const payResultReversals =
     create: (body: PayResultReversalWrite) => request<PayResultReversal>('POST', '/api/hrm/pay-result-reversals', { body }),
 };
 
-/** hrm.pay_results: Net result per employee per run; append-only once the run is locked (PAY-33) */
+/** hrm.pay_results: Net result per employee per run; append-only once the run is locked (PAY-33). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PayResult
 {
     id: string;
@@ -3428,12 +3428,12 @@ export interface PayResult
     employmentId: string;
     taxYear: number;
     payPeriodId: string;
-    gross: number;
-    deductions: number;
-    net: number;
-    employerCost: number;
-    taxableIncomeYtd: number;
-    taxYtd: number;
+    gross?: number | string;
+    deductions?: number | string;
+    net?: number | string;
+    employerCost?: number | string;
+    taxableIncomeYtd?: number | string;
+    taxYtd?: number | string;
     workedDays: number;
     paidDays: number;
     correctsResultId: string | null;
@@ -3481,7 +3481,7 @@ export const payResults =
     update: (id: string, body: PayResultWrite & { rowVersion: number }) => request<PayResult>('PUT', `/api/hrm/pay-results/${id}`, { body }),
 };
 
-/** hrm.pay_run_employees: Who is in a run, the frozen input snapshot, status and validation flags */
+/** hrm.pay_run_employees: Who is in a run, the frozen input snapshot, status and validation flags. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PayRunEmployee
 {
     id: string;
@@ -3539,7 +3539,7 @@ export const payRunEmployees =
     update: (id: string, body: PayRunEmployeeWrite & { rowVersion: number }) => request<PayRunEmployee>('PUT', `/api/hrm/pay-run-employees/${id}`, { body }),
 };
 
-/** hrm.pay_runs: PayRun */
+/** hrm.pay_runs: PayRun. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PayRun
 {
     id: string;
@@ -3606,7 +3606,7 @@ export const payRuns =
     update: (id: string, body: PayRunWrite & { rowVersion: number }) => request<PayRun>('PUT', `/api/hrm/pay-runs/${id}`, { body }),
 };
 
-/** hrm.payment_batches: PaymentBatch */
+/** hrm.payment_batches: PaymentBatch. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PaymentBatch
 {
     id: string;
@@ -3665,7 +3665,7 @@ export const paymentBatches =
     update: (id: string, body: PaymentBatchWrite & { rowVersion: number }) => request<PaymentBatch>('PUT', `/api/hrm/payment-batches/${id}`, { body }),
 };
 
-/** hrm.payment_lines: PaymentLine */
+/** hrm.payment_lines: PaymentLine. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PaymentLine
 {
     id: string;
@@ -3678,7 +3678,7 @@ export interface PaymentLine
     chequeNo: string | null;
     accountTitle: string | null;
     bankId: string | null;
-    amount: number;
+    amount?: number | string;
     bankReference: string | null;
     failureReason: string | null;
     reissuedInLineId: string | null;
@@ -3730,7 +3730,7 @@ export const paymentLines =
     update: (id: string, body: PaymentLineWrite & { rowVersion: number }) => request<PaymentLine>('PUT', `/api/hrm/payment-lines/${id}`, { body }),
 };
 
-/** hrm.person_addresses: PersonAddress */
+/** hrm.person_addresses: PersonAddress. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PersonAddress
 {
     id: string;
@@ -3770,7 +3770,7 @@ export const personAddresses =
     update: (id: string, body: PersonAddressWrite & { rowVersion: number }) => request<PersonAddress>('PUT', `/api/hrm/person-addresses/${id}`, { body }),
 };
 
-/** hrm.person_contacts: PersonContact */
+/** hrm.person_contacts: PersonContact. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PersonContact
 {
     id: string;
@@ -3808,7 +3808,7 @@ export const personContacts =
     update: (id: string, body: PersonContactWrite & { rowVersion: number }) => request<PersonContact>('PUT', `/api/hrm/person-contacts/${id}`, { body }),
 };
 
-/** hrm.person_identifiers: National IDs, passports, tax numbers; validated per country pack */
+/** hrm.person_identifiers: National IDs, passports, tax numbers; validated per country pack. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PersonIdentifier
 {
     id: string;
@@ -3840,7 +3840,7 @@ export const personIdentifiers =
     get: (id: string) => request<PersonIdentifier>('GET', `/api/hrm/person-identifiers/${id}`),
 };
 
-/** hrm.person_qualifications: Education, previous experience, languages and certifications */
+/** hrm.person_qualifications: Education, previous experience, languages and certifications. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PersonQualification
 {
     id: string;
@@ -3898,7 +3898,7 @@ export const personQualifications =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/person-qualifications/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.person_relations: Family, dependents and emergency contacts in one table */
+/** hrm.person_relations: Family, dependents and emergency contacts in one table. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PersonRelation
 {
     id: string;
@@ -3948,7 +3948,7 @@ export const personRelations =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/person-relations/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.persons: One row per human (FR-XM-28). Employments hang off the person */
+/** hrm.persons: One row per human (FR-XM-28). Employments hang off the person. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Person
 {
     id: string;
@@ -4011,7 +4011,7 @@ export const persons =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/persons/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.policies: Named policies by type (leave, attendance, shift, overtime, pay, expense, loan, benefits, performance) */
+/** hrm.policies: Named policies by type (leave, attendance, shift, overtime, pay, expense, loan, benefits, performance). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Policy
 {
     id: string;
@@ -4057,7 +4057,7 @@ export const policies =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/policies/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.policy_acknowledgements: PolicyAcknowledgement */
+/** hrm.policy_acknowledgements: PolicyAcknowledgement. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PolicyAcknowledgement
 {
     id: string;
@@ -4093,7 +4093,7 @@ export const policyAcknowledgements =
     create: (body: PolicyAcknowledgementWrite) => request<PolicyAcknowledgement>('POST', '/api/hrm/policy-acknowledgements', { body }),
 };
 
-/** hrm.policy_assignments: Assigns a policy by attribute rule with precedence */
+/** hrm.policy_assignments: Assigns a policy by attribute rule with precedence. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PolicyAssignment
 {
     id: string;
@@ -4136,7 +4136,7 @@ export const policyAssignments =
     update: (id: string, body: PolicyAssignmentWrite & { rowVersion: number }) => request<PolicyAssignment>('PUT', `/api/hrm/policy-assignments/${id}`, { body }),
 };
 
-/** hrm.policy_publications: Policy documents published to populations for acknowledgement */
+/** hrm.policy_publications: Policy documents published to populations for acknowledgement. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PolicyPublication
 {
     id: string;
@@ -4184,7 +4184,7 @@ export const policyPublications =
     update: (id: string, body: PolicyPublicationWrite & { rowVersion: number }) => request<PolicyPublication>('PUT', `/api/hrm/policy-publications/${id}`, { body }),
 };
 
-/** hrm.policy_versions: PolicyVersion */
+/** hrm.policy_versions: PolicyVersion. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PolicyVersion
 {
     id: string;
@@ -4229,7 +4229,7 @@ export const policyVersions =
     update: (id: string, body: PolicyVersionWrite & { rowVersion: number }) => request<PolicyVersion>('PUT', `/api/hrm/policy-versions/${id}`, { body }),
 };
 
-/** hrm.positions: Position */
+/** hrm.positions: Position. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Position
 {
     id: string;
@@ -4291,7 +4291,7 @@ export const positions =
     update: (id: string, body: PositionWrite & { rowVersion: number }) => request<Position>('PUT', `/api/hrm/positions/${id}`, { body }),
 };
 
-/** hrm.previous_employer_income: PreviousEmployerIncome */
+/** hrm.previous_employer_income: PreviousEmployerIncome. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PreviousEmployerIncome
 {
     id: string;
@@ -4299,8 +4299,8 @@ export interface PreviousEmployerIncome
     employmentId: string;
     taxYear: number;
     employerName: string;
-    taxableIncome: number;
-    taxDeducted: number;
+    taxableIncome?: number | string;
+    taxDeducted?: number | string;
     fileId: string | null;
     createdAt: string;
     createdBy: string;
@@ -4337,7 +4337,7 @@ export const previousEmployerIncome =
     update: (id: string, body: PreviousEmployerIncomeWrite & { rowVersion: number }) => request<PreviousEmployerIncome>('PUT', `/api/hrm/previous-employer-income/${id}`, { body }),
 };
 
-/** hrm.probation_records: ProbationRecord */
+/** hrm.probation_records: ProbationRecord. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ProbationRecord
 {
     id: string;
@@ -4386,7 +4386,7 @@ export const probationRecords =
     update: (id: string, body: ProbationRecordWrite & { rowVersion: number }) => request<ProbationRecord>('PUT', `/api/hrm/probation-records/${id}`, { body }),
 };
 
-/** hrm.provident_fund_accounts: ProvidentFundAccount */
+/** hrm.provident_fund_accounts: ProvidentFundAccount. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ProvidentFundAccount
 {
     id: string;
@@ -4432,7 +4432,7 @@ export const providentFundAccounts =
     update: (id: string, body: ProvidentFundAccountWrite & { rowVersion: number }) => request<ProvidentFundAccount>('PUT', `/api/hrm/provident-fund-accounts/${id}`, { body }),
 };
 
-/** hrm.provident_fund_ledger: ProvidentFundLedger */
+/** hrm.provident_fund_ledger: ProvidentFundLedger. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ProvidentFundLedger
 {
     id: string;
@@ -4440,7 +4440,7 @@ export interface ProvidentFundLedger
     accountId: string;
     entryDate: string;
     kind: 'employee_contribution' | 'employer_contribution' | 'profit' | 'loan' | 'loan_repayment' | 'withdrawal' | 'payout' | 'adjustment' | 'transfer_out' | 'transfer_in';
-    amount: number;
+    amount?: number | string;
     sourceType: string | null;
     sourceId: string | null;
     createdAt: string;
@@ -4473,7 +4473,7 @@ export const providentFundLedger =
     create: (body: ProvidentFundLedgerWrite) => request<ProvidentFundLedger>('POST', '/api/hrm/provident-fund-ledger', { body }),
 };
 
-/** hrm.regularization_requests: RegularizationRequest */
+/** hrm.regularization_requests: RegularizationRequest. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface RegularizationRequest
 {
     id: string;
@@ -4527,7 +4527,7 @@ export const regularizationRequests =
     update: (id: string, body: RegularizationRequestWrite & { rowVersion: number }) => request<RegularizationRequest>('PUT', `/api/hrm/regularization-requests/${id}`, { body }),
 };
 
-/** hrm.retro_adjustments: Changes discovered after lock (attendance, salary, leave) carried to the next open run (PAY-16, FR-XM-26) */
+/** hrm.retro_adjustments: Changes discovered after lock (attendance, salary, leave) carried to the next open run (PAY-16, FR-XM-26). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface RetroAdjustment
 {
     id: string;
@@ -4538,7 +4538,7 @@ export interface RetroAdjustment
     causeType: string;
     causeId: string | null;
     componentId: string;
-    amount: number;
+    amount?: number | string;
     currencyCode: string;
     appliedInRunId: string | null;
     status: 'pending' | 'applied' | 'cancelled';
@@ -4585,7 +4585,7 @@ export const retroAdjustments =
     update: (id: string, body: RetroAdjustmentWrite & { rowVersion: number }) => request<RetroAdjustment>('PUT', `/api/hrm/retro-adjustments/${id}`, { body }),
 };
 
-/** hrm.review_assignments: Who reviews whom in a cycle (self, manager, skip-level, peer, 360) */
+/** hrm.review_assignments: Who reviews whom in a cycle (self, manager, skip-level, peer, 360). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ReviewAssignment
 {
     id: string;
@@ -4635,7 +4635,7 @@ export const reviewAssignments =
     update: (id: string, body: ReviewAssignmentWrite & { rowVersion: number }) => request<ReviewAssignment>('PUT', `/api/hrm/review-assignments/${id}`, { body }),
 };
 
-/** hrm.review_cycles: ReviewCycle */
+/** hrm.review_cycles: ReviewCycle. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ReviewCycle
 {
     id: string;
@@ -4687,7 +4687,7 @@ export const reviewCycles =
     update: (id: string, body: ReviewCycleWrite & { rowVersion: number }) => request<ReviewCycle>('PUT', `/api/hrm/review-cycles/${id}`, { body }),
 };
 
-/** hrm.review_participants: ReviewParticipant */
+/** hrm.review_participants: ReviewParticipant. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ReviewParticipant
 {
     id: string;
@@ -4739,7 +4739,7 @@ export const reviewParticipants =
     update: (id: string, body: ReviewParticipantWrite & { rowVersion: number }) => request<ReviewParticipant>('PUT', `/api/hrm/review-participants/${id}`, { body }),
 };
 
-/** hrm.roster_lines: Shift or weekly off per employee per day */
+/** hrm.roster_lines: Shift or weekly off per employee per day. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface RosterLine
 {
     id: string;
@@ -4786,7 +4786,7 @@ export const rosterLines =
     update: (id: string, body: RosterLineWrite & { rowVersion: number }) => request<RosterLine>('PUT', `/api/hrm/roster-lines/${id}`, { body }),
 };
 
-/** hrm.rosters: Roster */
+/** hrm.rosters: Roster. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Roster
 {
     id: string;
@@ -4830,7 +4830,7 @@ export const rosters =
     update: (id: string, body: RosterWrite & { rowVersion: number }) => request<Roster>('PUT', `/api/hrm/rosters/${id}`, { body }),
 };
 
-/** hrm.salary_bands: SalaryBand */
+/** hrm.salary_bands: SalaryBand. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface SalaryBand
 {
     id: string;
@@ -4877,7 +4877,7 @@ export const salaryBands =
     update: (id: string, body: SalaryBandWrite & { rowVersion: number }) => request<SalaryBand>('PUT', `/api/hrm/salary-bands/${id}`, { body }),
 };
 
-/** hrm.salary_holds: SalaryHold */
+/** hrm.salary_holds: SalaryHold. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface SalaryHold
 {
     id: string;
@@ -4924,7 +4924,7 @@ export const salaryHolds =
     update: (id: string, body: SalaryHoldWrite & { rowVersion: number }) => request<SalaryHold>('PUT', `/api/hrm/salary-holds/${id}`, { body }),
 };
 
-/** hrm.salary_structure_components: SalaryStructureComponent */
+/** hrm.salary_structure_components: SalaryStructureComponent. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface SalaryStructureComponent
 {
     id: string;
@@ -4973,7 +4973,7 @@ export const salaryStructureComponents =
     update: (id: string, body: SalaryStructureComponentWrite & { rowVersion: number }) => request<SalaryStructureComponent>('PUT', `/api/hrm/salary-structure-components/${id}`, { body }),
 };
 
-/** hrm.salary_structures: SalaryStructure */
+/** hrm.salary_structures: SalaryStructure. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface SalaryStructure
 {
     id: string;
@@ -5017,7 +5017,7 @@ export const salaryStructures =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/salary-structures/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.separations: Separation */
+/** hrm.separations: Separation. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Separation
 {
     id: string;
@@ -5074,7 +5074,7 @@ export const separations =
     update: (id: string, body: SeparationWrite & { rowVersion: number }) => request<Separation>('PUT', `/api/hrm/separations/${id}`, { body }),
 };
 
-/** hrm.service_requests: General HR requests from self-service (letters, documents, other) */
+/** hrm.service_requests: General HR requests from self-service (letters, documents, other). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ServiceRequest
 {
     id: string;
@@ -5130,7 +5130,7 @@ export const serviceRequests =
     update: (id: string, body: ServiceRequestWrite & { rowVersion: number }) => request<ServiceRequest>('PUT', `/api/hrm/service-requests/${id}`, { body }),
 };
 
-/** hrm.session_enrollments: SessionEnrollment */
+/** hrm.session_enrollments: SessionEnrollment. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface SessionEnrollment
 {
     id: string;
@@ -5182,7 +5182,7 @@ export const sessionEnrollments =
     update: (id: string, body: SessionEnrollmentWrite & { rowVersion: number }) => request<SessionEnrollment>('PUT', `/api/hrm/session-enrollments/${id}`, { body }),
 };
 
-/** hrm.shifts: Shift */
+/** hrm.shifts: Shift. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Shift
 {
     id: string;
@@ -5243,7 +5243,7 @@ export const shifts =
     remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/shifts/${id}`, { query: { rowVersion } }),
 };
 
-/** hrm.statutory_returns: Generated registers and returns (EOBI, social security, withholding statements, tax certificates) */
+/** hrm.statutory_returns: Generated registers and returns (EOBI, social security, withholding statements, tax certificates). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface StatutoryReturn
 {
     id: string;
@@ -5286,7 +5286,7 @@ export const statutoryReturns =
     create: (body: StatutoryReturnWrite) => request<StatutoryReturn>('POST', '/api/hrm/statutory-returns', { body }),
 };
 
-/** hrm.statutory_table_rows: StatutoryTableRow */
+/** hrm.statutory_table_rows: StatutoryTableRow. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface StatutoryTableRow
 {
     id: string;
@@ -5334,7 +5334,7 @@ export const statutoryTableRows =
     update: (id: string, body: StatutoryTableRowWrite & { rowVersion: number }) => request<StatutoryTableRow>('PUT', `/api/hrm/statutory-table-rows/${id}`, { body }),
 };
 
-/** hrm.statutory_tables: Pack-supplied, tenant-overridable rate and slab tables (income tax slabs, EOBI, PESSI/SESSI, WWF, minimum wage) */
+/** hrm.statutory_tables: Pack-supplied, tenant-overridable rate and slab tables (income tax slabs, EOBI, PESSI/SESSI, WWF, minimum wage). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface StatutoryTable
 {
     id: string;
@@ -5381,14 +5381,14 @@ export const statutoryTables =
     update: (id: string, body: StatutoryTableWrite & { rowVersion: number }) => request<StatutoryTable>('PUT', `/api/hrm/statutory-tables/${id}`, { body }),
 };
 
-/** hrm.tax_declaration_lines: TaxDeclarationLine */
+/** hrm.tax_declaration_lines: TaxDeclarationLine. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface TaxDeclarationLine
 {
     id: string;
     declarationId: string;
     kind: string;
-    declaredAmount: number;
-    verifiedAmount: number | null;
+    declaredAmount?: number | string;
+    verifiedAmount?: number | string | null;
     fileIds: string[];
     createdAt: string;
     createdBy: string;
@@ -5421,7 +5421,7 @@ export const taxDeclarationLines =
     update: (id: string, body: TaxDeclarationLineWrite & { rowVersion: number }) => request<TaxDeclarationLine>('PUT', `/api/hrm/tax-declaration-lines/${id}`, { body }),
 };
 
-/** hrm.tax_declarations: TaxDeclaration */
+/** hrm.tax_declarations: TaxDeclaration. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface TaxDeclaration
 {
     id: string;
@@ -5461,7 +5461,7 @@ export const taxDeclarations =
     update: (id: string, body: TaxDeclarationWrite & { rowVersion: number }) => request<TaxDeclaration>('PUT', `/api/hrm/tax-declarations/${id}`, { body }),
 };
 
-/** hrm.training_bonds: TrainingBond */
+/** hrm.training_bonds: TrainingBond. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface TrainingBond
 {
     id: string;
@@ -5510,7 +5510,7 @@ export const trainingBonds =
     update: (id: string, body: TrainingBondWrite & { rowVersion: number }) => request<TrainingBond>('PUT', `/api/hrm/training-bonds/${id}`, { body }),
 };
 
-/** hrm.training_requirements: Materialized due items per employee for compliance reporting and reminders */
+/** hrm.training_requirements: Materialized due items per employee for compliance reporting and reminders. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface TrainingRequirement
 {
     id: string;

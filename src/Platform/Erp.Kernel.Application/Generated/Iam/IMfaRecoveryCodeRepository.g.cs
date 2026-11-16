@@ -17,3 +17,28 @@ public interface IMfaRecoveryCodeRepository : global::Erp.BuildingBlocks.Applica
 {
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.MfaRecoveryCode>> ListAsync(MfaRecoveryCodeFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of iam.mfa_recovery_codes and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class MfaRecoveryCodeAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Iam.MfaRecoveryCode> Scope { get; } = new(
+        "iam.mfa_recovery_codes",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.MfaRecoveryCode, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.User] = e => e.UserId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.MfaRecoveryCode, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("iam.mfa_recovery_codes",
+    [
+        new("id", "Id", null),
+        new("user_id", "UserId", null),
+        new("code_hash", "CodeHash", null),
+        new("used_at", "UsedAt", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

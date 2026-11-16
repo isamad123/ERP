@@ -24,3 +24,24 @@ public interface IPlatformAuditRepository : global::Erp.BuildingBlocks.Applicati
     /// <summary>Rows matching (platform_user_id, occurred_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.PlatformAudit>> FindByPlatformUserIdAndOccurredAtAsync(global::System.Guid platformUserId, global::System.DateTimeOffset occurredAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cp.platform_audit and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PlatformAuditAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.ControlPlane.Generated.PlatformAudit> Scope { get; } = new(
+        "cp.platform_audit",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.PlatformAudit, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.PlatformAudit, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cp.platform_audit",
+    [
+        new("id", "Id", null),
+        new("platform_user_id", "PlatformUserId", null),
+        new("action", "Action", null),
+        new("tenant_id", "TenantId", null),
+        new("occurred_at", "OccurredAt", null),
+        new("details", "Details", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

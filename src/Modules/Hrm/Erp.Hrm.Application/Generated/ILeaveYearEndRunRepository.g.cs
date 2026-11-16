@@ -24,3 +24,30 @@ public interface ILeaveYearEndRunRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (company_id, leave_year); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.LeaveYearEndRun>> FindByCompanyIdAndLeaveYearAsync(global::System.Guid companyId, int leaveYear, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.leave_year_end_runs and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class LeaveYearEndRunAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.LeaveYearEndRun> Scope { get; } = new(
+        "hrm.leave_year_end_runs",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.LeaveYearEndRun, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.LeaveYearEndRun, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.leave_year_end_runs",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("leave_year", "LeaveYear", null),
+        new("job_run_id", "JobRunId", null),
+        new("summary", "Summary", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

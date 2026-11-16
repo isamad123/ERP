@@ -19,3 +19,30 @@ public interface IDefinitionRepository : global::Erp.BuildingBlocks.Application.
     /// <summary>Rows matching (code); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Job.Definition>> FindByCodeAsync(string code, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of job.definitions and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class DefinitionAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Job.Definition> Scope { get; } = new(
+        "job.definitions",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Job.Definition, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Job.Definition, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("job.definitions",
+    [
+        new("id", "Id", null),
+        new("code", "Code", null),
+        new("module_id", "ModuleId", null),
+        new("schedule", "Schedule", null),
+        new("parameters", "Parameters", null),
+        new("concurrency_limit", "ConcurrencyLimit", null),
+        new("timeout_seconds", "TimeoutSeconds", null),
+        new("retry_policy", "RetryPolicy", null),
+        new("is_enabled", "IsEnabled", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

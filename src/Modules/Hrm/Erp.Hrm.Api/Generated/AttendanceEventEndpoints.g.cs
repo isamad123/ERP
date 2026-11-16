@@ -61,7 +61,7 @@ public sealed class AttendanceEventListQuery
     public global::System.Guid? DeviceId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.attendance_events: read, create.</summary>
+/// <summary>Generated endpoints of hrm.attendance_events: read, create. Answers pass through field security (S1.06).</summary>
 internal static class AttendanceEventEndpoints
 {
     private const string Resource = "hrm.attendance_events";
@@ -74,35 +74,44 @@ internal static class AttendanceEventEndpoints
         group.MapPost("/", CreateAsync).WithName("hrm.attendance_events.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.attendance_events.create"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] AttendanceEventListQuery query, global::Erp.Hrm.Application.Generated.IAttendanceEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] AttendanceEventListQuery query, global::Erp.Hrm.Application.Generated.IAttendanceEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_events.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.AttendanceEventFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, DeviceId = query.DeviceId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<AttendanceEventResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.AttendanceEventAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IAttendanceEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IAttendanceEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_events.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.AttendanceEventAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(AttendanceEventWriteRequest request, global::Erp.Hrm.Application.Generated.IAttendanceEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(AttendanceEventWriteRequest request, global::Erp.Hrm.Application.Generated.IAttendanceEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_events.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.AttendanceEventAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.AttendanceEvent();
-            Apply(request, row, update: false);
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/attendance-events/" + row.Id.ToString(), ToResponse(row));
+            return TypedResults.Created("/api/hrm/attendance-events/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.AttendanceEventAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.AttendanceEvent row) => row.CompanyId;
 
     private static AttendanceEventResponse ToResponse(global::Erp.Hrm.Domain.Generated.AttendanceEvent row) => new()
     {
@@ -123,38 +132,39 @@ internal static class AttendanceEventEndpoints
         CreatedBy = row.CreatedBy,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(AttendanceEventWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(AttendanceEventWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.EmploymentId is null)
+        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
         {
             errors.Add("employmentId");
         }
-        if (request.EventDate is null)
+        if (request.EventDate is null && (!update || access.CanEdit("event_date")))
         {
             errors.Add("eventDate");
         }
-        if (request.EventAt is null)
+        if (request.EventAt is null && (!update || access.CanEdit("event_at")))
         {
             errors.Add("eventAt");
         }
-        if (request.Direction is null)
+        if (request.Direction is null && (!update || access.CanEdit("direction")))
         {
             errors.Add("direction");
         }
-        if (request.Source is null)
+        if (request.Source is null && (!update || access.CanEdit("source")))
         {
             errors.Add("source");
         }
-        if (request.ReceivedAt is null)
+        if (request.ReceivedAt is null && (!update || access.CanEdit("received_at")))
         {
             errors.Add("receivedAt");
         }
-        if (request.IdempotencyKey is null)
+        if (request.IdempotencyKey is null && (!update || access.CanEdit("idempotency_key")))
         {
             errors.Add("idempotencyKey");
         }
@@ -162,29 +172,115 @@ internal static class AttendanceEventEndpoints
         {
             errors.Add("ipAddress");
         }
-        _ = update;
         return errors;
     }
 
-    private static void Apply(AttendanceEventWriteRequest request, global::Erp.Hrm.Domain.Generated.AttendanceEvent row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(AttendanceEventWriteRequest request, global::Erp.Hrm.Domain.Generated.AttendanceEvent row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.EmploymentId = request.EmploymentId!.Value;
-        row.EventDate = request.EventDate!.Value;
-        row.EventAt = request.EventAt!.Value;
-        row.Direction = request.Direction!;
-        row.Source = request.Source!;
-        row.DeviceId = request.DeviceId;
-        row.ReceivedAt = request.ReceivedAt!.Value;
-        row.IdempotencyKey = request.IdempotencyKey!;
-        row.IpAddress = request.IpAddress is null ? null : global::System.Net.IPAddress.Parse(request.IpAddress);
-        if (request.IsDuplicate is not null)
+        if (access.CanEdit("employment_id"))
         {
-            row.IsDuplicate = request.IsDuplicate!.Value;
+            row.EmploymentId = request.EmploymentId!.Value;
         }
-        row.SupersedesEventId = request.SupersedesEventId;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
+        {
+            denied.Add("employmentId");
+        }
+        if (access.CanEdit("event_date"))
+        {
+            row.EventDate = request.EventDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EventDate, row.EventDate, update))
+        {
+            denied.Add("eventDate");
+        }
+        if (access.CanEdit("event_at"))
+        {
+            row.EventAt = request.EventAt!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EventAt, row.EventAt, update))
+        {
+            denied.Add("eventAt");
+        }
+        if (access.CanEdit("direction"))
+        {
+            row.Direction = request.Direction!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Direction, row.Direction, update))
+        {
+            denied.Add("direction");
+        }
+        if (access.CanEdit("source"))
+        {
+            row.Source = request.Source!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Source, row.Source, update))
+        {
+            denied.Add("source");
+        }
+        if (access.CanEdit("device_id"))
+        {
+            row.DeviceId = request.DeviceId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DeviceId, row.DeviceId, update))
+        {
+            denied.Add("deviceId");
+        }
+        if (access.CanEdit("received_at"))
+        {
+            row.ReceivedAt = request.ReceivedAt!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReceivedAt, row.ReceivedAt, update))
+        {
+            denied.Add("receivedAt");
+        }
+        if (access.CanEdit("idempotency_key"))
+        {
+            row.IdempotencyKey = request.IdempotencyKey!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IdempotencyKey, row.IdempotencyKey, update))
+        {
+            denied.Add("idempotencyKey");
+        }
+        if (access.CanEdit("ip_address"))
+        {
+            row.IpAddress = request.IpAddress is null ? null : global::System.Net.IPAddress.Parse(request.IpAddress);
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IpAddress, row.IpAddress, update))
+        {
+            denied.Add("ipAddress");
+        }
+        if (access.CanEdit("is_duplicate"))
+        {
+            if (request.IsDuplicate is not null)
+            {
+                row.IsDuplicate = request.IsDuplicate!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsDuplicate, row.IsDuplicate, update))
+        {
+            denied.Add("isDuplicate");
+        }
+        if (access.CanEdit("supersedes_event_id"))
+        {
+            row.SupersedesEventId = request.SupersedesEventId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SupersedesEventId, row.SupersedesEventId, update))
+        {
+            denied.Add("supersedesEventId");
+        }
+        return denied;
     }
 }

@@ -55,7 +55,7 @@ public sealed class SetupTaskListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of cfg.setup_tasks: read, create, update.</summary>
+/// <summary>Generated endpoints of cfg.setup_tasks: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class SetupTaskEndpoints
 {
     private const string Resource = "cfg.setup_tasks";
@@ -69,55 +69,70 @@ internal static class SetupTaskEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("cfg.setup_tasks.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "cfg.setup_tasks.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] SetupTaskListQuery query, global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] SetupTaskListQuery query, global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.setup_tasks.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.SetupTaskFilter { CompanyId = query.CompanyId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<SetupTaskResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.SetupTaskAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.setup_tasks.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.SetupTaskAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(SetupTaskWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(SetupTaskWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.setup_tasks.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.SetupTaskAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Cfg.SetupTask();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/setup-tasks/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, SetupTaskWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.setup_tasks.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/cfg/setup-tasks/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.SetupTaskAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, SetupTaskWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "cfg.setup_tasks.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.SetupTaskAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.SetupTaskAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Cfg.SetupTask row) => row.CompanyId;
 
     private static SetupTaskResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.SetupTask row) => new()
     {
@@ -136,18 +151,19 @@ internal static class SetupTaskEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(SetupTaskWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(SetupTaskWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.ModuleId is null)
+        if (request.ModuleId is null && (!update || access.CanEdit("module_id")))
         {
             errors.Add("moduleId");
         }
-        if (request.TaskKey is null)
+        if (request.TaskKey is null && (!update || access.CanEdit("task_key")))
         {
             errors.Add("taskKey");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -158,20 +174,72 @@ internal static class SetupTaskEndpoints
         return errors;
     }
 
-    private static void Apply(SetupTaskWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.SetupTask row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(SetupTaskWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.SetupTask row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.ModuleId = request.ModuleId!;
-        row.TaskKey = request.TaskKey!;
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("module_id"))
+        {
+            row.ModuleId = request.ModuleId!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ModuleId, row.ModuleId, update))
+        {
+            denied.Add("moduleId");
+        }
+        if (access.CanEdit("task_key"))
+        {
+            row.TaskKey = request.TaskKey!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TaskKey, row.TaskKey, update))
+        {
+            denied.Add("taskKey");
+        }
         if (!update)
         {
-            row.CompanyId = request.CompanyId;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        if (request.IsRequired is not null)
+        if (access.CanEdit("is_required"))
         {
-            row.IsRequired = request.IsRequired!.Value;
+            if (request.IsRequired is not null)
+            {
+                row.IsRequired = request.IsRequired!.Value;
+            }
         }
-        row.CompletedBy = request.CompletedBy;
-        row.CompletedAt = request.CompletedAt;
-        row.Status = request.Status!;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsRequired, row.IsRequired, update))
+        {
+            denied.Add("isRequired");
+        }
+        if (access.CanEdit("completed_by"))
+        {
+            row.CompletedBy = request.CompletedBy;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CompletedBy, row.CompletedBy, update))
+        {
+            denied.Add("completedBy");
+        }
+        if (access.CanEdit("completed_at"))
+        {
+            row.CompletedAt = request.CompletedAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CompletedAt, row.CompletedAt, update))
+        {
+            denied.Add("completedAt");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

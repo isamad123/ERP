@@ -63,7 +63,7 @@ public sealed class LiabilityAccrualListQuery
     public global::System.Guid? ReversesAccrualId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.liability_accruals: read, create.</summary>
+/// <summary>Generated endpoints of hrm.liability_accruals: read, create. Answers pass through field security (S1.06).</summary>
 internal static class LiabilityAccrualEndpoints
 {
     private const string Resource = "hrm.liability_accruals";
@@ -76,35 +76,44 @@ internal static class LiabilityAccrualEndpoints
         group.MapPost("/", CreateAsync).WithName("hrm.liability_accruals.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.liability_accruals.create"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] LiabilityAccrualListQuery query, global::Erp.Hrm.Application.Generated.ILiabilityAccrualRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] LiabilityAccrualListQuery query, global::Erp.Hrm.Application.Generated.ILiabilityAccrualRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.liability_accruals.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.LiabilityAccrualFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, PayPeriodId = query.PayPeriodId, AccountingEventId = query.AccountingEventId, ReversesAccrualId = query.ReversesAccrualId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<LiabilityAccrualResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.LiabilityAccrualAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.ILiabilityAccrualRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.ILiabilityAccrualRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.liability_accruals.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.LiabilityAccrualAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LiabilityAccrualWriteRequest request, global::Erp.Hrm.Application.Generated.ILiabilityAccrualRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LiabilityAccrualWriteRequest request, global::Erp.Hrm.Application.Generated.ILiabilityAccrualRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.liability_accruals.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.LiabilityAccrualAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.LiabilityAccrual();
-            Apply(request, row, update: false);
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/liability-accruals/" + row.Id.ToString(), ToResponse(row));
+            return TypedResults.Created("/api/hrm/liability-accruals/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.LiabilityAccrualAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.LiabilityAccrual row) => row.CompanyId;
 
     private static LiabilityAccrualResponse ToResponse(global::Erp.Hrm.Domain.Generated.LiabilityAccrual row) => new()
     {
@@ -124,64 +133,144 @@ internal static class LiabilityAccrualEndpoints
         CreatedBy = row.CreatedBy,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(LiabilityAccrualWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(LiabilityAccrualWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.EmploymentId is null)
+        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
         {
             errors.Add("employmentId");
         }
-        if (request.PayPeriodId is null)
+        if (request.PayPeriodId is null && (!update || access.CanEdit("pay_period_id")))
         {
             errors.Add("payPeriodId");
         }
-        if (request.Kind is null)
+        if (request.Kind is null && (!update || access.CanEdit("kind")))
         {
             errors.Add("kind");
         }
-        if (request.Seq is null)
+        if (request.Seq is null && (!update || access.CanEdit("seq")))
         {
             errors.Add("seq");
         }
-        if (request.Balance is null)
+        if (request.Balance is null && (!update || access.CanEdit("balance")))
         {
             errors.Add("balance");
         }
-        if (request.Movement is null)
+        if (request.Movement is null && (!update || access.CanEdit("movement")))
         {
             errors.Add("movement");
         }
-        if (request.CurrencyCode is null)
+        if (request.CurrencyCode is null && (!update || access.CanEdit("currency_code")))
         {
             errors.Add("currencyCode");
         }
-        if (request.Basis is null)
+        if (request.Basis is null && (!update || access.CanEdit("basis")))
         {
             errors.Add("basis");
         }
-        _ = update;
         return errors;
     }
 
-    private static void Apply(LiabilityAccrualWriteRequest request, global::Erp.Hrm.Domain.Generated.LiabilityAccrual row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(LiabilityAccrualWriteRequest request, global::Erp.Hrm.Domain.Generated.LiabilityAccrual row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.EmploymentId = request.EmploymentId!.Value;
-        row.PayPeriodId = request.PayPeriodId!.Value;
-        row.Kind = request.Kind!;
-        row.Seq = request.Seq!.Value;
-        row.Balance = request.Balance!.Value;
-        row.Movement = request.Movement!.Value;
-        row.CurrencyCode = request.CurrencyCode!;
-        row.Basis = GeneratedEndpointSupport.ToDocument(request.Basis)!;
-        row.AccountingEventId = request.AccountingEventId;
-        row.ReversesAccrualId = request.ReversesAccrualId;
+        if (access.CanEdit("employment_id"))
+        {
+            row.EmploymentId = request.EmploymentId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
+        {
+            denied.Add("employmentId");
+        }
+        if (access.CanEdit("pay_period_id"))
+        {
+            row.PayPeriodId = request.PayPeriodId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PayPeriodId, row.PayPeriodId, update))
+        {
+            denied.Add("payPeriodId");
+        }
+        if (access.CanEdit("kind"))
+        {
+            row.Kind = request.Kind!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Kind, row.Kind, update))
+        {
+            denied.Add("kind");
+        }
+        if (access.CanEdit("seq"))
+        {
+            row.Seq = request.Seq!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Seq, row.Seq, update))
+        {
+            denied.Add("seq");
+        }
+        if (access.CanEdit("balance"))
+        {
+            row.Balance = request.Balance!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Balance, row.Balance, update))
+        {
+            denied.Add("balance");
+        }
+        if (access.CanEdit("movement"))
+        {
+            row.Movement = request.Movement!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Movement, row.Movement, update))
+        {
+            denied.Add("movement");
+        }
+        if (access.CanEdit("currency_code"))
+        {
+            row.CurrencyCode = request.CurrencyCode!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CurrencyCode, row.CurrencyCode, update))
+        {
+            denied.Add("currencyCode");
+        }
+        if (access.CanEdit("basis"))
+        {
+            row.Basis = GeneratedEndpointSupport.ToDocument(request.Basis)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Basis, row.Basis, update))
+        {
+            denied.Add("basis");
+        }
+        if (access.CanEdit("accounting_event_id"))
+        {
+            row.AccountingEventId = request.AccountingEventId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.AccountingEventId, row.AccountingEventId, update))
+        {
+            denied.Add("accountingEventId");
+        }
+        if (access.CanEdit("reverses_accrual_id"))
+        {
+            row.ReversesAccrualId = request.ReversesAccrualId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReversesAccrualId, row.ReversesAccrualId, update))
+        {
+            denied.Add("reversesAccrualId");
+        }
+        return denied;
     }
 }

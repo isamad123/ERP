@@ -24,3 +24,34 @@ public interface INumberingSchemeRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (company_id, branch_id, document_type); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme>> FindByCompanyIdAndBranchIdAndDocumentTypeAsync(global::System.Guid companyId, global::System.Guid? branchId, string documentType, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cfg.numbering_schemes and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class NumberingSchemeAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme> Scope { get; } = new(
+        "cfg.numbering_schemes",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Branch] = e => e.BranchId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cfg.numbering_schemes",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("branch_id", "BranchId", null),
+        new("document_type", "DocumentType", null),
+        new("pattern", "Pattern", null),
+        new("reset_rule", "ResetRule", null),
+        new("gap_free", "GapFree", null),
+        new("start_value", "StartValue", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

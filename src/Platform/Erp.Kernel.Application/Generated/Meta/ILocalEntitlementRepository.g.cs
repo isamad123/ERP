@@ -16,3 +16,27 @@ public interface ILocalEntitlementRepository : global::Erp.BuildingBlocks.Applic
 {
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Meta.LocalEntitlement>> ListAsync(LocalEntitlementFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of meta.local_entitlement and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class LocalEntitlementAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Meta.LocalEntitlement> Scope { get; } = new(
+        "meta.local_entitlement",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Meta.LocalEntitlement, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Meta.LocalEntitlement, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("meta.local_entitlement",
+    [
+        new("id", "Id", null),
+        new("payload", "Payload", null),
+        new("signature", "Signature", null),
+        new("state", "State", null),
+        new("state_since", "StateSince", null),
+        new("highest_time_seen", "HighestTimeSeen", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

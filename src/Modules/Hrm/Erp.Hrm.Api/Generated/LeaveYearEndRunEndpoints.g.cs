@@ -53,7 +53,7 @@ public sealed class LeaveYearEndRunListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.leave_year_end_runs: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.leave_year_end_runs: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class LeaveYearEndRunEndpoints
 {
     private const string Resource = "hrm.leave_year_end_runs";
@@ -67,55 +67,70 @@ internal static class LeaveYearEndRunEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.leave_year_end_runs.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.leave_year_end_runs.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] LeaveYearEndRunListQuery query, global::Erp.Hrm.Application.Generated.ILeaveYearEndRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] LeaveYearEndRunListQuery query, global::Erp.Hrm.Application.Generated.ILeaveYearEndRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.leave_year_end_runs.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.LeaveYearEndRunFilter { CompanyId = query.CompanyId, JobRunId = query.JobRunId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<LeaveYearEndRunResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.LeaveYearEndRunAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.ILeaveYearEndRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.ILeaveYearEndRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.leave_year_end_runs.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.LeaveYearEndRunAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LeaveYearEndRunWriteRequest request, global::Erp.Hrm.Application.Generated.ILeaveYearEndRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LeaveYearEndRunWriteRequest request, global::Erp.Hrm.Application.Generated.ILeaveYearEndRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.leave_year_end_runs.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.LeaveYearEndRunAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.LeaveYearEndRun();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/leave-year-end-runs/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, LeaveYearEndRunWriteRequest request, global::Erp.Hrm.Application.Generated.ILeaveYearEndRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.leave_year_end_runs.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/leave-year-end-runs/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.LeaveYearEndRunAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, LeaveYearEndRunWriteRequest request, global::Erp.Hrm.Application.Generated.ILeaveYearEndRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.leave_year_end_runs.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.LeaveYearEndRunAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.LeaveYearEndRunAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.LeaveYearEndRun row) => row.CompanyId;
 
     private static LeaveYearEndRunResponse ToResponse(global::Erp.Hrm.Domain.Generated.LeaveYearEndRun row) => new()
     {
@@ -132,22 +147,23 @@ internal static class LeaveYearEndRunEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(LeaveYearEndRunWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(LeaveYearEndRunWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.LeaveYear is null)
+        if (request.LeaveYear is null && (!update || access.CanEdit("leave_year")))
         {
             errors.Add("leaveYear");
         }
-        if (request.Summary is null)
+        if (request.Summary is null && (!update || access.CanEdit("summary")))
         {
             errors.Add("summary");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -158,15 +174,53 @@ internal static class LeaveYearEndRunEndpoints
         return errors;
     }
 
-    private static void Apply(LeaveYearEndRunWriteRequest request, global::Erp.Hrm.Domain.Generated.LeaveYearEndRun row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(LeaveYearEndRunWriteRequest request, global::Erp.Hrm.Domain.Generated.LeaveYearEndRun row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.LeaveYear = request.LeaveYear!.Value;
-        row.JobRunId = request.JobRunId;
-        row.Summary = GeneratedEndpointSupport.ToDocument(request.Summary)!;
-        row.Status = request.Status!;
+        if (access.CanEdit("leave_year"))
+        {
+            row.LeaveYear = request.LeaveYear!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LeaveYear, row.LeaveYear, update))
+        {
+            denied.Add("leaveYear");
+        }
+        if (access.CanEdit("job_run_id"))
+        {
+            row.JobRunId = request.JobRunId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.JobRunId, row.JobRunId, update))
+        {
+            denied.Add("jobRunId");
+        }
+        if (access.CanEdit("summary"))
+        {
+            row.Summary = GeneratedEndpointSupport.ToDocument(request.Summary)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Summary, row.Summary, update))
+        {
+            denied.Add("summary");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

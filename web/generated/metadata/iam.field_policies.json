@@ -12,20 +12,13 @@
     {
       "action": "read",
       "permission": "iam.field_policies.read"
-    },
-    {
-      "action": "create",
-      "permission": "iam.field_policies.create"
-    },
-    {
-      "action": "update",
-      "permission": "iam.field_policies.update"
     }
   ],
   "companyScoped": false,
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {},
   "listFields": [
     "roleId",
     "resourceType",

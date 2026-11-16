@@ -8,6 +8,8 @@
     - [purpose, "enum(appraisal,probation_review,goal_review,custom)", req]
     - [active_version_id, uuid, opt, fk hrm.form_versions]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [PRF-03, ONB-12]
   notes: "active_version_id uses composite FK (id, active_version_id) -> hrm.form_versions (parent_id, id)."
 
@@ -34,6 +36,8 @@
     - [score, qty, opt]
     - [submitted_at, ts, opt]
   indexes: [[context_type, context_id], [subject_employment_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: subject_employment_id}
   reqs: [PRF-03, PRF-04, ONB-12]
 
 - table: hrm.review_cycles
@@ -48,6 +52,8 @@
     - [eligibility_rule, json, req]
     - [phases, json, req, "dates for goal setting, self review, manager review, sign-off"]
     - [review_types, "text[]", req, "self, manager, skip_level, peer, 360"]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [PRF-01, PRF-04]
 
 - table: hrm.review_participants
@@ -62,6 +68,8 @@
     - [signed_off_at, ts, opt]
     - [acknowledged_at, ts, opt]
   unique: [[cycle_id, employment_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [PRF-01, PRF-09]
 
 - table: hrm.review_assignments
@@ -76,6 +84,8 @@
     - [form_response_id, uuid, opt, fk hrm.form_responses]
     - [due_date, date, opt]
   unique: [[participant_id, reviewer_employment_id, review_type]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [PRF-04]
 
 - table: hrm.goals
@@ -94,6 +104,8 @@
     - [actual, json, opt]
     - [due_date, date, opt]
   indexes: [[owner_employment_id, cycle_id], [parent_goal_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, org_unit: org_unit_id, employment: owner_employment_id}
   reqs: [PRF-02]
   notes: Cycle check trigger on parent_goal_id.
 
@@ -105,6 +117,8 @@
     - [actual, json, opt]
     - [comment, text, opt]
   indexes: [[goal_id, created_at]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [PRF-02]
 
 - table: hrm.courses
@@ -119,6 +133,8 @@
     - [awards_certification, text, opt]
     - [certification_valid_months, int, opt]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [LND-01, LND-05]
 
 - table: hrm.course_sessions
@@ -133,6 +149,8 @@
     - [trainer, text, opt]
     - [capacity, int, opt]
   indexes: [[course_id, start_at]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [LND-02]
 
 - table: hrm.session_enrollments
@@ -147,6 +165,8 @@
     - [feedback, json, opt]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   unique: [[session_id, employment_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [LND-02, LND-03]
 
 - table: hrm.learning_records
@@ -163,6 +183,8 @@
     - [certificate_file_id, uuid, opt, fk doc.files]
     - [expires_on, date, opt]
   indexes: [[employment_id, completed_on], [expires_on]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [LND-03, LND-05]
 
 - table: hrm.mandatory_training_rules
@@ -173,6 +195,8 @@
     - [applies_rule, json, req, "role, location, grade, unit"]
     - [due_within_days, int, req, from joining or rule start]
     - [recurrence_months, int, opt]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [LND-04]
 
 - table: hrm.training_requirements
@@ -185,6 +209,8 @@
     - [due_date, date, req]
     - [learning_record_id, uuid, opt, fk hrm.learning_records]
   unique: [[rule_id, employment_id, due_date]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [LND-04]
 
 - table: hrm.training_bonds
@@ -198,4 +224,6 @@
     - [obligation_until, date, req]
     - [recovery_rule, "enum(full,pro_rata)", req]
   notes: Active bonds appear in final settlement as bond_recovery (LND-06).
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [LND-06]

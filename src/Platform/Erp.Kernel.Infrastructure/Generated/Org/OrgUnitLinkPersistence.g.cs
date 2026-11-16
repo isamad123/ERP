@@ -36,13 +36,13 @@ internal sealed class OrgUnitLinkRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink>(context, clock, actor, scope, "org.org_unit_links"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Org.OrgUnitLinkAccess.Scope),
     global::Erp.Kernel.Application.Generated.Org.IOrgUnitLinkRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink>> ListAsync(global::Erp.Kernel.Application.Generated.Org.OrgUnitLinkFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink>> ListAsync(global::Erp.Kernel.Application.Generated.Org.OrgUnitLinkFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.HierarchyId is { } hierarchyIdFilter)
         {
             query = query.Where(e => e.HierarchyId == hierarchyIdFilter);
@@ -55,11 +55,12 @@ internal sealed class OrgUnitLinkRepository(
         {
             query = query.Where(e => e.ParentUnitId == parentUnitIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink>> FindByHierarchyIdAndParentUnitIdAsync(global::System.Guid hierarchyId, global::System.Guid? parentUnitId, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.HierarchyId == hierarchyId && e.ParentUnitId == parentUnitId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.HierarchyId == hierarchyId && e.ParentUnitId == parentUnitId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

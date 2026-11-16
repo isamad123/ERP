@@ -31,3 +31,45 @@ public interface IEmploymentRepository : global::Erp.BuildingBlocks.Application.
     /// <summary>Rows matching (company_id, status); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Employment>> FindByCompanyIdAndStatusAsync(global::System.Guid companyId, string status, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.employments and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class EmploymentAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.Employment> Scope { get; } = new(
+        "hrm.employments",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.Employment, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.Id,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Person] = e => e.PersonId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.Employment, string?>>>
+        {
+            ["status"] = e => e.Status,
+            ["employee_type"] = e => e.EmployeeType,
+        });
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.employments",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("person_id", "PersonId", null),
+        new("employee_no", "EmployeeNo", null),
+        new("employee_type", "EmployeeType", null),
+        new("joining_date", "JoiningDate", null),
+        new("service_start_date", "ServiceStartDate", null),
+        new("confirmation_date", "ConfirmationDate", null),
+        new("expected_end_date", "ExpectedEndDate", null),
+        new("separation_date", "SeparationDate", null),
+        new("previous_employment_id", "PreviousEmploymentId", null),
+        new("user_ref", "UserRef", null),
+        new("is_primary", "IsPrimary", null),
+        new("status", "Status", null),
+        new("custom", "Custom", null, IsCustom: true),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

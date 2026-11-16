@@ -20,9 +20,7 @@ public sealed class BaselineSeed
     [JsonPropertyName("currencies")]
     public required Dictionary<string, CurrencySeed> Currencies { get; init; }
 
-    [JsonPropertyName("roles")]
-    public required List<RoleSeed> Roles { get; init; }
-
+    /// <summary>Code of the baseline role the first administrator receives (defined in the kernel's baseline-roles.json).</summary>
     [JsonPropertyName("admin_role")]
     public required string AdminRole { get; init; }
 
@@ -52,15 +50,6 @@ public sealed class CurrencySeed
 
     [JsonPropertyName("decimals")]
     public required int Decimals { get; init; }
-}
-
-public sealed class RoleSeed
-{
-    [JsonPropertyName("code")]
-    public required string Code { get; init; }
-
-    [JsonPropertyName("name")]
-    public required Dictionary<string, string> Name { get; init; }
 }
 
 public sealed class SystemUserSeed

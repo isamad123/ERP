@@ -28,3 +28,39 @@ public interface ILoanRepository : global::Erp.BuildingBlocks.Application.Data.I
     /// <summary>Rows matching (company_id, loan_no); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Loan>> FindByCompanyIdAndLoanNoAsync(global::System.Guid companyId, string loanNo, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.loans and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class LoanAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.Loan> Scope { get; } = new(
+        "hrm.loans",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.Loan, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.Loan, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.loans",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("loan_no", "LoanNo", null),
+        new("employment_id", "EmploymentId", null),
+        new("loan_type_id", "LoanTypeId", null),
+        new("principal", "Principal", "salary"),
+        new("currency_code", "CurrencyCode", null),
+        new("interest_rate", "InterestRate", null),
+        new("installments", "Installments", null),
+        new("start_period_id", "StartPeriodId", null),
+        new("guarantor_employment_id", "GuarantorEmploymentId", null),
+        new("disbursed_on", "DisbursedOn", null),
+        new("workflow_instance_id", "WorkflowInstanceId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

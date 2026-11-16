@@ -27,6 +27,10 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "branch": "branchId",
+    "company": "companyId"
+  },
   "listFields": [
     "companyId",
     "branchId",

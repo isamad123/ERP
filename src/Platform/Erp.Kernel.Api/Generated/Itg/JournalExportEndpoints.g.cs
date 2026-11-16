@@ -57,7 +57,7 @@ public sealed class JournalExportListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of itg.journal_exports: read, create, update.</summary>
+/// <summary>Generated endpoints of itg.journal_exports: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class JournalExportEndpoints
 {
     private const string Resource = "itg.journal_exports";
@@ -71,55 +71,70 @@ internal static class JournalExportEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("itg.journal_exports.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "itg.journal_exports.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] JournalExportListQuery query, global::Erp.Kernel.Application.Generated.Itg.IJournalExportRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] JournalExportListQuery query, global::Erp.Kernel.Application.Generated.Itg.IJournalExportRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "itg.journal_exports.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Itg.JournalExportFilter { CompanyId = query.CompanyId, FileId = query.FileId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<JournalExportResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Itg.JournalExportAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Itg.IJournalExportRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Itg.IJournalExportRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "itg.journal_exports.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Itg.JournalExportAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(JournalExportWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IJournalExportRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(JournalExportWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IJournalExportRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "itg.journal_exports.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Itg.JournalExportAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Itg.JournalExport();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/itg/journal-exports/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, JournalExportWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IJournalExportRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "itg.journal_exports.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/itg/journal-exports/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Itg.JournalExportAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, JournalExportWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IJournalExportRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "itg.journal_exports.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Itg.JournalExportAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Itg.JournalExportAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Itg.JournalExport row) => row.CompanyId;
 
     private static JournalExportResponse ToResponse(global::Erp.Kernel.Domain.Generated.Itg.JournalExport row) => new()
     {
@@ -138,34 +153,35 @@ internal static class JournalExportEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(JournalExportWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(JournalExportWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.PeriodFrom is null)
+        if (request.PeriodFrom is null && (!update || access.CanEdit("period_from")))
         {
             errors.Add("periodFrom");
         }
-        if (request.PeriodTo is null)
+        if (request.PeriodTo is null && (!update || access.CanEdit("period_to")))
         {
             errors.Add("periodTo");
         }
-        if (request.Format is null)
+        if (request.Format is null && (!update || access.CanEdit("format")))
         {
             errors.Add("format");
         }
-        if (request.EventCount is null)
+        if (request.EventCount is null && (!update || access.CanEdit("event_count")))
         {
             errors.Add("eventCount");
         }
-        if (request.FileId is null)
+        if (request.FileId is null && (!update || access.CanEdit("file_id")))
         {
             errors.Add("fileId");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -176,17 +192,69 @@ internal static class JournalExportEndpoints
         return errors;
     }
 
-    private static void Apply(JournalExportWriteRequest request, global::Erp.Kernel.Domain.Generated.Itg.JournalExport row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(JournalExportWriteRequest request, global::Erp.Kernel.Domain.Generated.Itg.JournalExport row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.PeriodFrom = request.PeriodFrom!.Value;
-        row.PeriodTo = request.PeriodTo!.Value;
-        row.Format = request.Format!;
-        row.EventCount = request.EventCount!.Value;
-        row.FileId = request.FileId!.Value;
-        row.Status = request.Status!;
+        if (access.CanEdit("period_from"))
+        {
+            row.PeriodFrom = request.PeriodFrom!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodFrom, row.PeriodFrom, update))
+        {
+            denied.Add("periodFrom");
+        }
+        if (access.CanEdit("period_to"))
+        {
+            row.PeriodTo = request.PeriodTo!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodTo, row.PeriodTo, update))
+        {
+            denied.Add("periodTo");
+        }
+        if (access.CanEdit("format"))
+        {
+            row.Format = request.Format!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Format, row.Format, update))
+        {
+            denied.Add("format");
+        }
+        if (access.CanEdit("event_count"))
+        {
+            row.EventCount = request.EventCount!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EventCount, row.EventCount, update))
+        {
+            denied.Add("eventCount");
+        }
+        if (access.CanEdit("file_id"))
+        {
+            row.FileId = request.FileId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileId, row.FileId, update))
+        {
+            denied.Add("fileId");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

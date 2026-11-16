@@ -27,3 +27,37 @@ public interface IPaymentBatchRepository : global::Erp.BuildingBlocks.Applicatio
     /// <summary>Rows matching (pay_run_id, payment_mode, company_bank_account_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PaymentBatch>> FindByPayRunIdAndPaymentModeAndCompanyBankAccountIdAsync(global::System.Guid? payRunId, string paymentMode, global::System.Guid? companyBankAccountId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.payment_batches and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PaymentBatchAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.PaymentBatch> Scope { get; } = new(
+        "hrm.payment_batches",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PaymentBatch, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PaymentBatch, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.payment_batches",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("pay_run_id", "PayRunId", null),
+        new("company_bank_account_id", "CompanyBankAccountId", null),
+        new("payment_mode", "PaymentMode", null),
+        new("template_id", "TemplateId", null),
+        new("file_id", "FileId", null),
+        new("total_amount", "TotalAmount", null),
+        new("line_count", "LineCount", null),
+        new("value_date", "ValueDate", null),
+        new("file_checksum", "FileChecksum", null),
+        new("currency_code", "CurrencyCode", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

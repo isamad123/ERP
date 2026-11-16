@@ -21,3 +21,34 @@ public interface IIncrementCycleRepository : global::Erp.BuildingBlocks.Applicat
 
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.IncrementCycle>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.increment_cycles and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class IncrementCycleAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.IncrementCycle> Scope { get; } = new(
+        "hrm.increment_cycles",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.IncrementCycle, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.IncrementCycle, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.increment_cycles",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("name", "Name", null),
+        new("effective_date", "EffectiveDate", null),
+        new("budget_amount", "BudgetAmount", null),
+        new("currency_code", "CurrencyCode", null),
+        new("eligibility_rule", "EligibilityRule", null),
+        new("guidelines", "Guidelines", null),
+        new("review_cycle_id", "ReviewCycleId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

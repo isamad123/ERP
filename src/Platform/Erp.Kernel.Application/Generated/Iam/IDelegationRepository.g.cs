@@ -22,3 +22,29 @@ public interface IDelegationRepository : global::Erp.BuildingBlocks.Application.
     /// <summary>Rows matching (to_user_id, valid_from); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.Delegation>> FindByToUserIdAndValidFromAsync(global::System.Guid toUserId, global::System.DateTimeOffset validFrom, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of iam.delegations and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class DelegationAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Iam.Delegation> Scope { get; } = new(
+        "iam.delegations",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.Delegation, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.Delegation, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("iam.delegations",
+    [
+        new("id", "Id", null),
+        new("from_user_id", "FromUserId", null),
+        new("to_user_id", "ToUserId", null),
+        new("scope", "Scope", null),
+        new("valid_from", "ValidFrom", null),
+        new("valid_to", "ValidTo", null),
+        new("reason", "Reason", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

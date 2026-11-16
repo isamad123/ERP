@@ -53,7 +53,7 @@ public sealed class OrgUnitLinkListQuery
     public global::System.Guid? ParentUnitId { get; init; }
 }
 
-/// <summary>Generated endpoints of org.org_unit_links: read, create, update.</summary>
+/// <summary>Generated endpoints of org.org_unit_links: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class OrgUnitLinkEndpoints
 {
     private const string Resource = "org.org_unit_links";
@@ -67,55 +67,70 @@ internal static class OrgUnitLinkEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("org.org_unit_links.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "org.org_unit_links.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] OrgUnitLinkListQuery query, global::Erp.Kernel.Application.Generated.Org.IOrgUnitLinkRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] OrgUnitLinkListQuery query, global::Erp.Kernel.Application.Generated.Org.IOrgUnitLinkRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "org.org_unit_links.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Org.OrgUnitLinkFilter { HierarchyId = query.HierarchyId, UnitId = query.UnitId, ParentUnitId = query.ParentUnitId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<OrgUnitLinkResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Org.OrgUnitLinkAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Org.IOrgUnitLinkRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Org.IOrgUnitLinkRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "org.org_unit_links.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Org.OrgUnitLinkAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(OrgUnitLinkWriteRequest request, global::Erp.Kernel.Application.Generated.Org.IOrgUnitLinkRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(OrgUnitLinkWriteRequest request, global::Erp.Kernel.Application.Generated.Org.IOrgUnitLinkRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "org.org_unit_links.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Org.OrgUnitLinkAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/org/org-unit-links/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, OrgUnitLinkWriteRequest request, global::Erp.Kernel.Application.Generated.Org.IOrgUnitLinkRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "org.org_unit_links.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/org/org-unit-links/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Org.OrgUnitLinkAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, OrgUnitLinkWriteRequest request, global::Erp.Kernel.Application.Generated.Org.IOrgUnitLinkRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "org.org_unit_links.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Org.OrgUnitLinkAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Org.OrgUnitLinkAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink row) => null;
 
     private static OrgUnitLinkResponse ToResponse(global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink row) => new()
     {
@@ -132,18 +147,19 @@ internal static class OrgUnitLinkEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(OrgUnitLinkWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(OrgUnitLinkWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.HierarchyId is null)
+        if (request.HierarchyId is null && (!update || access.CanEdit("hierarchy_id")))
         {
             errors.Add("hierarchyId");
         }
-        if (request.UnitId is null)
+        if (request.UnitId is null && (!update || access.CanEdit("unit_id")))
         {
             errors.Add("unitId");
         }
-        if (request.ValidFrom is null)
+        if (request.ValidFrom is null && (!update || access.CanEdit("valid_from")))
         {
             errors.Add("validFrom");
         }
@@ -154,13 +170,50 @@ internal static class OrgUnitLinkEndpoints
         return errors;
     }
 
-    private static void Apply(OrgUnitLinkWriteRequest request, global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(OrgUnitLinkWriteRequest request, global::Erp.Kernel.Domain.Generated.Org.OrgUnitLink row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.HierarchyId = request.HierarchyId!.Value;
-        row.UnitId = request.UnitId!.Value;
-        row.ParentUnitId = request.ParentUnitId;
-        row.ValidFrom = request.ValidFrom!.Value;
-        row.ValidTo = request.ValidTo;
-        _ = update;
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("hierarchy_id"))
+        {
+            row.HierarchyId = request.HierarchyId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.HierarchyId, row.HierarchyId, update))
+        {
+            denied.Add("hierarchyId");
+        }
+        if (access.CanEdit("unit_id"))
+        {
+            row.UnitId = request.UnitId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.UnitId, row.UnitId, update))
+        {
+            denied.Add("unitId");
+        }
+        if (access.CanEdit("parent_unit_id"))
+        {
+            row.ParentUnitId = request.ParentUnitId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ParentUnitId, row.ParentUnitId, update))
+        {
+            denied.Add("parentUnitId");
+        }
+        if (access.CanEdit("valid_from"))
+        {
+            row.ValidFrom = request.ValidFrom!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidFrom, row.ValidFrom, update))
+        {
+            denied.Add("validFrom");
+        }
+        if (access.CanEdit("valid_to"))
+        {
+            row.ValidTo = request.ValidTo;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidTo, row.ValidTo, update))
+        {
+            denied.Add("validTo");
+        }
+        return denied;
     }
 }

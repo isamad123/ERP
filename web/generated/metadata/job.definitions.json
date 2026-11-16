@@ -25,6 +25,7 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {},
   "listFields": [
     "code",
     "moduleId",

@@ -27,10 +27,22 @@ public enum EndpointKind
 
     /// <summary>Administrator action on <c>/api/iam/users/{id}/...</c> (S1.05): A's user id on B's host is 404.</summary>
     IdentityUserAction,
+
+    /// <summary>Access-control create (S1.06): a body naming A's ids is refused on B's host and creates nothing in A.</summary>
+    AccessCreate,
+
+    /// <summary>Access-control action on a record's route (S1.06): A's id on B's host is 404.</summary>
+    AccessRecordAction,
+
+    /// <summary>Access-control query (S1.06): a query string naming A's ids is 404 or returns nothing of A's.</summary>
+    AccessQuery,
+
+    /// <summary>Access-control catalogue (S1.06): B's catalogue never shows A's roles.</summary>
+    AccessCatalog,
 }
 
 /// <summary>One API endpoint as the API host maps it: method, route and the table it serves.</summary>
-public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null)
+public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null)
 {
     private const string IdSegment = "/{id:guid}";
 
@@ -44,6 +56,15 @@ public sealed record ApiEndpoint(string Method, string Pattern, string? Resource
     {
         get
         {
+            switch (AccessKind)
+            {
+                case "create": return EndpointKind.AccessCreate;
+                case "record_action": return EndpointKind.AccessRecordAction;
+                case "query": return EndpointKind.AccessQuery;
+                case "catalog": return EndpointKind.AccessCatalog;
+                case not null: return EndpointKind.Unclassified;
+            }
+
             switch (IdentityKind)
             {
                 case "anonymous": return EndpointKind.IdentityAnonymous;
@@ -124,12 +145,13 @@ public static class EndpointInventory
         foreach (var endpoint in ((IEndpointRouteBuilder)app).DataSources.SelectMany(d => d.Endpoints).OfType<RouteEndpoint>())
         {
             var methods = endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods;
-            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource;
+            var access = endpoint.Metadata.GetMetadata<AccessEndpointMetadata>();
+            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource;
             var identity = endpoint.Metadata.GetMetadata<IdentityEndpointMetadata>()?.Kind;
             var anonymous = endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null || endpoint.Metadata.GetMetadata<IAuthorizeData>() is null;
             foreach (var method in methods is { Count: > 0 } ? methods : ["*"])
             {
-                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity));
+                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind));
             }
         }
 

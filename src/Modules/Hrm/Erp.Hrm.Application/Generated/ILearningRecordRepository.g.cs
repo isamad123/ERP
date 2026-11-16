@@ -29,3 +29,36 @@ public interface ILearningRecordRepository : global::Erp.BuildingBlocks.Applicat
     /// <summary>Rows matching (expires_on); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.LearningRecord>> FindByExpiresOnAsync(global::System.DateOnly? expiresOn, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.learning_records and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class LearningRecordAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.LearningRecord> Scope { get; } = new(
+        "hrm.learning_records",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.LearningRecord, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.LearningRecord, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.learning_records",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("employment_id", "EmploymentId", null),
+        new("course_id", "CourseId", null),
+        new("enrollment_id", "EnrollmentId", null),
+        new("title", "Title", null),
+        new("completed_on", "CompletedOn", null),
+        new("hours", "Hours", null),
+        new("result", "Result", null),
+        new("certificate_file_id", "CertificateFileId", null),
+        new("expires_on", "ExpiresOn", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

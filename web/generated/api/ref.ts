@@ -3,7 +3,7 @@
 // </auto-generated>
 import { request, type PagedResult } from './http';
 
-/** ref.banks: Banks per country, seeded by the country pack */
+/** ref.banks: Banks per country, seeded by the country pack. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Bank
 {
     id: string;
@@ -45,7 +45,7 @@ export const banks =
     update: (id: string, body: BankWrite & { rowVersion: number }) => request<Bank>('PUT', `/api/ref/banks/${id}`, { body }),
 };
 
-/** ref.calendars: Holiday calendars per country, company or location */
+/** ref.calendars: Holiday calendars per country, company or location. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Calendar
 {
     id: string;
@@ -84,7 +84,7 @@ export const calendars =
     update: (id: string, body: CalendarWrite & { rowVersion: number }) => request<Calendar>('PUT', `/api/ref/calendars/${id}`, { body }),
 };
 
-/** ref.holidays: Holiday */
+/** ref.holidays: Holiday. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Holiday
 {
     id: string;

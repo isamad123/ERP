@@ -49,7 +49,7 @@ public sealed class ProvidentFundLedgerListQuery
     public global::System.Guid? AccountId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.provident_fund_ledger: read, create.</summary>
+/// <summary>Generated endpoints of hrm.provident_fund_ledger: read, create. Answers pass through field security (S1.06).</summary>
 internal static class ProvidentFundLedgerEndpoints
 {
     private const string Resource = "hrm.provident_fund_ledger";
@@ -62,35 +62,44 @@ internal static class ProvidentFundLedgerEndpoints
         group.MapPost("/", CreateAsync).WithName("hrm.provident_fund_ledger.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.provident_fund_ledger.create"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ProvidentFundLedgerListQuery query, global::Erp.Hrm.Application.Generated.IProvidentFundLedgerRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ProvidentFundLedgerListQuery query, global::Erp.Hrm.Application.Generated.IProvidentFundLedgerRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.provident_fund_ledger.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ProvidentFundLedgerFilter { CompanyId = query.CompanyId, AccountId = query.AccountId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<ProvidentFundLedgerResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.ProvidentFundLedgerAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IProvidentFundLedgerRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IProvidentFundLedgerRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.provident_fund_ledger.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ProvidentFundLedgerAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ProvidentFundLedgerWriteRequest request, global::Erp.Hrm.Application.Generated.IProvidentFundLedgerRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ProvidentFundLedgerWriteRequest request, global::Erp.Hrm.Application.Generated.IProvidentFundLedgerRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.provident_fund_ledger.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ProvidentFundLedgerAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.ProvidentFundLedger();
-            Apply(request, row, update: false);
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/provident-fund-ledger/" + row.Id.ToString(), ToResponse(row));
+            return TypedResults.Created("/api/hrm/provident-fund-ledger/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ProvidentFundLedgerAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.ProvidentFundLedger row) => row.CompanyId;
 
     private static ProvidentFundLedgerResponse ToResponse(global::Erp.Hrm.Domain.Generated.ProvidentFundLedger row) => new()
     {
@@ -106,44 +115,96 @@ internal static class ProvidentFundLedgerEndpoints
         CreatedBy = row.CreatedBy,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(ProvidentFundLedgerWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(ProvidentFundLedgerWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.AccountId is null)
+        if (request.AccountId is null && (!update || access.CanEdit("account_id")))
         {
             errors.Add("accountId");
         }
-        if (request.EntryDate is null)
+        if (request.EntryDate is null && (!update || access.CanEdit("entry_date")))
         {
             errors.Add("entryDate");
         }
-        if (request.Kind is null)
+        if (request.Kind is null && (!update || access.CanEdit("kind")))
         {
             errors.Add("kind");
         }
-        if (request.Amount is null)
+        if (request.Amount is null && (!update || access.CanEdit("amount")))
         {
             errors.Add("amount");
         }
-        _ = update;
         return errors;
     }
 
-    private static void Apply(ProvidentFundLedgerWriteRequest request, global::Erp.Hrm.Domain.Generated.ProvidentFundLedger row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(ProvidentFundLedgerWriteRequest request, global::Erp.Hrm.Domain.Generated.ProvidentFundLedger row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.AccountId = request.AccountId!.Value;
-        row.EntryDate = request.EntryDate!.Value;
-        row.Kind = request.Kind!;
-        row.Amount = request.Amount!.Value;
-        row.SourceType = request.SourceType;
-        row.SourceId = request.SourceId;
+        if (access.CanEdit("account_id"))
+        {
+            row.AccountId = request.AccountId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.AccountId, row.AccountId, update))
+        {
+            denied.Add("accountId");
+        }
+        if (access.CanEdit("entry_date"))
+        {
+            row.EntryDate = request.EntryDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EntryDate, row.EntryDate, update))
+        {
+            denied.Add("entryDate");
+        }
+        if (access.CanEdit("kind"))
+        {
+            row.Kind = request.Kind!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Kind, row.Kind, update))
+        {
+            denied.Add("kind");
+        }
+        if (access.CanEdit("amount"))
+        {
+            row.Amount = request.Amount!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Amount, row.Amount, update))
+        {
+            denied.Add("amount");
+        }
+        if (access.CanEdit("source_type"))
+        {
+            row.SourceType = request.SourceType;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SourceType, row.SourceType, update))
+        {
+            denied.Add("sourceType");
+        }
+        if (access.CanEdit("source_id"))
+        {
+            row.SourceId = request.SourceId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SourceId, row.SourceId, update))
+        {
+            denied.Add("sourceId");
+        }
+        return denied;
     }
 }

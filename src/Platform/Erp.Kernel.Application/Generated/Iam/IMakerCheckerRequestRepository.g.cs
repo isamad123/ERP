@@ -22,3 +22,34 @@ public interface IMakerCheckerRequestRepository : global::Erp.BuildingBlocks.App
     /// <summary>Rows matching (status, created_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.MakerCheckerRequest>> FindByStatusAndCreatedAtAsync(string status, global::System.DateTimeOffset createdAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of iam.maker_checker_requests and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class MakerCheckerRequestAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Iam.MakerCheckerRequest> Scope { get; } = new(
+        "iam.maker_checker_requests",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.MakerCheckerRequest, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.User] = e => e.RequestedBy,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.MakerCheckerRequest, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("iam.maker_checker_requests",
+    [
+        new("id", "Id", null),
+        new("action_type", "ActionType", null),
+        new("subject_type", "SubjectType", null),
+        new("subject_id", "SubjectId", null),
+        new("payload", "Payload", null),
+        new("requested_by", "RequestedBy", null),
+        new("decided_by", "DecidedBy", null),
+        new("decided_at", "DecidedAt", null),
+        new("reason", "Reason", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

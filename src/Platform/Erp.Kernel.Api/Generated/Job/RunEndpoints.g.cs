@@ -63,7 +63,7 @@ public sealed class RunListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of job.runs: read, create, update.</summary>
+/// <summary>Generated endpoints of job.runs: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class RunEndpoints
 {
     private const string Resource = "job.runs";
@@ -77,55 +77,70 @@ internal static class RunEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("job.runs.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "job.runs.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] RunListQuery query, global::Erp.Kernel.Application.Generated.Job.IRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] RunListQuery query, global::Erp.Kernel.Application.Generated.Job.IRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "job.runs.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Job.RunFilter { DefinitionId = query.DefinitionId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<RunResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Job.RunAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Job.IRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Job.IRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "job.runs.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Job.RunAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(RunWriteRequest request, global::Erp.Kernel.Application.Generated.Job.IRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(RunWriteRequest request, global::Erp.Kernel.Application.Generated.Job.IRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "job.runs.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Job.RunAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Job.Run();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/job/runs/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, RunWriteRequest request, global::Erp.Kernel.Application.Generated.Job.IRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "job.runs.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/job/runs/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Job.RunAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, RunWriteRequest request, global::Erp.Kernel.Application.Generated.Job.IRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "job.runs.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Job.RunAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Job.RunAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Job.Run row) => row.CompanyId;
 
     private static RunResponse ToResponse(global::Erp.Kernel.Domain.Generated.Job.Run row) => new()
     {
@@ -148,14 +163,15 @@ internal static class RunEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(RunWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(RunWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.DefinitionId is null)
+        if (request.DefinitionId is null && (!update || access.CanEdit("definition_id")))
         {
             errors.Add("definitionId");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -166,21 +182,101 @@ internal static class RunEndpoints
         return errors;
     }
 
-    private static void Apply(RunWriteRequest request, global::Erp.Kernel.Domain.Generated.Job.Run row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(RunWriteRequest request, global::Erp.Kernel.Domain.Generated.Job.Run row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.DefinitionId = request.DefinitionId!.Value;
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("definition_id"))
+        {
+            row.DefinitionId = request.DefinitionId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DefinitionId, row.DefinitionId, update))
+        {
+            denied.Add("definitionId");
+        }
         if (!update)
         {
-            row.CompanyId = request.CompanyId;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.ProgressPct = request.ProgressPct;
-        row.Checkpoint = GeneratedEndpointSupport.ToDocument(request.Checkpoint);
-        row.StartedAt = request.StartedAt;
-        row.FinishedAt = request.FinishedAt;
-        row.Error = request.Error;
-        row.RequestedBy = request.RequestedBy;
-        row.LeaseOwner = request.LeaseOwner;
-        row.LeaseExpiresAt = request.LeaseExpiresAt;
-        row.Status = request.Status!;
+        if (access.CanEdit("progress_pct"))
+        {
+            row.ProgressPct = request.ProgressPct;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ProgressPct, row.ProgressPct, update))
+        {
+            denied.Add("progressPct");
+        }
+        if (access.CanEdit("checkpoint"))
+        {
+            row.Checkpoint = GeneratedEndpointSupport.ToDocument(request.Checkpoint);
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Checkpoint, row.Checkpoint, update))
+        {
+            denied.Add("checkpoint");
+        }
+        if (access.CanEdit("started_at"))
+        {
+            row.StartedAt = request.StartedAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StartedAt, row.StartedAt, update))
+        {
+            denied.Add("startedAt");
+        }
+        if (access.CanEdit("finished_at"))
+        {
+            row.FinishedAt = request.FinishedAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FinishedAt, row.FinishedAt, update))
+        {
+            denied.Add("finishedAt");
+        }
+        if (access.CanEdit("error"))
+        {
+            row.Error = request.Error;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Error, row.Error, update))
+        {
+            denied.Add("error");
+        }
+        if (access.CanEdit("requested_by"))
+        {
+            row.RequestedBy = request.RequestedBy;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RequestedBy, row.RequestedBy, update))
+        {
+            denied.Add("requestedBy");
+        }
+        if (access.CanEdit("lease_owner"))
+        {
+            row.LeaseOwner = request.LeaseOwner;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LeaseOwner, row.LeaseOwner, update))
+        {
+            denied.Add("leaseOwner");
+        }
+        if (access.CanEdit("lease_expires_at"))
+        {
+            row.LeaseExpiresAt = request.LeaseExpiresAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LeaseExpiresAt, row.LeaseExpiresAt, update))
+        {
+            denied.Add("leaseExpiresAt");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

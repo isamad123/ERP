@@ -17,3 +17,34 @@ public interface IStatutoryTableRepository : global::Erp.BuildingBlocks.Applicat
 {
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.StatutoryTable>> ListAsync(StatutoryTableFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.statutory_tables and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class StatutoryTableAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.StatutoryTable> Scope { get; } = new(
+        "hrm.statutory_tables",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.StatutoryTable, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.StatutoryTable, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.statutory_tables",
+    [
+        new("id", "Id", null),
+        new("code", "Code", null),
+        new("company_id", "CompanyId", null),
+        new("company_scope", "CompanyScope", null),
+        new("source", "Source", null),
+        new("kind", "Kind", null),
+        new("description_i18n", "DescriptionI18n", null),
+        new("pack_version", "PackVersion", null),
+        new("valid_from", "ValidFrom", null),
+        new("valid_to", "ValidTo", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

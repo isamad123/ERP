@@ -37,3 +37,45 @@ public interface IEmploymentAssignmentRepository : global::Erp.BuildingBlocks.Ap
     /// <summary>Rows matching (manager_employment_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.EmploymentAssignment>> FindByManagerEmploymentIdAsync(global::System.Guid? managerEmploymentId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.employment_assignments and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class EmploymentAssignmentAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.EmploymentAssignment> Scope { get; } = new(
+        "hrm.employment_assignments",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.EmploymentAssignment, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Branch] = e => e.BranchId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.OrgUnit] = e => e.OrgUnitId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.EmploymentAssignment, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.employment_assignments",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("employment_id", "EmploymentId", null),
+        new("event_id", "EventId", null),
+        new("org_unit_id", "OrgUnitId", null),
+        new("position_id", "PositionId", null),
+        new("title", "Title", null),
+        new("grade_id", "GradeId", null),
+        new("branch_id", "BranchId", null),
+        new("location_id", "LocationId", null),
+        new("manager_employment_id", "ManagerEmploymentId", null),
+        new("pay_group_id", "PayGroupId", null),
+        new("cost_allocation", "CostAllocation", null),
+        new("fte", "Fte", null),
+        new("work_schedule", "WorkSchedule", null),
+        new("is_acting", "IsActing", null),
+        new("valid_from", "ValidFrom", null),
+        new("valid_to", "ValidTo", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

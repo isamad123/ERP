@@ -20,3 +20,33 @@ public interface IEmploymentStatutoryRegistrationRepository : global::Erp.Buildi
 
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.EmploymentStatutoryRegistration>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.employment_statutory_registrations and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class EmploymentStatutoryRegistrationAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.EmploymentStatutoryRegistration> Scope { get; } = new(
+        "hrm.employment_statutory_registrations",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.EmploymentStatutoryRegistration, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.EmploymentStatutoryRegistration, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.employment_statutory_registrations",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("employment_id", "EmploymentId", null),
+        new("scheme", "Scheme", null),
+        new("is_applicable", "IsApplicable", null),
+        new("exemption_reason", "ExemptionReason", null),
+        new("valid_from", "ValidFrom", null),
+        new("valid_to", "ValidTo", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

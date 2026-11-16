@@ -45,7 +45,7 @@ public sealed class PolicyAcknowledgementListQuery
     public global::System.Guid? EmploymentId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.policy_acknowledgements: read, create.</summary>
+/// <summary>Generated endpoints of hrm.policy_acknowledgements: read, create. Answers pass through field security (S1.06).</summary>
 internal static class PolicyAcknowledgementEndpoints
 {
     private const string Resource = "hrm.policy_acknowledgements";
@@ -58,35 +58,44 @@ internal static class PolicyAcknowledgementEndpoints
         group.MapPost("/", CreateAsync).WithName("hrm.policy_acknowledgements.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.policy_acknowledgements.create"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PolicyAcknowledgementListQuery query, global::Erp.Hrm.Application.Generated.IPolicyAcknowledgementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PolicyAcknowledgementListQuery query, global::Erp.Hrm.Application.Generated.IPolicyAcknowledgementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.policy_acknowledgements.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PolicyAcknowledgementFilter { CompanyId = query.CompanyId, PublicationId = query.PublicationId, EmploymentId = query.EmploymentId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<PolicyAcknowledgementResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.PolicyAcknowledgementAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPolicyAcknowledgementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPolicyAcknowledgementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.policy_acknowledgements.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PolicyAcknowledgementAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PolicyAcknowledgementWriteRequest request, global::Erp.Hrm.Application.Generated.IPolicyAcknowledgementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PolicyAcknowledgementWriteRequest request, global::Erp.Hrm.Application.Generated.IPolicyAcknowledgementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.policy_acknowledgements.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PolicyAcknowledgementAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.PolicyAcknowledgement();
-            Apply(request, row, update: false);
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/policy-acknowledgements/" + row.Id.ToString(), ToResponse(row));
+            return TypedResults.Created("/api/hrm/policy-acknowledgements/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PolicyAcknowledgementAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.PolicyAcknowledgement row) => row.CompanyId;
 
     private static PolicyAcknowledgementResponse ToResponse(global::Erp.Hrm.Domain.Generated.PolicyAcknowledgement row) => new()
     {
@@ -99,37 +108,68 @@ internal static class PolicyAcknowledgementEndpoints
         CreatedBy = row.CreatedBy,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(PolicyAcknowledgementWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(PolicyAcknowledgementWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.PublicationId is null)
+        if (request.PublicationId is null && (!update || access.CanEdit("publication_id")))
         {
             errors.Add("publicationId");
         }
-        if (request.EmploymentId is null)
+        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
         {
             errors.Add("employmentId");
         }
-        if (request.AcknowledgedAt is null)
+        if (request.AcknowledgedAt is null && (!update || access.CanEdit("acknowledged_at")))
         {
             errors.Add("acknowledgedAt");
         }
-        _ = update;
         return errors;
     }
 
-    private static void Apply(PolicyAcknowledgementWriteRequest request, global::Erp.Hrm.Domain.Generated.PolicyAcknowledgement row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(PolicyAcknowledgementWriteRequest request, global::Erp.Hrm.Domain.Generated.PolicyAcknowledgement row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.PublicationId = request.PublicationId!.Value;
-        row.EmploymentId = request.EmploymentId!.Value;
-        row.AcknowledgedAt = request.AcknowledgedAt!.Value;
+        if (access.CanEdit("publication_id"))
+        {
+            row.PublicationId = request.PublicationId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PublicationId, row.PublicationId, update))
+        {
+            denied.Add("publicationId");
+        }
+        if (access.CanEdit("employment_id"))
+        {
+            row.EmploymentId = request.EmploymentId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
+        {
+            denied.Add("employmentId");
+        }
+        if (access.CanEdit("acknowledged_at"))
+        {
+            row.AcknowledgedAt = request.AcknowledgedAt!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.AcknowledgedAt, row.AcknowledgedAt, update))
+        {
+            denied.Add("acknowledgedAt");
+        }
+        return denied;
     }
 }

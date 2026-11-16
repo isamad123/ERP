@@ -63,7 +63,7 @@ public sealed class LoanInstallmentListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.loan_installments: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.loan_installments: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class LoanInstallmentEndpoints
 {
     private const string Resource = "hrm.loan_installments";
@@ -77,55 +77,70 @@ internal static class LoanInstallmentEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.loan_installments.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.loan_installments.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] LoanInstallmentListQuery query, global::Erp.Hrm.Application.Generated.ILoanInstallmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] LoanInstallmentListQuery query, global::Erp.Hrm.Application.Generated.ILoanInstallmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.loan_installments.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.LoanInstallmentFilter { CompanyId = query.CompanyId, LoanId = query.LoanId, PayPeriodId = query.PayPeriodId, PayResultLineId = query.PayResultLineId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<LoanInstallmentResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.LoanInstallmentAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.ILoanInstallmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.ILoanInstallmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.loan_installments.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.LoanInstallmentAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LoanInstallmentWriteRequest request, global::Erp.Hrm.Application.Generated.ILoanInstallmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LoanInstallmentWriteRequest request, global::Erp.Hrm.Application.Generated.ILoanInstallmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.loan_installments.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.LoanInstallmentAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.LoanInstallment();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/loan-installments/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, LoanInstallmentWriteRequest request, global::Erp.Hrm.Application.Generated.ILoanInstallmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.loan_installments.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/loan-installments/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.LoanInstallmentAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, LoanInstallmentWriteRequest request, global::Erp.Hrm.Application.Generated.ILoanInstallmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.loan_installments.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.LoanInstallmentAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.LoanInstallmentAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.LoanInstallment row) => row.CompanyId;
 
     private static LoanInstallmentResponse ToResponse(global::Erp.Hrm.Domain.Generated.LoanInstallment row) => new()
     {
@@ -145,34 +160,35 @@ internal static class LoanInstallmentEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(LoanInstallmentWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(LoanInstallmentWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.LoanId is null)
+        if (request.LoanId is null && (!update || access.CanEdit("loan_id")))
         {
             errors.Add("loanId");
         }
-        if (request.Seq is null)
+        if (request.Seq is null && (!update || access.CanEdit("seq")))
         {
             errors.Add("seq");
         }
-        if (request.PayPeriodId is null)
+        if (request.PayPeriodId is null && (!update || access.CanEdit("pay_period_id")))
         {
             errors.Add("payPeriodId");
         }
-        if (request.PrincipalAmount is null)
+        if (request.PrincipalAmount is null && (!update || access.CanEdit("principal_amount")))
         {
             errors.Add("principalAmount");
         }
-        if (request.InterestAmount is null)
+        if (request.InterestAmount is null && (!update || access.CanEdit("interest_amount")))
         {
             errors.Add("interestAmount");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -183,18 +199,77 @@ internal static class LoanInstallmentEndpoints
         return errors;
     }
 
-    private static void Apply(LoanInstallmentWriteRequest request, global::Erp.Hrm.Domain.Generated.LoanInstallment row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(LoanInstallmentWriteRequest request, global::Erp.Hrm.Domain.Generated.LoanInstallment row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.LoanId = request.LoanId!.Value;
-        row.Seq = request.Seq!.Value;
-        row.PayPeriodId = request.PayPeriodId!.Value;
-        row.PrincipalAmount = request.PrincipalAmount!.Value;
-        row.InterestAmount = request.InterestAmount!.Value;
-        row.PayResultLineId = request.PayResultLineId;
-        row.Status = request.Status!;
+        if (access.CanEdit("loan_id"))
+        {
+            row.LoanId = request.LoanId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LoanId, row.LoanId, update))
+        {
+            denied.Add("loanId");
+        }
+        if (access.CanEdit("seq"))
+        {
+            row.Seq = request.Seq!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Seq, row.Seq, update))
+        {
+            denied.Add("seq");
+        }
+        if (access.CanEdit("pay_period_id"))
+        {
+            row.PayPeriodId = request.PayPeriodId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PayPeriodId, row.PayPeriodId, update))
+        {
+            denied.Add("payPeriodId");
+        }
+        if (access.CanEdit("principal_amount"))
+        {
+            row.PrincipalAmount = request.PrincipalAmount!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PrincipalAmount, row.PrincipalAmount, update))
+        {
+            denied.Add("principalAmount");
+        }
+        if (access.CanEdit("interest_amount"))
+        {
+            row.InterestAmount = request.InterestAmount!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.InterestAmount, row.InterestAmount, update))
+        {
+            denied.Add("interestAmount");
+        }
+        if (access.CanEdit("pay_result_line_id"))
+        {
+            row.PayResultLineId = request.PayResultLineId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PayResultLineId, row.PayResultLineId, update))
+        {
+            denied.Add("payResultLineId");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

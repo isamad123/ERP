@@ -26,3 +26,38 @@ public interface IIncrementProposalRepository : global::Erp.BuildingBlocks.Appli
     /// <summary>Rows matching (cycle_id, employment_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.IncrementProposal>> FindByCycleIdAndEmploymentIdAsync(global::System.Guid cycleId, global::System.Guid employmentId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.increment_proposals and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class IncrementProposalAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.IncrementProposal> Scope { get; } = new(
+        "hrm.increment_proposals",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.IncrementProposal, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.IncrementProposal, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.increment_proposals",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("cycle_id", "CycleId", null),
+        new("employment_id", "EmploymentId", null),
+        new("current_amount", "CurrentAmount", "salary"),
+        new("proposed_amount", "ProposedAmount", "salary"),
+        new("proposed_percent", "ProposedPercent", null),
+        new("promotion_grade_id", "PromotionGradeId", null),
+        new("rating", "Rating", null),
+        new("compa_ratio", "CompaRatio", null),
+        new("recommended_by", "RecommendedBy", null),
+        new("notes", "Notes", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

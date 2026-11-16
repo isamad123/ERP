@@ -35,3 +35,39 @@ public interface IPaymentLineRepository : global::Erp.BuildingBlocks.Application
     /// <summary>Rows matching (result_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PaymentLine>> FindByResultIdAsync(global::System.Guid resultId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.payment_lines and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PaymentLineAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.PaymentLine> Scope { get; } = new(
+        "hrm.payment_lines",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PaymentLine, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PaymentLine, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.payment_lines",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("batch_id", "BatchId", null),
+        new("batch_status", "BatchStatus", null),
+        new("result_id", "ResultId", null),
+        new("source_run_id", "SourceRunId", null),
+        new("bank_account_id", "BankAccountId", null),
+        new("cheque_no", "ChequeNo", null),
+        new("account_title", "AccountTitle", null),
+        new("bank_id", "BankId", null),
+        new("amount", "Amount", "salary"),
+        new("bank_reference", "BankReference", null),
+        new("failure_reason", "FailureReason", null),
+        new("reissued_in_line_id", "ReissuedInLineId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

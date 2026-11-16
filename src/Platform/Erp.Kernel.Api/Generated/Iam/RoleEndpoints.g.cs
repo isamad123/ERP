@@ -30,20 +30,6 @@ public sealed class RoleResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for iam.roles. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class RoleWriteRequest
-{
-    public string? Code { get; init; }
-    public global::System.Text.Json.JsonElement? NameI18n { get; init; }
-    public global::System.Text.Json.JsonElement? DescriptionI18n { get; init; }
-    public string? Source { get; init; }
-    public string? BaselineCode { get; init; }
-    public bool? IsActive { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for iam.roles.</summary>
 public sealed class RoleListQuery
 {
@@ -52,7 +38,7 @@ public sealed class RoleListQuery
     public int? Limit { get; init; }
 }
 
-/// <summary>Generated endpoints of iam.roles: read, create, update, delete.</summary>
+/// <summary>Generated endpoints of iam.roles: read. Answers pass through field security (S1.06).</summary>
 internal static class RoleEndpoints
 {
     private const string Resource = "iam.roles";
@@ -62,72 +48,25 @@ internal static class RoleEndpoints
         var group = app.MapGroup("/api/iam/roles").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("iam.roles.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.roles.read"));
         group.MapGet("/{id:guid}", GetAsync).WithName("iam.roles.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.roles.read"));
-        group.MapPost("/", CreateAsync).WithName("iam.roles.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "iam.roles.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("iam.roles.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "iam.roles.update"));
-        group.MapDelete("/{id:guid}", DeleteAsync).WithName("iam.roles.delete").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "delete", "iam.roles.delete"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] RoleListQuery query, global::Erp.Kernel.Application.Generated.Iam.IRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] RoleListQuery query, global::Erp.Kernel.Application.Generated.Iam.IRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "iam.roles.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.RoleFilter {  }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<RoleResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Iam.RoleAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Iam.IRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Iam.IRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "iam.roles.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Iam.RoleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(RoleWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.roles.create", async () =>
-        {
-            var errors = Validate(request, update: false);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Iam.Role();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/iam/roles/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, RoleWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.roles.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            Apply(request, row, update: true);
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> DeleteAsync(global::System.Guid id, long? rowVersion, global::Erp.Kernel.Application.Generated.Iam.IRoleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.roles.delete", async () =>
-        {
-            if (rowVersion is null)
-            {
-                return GeneratedEndpointSupport.Invalid(["rowVersion"]);
-            }
-
-            var deleted = await repository.SoftDeleteAsync(id, rowVersion.Value, cancellationToken).ConfigureAwait(false);
-            return deleted ? TypedResults.NoContent() : GeneratedEndpointSupport.NotFound();
-        }, cancellationToken);
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Iam.Role row) => null;
 
     private static RoleResponse ToResponse(global::Erp.Kernel.Domain.Generated.Iam.Role row) => new()
     {
@@ -147,40 +86,4 @@ internal static class RoleEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    private static global::System.Collections.Generic.List<string> Validate(RoleWriteRequest request, bool update)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.Code is null)
-        {
-            errors.Add("code");
-        }
-        if (request.NameI18n is null)
-        {
-            errors.Add("nameI18n");
-        }
-        if (request.Source is null)
-        {
-            errors.Add("source");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    private static void Apply(RoleWriteRequest request, global::Erp.Kernel.Domain.Generated.Iam.Role row, bool update)
-    {
-        row.Code = request.Code!;
-        row.NameI18n = GeneratedEndpointSupport.ToDocument(request.NameI18n)!;
-        row.DescriptionI18n = GeneratedEndpointSupport.ToDocument(request.DescriptionI18n);
-        row.Source = request.Source!;
-        row.BaselineCode = request.BaselineCode;
-        if (request.IsActive is not null)
-        {
-            row.IsActive = request.IsActive!.Value;
-        }
-        _ = update;
-    }
 }

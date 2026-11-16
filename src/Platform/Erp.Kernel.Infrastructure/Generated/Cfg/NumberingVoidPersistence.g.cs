@@ -31,17 +31,17 @@ internal sealed class NumberingVoidRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid>(context, clock, actor, scope, "cfg.numbering_voids"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Cfg.NumberingVoidAccess.Scope),
     global::Erp.Kernel.Application.Generated.Cfg.INumberingVoidRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid>> ListAsync(global::Erp.Kernel.Application.Generated.Cfg.NumberingVoidFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid>> ListAsync(global::Erp.Kernel.Application.Generated.Cfg.NumberingVoidFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.SchemeId is { } schemeIdFilter)
         {
             query = query.Where(e => e.SchemeId == schemeIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 }

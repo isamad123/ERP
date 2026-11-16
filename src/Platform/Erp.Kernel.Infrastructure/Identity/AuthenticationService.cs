@@ -46,7 +46,7 @@ public sealed class AuthenticationService(
 
         // The same work on every path (policy read, one Argon2id check, one credential statement), so an unknown user
         // takes about as long as a known one (slice build item 3, review finding 9).
-        var policy = await IdentitySettings.ReadAsync(connection, tx, account?.Id, cancellationToken).ConfigureAwait(false);
+        var policy = await IdentitySettings.ReadAsync(connection, tx, account?.Id, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         if (account is null || !account.HasCredential)
         {
             hasher.Verify(password, DummyHash(), hasher.Algorithm, out _);
@@ -104,7 +104,7 @@ public sealed class AuthenticationService(
             return AuthResult.Failed;
         }
 
-        var policy = await IdentitySettings.ReadAsync(connection, tx, account.Id, cancellationToken).ConfigureAwait(false);
+        var policy = await IdentitySettings.ReadAsync(connection, tx, account.Id, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         var ok = false;
         if (!string.IsNullOrWhiteSpace(recoveryCode))
         {
@@ -149,7 +149,7 @@ public sealed class AuthenticationService(
             return AuthResult.Failed;
         }
 
-        var policy = await IdentitySettings.ReadAsync(connection, tx, account.Id, cancellationToken).ConfigureAwait(false);
+        var policy = await IdentitySettings.ReadAsync(connection, tx, account.Id, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         var errors = await Passwords.ValidateNewAsync(connection, tx, account.Id, newPassword, policy.Password, hasher, cancellationToken).ConfigureAwait(false);
         if (errors.Count > 0)
         {
@@ -196,7 +196,7 @@ public sealed class AuthenticationService(
             return AuthResult.Failed;
         }
 
-        var policy = await IdentitySettings.ReadAsync(connection, tx, account.Id, cancellationToken).ConfigureAwait(false);
+        var policy = await IdentitySettings.ReadAsync(connection, tx, account.Id, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         var encryptor = await encryptors.GetAsync(cancellationToken).ConfigureAwait(false);
         var codes = await MfaEnrolments.ConfirmAsync(connection, tx, account.Id, deviceId, code, policy.Mfa, encryptor, hasher, now, cancellationToken).ConfigureAwait(false);
         if (codes is null)
@@ -261,7 +261,7 @@ public sealed class AuthenticationService(
             return await EndAsync("absolute_timeout").ConfigureAwait(false);
         }
 
-        var policy = await IdentitySettings.ReadAsync(connection, tx, session.UserId, cancellationToken).ConfigureAwait(false);
+        var policy = await IdentitySettings.ReadAsync(connection, tx, session.UserId, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         if (now - session.LastSeenAt >= TimeSpan.FromMinutes(policy.Session.IdleMinutes))
         {
             return await EndAsync("idle_timeout").ConfigureAwait(false);
@@ -312,7 +312,7 @@ public sealed class AuthenticationService(
             return AuthResult.Failed;
         }
 
-        var policy = await IdentitySettings.ReadAsync(connection, tx, account.Id, cancellationToken).ConfigureAwait(false);
+        var policy = await IdentitySettings.ReadAsync(connection, tx, account.Id, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         var errors = PasswordRules.Check(newPassword, policy.Password);
         if (errors.Count > 0)
         {

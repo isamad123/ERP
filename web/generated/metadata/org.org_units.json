@@ -30,6 +30,10 @@
   "effectiveDated": false,
   "softDelete": true,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId",
+    "org_unit": "id"
+  },
   "listFields": [
     "companyId",
     "code",

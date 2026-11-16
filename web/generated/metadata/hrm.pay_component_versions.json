@@ -29,6 +29,7 @@
   "effectiveDated": true,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {},
   "listFields": [
     "componentId",
     "method",

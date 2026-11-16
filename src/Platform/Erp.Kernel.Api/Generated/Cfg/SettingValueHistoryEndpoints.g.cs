@@ -45,7 +45,7 @@ public sealed class SettingValueHistoryListQuery
     public int? Limit { get; init; }
 }
 
-/// <summary>Generated endpoints of cfg.setting_value_history: read, create.</summary>
+/// <summary>Generated endpoints of cfg.setting_value_history: read, create. Answers pass through field security (S1.06).</summary>
 internal static class SettingValueHistoryEndpoints
 {
     private const string Resource = "cfg.setting_value_history";
@@ -58,35 +58,44 @@ internal static class SettingValueHistoryEndpoints
         group.MapPost("/", CreateAsync).WithName("cfg.setting_value_history.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "cfg.setting_value_history.create"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] SettingValueHistoryListQuery query, global::Erp.Kernel.Application.Generated.Cfg.ISettingValueHistoryRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] SettingValueHistoryListQuery query, global::Erp.Kernel.Application.Generated.Cfg.ISettingValueHistoryRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.setting_value_history.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.SettingValueHistoryFilter {  }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<SettingValueHistoryResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.SettingValueHistoryAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.ISettingValueHistoryRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.ISettingValueHistoryRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.setting_value_history.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.SettingValueHistoryAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(SettingValueHistoryWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ISettingValueHistoryRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(SettingValueHistoryWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ISettingValueHistoryRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.setting_value_history.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.SettingValueHistoryAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Cfg.SettingValueHistory();
-            Apply(request, row, update: false);
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/setting-value-history/" + row.Id.ToString(), ToResponse(row));
+            return TypedResults.Created("/api/cfg/setting-value-history/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.SettingValueHistoryAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Cfg.SettingValueHistory row) => null;
 
     private static SettingValueHistoryResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.SettingValueHistory row) => new()
     {
@@ -102,34 +111,85 @@ internal static class SettingValueHistoryEndpoints
         CreatedBy = row.CreatedBy,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(SettingValueHistoryWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(SettingValueHistoryWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.SettingValueId is null)
+        if (request.SettingValueId is null && (!update || access.CanEdit("setting_value_id")))
         {
             errors.Add("settingValueId");
         }
-        if (request.SettingKey is null)
+        if (request.SettingKey is null && (!update || access.CanEdit("setting_key")))
         {
             errors.Add("settingKey");
         }
-        if (request.Layer is null)
+        if (request.Layer is null && (!update || access.CanEdit("layer")))
         {
             errors.Add("layer");
         }
-        _ = update;
         return errors;
     }
 
-    private static void Apply(SettingValueHistoryWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.SettingValueHistory row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(SettingValueHistoryWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.SettingValueHistory row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.SettingValueId = request.SettingValueId!.Value;
-        row.SettingKey = request.SettingKey!;
-        row.Layer = request.Layer!;
-        row.ScopeId = request.ScopeId;
-        row.OldValue = GeneratedEndpointSupport.ToDocument(request.OldValue);
-        row.NewValue = GeneratedEndpointSupport.ToDocument(request.NewValue);
-        row.Reason = request.Reason;
-        _ = update;
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("setting_value_id"))
+        {
+            row.SettingValueId = request.SettingValueId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SettingValueId, row.SettingValueId, update))
+        {
+            denied.Add("settingValueId");
+        }
+        if (access.CanEdit("setting_key"))
+        {
+            row.SettingKey = request.SettingKey!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SettingKey, row.SettingKey, update))
+        {
+            denied.Add("settingKey");
+        }
+        if (access.CanEdit("layer"))
+        {
+            row.Layer = request.Layer!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Layer, row.Layer, update))
+        {
+            denied.Add("layer");
+        }
+        if (access.CanEdit("scope_id"))
+        {
+            row.ScopeId = request.ScopeId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ScopeId, row.ScopeId, update))
+        {
+            denied.Add("scopeId");
+        }
+        if (access.CanEdit("old_value"))
+        {
+            row.OldValue = GeneratedEndpointSupport.ToDocument(request.OldValue);
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OldValue, row.OldValue, update))
+        {
+            denied.Add("oldValue");
+        }
+        if (access.CanEdit("new_value"))
+        {
+            row.NewValue = GeneratedEndpointSupport.ToDocument(request.NewValue);
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.NewValue, row.NewValue, update))
+        {
+            denied.Add("newValue");
+        }
+        if (access.CanEdit("reason"))
+        {
+            row.Reason = request.Reason;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Reason, row.Reason, update))
+        {
+            denied.Add("reason");
+        }
+        return denied;
     }
 }

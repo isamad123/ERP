@@ -20,3 +20,24 @@ public interface IPasswordHistoryRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (user_id, created_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.PasswordHistory>> FindByUserIdAndCreatedAtAsync(global::System.Guid userId, global::System.DateTimeOffset createdAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of iam.password_history and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PasswordHistoryAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Iam.PasswordHistory> Scope { get; } = new(
+        "iam.password_history",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.PasswordHistory, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.User] = e => e.UserId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.PasswordHistory, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("iam.password_history",
+    [
+        new("id", "Id", null),
+        new("user_id", "UserId", null),
+        new("password_hash", "PasswordHash", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

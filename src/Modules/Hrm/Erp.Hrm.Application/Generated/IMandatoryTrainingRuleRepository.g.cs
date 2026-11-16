@@ -21,3 +21,31 @@ public interface IMandatoryTrainingRuleRepository : global::Erp.BuildingBlocks.A
 
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.MandatoryTrainingRule>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.mandatory_training_rules and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class MandatoryTrainingRuleAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.MandatoryTrainingRule> Scope { get; } = new(
+        "hrm.mandatory_training_rules",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.MandatoryTrainingRule, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.MandatoryTrainingRule, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.mandatory_training_rules",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("course_id", "CourseId", null),
+        new("applies_rule", "AppliesRule", null),
+        new("due_within_days", "DueWithinDays", null),
+        new("recurrence_months", "RecurrenceMonths", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

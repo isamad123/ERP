@@ -25,6 +25,9 @@
   "effectiveDated": true,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "person": "personId"
+  },
   "listFields": [
     "personId",
     "kind",

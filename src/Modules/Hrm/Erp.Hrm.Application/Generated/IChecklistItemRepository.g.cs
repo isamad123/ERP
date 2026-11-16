@@ -26,3 +26,34 @@ public interface IChecklistItemRepository : global::Erp.BuildingBlocks.Applicati
     /// <summary>Rows matching (owner_user_id, status); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ChecklistItem>> FindByOwnerUserIdAndStatusAsync(global::System.Guid? ownerUserId, string status, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.checklist_items and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ChecklistItemAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.ChecklistItem> Scope { get; } = new(
+        "hrm.checklist_items",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ChecklistItem, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.User] = e => e.OwnerUserId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ChecklistItem, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.checklist_items",
+    [
+        new("id", "Id", null),
+        new("checklist_id", "ChecklistId", null),
+        new("template_item_id", "TemplateItemId", null),
+        new("owner_user_id", "OwnerUserId", null),
+        new("due_date", "DueDate", null),
+        new("is_clearance", "IsClearance", null),
+        new("completed_by", "CompletedBy", null),
+        new("completed_at", "CompletedAt", null),
+        new("notes", "Notes", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

@@ -34017,6 +34017,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "retired_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -34733,6 +34743,194 @@
       "append_only_updatable": [],
       "has_api": false,
       "full_name": "iam.user_group_members"
+    },
+    {
+      "database": "tenant",
+      "schema": "iam",
+      "name": "user_group_roles",
+      "module": "kernel",
+      "traits": [
+        "std",
+        "eff"
+      ],
+      "requirements": [
+        "ADM-USR-06",
+        "KRN-IAM-11"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "group_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "role_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "company_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "reason",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "valid_from",
+          "kind": "Date",
+          "type": "date",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "valid_to",
+          "kind": "Date",
+          "type": "date",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [],
+      "checks": [
+        "ck_user_group_roles_valid_to"
+      ],
+      "exclusions": [
+        "ex_user_group_roles_group_id_role_id_company_id"
+      ],
+      "foreign_keys": [
+        {
+          "name": "fk_user_group_roles_group_id",
+          "columns": [
+            "group_id"
+          ],
+          "target": "iam.user_groups",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "fk_user_group_roles_role_id",
+          "columns": [
+            "role_id"
+          ],
+          "target": "iam.roles",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "fk_user_group_roles_company_id",
+          "columns": [
+            "company_id"
+          ],
+          "target": "org.companies",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_user_group_roles_group_id",
+        "ix_user_group_roles_role_id",
+        "ix_user_group_roles_company_id"
+      ],
+      "triggers": [],
+      "append_only_updatable": [],
+      "has_api": true,
+      "full_name": "iam.user_group_roles"
     },
     {
       "database": "tenant",

@@ -20,3 +20,27 @@ public interface IUsageMeterRepository : global::Erp.BuildingBlocks.Application.
     /// <summary>Rows matching (tenant_id, meter_key, period); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.UsageMeter>> FindByTenantIdAndMeterKeyAndPeriodAsync(global::System.Guid tenantId, string meterKey, string period, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cp.usage_meters and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class UsageMeterAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.ControlPlane.Generated.UsageMeter> Scope { get; } = new(
+        "cp.usage_meters",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.UsageMeter, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.UsageMeter, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cp.usage_meters",
+    [
+        new("id", "Id", null),
+        new("tenant_id", "TenantId", null),
+        new("meter_key", "MeterKey", null),
+        new("period", "Period", null),
+        new("value", "Value", null),
+        new("as_of", "AsOf", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

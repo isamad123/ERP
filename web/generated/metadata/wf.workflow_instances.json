@@ -26,6 +26,9 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "user": "requesterUserId"
+  },
   "listFields": [
     "companyId",
     "versionId",

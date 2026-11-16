@@ -19,6 +19,9 @@
   unique: [[lower(username)], [lower(email)]]
   # CR-012 (S1.05): status changes only through the user status service (transitions, user limit, session revocation).
   api_read_only: [status, is_system, last_login_at]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: id}
+  api_actions: [read, create, update]
   reqs: [KRN-IAM-01, ADM-USR-01, ADM-USR-03, ADM-USR-07]
 
 - table: iam.user_credentials
@@ -32,6 +35,8 @@
     - [must_change, bool, req]
     - [failed_attempts, int, req, default 0]
     - [locked_until, ts, opt]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: user_id}
   reqs: [KRN-IAM-01, ADM-USR-05, ADM-USR-20]
 
 - table: iam.password_history
@@ -40,6 +45,8 @@
     - [user_id, uuid, req, fk iam.users]
     - [password_hash, text, req]
   indexes: [[user_id, created_at]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: user_id}
   reqs: [ADM-USR-20]
 
 - table: iam.mfa_devices
@@ -51,6 +58,8 @@
     - [secret, enc, opt]
     - [label, text, opt]
     - [last_used_at, ts, opt]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: user_id}
   reqs: [KRN-IAM-02, ADM-USR-21]
 
 - table: iam.sessions
@@ -79,6 +88,8 @@
     S1.05-r1:
       columns: [previous_refresh_hash]
       note: "From S1.05-r1 it also keeps previous_refresh_hash, the token replaced by the last rotation (reuse detection, CR-016)."
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: user_id}
   reqs: [KRN-IAM-04, ADM-USR-24]
 
 - table: iam.login_attempts
@@ -104,6 +115,8 @@
     - [expires_at, ts, req]
     - [used_at, ts, opt]
   unique: [[token_hash]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: user_id}
   reqs: [KRN-IAM-01, KRN-IAM-02, ADM-USR-05]
 
 - table: iam.mfa_recovery_codes
@@ -114,6 +127,8 @@
     - [user_id, uuid, req, fk iam.users]
     - [code_hash, text, req, Argon2id hash of the code; the code is shown once]
     - [used_at, ts, opt]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: user_id}
   reqs: [KRN-IAM-02, ADM-USR-21]
 
 - table: iam.permissions
@@ -124,7 +139,11 @@
     - [module_id, code, req]
     - [description_i18n, i18n, req]
     - [is_sensitive, bool, req]
+    - [retired_at, ts, opt, "set when no module declares the code any more; never deleted, grants nothing (CR-021)"]
   unique: [[code]]
+  added_in: {S1.06: [retired_at]}
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  api_actions: [read]
   reqs: [KRN-IAM-10, ADM-ROL-01]
 
 - table: iam.roles
@@ -134,6 +153,8 @@
     - [source, "enum(module,pack,tenant)", req]
     - [baseline_code, code, opt, baseline role it was copied from]
   unique: [[lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  api_actions: [read]
   reqs: [KRN-IAM-11, ADM-ROL-02, ADM-ROL-03]
 
 - table: iam.role_permissions
@@ -169,6 +190,8 @@
     - [field_key, text, req, includes custom fields]
     - [access, "enum(hidden,masked,read_only,editable)", req]
   unique: [[role_id, resource_type, field_key]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  api_actions: [read]
   reqs: [KRN-IAM-13, ADM-ROL-07]
 
 - table: iam.user_roles
@@ -179,11 +202,16 @@
     - [role_id, uuid, req, fk iam.roles]
     - [company_id, uuid, opt, fk org.companies; null means all companies]
     - [reason, text, opt]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, user: user_id}
+  api_actions: [read]
   reqs: [KRN-IAM-11, ADM-ROL-04]
 
 - table: iam.user_groups
   traits: [std, soft, name]
   unique: [[lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  api_actions: [read]
   reqs: [ADM-USR-06]
 
 - table: iam.user_group_members
@@ -191,7 +219,24 @@
   columns:
     - [group_id, uuid, req, fk iam.user_groups]
     - [user_id, uuid, req, fk iam.users]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: user_id}
   reqs: [ADM-USR-06]
+
+# CR-019 (S1.06 Q7): roles given to a user group; a user's roles are their own assignments plus their groups'.
+- table: iam.user_group_roles
+  purpose: Roles given to every member of a user group (FR-ADM-USR-06)
+  traits: [std, eff]
+  added_in: S1.06
+  eff_key: [group_id, role_id, company_id]
+  columns:
+    - [group_id, uuid, req, fk iam.user_groups]
+    - [role_id, uuid, req, fk iam.roles]
+    - [company_id, uuid, opt, fk org.companies; null means all companies]
+    - [reason, text, opt]
+  scope: {company: company_id}
+  api_actions: [read]
+  reqs: [ADM-USR-06, KRN-IAM-11]
 
 - table: iam.delegations
   purpose: Approval delegation and out-of-office substitution
@@ -221,6 +266,9 @@
     - [decided_at, ts, opt]
     - [reason, text, opt]
   indexes: [[status, created_at]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: requested_by}
+  api_actions: [read]
   reqs: [KRN-IAM-14, ADM-SET-04, HRM-PAY-13]
 
 - table: iam.api_clients
@@ -252,6 +300,8 @@
     - [logo_file_id, uuid, opt, fk doc.files]
     - [cost_center_model, "enum(none,external_ref)", req, Finance cost centres are Later]
   unique: [[lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: id}
   reqs: [KRN-ORG-01, ADM-ORG-01]
 
 - table: org.company_registrations
@@ -264,6 +314,8 @@
     - [value, enc, req]
     - [value_hmac, hmac, req]
     - [authority, code, req, "e.g. PESSI, SESSI, EOBI, FBR; 'none' when not applicable"]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [KRN-ORG-01, HRM-CPL-02]
 
 - table: org.company_bank_accounts
@@ -277,12 +329,16 @@
     - [iban_hmac, hmac, opt]
     - [currency_code, char(3), req]
     - [salary_file_format, code, opt, doc.templates code of the bank file format]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [HRM-PAY-23]
 
 - table: org.branches
   traits: [std, co, soft, name]
   unique: [[company_id, lower(code)]]
   notes: Every company has at least one branch; small customers get one created automatically (rule SC-2).
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, branch: id}
   reqs: [KRN-ORG-02]
 
 - table: org.locations
@@ -297,6 +353,8 @@
     - [time_zone, text, req]
     - [holiday_calendar_id, uuid, opt, fk ref.calendars]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, branch: branch_id}
   reqs: [KRN-ORG-02, ADM-ORG-02]
 
 - table: org.org_unit_types
@@ -315,6 +373,8 @@
     - [cost_center_ref, uuid, opt, "Finance, Later; no FK"]
     - [head_position_ref, uuid, opt, hrm.positions.id; no FK]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, org_unit: id}
   reqs: [KRN-ORG-03, ADM-ORG-03]
 
 - table: org.org_hierarchies
@@ -501,6 +561,8 @@
     - [gap_free, bool, req]
     - [start_value, big, req]
   unique: [[company_id, branch_id, document_type, "where status='active'"]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, branch: branch_id}
   reqs: [KRN-NUM-01, KRN-NUM-02, HRM-EMP-04]
 
 - table: cfg.numbering_counters
@@ -555,6 +617,8 @@
     - [completed_by, uuid, opt]
     - [completed_at, ts, opt]
   unique: [[module_id, task_key, company_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [ADM-ONB-01, ADM-ONB-02, ADM-ONB-03]
 
 - table: wf.workflow_definitions
@@ -592,6 +656,8 @@
     - [completed_at, ts, opt]
     - [context, json, req, "values used by conditions, frozen at start"]
   indexes: [[document_type, document_id], [status, "partial where status='running'"]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: requester_user_id}
   reqs: [KRN-WFL-01, KRN-WFL-10]
 
 - table: wf.workflow_tasks
@@ -610,6 +676,8 @@
     - [comment, text, opt]
   checks: ["assignee_user_id is distinct from the instance requester (FR-XM-32), enforced by trigger"]
   indexes: [[assignee_user_id, status, "partial where status='pending'"], [instance_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: assignee_user_id}
   reqs: [KRN-WFL-07, KRN-WFL-08, KRN-WFL-09, HRM-ROL-04, FR-XM-32]
 
 - table: wf.workflow_history
@@ -642,6 +710,8 @@
     - [prev_hash, bytea, req]
     - [row_hash, bytea, req]
   indexes: [[entity_type, entity_id, occurred_at], [actor_user_id, occurred_at]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [KRN-AUD-01, KRN-AUD-03, KRN-AUD-04, KRN-AUD-07]
 
 - table: aud.access_log
@@ -686,6 +756,8 @@
     - [person_id, uuid, req, pk]
     - [wrapped_key, bytea, req, encrypted by the tenant key]
     - [destroyed_at, ts, opt]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {person: person_id}
   reqs: [HRM-PRV-04]
 
 - table: doc.files
@@ -707,6 +779,8 @@
     - [retention_until, date, opt]
     - [is_sensitive, bool, req]
   indexes: [[owner_type, owner_id], [expires_on, partial where expires_on is not null]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [KRN-DOC-01, KRN-DOC-02, KRN-DOC-03, KRN-DOC-08]
 
 - table: doc.retention_rules
@@ -730,6 +804,8 @@
     - [source, "enum(pack,tenant)", req]
     - [active_version_id, uuid, opt, fk doc.template_versions]
   unique: [[lower(code), company_id, language]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [KRN-DOC-05, HRM-DOC-04, HRM-PAY-28]
   notes: "active_version_id uses composite FK (id, active_version_id) -> doc.template_versions (parent_id, id)."
 
@@ -753,6 +829,8 @@
     - [file_id, uuid, req, fk doc.files]
     - [is_password_protected, bool, req]
   indexes: [[owner_type, owner_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [KRN-DOC-05, HRM-PAY-28]
 
 - table: ntf.templates
@@ -776,6 +854,8 @@
     - [channels, "text[]", req]
     - [company_id, uuid, opt]
     - [is_mandatory, bool, req]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [KRN-NTF-03]
 
 - table: ntf.preferences
@@ -786,6 +866,8 @@
     - [channel, text, req]
     - [enabled, bool, req]
     - [quiet_hours, json, opt]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: user_id}
   reqs: [KRN-NTF-04, HRM-NTF-04]
 
 - table: ntf.outbound_messages
@@ -817,6 +899,8 @@
     - [link, text, opt]
     - [read_at, ts, opt]
   indexes: [[user_id, read_at, created_at]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: user_id}
   reqs: [HRM-NTF-09]
 
 - table: itg.import_templates
@@ -839,6 +923,8 @@
     - [ok_rows, int, opt]
     - [error_rows, int, opt]
     - [job_run_id, uuid, opt, fk job.runs]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [KRN-INT-04, ADM-DAT-01]
 
 - table: itg.import_batch_errors
@@ -860,6 +946,8 @@
     - [format, "enum(csv,xlsx,pdf)", req]
     - [row_count, int, opt]
     - [file_id, uuid, opt, fk doc.files]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [ADM-DAT-04]
 
 - table: itg.connectors
@@ -885,6 +973,8 @@
     - [debit_account, text, req]
     - [credit_account, text, req]
   unique: [[company_id, source_kind, source_key, allocation_key]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [KRN-INT-09, ADM-INT-07]
 
 - table: itg.accounting_events
@@ -903,6 +993,8 @@
     - [supersedes_event_id, uuid, opt, fk itg.accounting_events; a reversal or re-post]
   checks: [total_debit = total_credit]
   unique: [[company_id, source_module, source_id, posting_version]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [KRN-INT-09, KRN-INT-12, HRM-PAY-30, FR-XM-27]
 
 - table: itg.accounting_event_exports
@@ -924,6 +1016,8 @@
     - [format, code, req, "csv, quickbooks, tally"]
     - [event_count, int, req]
     - [file_id, uuid, req, fk doc.files]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [KRN-INT-09, ADM-INT-07]
 
 - table: job.definitions
@@ -955,6 +1049,8 @@
     - [lease_owner, text, opt, worker holding the run (runs once across workers)]
     - [lease_expires_at, ts, opt]
   indexes: [[status, created_at]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [KRN-JOB-02, KRN-JOB-03, KRN-JOB-05, HRM-PAY-34]
 
 - table: job.run_logs

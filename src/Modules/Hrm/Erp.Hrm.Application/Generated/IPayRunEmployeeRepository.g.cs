@@ -26,3 +26,38 @@ public interface IPayRunEmployeeRepository : global::Erp.BuildingBlocks.Applicat
     /// <summary>Rows matching (pay_run_id, employment_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PayRunEmployee>> FindByPayRunIdAndEmploymentIdAsync(global::System.Guid payRunId, global::System.Guid employmentId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.pay_run_employees and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PayRunEmployeeAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.PayRunEmployee> Scope { get; } = new(
+        "hrm.pay_run_employees",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PayRunEmployee, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PayRunEmployee, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.pay_run_employees",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("pay_run_id", "PayRunId", null),
+        new("employment_id", "EmploymentId", null),
+        new("period_start", "PeriodStart", null),
+        new("period_end", "PeriodEnd", null),
+        new("run_kind", "RunKind", null),
+        new("run_status", "RunStatus", null),
+        new("snapshot", "Snapshot", null),
+        new("snapshot_hash", "SnapshotHash", null),
+        new("validation_flags", "ValidationFlags", null),
+        new("hold_id", "HoldId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

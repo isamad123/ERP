@@ -39,13 +39,13 @@ internal sealed class AttendancePeriodRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Hrm.Domain.Generated.AttendancePeriod>(context, clock, actor, scope, "hrm.attendance_periods"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Hrm.Domain.Generated.AttendancePeriod>(context, clock, actor, scope, global::Erp.Hrm.Application.Generated.AttendancePeriodAccess.Scope),
     global::Erp.Hrm.Application.Generated.IAttendancePeriodRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendancePeriod>> ListAsync(global::Erp.Hrm.Application.Generated.AttendancePeriodFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendancePeriod>> ListAsync(global::Erp.Hrm.Application.Generated.AttendancePeriodFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.CompanyId is { } companyIdFilter)
         {
             query = query.Where(e => e.CompanyId == companyIdFilter);
@@ -66,14 +66,15 @@ internal sealed class AttendancePeriodRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendancePeriod>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
-        PageAsync(Query().Where(e => e.CompanyId == companyId), page, cancellationToken);
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendancePeriod>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
+        await PageAsync((await QueryAsync(cancellationToken).ConfigureAwait(false)).Where(e => e.CompanyId == companyId), page, cancellationToken).ConfigureAwait(false);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendancePeriod>> FindByPayPeriodIdAsync(global::System.Guid payPeriodId, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.PayPeriodId == payPeriodId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.PayPeriodId == payPeriodId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

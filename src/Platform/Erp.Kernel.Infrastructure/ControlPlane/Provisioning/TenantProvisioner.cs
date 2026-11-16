@@ -94,7 +94,7 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
             await CompletedAsync(actor, registration, step, progress, cancellationToken).ConfigureAwait(false);
 
             step = "seed";
-            await SeedAsync(registration, request, cancellationToken).ConfigureAwait(false);
+            await SeedAsync(registration, request, modules, cancellationToken).ConfigureAwait(false);
             await CompletedAsync(actor, registration, step, progress, cancellationToken).ConfigureAwait(false);
 
             step = "smoke_test";
@@ -296,7 +296,7 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
 
     // ------------------------------------------------------------------ step 5: baseline data and first administrator
 
-    private async Task SeedAsync(Registration registration, ProvisioningRequest request, CancellationToken cancellationToken)
+    private async Task SeedAsync(Registration registration, ProvisioningRequest request, IReadOnlyCollection<string> modules, CancellationToken cancellationToken)
     {
         var seed = BaselineSeed.Current;
         var country = seed.Countries.GetValueOrDefault(request.CountryCode)
@@ -330,14 +330,8 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
             new Dictionary<string, string> { [request.DefaultLanguage] = request.Name }, cancellationToken).ConfigureAwait(false);
         var companyId = await Sql.ScalarAsync<Guid>(connection, transaction, "select id from org.companies where lower(code) = lower($1) and not is_deleted", cancellationToken, request.Code).ConfigureAwait(false);
 
-        foreach (var role in seed.Roles)
-        {
-            await JsonInsertAsync(connection, transaction, """
-                insert into iam.roles (id, code, name_i18n, source, baseline_code, created_at, created_by, updated_at, updated_by)
-                select $1, $2, $3, 'module', $2, $4, $5, $4, $5
-                where not exists (select 1 from iam.roles where lower(code) = lower($2) and not is_deleted)
-                """, [Guid.CreateVersion7(now), role.Code, null, now, actor], 2, role.Name, cancellationToken).ConfigureAwait(false);
-        }
+        // Permission registry, baseline data scopes and baseline roles of the installed modules (slice S1.06).
+        await Access.AccessSetup.EnsureAsync(connection, transaction, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
 
         // First tenant administrator: invited, no password. Invitation e-mail and sign-in are slices S1.05 and S1.11.
         await Sql.ExecuteAsync(connection, transaction, """

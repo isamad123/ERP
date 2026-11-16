@@ -3,7 +3,7 @@
 // </auto-generated>
 import { request, type PagedResult } from './http';
 
-/** ntf.in_app_items: InAppItem */
+/** ntf.in_app_items: InAppItem. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface InAppItem
 {
     id: string;
@@ -45,7 +45,7 @@ export const inAppItems =
     update: (id: string, body: InAppItemWrite & { rowVersion: number }) => request<InAppItem>('PUT', `/api/ntf/in-app-items/${id}`, { body }),
 };
 
-/** ntf.outbound_messages: OutboundMessage */
+/** ntf.outbound_messages: OutboundMessage. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface OutboundMessage
 {
     id: string;
@@ -96,7 +96,7 @@ export const outboundMessages =
     update: (id: string, body: OutboundMessageWrite & { rowVersion: number }) => request<OutboundMessage>('PUT', `/api/ntf/outbound-messages/${id}`, { body }),
 };
 
-/** ntf.subscriptions: Subscription */
+/** ntf.subscriptions: Subscription. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Subscription
 {
     id: string;
@@ -135,7 +135,7 @@ export const subscriptions =
     update: (id: string, body: SubscriptionWrite & { rowVersion: number }) => request<Subscription>('PUT', `/api/ntf/subscriptions/${id}`, { body }),
 };
 
-/** ntf.templates: Template */
+/** ntf.templates: Template. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Template
 {
     id: string;

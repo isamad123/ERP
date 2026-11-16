@@ -23,3 +23,29 @@ public interface IProvidentFundLedgerRepository : global::Erp.BuildingBlocks.App
     /// <summary>Rows matching (account_id, entry_date); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ProvidentFundLedger>> FindByAccountIdAndEntryDateAsync(global::System.Guid accountId, global::System.DateOnly entryDate, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.provident_fund_ledger and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ProvidentFundLedgerAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.ProvidentFundLedger> Scope { get; } = new(
+        "hrm.provident_fund_ledger",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ProvidentFundLedger, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ProvidentFundLedger, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.provident_fund_ledger",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("account_id", "AccountId", null),
+        new("entry_date", "EntryDate", null),
+        new("kind", "Kind", null),
+        new("amount", "Amount", "salary"),
+        new("source_type", "SourceType", null),
+        new("source_id", "SourceId", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

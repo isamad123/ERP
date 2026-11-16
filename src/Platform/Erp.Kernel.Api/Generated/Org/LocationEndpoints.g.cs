@@ -68,7 +68,7 @@ public sealed class LocationListQuery
     public global::System.Guid? HolidayCalendarId { get; init; }
 }
 
-/// <summary>Generated endpoints of org.locations: read, create, update, delete.</summary>
+/// <summary>Generated endpoints of org.locations: read, create, update, delete. Answers pass through field security (S1.06).</summary>
 internal static class LocationEndpoints
 {
     private const string Resource = "org.locations";
@@ -83,54 +83,67 @@ internal static class LocationEndpoints
         group.MapDelete("/{id:guid}", DeleteAsync).WithName("org.locations.delete").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "delete", "org.locations.delete"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] LocationListQuery query, global::Erp.Kernel.Application.Generated.Org.ILocationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] LocationListQuery query, global::Erp.Kernel.Application.Generated.Org.ILocationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "org.locations.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Org.LocationFilter { CompanyId = query.CompanyId, BranchId = query.BranchId, HolidayCalendarId = query.HolidayCalendarId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<LocationResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Org.LocationAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Org.ILocationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Org.ILocationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "org.locations.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Org.LocationAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LocationWriteRequest request, global::Erp.Kernel.Application.Generated.Org.ILocationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LocationWriteRequest request, global::Erp.Kernel.Application.Generated.Org.ILocationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "org.locations.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Org.LocationAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Org.Location();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/org/locations/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, LocationWriteRequest request, global::Erp.Kernel.Application.Generated.Org.ILocationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "org.locations.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/org/locations/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Org.LocationAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, LocationWriteRequest request, global::Erp.Kernel.Application.Generated.Org.ILocationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "org.locations.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Org.LocationAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Org.LocationAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> DeleteAsync(global::System.Guid id, long? rowVersion, global::Erp.Kernel.Application.Generated.Org.ILocationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
@@ -144,6 +157,8 @@ internal static class LocationEndpoints
             var deleted = await repository.SoftDeleteAsync(id, rowVersion.Value, cancellationToken).ConfigureAwait(false);
             return deleted ? TypedResults.NoContent() : GeneratedEndpointSupport.NotFound();
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Org.Location row) => row.CompanyId;
 
     private static LocationResponse ToResponse(global::Erp.Kernel.Domain.Generated.Org.Location row) => new()
     {
@@ -169,34 +184,35 @@ internal static class LocationEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(LocationWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(LocationWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.Code is null)
+        if (request.Code is null && (!update || access.CanEdit("code")))
         {
             errors.Add("code");
         }
-        if (request.NameI18n is null)
+        if (request.NameI18n is null && (!update || access.CanEdit("name_i18n")))
         {
             errors.Add("nameI18n");
         }
-        if (request.BranchId is null)
+        if (request.BranchId is null && (!update || access.CanEdit("branch_id")))
         {
             errors.Add("branchId");
         }
-        if (request.Address is null)
+        if (request.Address is null && (!update || access.CanEdit("address")))
         {
             errors.Add("address");
         }
-        if (request.RegionCode is null)
+        if (request.RegionCode is null && (!update || access.CanEdit("region_code")))
         {
             errors.Add("regionCode");
         }
-        if (request.TimeZone is null)
+        if (request.TimeZone is null && (!update || access.CanEdit("time_zone")))
         {
             errors.Add("timeZone");
         }
@@ -207,24 +223,104 @@ internal static class LocationEndpoints
         return errors;
     }
 
-    private static void Apply(LocationWriteRequest request, global::Erp.Kernel.Domain.Generated.Org.Location row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(LocationWriteRequest request, global::Erp.Kernel.Domain.Generated.Org.Location row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.Code = request.Code!;
-        row.NameI18n = GeneratedEndpointSupport.ToDocument(request.NameI18n)!;
-        row.BranchId = request.BranchId!.Value;
-        row.Address = GeneratedEndpointSupport.ToDocument(request.Address)!;
-        row.RegionCode = request.RegionCode!;
-        row.Latitude = request.Latitude;
-        row.Longitude = request.Longitude;
-        row.TimeZone = request.TimeZone!;
-        row.HolidayCalendarId = request.HolidayCalendarId;
-        if (request.IsActive is not null)
+        if (access.CanEdit("code"))
         {
-            row.IsActive = request.IsActive!.Value;
+            row.Code = request.Code!;
         }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Code, row.Code, update))
+        {
+            denied.Add("code");
+        }
+        if (access.CanEdit("name_i18n"))
+        {
+            row.NameI18n = GeneratedEndpointSupport.ToDocument(request.NameI18n)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.NameI18n, row.NameI18n, update))
+        {
+            denied.Add("nameI18n");
+        }
+        if (access.CanEdit("branch_id"))
+        {
+            row.BranchId = request.BranchId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.BranchId, row.BranchId, update))
+        {
+            denied.Add("branchId");
+        }
+        if (access.CanEdit("address"))
+        {
+            row.Address = GeneratedEndpointSupport.ToDocument(request.Address)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Address, row.Address, update))
+        {
+            denied.Add("address");
+        }
+        if (access.CanEdit("region_code"))
+        {
+            row.RegionCode = request.RegionCode!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RegionCode, row.RegionCode, update))
+        {
+            denied.Add("regionCode");
+        }
+        if (access.CanEdit("latitude"))
+        {
+            row.Latitude = request.Latitude;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Latitude, row.Latitude, update))
+        {
+            denied.Add("latitude");
+        }
+        if (access.CanEdit("longitude"))
+        {
+            row.Longitude = request.Longitude;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Longitude, row.Longitude, update))
+        {
+            denied.Add("longitude");
+        }
+        if (access.CanEdit("time_zone"))
+        {
+            row.TimeZone = request.TimeZone!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TimeZone, row.TimeZone, update))
+        {
+            denied.Add("timeZone");
+        }
+        if (access.CanEdit("holiday_calendar_id"))
+        {
+            row.HolidayCalendarId = request.HolidayCalendarId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.HolidayCalendarId, row.HolidayCalendarId, update))
+        {
+            denied.Add("holidayCalendarId");
+        }
+        if (access.CanEdit("is_active"))
+        {
+            if (request.IsActive is not null)
+            {
+                row.IsActive = request.IsActive!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsActive, row.IsActive, update))
+        {
+            denied.Add("isActive");
+        }
+        return denied;
     }
 }

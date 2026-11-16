@@ -38,13 +38,13 @@ internal sealed class ChecklistTemplateItemRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Hrm.Domain.Generated.ChecklistTemplateItem>(context, clock, actor, scope, "hrm.checklist_template_items"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Hrm.Domain.Generated.ChecklistTemplateItem>(context, clock, actor, scope, global::Erp.Hrm.Application.Generated.ChecklistTemplateItemAccess.Scope),
     global::Erp.Hrm.Application.Generated.IChecklistTemplateItemRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ChecklistTemplateItem>> ListAsync(global::Erp.Hrm.Application.Generated.ChecklistTemplateItemFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ChecklistTemplateItem>> ListAsync(global::Erp.Hrm.Application.Generated.ChecklistTemplateItemFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.TemplateId is { } templateIdFilter)
         {
             query = query.Where(e => e.TemplateId == templateIdFilter);
@@ -53,6 +53,6 @@ internal sealed class ChecklistTemplateItemRepository(
         {
             query = query.Where(e => e.OwnerRoleId == ownerRoleIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 }

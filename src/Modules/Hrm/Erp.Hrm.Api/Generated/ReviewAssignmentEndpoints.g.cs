@@ -63,7 +63,7 @@ public sealed class ReviewAssignmentListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.review_assignments: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.review_assignments: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class ReviewAssignmentEndpoints
 {
     private const string Resource = "hrm.review_assignments";
@@ -77,55 +77,70 @@ internal static class ReviewAssignmentEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.review_assignments.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.review_assignments.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ReviewAssignmentListQuery query, global::Erp.Hrm.Application.Generated.IReviewAssignmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ReviewAssignmentListQuery query, global::Erp.Hrm.Application.Generated.IReviewAssignmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.review_assignments.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ReviewAssignmentFilter { CompanyId = query.CompanyId, ParticipantId = query.ParticipantId, ReviewerEmploymentId = query.ReviewerEmploymentId, FormResponseId = query.FormResponseId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<ReviewAssignmentResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.ReviewAssignmentAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IReviewAssignmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IReviewAssignmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.review_assignments.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ReviewAssignmentAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ReviewAssignmentWriteRequest request, global::Erp.Hrm.Application.Generated.IReviewAssignmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ReviewAssignmentWriteRequest request, global::Erp.Hrm.Application.Generated.IReviewAssignmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.review_assignments.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ReviewAssignmentAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.ReviewAssignment();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/review-assignments/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ReviewAssignmentWriteRequest request, global::Erp.Hrm.Application.Generated.IReviewAssignmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.review_assignments.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/review-assignments/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ReviewAssignmentAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ReviewAssignmentWriteRequest request, global::Erp.Hrm.Application.Generated.IReviewAssignmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.review_assignments.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ReviewAssignmentAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ReviewAssignmentAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.ReviewAssignment row) => row.CompanyId;
 
     private static ReviewAssignmentResponse ToResponse(global::Erp.Hrm.Domain.Generated.ReviewAssignment row) => new()
     {
@@ -145,26 +160,27 @@ internal static class ReviewAssignmentEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(ReviewAssignmentWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(ReviewAssignmentWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.ParticipantId is null)
+        if (request.ParticipantId is null && (!update || access.CanEdit("participant_id")))
         {
             errors.Add("participantId");
         }
-        if (request.ReviewerEmploymentId is null)
+        if (request.ReviewerEmploymentId is null && (!update || access.CanEdit("reviewer_employment_id")))
         {
             errors.Add("reviewerEmploymentId");
         }
-        if (request.ReviewType is null)
+        if (request.ReviewType is null && (!update || access.CanEdit("review_type")))
         {
             errors.Add("reviewType");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -175,21 +191,80 @@ internal static class ReviewAssignmentEndpoints
         return errors;
     }
 
-    private static void Apply(ReviewAssignmentWriteRequest request, global::Erp.Hrm.Domain.Generated.ReviewAssignment row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(ReviewAssignmentWriteRequest request, global::Erp.Hrm.Domain.Generated.ReviewAssignment row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.ParticipantId = request.ParticipantId!.Value;
-        row.ReviewerEmploymentId = request.ReviewerEmploymentId!.Value;
-        row.ReviewType = request.ReviewType!;
-        if (request.IsAnonymous is not null)
+        if (access.CanEdit("participant_id"))
         {
-            row.IsAnonymous = request.IsAnonymous!.Value;
+            row.ParticipantId = request.ParticipantId!.Value;
         }
-        row.FormResponseId = request.FormResponseId;
-        row.DueDate = request.DueDate;
-        row.Status = request.Status!;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ParticipantId, row.ParticipantId, update))
+        {
+            denied.Add("participantId");
+        }
+        if (access.CanEdit("reviewer_employment_id"))
+        {
+            row.ReviewerEmploymentId = request.ReviewerEmploymentId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReviewerEmploymentId, row.ReviewerEmploymentId, update))
+        {
+            denied.Add("reviewerEmploymentId");
+        }
+        if (access.CanEdit("review_type"))
+        {
+            row.ReviewType = request.ReviewType!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReviewType, row.ReviewType, update))
+        {
+            denied.Add("reviewType");
+        }
+        if (access.CanEdit("is_anonymous"))
+        {
+            if (request.IsAnonymous is not null)
+            {
+                row.IsAnonymous = request.IsAnonymous!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsAnonymous, row.IsAnonymous, update))
+        {
+            denied.Add("isAnonymous");
+        }
+        if (access.CanEdit("form_response_id"))
+        {
+            row.FormResponseId = request.FormResponseId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FormResponseId, row.FormResponseId, update))
+        {
+            denied.Add("formResponseId");
+        }
+        if (access.CanEdit("due_date"))
+        {
+            row.DueDate = request.DueDate;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DueDate, row.DueDate, update))
+        {
+            denied.Add("dueDate");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

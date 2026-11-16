@@ -27,3 +27,36 @@ public interface IWorkflowTaskRepository : global::Erp.BuildingBlocks.Applicatio
     /// <summary>Rows matching (instance_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Wf.WorkflowTask>> FindByInstanceIdAsync(global::System.Guid instanceId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of wf.workflow_tasks and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class WorkflowTaskAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Wf.WorkflowTask> Scope { get; } = new(
+        "wf.workflow_tasks",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Wf.WorkflowTask, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.User] = e => e.AssigneeUserId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Wf.WorkflowTask, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("wf.workflow_tasks",
+    [
+        new("id", "Id", null),
+        new("instance_id", "InstanceId", null),
+        new("step_key", "StepKey", null),
+        new("assignee_user_id", "AssigneeUserId", null),
+        new("assignee_role_id", "AssigneeRoleId", null),
+        new("acting_for_user_id", "ActingForUserId", null),
+        new("due_at", "DueAt", null),
+        new("escalated_at", "EscalatedAt", null),
+        new("acted_by", "ActedBy", null),
+        new("acted_at", "ActedAt", null),
+        new("comment", "Comment", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

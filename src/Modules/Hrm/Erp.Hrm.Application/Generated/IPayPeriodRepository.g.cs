@@ -27,3 +27,34 @@ public interface IPayPeriodRepository : global::Erp.BuildingBlocks.Application.D
     /// <summary>Rows matching (pay_group_id, tax_year, period_no); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PayPeriod>> FindByPayGroupIdAndTaxYearAndPeriodNoAsync(global::System.Guid payGroupId, int taxYear, int periodNo, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.pay_periods and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PayPeriodAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.PayPeriod> Scope { get; } = new(
+        "hrm.pay_periods",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PayPeriod, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PayPeriod, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.pay_periods",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("pay_group_id", "PayGroupId", null),
+        new("period_no", "PeriodNo", null),
+        new("tax_year", "TaxYear", null),
+        new("start_date", "StartDate", null),
+        new("end_date", "EndDate", null),
+        new("cut_off_date", "CutOffDate", null),
+        new("payment_date", "PaymentDate", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

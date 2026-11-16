@@ -35,17 +35,17 @@ internal sealed class PersonContactRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Hrm.Domain.Generated.PersonContact>(context, clock, actor, scope, "hrm.person_contacts"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Hrm.Domain.Generated.PersonContact>(context, clock, actor, scope, global::Erp.Hrm.Application.Generated.PersonContactAccess.Scope),
     global::Erp.Hrm.Application.Generated.IPersonContactRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PersonContact>> ListAsync(global::Erp.Hrm.Application.Generated.PersonContactFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PersonContact>> ListAsync(global::Erp.Hrm.Application.Generated.PersonContactFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.PersonId is { } personIdFilter)
         {
             query = query.Where(e => e.PersonId == personIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 }

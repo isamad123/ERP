@@ -34,3 +34,44 @@ public interface IAttendanceDayRepository : global::Erp.BuildingBlocks.Applicati
     /// <summary>Rows matching (company_id, work_date, result); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendanceDay>> FindByCompanyIdAndWorkDateAndResultAsync(global::System.Guid companyId, global::System.DateOnly workDate, string result, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.attendance_days and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class AttendanceDayAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.AttendanceDay> Scope { get; } = new(
+        "hrm.attendance_days",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.AttendanceDay, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.AttendanceDay, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.attendance_days",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("employment_id", "EmploymentId", null),
+        new("work_date", "WorkDate", null),
+        new("shift_id", "ShiftId", null),
+        new("day_type", "DayType", null),
+        new("result", "Result", null),
+        new("first_in", "FirstIn", null),
+        new("last_out", "LastOut", null),
+        new("worked_minutes", "WorkedMinutes", null),
+        new("late_minutes", "LateMinutes", null),
+        new("early_minutes", "EarlyMinutes", null),
+        new("overtime_minutes", "OvertimeMinutes", null),
+        new("leave_request_id", "LeaveRequestId", null),
+        new("duty_request_id", "DutyRequestId", null),
+        new("explanation", "Explanation", null),
+        new("policy_version_id", "PolicyVersionId", null),
+        new("period_id", "PeriodId", null),
+        new("processed_at", "ProcessedAt", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

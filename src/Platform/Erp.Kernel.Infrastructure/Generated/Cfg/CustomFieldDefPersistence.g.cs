@@ -45,13 +45,13 @@ internal sealed class CustomFieldDefRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef>(context, clock, actor, scope, "cfg.custom_field_defs"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Cfg.CustomFieldDefAccess.Scope),
     global::Erp.Kernel.Application.Generated.Cfg.ICustomFieldDefRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef>> ListAsync(global::Erp.Kernel.Application.Generated.Cfg.CustomFieldDefFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef>> ListAsync(global::Erp.Kernel.Application.Generated.Cfg.CustomFieldDefFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.OptionListId is { } optionListIdFilter)
         {
             query = query.Where(e => e.OptionListId == optionListIdFilter);
@@ -60,11 +60,12 @@ internal sealed class CustomFieldDefRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef>> FindByEntityTypeAndFieldKeyAsync(string entityType, string fieldKey, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.EntityType == entityType && e.FieldKey == fieldKey).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.EntityType == entityType && e.FieldKey == fieldKey).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

@@ -9,7 +9,7 @@ using global::Microsoft.AspNetCore.Routing;
 
 namespace Erp.Kernel.Api.Generated;
 
-/// <summary>Maps the generated endpoints of the Kernel tables. Not called by the host until tenant resolution exists (S1.03).</summary>
+/// <summary>Maps the generated endpoints of the Kernel tables (host: S1.03; access control: S1.06).</summary>
 public static class KernelGeneratedEndpoints
 {
     public static IEndpointRouteBuilder MapKernelGeneratedEndpoints(this IEndpointRouteBuilder app)
@@ -37,6 +37,7 @@ public static class KernelGeneratedEndpoints
         global::Erp.Kernel.Api.Generated.Iam.MakerCheckerRequestEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Iam.PermissionEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Iam.RoleEndpoints.Map(app);
+        global::Erp.Kernel.Api.Generated.Iam.UserGroupRoleEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Iam.UserGroupEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Iam.UserRoleEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Iam.UserEndpoints.Map(app);
@@ -90,6 +91,10 @@ internal static class GeneratedEndpointSupport
         {
             return await action().ConfigureAwait(false);
         }
+        catch (global::Erp.BuildingBlocks.Application.Security.AccessDeniedException ex)
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, title: ex.ErrorCode);
+        }
         catch (global::Erp.BuildingBlocks.Application.Data.ConcurrencyConflictException ex)
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: ex.ErrorCode);
@@ -111,4 +116,42 @@ internal static class GeneratedEndpointSupport
 
     public static global::System.Text.Json.JsonDocument? ToDocument(global::System.Text.Json.JsonElement? value) =>
         value is { } element ? global::System.Text.Json.JsonDocument.Parse(element.GetRawText()) : null;
+
+    /// <summary>A change to fields the caller may not edit (FR-KRN-IAM-13): 400 naming each field.</summary>
+    public static IResult NotEditable(global::System.Collections.Generic.List<string> fields) =>
+        TypedResults.ValidationProblem(fields.ToDictionary(f => f, _ => new[] { global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable }), title: global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable);
+
+    /// <summary>The answer for one row with hidden fields left out and masked fields masked (field security of the row's company).</summary>
+    public static async global::System.Threading.Tasks.Task<global::System.Text.Json.Nodes.JsonObject> ShapeOneAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, TRow row, global::System.Func<TRow, global::System.Guid?> companyOf, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken) =>
+        (await ShapeAsync(fields, catalog, [row], companyOf, toResponse, cancellationToken).ConfigureAwait(false))[0];
+
+    /// <summary>The answers for rows, each shaped by the field access of its company (read once per company).</summary>
+    public static async global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>> ShapeAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, global::System.Collections.Generic.IReadOnlyList<TRow> rows, global::System.Func<TRow, global::System.Guid?> companyOf, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)
+    {
+        var byCompany = new global::System.Collections.Generic.Dictionary<global::System.Guid, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap>();
+        global::Erp.BuildingBlocks.Application.Security.FieldAccessMap? noCompany = null;
+        var shaped = new global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>(rows.Count);
+        foreach (var row in rows)
+        {
+            var company = companyOf(row);
+            global::Erp.BuildingBlocks.Application.Security.FieldAccessMap? access;
+            if (company is { } id)
+            {
+                if (!byCompany.TryGetValue(id, out access))
+                {
+                    access = await fields.ForAsync(catalog, "read", id, cancellationToken).ConfigureAwait(false);
+                    byCompany[id] = access;
+                }
+            }
+            else
+            {
+                access = noCompany ??= await fields.ForAsync(catalog, "read", null, cancellationToken).ConfigureAwait(false);
+            }
+
+            var node = global::System.Text.Json.JsonSerializer.SerializeToNode(toResponse(row), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();
+            shaped.Add(global::Erp.BuildingBlocks.Application.Security.FieldShaping.Shape(node, catalog, access));
+        }
+
+        return shaped;
+    }
 }

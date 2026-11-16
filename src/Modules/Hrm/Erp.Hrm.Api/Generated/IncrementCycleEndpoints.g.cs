@@ -61,7 +61,7 @@ public sealed class IncrementCycleListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.increment_cycles: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.increment_cycles: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class IncrementCycleEndpoints
 {
     private const string Resource = "hrm.increment_cycles";
@@ -75,55 +75,70 @@ internal static class IncrementCycleEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.increment_cycles.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.increment_cycles.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] IncrementCycleListQuery query, global::Erp.Hrm.Application.Generated.IIncrementCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] IncrementCycleListQuery query, global::Erp.Hrm.Application.Generated.IIncrementCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.increment_cycles.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.IncrementCycleFilter { CompanyId = query.CompanyId, ReviewCycleId = query.ReviewCycleId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<IncrementCycleResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.IncrementCycleAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IIncrementCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IIncrementCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.increment_cycles.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.IncrementCycleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(IncrementCycleWriteRequest request, global::Erp.Hrm.Application.Generated.IIncrementCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(IncrementCycleWriteRequest request, global::Erp.Hrm.Application.Generated.IIncrementCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.increment_cycles.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.IncrementCycleAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.IncrementCycle();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/increment-cycles/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, IncrementCycleWriteRequest request, global::Erp.Hrm.Application.Generated.IIncrementCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.increment_cycles.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/increment-cycles/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.IncrementCycleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, IncrementCycleWriteRequest request, global::Erp.Hrm.Application.Generated.IIncrementCycleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.increment_cycles.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.IncrementCycleAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.IncrementCycleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.IncrementCycle row) => row.CompanyId;
 
     private static IncrementCycleResponse ToResponse(global::Erp.Hrm.Domain.Generated.IncrementCycle row) => new()
     {
@@ -144,34 +159,35 @@ internal static class IncrementCycleEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(IncrementCycleWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(IncrementCycleWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.Name is null)
+        if (request.Name is null && (!update || access.CanEdit("name")))
         {
             errors.Add("name");
         }
-        if (request.EffectiveDate is null)
+        if (request.EffectiveDate is null && (!update || access.CanEdit("effective_date")))
         {
             errors.Add("effectiveDate");
         }
-        if (request.CurrencyCode is null)
+        if (request.CurrencyCode is null && (!update || access.CanEdit("currency_code")))
         {
             errors.Add("currencyCode");
         }
-        if (request.EligibilityRule is null)
+        if (request.EligibilityRule is null && (!update || access.CanEdit("eligibility_rule")))
         {
             errors.Add("eligibilityRule");
         }
-        if (request.Guidelines is null)
+        if (request.Guidelines is null && (!update || access.CanEdit("guidelines")))
         {
             errors.Add("guidelines");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -182,19 +198,85 @@ internal static class IncrementCycleEndpoints
         return errors;
     }
 
-    private static void Apply(IncrementCycleWriteRequest request, global::Erp.Hrm.Domain.Generated.IncrementCycle row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(IncrementCycleWriteRequest request, global::Erp.Hrm.Domain.Generated.IncrementCycle row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.Name = request.Name!;
-        row.EffectiveDate = request.EffectiveDate!.Value;
-        row.BudgetAmount = request.BudgetAmount;
-        row.CurrencyCode = request.CurrencyCode!;
-        row.EligibilityRule = GeneratedEndpointSupport.ToDocument(request.EligibilityRule)!;
-        row.Guidelines = GeneratedEndpointSupport.ToDocument(request.Guidelines)!;
-        row.ReviewCycleId = request.ReviewCycleId;
-        row.Status = request.Status!;
+        if (access.CanEdit("name"))
+        {
+            row.Name = request.Name!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Name, row.Name, update))
+        {
+            denied.Add("name");
+        }
+        if (access.CanEdit("effective_date"))
+        {
+            row.EffectiveDate = request.EffectiveDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EffectiveDate, row.EffectiveDate, update))
+        {
+            denied.Add("effectiveDate");
+        }
+        if (access.CanEdit("budget_amount"))
+        {
+            row.BudgetAmount = request.BudgetAmount;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.BudgetAmount, row.BudgetAmount, update))
+        {
+            denied.Add("budgetAmount");
+        }
+        if (access.CanEdit("currency_code"))
+        {
+            row.CurrencyCode = request.CurrencyCode!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CurrencyCode, row.CurrencyCode, update))
+        {
+            denied.Add("currencyCode");
+        }
+        if (access.CanEdit("eligibility_rule"))
+        {
+            row.EligibilityRule = GeneratedEndpointSupport.ToDocument(request.EligibilityRule)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EligibilityRule, row.EligibilityRule, update))
+        {
+            denied.Add("eligibilityRule");
+        }
+        if (access.CanEdit("guidelines"))
+        {
+            row.Guidelines = GeneratedEndpointSupport.ToDocument(request.Guidelines)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Guidelines, row.Guidelines, update))
+        {
+            denied.Add("guidelines");
+        }
+        if (access.CanEdit("review_cycle_id"))
+        {
+            row.ReviewCycleId = request.ReviewCycleId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReviewCycleId, row.ReviewCycleId, update))
+        {
+            denied.Add("reviewCycleId");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

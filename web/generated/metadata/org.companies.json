@@ -30,6 +30,9 @@
   "effectiveDated": false,
   "softDelete": true,
   "appendOnly": false,
+  "scope": {
+    "company": "id"
+  },
   "listFields": [
     "code",
     "nameI18n",

@@ -54,7 +54,7 @@ public sealed class GradeListQuery
     public global::System.Guid? CompanyId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.grades: read, create, update, delete.</summary>
+/// <summary>Generated endpoints of hrm.grades: read, create, update, delete. Answers pass through field security (S1.06).</summary>
 internal static class GradeEndpoints
 {
     private const string Resource = "hrm.grades";
@@ -69,54 +69,67 @@ internal static class GradeEndpoints
         group.MapDelete("/{id:guid}", DeleteAsync).WithName("hrm.grades.delete").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "delete", "hrm.grades.delete"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] GradeListQuery query, global::Erp.Hrm.Application.Generated.IGradeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] GradeListQuery query, global::Erp.Hrm.Application.Generated.IGradeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.grades.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.GradeFilter { CompanyId = query.CompanyId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<GradeResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.GradeAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IGradeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IGradeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.grades.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.GradeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(GradeWriteRequest request, global::Erp.Hrm.Application.Generated.IGradeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(GradeWriteRequest request, global::Erp.Hrm.Application.Generated.IGradeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.grades.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.GradeAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.Grade();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/grades/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, GradeWriteRequest request, global::Erp.Hrm.Application.Generated.IGradeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.grades.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/grades/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.GradeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, GradeWriteRequest request, global::Erp.Hrm.Application.Generated.IGradeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.grades.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.GradeAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.GradeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static global::System.Threading.Tasks.Task<IResult> DeleteAsync(global::System.Guid id, long? rowVersion, global::Erp.Hrm.Application.Generated.IGradeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
@@ -130,6 +143,8 @@ internal static class GradeEndpoints
             var deleted = await repository.SoftDeleteAsync(id, rowVersion.Value, cancellationToken).ConfigureAwait(false);
             return deleted ? TypedResults.NoContent() : GeneratedEndpointSupport.NotFound();
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.Grade row) => row.CompanyId;
 
     private static GradeResponse ToResponse(global::Erp.Hrm.Domain.Generated.Grade row) => new()
     {
@@ -150,26 +165,27 @@ internal static class GradeEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(GradeWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(GradeWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.Code is null)
+        if (request.Code is null && (!update || access.CanEdit("code")))
         {
             errors.Add("code");
         }
-        if (request.NameI18n is null)
+        if (request.NameI18n is null && (!update || access.CanEdit("name_i18n")))
         {
             errors.Add("nameI18n");
         }
-        if (request.Rank is null)
+        if (request.Rank is null && (!update || access.CanEdit("rank")))
         {
             errors.Add("rank");
         }
-        if (request.Defaults is null)
+        if (request.Defaults is null && (!update || access.CanEdit("defaults")))
         {
             errors.Add("defaults");
         }
@@ -180,19 +196,64 @@ internal static class GradeEndpoints
         return errors;
     }
 
-    private static void Apply(GradeWriteRequest request, global::Erp.Hrm.Domain.Generated.Grade row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(GradeWriteRequest request, global::Erp.Hrm.Domain.Generated.Grade row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.Code = request.Code!;
-        row.NameI18n = GeneratedEndpointSupport.ToDocument(request.NameI18n)!;
-        row.Rank = request.Rank!.Value;
-        row.Defaults = GeneratedEndpointSupport.ToDocument(request.Defaults)!;
-        if (request.IsActive is not null)
+        if (access.CanEdit("code"))
         {
-            row.IsActive = request.IsActive!.Value;
+            row.Code = request.Code!;
         }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Code, row.Code, update))
+        {
+            denied.Add("code");
+        }
+        if (access.CanEdit("name_i18n"))
+        {
+            row.NameI18n = GeneratedEndpointSupport.ToDocument(request.NameI18n)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.NameI18n, row.NameI18n, update))
+        {
+            denied.Add("nameI18n");
+        }
+        if (access.CanEdit("rank"))
+        {
+            row.Rank = request.Rank!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Rank, row.Rank, update))
+        {
+            denied.Add("rank");
+        }
+        if (access.CanEdit("defaults"))
+        {
+            row.Defaults = GeneratedEndpointSupport.ToDocument(request.Defaults)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Defaults, row.Defaults, update))
+        {
+            denied.Add("defaults");
+        }
+        if (access.CanEdit("is_active"))
+        {
+            if (request.IsActive is not null)
+            {
+                row.IsActive = request.IsActive!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsActive, row.IsActive, update))
+        {
+            denied.Add("isActive");
+        }
+        return denied;
     }
 }

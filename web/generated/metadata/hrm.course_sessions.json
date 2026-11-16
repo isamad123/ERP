@@ -25,6 +25,9 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId"
+  },
   "listFields": [
     "companyId",
     "courseId",

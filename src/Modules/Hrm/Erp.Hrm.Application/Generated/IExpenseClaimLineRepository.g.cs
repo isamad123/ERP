@@ -28,3 +28,35 @@ public interface IExpenseClaimLineRepository : global::Erp.BuildingBlocks.Applic
     /// <summary>Rows matching (receipt_hash); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ExpenseClaimLine>> FindByReceiptHashAsync(string? receiptHash, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.expense_claim_lines and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ExpenseClaimLineAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.ExpenseClaimLine> Scope { get; } = new(
+        "hrm.expense_claim_lines",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ExpenseClaimLine, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ExpenseClaimLine, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.expense_claim_lines",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("claim_id", "ClaimId", null),
+        new("category_id", "CategoryId", null),
+        new("expense_date", "ExpenseDate", null),
+        new("amount", "Amount", null),
+        new("description", "Description", null),
+        new("receipt_file_id", "ReceiptFileId", null),
+        new("receipt_hash", "ReceiptHash", null),
+        new("cost_allocation", "CostAllocation", null),
+        new("policy_flags", "PolicyFlags", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

@@ -37,13 +37,13 @@ internal sealed class UserRoleRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Iam.UserRole>(context, clock, actor, scope, "iam.user_roles"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Iam.UserRole>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Iam.UserRoleAccess.Scope),
     global::Erp.Kernel.Application.Generated.Iam.IUserRoleRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.UserRole>> ListAsync(global::Erp.Kernel.Application.Generated.Iam.UserRoleFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.UserRole>> ListAsync(global::Erp.Kernel.Application.Generated.Iam.UserRoleFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.UserId is { } userIdFilter)
         {
             query = query.Where(e => e.UserId == userIdFilter);
@@ -56,6 +56,6 @@ internal sealed class UserRoleRepository(
         {
             query = query.Where(e => e.CompanyId == companyIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 }

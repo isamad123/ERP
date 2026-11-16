@@ -40,22 +40,23 @@ internal sealed class StatutoryTableRowRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Hrm.Domain.Generated.StatutoryTableRow>(context, clock, actor, scope, "hrm.statutory_table_rows"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Hrm.Domain.Generated.StatutoryTableRow>(context, clock, actor, scope, global::Erp.Hrm.Application.Generated.StatutoryTableRowAccess.Scope),
     global::Erp.Hrm.Application.Generated.IStatutoryTableRowRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.StatutoryTableRow>> ListAsync(global::Erp.Hrm.Application.Generated.StatutoryTableRowFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.StatutoryTableRow>> ListAsync(global::Erp.Hrm.Application.Generated.StatutoryTableRowFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.TableId is { } tableIdFilter)
         {
             query = query.Where(e => e.TableId == tableIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.StatutoryTableRow>> FindByTableIdAndSeqAsync(global::System.Guid tableId, int seq, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.TableId == tableId && e.Seq == seq).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.TableId == tableId && e.Seq == seq).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

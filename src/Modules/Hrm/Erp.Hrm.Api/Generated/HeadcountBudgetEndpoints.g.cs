@@ -55,7 +55,7 @@ public sealed class HeadcountBudgetListQuery
     public global::System.Guid? GradeId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.headcount_budgets: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.headcount_budgets: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class HeadcountBudgetEndpoints
 {
     private const string Resource = "hrm.headcount_budgets";
@@ -69,55 +69,70 @@ internal static class HeadcountBudgetEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.headcount_budgets.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.headcount_budgets.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] HeadcountBudgetListQuery query, global::Erp.Hrm.Application.Generated.IHeadcountBudgetRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] HeadcountBudgetListQuery query, global::Erp.Hrm.Application.Generated.IHeadcountBudgetRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.headcount_budgets.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.HeadcountBudgetFilter { CompanyId = query.CompanyId, OrgUnitId = query.OrgUnitId, GradeId = query.GradeId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<HeadcountBudgetResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.HeadcountBudgetAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IHeadcountBudgetRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IHeadcountBudgetRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.headcount_budgets.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.HeadcountBudgetAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(HeadcountBudgetWriteRequest request, global::Erp.Hrm.Application.Generated.IHeadcountBudgetRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(HeadcountBudgetWriteRequest request, global::Erp.Hrm.Application.Generated.IHeadcountBudgetRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.headcount_budgets.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.HeadcountBudgetAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.HeadcountBudget();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/headcount-budgets/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, HeadcountBudgetWriteRequest request, global::Erp.Hrm.Application.Generated.IHeadcountBudgetRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.headcount_budgets.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/headcount-budgets/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.HeadcountBudgetAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, HeadcountBudgetWriteRequest request, global::Erp.Hrm.Application.Generated.IHeadcountBudgetRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.headcount_budgets.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.HeadcountBudgetAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.HeadcountBudgetAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.HeadcountBudget row) => row.CompanyId;
 
     private static HeadcountBudgetResponse ToResponse(global::Erp.Hrm.Domain.Generated.HeadcountBudget row) => new()
     {
@@ -135,22 +150,23 @@ internal static class HeadcountBudgetEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(HeadcountBudgetWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(HeadcountBudgetWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.OrgUnitId is null)
+        if (request.OrgUnitId is null && (!update || access.CanEdit("org_unit_id")))
         {
             errors.Add("orgUnitId");
         }
-        if (request.SanctionedCount is null)
+        if (request.SanctionedCount is null && (!update || access.CanEdit("sanctioned_count")))
         {
             errors.Add("sanctionedCount");
         }
-        if (request.ValidFrom is null)
+        if (request.ValidFrom is null && (!update || access.CanEdit("valid_from")))
         {
             errors.Add("validFrom");
         }
@@ -161,16 +177,61 @@ internal static class HeadcountBudgetEndpoints
         return errors;
     }
 
-    private static void Apply(HeadcountBudgetWriteRequest request, global::Erp.Hrm.Domain.Generated.HeadcountBudget row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(HeadcountBudgetWriteRequest request, global::Erp.Hrm.Domain.Generated.HeadcountBudget row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.OrgUnitId = request.OrgUnitId!.Value;
-        row.GradeId = request.GradeId;
-        row.SanctionedCount = request.SanctionedCount!.Value;
-        row.ValidFrom = request.ValidFrom!.Value;
-        row.ValidTo = request.ValidTo;
+        if (access.CanEdit("org_unit_id"))
+        {
+            row.OrgUnitId = request.OrgUnitId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OrgUnitId, row.OrgUnitId, update))
+        {
+            denied.Add("orgUnitId");
+        }
+        if (access.CanEdit("grade_id"))
+        {
+            row.GradeId = request.GradeId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.GradeId, row.GradeId, update))
+        {
+            denied.Add("gradeId");
+        }
+        if (access.CanEdit("sanctioned_count"))
+        {
+            row.SanctionedCount = request.SanctionedCount!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SanctionedCount, row.SanctionedCount, update))
+        {
+            denied.Add("sanctionedCount");
+        }
+        if (access.CanEdit("valid_from"))
+        {
+            row.ValidFrom = request.ValidFrom!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidFrom, row.ValidFrom, update))
+        {
+            denied.Add("validFrom");
+        }
+        if (access.CanEdit("valid_to"))
+        {
+            row.ValidTo = request.ValidTo;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidTo, row.ValidTo, update))
+        {
+            denied.Add("validTo");
+        }
+        return denied;
     }
 }

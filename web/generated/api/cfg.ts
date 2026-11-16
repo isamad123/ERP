@@ -3,7 +3,7 @@
 // </auto-generated>
 import { request, type PagedResult } from './http';
 
-/** cfg.custom_field_defs: CustomFieldDef */
+/** cfg.custom_field_defs: CustomFieldDef. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface CustomFieldDef
 {
     id: string;
@@ -62,7 +62,7 @@ export const customFieldDefs =
     update: (id: string, body: CustomFieldDefWrite & { rowVersion: number }) => request<CustomFieldDef>('PUT', `/api/cfg/custom-field-defs/${id}`, { body }),
 };
 
-/** cfg.feature_flag_overrides: FeatureFlagOverride */
+/** cfg.feature_flag_overrides: FeatureFlagOverride. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface FeatureFlagOverride
 {
     id: string;
@@ -100,7 +100,7 @@ export const featureFlagOverrides =
     update: (id: string, body: FeatureFlagOverrideWrite & { rowVersion: number }) => request<FeatureFlagOverride>('PUT', `/api/cfg/feature-flag-overrides/${id}`, { body }),
 };
 
-/** cfg.installed_packs: InstalledPack */
+/** cfg.installed_packs: InstalledPack. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface InstalledPack
 {
     id: string;
@@ -138,7 +138,7 @@ export const installedPacks =
     update: (id: string, body: InstalledPackWrite & { rowVersion: number }) => request<InstalledPack>('PUT', `/api/cfg/installed-packs/${id}`, { body }),
 };
 
-/** cfg.labels: Label and terminology overrides per language and layer */
+/** cfg.labels: Label and terminology overrides per language and layer. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface Label
 {
     id: string;
@@ -177,7 +177,7 @@ export const labels =
     update: (id: string, body: LabelWrite & { rowVersion: number }) => request<Label>('PUT', `/api/cfg/labels/${id}`, { body }),
 };
 
-/** cfg.numbering_schemes: NumberingScheme */
+/** cfg.numbering_schemes: NumberingScheme. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface NumberingScheme
 {
     id: string;
@@ -225,7 +225,7 @@ export const numberingSchemes =
     update: (id: string, body: NumberingSchemeWrite & { rowVersion: number }) => request<NumberingScheme>('PUT', `/api/cfg/numbering-schemes/${id}`, { body }),
 };
 
-/** cfg.numbering_voids: NumberingVoid */
+/** cfg.numbering_voids: NumberingVoid. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface NumberingVoid
 {
     id: string;
@@ -257,7 +257,7 @@ export const numberingVoids =
     create: (body: NumberingVoidWrite) => request<NumberingVoid>('POST', '/api/cfg/numbering-voids', { body }),
 };
 
-/** cfg.option_list_items: OptionListItem */
+/** cfg.option_list_items: OptionListItem. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface OptionListItem
 {
     id: string;
@@ -299,7 +299,7 @@ export const optionListItems =
     update: (id: string, body: OptionListItemWrite & { rowVersion: number }) => request<OptionListItem>('PUT', `/api/cfg/option-list-items/${id}`, { body }),
 };
 
-/** cfg.option_lists: Shared dropdown lists (reason codes, exit reasons, relationship types) */
+/** cfg.option_lists: Shared dropdown lists (reason codes, exit reasons, relationship types). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface OptionList
 {
     id: string;
@@ -336,7 +336,7 @@ export const optionLists =
     update: (id: string, body: OptionListWrite & { rowVersion: number }) => request<OptionList>('PUT', `/api/cfg/option-lists/${id}`, { body }),
 };
 
-/** cfg.pack_items: Every object a pack created, with tenant override flag so upgrades keep overrides */
+/** cfg.pack_items: Every object a pack created, with tenant override flag so upgrades keep overrides. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface PackItem
 {
     id: string;
@@ -375,7 +375,7 @@ export const packItems =
     update: (id: string, body: PackItemWrite & { rowVersion: number }) => request<PackItem>('PUT', `/api/cfg/pack-items/${id}`, { body }),
 };
 
-/** cfg.setting_value_history: SettingValueHistory */
+/** cfg.setting_value_history: SettingValueHistory. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface SettingValueHistory
 {
     id: string;
@@ -414,7 +414,7 @@ export const settingValueHistory =
     create: (body: SettingValueHistoryWrite) => request<SettingValueHistory>('POST', '/api/cfg/setting-value-history', { body }),
 };
 
-/** cfg.setting_values: SettingValue */
+/** cfg.setting_values: SettingValue. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface SettingValue
 {
     id: string;
@@ -452,7 +452,7 @@ export const settingValues =
     update: (id: string, body: SettingValueWrite & { rowVersion: number }) => request<SettingValue>('PUT', `/api/cfg/setting-values/${id}`, { body }),
 };
 
-/** cfg.setup_tasks: First-run wizard progress and readiness checklist per module (ADM-ONB-01 to 03) */
+/** cfg.setup_tasks: First-run wizard progress and readiness checklist per module (ADM-ONB-01 to 03). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface SetupTask
 {
     id: string;

@@ -20,3 +20,29 @@ public interface IDbClusterRepository : global::Erp.BuildingBlocks.Application.D
     /// <summary>Rows matching (name); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.DbCluster>> FindByNameAsync(string name, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cp.db_clusters and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class DbClusterAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.ControlPlane.Generated.DbCluster> Scope { get; } = new(
+        "cp.db_clusters",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.DbCluster, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.DbCluster, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cp.db_clusters",
+    [
+        new("id", "Id", null),
+        new("name", "Name", null),
+        new("region_code", "RegionCode", null),
+        new("host", "Host", null),
+        new("port", "Port", null),
+        new("max_databases", "MaxDatabases", null),
+        new("admin_secret_ref", "AdminSecretRef", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

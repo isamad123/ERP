@@ -61,7 +61,7 @@ public sealed class ParallelRunLineListQuery
     public global::System.Guid? EmploymentId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.parallel_run_lines: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.parallel_run_lines: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class ParallelRunLineEndpoints
 {
     private const string Resource = "hrm.parallel_run_lines";
@@ -75,55 +75,70 @@ internal static class ParallelRunLineEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.parallel_run_lines.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.parallel_run_lines.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ParallelRunLineListQuery query, global::Erp.Hrm.Application.Generated.IParallelRunLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ParallelRunLineListQuery query, global::Erp.Hrm.Application.Generated.IParallelRunLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.parallel_run_lines.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ParallelRunLineFilter { CompanyId = query.CompanyId, ParallelRunId = query.ParallelRunId, EmploymentId = query.EmploymentId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<ParallelRunLineResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.ParallelRunLineAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IParallelRunLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IParallelRunLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.parallel_run_lines.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ParallelRunLineAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ParallelRunLineWriteRequest request, global::Erp.Hrm.Application.Generated.IParallelRunLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ParallelRunLineWriteRequest request, global::Erp.Hrm.Application.Generated.IParallelRunLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.parallel_run_lines.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ParallelRunLineAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.ParallelRunLine();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/parallel-run-lines/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ParallelRunLineWriteRequest request, global::Erp.Hrm.Application.Generated.IParallelRunLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.parallel_run_lines.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/parallel-run-lines/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ParallelRunLineAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ParallelRunLineWriteRequest request, global::Erp.Hrm.Application.Generated.IParallelRunLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.parallel_run_lines.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ParallelRunLineAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ParallelRunLineAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.ParallelRunLine row) => row.CompanyId;
 
     private static ParallelRunLineResponse ToResponse(global::Erp.Hrm.Domain.Generated.ParallelRunLine row) => new()
     {
@@ -144,26 +159,27 @@ internal static class ParallelRunLineEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(ParallelRunLineWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(ParallelRunLineWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.ParallelRunId is null)
+        if (request.ParallelRunId is null && (!update || access.CanEdit("parallel_run_id")))
         {
             errors.Add("parallelRunId");
         }
-        if (request.LegacyEmployeeNo is null)
+        if (request.LegacyEmployeeNo is null && (!update || access.CanEdit("legacy_employee_no")))
         {
             errors.Add("legacyEmployeeNo");
         }
-        if (request.ComponentCode is null)
+        if (request.ComponentCode is null && (!update || access.CanEdit("component_code")))
         {
             errors.Add("componentCode");
         }
-        if (request.Difference is null)
+        if (request.Difference is null && (!update || access.CanEdit("difference")))
         {
             errors.Add("difference");
         }
@@ -174,19 +190,85 @@ internal static class ParallelRunLineEndpoints
         return errors;
     }
 
-    private static void Apply(ParallelRunLineWriteRequest request, global::Erp.Hrm.Domain.Generated.ParallelRunLine row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(ParallelRunLineWriteRequest request, global::Erp.Hrm.Domain.Generated.ParallelRunLine row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.ParallelRunId = request.ParallelRunId!.Value;
-        row.EmploymentId = request.EmploymentId;
-        row.LegacyEmployeeNo = request.LegacyEmployeeNo!;
-        row.ComponentCode = request.ComponentCode!;
-        row.LegacyAmount = request.LegacyAmount;
-        row.NewAmount = request.NewAmount;
-        row.Difference = request.Difference!.Value;
-        row.Explanation = request.Explanation;
+        if (access.CanEdit("parallel_run_id"))
+        {
+            row.ParallelRunId = request.ParallelRunId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ParallelRunId, row.ParallelRunId, update))
+        {
+            denied.Add("parallelRunId");
+        }
+        if (access.CanEdit("employment_id"))
+        {
+            row.EmploymentId = request.EmploymentId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
+        {
+            denied.Add("employmentId");
+        }
+        if (access.CanEdit("legacy_employee_no"))
+        {
+            row.LegacyEmployeeNo = request.LegacyEmployeeNo!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LegacyEmployeeNo, row.LegacyEmployeeNo, update))
+        {
+            denied.Add("legacyEmployeeNo");
+        }
+        if (access.CanEdit("component_code"))
+        {
+            row.ComponentCode = request.ComponentCode!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ComponentCode, row.ComponentCode, update))
+        {
+            denied.Add("componentCode");
+        }
+        if (access.CanEdit("legacy_amount"))
+        {
+            row.LegacyAmount = request.LegacyAmount;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LegacyAmount, row.LegacyAmount, update))
+        {
+            denied.Add("legacyAmount");
+        }
+        if (access.CanEdit("new_amount"))
+        {
+            row.NewAmount = request.NewAmount;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.NewAmount, row.NewAmount, update))
+        {
+            denied.Add("newAmount");
+        }
+        if (access.CanEdit("difference"))
+        {
+            row.Difference = request.Difference!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Difference, row.Difference, update))
+        {
+            denied.Add("difference");
+        }
+        if (access.CanEdit("explanation"))
+        {
+            row.Explanation = request.Explanation;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Explanation, row.Explanation, update))
+        {
+            denied.Add("explanation");
+        }
+        return denied;
     }
 }

@@ -33,13 +33,13 @@ internal sealed class PlatformAuditRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Kernel.Domain.ControlPlane.Generated.PlatformAudit>(context, clock, actor, scope, "cp.platform_audit"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Kernel.Domain.ControlPlane.Generated.PlatformAudit>(context, clock, actor, scope, global::Erp.Kernel.Application.ControlPlane.Generated.PlatformAuditAccess.Scope),
     global::Erp.Kernel.Application.ControlPlane.Generated.IPlatformAuditRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.PlatformAudit>> ListAsync(global::Erp.Kernel.Application.ControlPlane.Generated.PlatformAuditFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.PlatformAudit>> ListAsync(global::Erp.Kernel.Application.ControlPlane.Generated.PlatformAuditFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.PlatformUserId is { } platformUserIdFilter)
         {
             query = query.Where(e => e.PlatformUserId == platformUserIdFilter);
@@ -48,16 +48,18 @@ internal sealed class PlatformAuditRepository(
         {
             query = query.Where(e => e.TenantId == tenantIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.PlatformAudit>> FindByTenantIdAndOccurredAtAsync(global::System.Guid? tenantId, global::System.DateTimeOffset occurredAt, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.TenantId == tenantId && e.OccurredAt == occurredAt).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.TenantId == tenantId && e.OccurredAt == occurredAt).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.PlatformAudit>> FindByPlatformUserIdAndOccurredAtAsync(global::System.Guid platformUserId, global::System.DateTimeOffset occurredAt, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.PlatformUserId == platformUserId && e.OccurredAt == occurredAt).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.PlatformUserId == platformUserId && e.OccurredAt == occurredAt).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

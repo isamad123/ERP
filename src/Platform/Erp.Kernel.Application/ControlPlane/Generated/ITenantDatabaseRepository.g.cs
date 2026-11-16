@@ -25,3 +25,32 @@ public interface ITenantDatabaseRepository : global::Erp.BuildingBlocks.Applicat
     /// <summary>Rows matching (tenant_id, env_type); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.TenantDatabase>> FindByTenantIdAndEnvTypeAsync(global::System.Guid tenantId, string envType, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cp.tenant_databases and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class TenantDatabaseAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.ControlPlane.Generated.TenantDatabase> Scope { get; } = new(
+        "cp.tenant_databases",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.TenantDatabase, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.ControlPlane.Generated.TenantDatabase, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cp.tenant_databases",
+    [
+        new("id", "Id", null),
+        new("tenant_id", "TenantId", null),
+        new("db_cluster_id", "DbClusterId", null),
+        new("env_type", "EnvType", null),
+        new("database_name", "DatabaseName", null),
+        new("app_secret_ref", "AppSecretRef", null),
+        new("schema_version", "SchemaVersion", null),
+        new("size_bytes", "SizeBytes", null),
+        new("last_backup_at", "LastBackupAt", null),
+        new("last_restore_test_at", "LastRestoreTestAt", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

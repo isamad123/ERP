@@ -13,20 +13,15 @@
     {
       "action": "read",
       "permission": "iam.maker_checker_requests.read"
-    },
-    {
-      "action": "create",
-      "permission": "iam.maker_checker_requests.create"
-    },
-    {
-      "action": "update",
-      "permission": "iam.maker_checker_requests.update"
     }
   ],
   "companyScoped": false,
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "user": "requestedBy"
+  },
   "listFields": [
     "actionType",
     "subjectType",

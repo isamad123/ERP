@@ -49,13 +49,13 @@ internal sealed class AttendanceDayRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Hrm.Domain.Generated.AttendanceDay>(context, clock, actor, scope, "hrm.attendance_days"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Hrm.Domain.Generated.AttendanceDay>(context, clock, actor, scope, global::Erp.Hrm.Application.Generated.AttendanceDayAccess.Scope),
     global::Erp.Hrm.Application.Generated.IAttendanceDayRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendanceDay>> ListAsync(global::Erp.Hrm.Application.Generated.AttendanceDayFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendanceDay>> ListAsync(global::Erp.Hrm.Application.Generated.AttendanceDayFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.CompanyId is { } companyIdFilter)
         {
             query = query.Where(e => e.CompanyId == companyIdFilter);
@@ -84,24 +84,27 @@ internal sealed class AttendanceDayRepository(
         {
             query = query.Where(e => e.PeriodId == periodIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendanceDay>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
-        PageAsync(Query().Where(e => e.CompanyId == companyId), page, cancellationToken);
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendanceDay>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
+        await PageAsync((await QueryAsync(cancellationToken).ConfigureAwait(false)).Where(e => e.CompanyId == companyId), page, cancellationToken).ConfigureAwait(false);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendanceDay>> FindByEmploymentIdAndWorkDateAsync(global::System.Guid employmentId, global::System.DateOnly workDate, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.EmploymentId == employmentId && e.WorkDate == workDate).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.EmploymentId == employmentId && e.WorkDate == workDate).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendanceDay>> FindByCompanyIdAndIdAndWorkDateAsync(global::System.Guid companyId, global::System.Guid id, global::System.DateOnly workDate, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.CompanyId == companyId && e.Id == id && e.WorkDate == workDate).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.CompanyId == companyId && e.Id == id && e.WorkDate == workDate).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.AttendanceDay>> FindByCompanyIdAndWorkDateAndResultAsync(global::System.Guid companyId, global::System.DateOnly workDate, string result, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.CompanyId == companyId && e.WorkDate == workDate && e.Result == result).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.CompanyId == companyId && e.WorkDate == workDate && e.Result == result).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

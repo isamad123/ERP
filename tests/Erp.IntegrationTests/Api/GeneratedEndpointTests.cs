@@ -53,7 +53,8 @@ public sealed class GeneratedEndpointTests : IAsyncLifetime
         builder.Services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
         builder.Services.AddSingleton<IClock>(new TestClock(new DateTimeOffset(2026, 11, 15, 8, 0, 0, TimeSpan.Zero)));
         builder.Services.AddSingleton<ICurrentActor>(new TestActor(Guid.CreateVersion7()));
-        builder.Services.AddSingleton<IDataScopeFilter, AllRowsScope>();
+        builder.Services.AddSingleton<IDataScopeFilter, AllowAllAccess.AllRows>();
+        builder.Services.AddSingleton<IFieldAccess, AllowAllAccess.AllFields>();
         builder.Services.AddSingleton<IPermissionChecker>(_permissions);
         _app = builder.Build();
         _app.MapKernelGeneratedEndpoints();
@@ -244,12 +245,6 @@ public sealed class GeneratedEndpointTests : IAsyncLifetime
         }
 
         public ValueTask<bool> HasPermissionAsync(string permission, CancellationToken cancellationToken) => ValueTask.FromResult(Granted.Contains(permission));
-    }
-
-    private sealed class AllRowsScope : IDataScopeFilter
-    {
-        public IQueryable<T> Apply<T>(IQueryable<T> query, string resource)
-            where T : class => query;
     }
 
     private sealed record TestActor(Guid UserId) : ICurrentActor;

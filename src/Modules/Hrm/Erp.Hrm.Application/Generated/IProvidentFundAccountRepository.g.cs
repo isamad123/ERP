@@ -24,3 +24,33 @@ public interface IProvidentFundAccountRepository : global::Erp.BuildingBlocks.Ap
     /// <summary>Rows matching (employment_id, scheme_code); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ProvidentFundAccount>> FindByEmploymentIdAndSchemeCodeAsync(global::System.Guid employmentId, string schemeCode, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.provident_fund_accounts and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ProvidentFundAccountAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.ProvidentFundAccount> Scope { get; } = new(
+        "hrm.provident_fund_accounts",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ProvidentFundAccount, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ProvidentFundAccount, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.provident_fund_accounts",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("employment_id", "EmploymentId", null),
+        new("scheme_code", "SchemeCode", null),
+        new("opened_on", "OpenedOn", null),
+        new("closed_on", "ClosedOn", null),
+        new("currency_code", "CurrencyCode", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

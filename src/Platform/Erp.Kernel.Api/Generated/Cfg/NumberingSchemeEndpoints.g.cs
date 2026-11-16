@@ -59,7 +59,7 @@ public sealed class NumberingSchemeListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of cfg.numbering_schemes: read, create, update.</summary>
+/// <summary>Generated endpoints of cfg.numbering_schemes: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class NumberingSchemeEndpoints
 {
     private const string Resource = "cfg.numbering_schemes";
@@ -73,55 +73,70 @@ internal static class NumberingSchemeEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("cfg.numbering_schemes.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "cfg.numbering_schemes.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] NumberingSchemeListQuery query, global::Erp.Kernel.Application.Generated.Cfg.INumberingSchemeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] NumberingSchemeListQuery query, global::Erp.Kernel.Application.Generated.Cfg.INumberingSchemeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.numbering_schemes.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.NumberingSchemeFilter { CompanyId = query.CompanyId, BranchId = query.BranchId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<NumberingSchemeResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.NumberingSchemeAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.INumberingSchemeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Cfg.INumberingSchemeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.numbering_schemes.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.NumberingSchemeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(NumberingSchemeWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.INumberingSchemeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(NumberingSchemeWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.INumberingSchemeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.numbering_schemes.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.NumberingSchemeAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/numbering-schemes/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, NumberingSchemeWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.INumberingSchemeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.numbering_schemes.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/cfg/numbering-schemes/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.NumberingSchemeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, NumberingSchemeWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.INumberingSchemeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "cfg.numbering_schemes.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.NumberingSchemeAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Cfg.NumberingSchemeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme row) => row.CompanyId;
 
     private static NumberingSchemeResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme row) => new()
     {
@@ -141,30 +156,31 @@ internal static class NumberingSchemeEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(NumberingSchemeWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(NumberingSchemeWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.DocumentType is null)
+        if (request.DocumentType is null && (!update || access.CanEdit("document_type")))
         {
             errors.Add("documentType");
         }
-        if (request.Pattern is null)
+        if (request.Pattern is null && (!update || access.CanEdit("pattern")))
         {
             errors.Add("pattern");
         }
-        if (request.ResetRule is null)
+        if (request.ResetRule is null && (!update || access.CanEdit("reset_rule")))
         {
             errors.Add("resetRule");
         }
-        if (request.StartValue is null)
+        if (request.StartValue is null && (!update || access.CanEdit("start_value")))
         {
             errors.Add("startValue");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -175,21 +191,80 @@ internal static class NumberingSchemeEndpoints
         return errors;
     }
 
-    private static void Apply(NumberingSchemeWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(NumberingSchemeWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.BranchId = request.BranchId;
-        row.DocumentType = request.DocumentType!;
-        row.Pattern = request.Pattern!;
-        row.ResetRule = request.ResetRule!;
-        if (request.GapFree is not null)
+        if (access.CanEdit("branch_id"))
         {
-            row.GapFree = request.GapFree!.Value;
+            row.BranchId = request.BranchId;
         }
-        row.StartValue = request.StartValue!.Value;
-        row.Status = request.Status!;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.BranchId, row.BranchId, update))
+        {
+            denied.Add("branchId");
+        }
+        if (access.CanEdit("document_type"))
+        {
+            row.DocumentType = request.DocumentType!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DocumentType, row.DocumentType, update))
+        {
+            denied.Add("documentType");
+        }
+        if (access.CanEdit("pattern"))
+        {
+            row.Pattern = request.Pattern!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Pattern, row.Pattern, update))
+        {
+            denied.Add("pattern");
+        }
+        if (access.CanEdit("reset_rule"))
+        {
+            row.ResetRule = request.ResetRule!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ResetRule, row.ResetRule, update))
+        {
+            denied.Add("resetRule");
+        }
+        if (access.CanEdit("gap_free"))
+        {
+            if (request.GapFree is not null)
+            {
+                row.GapFree = request.GapFree!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.GapFree, row.GapFree, update))
+        {
+            denied.Add("gapFree");
+        }
+        if (access.CanEdit("start_value"))
+        {
+            row.StartValue = request.StartValue!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StartValue, row.StartValue, update))
+        {
+            denied.Add("startValue");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

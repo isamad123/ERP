@@ -75,7 +75,7 @@ public sealed class FinalSettlementListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.final_settlements: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.final_settlements: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class FinalSettlementEndpoints
 {
     private const string Resource = "hrm.final_settlements";
@@ -89,55 +89,70 @@ internal static class FinalSettlementEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.final_settlements.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.final_settlements.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] FinalSettlementListQuery query, global::Erp.Hrm.Application.Generated.IFinalSettlementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] FinalSettlementListQuery query, global::Erp.Hrm.Application.Generated.IFinalSettlementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.final_settlements.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.FinalSettlementFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, SeparationId = query.SeparationId, PayRunId = query.PayRunId, StatementDocumentId = query.StatementDocumentId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<FinalSettlementResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.FinalSettlementAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IFinalSettlementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IFinalSettlementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.final_settlements.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.FinalSettlementAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(FinalSettlementWriteRequest request, global::Erp.Hrm.Application.Generated.IFinalSettlementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(FinalSettlementWriteRequest request, global::Erp.Hrm.Application.Generated.IFinalSettlementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.final_settlements.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.FinalSettlementAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.FinalSettlement();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/final-settlements/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, FinalSettlementWriteRequest request, global::Erp.Hrm.Application.Generated.IFinalSettlementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.final_settlements.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/final-settlements/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.FinalSettlementAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, FinalSettlementWriteRequest request, global::Erp.Hrm.Application.Generated.IFinalSettlementRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.final_settlements.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.FinalSettlementAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.FinalSettlementAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.FinalSettlement row) => row.CompanyId;
 
     private static FinalSettlementResponse ToResponse(global::Erp.Hrm.Domain.Generated.FinalSettlement row) => new()
     {
@@ -161,34 +176,35 @@ internal static class FinalSettlementEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(FinalSettlementWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(FinalSettlementWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.EmploymentId is null)
+        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
         {
             errors.Add("employmentId");
         }
-        if (request.SeparationId is null)
+        if (request.SeparationId is null && (!update || access.CanEdit("separation_id")))
         {
             errors.Add("separationId");
         }
-        if (request.ClearanceStatus is null)
+        if (request.ClearanceStatus is null && (!update || access.CanEdit("clearance_status")))
         {
             errors.Add("clearanceStatus");
         }
-        if (request.OpenItems is null)
+        if (request.OpenItems is null && (!update || access.CanEdit("open_items")))
         {
             errors.Add("openItems");
         }
-        if (request.CurrencyCode is null)
+        if (request.CurrencyCode is null && (!update || access.CanEdit("currency_code")))
         {
             errors.Add("currencyCode");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -199,22 +215,109 @@ internal static class FinalSettlementEndpoints
         return errors;
     }
 
-    private static void Apply(FinalSettlementWriteRequest request, global::Erp.Hrm.Domain.Generated.FinalSettlement row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(FinalSettlementWriteRequest request, global::Erp.Hrm.Domain.Generated.FinalSettlement row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.EmploymentId = request.EmploymentId!.Value;
-        row.SeparationId = request.SeparationId!.Value;
-        row.PayRunId = request.PayRunId;
-        row.ClearanceStatus = request.ClearanceStatus!;
-        row.OpenItems = GeneratedEndpointSupport.ToDocument(request.OpenItems)!;
-        row.NetAmount = request.NetAmount;
-        row.CurrencyCode = request.CurrencyCode!;
-        row.StatementDocumentId = request.StatementDocumentId;
-        row.AcknowledgedAt = request.AcknowledgedAt;
-        row.WorkflowInstanceId = request.WorkflowInstanceId;
-        row.Status = request.Status!;
+        if (access.CanEdit("employment_id"))
+        {
+            row.EmploymentId = request.EmploymentId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
+        {
+            denied.Add("employmentId");
+        }
+        if (access.CanEdit("separation_id"))
+        {
+            row.SeparationId = request.SeparationId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SeparationId, row.SeparationId, update))
+        {
+            denied.Add("separationId");
+        }
+        if (access.CanEdit("pay_run_id"))
+        {
+            row.PayRunId = request.PayRunId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PayRunId, row.PayRunId, update))
+        {
+            denied.Add("payRunId");
+        }
+        if (access.CanEdit("clearance_status"))
+        {
+            row.ClearanceStatus = request.ClearanceStatus!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ClearanceStatus, row.ClearanceStatus, update))
+        {
+            denied.Add("clearanceStatus");
+        }
+        if (access.CanEdit("open_items"))
+        {
+            row.OpenItems = GeneratedEndpointSupport.ToDocument(request.OpenItems)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OpenItems, row.OpenItems, update))
+        {
+            denied.Add("openItems");
+        }
+        if (access.CanEdit("net_amount"))
+        {
+            row.NetAmount = request.NetAmount;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.NetAmount, row.NetAmount, update))
+        {
+            denied.Add("netAmount");
+        }
+        if (access.CanEdit("currency_code"))
+        {
+            row.CurrencyCode = request.CurrencyCode!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CurrencyCode, row.CurrencyCode, update))
+        {
+            denied.Add("currencyCode");
+        }
+        if (access.CanEdit("statement_document_id"))
+        {
+            row.StatementDocumentId = request.StatementDocumentId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StatementDocumentId, row.StatementDocumentId, update))
+        {
+            denied.Add("statementDocumentId");
+        }
+        if (access.CanEdit("acknowledged_at"))
+        {
+            row.AcknowledgedAt = request.AcknowledgedAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.AcknowledgedAt, row.AcknowledgedAt, update))
+        {
+            denied.Add("acknowledgedAt");
+        }
+        if (access.CanEdit("workflow_instance_id"))
+        {
+            row.WorkflowInstanceId = request.WorkflowInstanceId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkflowInstanceId, row.WorkflowInstanceId, update))
+        {
+            denied.Add("workflowInstanceId");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

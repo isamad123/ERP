@@ -67,7 +67,7 @@ public sealed class RegularizationRequestListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.regularization_requests: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.regularization_requests: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class RegularizationRequestEndpoints
 {
     private const string Resource = "hrm.regularization_requests";
@@ -81,55 +81,70 @@ internal static class RegularizationRequestEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.regularization_requests.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.regularization_requests.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] RegularizationRequestListQuery query, global::Erp.Hrm.Application.Generated.IRegularizationRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] RegularizationRequestListQuery query, global::Erp.Hrm.Application.Generated.IRegularizationRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.regularization_requests.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.RegularizationRequestFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, ExceptionId = query.ExceptionId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<RegularizationRequestResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.RegularizationRequestAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IRegularizationRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IRegularizationRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.regularization_requests.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.RegularizationRequestAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(RegularizationRequestWriteRequest request, global::Erp.Hrm.Application.Generated.IRegularizationRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(RegularizationRequestWriteRequest request, global::Erp.Hrm.Application.Generated.IRegularizationRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.regularization_requests.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.RegularizationRequestAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.RegularizationRequest();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/regularization-requests/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, RegularizationRequestWriteRequest request, global::Erp.Hrm.Application.Generated.IRegularizationRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.regularization_requests.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/regularization-requests/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.RegularizationRequestAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, RegularizationRequestWriteRequest request, global::Erp.Hrm.Application.Generated.IRegularizationRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.regularization_requests.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.RegularizationRequestAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.RegularizationRequestAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.RegularizationRequest row) => row.CompanyId;
 
     private static RegularizationRequestResponse ToResponse(global::Erp.Hrm.Domain.Generated.RegularizationRequest row) => new()
     {
@@ -151,26 +166,27 @@ internal static class RegularizationRequestEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(RegularizationRequestWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(RegularizationRequestWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.EmploymentId is null)
+        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
         {
             errors.Add("employmentId");
         }
-        if (request.WorkDate is null)
+        if (request.WorkDate is null && (!update || access.CanEdit("work_date")))
         {
             errors.Add("workDate");
         }
-        if (request.Reason is null)
+        if (request.Reason is null && (!update || access.CanEdit("reason")))
         {
             errors.Add("reason");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -181,23 +197,96 @@ internal static class RegularizationRequestEndpoints
         return errors;
     }
 
-    private static void Apply(RegularizationRequestWriteRequest request, global::Erp.Hrm.Domain.Generated.RegularizationRequest row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(RegularizationRequestWriteRequest request, global::Erp.Hrm.Domain.Generated.RegularizationRequest row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.EmploymentId = request.EmploymentId!.Value;
-        row.ExceptionId = request.ExceptionId;
-        row.WorkDate = request.WorkDate!.Value;
-        row.RequestedIn = request.RequestedIn;
-        row.RequestedOut = request.RequestedOut;
-        row.Reason = request.Reason!;
-        if (request.FileIds is not null)
+        if (access.CanEdit("employment_id"))
         {
-            row.FileIds = request.FileIds ?? [];
+            row.EmploymentId = request.EmploymentId!.Value;
         }
-        row.WorkflowInstanceId = request.WorkflowInstanceId;
-        row.Status = request.Status!;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
+        {
+            denied.Add("employmentId");
+        }
+        if (access.CanEdit("exception_id"))
+        {
+            row.ExceptionId = request.ExceptionId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ExceptionId, row.ExceptionId, update))
+        {
+            denied.Add("exceptionId");
+        }
+        if (access.CanEdit("work_date"))
+        {
+            row.WorkDate = request.WorkDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkDate, row.WorkDate, update))
+        {
+            denied.Add("workDate");
+        }
+        if (access.CanEdit("requested_in"))
+        {
+            row.RequestedIn = request.RequestedIn;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RequestedIn, row.RequestedIn, update))
+        {
+            denied.Add("requestedIn");
+        }
+        if (access.CanEdit("requested_out"))
+        {
+            row.RequestedOut = request.RequestedOut;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RequestedOut, row.RequestedOut, update))
+        {
+            denied.Add("requestedOut");
+        }
+        if (access.CanEdit("reason"))
+        {
+            row.Reason = request.Reason!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Reason, row.Reason, update))
+        {
+            denied.Add("reason");
+        }
+        if (access.CanEdit("file_ids"))
+        {
+            if (request.FileIds is not null)
+            {
+                row.FileIds = request.FileIds ?? [];
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileIds, row.FileIds, update))
+        {
+            denied.Add("fileIds");
+        }
+        if (access.CanEdit("workflow_instance_id"))
+        {
+            row.WorkflowInstanceId = request.WorkflowInstanceId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkflowInstanceId, row.WorkflowInstanceId, update))
+        {
+            denied.Add("workflowInstanceId");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

@@ -25,3 +25,34 @@ public interface ICourseSessionRepository : global::Erp.BuildingBlocks.Applicati
     /// <summary>Rows matching (course_id, start_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.CourseSession>> FindByCourseIdAndStartAtAsync(global::System.Guid courseId, global::System.DateTimeOffset startAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.course_sessions and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class CourseSessionAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.CourseSession> Scope { get; } = new(
+        "hrm.course_sessions",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.CourseSession, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.CourseSession, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.course_sessions",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("course_id", "CourseId", null),
+        new("start_at", "StartAt", null),
+        new("end_at", "EndAt", null),
+        new("venue", "Venue", null),
+        new("location_id", "LocationId", null),
+        new("trainer", "Trainer", null),
+        new("capacity", "Capacity", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

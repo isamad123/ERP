@@ -20,3 +20,31 @@ public interface IConnectorRepository : global::Erp.BuildingBlocks.Application.D
     /// <summary>Rows matching (lower(code)); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Itg.Connector>> FindByCodeAsync(string code, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of itg.connectors and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ConnectorAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Itg.Connector> Scope { get; } = new(
+        "itg.connectors",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Itg.Connector, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Itg.Connector, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("itg.connectors",
+    [
+        new("id", "Id", null),
+        new("code", "Code", null),
+        new("name_i18n", "NameI18n", null),
+        new("kind", "Kind", null),
+        new("provider", "Provider", null),
+        new("config", "Config", null),
+        new("credentials_ref", "CredentialsRef", null),
+        new("last_health_at", "LastHealthAt", null),
+        new("status", "Status", null),
+        new("is_active", "IsActive", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

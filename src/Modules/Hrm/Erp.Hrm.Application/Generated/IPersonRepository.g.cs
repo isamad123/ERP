@@ -21,3 +21,42 @@ public interface IPersonRepository : global::Erp.BuildingBlocks.Application.Data
     /// <summary>Rows matching (lower(person_no)); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Person>> FindByPersonNoAsync(string personNo, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.persons and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PersonAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.Person> Scope { get; } = new(
+        "hrm.persons",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.Person, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Person] = e => e.Id,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.Person, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.persons",
+    [
+        new("id", "Id", null),
+        new("person_no", "PersonNo", null),
+        new("first_name", "FirstName", null),
+        new("middle_name", "MiddleName", null),
+        new("last_name", "LastName", null),
+        new("name_local", "NameLocal", null),
+        new("father_or_spouse_name", "FatherOrSpouseName", null),
+        new("gender", "Gender", null),
+        new("date_of_birth", "DateOfBirth", null),
+        new("marital_status", "MaritalStatus", null),
+        new("nationality_code", "NationalityCode", null),
+        new("religion", "Religion", null),
+        new("photo_file_id", "PhotoFileId", null),
+        new("party_ref", "PartyRef", null),
+        new("custom", "Custom", null, IsCustom: true),
+        new("is_deleted", "IsDeleted", null),
+        new("deleted_at", "DeletedAt", null),
+        new("deleted_by", "DeletedBy", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

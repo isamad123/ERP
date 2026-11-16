@@ -23,6 +23,9 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": true,
+  "scope": {
+    "company": "companyId"
+  },
   "listFields": [
     "companyId",
     "loanId",
@@ -109,7 +112,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.loan_transactions.amount"
+      "labelKey": "fields.hrm.loan_transactions.amount",
+      "fieldClass": "salary"
     },
     {
       "column": "txn_date",

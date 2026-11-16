@@ -19,3 +19,22 @@ public interface IRunLogRepository : global::Erp.BuildingBlocks.Application.Data
     /// <summary>Rows matching (run_id, created_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Job.RunLog>> FindByRunIdAndCreatedAtAsync(global::System.Guid runId, global::System.DateTimeOffset createdAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of job.run_logs and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class RunLogAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Job.RunLog> Scope { get; } = new(
+        "job.run_logs",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Job.RunLog, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Job.RunLog, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("job.run_logs",
+    [
+        new("id", "Id", null),
+        new("run_id", "RunId", null),
+        new("level", "Level", null),
+        new("message", "Message", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

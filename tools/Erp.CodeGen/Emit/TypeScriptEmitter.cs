@@ -109,11 +109,13 @@ public static class TypeScriptEmitter
         foreach (var t in tables)
         {
             var entity = N.Entity(t);
-            w.Line($"/** {t.FullName}: {(t.Purpose ?? entity).Replace("*/", "* /", StringComparison.Ordinal)} */");
+            w.Line($"/** {t.FullName}: {(t.Purpose ?? entity).Replace("*/", "* /", StringComparison.Ordinal)}. Field rules (S1.06) may leave a field out or mask it as text. */");
             w.Open($"export interface {entity}");
             foreach (var c in CSharpEmitter.ResponseColumns(t))
             {
-                w.Line($"{Naming.Camel(c.Name)}: {N.TsType(c)}{(c.Required ? string.Empty : " | null")};");
+                // Salary fields are hidden unless a field rule opens them, and may be masked ("****1234"), GHR-06.
+                var salary = c.FieldClass == "salary";
+                w.Line($"{Naming.Camel(c.Name)}{(salary ? "?" : string.Empty)}: {N.TsType(c)}{(salary ? " | string" : string.Empty)}{(c.Required ? string.Empty : " | null")};");
             }
 
             w.Close().Line();
@@ -142,7 +144,7 @@ public static class TypeScriptEmitter
             w.Open($"export const {Naming.Camel(t.Name)} =");
             w.Line($"list: (query: {entity}ListQuery = {{}}) => request<PagedResult<{entity}>>('GET', '{route}', {{ query }}),");
             w.Line($"get: (id: string) => request<{entity}>('GET', `{route}/${{id}}`),");
-            if (CSharpEmitter.CanWrite(t))
+            if (CSharpEmitter.CanCreate(t))
             {
                 w.Line($"create: (body: {entity}Write) => request<{entity}>('POST', '{route}', {{ body }}),");
             }
@@ -152,7 +154,7 @@ public static class TypeScriptEmitter
                 w.Line($"update: (id: string, body: {entity}Write & {{ rowVersion: number }}) => request<{entity}>('PUT', `{route}/${{id}}`, {{ body }}),");
             }
 
-            if (t.IsSoftDeleted && t.HasRowVersion)
+            if (CSharpEmitter.CanDelete(t))
             {
                 w.Line($"remove: (id: string, rowVersion: number) => request<void>('DELETE', `{route}/${{id}}`, {{ query: {{ rowVersion }} }}),");
             }
@@ -185,6 +187,10 @@ public static class TypeScriptEmitter
                 ["filter"] = filters.Contains(c.Name),
                 ["labelKey"] = $"fields.{t.FullName}.{c.Name}",
             };
+            if (c.FieldClass is not null)
+            {
+                field["fieldClass"] = c.FieldClass;
+            }
             if (c.EnumValues.Count > 0)
             {
                 field["options"] = new JsonArray(c.EnumValues.Select(v => (JsonNode)new JsonObject { ["value"] = v, ["labelKey"] = $"options.{t.FullName}.{c.Name}.{v}" }).ToArray());
@@ -222,6 +228,7 @@ public static class TypeScriptEmitter
             ["effectiveDated"] = t.IsEffectiveDated,
             ["softDelete"] = t.IsSoftDeleted,
             ["appendOnly"] = t.IsAppendOnly,
+            ["scope"] = new JsonObject(t.ScopeLocators.Select(kv => KeyValuePair.Create(kv.Key, (JsonNode?)Naming.Camel(kv.Value)))),
             ["listFields"] = new JsonArray(listFields),
             ["fields"] = fields,
         };

@@ -26,6 +26,10 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId",
+    "employment": "employmentId"
+  },
   "listFields": [
     "companyId",
     "cycleId",
@@ -88,7 +92,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.increment_proposals.current_amount"
+      "labelKey": "fields.hrm.increment_proposals.current_amount",
+      "fieldClass": "salary"
     },
     {
       "column": "proposed_amount",
@@ -98,7 +103,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.increment_proposals.proposed_amount"
+      "labelKey": "fields.hrm.increment_proposals.proposed_amount",
+      "fieldClass": "salary"
     },
     {
       "column": "proposed_percent",

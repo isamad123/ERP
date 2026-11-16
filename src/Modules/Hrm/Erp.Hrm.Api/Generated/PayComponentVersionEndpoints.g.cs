@@ -59,7 +59,7 @@ public sealed class PayComponentVersionListQuery
     public global::System.Guid? ComponentId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.pay_component_versions: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.pay_component_versions: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class PayComponentVersionEndpoints
 {
     private const string Resource = "hrm.pay_component_versions";
@@ -73,55 +73,70 @@ internal static class PayComponentVersionEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.pay_component_versions.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.pay_component_versions.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PayComponentVersionListQuery query, global::Erp.Hrm.Application.Generated.IPayComponentVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PayComponentVersionListQuery query, global::Erp.Hrm.Application.Generated.IPayComponentVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_component_versions.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PayComponentVersionFilter { ComponentId = query.ComponentId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<PayComponentVersionResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.PayComponentVersionAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPayComponentVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPayComponentVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_component_versions.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PayComponentVersionAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PayComponentVersionWriteRequest request, global::Erp.Hrm.Application.Generated.IPayComponentVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PayComponentVersionWriteRequest request, global::Erp.Hrm.Application.Generated.IPayComponentVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_component_versions.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PayComponentVersionAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.PayComponentVersion();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/pay-component-versions/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PayComponentVersionWriteRequest request, global::Erp.Hrm.Application.Generated.IPayComponentVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_component_versions.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/pay-component-versions/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PayComponentVersionAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PayComponentVersionWriteRequest request, global::Erp.Hrm.Application.Generated.IPayComponentVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_component_versions.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PayComponentVersionAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PayComponentVersionAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.PayComponentVersion row) => null;
 
     private static PayComponentVersionResponse ToResponse(global::Erp.Hrm.Domain.Generated.PayComponentVersion row) => new()
     {
@@ -143,26 +158,27 @@ internal static class PayComponentVersionEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(PayComponentVersionWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(PayComponentVersionWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.ComponentId is null)
+        if (request.ComponentId is null && (!update || access.CanEdit("component_id")))
         {
             errors.Add("componentId");
         }
-        if (request.Method is null)
+        if (request.Method is null && (!update || access.CanEdit("method")))
         {
             errors.Add("method");
         }
-        if (request.ProRataRule is null)
+        if (request.ProRataRule is null && (!update || access.CanEdit("pro_rata_rule")))
         {
             errors.Add("proRataRule");
         }
-        if (request.StatutoryFlags is null)
+        if (request.StatutoryFlags is null && (!update || access.CanEdit("statutory_flags")))
         {
             errors.Add("statutoryFlags");
         }
-        if (request.ValidFrom is null)
+        if (request.ValidFrom is null && (!update || access.CanEdit("valid_from")))
         {
             errors.Add("validFrom");
         }
@@ -173,21 +189,93 @@ internal static class PayComponentVersionEndpoints
         return errors;
     }
 
-    private static void Apply(PayComponentVersionWriteRequest request, global::Erp.Hrm.Domain.Generated.PayComponentVersion row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(PayComponentVersionWriteRequest request, global::Erp.Hrm.Domain.Generated.PayComponentVersion row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.ComponentId = request.ComponentId!.Value;
-        row.Method = request.Method!;
-        row.Formula = request.Formula;
-        if (request.BaseComponentIds is not null)
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("component_id"))
         {
-            row.BaseComponentIds = request.BaseComponentIds ?? [];
+            row.ComponentId = request.ComponentId!.Value;
         }
-        row.StatutoryTableCode = request.StatutoryTableCode;
-        row.ProRataRule = request.ProRataRule!;
-        row.StatutoryFlags = GeneratedEndpointSupport.ToDocument(request.StatutoryFlags)!;
-        row.TaxTreatment = request.TaxTreatment;
-        row.ValidFrom = request.ValidFrom!.Value;
-        row.ValidTo = request.ValidTo;
-        _ = update;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ComponentId, row.ComponentId, update))
+        {
+            denied.Add("componentId");
+        }
+        if (access.CanEdit("method"))
+        {
+            row.Method = request.Method!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Method, row.Method, update))
+        {
+            denied.Add("method");
+        }
+        if (access.CanEdit("formula"))
+        {
+            row.Formula = request.Formula;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Formula, row.Formula, update))
+        {
+            denied.Add("formula");
+        }
+        if (access.CanEdit("base_component_ids"))
+        {
+            if (request.BaseComponentIds is not null)
+            {
+                row.BaseComponentIds = request.BaseComponentIds ?? [];
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.BaseComponentIds, row.BaseComponentIds, update))
+        {
+            denied.Add("baseComponentIds");
+        }
+        if (access.CanEdit("statutory_table_code"))
+        {
+            row.StatutoryTableCode = request.StatutoryTableCode;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StatutoryTableCode, row.StatutoryTableCode, update))
+        {
+            denied.Add("statutoryTableCode");
+        }
+        if (access.CanEdit("pro_rata_rule"))
+        {
+            row.ProRataRule = request.ProRataRule!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ProRataRule, row.ProRataRule, update))
+        {
+            denied.Add("proRataRule");
+        }
+        if (access.CanEdit("statutory_flags"))
+        {
+            row.StatutoryFlags = GeneratedEndpointSupport.ToDocument(request.StatutoryFlags)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StatutoryFlags, row.StatutoryFlags, update))
+        {
+            denied.Add("statutoryFlags");
+        }
+        if (access.CanEdit("tax_treatment"))
+        {
+            row.TaxTreatment = request.TaxTreatment;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TaxTreatment, row.TaxTreatment, update))
+        {
+            denied.Add("taxTreatment");
+        }
+        if (access.CanEdit("valid_from"))
+        {
+            row.ValidFrom = request.ValidFrom!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidFrom, row.ValidFrom, update))
+        {
+            denied.Add("validFrom");
+        }
+        if (access.CanEdit("valid_to"))
+        {
+            row.ValidTo = request.ValidTo;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidTo, row.ValidTo, update))
+        {
+            denied.Add("validTo");
+        }
+        return denied;
     }
 }

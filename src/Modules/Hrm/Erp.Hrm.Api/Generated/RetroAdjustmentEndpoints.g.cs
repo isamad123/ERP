@@ -73,7 +73,7 @@ public sealed class RetroAdjustmentListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.retro_adjustments: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.retro_adjustments: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class RetroAdjustmentEndpoints
 {
     private const string Resource = "hrm.retro_adjustments";
@@ -87,55 +87,70 @@ internal static class RetroAdjustmentEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.retro_adjustments.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.retro_adjustments.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] RetroAdjustmentListQuery query, global::Erp.Hrm.Application.Generated.IRetroAdjustmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] RetroAdjustmentListQuery query, global::Erp.Hrm.Application.Generated.IRetroAdjustmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.retro_adjustments.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.RetroAdjustmentFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, OriginalRunId = query.OriginalRunId, OriginalPayPeriodId = query.OriginalPayPeriodId, ComponentId = query.ComponentId, AppliedInRunId = query.AppliedInRunId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<RetroAdjustmentResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.RetroAdjustmentAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IRetroAdjustmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IRetroAdjustmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.retro_adjustments.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.RetroAdjustmentAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(RetroAdjustmentWriteRequest request, global::Erp.Hrm.Application.Generated.IRetroAdjustmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(RetroAdjustmentWriteRequest request, global::Erp.Hrm.Application.Generated.IRetroAdjustmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.retro_adjustments.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.RetroAdjustmentAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.RetroAdjustment();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/retro-adjustments/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, RetroAdjustmentWriteRequest request, global::Erp.Hrm.Application.Generated.IRetroAdjustmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.retro_adjustments.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/retro-adjustments/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.RetroAdjustmentAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, RetroAdjustmentWriteRequest request, global::Erp.Hrm.Application.Generated.IRetroAdjustmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.retro_adjustments.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.RetroAdjustmentAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.RetroAdjustmentAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.RetroAdjustment row) => row.CompanyId;
 
     private static RetroAdjustmentResponse ToResponse(global::Erp.Hrm.Domain.Generated.RetroAdjustment row) => new()
     {
@@ -158,42 +173,43 @@ internal static class RetroAdjustmentEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(RetroAdjustmentWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(RetroAdjustmentWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.EmploymentId is null)
+        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
         {
             errors.Add("employmentId");
         }
-        if (request.OriginalRunId is null)
+        if (request.OriginalRunId is null && (!update || access.CanEdit("original_run_id")))
         {
             errors.Add("originalRunId");
         }
-        if (request.OriginalPayPeriodId is null)
+        if (request.OriginalPayPeriodId is null && (!update || access.CanEdit("original_pay_period_id")))
         {
             errors.Add("originalPayPeriodId");
         }
-        if (request.CauseType is null)
+        if (request.CauseType is null && (!update || access.CanEdit("cause_type")))
         {
             errors.Add("causeType");
         }
-        if (request.ComponentId is null)
+        if (request.ComponentId is null && (!update || access.CanEdit("component_id")))
         {
             errors.Add("componentId");
         }
-        if (request.Amount is null)
+        if (request.Amount is null && (!update || access.CanEdit("amount")))
         {
             errors.Add("amount");
         }
-        if (request.CurrencyCode is null)
+        if (request.CurrencyCode is null && (!update || access.CanEdit("currency_code")))
         {
             errors.Add("currencyCode");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -204,21 +220,101 @@ internal static class RetroAdjustmentEndpoints
         return errors;
     }
 
-    private static void Apply(RetroAdjustmentWriteRequest request, global::Erp.Hrm.Domain.Generated.RetroAdjustment row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(RetroAdjustmentWriteRequest request, global::Erp.Hrm.Domain.Generated.RetroAdjustment row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.EmploymentId = request.EmploymentId!.Value;
-        row.OriginalRunId = request.OriginalRunId!.Value;
-        row.OriginalPayPeriodId = request.OriginalPayPeriodId!.Value;
-        row.CauseType = request.CauseType!;
-        row.CauseId = request.CauseId;
-        row.ComponentId = request.ComponentId!.Value;
-        row.Amount = request.Amount!.Value;
-        row.CurrencyCode = request.CurrencyCode!;
-        row.AppliedInRunId = request.AppliedInRunId;
-        row.Status = request.Status!;
+        if (access.CanEdit("employment_id"))
+        {
+            row.EmploymentId = request.EmploymentId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
+        {
+            denied.Add("employmentId");
+        }
+        if (access.CanEdit("original_run_id"))
+        {
+            row.OriginalRunId = request.OriginalRunId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OriginalRunId, row.OriginalRunId, update))
+        {
+            denied.Add("originalRunId");
+        }
+        if (access.CanEdit("original_pay_period_id"))
+        {
+            row.OriginalPayPeriodId = request.OriginalPayPeriodId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OriginalPayPeriodId, row.OriginalPayPeriodId, update))
+        {
+            denied.Add("originalPayPeriodId");
+        }
+        if (access.CanEdit("cause_type"))
+        {
+            row.CauseType = request.CauseType!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CauseType, row.CauseType, update))
+        {
+            denied.Add("causeType");
+        }
+        if (access.CanEdit("cause_id"))
+        {
+            row.CauseId = request.CauseId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CauseId, row.CauseId, update))
+        {
+            denied.Add("causeId");
+        }
+        if (access.CanEdit("component_id"))
+        {
+            row.ComponentId = request.ComponentId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ComponentId, row.ComponentId, update))
+        {
+            denied.Add("componentId");
+        }
+        if (access.CanEdit("amount"))
+        {
+            row.Amount = request.Amount!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Amount, row.Amount, update))
+        {
+            denied.Add("amount");
+        }
+        if (access.CanEdit("currency_code"))
+        {
+            row.CurrencyCode = request.CurrencyCode!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CurrencyCode, row.CurrencyCode, update))
+        {
+            denied.Add("currencyCode");
+        }
+        if (access.CanEdit("applied_in_run_id"))
+        {
+            row.AppliedInRunId = request.AppliedInRunId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.AppliedInRunId, row.AppliedInRunId, update))
+        {
+            denied.Add("appliedInRunId");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

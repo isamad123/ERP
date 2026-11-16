@@ -19,3 +19,23 @@ public interface ILoginAttemptRepository : global::Erp.BuildingBlocks.Applicatio
     /// <summary>Rows matching (username, occurred_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.LoginAttempt>> FindByUsernameAndOccurredAtAsync(string username, global::System.DateTimeOffset occurredAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of iam.login_attempts and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class LoginAttemptAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Iam.LoginAttempt> Scope { get; } = new(
+        "iam.login_attempts",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.LoginAttempt, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.LoginAttempt, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("iam.login_attempts",
+    [
+        new("id", "Id", null),
+        new("occurred_at", "OccurredAt", null),
+        new("username", "Username", null),
+        new("outcome", "Outcome", null),
+        new("ip_address", "IpAddress", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

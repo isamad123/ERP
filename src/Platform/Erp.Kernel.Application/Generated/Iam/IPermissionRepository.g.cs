@@ -19,3 +19,27 @@ public interface IPermissionRepository : global::Erp.BuildingBlocks.Application.
     /// <summary>Rows matching (code); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.Permission>> FindByCodeAsync(string code, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of iam.permissions and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PermissionAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Iam.Permission> Scope { get; } = new(
+        "iam.permissions",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.Permission, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.Permission, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("iam.permissions",
+    [
+        new("id", "Id", null),
+        new("code", "Code", null),
+        new("module_id", "ModuleId", null),
+        new("description_i18n", "DescriptionI18n", null),
+        new("is_sensitive", "IsSensitive", null),
+        new("retired_at", "RetiredAt", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

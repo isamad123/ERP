@@ -25,3 +25,39 @@ public interface IPersonQualificationRepository : global::Erp.BuildingBlocks.App
     /// <summary>Rows matching (expiry_date); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PersonQualification>> FindByExpiryDateAsync(global::System.DateOnly? expiryDate, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.person_qualifications and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PersonQualificationAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.PersonQualification> Scope { get; } = new(
+        "hrm.person_qualifications",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PersonQualification, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Person] = e => e.PersonId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PersonQualification, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.person_qualifications",
+    [
+        new("id", "Id", null),
+        new("person_id", "PersonId", null),
+        new("kind", "Kind", null),
+        new("title", "Title", null),
+        new("institution", "Institution", null),
+        new("start_date", "StartDate", null),
+        new("end_date", "EndDate", null),
+        new("expiry_date", "ExpiryDate", null),
+        new("grade_or_level", "GradeOrLevel", null),
+        new("details", "Details", null),
+        new("file_id", "FileId", null),
+        new("learning_record_id", "LearningRecordId", null),
+        new("is_deleted", "IsDeleted", null),
+        new("deleted_at", "DeletedAt", null),
+        new("deleted_by", "DeletedBy", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

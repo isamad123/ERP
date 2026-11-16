@@ -25,18 +25,6 @@ public sealed class FieldPolicyResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for iam.field_policies. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class FieldPolicyWriteRequest
-{
-    public global::System.Guid? RoleId { get; init; }
-    public string? ResourceType { get; init; }
-    public string? FieldKey { get; init; }
-    public string? Access { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for iam.field_policies.</summary>
 public sealed class FieldPolicyListQuery
 {
@@ -47,7 +35,7 @@ public sealed class FieldPolicyListQuery
     public global::System.Guid? RoleId { get; init; }
 }
 
-/// <summary>Generated endpoints of iam.field_policies: read, create, update.</summary>
+/// <summary>Generated endpoints of iam.field_policies: read. Answers pass through field security (S1.06).</summary>
 internal static class FieldPolicyEndpoints
 {
     private const string Resource = "iam.field_policies";
@@ -57,59 +45,25 @@ internal static class FieldPolicyEndpoints
         var group = app.MapGroup("/api/iam/field-policies").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("iam.field_policies.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.field_policies.read"));
         group.MapGet("/{id:guid}", GetAsync).WithName("iam.field_policies.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.field_policies.read"));
-        group.MapPost("/", CreateAsync).WithName("iam.field_policies.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "iam.field_policies.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("iam.field_policies.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "iam.field_policies.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] FieldPolicyListQuery query, global::Erp.Kernel.Application.Generated.Iam.IFieldPolicyRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] FieldPolicyListQuery query, global::Erp.Kernel.Application.Generated.Iam.IFieldPolicyRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "iam.field_policies.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.FieldPolicyFilter { RoleId = query.RoleId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<FieldPolicyResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Iam.FieldPolicyAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Iam.IFieldPolicyRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Iam.IFieldPolicyRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "iam.field_policies.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Iam.FieldPolicyAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(FieldPolicyWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IFieldPolicyRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.field_policies.create", async () =>
-        {
-            var errors = Validate(request, update: false);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Iam.FieldPolicy();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/iam/field-policies/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, FieldPolicyWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IFieldPolicyRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.field_policies.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            Apply(request, row, update: true);
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
-        }, cancellationToken);
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Iam.FieldPolicy row) => null;
 
     private static FieldPolicyResponse ToResponse(global::Erp.Kernel.Domain.Generated.Iam.FieldPolicy row) => new()
     {
@@ -124,39 +78,4 @@ internal static class FieldPolicyEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    private static global::System.Collections.Generic.List<string> Validate(FieldPolicyWriteRequest request, bool update)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.RoleId is null)
-        {
-            errors.Add("roleId");
-        }
-        if (request.ResourceType is null)
-        {
-            errors.Add("resourceType");
-        }
-        if (request.FieldKey is null)
-        {
-            errors.Add("fieldKey");
-        }
-        if (request.Access is null)
-        {
-            errors.Add("access");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    private static void Apply(FieldPolicyWriteRequest request, global::Erp.Kernel.Domain.Generated.Iam.FieldPolicy row, bool update)
-    {
-        row.RoleId = request.RoleId!.Value;
-        row.ResourceType = request.ResourceType!;
-        row.FieldKey = request.FieldKey!;
-        row.Access = request.Access!;
-        _ = update;
-    }
 }

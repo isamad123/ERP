@@ -21,3 +21,36 @@ public interface ICustomFieldDefRepository : global::Erp.BuildingBlocks.Applicat
     /// <summary>Rows matching (entity_type, field_key); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef>> FindByEntityTypeAndFieldKeyAsync(string entityType, string fieldKey, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cfg.custom_field_defs and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class CustomFieldDefAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef> Scope { get; } = new(
+        "cfg.custom_field_defs",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cfg.custom_field_defs",
+    [
+        new("id", "Id", null),
+        new("entity_type", "EntityType", null),
+        new("field_key", "FieldKey", null),
+        new("data_type", "DataType", null),
+        new("label_i18n", "LabelI18n", null),
+        new("help_i18n", "HelpI18n", null),
+        new("validation", "Validation", null),
+        new("default_value", "DefaultValue", null),
+        new("is_required", "IsRequired", null),
+        new("is_unique", "IsUnique", null),
+        new("option_list_id", "OptionListId", null),
+        new("section", "Section", null),
+        new("seq", "Seq", null),
+        new("version", "Version", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

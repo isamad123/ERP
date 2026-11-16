@@ -74,6 +74,12 @@ public sealed class Column
     /// </summary>
     public bool ApiReadOnly { get; set; }
 
+    /// <summary>
+    /// Field class (design key <c>field_class</c>, CR-018): <c>salary</c>, <c>personal</c> or <c>restricted</c>. Salary
+    /// fields are hidden from every role unless a field rule opens them (GHR-06).
+    /// </summary>
+    public string? FieldClass { get; set; }
+
     public bool IsSensitive => Kind is ColumnKind.Encrypted or ColumnKind.Hmac;
 
     public bool IsGenerated => GeneratedExpression is not null;
@@ -181,6 +187,23 @@ public sealed class Table
     public IEnumerable<string> ChangedIn =>
         new[] { AddedIn }.Concat(Columns.Select(c => c.AddedIn)).Concat(UpdatableAddedIn.Select(u => u.Slice)).Concat(CommentsAddedIn.Select(c => c.Slice))
             .Where(s => s is not null).Select(s => s!).Distinct(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Columns that locate a row for data scopes (design key <c>scope</c>, CR-018): dimension (company, branch, org_unit,
+    /// employment, person, user) to column name. Empty means the table is not scoped: the permission alone decides.
+    /// </summary>
+    public SortedDictionary<string, string> ScopeLocators { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Text columns that data-scope attribute conditions may test (design key <c>scope.attributes</c>, Q5).</summary>
+    public List<string> ScopeAttributes { get; } = [];
+
+    /// <summary>
+    /// Generated API actions allowed (design key <c>api_actions</c>, CR-020/CR-021); null means every action the table's
+    /// shape supports. Purpose-built services replace the closed ones.
+    /// </summary>
+    public IReadOnlyList<string>? ApiActions { get; set; }
+
+    public bool AllowsApi(string action) => ApiActions is null || ApiActions.Contains(action);
 
     public bool IsSoftDeleted => Traits.Contains("soft");
 

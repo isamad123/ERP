@@ -35,13 +35,13 @@ internal sealed class LoanTransactionRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Hrm.Domain.Generated.LoanTransaction>(context, clock, actor, scope, "hrm.loan_transactions"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Hrm.Domain.Generated.LoanTransaction>(context, clock, actor, scope, global::Erp.Hrm.Application.Generated.LoanTransactionAccess.Scope),
     global::Erp.Hrm.Application.Generated.ILoanTransactionRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.LoanTransaction>> ListAsync(global::Erp.Hrm.Application.Generated.LoanTransactionFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.LoanTransaction>> ListAsync(global::Erp.Hrm.Application.Generated.LoanTransactionFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.CompanyId is { } companyIdFilter)
         {
             query = query.Where(e => e.CompanyId == companyIdFilter);
@@ -50,19 +50,21 @@ internal sealed class LoanTransactionRepository(
         {
             query = query.Where(e => e.LoanId == loanIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.LoanTransaction>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
-        PageAsync(Query().Where(e => e.CompanyId == companyId), page, cancellationToken);
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.LoanTransaction>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
+        await PageAsync((await QueryAsync(cancellationToken).ConfigureAwait(false)).Where(e => e.CompanyId == companyId), page, cancellationToken).ConfigureAwait(false);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.LoanTransaction>> FindByLoanIdAndSourceTypeAndSourceIdAndKindAsync(global::System.Guid loanId, string? sourceType, global::System.Guid? sourceId, string kind, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.LoanId == loanId && e.SourceType == sourceType && e.SourceId == sourceId && e.Kind == kind).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.LoanId == loanId && e.SourceType == sourceType && e.SourceId == sourceId && e.Kind == kind).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.LoanTransaction>> FindByLoanIdAndTxnDateAsync(global::System.Guid loanId, global::System.DateOnly txnDate, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.LoanId == loanId && e.TxnDate == txnDate).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.LoanId == loanId && e.TxnDate == txnDate).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

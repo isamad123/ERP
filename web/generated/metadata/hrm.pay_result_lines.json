@@ -27,6 +27,10 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId",
+    "employment": "employmentId"
+  },
   "listFields": [
     "companyId",
     "resultId",
@@ -109,7 +113,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_result_lines.amount"
+      "labelKey": "fields.hrm.pay_result_lines.amount",
+      "fieldClass": "salary"
     },
     {
       "column": "units",

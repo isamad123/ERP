@@ -49,7 +49,7 @@ public sealed class TaxDeclarationLineListQuery
     public global::System.Guid? DeclarationId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.tax_declaration_lines: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.tax_declaration_lines: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class TaxDeclarationLineEndpoints
 {
     private const string Resource = "hrm.tax_declaration_lines";
@@ -63,55 +63,70 @@ internal static class TaxDeclarationLineEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.tax_declaration_lines.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.tax_declaration_lines.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] TaxDeclarationLineListQuery query, global::Erp.Hrm.Application.Generated.ITaxDeclarationLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] TaxDeclarationLineListQuery query, global::Erp.Hrm.Application.Generated.ITaxDeclarationLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.tax_declaration_lines.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.TaxDeclarationLineFilter { DeclarationId = query.DeclarationId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<TaxDeclarationLineResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.TaxDeclarationLineAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.ITaxDeclarationLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.ITaxDeclarationLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.tax_declaration_lines.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.TaxDeclarationLineAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(TaxDeclarationLineWriteRequest request, global::Erp.Hrm.Application.Generated.ITaxDeclarationLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(TaxDeclarationLineWriteRequest request, global::Erp.Hrm.Application.Generated.ITaxDeclarationLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.tax_declaration_lines.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.TaxDeclarationLineAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.TaxDeclarationLine();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/tax-declaration-lines/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, TaxDeclarationLineWriteRequest request, global::Erp.Hrm.Application.Generated.ITaxDeclarationLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.tax_declaration_lines.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/tax-declaration-lines/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.TaxDeclarationLineAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, TaxDeclarationLineWriteRequest request, global::Erp.Hrm.Application.Generated.ITaxDeclarationLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.tax_declaration_lines.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.TaxDeclarationLineAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.TaxDeclarationLineAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.TaxDeclarationLine row) => null;
 
     private static TaxDeclarationLineResponse ToResponse(global::Erp.Hrm.Domain.Generated.TaxDeclarationLine row) => new()
     {
@@ -128,18 +143,19 @@ internal static class TaxDeclarationLineEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(TaxDeclarationLineWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(TaxDeclarationLineWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.DeclarationId is null)
+        if (request.DeclarationId is null && (!update || access.CanEdit("declaration_id")))
         {
             errors.Add("declarationId");
         }
-        if (request.Kind is null)
+        if (request.Kind is null && (!update || access.CanEdit("kind")))
         {
             errors.Add("kind");
         }
-        if (request.DeclaredAmount is null)
+        if (request.DeclaredAmount is null && (!update || access.CanEdit("declared_amount")))
         {
             errors.Add("declaredAmount");
         }
@@ -150,16 +166,53 @@ internal static class TaxDeclarationLineEndpoints
         return errors;
     }
 
-    private static void Apply(TaxDeclarationLineWriteRequest request, global::Erp.Hrm.Domain.Generated.TaxDeclarationLine row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(TaxDeclarationLineWriteRequest request, global::Erp.Hrm.Domain.Generated.TaxDeclarationLine row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.DeclarationId = request.DeclarationId!.Value;
-        row.Kind = request.Kind!;
-        row.DeclaredAmount = request.DeclaredAmount!.Value;
-        row.VerifiedAmount = request.VerifiedAmount;
-        if (request.FileIds is not null)
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("declaration_id"))
         {
-            row.FileIds = request.FileIds ?? [];
+            row.DeclarationId = request.DeclarationId!.Value;
         }
-        _ = update;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DeclarationId, row.DeclarationId, update))
+        {
+            denied.Add("declarationId");
+        }
+        if (access.CanEdit("kind"))
+        {
+            row.Kind = request.Kind!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Kind, row.Kind, update))
+        {
+            denied.Add("kind");
+        }
+        if (access.CanEdit("declared_amount"))
+        {
+            row.DeclaredAmount = request.DeclaredAmount!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DeclaredAmount, row.DeclaredAmount, update))
+        {
+            denied.Add("declaredAmount");
+        }
+        if (access.CanEdit("verified_amount"))
+        {
+            row.VerifiedAmount = request.VerifiedAmount;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.VerifiedAmount, row.VerifiedAmount, update))
+        {
+            denied.Add("verifiedAmount");
+        }
+        if (access.CanEdit("file_ids"))
+        {
+            if (request.FileIds is not null)
+            {
+                row.FileIds = request.FileIds ?? [];
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileIds, row.FileIds, update))
+        {
+            denied.Add("fileIds");
+        }
+        return denied;
     }
 }

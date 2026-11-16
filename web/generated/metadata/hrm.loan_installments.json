@@ -25,6 +25,9 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId"
+  },
   "listFields": [
     "companyId",
     "loanId",
@@ -97,7 +100,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.loan_installments.principal_amount"
+      "labelKey": "fields.hrm.loan_installments.principal_amount",
+      "fieldClass": "salary"
     },
     {
       "column": "interest_amount",
@@ -107,7 +111,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.loan_installments.interest_amount"
+      "labelKey": "fields.hrm.loan_installments.interest_amount",
+      "fieldClass": "salary"
     },
     {
       "column": "pay_result_line_id",

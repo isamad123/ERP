@@ -492,7 +492,7 @@ public sealed class IdentityTests(TenancyFixture fx) : IAsyncLifetime
             {
                 await IdentitySetup.EnsureAsync(owner, fx.Secrets, A, ct);
                 await IdentitySetup.EnsureAsync(owner, fx.Secrets, A, ct);
-                var policy = await IdentitySettings.ReadAsync(owner, null, null, ct);
+                var policy = await IdentitySettings.ReadAsync(owner, null, null, DateTimeOffset.UtcNow, ct);
                 Assert.Equal(new Erp.Kernel.Domain.Identity.PasswordPolicy(10, 3, 5, 0, 7, 15), policy.Password);
                 Assert.Equal(new Erp.Kernel.Domain.Identity.SessionPolicy(30, 720, 3, 0), policy.Session);
                 Assert.Equal(7, policy.Mfa.GraceDays);

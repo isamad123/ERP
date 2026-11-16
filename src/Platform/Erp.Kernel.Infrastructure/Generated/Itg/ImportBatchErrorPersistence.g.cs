@@ -32,22 +32,23 @@ internal sealed class ImportBatchErrorRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Kernel.Domain.Generated.Itg.ImportBatchError>(context, clock, actor, scope, "itg.import_batch_errors"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedRepository<global::Erp.Kernel.Domain.Generated.Itg.ImportBatchError>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Scope),
     global::Erp.Kernel.Application.Generated.Itg.IImportBatchErrorRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Itg.ImportBatchError>> ListAsync(global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Itg.ImportBatchError>> ListAsync(global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.BatchId is { } batchIdFilter)
         {
             query = query.Where(e => e.BatchId == batchIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Itg.ImportBatchError>> FindByBatchIdAndRowNoAsync(global::System.Guid batchId, int rowNo, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.BatchId == batchId && e.RowNo == rowNo).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.BatchId == batchId && e.RowNo == rowNo).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

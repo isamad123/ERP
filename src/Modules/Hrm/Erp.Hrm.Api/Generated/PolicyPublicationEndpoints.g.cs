@@ -59,7 +59,7 @@ public sealed class PolicyPublicationListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.policy_publications: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.policy_publications: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class PolicyPublicationEndpoints
 {
     private const string Resource = "hrm.policy_publications";
@@ -73,55 +73,70 @@ internal static class PolicyPublicationEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.policy_publications.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.policy_publications.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PolicyPublicationListQuery query, global::Erp.Hrm.Application.Generated.IPolicyPublicationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PolicyPublicationListQuery query, global::Erp.Hrm.Application.Generated.IPolicyPublicationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.policy_publications.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PolicyPublicationFilter { CompanyId = query.CompanyId, FileId = query.FileId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<PolicyPublicationResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.PolicyPublicationAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPolicyPublicationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPolicyPublicationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.policy_publications.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PolicyPublicationAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PolicyPublicationWriteRequest request, global::Erp.Hrm.Application.Generated.IPolicyPublicationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PolicyPublicationWriteRequest request, global::Erp.Hrm.Application.Generated.IPolicyPublicationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.policy_publications.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PolicyPublicationAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.PolicyPublication();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/policy-publications/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PolicyPublicationWriteRequest request, global::Erp.Hrm.Application.Generated.IPolicyPublicationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.policy_publications.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/policy-publications/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PolicyPublicationAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PolicyPublicationWriteRequest request, global::Erp.Hrm.Application.Generated.IPolicyPublicationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.policy_publications.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PolicyPublicationAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PolicyPublicationAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.PolicyPublication row) => row.CompanyId;
 
     private static PolicyPublicationResponse ToResponse(global::Erp.Hrm.Domain.Generated.PolicyPublication row) => new()
     {
@@ -141,30 +156,31 @@ internal static class PolicyPublicationEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(PolicyPublicationWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(PolicyPublicationWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.TitleI18n is null)
+        if (request.TitleI18n is null && (!update || access.CanEdit("title_i18n")))
         {
             errors.Add("titleI18n");
         }
-        if (request.Version is null)
+        if (request.Version is null && (!update || access.CanEdit("version")))
         {
             errors.Add("version");
         }
-        if (request.FileId is null)
+        if (request.FileId is null && (!update || access.CanEdit("file_id")))
         {
             errors.Add("fileId");
         }
-        if (request.AudienceRule is null)
+        if (request.AudienceRule is null && (!update || access.CanEdit("audience_rule")))
         {
             errors.Add("audienceRule");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -175,21 +191,80 @@ internal static class PolicyPublicationEndpoints
         return errors;
     }
 
-    private static void Apply(PolicyPublicationWriteRequest request, global::Erp.Hrm.Domain.Generated.PolicyPublication row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(PolicyPublicationWriteRequest request, global::Erp.Hrm.Domain.Generated.PolicyPublication row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.TitleI18n = GeneratedEndpointSupport.ToDocument(request.TitleI18n)!;
-        row.Version = request.Version!.Value;
-        row.FileId = request.FileId!.Value;
-        row.AudienceRule = GeneratedEndpointSupport.ToDocument(request.AudienceRule)!;
-        if (request.RequiresAck is not null)
+        if (access.CanEdit("title_i18n"))
         {
-            row.RequiresAck = request.RequiresAck!.Value;
+            row.TitleI18n = GeneratedEndpointSupport.ToDocument(request.TitleI18n)!;
         }
-        row.PublishedAt = request.PublishedAt;
-        row.Status = request.Status!;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TitleI18n, row.TitleI18n, update))
+        {
+            denied.Add("titleI18n");
+        }
+        if (access.CanEdit("version"))
+        {
+            row.Version = request.Version!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Version, row.Version, update))
+        {
+            denied.Add("version");
+        }
+        if (access.CanEdit("file_id"))
+        {
+            row.FileId = request.FileId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileId, row.FileId, update))
+        {
+            denied.Add("fileId");
+        }
+        if (access.CanEdit("audience_rule"))
+        {
+            row.AudienceRule = GeneratedEndpointSupport.ToDocument(request.AudienceRule)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.AudienceRule, row.AudienceRule, update))
+        {
+            denied.Add("audienceRule");
+        }
+        if (access.CanEdit("requires_ack"))
+        {
+            if (request.RequiresAck is not null)
+            {
+                row.RequiresAck = request.RequiresAck!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RequiresAck, row.RequiresAck, update))
+        {
+            denied.Add("requiresAck");
+        }
+        if (access.CanEdit("published_at"))
+        {
+            row.PublishedAt = request.PublishedAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PublishedAt, row.PublishedAt, update))
+        {
+            denied.Add("publishedAt");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

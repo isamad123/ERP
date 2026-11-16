@@ -23,3 +23,33 @@ public interface IAccountingEventRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (company_id, source_module, source_id, posting_version); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Itg.AccountingEvent>> FindByCompanyIdAndSourceModuleAndSourceIdAndPostingVersionAsync(global::System.Guid companyId, string sourceModule, global::System.Guid sourceId, int postingVersion, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of itg.accounting_events and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class AccountingEventAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Itg.AccountingEvent> Scope { get; } = new(
+        "itg.accounting_events",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Itg.AccountingEvent, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Itg.AccountingEvent, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("itg.accounting_events",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("source_module", "SourceModule", null),
+        new("source_type", "SourceType", null),
+        new("source_id", "SourceId", null),
+        new("posting_version", "PostingVersion", null),
+        new("event_date", "EventDate", null),
+        new("currency_code", "CurrencyCode", null),
+        new("lines", "Lines", null),
+        new("total_debit", "TotalDebit", null),
+        new("total_credit", "TotalCredit", null),
+        new("supersedes_event_id", "SupersedesEventId", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

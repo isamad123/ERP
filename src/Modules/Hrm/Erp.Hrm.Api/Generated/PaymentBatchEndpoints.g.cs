@@ -73,7 +73,7 @@ public sealed class PaymentBatchListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.payment_batches: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.payment_batches: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class PaymentBatchEndpoints
 {
     private const string Resource = "hrm.payment_batches";
@@ -87,55 +87,70 @@ internal static class PaymentBatchEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.payment_batches.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.payment_batches.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PaymentBatchListQuery query, global::Erp.Hrm.Application.Generated.IPaymentBatchRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PaymentBatchListQuery query, global::Erp.Hrm.Application.Generated.IPaymentBatchRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.payment_batches.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PaymentBatchFilter { CompanyId = query.CompanyId, PayRunId = query.PayRunId, CompanyBankAccountId = query.CompanyBankAccountId, TemplateId = query.TemplateId, FileId = query.FileId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<PaymentBatchResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.PaymentBatchAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPaymentBatchRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPaymentBatchRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.payment_batches.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PaymentBatchAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PaymentBatchWriteRequest request, global::Erp.Hrm.Application.Generated.IPaymentBatchRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PaymentBatchWriteRequest request, global::Erp.Hrm.Application.Generated.IPaymentBatchRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.payment_batches.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PaymentBatchAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.PaymentBatch();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/payment-batches/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PaymentBatchWriteRequest request, global::Erp.Hrm.Application.Generated.IPaymentBatchRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.payment_batches.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/payment-batches/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PaymentBatchAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PaymentBatchWriteRequest request, global::Erp.Hrm.Application.Generated.IPaymentBatchRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.payment_batches.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PaymentBatchAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PaymentBatchAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.PaymentBatch row) => row.CompanyId;
 
     private static PaymentBatchResponse ToResponse(global::Erp.Hrm.Domain.Generated.PaymentBatch row) => new()
     {
@@ -159,30 +174,31 @@ internal static class PaymentBatchEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(PaymentBatchWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(PaymentBatchWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.PaymentMode is null)
+        if (request.PaymentMode is null && (!update || access.CanEdit("payment_mode")))
         {
             errors.Add("paymentMode");
         }
-        if (request.TotalAmount is null)
+        if (request.TotalAmount is null && (!update || access.CanEdit("total_amount")))
         {
             errors.Add("totalAmount");
         }
-        if (request.LineCount is null)
+        if (request.LineCount is null && (!update || access.CanEdit("line_count")))
         {
             errors.Add("lineCount");
         }
-        if (request.CurrencyCode is null)
+        if (request.CurrencyCode is null && (!update || access.CanEdit("currency_code")))
         {
             errors.Add("currencyCode");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -193,22 +209,109 @@ internal static class PaymentBatchEndpoints
         return errors;
     }
 
-    private static void Apply(PaymentBatchWriteRequest request, global::Erp.Hrm.Domain.Generated.PaymentBatch row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(PaymentBatchWriteRequest request, global::Erp.Hrm.Domain.Generated.PaymentBatch row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.PayRunId = request.PayRunId;
-        row.CompanyBankAccountId = request.CompanyBankAccountId;
-        row.PaymentMode = request.PaymentMode!;
-        row.TemplateId = request.TemplateId;
-        row.FileId = request.FileId;
-        row.TotalAmount = request.TotalAmount!.Value;
-        row.LineCount = request.LineCount!.Value;
-        row.ValueDate = request.ValueDate;
-        row.FileChecksum = request.FileChecksum;
-        row.CurrencyCode = request.CurrencyCode!;
-        row.Status = request.Status!;
+        if (access.CanEdit("pay_run_id"))
+        {
+            row.PayRunId = request.PayRunId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PayRunId, row.PayRunId, update))
+        {
+            denied.Add("payRunId");
+        }
+        if (access.CanEdit("company_bank_account_id"))
+        {
+            row.CompanyBankAccountId = request.CompanyBankAccountId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CompanyBankAccountId, row.CompanyBankAccountId, update))
+        {
+            denied.Add("companyBankAccountId");
+        }
+        if (access.CanEdit("payment_mode"))
+        {
+            row.PaymentMode = request.PaymentMode!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PaymentMode, row.PaymentMode, update))
+        {
+            denied.Add("paymentMode");
+        }
+        if (access.CanEdit("template_id"))
+        {
+            row.TemplateId = request.TemplateId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TemplateId, row.TemplateId, update))
+        {
+            denied.Add("templateId");
+        }
+        if (access.CanEdit("file_id"))
+        {
+            row.FileId = request.FileId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileId, row.FileId, update))
+        {
+            denied.Add("fileId");
+        }
+        if (access.CanEdit("total_amount"))
+        {
+            row.TotalAmount = request.TotalAmount!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TotalAmount, row.TotalAmount, update))
+        {
+            denied.Add("totalAmount");
+        }
+        if (access.CanEdit("line_count"))
+        {
+            row.LineCount = request.LineCount!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LineCount, row.LineCount, update))
+        {
+            denied.Add("lineCount");
+        }
+        if (access.CanEdit("value_date"))
+        {
+            row.ValueDate = request.ValueDate;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValueDate, row.ValueDate, update))
+        {
+            denied.Add("valueDate");
+        }
+        if (access.CanEdit("file_checksum"))
+        {
+            row.FileChecksum = request.FileChecksum;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileChecksum, row.FileChecksum, update))
+        {
+            denied.Add("fileChecksum");
+        }
+        if (access.CanEdit("currency_code"))
+        {
+            row.CurrencyCode = request.CurrencyCode!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CurrencyCode, row.CurrencyCode, update))
+        {
+            denied.Add("currencyCode");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

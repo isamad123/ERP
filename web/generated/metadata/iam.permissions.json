@@ -12,25 +12,19 @@
     {
       "action": "read",
       "permission": "iam.permissions.read"
-    },
-    {
-      "action": "create",
-      "permission": "iam.permissions.create"
-    },
-    {
-      "action": "update",
-      "permission": "iam.permissions.update"
     }
   ],
   "companyScoped": false,
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {},
   "listFields": [
     "code",
     "moduleId",
     "descriptionI18n",
-    "isSensitive"
+    "isSensitive",
+    "retiredAt"
   ],
   "fields": [
     {
@@ -83,6 +77,16 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.iam.permissions.is_sensitive"
+    },
+    {
+      "column": "retired_at",
+      "field": "retiredAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.iam.permissions.retired_at"
     },
     {
       "column": "created_at",

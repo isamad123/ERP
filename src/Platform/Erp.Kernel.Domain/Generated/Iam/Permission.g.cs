@@ -27,6 +27,9 @@ public sealed partial class Permission : global::Erp.BuildingBlocks.Domain.Entit
     /// <summary>is_sensitive</summary>
     public bool IsSensitive { get; set; }
 
+    /// <summary>retired_at: set when no module declares the code any more; never deleted, grants nothing (CR-021)</summary>
+    public global::System.DateTimeOffset? RetiredAt { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

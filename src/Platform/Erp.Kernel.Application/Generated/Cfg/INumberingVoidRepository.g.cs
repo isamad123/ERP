@@ -17,3 +17,22 @@ public interface INumberingVoidRepository : global::Erp.BuildingBlocks.Applicati
 {
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid>> ListAsync(NumberingVoidFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of cfg.numbering_voids and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class NumberingVoidAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid> Scope { get; } = new(
+        "cfg.numbering_voids",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("cfg.numbering_voids",
+    [
+        new("id", "Id", null),
+        new("scheme_id", "SchemeId", null),
+        new("number", "Number", null),
+        new("reason", "Reason", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

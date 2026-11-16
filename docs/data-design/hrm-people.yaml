@@ -19,6 +19,8 @@
     - [photo_file_id, uuid, opt, fk doc.files]
     - [party_ref, uuid, opt, kernel party when Finance or Procurement pays the person (Later); no FK]
   unique: [[lower(person_no)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {person: id}
   reqs: [EMP-01, EMP-15, FR-XM-28]
 
 - table: hrm.person_identifiers
@@ -35,6 +37,8 @@
     - [expiry_date, date, opt]
     - [file_id, uuid, opt, fk doc.files]
   unique: [[kind, country_code, value_hmac]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {person: person_id}
   reqs: [EMP-05, EMP-16, EMP-18]
   notes: One row per identifier; renewal updates issue and expiry dates (history in the audit log).
 
@@ -45,6 +49,8 @@
     - [kind, "enum(mobile,phone,email_personal,email_work,other)", req]
     - [value, text, req]
     - [is_primary, bool, req]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {person: person_id}
   reqs: [EMP-01]
 
 - table: hrm.person_addresses
@@ -54,6 +60,8 @@
     - [person_id, uuid, req, fk hrm.persons]
     - [kind, "enum(permanent,current,mailing)", req]
     - [address, json, req]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {person: person_id}
   reqs: [EMP-01]
 
 - table: hrm.person_relations
@@ -69,6 +77,8 @@
     - [phone, text, opt]
     - [is_dependent, bool, req]
     - [is_emergency_contact, bool, req]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {person: person_id}
   reqs: [EMP-01, CMP-04, CMP-05]
 
 - table: hrm.nominations
@@ -81,6 +91,8 @@
     - [relation_id, uuid, req, fk hrm.person_relations]
     - [share, pct, req]
   checks: ["deferred: shares per (person_id, scheme) on any date sum to 1"]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {person: person_id}
   reqs: [CMP-04, CMP-05, PAY-26]
 
 - table: hrm.person_qualifications
@@ -99,6 +111,8 @@
     - [file_id, uuid, opt, fk doc.files]
     - [learning_record_id, uuid, opt, fk hrm.learning_records when earned through training]
   indexes: [[person_id, kind], [expiry_date, partial where expiry_date is not null]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {person: person_id}
   reqs: [EMP-01, LND-05]
 
 - table: hrm.employments
@@ -119,6 +133,8 @@
     - [is_primary, bool, req, one primary per person (multiple concurrent assignments are 1.1)]
   unique: [[company_id, lower(employee_no)], [person_id, "where is_primary and status in ('pre_joining','active','on_notice')"]]
   indexes: [[person_id], [company_id, status]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: id, person: person_id, attributes: [status, employee_type]}
   reqs: [EMP-02, EMP-04, EMP-07, EMP-15, EMP-17, FR-XM-30]
 
 - table: hrm.employment_assignments
@@ -141,6 +157,8 @@
     - [work_schedule, code, opt]
     - [is_acting, bool, req]
   indexes: [[employment_id, valid_from], [org_unit_id], [manager_employment_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, branch: branch_id, org_unit: org_unit_id, employment: employment_id}
   reqs: [EMP-02, EMP-03, POS-01]
   notes: Cycle check trigger on manager_employment_id.
 
@@ -158,6 +176,8 @@
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
     - [letter_document_id, uuid, opt, fk doc.generated_documents]
   indexes: [[employment_id, effective_date]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [EMP-03, EMP-11, FR-XM-30]
 
 - table: hrm.contracts
@@ -173,6 +193,8 @@
     - [file_id, uuid, opt, fk doc.files]
     - [renews_contract_id, uuid, opt, fk hrm.contracts]
   indexes: [[employment_id], [end_date]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [EMP-09]
 
 - table: hrm.probation_records
@@ -185,6 +207,8 @@
     - [extended_to, date, opt]
     - [review_form_response_id, uuid, opt, fk hrm.form_responses]
     - [decision_date, date, opt]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [EMP-10, ONB-12]
 
 - table: hrm.employee_bank_accounts
@@ -204,6 +228,8 @@
   checks: [bank fields required when payment_mode = bank_transfer or mobile_wallet]
   indexes: [[employment_id, valid_from], [account_number_hmac], [iban_hmac]]
   notes: Changes go through maker-checker (iam.maker_checker_requests).
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [EMP-06, PAY-24]
   eff_key: [employment_id, priority]
 
@@ -218,6 +244,8 @@
     - [exemption_reason, text, opt]
     - [registration_no, enc, opt]
     - [registration_no_hmac, hmac, opt]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [PAY-20, CPL-02]
 
 - table: hrm.change_requests
@@ -232,6 +260,8 @@
     - [current_snapshot, json, req]
     - [file_ids, "uuid[]", req]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [EMP-08, SSP-12]
 
 - table: hrm.service_requests
@@ -247,6 +277,8 @@
     - [generated_document_id, uuid, opt, fk doc.generated_documents]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   unique: [[company_id, request_no]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, branch: branch_id, employment: employment_id}
   reqs: [DOC-07, SSP-12]
 
 - table: hrm.employee_letters
@@ -269,6 +301,8 @@
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   unique: [[company_id, letter_no]]
   indexes: [[employment_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [DOC-04, DOC-05, DOC-07, DOC-08, CMP-06]
 
 - table: hrm.grades
@@ -277,6 +311,8 @@
     - [rank, int, req, ordering]
     - [defaults, json, req, leave and policy defaults]
   unique: [[company_id, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [POS-06]
 
 - table: hrm.positions
@@ -294,6 +330,8 @@
     - [cost_center_ref, uuid, opt]
     - [budgeted_fte, pct, req]
   indexes: [[org_unit_id], [reports_to_position_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, org_unit: org_unit_id}
   reqs: [POS-01, POS-02, POS-03, POS-04, POS-08]
   notes: Cycle check trigger on reports_to_position_id.
 
@@ -305,6 +343,8 @@
     - [org_unit_id, uuid, req, fk org.org_units]
     - [grade_id, uuid, opt, fk hrm.grades]
     - [sanctioned_count, int, req]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, org_unit: org_unit_id}
   reqs: [POS-01, POS-03]
 
 - table: hrm.policies
@@ -314,6 +354,8 @@
     - [policy_type, code, req]
     - [source, "enum(pack,tenant)", req]
   unique: [[company_id, policy_type, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [POL-02, POL-04]
 
 - table: hrm.policy_versions
@@ -337,6 +379,8 @@
     - [precedence, int, req]
     - [rule, json, req, "conditions on company, location, grade, employee type, unit, custom field"]
   indexes: [[policy_id], [company_id, precedence]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [POL-02, POL-03]
   eff_key: [policy_id, precedence]
 
@@ -353,6 +397,8 @@
     - [requested_due_date, date, opt]
     - [verified_by, uuid, opt]
   indexes: [[employment_id, document_type], [expiry_date]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [DOC-01, DOC-02, DOC-03]
 
 - table: hrm.policy_publications
@@ -366,6 +412,8 @@
     - [audience_rule, json, req]
     - [requires_ack, bool, req]
     - [published_at, ts, opt]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [DOC-06]
 
 - table: hrm.policy_acknowledgements
@@ -375,6 +423,8 @@
     - [employment_id, uuid, req, fk hrm.employments]
     - [acknowledged_at, ts, req]
   unique: [[publication_id, employment_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [DOC-06]
 
 - table: hrm.checklist_templates
@@ -383,6 +433,8 @@
     - [kind, "enum(onboarding,offboarding)", req]
     - [applies_rule, json, req, "employee type, company, location, role"]
   unique: [[company_id, kind, lower(code)]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id}
   reqs: [ONB-01, ONB-04]
 
 - table: hrm.checklist_template_items
@@ -405,6 +457,8 @@
     - [template_id, uuid, req, fk hrm.checklist_templates]
     - [kind, "enum(onboarding,offboarding)", req]
     - [separation_id, uuid, opt, fk hrm.separations]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [ONB-01, ONB-04]
 
 - table: hrm.checklist_items
@@ -420,6 +474,8 @@
     - [completed_at, ts, opt]
     - [notes, text, opt]
   indexes: [[checklist_id], [owner_user_id, status]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {user: owner_user_id}
   reqs: [ONB-01, ONB-04, ONB-17]
 
 - table: hrm.separations
@@ -437,4 +493,6 @@
     - [is_rehire_eligible, bool, opt]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   indexes: [[employment_id]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
+  scope: {company: company_id, employment: employment_id}
   reqs: [ONB-03, ONB-06, ONB-13, ONB-14]

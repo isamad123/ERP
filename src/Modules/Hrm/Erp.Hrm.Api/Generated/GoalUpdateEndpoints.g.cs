@@ -45,7 +45,7 @@ public sealed class GoalUpdateListQuery
     public global::System.Guid? GoalId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.goal_updates: read, create.</summary>
+/// <summary>Generated endpoints of hrm.goal_updates: read, create. Answers pass through field security (S1.06).</summary>
 internal static class GoalUpdateEndpoints
 {
     private const string Resource = "hrm.goal_updates";
@@ -58,35 +58,44 @@ internal static class GoalUpdateEndpoints
         group.MapPost("/", CreateAsync).WithName("hrm.goal_updates.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.goal_updates.create"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] GoalUpdateListQuery query, global::Erp.Hrm.Application.Generated.IGoalUpdateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] GoalUpdateListQuery query, global::Erp.Hrm.Application.Generated.IGoalUpdateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.goal_updates.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.GoalUpdateFilter { CompanyId = query.CompanyId, GoalId = query.GoalId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<GoalUpdateResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.GoalUpdateAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IGoalUpdateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IGoalUpdateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.goal_updates.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.GoalUpdateAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(GoalUpdateWriteRequest request, global::Erp.Hrm.Application.Generated.IGoalUpdateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(GoalUpdateWriteRequest request, global::Erp.Hrm.Application.Generated.IGoalUpdateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.goal_updates.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.GoalUpdateAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.GoalUpdate();
-            Apply(request, row, update: false);
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/goal-updates/" + row.Id.ToString(), ToResponse(row));
+            return TypedResults.Created("/api/hrm/goal-updates/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.GoalUpdateAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.GoalUpdate row) => row.CompanyId;
 
     private static GoalUpdateResponse ToResponse(global::Erp.Hrm.Domain.Generated.GoalUpdate row) => new()
     {
@@ -100,30 +109,68 @@ internal static class GoalUpdateEndpoints
         CreatedBy = row.CreatedBy,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(GoalUpdateWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(GoalUpdateWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.GoalId is null)
+        if (request.GoalId is null && (!update || access.CanEdit("goal_id")))
         {
             errors.Add("goalId");
         }
-        _ = update;
         return errors;
     }
 
-    private static void Apply(GoalUpdateWriteRequest request, global::Erp.Hrm.Domain.Generated.GoalUpdate row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(GoalUpdateWriteRequest request, global::Erp.Hrm.Domain.Generated.GoalUpdate row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.GoalId = request.GoalId!.Value;
-        row.ProgressPct = request.ProgressPct;
-        row.Actual = GeneratedEndpointSupport.ToDocument(request.Actual);
-        row.Comment = request.Comment;
+        if (access.CanEdit("goal_id"))
+        {
+            row.GoalId = request.GoalId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.GoalId, row.GoalId, update))
+        {
+            denied.Add("goalId");
+        }
+        if (access.CanEdit("progress_pct"))
+        {
+            row.ProgressPct = request.ProgressPct;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ProgressPct, row.ProgressPct, update))
+        {
+            denied.Add("progressPct");
+        }
+        if (access.CanEdit("actual"))
+        {
+            row.Actual = GeneratedEndpointSupport.ToDocument(request.Actual);
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Actual, row.Actual, update))
+        {
+            denied.Add("actual");
+        }
+        if (access.CanEdit("comment"))
+        {
+            row.Comment = request.Comment;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Comment, row.Comment, update))
+        {
+            denied.Add("comment");
+        }
+        return denied;
     }
 }

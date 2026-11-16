@@ -40,13 +40,13 @@ internal sealed class TemplateRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Doc.Template>(context, clock, actor, scope, "doc.templates"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Doc.Template>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Doc.TemplateAccess.Scope),
     global::Erp.Kernel.Application.Generated.Doc.ITemplateRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.Template>> ListAsync(global::Erp.Kernel.Application.Generated.Doc.TemplateFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.Template>> ListAsync(global::Erp.Kernel.Application.Generated.Doc.TemplateFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.Id is { } idFilter)
         {
             query = query.Where(e => e.Id == idFilter);
@@ -59,11 +59,12 @@ internal sealed class TemplateRepository(
         {
             query = query.Where(e => e.ActiveVersionId == activeVersionIdFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.Template>> FindByCodeAndCompanyIdAndLanguageAsync(string code, global::System.Guid? companyId, string language, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.Code!.ToLower() == code!.ToLower() && e.CompanyId == companyId && e.Language == language).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.Code!.ToLower() == code!.ToLower() && e.CompanyId == companyId && e.Language == language).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

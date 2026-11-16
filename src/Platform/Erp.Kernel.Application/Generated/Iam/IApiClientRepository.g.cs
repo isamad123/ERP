@@ -20,3 +20,34 @@ public interface IApiClientRepository : global::Erp.BuildingBlocks.Application.D
     /// <summary>Rows matching (client_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.ApiClient>> FindByClientIdAsync(string clientId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of iam.api_clients and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ApiClientAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Iam.ApiClient> Scope { get; } = new(
+        "iam.api_clients",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.ApiClient, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.ApiClient, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("iam.api_clients",
+    [
+        new("id", "Id", null),
+        new("name", "Name", null),
+        new("client_id", "ClientId", null),
+        new("secret_hash", "SecretHash", null),
+        new("scopes", "Scopes", null),
+        new("ip_allow", "IpAllow", null),
+        new("rate_limit_per_minute", "RateLimitPerMinute", null),
+        new("expires_at", "ExpiresAt", null),
+        new("last_used_at", "LastUsedAt", null),
+        new("status", "Status", null),
+        new("is_deleted", "IsDeleted", null),
+        new("deleted_at", "DeletedAt", null),
+        new("deleted_by", "DeletedBy", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

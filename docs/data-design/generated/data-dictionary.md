@@ -2,7 +2,7 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 217 tables. Control-plane database: 13 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 218 tables. Control-plane database: 13 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
@@ -10,7 +10,7 @@ Release 1.0. Customer database: 217 tables. Control-plane database: 13 tables. E
 | customer | cfg | 17 |
 | customer | doc | 7 |
 | customer | hrm | 112 |
-| customer | iam | 22 |
+| customer | iam | 23 |
 | customer | itg | 11 |
 | customer | job | 5 |
 | customer | meta | 4 |
@@ -5478,6 +5478,7 @@ Registered from module manifests at start-up. Requirements: KRN-IAM-10, ADM-ROL-
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| retired_at | timestamp with time zone | yes |  | set when no module declares the code any more; never deleted, grants nothing (CR-021) |
 
 Constraints:
 
@@ -5632,6 +5633,40 @@ Constraints:
 Indexes:
 
 - `ix_user_group_members_user_id` CREATE INDEX ix_user_group_members_user_id ON iam.user_group_members USING btree (user_id)
+
+### iam.user_group_roles
+
+Roles given to every member of a user group (FR-ADM-USR-06). Requirements: ADM-USR-06, KRN-IAM-11. Source: kernel.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| group_id | uuid | no |  | fk iam.user_groups |
+| role_id | uuid | no |  | fk iam.roles |
+| company_id | uuid | yes |  | fk org.companies; null means all companies |
+| reason | text | yes |  |  |
+| valid_from | date | no |  |  |
+| valid_to | date | yes |  |  |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `ck_user_group_roles_valid_to` CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))
+- `ex_user_group_roles_group_id_role_id_company_id` EXCLUDE USING gist (group_id WITH =, role_id WITH =, COALESCE(company_id, '00000000-0000-0000-0000-000000000000'::uuid) WITH =, daterange(valid_from, valid_to, '[)'::text) WITH &&)
+- `fk_user_group_roles_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
+- `fk_user_group_roles_group_id` FOREIGN KEY (group_id) REFERENCES iam.user_groups(id)
+- `fk_user_group_roles_role_id` FOREIGN KEY (role_id) REFERENCES iam.roles(id)
+- `pk_user_group_roles` PRIMARY KEY (id)
+
+Indexes:
+
+- `ix_user_group_roles_company_id` CREATE INDEX ix_user_group_roles_company_id ON iam.user_group_roles USING btree (company_id)
+- `ix_user_group_roles_group_id` CREATE INDEX ix_user_group_roles_group_id ON iam.user_group_roles USING btree (group_id)
+- `ix_user_group_roles_role_id` CREATE INDEX ix_user_group_roles_role_id ON iam.user_group_roles USING btree (role_id)
 
 ### iam.user_groups
 

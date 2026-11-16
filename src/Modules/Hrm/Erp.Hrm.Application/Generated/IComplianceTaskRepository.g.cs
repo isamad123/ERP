@@ -26,3 +26,34 @@ public interface IComplianceTaskRepository : global::Erp.BuildingBlocks.Applicat
     /// <summary>Rows matching (obligation_id, period_label); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ComplianceTask>> FindByObligationIdAndPeriodLabelAsync(global::System.Guid obligationId, string periodLabel, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.compliance_tasks and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class ComplianceTaskAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.ComplianceTask> Scope { get; } = new(
+        "hrm.compliance_tasks",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ComplianceTask, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.User] = e => e.OwnerUserId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.ComplianceTask, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.compliance_tasks",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("obligation_id", "ObligationId", null),
+        new("period_label", "PeriodLabel", null),
+        new("due_date", "DueDate", null),
+        new("owner_user_id", "OwnerUserId", null),
+        new("filed_on", "FiledOn", null),
+        new("evidence_file_id", "EvidenceFileId", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

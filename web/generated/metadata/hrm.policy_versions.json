@@ -26,6 +26,7 @@
   "effectiveDated": true,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {},
   "listFields": [
     "policyId",
     "version",

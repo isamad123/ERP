@@ -21,3 +21,25 @@ public interface IWorkflowHistoryRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (instance_id, created_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Wf.WorkflowHistory>> FindByInstanceIdAndCreatedAtAsync(global::System.Guid instanceId, global::System.DateTimeOffset createdAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of wf.workflow_history and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class WorkflowHistoryAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Wf.WorkflowHistory> Scope { get; } = new(
+        "wf.workflow_history",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Wf.WorkflowHistory, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Wf.WorkflowHistory, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("wf.workflow_history",
+    [
+        new("id", "Id", null),
+        new("instance_id", "InstanceId", null),
+        new("task_id", "TaskId", null),
+        new("event", "Event", null),
+        new("actor_id", "ActorId", null),
+        new("acting_for_user_id", "ActingForUserId", null),
+        new("details", "Details", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

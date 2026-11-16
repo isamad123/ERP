@@ -20,3 +20,31 @@ public interface IStatutoryTableRowRepository : global::Erp.BuildingBlocks.Appli
     /// <summary>Rows matching (table_id, seq); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.StatutoryTableRow>> FindByTableIdAndSeqAsync(global::System.Guid tableId, int seq, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.statutory_table_rows and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class StatutoryTableRowAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.StatutoryTableRow> Scope { get; } = new(
+        "hrm.statutory_table_rows",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.StatutoryTableRow, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.StatutoryTableRow, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.statutory_table_rows",
+    [
+        new("id", "Id", null),
+        new("table_id", "TableId", null),
+        new("seq", "Seq", null),
+        new("lower_bound", "LowerBound", null),
+        new("upper_bound", "UpperBound", null),
+        new("fixed_amount", "FixedAmount", null),
+        new("currency_code", "CurrencyCode", null),
+        new("rate", "Rate", null),
+        new("key", "Key", null),
+        new("attributes", "Attributes", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

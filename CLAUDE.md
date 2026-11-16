@@ -112,6 +112,9 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
   (PostgreSQL 16 service), data-dictionary drift and the licence gate.
 - Tenant-isolation suite (S1.04): `dotnet test --project tests/Erp.IntegrationTests --no-build --filter-trait "Suite=TenantIsolation"`; CI job `tenant-isolation`.
   Every endpoint is found automatically; one the suite cannot probe fails it (see `docs/handoff/2026-11-15-S1.04.md`).
+- Access control (S1.06): `generate` also writes each module's permission manifest (`*/Access/permissions.g.json`); baseline roles are
+  data in `*/Access/baseline-roles.json`, applied by provisioning and `migrate`. Access tests use the real engine (`tests/Erp.IntegrationTests/Access`);
+  the isolation suite keeps allow-all doubles (`AllowAllAccess`).
 - Not yet automated: secret scan, invariant tests.
 
 ## Where things are

@@ -4,11 +4,15 @@ using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.BuildingBlocks.Infrastructure.Time;
 using Erp.Hrm.Api.Generated;
+using Erp.Hrm.Infrastructure.Access;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Api.ControlPlane.Tenancy;
+using Erp.Kernel.Api.Access;
 using Erp.Kernel.Api.Identity;
+using Erp.Kernel.Application.Access;
 using Erp.Kernel.Application.Identity;
 using Erp.Kernel.Api.Generated;
+using Erp.Kernel.Infrastructure.Access;
 using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Erp.Kernel.Infrastructure.Generated;
@@ -53,9 +57,16 @@ public static class ApiHost
         services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
         services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 
-        // Until roles, permissions and data scopes exist (S1.06) nothing is granted: every business endpoint answers 403.
-        services.AddSingleton<IPermissionChecker, NoGrantsPermissionChecker>();
-        services.AddSingleton<IDataScopeFilter, DataScopesNotConfigured>();
+        // Access control (S1.06): one engine decides permissions, data scopes and field access for every endpoint. The HR
+        // module answers the team and department questions through the kernel's Contracts interface (Q3, D-10).
+        services.AddKernelAccess();
+        services.AddHrmAccess();
+        services.AddSingleton(new ResourceCatalog([.. KernelResourceCatalog.All, .. HrmResourceCatalog.All]));
+        services.AddScoped<AccessAdministrationService>();
+        services.AddScoped<IRoleService>(sp => sp.GetRequiredService<AccessAdministrationService>());
+        services.AddScoped<IAssignmentService>(sp => sp.GetRequiredService<AccessAdministrationService>());
+        services.AddScoped<IMakerCheckerService>(sp => sp.GetRequiredService<AccessAdministrationService>());
+        services.AddScoped<IAccessPreviewService>(sp => sp.GetRequiredService<AccessAdministrationService>());
 
         // Identity (S1.05): the API trusts only tokens signed with the keys in the secret store (created by the migrator's
         // `migrate` command). Auth:SigningPublicKeys may add further public keys (the integration tests use one).
@@ -105,6 +116,7 @@ public static class ApiHost
         app.MapIdentityAuthEndpoints();
         var api = app.MapGroup(string.Empty).RequireAuthorization();
         api.MapIdentityAccountEndpoints();
+        api.MapAccessEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();
         return app;
@@ -116,17 +128,4 @@ public static class ApiHost
         key.ImportFromPem(pem);
         return new ECDsaSecurityKey(key);
     }
-}
-
-/// <summary>Grants nothing. Registered until the permission service of slice S1.06 replaces it; endpoints answer 403.</summary>
-internal sealed class NoGrantsPermissionChecker : IPermissionChecker
-{
-    public ValueTask<bool> HasPermissionAsync(string permission, CancellationToken cancellationToken) => ValueTask.FromResult(false);
-}
-
-/// <summary>Data scopes arrive in S1.06. Never reached while <see cref="NoGrantsPermissionChecker"/> refuses every call.</summary>
-internal sealed class DataScopesNotConfigured : IDataScopeFilter
-{
-    public IQueryable<T> Apply<T>(IQueryable<T> query, string resource)
-        where T : class => throw new InvalidOperationException("Data scopes are not configured (slice S1.06).");
 }

@@ -21,6 +21,9 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": true,
+  "scope": {
+    "company": "companyId"
+  },
   "listFields": [
     "companyId",
     "accountId",
@@ -133,7 +136,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.provident_fund_ledger.amount"
+      "labelKey": "fields.hrm.provident_fund_ledger.amount",
+      "fieldClass": "salary"
     },
     {
       "column": "source_type",

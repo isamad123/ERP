@@ -28,3 +28,30 @@ public interface IStatutoryReturnRepository : global::Erp.BuildingBlocks.Applica
     /// <summary>Rows matching (employment_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.StatutoryReturn>> FindByEmploymentIdAsync(global::System.Guid? employmentId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.statutory_returns and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class StatutoryReturnAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.StatutoryReturn> Scope { get; } = new(
+        "hrm.statutory_returns",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.StatutoryReturn, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.StatutoryReturn, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.statutory_returns",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("return_code", "ReturnCode", null),
+        new("period_label", "PeriodLabel", null),
+        new("compliance_task_id", "ComplianceTaskId", null),
+        new("employment_id", "EmploymentId", null),
+        new("generated_document_id", "GeneratedDocumentId", null),
+        new("source_run_ids", "SourceRunIds", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

@@ -55,7 +55,7 @@ public sealed class MandatoryTrainingRuleListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.mandatory_training_rules: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.mandatory_training_rules: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class MandatoryTrainingRuleEndpoints
 {
     private const string Resource = "hrm.mandatory_training_rules";
@@ -69,55 +69,70 @@ internal static class MandatoryTrainingRuleEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.mandatory_training_rules.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.mandatory_training_rules.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] MandatoryTrainingRuleListQuery query, global::Erp.Hrm.Application.Generated.IMandatoryTrainingRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] MandatoryTrainingRuleListQuery query, global::Erp.Hrm.Application.Generated.IMandatoryTrainingRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.mandatory_training_rules.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.MandatoryTrainingRuleFilter { CompanyId = query.CompanyId, CourseId = query.CourseId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<MandatoryTrainingRuleResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.MandatoryTrainingRuleAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IMandatoryTrainingRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IMandatoryTrainingRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.mandatory_training_rules.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.MandatoryTrainingRuleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(MandatoryTrainingRuleWriteRequest request, global::Erp.Hrm.Application.Generated.IMandatoryTrainingRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(MandatoryTrainingRuleWriteRequest request, global::Erp.Hrm.Application.Generated.IMandatoryTrainingRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.mandatory_training_rules.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.MandatoryTrainingRuleAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.MandatoryTrainingRule();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/mandatory-training-rules/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, MandatoryTrainingRuleWriteRequest request, global::Erp.Hrm.Application.Generated.IMandatoryTrainingRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.mandatory_training_rules.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/mandatory-training-rules/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.MandatoryTrainingRuleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, MandatoryTrainingRuleWriteRequest request, global::Erp.Hrm.Application.Generated.IMandatoryTrainingRuleRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.mandatory_training_rules.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.MandatoryTrainingRuleAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.MandatoryTrainingRuleAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.MandatoryTrainingRule row) => row.CompanyId;
 
     private static MandatoryTrainingRuleResponse ToResponse(global::Erp.Hrm.Domain.Generated.MandatoryTrainingRule row) => new()
     {
@@ -135,26 +150,27 @@ internal static class MandatoryTrainingRuleEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(MandatoryTrainingRuleWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(MandatoryTrainingRuleWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.CourseId is null)
+        if (request.CourseId is null && (!update || access.CanEdit("course_id")))
         {
             errors.Add("courseId");
         }
-        if (request.AppliesRule is null)
+        if (request.AppliesRule is null && (!update || access.CanEdit("applies_rule")))
         {
             errors.Add("appliesRule");
         }
-        if (request.DueWithinDays is null)
+        if (request.DueWithinDays is null && (!update || access.CanEdit("due_within_days")))
         {
             errors.Add("dueWithinDays");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -165,16 +181,61 @@ internal static class MandatoryTrainingRuleEndpoints
         return errors;
     }
 
-    private static void Apply(MandatoryTrainingRuleWriteRequest request, global::Erp.Hrm.Domain.Generated.MandatoryTrainingRule row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(MandatoryTrainingRuleWriteRequest request, global::Erp.Hrm.Domain.Generated.MandatoryTrainingRule row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.CourseId = request.CourseId!.Value;
-        row.AppliesRule = GeneratedEndpointSupport.ToDocument(request.AppliesRule)!;
-        row.DueWithinDays = request.DueWithinDays!.Value;
-        row.RecurrenceMonths = request.RecurrenceMonths;
-        row.Status = request.Status!;
+        if (access.CanEdit("course_id"))
+        {
+            row.CourseId = request.CourseId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CourseId, row.CourseId, update))
+        {
+            denied.Add("courseId");
+        }
+        if (access.CanEdit("applies_rule"))
+        {
+            row.AppliesRule = GeneratedEndpointSupport.ToDocument(request.AppliesRule)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.AppliesRule, row.AppliesRule, update))
+        {
+            denied.Add("appliesRule");
+        }
+        if (access.CanEdit("due_within_days"))
+        {
+            row.DueWithinDays = request.DueWithinDays!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DueWithinDays, row.DueWithinDays, update))
+        {
+            denied.Add("dueWithinDays");
+        }
+        if (access.CanEdit("recurrence_months"))
+        {
+            row.RecurrenceMonths = request.RecurrenceMonths;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RecurrenceMonths, row.RecurrenceMonths, update))
+        {
+            denied.Add("recurrenceMonths");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

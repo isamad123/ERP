@@ -8,8 +8,9 @@ using Npgsql;
 namespace Erp.BuildingBlocks.Infrastructure.Persistence;
 
 /// <summary>
-/// Shared behaviour of the generated repositories (slice S1.02): data-scope filtering on every read, soft-deleted
-/// rows hidden, standard columns stamped from the injected clock and actor, row_version concurrency, and PostgreSQL
+/// Shared behaviour of the generated repositories (slice S1.02): data-scope filtering on every read and a data-scope
+/// check on every write (slice S1.06: the row before and after the change must be inside the caller's scope for the
+/// action, otherwise <see cref="AccessDeniedException"/>), soft-deleted rows hidden, standard columns stamped from the injected clock and actor, row_version concurrency, and PostgreSQL
 /// constraint errors translated into <see cref="DataException"/> types that carry a localization key.
 /// </summary>
 public abstract class GeneratedRepository<TEntity> : IRepository<TEntity>
@@ -17,13 +18,14 @@ public abstract class GeneratedRepository<TEntity> : IRepository<TEntity>
 {
     private static readonly bool IsSoftDeletable = typeof(ISoftDeletable).IsAssignableFrom(typeof(TEntity));
 
-    protected GeneratedRepository(DbContext context, IClock clock, ICurrentActor actor, IDataScopeFilter scope, string resource)
+    protected GeneratedRepository(DbContext context, IClock clock, ICurrentActor actor, IDataScopeFilter scope, ScopeTarget<TEntity> target)
     {
+        ArgumentNullException.ThrowIfNull(target);
         Context = context;
         Clock = clock;
         Actor = actor;
         Scope = scope;
-        Resource = resource;
+        Target = target;
     }
 
     protected DbContext Context { get; }
@@ -34,26 +36,46 @@ public abstract class GeneratedRepository<TEntity> : IRepository<TEntity>
 
     protected IDataScopeFilter Scope { get; }
 
+    /// <summary>How rows are located for data scopes; <see cref="ScopeTarget{T}.Resource"/> names the resource.</summary>
+    protected ScopeTarget<TEntity> Target { get; }
+
     /// <summary>Resource name used for data scopes and permissions, for example <c>hrm.leave_requests</c>.</summary>
-    protected string Resource { get; }
+    protected string Resource => Target.Resource;
 
     /// <summary>Read query: data scope applied, soft-deleted rows hidden, no tracking.</summary>
-    protected IQueryable<TEntity> Query() => Visible(Context.Set<TEntity>().AsNoTracking());
+    protected ValueTask<IQueryable<TEntity>> QueryAsync(CancellationToken cancellationToken) =>
+        VisibleAsync(Context.Set<TEntity>().AsNoTracking(), cancellationToken);
 
-    private IQueryable<TEntity> Visible(IQueryable<TEntity> query)
+    private async ValueTask<IQueryable<TEntity>> VisibleAsync(IQueryable<TEntity> query, CancellationToken cancellationToken)
     {
-        var scoped = Scope.Apply(query, Resource);
+        var scoped = await Scope.ApplyAsync(query, Target, "read", cancellationToken).ConfigureAwait(false);
         return IsSoftDeletable ? scoped.Where(e => !EF.Property<bool>(e, "IsDeleted")) : scoped;
     }
 
-    public Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
-        Query().FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+    public async Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
+        await (await QueryAsync(cancellationToken).ConfigureAwait(false)).FirstOrDefaultAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
 
-    public Task<TEntity?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
-        Visible(Context.Set<TEntity>()).FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+    public async Task<TEntity?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+        await (await VisibleAsync(Context.Set<TEntity>(), cancellationToken).ConfigureAwait(false)).FirstOrDefaultAsync(e => e.Id == id, cancellationToken).ConfigureAwait(false);
+
+    /// <summary>Refuses a write when the row is outside the caller's data scope for the action.</summary>
+    protected async Task EnsureInScopeAsync(TEntity entity, string action, CancellationToken cancellationToken)
+    {
+        if (!await Scope.AllowsAsync(entity, Target, action, cancellationToken).ConfigureAwait(false))
+        {
+            throw new AccessDeniedException();
+        }
+    }
+
+    /// <summary>The row as it was read from the database (before the caller's changes), for the "before" scope check.</summary>
+    protected TEntity Original(TEntity entity)
+    {
+        var entry = Context.Entry(entity);
+        return entry.State == EntityState.Detached ? entity : (TEntity)entry.OriginalValues.ToObject();
+    }
 
     /// <summary>Keyset page ordered by id after optional filters.</summary>
-    protected async Task<IReadOnlyList<TEntity>> PageAsync(IQueryable<TEntity> query, PageRequest page, CancellationToken cancellationToken)
+    protected static async Task<IReadOnlyList<TEntity>> PageAsync(IQueryable<TEntity> query, PageRequest page, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(page);
         if (page.After is { } after)
@@ -86,15 +108,26 @@ public abstract class GeneratedRepository<TEntity> : IRepository<TEntity>
             versioned.RowVersion = 1;
         }
 
+        await EnsureInScopeAsync(entity, "create", cancellationToken).ConfigureAwait(false);
         Context.Set<TEntity>().Add(entity);
         await SaveAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Saves with <c>where row_version = expected</c> and increments the version.</summary>
-    protected async Task SaveVersionedAsync<TVersioned>(TVersioned entity, long expectedRowVersion, CancellationToken cancellationToken)
+    /// <remarks>
+    /// <paramref name="scopeAction"/> (normally update) is checked on the row before and after the change; null when the
+    /// caller already checked (soft delete checks <c>delete</c>).
+    /// </remarks>
+    protected async Task SaveVersionedAsync<TVersioned>(TVersioned entity, long expectedRowVersion, string? scopeAction, CancellationToken cancellationToken)
         where TVersioned : class, TEntity, IVersioned
     {
         ArgumentNullException.ThrowIfNull(entity);
+        if (scopeAction is not null)
+        {
+            await EnsureInScopeAsync(Original(entity), scopeAction, cancellationToken).ConfigureAwait(false);
+            await EnsureInScopeAsync(entity, scopeAction, cancellationToken).ConfigureAwait(false);
+        }
+
         var entry = Context.Entry(entity);
         if (entry.State == EntityState.Detached)
         {
@@ -109,6 +142,7 @@ public abstract class GeneratedRepository<TEntity> : IRepository<TEntity>
         await SaveAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Saves the pending changes, translating constraint errors (no scope check: callers check first).</summary>
     protected async Task SaveAsync(CancellationToken cancellationToken)
     {
         try
@@ -129,17 +163,17 @@ public abstract class GeneratedRepository<TEntity> : IRepository<TEntity>
 }
 
 /// <summary>Repository of a table with trait std: updates guarded by row_version.</summary>
-public abstract class GeneratedMutableRepository<TEntity>(DbContext context, IClock clock, ICurrentActor actor, IDataScopeFilter scope, string resource)
-    : GeneratedRepository<TEntity>(context, clock, actor, scope, resource), IMutableRepository<TEntity>
+public abstract class GeneratedMutableRepository<TEntity>(DbContext context, IClock clock, ICurrentActor actor, IDataScopeFilter scope, ScopeTarget<TEntity> target)
+    : GeneratedRepository<TEntity>(context, clock, actor, scope, target), IMutableRepository<TEntity>
     where TEntity : class, IEntity, IVersioned
 {
     public Task UpdateAsync(TEntity entity, long expectedRowVersion, CancellationToken cancellationToken) =>
-        SaveVersionedAsync(entity, expectedRowVersion, cancellationToken);
+        SaveVersionedAsync(entity, expectedRowVersion, "update", cancellationToken);
 }
 
 /// <summary>Repository of a table with traits std and soft.</summary>
-public abstract class GeneratedSoftDeleteRepository<TEntity>(DbContext context, IClock clock, ICurrentActor actor, IDataScopeFilter scope, string resource)
-    : GeneratedMutableRepository<TEntity>(context, clock, actor, scope, resource), ISoftDeleteRepository<TEntity>
+public abstract class GeneratedSoftDeleteRepository<TEntity>(DbContext context, IClock clock, ICurrentActor actor, IDataScopeFilter scope, ScopeTarget<TEntity> target)
+    : GeneratedMutableRepository<TEntity>(context, clock, actor, scope, target), ISoftDeleteRepository<TEntity>
     where TEntity : class, IEntity, IVersioned, ISoftDeletable
 {
     public async Task<bool> SoftDeleteAsync(Guid id, long expectedRowVersion, CancellationToken cancellationToken)
@@ -150,10 +184,11 @@ public abstract class GeneratedSoftDeleteRepository<TEntity>(DbContext context, 
             return false;
         }
 
+        await EnsureInScopeAsync(entity, "delete", cancellationToken).ConfigureAwait(false);
         entity.IsDeleted = true;
         entity.DeletedAt = Clock.UtcNow;
         entity.DeletedBy = Actor.UserId;
-        await SaveVersionedAsync(entity, expectedRowVersion, cancellationToken).ConfigureAwait(false);
+        await SaveVersionedAsync(entity, expectedRowVersion, null, cancellationToken).ConfigureAwait(false);
         return true;
     }
 }
@@ -174,5 +209,25 @@ public static class PostgresErrors
             "ER001" => new DataValidationException("errors.data.append_only", error.TableName, wrapper),
             _ => new DataValidationException("errors.data.rejected", error.SqlState, wrapper),
         };
+    }
+}
+
+/// <summary>Counts and lists the rows of one table a data-scope filter lets through (generated resource catalogues, S1.06).</summary>
+public static class ScopePreviewQuery
+{
+    public static async Task<ScopePreviewResult> RunAsync<TEntity>(DbContext context, IDataScopeFilter filter, ScopeTarget<TEntity> target, int limit, CancellationToken cancellationToken)
+        where TEntity : class, IEntity
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(filter);
+        var query = await filter.ApplyAsync(context.Set<TEntity>().AsNoTracking(), target, "read", cancellationToken).ConfigureAwait(false);
+        if (typeof(ISoftDeletable).IsAssignableFrom(typeof(TEntity)))
+        {
+            query = query.Where(e => !EF.Property<bool>(e, "IsDeleted"));
+        }
+
+        var count = await query.LongCountAsync(cancellationToken).ConfigureAwait(false);
+        var ids = await query.OrderBy(e => e.Id).Take(Math.Clamp(limit, 1, PageRequest.MaxLimit)).Select(e => e.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
+        return new ScopePreviewResult(count, ids);
     }
 }

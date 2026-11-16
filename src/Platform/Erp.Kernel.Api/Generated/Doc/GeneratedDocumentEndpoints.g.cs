@@ -49,7 +49,7 @@ public sealed class GeneratedDocumentListQuery
     public global::System.Guid? FileId { get; init; }
 }
 
-/// <summary>Generated endpoints of doc.generated_documents: read, create.</summary>
+/// <summary>Generated endpoints of doc.generated_documents: read, create. Answers pass through field security (S1.06).</summary>
 internal static class GeneratedDocumentEndpoints
 {
     private const string Resource = "doc.generated_documents";
@@ -62,35 +62,44 @@ internal static class GeneratedDocumentEndpoints
         group.MapPost("/", CreateAsync).WithName("doc.generated_documents.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "doc.generated_documents.create"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] GeneratedDocumentListQuery query, global::Erp.Kernel.Application.Generated.Doc.IGeneratedDocumentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] GeneratedDocumentListQuery query, global::Erp.Kernel.Application.Generated.Doc.IGeneratedDocumentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "doc.generated_documents.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentFilter { CompanyId = query.CompanyId, TemplateVersionId = query.TemplateVersionId, FileId = query.FileId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<GeneratedDocumentResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Doc.IGeneratedDocumentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Doc.IGeneratedDocumentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "doc.generated_documents.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(GeneratedDocumentWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.IGeneratedDocumentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(GeneratedDocumentWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.IGeneratedDocumentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "doc.generated_documents.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument();
-            Apply(request, row, update: false);
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/doc/generated-documents/" + row.Id.ToString(), ToResponse(row));
+            return TypedResults.Created("/api/doc/generated-documents/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument row) => row.CompanyId;
 
     private static GeneratedDocumentResponse ToResponse(global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument row) => new()
     {
@@ -105,46 +114,91 @@ internal static class GeneratedDocumentEndpoints
         CreatedBy = row.CreatedBy,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(GeneratedDocumentWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(GeneratedDocumentWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.TemplateVersionId is null)
+        if (request.TemplateVersionId is null && (!update || access.CanEdit("template_version_id")))
         {
             errors.Add("templateVersionId");
         }
-        if (request.OwnerType is null)
+        if (request.OwnerType is null && (!update || access.CanEdit("owner_type")))
         {
             errors.Add("ownerType");
         }
-        if (request.OwnerId is null)
+        if (request.OwnerId is null && (!update || access.CanEdit("owner_id")))
         {
             errors.Add("ownerId");
         }
-        if (request.FileId is null)
+        if (request.FileId is null && (!update || access.CanEdit("file_id")))
         {
             errors.Add("fileId");
         }
-        _ = update;
         return errors;
     }
 
-    private static void Apply(GeneratedDocumentWriteRequest request, global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(GeneratedDocumentWriteRequest request, global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.TemplateVersionId = request.TemplateVersionId!.Value;
-        row.OwnerType = request.OwnerType!;
-        row.OwnerId = request.OwnerId!.Value;
-        row.FileId = request.FileId!.Value;
-        if (request.IsPasswordProtected is not null)
+        if (access.CanEdit("template_version_id"))
         {
-            row.IsPasswordProtected = request.IsPasswordProtected!.Value;
+            row.TemplateVersionId = request.TemplateVersionId!.Value;
         }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TemplateVersionId, row.TemplateVersionId, update))
+        {
+            denied.Add("templateVersionId");
+        }
+        if (access.CanEdit("owner_type"))
+        {
+            row.OwnerType = request.OwnerType!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OwnerType, row.OwnerType, update))
+        {
+            denied.Add("ownerType");
+        }
+        if (access.CanEdit("owner_id"))
+        {
+            row.OwnerId = request.OwnerId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OwnerId, row.OwnerId, update))
+        {
+            denied.Add("ownerId");
+        }
+        if (access.CanEdit("file_id"))
+        {
+            row.FileId = request.FileId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileId, row.FileId, update))
+        {
+            denied.Add("fileId");
+        }
+        if (access.CanEdit("is_password_protected"))
+        {
+            if (request.IsPasswordProtected is not null)
+            {
+                row.IsPasswordProtected = request.IsPasswordProtected!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsPasswordProtected, row.IsPasswordProtected, update))
+        {
+            denied.Add("isPasswordProtected");
+        }
+        return denied;
     }
 }

@@ -32,3 +32,36 @@ public interface ILeaveLedgerRepository : global::Erp.BuildingBlocks.Application
     /// <summary>Rows matching (employment_id, leave_type_id, leave_year); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.LeaveLedger>> FindByEmploymentIdAndLeaveTypeIdAndLeaveYearAsync(global::System.Guid employmentId, global::System.Guid leaveTypeId, int leaveYear, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.leave_ledger and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class LeaveLedgerAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.LeaveLedger> Scope { get; } = new(
+        "hrm.leave_ledger",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.LeaveLedger, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.EmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.LeaveLedger, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.leave_ledger",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("employment_id", "EmploymentId", null),
+        new("leave_type_id", "LeaveTypeId", null),
+        new("leave_year", "LeaveYear", null),
+        new("entry_date", "EntryDate", null),
+        new("kind", "Kind", null),
+        new("quantity", "Quantity", null),
+        new("expires_on", "ExpiresOn", null),
+        new("source_type", "SourceType", null),
+        new("source_id", "SourceId", null),
+        new("policy_version_id", "PolicyVersionId", null),
+        new("reverses_entry_id", "ReversesEntryId", null),
+        new("reason", "Reason", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

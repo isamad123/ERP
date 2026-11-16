@@ -18,23 +18,12 @@ public sealed class PermissionResponse
     public string ModuleId { get; init; } = null!;
     public global::System.Text.Json.JsonElement DescriptionI18n { get; init; }
     public bool IsSensitive { get; init; }
+    public global::System.DateTimeOffset? RetiredAt { get; init; }
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for iam.permissions. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class PermissionWriteRequest
-{
-    public string? Code { get; init; }
-    public string? ModuleId { get; init; }
-    public global::System.Text.Json.JsonElement? DescriptionI18n { get; init; }
-    public bool? IsSensitive { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for iam.permissions.</summary>
@@ -45,7 +34,7 @@ public sealed class PermissionListQuery
     public int? Limit { get; init; }
 }
 
-/// <summary>Generated endpoints of iam.permissions: read, create, update.</summary>
+/// <summary>Generated endpoints of iam.permissions: read. Answers pass through field security (S1.06).</summary>
 internal static class PermissionEndpoints
 {
     private const string Resource = "iam.permissions";
@@ -55,59 +44,25 @@ internal static class PermissionEndpoints
         var group = app.MapGroup("/api/iam/permissions").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("iam.permissions.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.permissions.read"));
         group.MapGet("/{id:guid}", GetAsync).WithName("iam.permissions.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.permissions.read"));
-        group.MapPost("/", CreateAsync).WithName("iam.permissions.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "iam.permissions.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("iam.permissions.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "iam.permissions.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PermissionListQuery query, global::Erp.Kernel.Application.Generated.Iam.IPermissionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PermissionListQuery query, global::Erp.Kernel.Application.Generated.Iam.IPermissionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "iam.permissions.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.PermissionFilter {  }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<PermissionResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Iam.PermissionAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Iam.IPermissionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Iam.IPermissionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "iam.permissions.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Iam.PermissionAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PermissionWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IPermissionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.permissions.create", async () =>
-        {
-            var errors = Validate(request, update: false);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Iam.Permission();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/iam/permissions/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PermissionWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IPermissionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.permissions.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            Apply(request, row, update: true);
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
-        }, cancellationToken);
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Iam.Permission row) => null;
 
     private static PermissionResponse ToResponse(global::Erp.Kernel.Domain.Generated.Iam.Permission row) => new()
     {
@@ -116,44 +71,11 @@ internal static class PermissionEndpoints
         ModuleId = row.ModuleId,
         DescriptionI18n = row.DescriptionI18n.RootElement.Clone(),
         IsSensitive = row.IsSensitive,
+        RetiredAt = row.RetiredAt,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
         UpdatedAt = row.UpdatedAt,
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    private static global::System.Collections.Generic.List<string> Validate(PermissionWriteRequest request, bool update)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.Code is null)
-        {
-            errors.Add("code");
-        }
-        if (request.ModuleId is null)
-        {
-            errors.Add("moduleId");
-        }
-        if (request.DescriptionI18n is null)
-        {
-            errors.Add("descriptionI18n");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    private static void Apply(PermissionWriteRequest request, global::Erp.Kernel.Domain.Generated.Iam.Permission row, bool update)
-    {
-        row.Code = request.Code!;
-        row.ModuleId = request.ModuleId!;
-        row.DescriptionI18n = GeneratedEndpointSupport.ToDocument(request.DescriptionI18n)!;
-        if (request.IsSensitive is not null)
-        {
-            row.IsSensitive = request.IsSensitive!.Value;
-        }
-        _ = update;
-    }
 }

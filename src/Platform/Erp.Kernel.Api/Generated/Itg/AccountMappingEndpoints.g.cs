@@ -51,7 +51,7 @@ public sealed class AccountMappingListQuery
     public global::System.Guid? CompanyId { get; init; }
 }
 
-/// <summary>Generated endpoints of itg.account_mappings: read, create, update.</summary>
+/// <summary>Generated endpoints of itg.account_mappings: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class AccountMappingEndpoints
 {
     private const string Resource = "itg.account_mappings";
@@ -65,55 +65,70 @@ internal static class AccountMappingEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("itg.account_mappings.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "itg.account_mappings.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] AccountMappingListQuery query, global::Erp.Kernel.Application.Generated.Itg.IAccountMappingRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] AccountMappingListQuery query, global::Erp.Kernel.Application.Generated.Itg.IAccountMappingRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "itg.account_mappings.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Itg.AccountMappingFilter { CompanyId = query.CompanyId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<AccountMappingResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Itg.AccountMappingAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Itg.IAccountMappingRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Itg.IAccountMappingRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "itg.account_mappings.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Itg.AccountMappingAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(AccountMappingWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IAccountMappingRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(AccountMappingWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IAccountMappingRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "itg.account_mappings.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Itg.AccountMappingAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Itg.AccountMapping();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/itg/account-mappings/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, AccountMappingWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IAccountMappingRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "itg.account_mappings.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/itg/account-mappings/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Itg.AccountMappingAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, AccountMappingWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IAccountMappingRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "itg.account_mappings.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Itg.AccountMappingAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Itg.AccountMappingAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Itg.AccountMapping row) => row.CompanyId;
 
     private static AccountMappingResponse ToResponse(global::Erp.Kernel.Domain.Generated.Itg.AccountMapping row) => new()
     {
@@ -131,26 +146,27 @@ internal static class AccountMappingEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(AccountMappingWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(AccountMappingWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.SourceKind is null)
+        if (request.SourceKind is null && (!update || access.CanEdit("source_kind")))
         {
             errors.Add("sourceKind");
         }
-        if (request.SourceKey is null)
+        if (request.SourceKey is null && (!update || access.CanEdit("source_key")))
         {
             errors.Add("sourceKey");
         }
-        if (request.DebitAccount is null)
+        if (request.DebitAccount is null && (!update || access.CanEdit("debit_account")))
         {
             errors.Add("debitAccount");
         }
-        if (request.CreditAccount is null)
+        if (request.CreditAccount is null && (!update || access.CanEdit("credit_account")))
         {
             errors.Add("creditAccount");
         }
@@ -161,16 +177,61 @@ internal static class AccountMappingEndpoints
         return errors;
     }
 
-    private static void Apply(AccountMappingWriteRequest request, global::Erp.Kernel.Domain.Generated.Itg.AccountMapping row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(AccountMappingWriteRequest request, global::Erp.Kernel.Domain.Generated.Itg.AccountMapping row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.SourceKind = request.SourceKind!;
-        row.SourceKey = request.SourceKey!;
-        row.AllocationKey = request.AllocationKey;
-        row.DebitAccount = request.DebitAccount!;
-        row.CreditAccount = request.CreditAccount!;
+        if (access.CanEdit("source_kind"))
+        {
+            row.SourceKind = request.SourceKind!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SourceKind, row.SourceKind, update))
+        {
+            denied.Add("sourceKind");
+        }
+        if (access.CanEdit("source_key"))
+        {
+            row.SourceKey = request.SourceKey!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SourceKey, row.SourceKey, update))
+        {
+            denied.Add("sourceKey");
+        }
+        if (access.CanEdit("allocation_key"))
+        {
+            row.AllocationKey = request.AllocationKey;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.AllocationKey, row.AllocationKey, update))
+        {
+            denied.Add("allocationKey");
+        }
+        if (access.CanEdit("debit_account"))
+        {
+            row.DebitAccount = request.DebitAccount!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DebitAccount, row.DebitAccount, update))
+        {
+            denied.Add("debitAccount");
+        }
+        if (access.CanEdit("credit_account"))
+        {
+            row.CreditAccount = request.CreditAccount!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CreditAccount, row.CreditAccount, update))
+        {
+            denied.Add("creditAccount");
+        }
+        return denied;
     }
 }

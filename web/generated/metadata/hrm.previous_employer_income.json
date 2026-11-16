@@ -25,6 +25,10 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId",
+    "employment": "employmentId"
+  },
   "listFields": [
     "companyId",
     "employmentId",
@@ -95,7 +99,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.previous_employer_income.taxable_income"
+      "labelKey": "fields.hrm.previous_employer_income.taxable_income",
+      "fieldClass": "salary"
     },
     {
       "column": "tax_deducted",
@@ -105,7 +110,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.previous_employer_income.tax_deducted"
+      "labelKey": "fields.hrm.previous_employer_income.tax_deducted",
+      "fieldClass": "salary"
     },
     {
       "column": "file_id",

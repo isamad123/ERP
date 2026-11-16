@@ -27,3 +27,40 @@ public interface IFileRepository : global::Erp.BuildingBlocks.Application.Data.I
     /// <summary>Rows matching (expires_on); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.File>> FindByExpiresOnAsync(global::System.DateOnly? expiresOn, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of doc.files and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class FileAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Doc.File> Scope { get; } = new(
+        "doc.files",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Doc.File, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Doc.File, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("doc.files",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("owner_type", "OwnerType", null),
+        new("owner_id", "OwnerId", null),
+        new("file_name", "FileName", null),
+        new("content_type", "ContentType", null),
+        new("size_bytes", "SizeBytes", null),
+        new("checksum", "Checksum", null),
+        new("storage_key", "StorageKey", null),
+        new("version_no", "VersionNo", null),
+        new("previous_file_id", "PreviousFileId", null),
+        new("document_type", "DocumentType", null),
+        new("expires_on", "ExpiresOn", null),
+        new("retention_until", "RetentionUntil", null),
+        new("is_sensitive", "IsSensitive", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

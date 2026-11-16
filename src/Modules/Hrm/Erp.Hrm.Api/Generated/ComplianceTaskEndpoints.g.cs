@@ -63,7 +63,7 @@ public sealed class ComplianceTaskListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.compliance_tasks: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.compliance_tasks: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class ComplianceTaskEndpoints
 {
     private const string Resource = "hrm.compliance_tasks";
@@ -77,55 +77,70 @@ internal static class ComplianceTaskEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.compliance_tasks.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.compliance_tasks.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ComplianceTaskListQuery query, global::Erp.Hrm.Application.Generated.IComplianceTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ComplianceTaskListQuery query, global::Erp.Hrm.Application.Generated.IComplianceTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.compliance_tasks.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ComplianceTaskFilter { CompanyId = query.CompanyId, ObligationId = query.ObligationId, OwnerUserId = query.OwnerUserId, EvidenceFileId = query.EvidenceFileId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<ComplianceTaskResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.ComplianceTaskAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IComplianceTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IComplianceTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.compliance_tasks.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ComplianceTaskAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ComplianceTaskWriteRequest request, global::Erp.Hrm.Application.Generated.IComplianceTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ComplianceTaskWriteRequest request, global::Erp.Hrm.Application.Generated.IComplianceTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.compliance_tasks.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ComplianceTaskAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.ComplianceTask();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/compliance-tasks/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ComplianceTaskWriteRequest request, global::Erp.Hrm.Application.Generated.IComplianceTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.compliance_tasks.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/compliance-tasks/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ComplianceTaskAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ComplianceTaskWriteRequest request, global::Erp.Hrm.Application.Generated.IComplianceTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.compliance_tasks.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ComplianceTaskAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.ComplianceTaskAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.ComplianceTask row) => row.CompanyId;
 
     private static ComplianceTaskResponse ToResponse(global::Erp.Hrm.Domain.Generated.ComplianceTask row) => new()
     {
@@ -145,26 +160,27 @@ internal static class ComplianceTaskEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(ComplianceTaskWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(ComplianceTaskWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.ObligationId is null)
+        if (request.ObligationId is null && (!update || access.CanEdit("obligation_id")))
         {
             errors.Add("obligationId");
         }
-        if (request.PeriodLabel is null)
+        if (request.PeriodLabel is null && (!update || access.CanEdit("period_label")))
         {
             errors.Add("periodLabel");
         }
-        if (request.DueDate is null)
+        if (request.DueDate is null && (!update || access.CanEdit("due_date")))
         {
             errors.Add("dueDate");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -175,18 +191,77 @@ internal static class ComplianceTaskEndpoints
         return errors;
     }
 
-    private static void Apply(ComplianceTaskWriteRequest request, global::Erp.Hrm.Domain.Generated.ComplianceTask row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(ComplianceTaskWriteRequest request, global::Erp.Hrm.Domain.Generated.ComplianceTask row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.ObligationId = request.ObligationId!.Value;
-        row.PeriodLabel = request.PeriodLabel!;
-        row.DueDate = request.DueDate!.Value;
-        row.OwnerUserId = request.OwnerUserId;
-        row.FiledOn = request.FiledOn;
-        row.EvidenceFileId = request.EvidenceFileId;
-        row.Status = request.Status!;
+        if (access.CanEdit("obligation_id"))
+        {
+            row.ObligationId = request.ObligationId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ObligationId, row.ObligationId, update))
+        {
+            denied.Add("obligationId");
+        }
+        if (access.CanEdit("period_label"))
+        {
+            row.PeriodLabel = request.PeriodLabel!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodLabel, row.PeriodLabel, update))
+        {
+            denied.Add("periodLabel");
+        }
+        if (access.CanEdit("due_date"))
+        {
+            row.DueDate = request.DueDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DueDate, row.DueDate, update))
+        {
+            denied.Add("dueDate");
+        }
+        if (access.CanEdit("owner_user_id"))
+        {
+            row.OwnerUserId = request.OwnerUserId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OwnerUserId, row.OwnerUserId, update))
+        {
+            denied.Add("ownerUserId");
+        }
+        if (access.CanEdit("filed_on"))
+        {
+            row.FiledOn = request.FiledOn;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FiledOn, row.FiledOn, update))
+        {
+            denied.Add("filedOn");
+        }
+        if (access.CanEdit("evidence_file_id"))
+        {
+            row.EvidenceFileId = request.EvidenceFileId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EvidenceFileId, row.EvidenceFileId, update))
+        {
+            denied.Add("evidenceFileId");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

@@ -42,13 +42,13 @@ internal sealed class RunRepository(
     global::Erp.BuildingBlocks.Domain.Time.IClock clock,
     global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,
     global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)
-    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Job.Run>(context, clock, actor, scope, "job.runs"),
+    : global::Erp.BuildingBlocks.Infrastructure.Persistence.GeneratedMutableRepository<global::Erp.Kernel.Domain.Generated.Job.Run>(context, clock, actor, scope, global::Erp.Kernel.Application.Generated.Job.RunAccess.Scope),
     global::Erp.Kernel.Application.Generated.Job.IRunRepository
 {
-    public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Job.Run>> ListAsync(global::Erp.Kernel.Application.Generated.Job.RunFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Job.Run>> ListAsync(global::Erp.Kernel.Application.Generated.Job.RunFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
-        var query = Query();
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         if (filter.DefinitionId is { } definitionIdFilter)
         {
             query = query.Where(e => e.DefinitionId == definitionIdFilter);
@@ -57,11 +57,12 @@ internal sealed class RunRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
-        return PageAsync(query, page, cancellationToken);
+        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Job.Run>> FindByStatusAndCreatedAtAsync(string status, global::System.DateTimeOffset createdAt, global::System.Threading.CancellationToken cancellationToken)
     {
-        return await Query().Where(e => e.Status == status && e.CreatedAt == createdAt).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.Status == status && e.CreatedAt == createdAt).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

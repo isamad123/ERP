@@ -53,7 +53,7 @@ public sealed class DefinitionListQuery
     public int? Limit { get; init; }
 }
 
-/// <summary>Generated endpoints of job.definitions: read, create, update.</summary>
+/// <summary>Generated endpoints of job.definitions: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class DefinitionEndpoints
 {
     private const string Resource = "job.definitions";
@@ -67,55 +67,70 @@ internal static class DefinitionEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("job.definitions.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "job.definitions.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] DefinitionListQuery query, global::Erp.Kernel.Application.Generated.Job.IDefinitionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] DefinitionListQuery query, global::Erp.Kernel.Application.Generated.Job.IDefinitionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "job.definitions.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Job.DefinitionFilter {  }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<DefinitionResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Job.DefinitionAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Job.IDefinitionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Job.IDefinitionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "job.definitions.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Job.DefinitionAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(DefinitionWriteRequest request, global::Erp.Kernel.Application.Generated.Job.IDefinitionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(DefinitionWriteRequest request, global::Erp.Kernel.Application.Generated.Job.IDefinitionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "job.definitions.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Job.DefinitionAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Job.Definition();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/job/definitions/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, DefinitionWriteRequest request, global::Erp.Kernel.Application.Generated.Job.IDefinitionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "job.definitions.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/job/definitions/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Job.DefinitionAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, DefinitionWriteRequest request, global::Erp.Kernel.Application.Generated.Job.IDefinitionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "job.definitions.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Job.DefinitionAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Job.DefinitionAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Job.Definition row) => null;
 
     private static DefinitionResponse ToResponse(global::Erp.Kernel.Domain.Generated.Job.Definition row) => new()
     {
@@ -135,30 +150,31 @@ internal static class DefinitionEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(DefinitionWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(DefinitionWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.Code is null)
+        if (request.Code is null && (!update || access.CanEdit("code")))
         {
             errors.Add("code");
         }
-        if (request.ModuleId is null)
+        if (request.ModuleId is null && (!update || access.CanEdit("module_id")))
         {
             errors.Add("moduleId");
         }
-        if (request.Parameters is null)
+        if (request.Parameters is null && (!update || access.CanEdit("parameters")))
         {
             errors.Add("parameters");
         }
-        if (request.ConcurrencyLimit is null)
+        if (request.ConcurrencyLimit is null && (!update || access.CanEdit("concurrency_limit")))
         {
             errors.Add("concurrencyLimit");
         }
-        if (request.TimeoutSeconds is null)
+        if (request.TimeoutSeconds is null && (!update || access.CanEdit("timeout_seconds")))
         {
             errors.Add("timeoutSeconds");
         }
-        if (request.RetryPolicy is null)
+        if (request.RetryPolicy is null && (!update || access.CanEdit("retry_policy")))
         {
             errors.Add("retryPolicy");
         }
@@ -169,19 +185,77 @@ internal static class DefinitionEndpoints
         return errors;
     }
 
-    private static void Apply(DefinitionWriteRequest request, global::Erp.Kernel.Domain.Generated.Job.Definition row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(DefinitionWriteRequest request, global::Erp.Kernel.Domain.Generated.Job.Definition row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.Code = request.Code!;
-        row.ModuleId = request.ModuleId!;
-        row.Schedule = GeneratedEndpointSupport.ToDocument(request.Schedule);
-        row.Parameters = GeneratedEndpointSupport.ToDocument(request.Parameters)!;
-        row.ConcurrencyLimit = request.ConcurrencyLimit!.Value;
-        row.TimeoutSeconds = request.TimeoutSeconds!.Value;
-        row.RetryPolicy = GeneratedEndpointSupport.ToDocument(request.RetryPolicy)!;
-        if (request.IsEnabled is not null)
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("code"))
         {
-            row.IsEnabled = request.IsEnabled!.Value;
+            row.Code = request.Code!;
         }
-        _ = update;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Code, row.Code, update))
+        {
+            denied.Add("code");
+        }
+        if (access.CanEdit("module_id"))
+        {
+            row.ModuleId = request.ModuleId!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ModuleId, row.ModuleId, update))
+        {
+            denied.Add("moduleId");
+        }
+        if (access.CanEdit("schedule"))
+        {
+            row.Schedule = GeneratedEndpointSupport.ToDocument(request.Schedule);
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Schedule, row.Schedule, update))
+        {
+            denied.Add("schedule");
+        }
+        if (access.CanEdit("parameters"))
+        {
+            row.Parameters = GeneratedEndpointSupport.ToDocument(request.Parameters)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Parameters, row.Parameters, update))
+        {
+            denied.Add("parameters");
+        }
+        if (access.CanEdit("concurrency_limit"))
+        {
+            row.ConcurrencyLimit = request.ConcurrencyLimit!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ConcurrencyLimit, row.ConcurrencyLimit, update))
+        {
+            denied.Add("concurrencyLimit");
+        }
+        if (access.CanEdit("timeout_seconds"))
+        {
+            row.TimeoutSeconds = request.TimeoutSeconds!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TimeoutSeconds, row.TimeoutSeconds, update))
+        {
+            denied.Add("timeoutSeconds");
+        }
+        if (access.CanEdit("retry_policy"))
+        {
+            row.RetryPolicy = GeneratedEndpointSupport.ToDocument(request.RetryPolicy)!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RetryPolicy, row.RetryPolicy, update))
+        {
+            denied.Add("retryPolicy");
+        }
+        if (access.CanEdit("is_enabled"))
+        {
+            if (request.IsEnabled is not null)
+            {
+                row.IsEnabled = request.IsEnabled!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsEnabled, row.IsEnabled, update))
+        {
+            denied.Add("isEnabled");
+        }
+        return denied;
     }
 }

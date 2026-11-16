@@ -28,6 +28,10 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId",
+    "employment": "employmentId"
+  },
   "listFields": [
     "companyId",
     "loanNo",
@@ -100,7 +104,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.loans.principal"
+      "labelKey": "fields.hrm.loans.principal",
+      "fieldClass": "salary"
     },
     {
       "column": "currency_code",

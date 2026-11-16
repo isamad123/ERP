@@ -30,3 +30,40 @@ public interface IGoalRepository : global::Erp.BuildingBlocks.Application.Data.I
     /// <summary>Rows matching (parent_goal_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Goal>> FindByParentGoalIdAsync(global::System.Guid? parentGoalId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.goals and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class GoalAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.Goal> Scope { get; } = new(
+        "hrm.goals",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.Goal, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.OrgUnit] = e => e.OrgUnitId,
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Employment] = e => e.OwnerEmploymentId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.Goal, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.goals",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("cycle_id", "CycleId", null),
+        new("owner_employment_id", "OwnerEmploymentId", null),
+        new("org_unit_id", "OrgUnitId", null),
+        new("parent_goal_id", "ParentGoalId", null),
+        new("framework", "Framework", null),
+        new("title", "Title", null),
+        new("description", "Description", null),
+        new("weight", "Weight", null),
+        new("target", "Target", null),
+        new("actual", "Actual", null),
+        new("due_date", "DueDate", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

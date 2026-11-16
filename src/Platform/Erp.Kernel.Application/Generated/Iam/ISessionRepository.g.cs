@@ -20,3 +20,32 @@ public interface ISessionRepository : global::Erp.BuildingBlocks.Application.Dat
     /// <summary>Rows matching (user_id, issued_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.Session>> FindByUserIdAndIssuedAtAsync(global::System.Guid userId, global::System.DateTimeOffset issuedAt, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of iam.sessions and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class SessionAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Iam.Session> Scope { get; } = new(
+        "iam.sessions",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.Session, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.User] = e => e.UserId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Iam.Session, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("iam.sessions",
+    [
+        new("id", "Id", null),
+        new("user_id", "UserId", null),
+        new("issued_at", "IssuedAt", null),
+        new("last_seen_at", "LastSeenAt", null),
+        new("expires_at", "ExpiresAt", null),
+        new("ip_address", "IpAddress", null),
+        new("user_agent", "UserAgent", null),
+        new("revoked_at", "RevokedAt", null),
+        new("revoked_reason", "RevokedReason", null),
+        new("refresh_token_hash", "RefreshTokenHash", null),
+        new("previous_refresh_hash", "PreviousRefreshHash", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

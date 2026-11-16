@@ -26,6 +26,9 @@
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
+  "scope": {
+    "company": "companyId"
+  },
   "listFields": [
     "companyId",
     "batchId",
@@ -151,7 +154,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.payment_lines.amount"
+      "labelKey": "fields.hrm.payment_lines.amount",
+      "fieldClass": "salary"
     },
     {
       "column": "bank_reference",

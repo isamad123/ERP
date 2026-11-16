@@ -20,3 +20,29 @@ public interface ITemplateRepository : global::Erp.BuildingBlocks.Application.Da
     /// <summary>Rows matching (event_code, channel, language, version); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.Template>> FindByEventCodeAndChannelAndLanguageAndVersionAsync(string eventCode, string channel, string language, int version, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of ntf.templates and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class TemplateAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Ntf.Template> Scope { get; } = new(
+        "ntf.templates",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Ntf.Template, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Ntf.Template, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("ntf.templates",
+    [
+        new("id", "Id", null),
+        new("event_code", "EventCode", null),
+        new("channel", "Channel", null),
+        new("language", "Language", null),
+        new("subject", "Subject", null),
+        new("body", "Body", null),
+        new("version", "Version", null),
+        new("status", "Status", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

@@ -24,3 +24,28 @@ public interface IGeneratedDocumentRepository : global::Erp.BuildingBlocks.Appli
     /// <summary>Rows matching (owner_type, owner_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument>> FindByOwnerTypeAndOwnerIdAsync(string ownerType, global::System.Guid ownerId, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of doc.generated_documents and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class GeneratedDocumentAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument> Scope { get; } = new(
+        "doc.generated_documents",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("doc.generated_documents",
+    [
+        new("id", "Id", null),
+        new("company_id", "CompanyId", null),
+        new("template_version_id", "TemplateVersionId", null),
+        new("owner_type", "OwnerType", null),
+        new("owner_id", "OwnerId", null),
+        new("file_id", "FileId", null),
+        new("is_password_protected", "IsPasswordProtected", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+    ]);
+}

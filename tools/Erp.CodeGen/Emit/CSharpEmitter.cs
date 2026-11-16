@@ -26,14 +26,21 @@ public static class CSharpEmitter
         HasRepository(t) && t.Database == DatabaseKind.Tenant && !model.Settings.ApiExcluded.Contains(t.FullName);
 
     /// <summary>Create and update endpoints need every required column; encrypted values need the key service (S1.06/S1.07).</summary>
-    public static bool CanWrite(Table t) => !t.Columns.Exists(c => c.IsSensitive && c.Required);
+    private static bool Writable(Table t) => !t.Columns.Exists(c => c.IsSensitive && c.Required);
 
-    public static bool CanUpdate(Table t) => CanWrite(t) && t.HasRowVersion && !t.IsAppendOnly;
+    public static bool CanCreate(Table t) => Writable(t) && t.AllowsApi("create");
+
+    public static bool CanUpdate(Table t) => Writable(t) && t.HasRowVersion && !t.IsAppendOnly && t.AllowsApi("update");
+
+    /// <summary>True when the generated API accepts a body (create or update); data-design key api_actions may close both.</summary>
+    public static bool CanWrite(Table t) => CanCreate(t) || CanUpdate(t);
+
+    public static bool CanDelete(Table t) => t.IsSoftDeleted && t.HasRowVersion && t.AllowsApi("delete");
 
     public static IEnumerable<string> Actions(Table t)
     {
         yield return "read";
-        if (CanWrite(t))
+        if (CanCreate(t))
         {
             yield return "create";
         }
@@ -43,7 +50,7 @@ public static class CSharpEmitter
             yield return "update";
         }
 
-        if (t.IsSoftDeleted && t.HasRowVersion)
+        if (CanDelete(t))
         {
             yield return "delete";
         }
@@ -84,6 +91,10 @@ public static class CSharpEmitter
             var sample = tables[0];
             var infraRoot = module.Key == "controlplane" ? "src/Platform/Erp.Kernel.Infrastructure/ControlPlane/Generated" : $"{N.ModuleFolder(sample)}/Erp.{N.ModuleProject(sample)}.Infrastructure/Generated";
             output.Add($"{infraRoot}/{N.DbContextName(sample)}.g.cs", DbContext(module.Key, tables));
+            if (module.Key != "controlplane")
+            {
+                output.Add($"{infraRoot}/{N.ModuleProject(sample)}ResourceCatalog.g.cs", ResourceCatalog(module.Key, tables.Where(HasRepository).ToList()));
+            }
             if (module.Key == "controlplane")
             {
                 continue;
@@ -93,6 +104,7 @@ public static class CSharpEmitter
             var project = N.ModuleProject(sample);
             output.Add($"{N.ModuleFolder(sample)}/Erp.{project}.Api/Generated/{project}GeneratedEndpoints.g.cs", EndpointRoot(project, apiTables));
             output.Add($"{N.ModuleFolder(sample)}/Erp.{project}.Contracts/Generated/{project}Permissions.g.cs", Permissions(project, apiTables));
+            output.Add($"{N.ModuleFolder(sample)}/Erp.{project}.Infrastructure/Access/permissions.g.json", PermissionManifest(module.Key, apiTables));
         }
     }
 
@@ -259,11 +271,11 @@ public static class CSharpEmitter
             w.Line("    global::Erp.BuildingBlocks.Domain.Time.IClock clock,");
             w.Line("    global::Erp.BuildingBlocks.Application.Security.ICurrentActor actor,");
             w.Line("    global::Erp.BuildingBlocks.Application.Security.IDataScopeFilter scope)");
-            w.Line($"    : global::Erp.BuildingBlocks.Infrastructure.Persistence.{baseClass}<{e}>(context, clock, actor, scope, {CodeWriter.CSharpString(N.Resource(t))}),");
+            w.Line($"    : global::Erp.BuildingBlocks.Infrastructure.Persistence.{baseClass}<{e}>(context, clock, actor, scope, {AccessFull(t)}.Scope),");
             w.Open($"    {N.RepositoryInterfaceFull(t)}");
-            w.Open($"public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<{e}>> ListAsync({N.FilterFull(t)} filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)");
+            w.Open($"public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<{e}>> ListAsync({N.FilterFull(t)} filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken)");
             w.Line("global::System.ArgumentNullException.ThrowIfNull(filter);");
-            w.Line("var query = Query();");
+            w.Line("var query = await QueryAsync(cancellationToken).ConfigureAwait(false);");
             foreach (var c in FilterColumns(t))
             {
                 var p = N.Property(t, c);
@@ -274,20 +286,21 @@ public static class CSharpEmitter
                 w.Close();
             }
 
-            w.Line("return PageAsync(query, page, cancellationToken);");
+            w.Line("return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);");
             w.Close();
             if (t.IsCompanyScoped)
             {
                 w.Line();
-                w.Line($"public global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<{e}>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>");
-                w.Line("    PageAsync(Query().Where(e => e.CompanyId == companyId), page, cancellationToken);");
+                w.Line($"public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<{e}>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>");
+                w.Line("    await PageAsync((await QueryAsync(cancellationToken).ConfigureAwait(false)).Where(e => e.CompanyId == companyId), page, cancellationToken).ConfigureAwait(false);");
             }
 
             foreach (var finder in Finders(t))
             {
                 w.Line();
                 w.Open($"public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<{e}>> {finder.Name}({finder.Parameters}, global::System.Threading.CancellationToken cancellationToken)");
-                w.Line($"return await Query().Where(e => {finder.Predicate}).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);");
+                w.Line("var query = await QueryAsync(cancellationToken).ConfigureAwait(false);");
+                w.Line($"return await query.Where(e => {finder.Predicate}).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);");
                 w.Close();
             }
 
@@ -407,8 +420,82 @@ public static class CSharpEmitter
             w.Line($"global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<{e}>> {finder.Name}({finder.Parameters}, global::System.Threading.CancellationToken cancellationToken);");
         }
 
-        w.Close();
+        w.Close().Line();
+        Access(w, t);
         return w.ToString();
+    }
+
+    public static string AccessName(Table t) => N.Entity(t) + "Access";
+
+    private static string AccessFull(Table t) => $"global::{N.Namespace(t, "Application")}.{AccessName(t)}";
+
+    private static readonly Dictionary<string, string> Dimensions = new(StringComparer.Ordinal)
+    {
+        ["company"] = "Company",
+        ["branch"] = "Branch",
+        ["org_unit"] = "OrgUnit",
+        ["employment"] = "Employment",
+        ["person"] = "Person",
+        ["user"] = "User",
+    };
+
+    /// <summary>Fields the API shows (and field rules address): every returned column; custom fields by key.</summary>
+    public static IReadOnlyList<Column> FieldColumns(Table t) => ResponseColumns(t);
+
+    /// <summary>Data-scope locators (design key scope, CR-018) and the field catalogue (field_class) of one table (S1.06).</summary>
+    private static void Access(CodeWriter w, Table t)
+    {
+        const string sec = "global::Erp.BuildingBlocks.Application.Security.";
+        var e = N.EntityFull(t);
+        w.Line($"/// <summary>How data scopes locate rows of {CodeWriter.Xml(t.FullName)} and which fields its API shows (slice S1.06, CR-018).</summary>");
+        w.Open($"public static class {AccessName(t)}");
+        w.Line($"public static {sec}ScopeTarget<{e}> Scope {{ get; }} = new(");
+        w.Line($"    {CodeWriter.CSharpString(N.Resource(t))},");
+        var locators = t.ScopeLocators.OrderBy(kv => Array.IndexOf(DesignLoader.ScopeDimensions, kv.Key)).ToList();
+        if (locators.Count == 0)
+        {
+            w.Line($"    new global::System.Collections.Generic.Dictionary<{sec}ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<{e}, global::System.Guid?>>>(),");
+        }
+        else
+        {
+            w.Line($"    new global::System.Collections.Generic.Dictionary<{sec}ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<{e}, global::System.Guid?>>>");
+            w.Line("    {");
+            foreach (var (dimension, column) in locators)
+            {
+                w.Line($"        [{sec}ScopeDimension.{Dimensions[dimension]}] = e => e.{N.Property(t, t.Column(column))},");
+            }
+
+            w.Line("    },");
+        }
+
+        if (t.ScopeAttributes.Count == 0)
+        {
+            w.Line($"    new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<{e}, string?>>>());");
+        }
+        else
+        {
+            w.Line($"    new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<{e}, string?>>>");
+            w.Line("    {");
+            foreach (var name in t.ScopeAttributes)
+            {
+                w.Line($"        [{CodeWriter.CSharpString(name)}] = e => e.{N.Property(t, t.Column(name))},");
+            }
+
+            w.Line("    });");
+        }
+
+        w.Line();
+        w.Line($"public static {sec}FieldCatalog Fields {{ get; }} = new({CodeWriter.CSharpString(N.Resource(t))},");
+        w.Line("[");
+        foreach (var c in FieldColumns(t))
+        {
+            var fieldClass = c.FieldClass is null ? "null" : CodeWriter.CSharpString(c.FieldClass);
+            var custom = c.Name == "custom" && c.Kind is ColumnKind.Json ? ", IsCustom: true" : string.Empty;
+            w.Line($"    new({CodeWriter.CSharpString(c.Name)}, {CodeWriter.CSharpString(N.Property(t, c))}, {fieldClass}{custom}),");
+        }
+
+        w.Line("]);");
+        w.Close();
     }
 
     // ---------------------------------------------------------------- Api
@@ -474,7 +561,7 @@ public static class CSharpEmitter
 
         w.Close().Line();
 
-        w.Line($"/// <summary>Generated endpoints of {CodeWriter.Xml(t.FullName)}: {string.Join(", ", Actions(t))}.</summary>");
+        w.Line($"/// <summary>Generated endpoints of {CodeWriter.Xml(t.FullName)}: {string.Join(", ", Actions(t))}. Answers pass through field security (S1.06).</summary>");
         w.Open($"internal static class {entity}Endpoints");
         w.Line($"private const string Resource = {CodeWriter.CSharpString(resource)};");
         w.Line();
@@ -482,7 +569,7 @@ public static class CSharpEmitter
         w.Line($"var group = app.MapGroup({CodeWriter.CSharpString(N.Route(t))}).WithTags(Resource);");
         Map(w, "MapGet", "\"/\"", "ListAsync", "list", "read", t);
         Map(w, "MapGet", "\"/{id:guid}\"", "GetAsync", "get", "read", t);
-        if (CanWrite(t))
+        if (CanCreate(t))
         {
             Map(w, "MapPost", "\"/\"", "CreateAsync", "create", "create", t);
         }
@@ -492,7 +579,7 @@ public static class CSharpEmitter
             Map(w, "MapPut", "\"/{id:guid}\"", "UpdateAsync", "update", "update", t);
         }
 
-        if (t.IsSoftDeleted && t.HasRowVersion)
+        if (CanDelete(t))
         {
             Map(w, "MapDelete", "\"/{id:guid}\"", "DeleteAsync", "delete", "delete", t);
         }
@@ -500,73 +587,93 @@ public static class CSharpEmitter
         w.Close();
 
         var repo = N.RepositoryInterfaceFull(t);
+        var access = AccessFull(t);
         const string permissions = "global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions";
+        const string fields = "global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields";
         const string ct = "global::System.Threading.CancellationToken cancellationToken";
+        const string json = "global::System.Text.Json.Nodes.JsonObject";
 
         // List
         var filterInit = string.Join(", ", FilterColumns(t).Select(c => $"{N.Property(t, c)} = query.{N.Property(t, c)}"));
         w.Line();
-        w.Line($"private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] {entity}ListQuery query, {repo} repository, {permissions}, {ct}) =>");
+        w.Line($"private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] {entity}ListQuery query, {repo} repository, {permissions}, {fields}, {ct}) =>");
         w.Line($"    GeneratedEndpointSupport.RunAsync(permissions, {CodeWriter.CSharpString(N.Permission(t, "read"))}, async () =>");
         w.Line("    {");
         w.Line($"        var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);");
         w.Line($"        var rows = await repository.ListAsync(new {N.FilterFull(t)} {{ {filterInit} }}, page, cancellationToken).ConfigureAwait(false);");
-        w.Line($"        return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<{entity}Response>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));");
+        w.Line($"        var items = await GeneratedEndpointSupport.ShapeAsync(fields, {access}.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);");
+        w.Line($"        return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<{json}>(items, rows.Count == page.Limit ? rows[^1].Id : null));");
         w.Line("    }, cancellationToken);");
 
         // Get
         w.Line();
-        w.Line($"private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, {repo} repository, {permissions}, {ct}) =>");
+        w.Line($"private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, {repo} repository, {permissions}, {fields}, {ct}) =>");
         w.Line($"    GeneratedEndpointSupport.RunAsync(permissions, {CodeWriter.CSharpString(N.Permission(t, "read"))}, async () =>");
         w.Line("    {");
         w.Line("        var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);");
-        w.Line("        return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));");
+        w.Line($"        return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, {access}.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));");
         w.Line("    }, cancellationToken);");
 
-        if (CanWrite(t))
+        if (CanCreate(t))
         {
+            var companyLocator = t.ScopeLocators.GetValueOrDefault("company");
+            var createCompany = companyLocator is not null && WritableColumns(t, update: false).Any(c => c.Name == companyLocator)
+                ? "request." + N.Property(t, t.Column(companyLocator))
+                : "null";
             w.Line();
-            w.Line($"private static global::System.Threading.Tasks.Task<IResult> CreateAsync({entity}WriteRequest request, {repo} repository, {permissions}, {ct}) =>");
+            w.Line($"private static global::System.Threading.Tasks.Task<IResult> CreateAsync({entity}WriteRequest request, {repo} repository, {permissions}, {fields}, {ct}) =>");
             w.Line($"    GeneratedEndpointSupport.RunAsync(permissions, {CodeWriter.CSharpString(N.Permission(t, "create"))}, async () =>");
             w.Line("    {");
-            w.Line("        var errors = Validate(request, update: false);");
+            w.Line($"        var access = await fields.ForAsync({access}.Fields, \"create\", {createCompany}, cancellationToken).ConfigureAwait(false);");
+            w.Line("        var errors = Validate(request, update: false, access);");
             w.Line("        if (errors.Count > 0)");
             w.Line("        {");
             w.Line("            return GeneratedEndpointSupport.Invalid(errors);");
             w.Line("        }");
             w.Line();
             w.Line($"        var row = new {e}();");
-            w.Line("        Apply(request, row, update: false);");
+            w.Line("        var denied = Apply(request, row, update: false, access);");
+            w.Line("        if (denied.Count > 0)");
+            w.Line("        {");
+            w.Line("            return GeneratedEndpointSupport.NotEditable(denied);");
+            w.Line("        }");
+            w.Line();
             w.Line("        await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);");
-            w.Line($"        return TypedResults.Created({CodeWriter.CSharpString(N.Route(t) + "/")} + row.Id.ToString(), ToResponse(row));");
+            w.Line($"        return TypedResults.Created({CodeWriter.CSharpString(N.Route(t) + "/")} + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, {access}.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));");
             w.Line("    }, cancellationToken);");
         }
 
         if (CanUpdate(t))
         {
             w.Line();
-            w.Line($"private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, {entity}WriteRequest request, {repo} repository, {permissions}, {ct}) =>");
+            w.Line($"private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, {entity}WriteRequest request, {repo} repository, {permissions}, {fields}, {ct}) =>");
             w.Line($"    GeneratedEndpointSupport.RunAsync(permissions, {CodeWriter.CSharpString(N.Permission(t, "update"))}, async () =>");
             w.Line("    {");
-            w.Line("        var errors = Validate(request, update: true);");
-            w.Line("        if (errors.Count > 0)");
-            w.Line("        {");
-            w.Line("            return GeneratedEndpointSupport.Invalid(errors);");
-            w.Line("        }");
-            w.Line();
             w.Line("        var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);");
             w.Line("        if (row is null)");
             w.Line("        {");
             w.Line("            return GeneratedEndpointSupport.NotFound();");
             w.Line("        }");
             w.Line();
-            w.Line("        Apply(request, row, update: true);");
+            w.Line($"        var access = await fields.ForAsync({access}.Fields, \"update\", CompanyOf(row), cancellationToken).ConfigureAwait(false);");
+            w.Line("        var errors = Validate(request, update: true, access);");
+            w.Line("        if (errors.Count > 0)");
+            w.Line("        {");
+            w.Line("            return GeneratedEndpointSupport.Invalid(errors);");
+            w.Line("        }");
+            w.Line();
+            w.Line("        var denied = Apply(request, row, update: true, access);");
+            w.Line("        if (denied.Count > 0)");
+            w.Line("        {");
+            w.Line("            return GeneratedEndpointSupport.NotEditable(denied);");
+            w.Line("        }");
+            w.Line();
             w.Line("        await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);");
-            w.Line("        return TypedResults.Ok(ToResponse(row));");
+            w.Line($"        return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, {access}.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));");
             w.Line("    }, cancellationToken);");
         }
 
-        if (t.IsSoftDeleted && t.HasRowVersion)
+        if (CanDelete(t))
         {
             w.Line();
             w.Line($"private static global::System.Threading.Tasks.Task<IResult> DeleteAsync(global::System.Guid id, long? rowVersion, {repo} repository, {permissions}, {ct}) =>");
@@ -582,6 +689,11 @@ public static class CSharpEmitter
             w.Line("    }, cancellationToken);");
         }
 
+        // Company of a row for field security (its company locator; null when the table has none).
+        w.Line();
+        var locator = t.ScopeLocators.GetValueOrDefault("company");
+        w.Line($"private static global::System.Guid? CompanyOf({e} row) => {(locator is null ? "null" : "row." + N.Property(t, t.Column(locator)))};");
+
         // ToResponse
         w.Line();
         w.Open($"private static {entity}Response ToResponse({e} row) => new()");
@@ -594,12 +706,27 @@ public static class CSharpEmitter
 
         if (CanWrite(t))
         {
+            const string map = "global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access";
             w.Line();
-            w.Open($"private static global::System.Collections.Generic.List<string> Validate({entity}WriteRequest request, bool update)");
+            w.Line("/// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>");
+            w.Open($"private static global::System.Collections.Generic.List<string> Validate({entity}WriteRequest request, bool update, {map})");
             w.Line("var errors = new global::System.Collections.Generic.List<string>();");
-            foreach (var c in WritableColumns(t, update: false).Where(c => c.Required && c.Default is null && c.Kind is not (ColumnKind.TextArray or ColumnKind.UuidArray)))
+            var required = WritableColumns(t, update: false).Where(c => c.Required && c.Default is null && c.Kind is not (ColumnKind.TextArray or ColumnKind.UuidArray)).ToList();
+            if (!required.Exists(c => c.Name != "company_id"))
             {
-                var condition = c.Name == "company_id" ? $"!update && request.{N.Property(t, c)} is null" : $"request.{N.Property(t, c)} is null";
+                w.Line("_ = access;");
+            }
+
+            if (required.Count == 0 && !CanUpdate(t))
+            {
+                w.Line("_ = update;");
+            }
+
+            foreach (var c in required)
+            {
+                var condition = c.Name == "company_id"
+                    ? $"!update && request.{N.Property(t, c)} is null"
+                    : $"request.{N.Property(t, c)} is null && (!update || access.CanEdit({CodeWriter.CSharpString(c.Name)}))";
                 w.Open($"if ({condition})");
                 w.Line($"errors.Add({CodeWriter.CSharpString(Naming.Camel(c.Name))});");
                 w.Close();
@@ -618,28 +745,43 @@ public static class CSharpEmitter
                 w.Line("errors.Add(\"rowVersion\");");
                 w.Close();
             }
-            else
-            {
-                w.Line("_ = update;");
-            }
 
             w.Line("return errors;");
             w.Close();
 
             w.Line();
-            w.Open($"private static void Apply({entity}WriteRequest request, {e} row, bool update)");
+            w.Line("/// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>");
+            w.Open($"private static global::System.Collections.Generic.List<string> Apply({entity}WriteRequest request, {e} row, bool update, {map})");
+            w.Line("var denied = new global::System.Collections.Generic.List<string>();");
             foreach (var c in WritableColumns(t, update: false))
             {
-                var assign = $"row.{N.Property(t, c)} = {RequestValue(t, c)};";
+                var p = N.Property(t, c);
+                var key = CodeWriter.CSharpString(c.Name);
+                var camel = CodeWriter.CSharpString(Naming.Camel(c.Name));
+                var assign = $"row.{p} = {RequestValue(t, c)};";
+                if (c.Name == "custom" && c.Kind is ColumnKind.Json)
+                {
+                    w.Line($"row.{p} = global::Erp.BuildingBlocks.Application.Security.FieldShaping.MergeCustom(request.{p}, update ? row.{p} : null, access, denied);");
+                    continue;
+                }
+
                 if (c.Name == "company_id")
                 {
                     w.Open("if (!update)");
+                    w.Open($"if (access.CanEdit({key}))");
                     w.Line(assign);
                     w.Close();
+                    w.Open($"else if (request.{p} is not null)");
+                    w.Line($"denied.Add({camel});");
+                    w.Close();
+                    w.Close();
+                    continue;
                 }
-                else if (c.Required && c.Default is not null)
+
+                w.Open($"if (access.CanEdit({key}))");
+                if (c.Required && c.Default is not null)
                 {
-                    w.Open($"if (request.{N.Property(t, c)} is not null)");
+                    w.Open($"if (request.{p} is not null)");
                     w.Line(assign);
                     w.Close();
                 }
@@ -647,6 +789,11 @@ public static class CSharpEmitter
                 {
                     w.Line(assign);
                 }
+
+                w.Close();
+                w.Open($"else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.{p}, row.{p}, update))");
+                w.Line($"denied.Add({camel});");
+                w.Close();
             }
 
             // Columns the API never accepts (api_read_only, CR-012): a status starts at its first listed value on create.
@@ -658,18 +805,13 @@ public static class CSharpEmitter
                 w.Close();
             }
 
-            if (initialStatus is null && !WritableColumns(t, update: false).Any(c => c.Name == "company_id"))
-            {
-                w.Line("_ = update;");
-            }
-
+            w.Line("return denied;");
             w.Close();
         }
 
         w.Close();
         return w.ToString();
     }
-
 
     private static void Map(CodeWriter w, string method, string pattern, string handler, string name, string action, Table t) =>
         w.Line($"group.{method}({pattern}, {handler}).WithName({CodeWriter.CSharpString(t.FullName + "." + name)}).WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, {CodeWriter.CSharpString(action)}, {CodeWriter.CSharpString(N.Permission(t, action))}));");
@@ -724,7 +866,7 @@ public static class CSharpEmitter
             .Line()
             .Line($"namespace Erp.{project}.Api.Generated;")
             .Line();
-        w.Line($"/// <summary>Maps the generated endpoints of the {project} tables. Not called by the host until tenant resolution exists (S1.03).</summary>");
+        w.Line($"/// <summary>Maps the generated endpoints of the {project} tables (host: S1.03; access control: S1.06).</summary>");
         w.Open($"public static class {project}GeneratedEndpoints");
         w.Open($"public static IEndpointRouteBuilder Map{project}GeneratedEndpoints(this IEndpointRouteBuilder app)");
         foreach (var t in tables)
@@ -744,6 +886,9 @@ public static class CSharpEmitter
         w.Open("try");
         w.Line("return await action().ConfigureAwait(false);");
         w.Close();
+        w.Open("catch (global::Erp.BuildingBlocks.Application.Security.AccessDeniedException ex)");
+        w.Line("return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, title: ex.ErrorCode);");
+        w.Close();
         w.Open("catch (global::Erp.BuildingBlocks.Application.Data.ConcurrencyConflictException ex)");
         w.Line("return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: ex.ErrorCode);");
         w.Close();
@@ -761,8 +906,98 @@ public static class CSharpEmitter
         w.Line();
         w.Line("public static global::System.Text.Json.JsonDocument? ToDocument(global::System.Text.Json.JsonElement? value) =>");
         w.Line("    value is { } element ? global::System.Text.Json.JsonDocument.Parse(element.GetRawText()) : null;");
+        w.Line();
+        w.Line("/// <summary>A change to fields the caller may not edit (FR-KRN-IAM-13): 400 naming each field.</summary>");
+        w.Line("public static IResult NotEditable(global::System.Collections.Generic.List<string> fields) =>");
+        w.Line("    TypedResults.ValidationProblem(fields.ToDictionary(f => f, _ => new[] { global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable }), title: global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable);");
+        w.Line();
+        w.Line("/// <summary>The answer for one row with hidden fields left out and masked fields masked (field security of the row's company).</summary>");
+        w.Line("public static async global::System.Threading.Tasks.Task<global::System.Text.Json.Nodes.JsonObject> ShapeOneAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, TRow row, global::System.Func<TRow, global::System.Guid?> companyOf, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken) =>");
+        w.Line("    (await ShapeAsync(fields, catalog, [row], companyOf, toResponse, cancellationToken).ConfigureAwait(false))[0];");
+        w.Line();
+        w.Line("/// <summary>The answers for rows, each shaped by the field access of its company (read once per company).</summary>");
+        w.Open("public static async global::System.Threading.Tasks.Task<global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>> ShapeAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, global::System.Collections.Generic.IReadOnlyList<TRow> rows, global::System.Func<TRow, global::System.Guid?> companyOf, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)");
+        w.Line("var byCompany = new global::System.Collections.Generic.Dictionary<global::System.Guid, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap>();");
+        w.Line("global::Erp.BuildingBlocks.Application.Security.FieldAccessMap? noCompany = null;");
+        w.Line("var shaped = new global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>(rows.Count);");
+        w.Open("foreach (var row in rows)");
+        w.Line("var company = companyOf(row);");
+        w.Line("global::Erp.BuildingBlocks.Application.Security.FieldAccessMap? access;");
+        w.Open("if (company is { } id)");
+        w.Open("if (!byCompany.TryGetValue(id, out access))");
+        w.Line("access = await fields.ForAsync(catalog, \"read\", id, cancellationToken).ConfigureAwait(false);");
+        w.Line("byCompany[id] = access;");
+        w.Close();
+        w.Close();
+        w.Open("else");
+        w.Line("access = noCompany ??= await fields.ForAsync(catalog, \"read\", null, cancellationToken).ConfigureAwait(false);");
+        w.Close();
+        w.Line();
+        w.Line("var node = global::System.Text.Json.JsonSerializer.SerializeToNode(toResponse(row), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();");
+        w.Line("shaped.Add(global::Erp.BuildingBlocks.Application.Security.FieldShaping.Shape(node, catalog, access));");
+        w.Close();
+        w.Line();
+        w.Line("return shaped;");
+        w.Close();
         w.Close();
         return w.ToString();
+    }
+
+    /// <summary>The module's resources for access control (fields and scope preview), registered by the host (S1.06).</summary>
+    private static string ResourceCatalog(string module, List<Table> tables)
+    {
+        var sample = tables[0];
+        var project = N.ModuleProject(sample);
+        var w = new CodeWriter();
+        w.Line(Header).Line("using global::Microsoft.Extensions.DependencyInjection;").Line().Line($"namespace Erp.{project}.Infrastructure.Generated;").Line();
+        w.Line($"/// <summary>Resources of the {module} tables for access control: field catalogue and data-scope preview (slice S1.06).</summary>");
+        w.Open($"public static class {project}ResourceCatalog");
+        w.Line("public static global::System.Collections.Generic.IReadOnlyList<global::Erp.BuildingBlocks.Application.Security.ResourceAccess> All { get; } =");
+        w.Line("[");
+        foreach (var t in tables)
+        {
+            var access = AccessFull(t);
+            w.Line($"    new({CodeWriter.CSharpString(N.Resource(t))}, {access}.Fields, {(t.ScopeLocators.Count > 0 ? "true" : "false")}, (sp, filter, limit, ct) => global::Erp.BuildingBlocks.Infrastructure.Persistence.ScopePreviewQuery.RunAsync(sp.GetRequiredService<{N.DbContextName(t)}>(), filter, {access}.Scope, limit, ct)),");
+        }
+
+        w.Line("];");
+        w.Close();
+        return w.ToString();
+    }
+
+    private static string Sensitive(Table t) => t.Columns.Exists(c => c.IsSensitive || c.Kind is ColumnKind.Money || c.FieldClass is not null) ? "true" : "false";
+
+    private static string ModuleId(Table t) => t.Module == "hrm" ? "hrm" : t.Schema;
+
+    /// <summary>
+    /// The module's permission manifest (FR-KRN-IAM-10): the generated codes the migrator registers into iam.permissions
+    /// for every customer that has the module (slice S1.06). Data, so the kernel never references a business module.
+    /// </summary>
+    private static string PermissionManifest(string module, List<Table> tables)
+    {
+        var items = new System.Text.Json.Nodes.JsonArray();
+        foreach (var t in tables)
+        {
+            foreach (var action in Actions(t))
+            {
+                var code = N.Permission(t, action);
+                items.Add(new System.Text.Json.Nodes.JsonObject
+                {
+                    ["code"] = code,
+                    ["module"] = ModuleId(t),
+                    ["descriptionKey"] = "permissions." + code,
+                    ["sensitive"] = Sensitive(t) == "true",
+                });
+            }
+        }
+
+        var root = new System.Text.Json.Nodes.JsonObject
+        {
+            ["_generated"] = $"{OutputSet.Marker} by tools/Erp.CodeGen from docs/data-design/*.yaml; do not edit",
+            ["module"] = module,
+            ["permissions"] = items,
+        };
+        return root.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }) + "\n";
     }
 
     private static string Permissions(string project, List<Table> tables)
@@ -775,8 +1010,8 @@ public static class CSharpEmitter
         w.Line("[");
         foreach (var t in tables)
         {
-            var sensitive = t.Columns.Exists(c => c.IsSensitive || c.Kind is ColumnKind.Money) ? "true" : "false";
-            var moduleId = t.Module == "hrm" ? "hrm" : t.Schema;
+            var sensitive = Sensitive(t);
+            var moduleId = ModuleId(t);
             foreach (var action in Actions(t))
             {
                 var code = N.Permission(t, action);

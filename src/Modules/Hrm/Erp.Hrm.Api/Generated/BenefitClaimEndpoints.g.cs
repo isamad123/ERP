@@ -61,7 +61,7 @@ public sealed class BenefitClaimListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.benefit_claims: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.benefit_claims: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class BenefitClaimEndpoints
 {
     private const string Resource = "hrm.benefit_claims";
@@ -75,55 +75,70 @@ internal static class BenefitClaimEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.benefit_claims.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.benefit_claims.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] BenefitClaimListQuery query, global::Erp.Hrm.Application.Generated.IBenefitClaimRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] BenefitClaimListQuery query, global::Erp.Hrm.Application.Generated.IBenefitClaimRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.benefit_claims.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.BenefitClaimFilter { CompanyId = query.CompanyId, EnrollmentId = query.EnrollmentId, PatientRelationId = query.PatientRelationId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<BenefitClaimResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.BenefitClaimAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IBenefitClaimRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IBenefitClaimRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.benefit_claims.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.BenefitClaimAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(BenefitClaimWriteRequest request, global::Erp.Hrm.Application.Generated.IBenefitClaimRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(BenefitClaimWriteRequest request, global::Erp.Hrm.Application.Generated.IBenefitClaimRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.benefit_claims.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.BenefitClaimAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.BenefitClaim();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/benefit-claims/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, BenefitClaimWriteRequest request, global::Erp.Hrm.Application.Generated.IBenefitClaimRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.benefit_claims.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/benefit-claims/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.BenefitClaimAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, BenefitClaimWriteRequest request, global::Erp.Hrm.Application.Generated.IBenefitClaimRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.benefit_claims.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.BenefitClaimAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.BenefitClaimAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.BenefitClaim row) => row.CompanyId;
 
     private static BenefitClaimResponse ToResponse(global::Erp.Hrm.Domain.Generated.BenefitClaim row) => new()
     {
@@ -143,26 +158,27 @@ internal static class BenefitClaimEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(BenefitClaimWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(BenefitClaimWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.EnrollmentId is null)
+        if (request.EnrollmentId is null && (!update || access.CanEdit("enrollment_id")))
         {
             errors.Add("enrollmentId");
         }
-        if (request.ClaimDate is null)
+        if (request.ClaimDate is null && (!update || access.CanEdit("claim_date")))
         {
             errors.Add("claimDate");
         }
-        if (request.AmountClaimed is null)
+        if (request.AmountClaimed is null && (!update || access.CanEdit("amount_claimed")))
         {
             errors.Add("amountClaimed");
         }
-        if (request.Status is null)
+        if (request.Status is null && (!update || access.CanEdit("status")))
         {
             errors.Add("status");
         }
@@ -173,21 +189,80 @@ internal static class BenefitClaimEndpoints
         return errors;
     }
 
-    private static void Apply(BenefitClaimWriteRequest request, global::Erp.Hrm.Domain.Generated.BenefitClaim row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(BenefitClaimWriteRequest request, global::Erp.Hrm.Domain.Generated.BenefitClaim row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.EnrollmentId = request.EnrollmentId!.Value;
-        row.ClaimDate = request.ClaimDate!.Value;
-        row.PatientRelationId = request.PatientRelationId;
-        row.AmountClaimed = request.AmountClaimed!.Value;
-        row.AmountApproved = request.AmountApproved;
-        if (request.FileIds is not null)
+        if (access.CanEdit("enrollment_id"))
         {
-            row.FileIds = request.FileIds ?? [];
+            row.EnrollmentId = request.EnrollmentId!.Value;
         }
-        row.Status = request.Status!;
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EnrollmentId, row.EnrollmentId, update))
+        {
+            denied.Add("enrollmentId");
+        }
+        if (access.CanEdit("claim_date"))
+        {
+            row.ClaimDate = request.ClaimDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ClaimDate, row.ClaimDate, update))
+        {
+            denied.Add("claimDate");
+        }
+        if (access.CanEdit("patient_relation_id"))
+        {
+            row.PatientRelationId = request.PatientRelationId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PatientRelationId, row.PatientRelationId, update))
+        {
+            denied.Add("patientRelationId");
+        }
+        if (access.CanEdit("amount_claimed"))
+        {
+            row.AmountClaimed = request.AmountClaimed!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.AmountClaimed, row.AmountClaimed, update))
+        {
+            denied.Add("amountClaimed");
+        }
+        if (access.CanEdit("amount_approved"))
+        {
+            row.AmountApproved = request.AmountApproved;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.AmountApproved, row.AmountApproved, update))
+        {
+            denied.Add("amountApproved");
+        }
+        if (access.CanEdit("file_ids"))
+        {
+            if (request.FileIds is not null)
+            {
+                row.FileIds = request.FileIds ?? [];
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileIds, row.FileIds, update))
+        {
+            denied.Add("fileIds");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
     }
 }

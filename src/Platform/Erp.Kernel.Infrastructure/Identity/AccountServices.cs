@@ -23,7 +23,7 @@ public sealed class AccountService(
         await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var account = await IdentityDb.GetAccountAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
-        var policy = await IdentitySettings.ReadAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
+        var policy = await IdentitySettings.ReadAsync(connection, tx, userId, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         if (account is not { HasCredential: true, Status: UserStatuses.Active } || string.IsNullOrEmpty(currentPassword) || !hasher.Verify(currentPassword, account.PasswordHash!, account.HashAlgorithm!, out _))
         {
             if (account is { HasCredential: true })
@@ -52,7 +52,7 @@ public sealed class AccountService(
     public async Task<IReadOnlyList<SessionView>> ListSessionsAsync(Guid userId, Guid currentSessionId, CancellationToken cancellationToken)
     {
         await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
-        var policy = await IdentitySettings.ReadAsync(connection, null, userId, cancellationToken).ConfigureAwait(false);
+        var policy = await IdentitySettings.ReadAsync(connection, null, userId, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         return await IdentityDb.LiveSessionsAsync(connection, null, userId, currentSessionId, TimeSpan.FromMinutes(policy.Session.IdleMinutes), clock.UtcNow, cancellationToken).ConfigureAwait(false);
     }
 
@@ -104,7 +104,7 @@ public sealed class AccountService(
         var now = clock.UtcNow;
         await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var policy = await IdentitySettings.ReadAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
+        var policy = await IdentitySettings.ReadAsync(connection, tx, userId, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         var encryptor = await encryptors.GetAsync(cancellationToken).ConfigureAwait(false);
         var codes = await MfaEnrolments.ConfirmAsync(connection, tx, userId, deviceId, code, policy.Mfa, encryptor, hasher, now, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -146,7 +146,7 @@ public sealed class AccountService(
         }
 
         await ReauthenticateAsync(connection, tx, userId, proof, now, cancellationToken).ConfigureAwait(false);
-        var policy = await IdentitySettings.ReadAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
+        var policy = await IdentitySettings.ReadAsync(connection, tx, userId, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         var codes = await IdentityDb.NewRecoveryCodesAsync(connection, tx, userId, policy.Mfa.RecoveryCodeCount, hasher, userId, now, cancellationToken).ConfigureAwait(false);
         await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.RecoveryCodesRegenerated, userId, userId, now, new { count = codes.Count }, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -188,7 +188,7 @@ public sealed class AccountService(
         {
             if (account.HasCredential)
             {
-                var policy = await IdentitySettings.ReadAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
+                var policy = await IdentitySettings.ReadAsync(connection, tx, userId, clock.UtcNow, cancellationToken).ConfigureAwait(false);
                 await Lockouts.CountFailureAsync(connection, tx, userId, policy, now, cancellationToken).ConfigureAwait(false);
                 await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -277,7 +277,14 @@ public sealed class UserAdministrationService(ITenantConnectionProvider database
                 return new AdminResult(AdminOutcome.Invalid, UserLimitReached);
             }
 
+            // The last tenant admin cannot be disabled or archived (spec 02 BR; slice S1.06 item 9).
+            var admins = await Access.TenantAdminGuard.CountAsync(c, tx, cancellationToken).ConfigureAwait(false);
             await IdentityDb.SetStatusAsync(c, tx, userId, status, by, now, cancellationToken).ConfigureAwait(false);
+            if (await Access.TenantAdminGuard.RemovedLastAsync(c, tx, admins, cancellationToken).ConfigureAwait(false))
+            {
+                return new AdminResult(AdminOutcome.Invalid, Access.TenantAdminGuard.LastAdmin);
+            }
+
             if (account.HasCredential && status is UserStatuses.Active or UserStatuses.Locked)
             {
                 // Unlocking clears the failure count; an administrator's lock has no end time (ruling P3).
@@ -300,7 +307,7 @@ public sealed class UserAdministrationService(ITenantConnectionProvider database
             return null;
         }
 
-        var policy = await IdentitySettings.ReadAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
+        var policy = await IdentitySettings.ReadAsync(connection, tx, userId, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         var sessions = await IdentityDb.LiveSessionsAsync(connection, tx, userId, null, TimeSpan.FromMinutes(policy.Session.IdleMinutes), clock.UtcNow, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return sessions;
@@ -344,7 +351,7 @@ public static class ActivationTokens
             return null;
         }
 
-        var policy = await IdentitySettings.ReadAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
+        var policy = await IdentitySettings.ReadAsync(connection, tx, userId, now, cancellationToken).ConfigureAwait(false);
         await IdentityDb.ExpireTokensAsync(connection, tx, userId, IdentityDb.Activation, actor, now, cancellationToken).ConfigureAwait(false);
         var token = await IdentityDb.IssueTokenAsync(connection, tx, userId, IdentityDb.Activation, policy.ActivationTokenLifetime, actor, now, cancellationToken).ConfigureAwait(false);
         var expires = now + policy.ActivationTokenLifetime;

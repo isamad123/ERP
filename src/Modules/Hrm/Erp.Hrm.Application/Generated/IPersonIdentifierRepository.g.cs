@@ -18,3 +18,32 @@ public interface IPersonIdentifierRepository : global::Erp.BuildingBlocks.Applic
 {
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PersonIdentifier>> ListAsync(PersonIdentifierFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 }
+
+/// <summary>How data scopes locate rows of hrm.person_identifiers and which fields its API shows (slice S1.06, CR-018).</summary>
+public static class PersonIdentifierAccess
+{
+    public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Hrm.Domain.Generated.PersonIdentifier> Scope { get; } = new(
+        "hrm.person_identifiers",
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PersonIdentifier, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Person] = e => e.PersonId,
+        },
+        new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Hrm.Domain.Generated.PersonIdentifier, string?>>>());
+
+    public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("hrm.person_identifiers",
+    [
+        new("id", "Id", null),
+        new("person_id", "PersonId", null),
+        new("kind", "Kind", null),
+        new("country_code", "CountryCode", null),
+        new("value_last4", "ValueLast4", null),
+        new("issue_date", "IssueDate", null),
+        new("expiry_date", "ExpiryDate", null),
+        new("file_id", "FileId", null),
+        new("created_at", "CreatedAt", null),
+        new("created_by", "CreatedBy", null),
+        new("updated_at", "UpdatedAt", null),
+        new("updated_by", "UpdatedBy", null),
+        new("row_version", "RowVersion", null),
+    ]);
+}

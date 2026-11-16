@@ -51,7 +51,7 @@ public sealed class InAppItemListQuery
     public global::System.Guid? UserId { get; init; }
 }
 
-/// <summary>Generated endpoints of ntf.in_app_items: read, create, update.</summary>
+/// <summary>Generated endpoints of ntf.in_app_items: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class InAppItemEndpoints
 {
     private const string Resource = "ntf.in_app_items";
@@ -65,55 +65,70 @@ internal static class InAppItemEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("ntf.in_app_items.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "ntf.in_app_items.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] InAppItemListQuery query, global::Erp.Kernel.Application.Generated.Ntf.IInAppItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] InAppItemListQuery query, global::Erp.Kernel.Application.Generated.Ntf.IInAppItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "ntf.in_app_items.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Ntf.InAppItemFilter { UserId = query.UserId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<InAppItemResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Kernel.Application.Generated.Ntf.InAppItemAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Ntf.IInAppItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Kernel.Application.Generated.Ntf.IInAppItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "ntf.in_app_items.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Ntf.InAppItemAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(InAppItemWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.IInAppItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(InAppItemWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.IInAppItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "ntf.in_app_items.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Ntf.InAppItemAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Kernel.Domain.Generated.Ntf.InAppItem();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/ntf/in-app-items/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, InAppItemWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.IInAppItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "ntf.in_app_items.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/ntf/in-app-items/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Ntf.InAppItemAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, InAppItemWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.IInAppItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "ntf.in_app_items.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Ntf.InAppItemAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Kernel.Application.Generated.Ntf.InAppItemAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Kernel.Domain.Generated.Ntf.InAppItem row) => null;
 
     private static InAppItemResponse ToResponse(global::Erp.Kernel.Domain.Generated.Ntf.InAppItem row) => new()
     {
@@ -131,22 +146,23 @@ internal static class InAppItemEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(InAppItemWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(InAppItemWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.UserId is null)
+        if (request.UserId is null && (!update || access.CanEdit("user_id")))
         {
             errors.Add("userId");
         }
-        if (request.EventCode is null)
+        if (request.EventCode is null && (!update || access.CanEdit("event_code")))
         {
             errors.Add("eventCode");
         }
-        if (request.Title is null)
+        if (request.Title is null && (!update || access.CanEdit("title")))
         {
             errors.Add("title");
         }
-        if (request.Body is null)
+        if (request.Body is null && (!update || access.CanEdit("body")))
         {
             errors.Add("body");
         }
@@ -157,14 +173,58 @@ internal static class InAppItemEndpoints
         return errors;
     }
 
-    private static void Apply(InAppItemWriteRequest request, global::Erp.Kernel.Domain.Generated.Ntf.InAppItem row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(InAppItemWriteRequest request, global::Erp.Kernel.Domain.Generated.Ntf.InAppItem row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
-        row.UserId = request.UserId!.Value;
-        row.EventCode = request.EventCode!;
-        row.Title = request.Title!;
-        row.Body = request.Body!;
-        row.Link = request.Link;
-        row.ReadAt = request.ReadAt;
-        _ = update;
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (access.CanEdit("user_id"))
+        {
+            row.UserId = request.UserId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.UserId, row.UserId, update))
+        {
+            denied.Add("userId");
+        }
+        if (access.CanEdit("event_code"))
+        {
+            row.EventCode = request.EventCode!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EventCode, row.EventCode, update))
+        {
+            denied.Add("eventCode");
+        }
+        if (access.CanEdit("title"))
+        {
+            row.Title = request.Title!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Title, row.Title, update))
+        {
+            denied.Add("title");
+        }
+        if (access.CanEdit("body"))
+        {
+            row.Body = request.Body!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Body, row.Body, update))
+        {
+            denied.Add("body");
+        }
+        if (access.CanEdit("link"))
+        {
+            row.Link = request.Link;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Link, row.Link, update))
+        {
+            denied.Add("link");
+        }
+        if (access.CanEdit("read_at"))
+        {
+            row.ReadAt = request.ReadAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReadAt, row.ReadAt, update))
+        {
+            denied.Add("readAt");
+        }
+        return denied;
     }
 }

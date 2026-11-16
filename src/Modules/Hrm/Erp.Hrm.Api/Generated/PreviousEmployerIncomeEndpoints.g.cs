@@ -57,7 +57,7 @@ public sealed class PreviousEmployerIncomeListQuery
     public global::System.Guid? FileId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.previous_employer_income: read, create, update.</summary>
+/// <summary>Generated endpoints of hrm.previous_employer_income: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class PreviousEmployerIncomeEndpoints
 {
     private const string Resource = "hrm.previous_employer_income";
@@ -71,55 +71,70 @@ internal static class PreviousEmployerIncomeEndpoints
         group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.previous_employer_income.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.previous_employer_income.update"));
     }
 
-    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PreviousEmployerIncomeListQuery query, global::Erp.Hrm.Application.Generated.IPreviousEmployerIncomeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PreviousEmployerIncomeListQuery query, global::Erp.Hrm.Application.Generated.IPreviousEmployerIncomeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.previous_employer_income.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
             var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PreviousEmployerIncomeFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, FileId = query.FileId }, page, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<PreviousEmployerIncomeResponse>(rows.Select(ToResponse).ToList(), rows.Count == page.Limit ? rows[^1].Id : null));
+            var items = await GeneratedEndpointSupport.ShapeAsync(fields, global::Erp.Hrm.Application.Generated.PreviousEmployerIncomeAccess.Fields, rows, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPreviousEmployerIncomeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> GetAsync(global::System.Guid id, global::Erp.Hrm.Application.Generated.IPreviousEmployerIncomeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.previous_employer_income.read", async () =>
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
-            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(ToResponse(row));
+            return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PreviousEmployerIncomeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PreviousEmployerIncomeWriteRequest request, global::Erp.Hrm.Application.Generated.IPreviousEmployerIncomeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PreviousEmployerIncomeWriteRequest request, global::Erp.Hrm.Application.Generated.IPreviousEmployerIncomeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.previous_employer_income.create", async () =>
         {
-            var errors = Validate(request, update: false);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PreviousEmployerIncomeAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
             if (errors.Count > 0)
             {
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
             var row = new global::Erp.Hrm.Domain.Generated.PreviousEmployerIncome();
-            Apply(request, row, update: false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/previous-employer-income/" + row.Id.ToString(), ToResponse(row));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PreviousEmployerIncomeWriteRequest request, global::Erp.Hrm.Application.Generated.IPreviousEmployerIncomeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.previous_employer_income.update", async () =>
-        {
-            var errors = Validate(request, update: true);
-            if (errors.Count > 0)
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
             {
-                return GeneratedEndpointSupport.Invalid(errors);
+                return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/previous-employer-income/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PreviousEmployerIncomeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PreviousEmployerIncomeWriteRequest request, global::Erp.Hrm.Application.Generated.IPreviousEmployerIncomeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.previous_employer_income.update", async () =>
+        {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
             if (row is null)
             {
                 return GeneratedEndpointSupport.NotFound();
             }
 
-            Apply(request, row, update: true);
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PreviousEmployerIncomeAccess.Fields, "update", CompanyOf(row), cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(ToResponse(row));
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(fields, global::Erp.Hrm.Application.Generated.PreviousEmployerIncomeAccess.Fields, row, CompanyOf, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
+
+    private static global::System.Guid? CompanyOf(global::Erp.Hrm.Domain.Generated.PreviousEmployerIncome row) => row.CompanyId;
 
     private static PreviousEmployerIncomeResponse ToResponse(global::Erp.Hrm.Domain.Generated.PreviousEmployerIncome row) => new()
     {
@@ -138,30 +153,31 @@ internal static class PreviousEmployerIncomeEndpoints
         RowVersion = row.RowVersion,
     };
 
-    private static global::System.Collections.Generic.List<string> Validate(PreviousEmployerIncomeWriteRequest request, bool update)
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(PreviousEmployerIncomeWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
         if (!update && request.CompanyId is null)
         {
             errors.Add("companyId");
         }
-        if (request.EmploymentId is null)
+        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
         {
             errors.Add("employmentId");
         }
-        if (request.TaxYear is null)
+        if (request.TaxYear is null && (!update || access.CanEdit("tax_year")))
         {
             errors.Add("taxYear");
         }
-        if (request.EmployerName is null)
+        if (request.EmployerName is null && (!update || access.CanEdit("employer_name")))
         {
             errors.Add("employerName");
         }
-        if (request.TaxableIncome is null)
+        if (request.TaxableIncome is null && (!update || access.CanEdit("taxable_income")))
         {
             errors.Add("taxableIncome");
         }
-        if (request.TaxDeducted is null)
+        if (request.TaxDeducted is null && (!update || access.CanEdit("tax_deducted")))
         {
             errors.Add("taxDeducted");
         }
@@ -172,17 +188,69 @@ internal static class PreviousEmployerIncomeEndpoints
         return errors;
     }
 
-    private static void Apply(PreviousEmployerIncomeWriteRequest request, global::Erp.Hrm.Domain.Generated.PreviousEmployerIncome row, bool update)
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(PreviousEmployerIncomeWriteRequest request, global::Erp.Hrm.Domain.Generated.PreviousEmployerIncome row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
+        var denied = new global::System.Collections.Generic.List<string>();
         if (!update)
         {
-            row.CompanyId = request.CompanyId!.Value;
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
         }
-        row.EmploymentId = request.EmploymentId!.Value;
-        row.TaxYear = request.TaxYear!.Value;
-        row.EmployerName = request.EmployerName!;
-        row.TaxableIncome = request.TaxableIncome!.Value;
-        row.TaxDeducted = request.TaxDeducted!.Value;
-        row.FileId = request.FileId;
+        if (access.CanEdit("employment_id"))
+        {
+            row.EmploymentId = request.EmploymentId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
+        {
+            denied.Add("employmentId");
+        }
+        if (access.CanEdit("tax_year"))
+        {
+            row.TaxYear = request.TaxYear!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TaxYear, row.TaxYear, update))
+        {
+            denied.Add("taxYear");
+        }
+        if (access.CanEdit("employer_name"))
+        {
+            row.EmployerName = request.EmployerName!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmployerName, row.EmployerName, update))
+        {
+            denied.Add("employerName");
+        }
+        if (access.CanEdit("taxable_income"))
+        {
+            row.TaxableIncome = request.TaxableIncome!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TaxableIncome, row.TaxableIncome, update))
+        {
+            denied.Add("taxableIncome");
+        }
+        if (access.CanEdit("tax_deducted"))
+        {
+            row.TaxDeducted = request.TaxDeducted!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TaxDeducted, row.TaxDeducted, update))
+        {
+            denied.Add("taxDeducted");
+        }
+        if (access.CanEdit("file_id"))
+        {
+            row.FileId = request.FileId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileId, row.FileId, update))
+        {
+            denied.Add("fileId");
+        }
+        return denied;
     }
 }
