@@ -506,7 +506,7 @@ public sealed class AccessControlTests(TenancyFixture fx) : IAsyncLifetime
         }
 
         var average = watch.Elapsed.TotalMilliseconds / Calls;
-        TestContext.Current.SendDiagnosticMessage($"S1.06 timing: {Calls} reads with 3 roles averaged {average:F1} ms per call (access rules read fresh each call, ruling D).");
+        TestContext.Current.TestOutputHelper?.WriteLine($"S1.06 timing: {Calls} reads with 3 roles averaged {average:F1} ms per call (access rules read fresh each call, ruling D).");
         Assert.True(average < 250, $"average {average:F1} ms");
     }
 }
