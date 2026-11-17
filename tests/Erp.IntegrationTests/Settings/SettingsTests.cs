@@ -190,9 +190,12 @@ public sealed class SettingsTests(TenancyFixture fx) : IAsyncLifetime
     {
         var admin = await _h.UserAsync(Ct, null, "tenant_admin");
         var key = await SettingAsync();
+        // The harness clock stands still; each change gets its own moment, as real changes do, so "newest first" is defined.
         await _h.PutAsync(admin, $"{Api}/{key}", Set("tenant", null, 20, "first"), Ct);
+        _h.Clock.Advance(TimeSpan.FromSeconds(1));
         var second = await _h.PutAsync(admin, $"{Api}/{key}", Set("tenant", null, 25, "second"), Ct);
         var row = second.Json.GetProperty("id").GetGuid();
+        _h.Clock.Advance(TimeSpan.FromSeconds(1));
         await _h.PostAsync(admin, $"{Api}/{key}/reset", new { layer = "tenant", reason = "third" }, Ct);
 
         var history = (await _h.GetAsync(admin, $"{Api}/{key}/history", Ct)).Json.EnumerateArray().ToList();
