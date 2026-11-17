@@ -16,6 +16,10 @@ using Erp.Kernel.Api.Numbering;
 using Erp.Kernel.Application.Numbering;
 using Erp.Kernel.Contracts.Numbering;
 using Erp.Kernel.Infrastructure.Numbering;
+using Erp.Kernel.Api.Settings;
+using Erp.Kernel.Application.Settings;
+using Erp.Kernel.Contracts.Settings;
+using Erp.Kernel.Infrastructure.Settings;
 using Erp.Kernel.Application.Access;
 using Erp.Kernel.Application.Audit;
 using Erp.Kernel.Application.Identity;
@@ -40,7 +44,8 @@ public static class ApiHost
     /// <summary>
     /// Settings read: <c>ConnectionStrings:ControlPlane</c>; <c>ERP_SECRETS_FILE</c>, <c>ERP_SECRETS_KEY</c>;
     /// <c>Auth:Issuer</c>, <c>Auth:Audience</c>, <c>Auth:SigningPublicKeys</c> (PEM, ECDSA P-256);
-    /// <c>Tenancy:StatementTimeoutSeconds</c>, <c>Tenancy:HostCacheSeconds</c>, <c>Tenancy:MaxPoolSizePerTenant</c>.
+    /// <c>Tenancy:StatementTimeoutSeconds</c>, <c>Tenancy:HostCacheSeconds</c>, <c>Tenancy:MaxPoolSizePerTenant</c>;
+    /// <c>Settings:RefreshMilliseconds</c> (how often a host checks for settings changes, slice S1.09a).
     /// <paramref name="overrides"/> runs last (tests replace the permission checker and data scopes there).
     /// </summary>
     public static WebApplication Build(WebApplicationBuilder builder, ISecretStore? secrets = null, Action<IServiceCollection>? overrides = null)
@@ -104,6 +109,17 @@ public static class ApiHost
         services.AddScoped<INumberVoids, NumberVoids>();
         services.AddScoped<INumberingAdministration, NumberingAdministrationService>();
 
+        // Settings and feature flags (S1.09a): one resolver over a per-host cache that follows cfg.config_versions, so a
+        // change is in force on every host within about Settings:RefreshMilliseconds (default 1000, ruling Q13).
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton(new SettingsCacheOptions(TimeSpan.FromMilliseconds(config.GetValue("Settings:RefreshMilliseconds", 1000))));
+        services.AddSingleton<SettingsCache>();
+        services.AddScoped<ILicensedFeatures, LocalEntitlementFeatures>();
+        services.AddScoped<SettingsService>();
+        services.AddScoped<ISettings>(sp => sp.GetRequiredService<SettingsService>());
+        services.AddScoped<IFeatureFlags>(sp => sp.GetRequiredService<SettingsService>());
+        services.AddScoped<ISettingsAdministration, SettingsAdministrationService>();
+
         var keys = signing.Validation.Concat((config.GetSection("Auth:SigningPublicKeys").Get<string[]>() ?? []).Select(ToKey)).ToList();
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
         {
@@ -141,6 +157,7 @@ public static class ApiHost
         api.MapAccessEndpoints();
         api.MapAuditEndpoints();
         api.MapNumberingEndpoints();
+        api.MapSettingsEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();
         return app;

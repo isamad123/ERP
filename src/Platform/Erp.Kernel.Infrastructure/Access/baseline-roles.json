@@ -76,6 +76,7 @@
         "cfg.numbering_voids.*",
         "cfg.numbering.void_report",
         "cfg.setting_values.read",
+        "cfg.setting_values.update",
         "cfg.custom_field_defs.read",
         "doc.templates.*",
         "doc.template_versions.*",

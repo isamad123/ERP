@@ -99,10 +99,13 @@ public static class Validator
                 yield return $"{table}.{column.Name}: column added_in on a table that is itself added later";
             }
 
-            // An optional enum column may come later with its own value check (NULL passes it, so existing rows stay valid).
-            if (column.Required || column.Default is not null || column.IsGenerated || column.Kind is ColumnKind.Code or ColumnKind.I18n)
+            // An optional enum, code or i18n column may come later with its own value check (NULL passes it, so existing rows
+            // stay valid). A required column may come later only with a constant default, which PostgreSQL 11+ adds without
+            // rewriting the table and which every existing row then satisfies (S1.09a, CR-036).
+            if ((column.Required && column.Default is null) || (!column.Required && column.Default is not null) || column.IsGenerated
+                || (column.Required && column.Kind is ColumnKind.Code or ColumnKind.I18n or ColumnKind.Enum))
             {
-                yield return $"{table}.{column.Name}: a column added later must be optional, without default, generated value or check (expand only)";
+                yield return $"{table}.{column.Name}: a column added later must be optional, or required with a constant default (bool, number or text), without generated value (expand only)";
             }
 
             if (table.ForeignKeys.Exists(f => f.Columns.Contains(column.Name)) || table.Uniques.Exists(u => u.Items.Contains(column.Name))

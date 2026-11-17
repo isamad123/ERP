@@ -76,6 +76,7 @@ public static class CatalogEmitter
             t.Indexes.Select(i => i.Name).ToList(),
             (t.IsAppendOnly ? [$"tg_{t.Name}_append_only", $"tg_{t.Name}_no_truncate"] : new List<string>())
                 .Concat(model.ImplementedStubs.SelectMany(st => st.Implementation!.Triggers).Where(tr => tr.Table == t.FullName).Select(tr => tr.Trigger))
+                .Concat(model.Functions.SelectMany(f => f.Triggers).Where(tr => tr.Table == t.FullName).Select(tr => tr.Trigger))
                 .ToList(),
             t.AppendOnlyUpdatable,
             CSharpEmitter.HasApi(model, t))).ToList();

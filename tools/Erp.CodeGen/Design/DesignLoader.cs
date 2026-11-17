@@ -135,10 +135,18 @@ public static partial class DesignLoader
                 {
                     var column = table.Column(name);
                     column.AddedIn = SliceId(slice, table.FullName);
-                    if (column.Kind == ColumnKind.Enum)
+                    // The column's own check (enum values S1.07; code shape and i18n object S1.09a) is added with the column
+                    // by the slice's design migration.
+                    string[]? checkParts = column.Kind switch
                     {
-                        // The enum's own check is added with the column by the slice's design migration (S1.07).
-                        var check = Naming.DbName("ck", table.Name, [column.Name]);
+                        ColumnKind.Enum => [column.Name],
+                        ColumnKind.Code => [column.Name, "code"],
+                        ColumnKind.I18n => [column.Name, "object"],
+                        _ => null,
+                    };
+                    if (checkParts is not null)
+                    {
+                        var check = Naming.DbName("ck", table.Name, checkParts);
                         var index = table.Checks.FindIndex(c => c.Name == check);
                         table.Checks[index] = table.Checks[index] with { AddedIn = column.AddedIn };
                     }
@@ -466,9 +474,9 @@ public static partial class DesignLoader
     }
 
     private static string SliceId(string slice, string where) =>
-        SlicePattern().IsMatch(slice) ? slice : throw new DesignException(where, $"'{slice}' is not a slice id such as S1.05 (or S1.05-r1 for a follow-up after that slice's design file was merged)");
+        SlicePattern().IsMatch(slice) ? slice : throw new DesignException(where, $"'{slice}' is not a slice id such as S1.05 (S1.09a for a part of a slice built in parts, S1.05-r1 for a follow-up after that slice's design file was merged)");
 
-    [GeneratedRegex(@"^S\d\.\d{2}(-r[1-3])?$")]
+    [GeneratedRegex(@"^S\d\.\d{2}[a-d]?(-r[1-3])?$")]
     private static partial Regex SlicePattern();
 
     // ---------------------------------------------------------------- columns

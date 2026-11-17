@@ -9,6 +9,8 @@
   <ItemGroup>
     <!-- The numbering pattern rules (slice S1.08) are pure code shared with the kernel, so default patterns are checked by the same rules. -->
     <Compile Include="../../src/Platform/Erp.Kernel.Domain/Numbering/NumberPattern.cs" Link="Design/NumberPattern.cs" />
+    <!-- The setting rules (slice S1.09a) are pure code shared with the kernel, so manifest defaults are checked by the same rules. -->
+    <Compile Include="../../src/Platform/Erp.Kernel.Domain/Settings/SettingRules.cs" Link="Design/SettingRules.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="YamlDotNet" />

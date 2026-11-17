@@ -102,8 +102,19 @@ public sealed class RuleBook
             var map = YamlNode.Map(entry, "rules.yaml functions");
             var name = YamlNode.Text(map.GetValueOrDefault("name"), "rules.yaml functions name");
             var where = "rules.yaml function " + name;
+            var unknown = map.Keys.Except(["slice", "name", "purpose", "sql", "triggers"]).ToList();
+            if (unknown.Count > 0)
+            {
+                throw new DesignException(where, "unknown keys: " + string.Join(", ", unknown));
+            }
+
+            // Triggers the SQL creates (S1.09a): listed so the expected catalogue knows them (DataDesignTests).
+            var triggers = YamlNode.List(map.GetValueOrDefault("triggers"), where + " triggers")
+                .Select(t => YamlNode.Texts(t, where))
+                .Select(t => t.Count == 2 ? (t[0], t[1]) : throw new DesignException(where, "each trigger is [table, trigger_name]"))
+                .ToList();
             functions.Add(new FunctionDef(YamlNode.Text(map.GetValueOrDefault("slice"), where + " slice"), name,
-                YamlNode.Text(map.GetValueOrDefault("purpose"), where + " purpose"), YamlNode.Text(map.GetValueOrDefault("sql"), where + " sql")));
+                YamlNode.Text(map.GetValueOrDefault("purpose"), where + " purpose"), YamlNode.Text(map.GetValueOrDefault("sql"), where + " sql"), triggers));
         }
 
         return new RuleBook(tables, functions);

@@ -118,6 +118,11 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
   the isolation suite keeps allow-all doubles (`AllowAllAccess`).
 - Numbering (S1.08): one kernel service (`INumberAllocator`) gives every document number; tables declare `numbering:` in the data design.
   Default schemes are seeded by provisioning and `migrate` (`NumberingSetup`). Invariant 6 tests: `--filter-trait "Invariant=6"`.
+- Settings and flags (S1.09a): declared in `<module>.Infrastructure/Settings/settings.yaml`; `generate` checks the manifest and writes
+  `Access/settings.g.json` and `*SettingKeys.g.cs`; `migrate` and provisioning register them (`SettingsSetup`). Values change only
+  through the settings services (`/api/cfg/settings`, `/api/cfg/feature-flags`). Hosts re-check `cfg.config_versions` every
+  `Settings:RefreshMilliseconds` (default 1000; tests use 0). The two-process test starts `src/Host/Erp.Host.Api/bin/<config>/net10.0/Erp.Host.Api.dll`,
+  so build the solution before the integration tests.
 - Not yet automated: secret scan; invariant tests other than invariant 6.
 
 ## Where things are

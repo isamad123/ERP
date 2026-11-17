@@ -87,9 +87,17 @@ public static class SqlEmitter
         }
     }
 
-    /// <summary>Stable position of a slice's rules file after the grants file: S1.03 → 0, S1.10 → 7.</summary>
+    /// <summary>
+    /// Stable position of a slice's rules file after the grants file: S1.03 → 0, S1.10 → 7. A slice built in parts
+    /// (S1.09a, S1.09b; slice S1.09 ruling Q0) shares its slice's position: the part letter in the file description keeps
+    /// the names distinct and in order (the migrator sorts and records files by name).
+    /// </summary>
     private static int RuleSliceOrder(string slice) =>
-        int.Parse(slice[(slice.IndexOf('.', StringComparison.Ordinal) + 1)..], CultureInfo.InvariantCulture) - 3;
+        int.Parse(slice[(slice.IndexOf('.', StringComparison.Ordinal) + 1)..].TrimEnd('a', 'b', 'c', 'd'), CultureInfo.InvariantCulture) - 3;
+
+    /// <summary>The part letter of a slice built in parts (S1.09a → 1, S1.09b → 2); 0 for a slice built in one go.</summary>
+    private static int SlicePart(string slice) =>
+        slice.Split('-')[0][^1] is var last && char.IsAsciiLetterLower(last) ? last - 'a' + 1 : 0;
 
     /// <summary>Database roles of spec 03 section 3.7 used by the customer database.</summary>
     public static readonly IReadOnlyList<string> GroupRoles = ["app_rw", "app_ro", "app_audit", "backup"];
@@ -182,7 +190,8 @@ public static class SqlEmitter
         {
             foreach (var column in table.Columns.Where(c => c.AddedIn == slice))
             {
-                b.Append(CultureInfo.InvariantCulture, $"alter table {table.FullName} add column if not exists {column.Name} {column.SqlType};\n");
+                var required = column.Required ? $" not null default {column.Default}" : string.Empty;
+                b.Append(CultureInfo.InvariantCulture, $"alter table {table.FullName} add column if not exists {column.Name} {column.SqlType}{required};\n");
             }
 
             if (table.AddedIn == slice)
@@ -539,7 +548,7 @@ public static class SqlEmitter
     private static bool UpTo(string item, string slice)
     {
         static (int Order, int Revision) Key(string id) =>
-            (RuleSliceOrder(id.Split('-')[0]), id.Contains("-r", StringComparison.Ordinal) ? int.Parse(id[^1..], CultureInfo.InvariantCulture) : 0);
+            (RuleSliceOrder(id.Split('-')[0]) * 10 + SlicePart(id), id.Contains("-r", StringComparison.Ordinal) ? int.Parse(id[^1..], CultureInfo.InvariantCulture) : 0);
         return Key(item).CompareTo(Key(slice)) <= 0;
     }
 

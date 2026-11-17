@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "cfg.setting_values.read"
-    },
-    {
-      "action": "create",
-      "permission": "cfg.setting_values.create"
-    },
-    {
-      "action": "update",
-      "permission": "cfg.setting_values.update"
     }
   ],
   "companyScoped": false,

@@ -25,4 +25,8 @@
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Slice S1.09a: the settings the hand-written seeds registered before the manifests (golden data of FR-KRN-SET-01). -->
+    <None Include="Settings/*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

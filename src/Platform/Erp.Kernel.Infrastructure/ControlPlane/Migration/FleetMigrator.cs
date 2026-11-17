@@ -40,7 +40,7 @@ public sealed class FleetMigrator(ControlPlaneOptions options, ISecretStore secr
                 await using (var owner = await provisioner.OpenTenantAsync(tenant, TenantLogins.Owner, cancellationToken).ConfigureAwait(false))
                 {
                     result = await TenantSchemaMigrator.ApplyAsync(owner, migrations.TenantScripts(modules), clock, BaselineSeed.SystemUserId, cancellationToken).ConfigureAwait(false);
-                    await Identity.IdentitySetup.EnsureAsync(owner, secrets, tenant.Code, cancellationToken).ConfigureAwait(false);
+                    await Identity.IdentitySetup.EnsureAsync(owner, secrets, tenant.Code, migrations.AccessFolders(modules), cancellationToken).ConfigureAwait(false);
                     access = await Access.AccessSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), clock.UtcNow, cancellationToken).ConfigureAwait(false);
                     await Numbering.NumberingSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), clock.UtcNow, cancellationToken).ConfigureAwait(false);
                 }

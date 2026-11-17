@@ -27,18 +27,6 @@
       "sensitive": false
     },
     {
-      "code": "cfg.feature_flag_overrides.create",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.feature_flag_overrides.create",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.feature_flag_overrides.update",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.feature_flag_overrides.update",
-      "sensitive": false
-    },
-    {
       "code": "cfg.installed_packs.read",
       "module": "cfg",
       "descriptionKey": "permissions.cfg.installed_packs.read",
@@ -147,27 +135,9 @@
       "sensitive": false
     },
     {
-      "code": "cfg.setting_value_history.create",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.setting_value_history.create",
-      "sensitive": false
-    },
-    {
       "code": "cfg.setting_values.read",
       "module": "cfg",
       "descriptionKey": "permissions.cfg.setting_values.read",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.setting_values.create",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.setting_values.create",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.setting_values.update",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.setting_values.update",
       "sensitive": false
     },
     {

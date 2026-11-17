@@ -11,14 +11,6 @@
     {
       "action": "read",
       "permission": "cfg.feature_flag_overrides.read"
-    },
-    {
-      "action": "create",
-      "permission": "cfg.feature_flag_overrides.create"
-    },
-    {
-      "action": "update",
-      "permission": "cfg.feature_flag_overrides.update"
     }
   ],
   "companyScoped": false,

@@ -19,5 +19,9 @@ internal sealed class FeatureFlagConfiguration : IEntityTypeConfiguration<global
         builder.Property(e => e.Key).HasColumnName("key").HasColumnType("text").IsRequired().ValueGeneratedNever();
         builder.Property(e => e.DefaultEnabled).HasColumnName("default_enabled").HasColumnType("boolean");
         builder.Property(e => e.DescriptionI18n).HasColumnName("description_i18n").HasColumnType("jsonb").IsRequired();
+        builder.Property(e => e.ModuleId).HasColumnName("module_id").HasColumnType("text");
+        builder.Property(e => e.EntitlementKey).HasColumnName("entitlement_key").HasColumnType("text");
+        builder.Property(e => e.NameI18n).HasColumnName("name_i18n").HasColumnType("jsonb");
+        builder.Property(e => e.HelpI18n).HasColumnName("help_i18n").HasColumnType("jsonb");
     }
 }

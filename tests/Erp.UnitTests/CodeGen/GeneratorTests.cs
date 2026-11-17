@@ -438,6 +438,104 @@ public sealed class GeneratorTests
         }
     }
 
+    [Fact]
+    public void S109a_CR036_CR037_settings_columns_counters_and_triggers_go_to_new_files_and_the_frozen_cfg_file_stays()
+    {
+        var files = Generator.Generate(Root).Files;
+        const string Frozen = "V202611150004__kernel__cfg.sql";
+        Assert.Equal(File.ReadAllText(Path.Combine(Root, SqlEmitter.KernelMigrations, Frozen)), files[SqlEmitter.KernelMigrations + "/" + Frozen]);
+        Assert.DoesNotContain("is_visible", files[SqlEmitter.KernelMigrations + "/" + Frozen], StringComparison.Ordinal);
+
+        // A slice built in parts (S1.09a) keeps its slice's place in the file order; the part letter keeps the name distinct.
+        var design = files[SqlEmitter.KernelMigrations + "/V202611150306__kernel__design_s1_09a.sql"];
+        Assert.Contains("alter table cfg.settings add column if not exists is_visible boolean not null default true;", design, StringComparison.Ordinal);
+        Assert.Contains("alter table cfg.settings add column if not exists self_service boolean not null default false;", design, StringComparison.Ordinal);
+        Assert.Contains("alter table cfg.settings add column if not exists tighten_only boolean not null default false;", design, StringComparison.Ordinal);
+        Assert.Contains("alter table cfg.settings add column if not exists name_i18n jsonb;", design, StringComparison.Ordinal);
+        Assert.Contains("add constraint ck_settings_name_i18n_object check (jsonb_typeof(name_i18n) = 'object');", design, StringComparison.Ordinal);
+        Assert.Contains("add constraint ck_settings_area_code check (length(area) between 1 and 40 and area = btrim(area));", design, StringComparison.Ordinal);
+        Assert.Contains("add constraint ck_settings_role_rule check (role_rule in ('any', 'all', 'lowest', 'highest'));", design, StringComparison.Ordinal);
+        Assert.Contains("add constraint ck_feature_flags_module_id_code check", design, StringComparison.Ordinal);
+        Assert.Contains("create table if not exists cfg.config_versions (", design, StringComparison.Ordinal);
+
+        var functions = files[SqlEmitter.KernelMigrations + "/V202611150336__kernel__functions_s1_09a.sql"];
+        Assert.Contains("create or replace function cfg.tg_config_version()", functions, StringComparison.Ordinal);
+        Assert.Contains("create or replace trigger tg_setting_values_config_version after insert or update or delete or truncate on cfg.setting_values", functions, StringComparison.Ordinal);
+
+        // Triggers declared by a functions entry are known to the expected catalogue (DataDesignTests).
+        var catalog = files["tests/Erp.IntegrationTests/Generated/expected-catalog.json"];
+        Assert.Contains("tg_feature_flag_overrides_config_version", catalog, StringComparison.Ordinal);
+
+        // Generated writes closed (CR-036 part 4, CR-037): only the read endpoints and codes stay.
+        Assert.DoesNotContain("cfg.setting_values.update", files["src/Platform/Erp.Kernel.Contracts/Generated/KernelPermissions.g.cs"], StringComparison.Ordinal);
+        Assert.DoesNotContain("cfg.setting_value_history.create", files["src/Platform/Erp.Kernel.Infrastructure/Access/permissions.g.json"], StringComparison.Ordinal);
+        Assert.Contains("cfg.feature_flag_overrides.read", files["src/Platform/Erp.Kernel.Infrastructure/Access/permissions.g.json"], StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("    - [unit, text, opt,", "    - [unit, text, req,", "required with a constant default")]
+    [InlineData("    - [area, code, opt,", "    - [area, code, req,", "required with a constant default")]
+    public void S109a_Validator_refuses_a_later_column_that_existing_rows_could_not_satisfy(string from, string to, string message)
+    {
+        var root = CopyDesign();
+        try
+        {
+            var file = Path.Combine(root, "docs", "data-design", "kernel.yaml");
+            var text = File.ReadAllText(file);
+            Assert.Contains(from, text, StringComparison.Ordinal);
+            File.WriteAllText(file, text.Replace(from, to, StringComparison.Ordinal));
+            var error = Assert.Throws<DesignException>(() => Generator.LoadModel(root));
+            Assert.Contains(message, error.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void S109a_FR_KRN_SET_01_the_kernel_manifest_compiles_to_the_registered_definitions_and_key_constants()
+    {
+        var files = Generator.Generate(Root).Files;
+        var manifest = System.Text.Json.JsonDocument.Parse(files["src/Platform/Erp.Kernel.Infrastructure/Access/settings.g.json"]).RootElement;
+        var settings = manifest.GetProperty("settings").EnumerateArray().ToList();
+        Assert.Equal(22, settings.Count);
+        var mfa = settings.Single(s => s.GetProperty("key").GetString() == "iam.mfa.required");
+        Assert.Equal("any", mfa.GetProperty("roleRule").GetString());
+        Assert.True(mfa.GetProperty("tightenOnly").GetBoolean());
+        var month = settings.Single(s => s.GetProperty("key").GetString() == "cfg.numbering.fiscal_year_start_month");
+        Assert.Equal("""{"min":1,"max":12}""", string.Concat(month.GetProperty("validation").GetRawText().Where(ch => !char.IsWhiteSpace(ch))));
+        Assert.All(settings, s => Assert.False(string.IsNullOrWhiteSpace(s.GetProperty("help").GetProperty("ur").GetString())));
+        Assert.Contains("public const string IamPasswordMinLength = \"iam.password.min_length\";", files["src/Platform/Erp.Kernel.Contracts/Generated/KernelSettingKeys.g.cs"], StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("type: int\n    default: 10\n", "type: int\n    default: 3\n", "breaks the setting's own rules")]
+    [InlineData("    layers: [tenant, role, user]\n    role_rule: any\n", "    layers: [tenant, role, user]\n", "the role layer needs a role_rule")]
+    [InlineData("    role_rule: any\n    tighten_only: true\n", "    role_rule: lowest\n    tighten_only: true\n", "role_rule is any or all for bool")]
+    [InlineData("  - key: iam.password.min_length\n", "  - key: hrm.password.min_length\n", "must start with one of this module's ids")]
+    [InlineData("    validation: {min: 6}\n", "    validation: {min: 6, smallest: 2}\n", "unknown keys: smallest")]
+    [InlineData("    name: {en: \"Minimum password length\", ur: \"پاس ورڈ کی کم از کم لمبائی\"}\n", "    name: {en: \"Minimum password length\"}\n", "needs English and Urdu text")]
+    [InlineData("    layers: [tenant]\n    area: security.passwords\n    unit: characters\n", "    layers: [tenant]\n    self_service: true\n    area: security.passwords\n    unit: characters\n", "self_service needs the user layer")]
+    public void S109a_FR_KRN_SET_01_an_invalid_manifest_stops_the_generator(string from, string to, string message)
+    {
+        var text = File.ReadAllText(Path.Combine(Root, "src/Platform/Erp.Kernel.Infrastructure", SettingsManifestLoader.ManifestPath));
+        Assert.Contains(from, text, StringComparison.Ordinal);
+        var index = text.IndexOf(from, StringComparison.Ordinal);
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, text[..index] + to + text[(index + from.Length)..]);
+            var model = Model.Value;
+            var error = Assert.Throws<DesignException>(() => SettingsManifestLoader.Read("kernel", "src/Platform/Erp.Kernel.Infrastructure", model.Settings.KernelSchemas, YamlNode.Load(path), "settings.yaml"));
+            Assert.Contains(message, error.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     private static string CopyDesign()
     {
         var root = Directory.CreateTempSubdirectory("erp-codegen-").FullName;

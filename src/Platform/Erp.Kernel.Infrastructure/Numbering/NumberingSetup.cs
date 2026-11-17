@@ -5,7 +5,7 @@ namespace Erp.Kernel.Infrastructure.Numbering;
 
 /// <summary>
 /// Numbering set-up of a customer database, run by provisioning and by the migrator's <c>migrate</c> after the access
-/// set-up (slice S1.08 ruling Q7, part of FR-KRN-TEN-02): registers the numbering settings and gives every company a
+/// set-up (slice S1.08 ruling Q7, part of FR-KRN-TEN-02): gives every company a
 /// default scheme for every registered document type it has none of (tenant-wide types once for the customer).
 /// Idempotent, keyed by company and document type, so document types of later releases appear automatically; a
 /// scheme an administrator retired is never brought back. Seeded schemes are baseline data (like baseline roles) and are
@@ -23,7 +23,6 @@ public static class NumberingSetup
         try
         {
             await Sql.ExecuteAsync(connection, tx, "select pg_advisory_xact_lock(hashtext('cfg.numbering_setup'))", cancellationToken).ConfigureAwait(false);
-            await NumberingSettings.SeedAsync(connection, tx, cancellationToken).ConfigureAwait(false);
             var companies = new List<Guid>();
             await using (var command = Sql.Command(connection, tx, "select id from org.companies where not is_deleted order by id", []))
             await using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))

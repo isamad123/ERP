@@ -23,6 +23,9 @@ internal sealed record AccessChange
     public const string RemoveMember = "iam.group.remove_member";
     public const string SetSetting = "iam.setting.set";
 
+    /// <summary>A change of a setting that needs approval (slice S1.09a, FR-ADM-SET-04); any key but <c>iam.*</c>.</summary>
+    public const string ChangeSetting = "cfg.setting.change";
+
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
     public required string Kind { get; init; }
@@ -66,6 +69,12 @@ internal sealed record AccessChange
     /// <summary>The cfg.setting_values row the setting is written to (an existing row, or the id a new one gets).</summary>
     public Guid? SettingRowId { get; init; }
 
+    /// <summary>True when the change removes the layer's value (reset to inherited, slice S1.09a); no value is given then.</summary>
+    public bool SettingReset { get; init; }
+
+    /// <summary>The history row a revert restores (slice S1.09a, FR-ADM-SET-06).</summary>
+    public Guid? SettingRevertedFrom { get; init; }
+
     public IReadOnlyList<RoleScopeChange>? Scopes { get; init; }
 
     public IReadOnlyList<RoleFieldChange>? Fields { get; init; }
@@ -89,7 +98,7 @@ internal sealed record AccessChange
         EndGroupRole => ("iam.user_group_roles", AssignmentId!.Value),
         AddMember or RemoveMember or AssignGroup => ("iam.user_groups", GroupId!.Value),
         Assign => ("iam.users", UserId!.Value),
-        SetSetting => ("cfg.setting_values", SettingRowId!.Value),
+        SetSetting or ChangeSetting => ("cfg.setting_values", SettingRowId!.Value),
         _ => ("iam.roles", RoleId!.Value),
     };
 }
@@ -161,20 +170,15 @@ internal static class AccessDb
     public static Task TouchRoleAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid roleId, Guid actor, DateTimeOffset now, CancellationToken ct) =>
         IdentityDb.ExecuteAsync(c, tx, "update iam.roles set updated_at = $2, updated_by = $3, row_version = row_version + 1 where id = $1", ct, roleId, now, actor);
 
+    /// <summary>The customer-wide effective value of a yes/no setting (settings resolver, slice S1.09a).</summary>
     public static async Task<bool> SettingOnAsync(NpgsqlConnection c, NpgsqlTransaction tx, string key, CancellationToken ct) =>
-        await IdentityDb.ScalarAsync<string>(c, tx, """
-            select coalesce((select value from cfg.setting_values where setting_key = $1 and layer = 'tenant' and scope_id is null),
-                            (select default_value from cfg.settings where key = $1))::text
-            """, ct, key).ConfigureAwait(false) == "true";
+        (await Settings.SettingsStore.ResolveAsync(c, tx, [key], null, null, default, ct).ConfigureAwait(false)).TryGetValue(key, out var r)
+        && r.Value.ValueKind == System.Text.Json.JsonValueKind.True;
 
-    public static async Task<int> SettingIntAsync(NpgsqlConnection c, NpgsqlTransaction tx, string key, int fallback, CancellationToken ct)
-    {
-        var text = await IdentityDb.ScalarAsync<string>(c, tx, """
-            select coalesce((select value from cfg.setting_values where setting_key = $1 and layer = 'tenant' and scope_id is null),
-                            (select default_value from cfg.settings where key = $1))::text
-            """, ct, key).ConfigureAwait(false);
-        return int.TryParse(text, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var value) && value > 0 ? value : fallback;
-    }
+    /// <summary>The customer-wide effective value of a whole-number setting; <paramref name="fallback"/> when unknown or not above 0.</summary>
+    public static async Task<int> SettingIntAsync(NpgsqlConnection c, NpgsqlTransaction tx, string key, int fallback, CancellationToken ct) =>
+        (await Settings.SettingsStore.ResolveAsync(c, tx, [key], null, null, default, ct).ConfigureAwait(false)).TryGetValue(key, out var r)
+        && r.Value.ValueKind == System.Text.Json.JsonValueKind.Number && r.Value.TryGetInt32(out var value) && value > 0 ? value : fallback;
 
     public static async Task<List<string>> TextsAsync(NpgsqlCommand command, CancellationToken ct)
     {

@@ -27,9 +27,10 @@ public sealed partial class DataDesignTests(MigratedDatabases db)
     public void D50_catalogue_covers_all_204_design_tables_plus_outbox_and_inbox_per_schema()
     {
         var design = MigratedDatabases.Catalog.Tables.Where(t => t.Traits.Count > 0 || t.Name is not ("outbox_messages" or "inbox_messages")).ToList();
-        // 204 tables approved by D-50 plus the two of CR-010 (slice S1.05), the one of CR-019 (slice S1.06) and the
-        // control-plane table of CR-027 (slice S1.07).
-        Assert.Equal(208, design.Count);
+        // 204 tables approved by D-50 plus the two of CR-010 (slice S1.05), the one of CR-019 (slice S1.06), the
+        // control-plane table of CR-027 (slice S1.07) and the change counters of CR-036 (slice S1.09a).
+        Assert.Equal(209, design.Count);
+        Assert.Contains(design, t => t.Schema == "cfg" && t.Name == "config_versions");
         Assert.Contains(design, t => t.Schema == "cp" && t.Name == "audit_anchors");
         Assert.Contains(design, t => t.Schema == "iam" && t.Name == "one_time_tokens");
         Assert.Contains(design, t => t.Schema == "iam" && t.Name == "mfa_recovery_codes");

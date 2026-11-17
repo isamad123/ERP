@@ -62,6 +62,9 @@ public static class AccessEvents
     public const string DataScopeCreated = "iam.data_scope_created";
     public const string SettingChanged = "iam.setting_changed";
 
+    /// <summary>An <c>iam.*</c> setting's layer value removed (reset to inherited, slice S1.09a); payload as <see cref="SettingChanged"/>.</summary>
+    public const string SettingReset = "iam.setting_reset";
+
     // Platform Super Admin recovery and override (CR-024); payload names the platform user and the reason.
     public const string PlatformAdminRoleRepaired = "iam.platform_admin_role_repaired";
     public const string PlatformAdminGranted = "iam.platform_admin_granted";
