@@ -460,10 +460,7 @@ public sealed class IdentityTests(TenancyFixture fx) : IAsyncLifetime
     {
         var ct = TestContext.Current.CancellationToken;
         var (_, username, tokens) = await h.ActiveUserAsync(A, ct);
-        await using (var cp = await fx.OpenControlPlaneAsync(ct))
-        {
-            await IdentityHarness.ExecAsync(cp, "update cp.entitlements set status = 'read_only' where tenant_id = (select id from cp.tenants where code = $1) and status <> 'superseded'", ct, A);
-        }
+        await fx.SetDaysAfterEndAsync(A, 20, ct); // S1.09b: read-only follows from the end date (20 days after it)
 
         try
         {
@@ -473,8 +470,7 @@ public sealed class IdentityTests(TenancyFixture fx) : IAsyncLifetime
         }
         finally
         {
-            await using var cp = await fx.OpenControlPlaneAsync(CancellationToken.None);
-            await IdentityHarness.ExecAsync(cp, "update cp.entitlements set status = 'active' where tenant_id = (select id from cp.tenants where code = $1) and status = 'read_only'", CancellationToken.None, A);
+            await fx.SetDaysAfterEndAsync(A, null, CancellationToken.None);
         }
     }
 

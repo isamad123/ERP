@@ -219,6 +219,21 @@ public sealed class TenancyFixture : IAsyncLifetime
         return before;
     }
 
+    /// <summary>
+    /// Test shortcut: moves the end date of the customer's entitlement in force so that today (Asia/Karachi) is
+    /// <paramref name="daysAfterEnd"/> days after it (null: perpetual). With the default periods (30, 14, 30 days, ruling Q4):
+    /// −29..0 Warning, 1..14 Grace, 15..44 Read-only, 45 on Locked. The state follows from the date (S1.09b).
+    /// </summary>
+    public async Task SetDaysAfterEndAsync(string code, int? daysAfterEnd, CancellationToken cancellationToken)
+    {
+        var today = Erp.Kernel.Domain.Entitlements.LicenceStates.Today(DateTimeOffset.UtcNow, Erp.Kernel.Domain.Entitlements.LicenceStates.Zone("Asia/Karachi"));
+        await using var cp = await OpenControlPlaneAsync(cancellationToken);
+        await ExecAsync(cp, """
+            update cp.entitlements e set expires_at = $2, effective_from = least(e.effective_from, coalesce($2, e.effective_from))
+            from cp.tenants t where t.id = e.tenant_id and t.code = $1 and e.status not in ('superseded', 'scheduled')
+            """, cancellationToken, code, daysAfterEnd is { } d ? today.AddDays(-d) : DBNull.Value);
+    }
+
     /// <summary>Puts back claims returned by <see cref="SetClaimAsync"/>.</summary>
     public async Task RestoreClaimsAsync(string code, string claims, CancellationToken cancellationToken)
     {
