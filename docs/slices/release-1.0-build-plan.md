@@ -16,7 +16,7 @@ Each slice is one fresh session. **Model** is what to select with `/model` befor
 | S1.06 | Roles, permissions, data scopes, field security, maker-checker | B | Opus |
 | S1.07 | Audit log with hash chain, access log, per-person keys | B | Opus |
 | S1.08 | Numbering (gap-free and gap-allowed) | B | Opus |
-| S1.09 | Settings, feature flags, entitlements and licence states | B | Opus |
+| S1.09 | Settings, feature flags, entitlements and licence states (built as S1.09a settings and flags, then S1.09b entitlements; ruling Q0) | B | Opus |
 | S1.10 | Workflow engine: linear and conditional approvals, delegation, escalation, inbox | B | Opus |
 | S1.11 | Jobs (chunked, resumable, run-once), notifications (in-app, email), documents and templates (PDF) | C | Opus |
 | S1.12 | Web shell and design system: login, navigation, first list screen, first form screen, first approval screen (the patterns Sonnet copies) | C | Opus |
