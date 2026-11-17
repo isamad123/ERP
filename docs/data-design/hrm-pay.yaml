@@ -272,6 +272,9 @@
     - [result_id, uuid, req, "pk, fk hrm.pay_results"]
     - [trace, json, req, "inputs, formulas, rule and table versions, rounding steps"]
     - [engine_version, text, req]
+  # S1.07 review finding 6 (CR-034, product owner 2026-11-17): the change log skips this table, for the reason given.
+  audit: false
+  audit_reason: "calculation trace with salary inputs, rewritten per calculation; the pay result's own entries record the change (CR-034)"
   reqs: [PAY-32]
   notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
 
