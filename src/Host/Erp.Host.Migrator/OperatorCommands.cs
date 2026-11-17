@@ -359,7 +359,7 @@ public static class OperatorCommands
         var to = DateOnly.ParseExact(c.Option("to"), "yyyy-MM-dd", CultureInfo.InvariantCulture);
         var host = await Erp.Kernel.Infrastructure.ControlPlane.Tenancy.TenantHosts.PrimaryAsync(Context.ControlPlane, code, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Customer {code} is not registered.");
-        var tenant = await new Erp.Kernel.Infrastructure.ControlPlane.Tenancy.TenantDirectory(Context.ControlPlane, c.Clock).FindByHostAsync(host, cancellationToken).ConfigureAwait(false)
+        var tenant = await new Erp.Kernel.Infrastructure.ControlPlane.Tenancy.TenantDirectory(Context.ControlPlane).FindByHostAsync(host, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Customer {code} has no database yet.");
         var copies = await AuditAnchorCopies.ReadAsync(Context.ControlPlane, code, from, to, cancellationToken).ConfigureAwait(false);
         await using var db = await new TenantProvisioner(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations).OpenTenantAsync(tenant, TenantLogins.ReadWrite, cancellationToken).ConfigureAwait(false);

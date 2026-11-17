@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.Json.Nodes;
-using Erp.BuildingBlocks.Domain.Time;
 using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Npgsql;
 
@@ -9,9 +8,11 @@ namespace Erp.Kernel.Infrastructure.ControlPlane.Tenancy;
 
 /// <summary>
 /// Host name → customer, read from the control plane (cp.tenant_domains, FR-KRN-TEN-04) with a short cache. Unknown
-/// hosts are cached as well, so repeated probes do not reach the control-plane database.
+/// hosts are cached as well, so repeated probes do not reach the control-plane database. The cache is timed by machine time
+/// (<see cref="TimeProvider"/>), not business time: a business clock set back must never keep a stale entry (slice S1.09b,
+/// where the entry carries the entitlements the licence state is worked out from).
 /// </summary>
-public sealed class TenantDirectory(ControlPlaneOptions options, IClock clock) : ITenantDirectory
+public sealed class TenantDirectory(ControlPlaneOptions options, TimeProvider? time = null) : ITenantDirectory
 {
     internal const string SelectTenant = """
         select t.id, t.code, t.status, d.id, d.database_name, d.status, c.host, c.port, d.app_secret_ref,
@@ -29,7 +30,7 @@ public sealed class TenantDirectory(ControlPlaneOptions options, IClock clock) :
     public async ValueTask<ResolvedTenant?> FindByHostAsync(string normalizedHost, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(normalizedHost);
-        var now = clock.UtcNow;
+        var now = (time ?? TimeProvider.System).GetUtcNow();
         if (_cache.TryGetValue(normalizedHost, out var hit) && hit.Expires > now)
         {
             return hit.Tenant;

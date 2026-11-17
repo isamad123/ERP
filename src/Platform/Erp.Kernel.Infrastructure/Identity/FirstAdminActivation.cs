@@ -22,7 +22,7 @@ public sealed class FirstAdminActivation(ControlPlaneOptions options, ISecretSto
         ArgumentException.ThrowIfNullOrWhiteSpace(tenantCode);
         var host = await TenantHosts.PrimaryAsync(options, tenantCode, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Customer {tenantCode} is not registered.");
-        var tenant = await new TenantDirectory(options, clock).FindByHostAsync(host, cancellationToken).ConfigureAwait(false)
+        var tenant = await new TenantDirectory(options).FindByHostAsync(host, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Customer {tenantCode} has no database yet.");
         await using var owner = await new TenantProvisioner(options, secrets, clock, migrations).OpenTenantAsync(tenant, TenantLogins.Owner, cancellationToken).ConfigureAwait(false);
         if (await ActivationTokens.FirstInvitedAdminAsync(owner, cancellationToken).ConfigureAwait(false) is not { } userId)
