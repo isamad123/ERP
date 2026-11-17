@@ -13,6 +13,16 @@ namespace Erp.IntegrationTests.Identity;
 [Collection(TenancyGroup.Name)]
 public sealed class IdentityTests(TenancyFixture fx) : IAsyncLifetime
 {
+    /// <summary>
+    /// A successful change to "disabled" or "archived" (FR-ADM-USR-03): since S1.10b (ruling P7) it answers 200 with the user's open
+    /// approval tasks, so the screen can offer to reassign them; the users of these tests hold none.
+    /// </summary>
+    internal static void AssertDisabled(Answer answer)
+    {
+        Assert.True(answer.Status == HttpStatusCode.OK, $"{answer.Status}: {answer.Body}");
+        Assert.Equal(0, answer.Json.GetProperty("openWorkflowTasks").GetInt32());
+    }
+
     internal static readonly SemaphoreSlim ProvisionGate = new(1, 1);
     internal static string? provisionedFor;
 
@@ -82,7 +92,7 @@ public sealed class IdentityTests(TenancyFixture fx) : IAsyncLifetime
         var (_, wrong, _) = await h.ActiveUserAsync(A, ct);
         var (disabledId, disabled, _) = await h.ActiveUserAsync(A, ct);
         var (_, locked, _) = await h.ActiveUserAsync(A, ct);
-        Assert.Equal(HttpStatusCode.NoContent, (await h.PostAsync(A, $"/api/iam/users/{disabledId}/status", new { status = "disabled", reason = "left" }, h.AdminToken(A), ct)).Status);
+        AssertDisabled(await h.PostAsync(A, $"/api/iam/users/{disabledId}/status", new { status = "disabled", reason = "left" }, h.AdminToken(A), ct));
         for (var i = 0; i < 5; i++)
         {
             await h.SignInAsync(A, locked, "Wrong-Password-1", ct);
@@ -346,14 +356,14 @@ public sealed class IdentityTests(TenancyFixture fx) : IAsyncLifetime
 
         Assert.Contains("errors.user.reason_required", (await h.PostAsync(A, $"/api/iam/users/{userId}/status", new { status = "disabled" }, admin, ct)).Body, StringComparison.Ordinal);
         Assert.Contains("errors.user.transition_not_allowed", (await h.PostAsync(A, $"/api/iam/users/{userId}/status", new { status = "archived", reason = "x" }, admin, ct)).Body, StringComparison.Ordinal);
-        Assert.Equal(HttpStatusCode.NoContent, (await h.PostAsync(A, $"/api/iam/users/{userId}/status", new { status = "disabled", reason = "left the company" }, admin, ct)).Status);
+        AssertDisabled(await h.PostAsync(A, $"/api/iam/users/{userId}/status", new { status = "disabled", reason = "left the company" }, admin, ct));
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await h.RefreshAsync(A, first.Text("refreshToken")!, ct)).Status);
         Assert.Equal(HttpStatusCode.Unauthorized, (await h.RefreshAsync(A, second.Text("refreshToken")!, ct)).Status);
         Assert.Equal(0, await h.CountAsync(A, "select count(*) from iam.sessions where user_id = $1 and revoked_at is null", ct, userId));
         Assert.Equal(HttpStatusCode.Unauthorized, (await h.SignInAsync(A, username, IdentityHarness.Password, ct)).Status);
 
-        Assert.Equal(HttpStatusCode.NoContent, (await h.PostAsync(A, $"/api/iam/users/{userId}/status", new { status = "archived", reason = "retention" }, admin, ct)).Status);
+        AssertDisabled(await h.PostAsync(A, $"/api/iam/users/{userId}/status", new { status = "archived", reason = "retention" }, admin, ct)); // archived answers like disabled (P7)
         Assert.Contains("errors.user.transition_not_allowed", (await h.PostAsync(A, $"/api/iam/users/{userId}/status", new { status = "active", reason = "x" }, admin, ct)).Body, StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.NotFound, (await h.PostAsync(A, $"/api/iam/users/{BaselineSeed.SystemUserId}/status", new { status = "disabled", reason = "x" }, admin, ct)).Status);
         Assert.Equal(HttpStatusCode.NotFound, (await h.PostAsync(B, $"/api/iam/users/{userId}/unlock", new { reason = "x" }, h.AdminToken(B), ct)).Status); // A's user on B's host
@@ -422,7 +432,7 @@ public sealed class IdentityTests(TenancyFixture fx) : IAsyncLifetime
         var ct = TestContext.Current.CancellationToken;
         var (pendingId, _, token) = await h.InviteAsync(A, ct);
         var (disabledId, _, _) = await h.ActiveUserAsync(A, ct);
-        Assert.Equal(HttpStatusCode.NoContent, (await h.PostAsync(A, $"/api/iam/users/{disabledId}/status", new { status = "disabled", reason = "seat test" }, h.AdminToken(A), ct)).Status);
+        AssertDisabled(await h.PostAsync(A, $"/api/iam/users/{disabledId}/status", new { status = "disabled", reason = "seat test" }, h.AdminToken(A), ct));
         var used = await h.CountAsync(A, "select count(*) from iam.users where not is_system and not is_deleted and status in ('active', 'locked')", ct);
         // Slice S1.09b: the limit is claims.limits["users.named"] of the entitlement in force (ruling Q1), enforced by the limit guard.
         var claims = await h.Fixture.SetClaimAsync(A, "limits,users.named", (int)used, ct);

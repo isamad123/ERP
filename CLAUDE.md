@@ -127,6 +127,9 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
   key `entitlement:` (file `- defaults:` entry, table override) gates generated endpoints. Operator commands `entitlement draft|apply|history`,
   `licence refresh`, `usage statement`; the worker host runs the hourly licence loop. Tests change a licence through
   `TenancyFixture.SetClaimAsync` / `SetDaysAfterEndAsync` (the API reads `cp.entitlements`, never `meta.local_entitlement`).
+- Workflow (S1.10a, S1.10b): document types in `<module>.Infrastructure/Access/workflow.json`; engine `Erp.Kernel.Infrastructure/Workflow/WorkflowEngine*.cs`.
+  Escalation runs in the worker host every minute and on demand with `workflow escalate [--tenant]`; tests run it through
+  `WorkflowRig.EscalateAsync` and move time with `WorkflowRig.ClockAt` (see `docs/handoff/2026-11-17-S1.10b.md`).
 - Not yet automated: secret scan; invariant tests other than invariant 6.
 
 ## Where things are

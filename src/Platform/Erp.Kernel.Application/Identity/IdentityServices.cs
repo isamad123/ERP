@@ -116,7 +116,12 @@ public enum AdminOutcome
 }
 
 /// <summary>Result of an administrator action; <c>Error</c> is a localization key when the outcome is Invalid.</summary>
-public sealed record AdminResult(AdminOutcome Outcome, string? Error = null)
+/// <summary>
+/// The result of an administrator's action on a user. <see cref="OpenWorkflowTasks"/> is set when a status change takes the
+/// user out of approving (disabled, archived): the approval tasks still assigned to them, so the screen can offer to
+/// reassign them (FR-ADM-USR-03; slice S1.10b ruling P7).
+/// </summary>
+public sealed record AdminResult(AdminOutcome Outcome, string? Error = null, int? OpenWorkflowTasks = null)
 {
     public static AdminResult Done { get; } = new(AdminOutcome.Done);
 

@@ -53,9 +53,10 @@ public static class SqlEmitter
         foreach (var slice in kernelTables.SelectMany(t => t.ChangedIn).Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal))
         {
             // A follow-up revision (S1.05-r1) gets its own file one hour later in the sequence, because the slice's
-            // own design file is frozen once merged: S1.05 → 0302, S1.05-r1 → 0402.
+            // own design file is frozen once merged: S1.05 → 0302, S1.05-r1 → 0402. A later part of a slice built in parts
+            // gets its own file ten hours later per part (S1.10a → 0307, S1.10b → 1307), for the same reason.
             var revision = slice.Contains("-r", StringComparison.Ordinal) ? int.Parse(slice[^1..], CultureInfo.InvariantCulture) : 0;
-            var sequence = 180 + (60 * revision) + RuleSliceOrder(slice.Split('-')[0]);
+            var sequence = 180 + (60 * revision) + RuleSliceOrder(slice.Split('-')[0]) + LaterPartOffset(slice);
             output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "design_" + slice.Replace(".", "_", StringComparison.Ordinal).Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant())}", DesignChanges(model, slice, "kernel"));
         }
 
@@ -64,7 +65,7 @@ public static class SqlEmitter
         {
             // A revision (S1.07-r1) gets its own file one hour later, like design revisions: S1.07 → 0334, S1.07-r1 → 0434.
             var revision = group.Key.Contains("-r", StringComparison.Ordinal) ? int.Parse(group.Key[^1..], CultureInfo.InvariantCulture) : 0;
-            var sequence = 180 + (60 * revision) + 30 + RuleSliceOrder(group.Key.Split('-')[0]);
+            var sequence = 180 + (60 * revision) + 30 + RuleSliceOrder(group.Key.Split('-')[0]) + LaterPartOffset(group.Key);
             output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "functions_" + group.Key.Replace(".", "_", StringComparison.Ordinal).Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant())}", Functions(group.Key, group));
         }
 
@@ -94,6 +95,12 @@ public static class SqlEmitter
     /// </summary>
     private static int RuleSliceOrder(string slice) =>
         int.Parse(slice[(slice.IndexOf('.', StringComparison.Ordinal) + 1)..].TrimEnd('a', 'b', 'c', 'd'), CultureInfo.InvariantCulture) - 3;
+
+    /// <summary>
+    /// Minutes added to the design and functions files of a later part of a slice (S1.10b): ten hours per part after the
+    /// first, so the parts never share a file name (S1.10a → 0307, S1.10b → 1307; slice S1.10b).
+    /// </summary>
+    private static int LaterPartOffset(string slice) => Math.Max(0, SlicePart(slice) - 1) * 600;
 
     /// <summary>The part letter of a slice built in parts (S1.09a → 1, S1.09b → 2); 0 for a slice built in one go.</summary>
     private static int SlicePart(string slice) =>

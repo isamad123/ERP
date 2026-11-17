@@ -201,6 +201,7 @@ public static class IdentityEndpoints
         var result = await action().ConfigureAwait(false);
         return result.Outcome switch
         {
+            AdminOutcome.Done when result.OpenWorkflowTasks is { } open => Results.Ok(new { openWorkflowTasks = open }), // S1.10b ruling P7
             AdminOutcome.Done => Results.NoContent(),
             AdminOutcome.NotFound => NotFoundResult(),
             _ => Problem(StatusCodes.Status400BadRequest, result.Error ?? InvalidRequest, null),

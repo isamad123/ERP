@@ -377,7 +377,7 @@ public sealed class EntitlementTests(TenancyFixture fx)
         var (two, _, _) = await h.ActiveUserAsync(code, Ct);
         foreach (var user in new[] { one, two })
         {
-            Assert.Equal(HttpStatusCode.NoContent, (await h.PostAsync(code, $"/api/iam/users/{user}/status", new { status = "disabled", reason = "seat race" }, h.AdminToken(code), Ct)).Status);
+            Identity.IdentityTests.AssertDisabled(await h.PostAsync(code, $"/api/iam/users/{user}/status", new { status = "disabled", reason = "seat race" }, h.AdminToken(code), Ct));
         }
 
         await fx.SetClaimAsync(code, "limits,users.named", await CustomerCountAsync(code, LimitSql.NamedUsers) + 1, Ct);

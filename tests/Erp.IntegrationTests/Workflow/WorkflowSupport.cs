@@ -8,6 +8,7 @@ using Erp.BuildingBlocks.Domain.Time;
 using Erp.IntegrationTests.Access;
 using Erp.IntegrationTests.Identity;
 using Erp.IntegrationTests.Tenancy;
+using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Erp.Kernel.Contracts.Workflow;
 using Erp.Kernel.Infrastructure.Workflow;
 using Microsoft.AspNetCore.Builder;
@@ -261,12 +262,67 @@ public sealed class WorkflowRig
 
     public Task<string> StatusAsync(Guid instance, CancellationToken ct) => H.ScalarAsync<string>("select status from wf.workflow_instances where id = $1", ct, instance);
 
-    public async Task<List<Guid>> InboxAsync(Guid user, CancellationToken ct)
+    public async Task<List<Guid>> InboxAsync(Guid user, CancellationToken ct, string query = "")
     {
-        var inbox = await GetAsync(user, "/api/wf/inbox", ct);
+        var inbox = await GetAsync(user, "/api/wf/inbox" + query, ct);
         Assert.True(inbox.Status == HttpStatusCode.OK, inbox.Body);
         return [.. inbox.Json.EnumerateArray().Select(i => i.GetProperty("taskId").GetGuid())];
     }
+
+    // ------------------------------------------------------------------ S1.10b
+
+    /// <summary>One escalation run for the rig's customer, as the worker's loop runs it (real runner, real scope binding).</summary>
+    public async Task<EscalationRun> EscalateAsync(CancellationToken ct)
+    {
+        var runner = new WorkflowEscalationRunner(H.Fixture.Options, App.Services.GetRequiredService<ITenantDataSourceFactory>(),
+            App.Services.GetRequiredService<ILicenceResolver>(), App.Services.GetRequiredService<IServiceScopeFactory>());
+        var outcome = Assert.Single(await runner.RunAsync(H.Code, ct));
+        Assert.True(outcome.Error is null && outcome.Skipped is null, outcome.Error ?? outcome.Skipped);
+        return outcome.Run!;
+    }
+
+    /// <summary>Runs code in a service scope bound to the rig's customer, as a request or the escalation runner is (for in-process contracts).</summary>
+    public async Task<T> InCustomerScopeAsync<T>(Func<IServiceProvider, Task<T>> action, CancellationToken ct)
+    {
+        ResolvedTenant tenant;
+        await using (var cp = new NpgsqlConnection(H.Fixture.Options.ConnectionString))
+        {
+            await cp.OpenAsync(ct);
+            tenant = (await Kernel.Infrastructure.ControlPlane.Tenancy.TenantDirectory.FindByCodeAsync(cp, H.Code, ct))!;
+        }
+
+        var dataSource = await App.Services.GetRequiredService<ITenantDataSourceFactory>().GetAsync(tenant, ct);
+        var licence = await App.Services.GetRequiredService<ILicenceResolver>().ResolveAsync(tenant, dataSource, ct);
+        await using var scope = App.Services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<TenantContext>().Bind(tenant, TenantAccessMode.Full, dataSource, licence);
+        return await action(scope.ServiceProvider);
+    }
+
+    /// <summary>Moves the test clock to a moment.</summary>
+    public void ClockAt(DateTimeOffset at) => H.Clock.Advance(at - H.Clock.UtcNow);
+
+    /// <summary>A task row's column.</summary>
+    public Task<T> TaskValueAsync<T>(Guid task, string column, CancellationToken ct) =>
+        H.ScalarAsync<T>($"select {column} from wf.workflow_tasks where id = $1", ct, task);
+
+    /// <summary>A task row's time column (UTC), or null.</summary>
+    public async Task<DateTimeOffset?> TaskTimeAsync(Guid task, string column, CancellationToken ct)
+    {
+        var value = await H.ScalarAsync<object>($"select {column} from wf.workflow_tasks where id = $1", ct, task);
+        return value is DateTime time ? new DateTimeOffset(DateTime.SpecifyKind(time, DateTimeKind.Utc)) : null;
+    }
+
+    /// <summary>Creates a delegation through the self-service endpoint; returns its id.</summary>
+    public async Task<Guid> DelegateAsync(Guid from, Guid to, CancellationToken ct, DateOnly? first = null, DateOnly? last = null, string[]? types = null, Guid[]? companies = null)
+    {
+        var today = KarachiToday();
+        var created = await PostAsync(from, "/api/iam/me/delegations", new { toUserId = to, from = first ?? today, to = last ?? today.AddDays(5), documentTypes = types, companyIds = companies, reason = "leave" }, ct);
+        Assert.True(created.Status == HttpStatusCode.Created, created.Body);
+        return created.Json.GetProperty("id").GetGuid();
+    }
+
+    /// <summary>Today in the customer's time zone (Asia/Karachi by default).</summary>
+    public DateOnly KarachiToday() => DateOnly.FromDateTime(H.Clock.UtcNow.ToOffset(TimeSpan.FromHours(5)).DateTime);
 }
 
 /// <summary>The organisation the tests describe: managers, department heads and position holders by user (HR's job from S1.20).</summary>

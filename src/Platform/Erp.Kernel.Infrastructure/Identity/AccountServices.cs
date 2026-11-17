@@ -295,6 +295,17 @@ public sealed class UserAdministrationService(ITenantConnectionProvider database
                 ? await IdentityDb.RevokeAllSessionsAsync(c, tx, userId, "status_" + status, now, cancellationToken).ConfigureAwait(false)
                 : 0;
             await IdentityDb.RaiseAsync(c, tx, IdentityEvents.UserStatusChanged, userId, by, now, new { from = account.Status, to = status, reason, sessions_revoked = revoked }, cancellationToken).ConfigureAwait(false);
+
+            // FR-ADM-USR-03 (slice S1.10b ruling P7): a user who can no longer approve may still hold approval tasks.
+            if (status is UserStatuses.Disabled or UserStatuses.Archived)
+            {
+                var open = await IdentityDb.ScalarAsync<int>(c, tx, """
+                    select count(*)::int from wf.workflow_tasks t join wf.workflow_instances i on i.id = t.instance_id and i.status = 'running'
+                    where t.status = 'pending' and t.assignee_user_id = $1
+                    """, cancellationToken, userId).ConfigureAwait(false);
+                return new AdminResult(AdminOutcome.Done, null, open);
+            }
+
             return AdminResult.Done;
         }, cancellationToken);
 

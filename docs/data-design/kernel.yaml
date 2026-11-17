@@ -762,7 +762,8 @@
   added_in: {S1.10a: [subject_user_ids]}
   api_actions: [read]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
-  scope: {user: requester_user_id}
+  # S1.10b (CR-043, ruling P1): the company locator, so a role limited to companies reads only their requests.
+  scope: {user: requester_user_id, company: company_id}
   reqs: [KRN-WFL-01, KRN-WFL-10]
 
 - table: wf.workflow_tasks
@@ -787,6 +788,8 @@
   indexes: [[assignee_user_id, status, "partial where status='pending'"], [instance_id]]
   # S1.10a (CR-041 items 2 and 4, Q4, Q7, Q9, Q14): engine columns; tasks change only through the engine.
   added_in: {S1.10a: [info_requested_at, info_requested_by, claimed_at, escalation_level]}
+  # S1.10b (CR-043): the escalation scan finds open tasks past their time limit.
+  indexes_added_in: {S1.10b: [[status, due_at]]}
   api_actions: [read]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {user: assignee_user_id}

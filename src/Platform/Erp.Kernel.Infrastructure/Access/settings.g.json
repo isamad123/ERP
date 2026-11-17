@@ -725,6 +725,147 @@
         "en": "When users, concurrent users or companies reach this percentage of the licence limit, a warning is shown and announced once. At 100 percent new ones are refused.",
         "ur": "جب صارفین، بیک وقت صارفین یا کمپنیاں لائسنس کی حد کے اس فیصد تک پہنچیں تو ایک بار تنبیہ دکھائی اور بھیجی جاتی ہے۔ 100 فیصد پر نئے رد کر دیے جاتے ہیں۔"
       }
+    },
+    {
+      "key": "wf.escalation.default_working_days",
+      "module": "wf",
+      "type": "int",
+      "default": 2,
+      "validation": {
+        "min": 1,
+        "max": 365
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "workflow",
+      "unit": "working days",
+      "name": {
+        "en": "Approval time limit",
+        "ur": "منظوری کی مقررہ مدت"
+      },
+      "description": {
+        "en": "Working days an approver has before a task moves up a level, when the route sets none",
+        "ur": "کام کے وہ دن جن کے بعد کام اگلے درجے پر چلا جاتا ہے، جب راستہ کوئی مدت مقرر نہ کرے"
+      },
+      "help": {
+        "en": "When a route step sets no time limit, a task moves to the next level after this many working days. Weekly off days and company holidays are not counted. Nothing is ever approved automatically.",
+        "ur": "جب راستے کا مرحلہ کوئی مدت مقرر نہ کرے تو کام اتنے کام کے دنوں کے بعد اگلے درجے پر چلا جاتا ہے۔ ہفتہ وار چھٹیاں اور کمپنی کی تعطیلات شمار نہیں ہوتیں۔ کوئی چیز کبھی خود بخود منظور نہیں ہوتی۔"
+      }
+    },
+    {
+      "key": "org.weekly_off_days",
+      "module": "org",
+      "type": "list",
+      "default": [
+        "saturday",
+        "sunday"
+      ],
+      "validation": {
+        "choices": [
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
+          "sunday"
+        ],
+        "max_items": 6
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "organization",
+      "unit": null,
+      "name": {
+        "en": "Weekly off days",
+        "ur": "ہفتہ وار چھٹیاں"
+      },
+      "description": {
+        "en": "Days of the week the company does not work (for approval time limits)",
+        "ur": "ہفتے کے وہ دن جن میں کمپنی کام نہیں کرتی (منظوری کی مدت کے لیے)"
+      },
+      "help": {
+        "en": "Approval time limits count working days only; these days and the company's holidays are skipped. Employee rosters keep their own patterns.",
+        "ur": "منظوری کی مدت میں صرف کام کے دن شمار ہوتے ہیں؛ یہ دن اور کمپنی کی تعطیلات چھوڑ دی جاتی ہیں۔ ملازمین کے روسٹر اپنے الگ نظام رکھتے ہیں۔"
+      }
+    },
+    {
+      "key": "wf.delegation.max_days",
+      "module": "wf",
+      "type": "int",
+      "default": 90,
+      "validation": {
+        "min": 1,
+        "max": 365
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "workflow",
+      "unit": "days",
+      "name": {
+        "en": "Longest delegation",
+        "ur": "طویل ترین تفویض"
+      },
+      "description": {
+        "en": "Most days one delegation of approvals may cover",
+        "ur": "منظوریوں کی ایک تفویض زیادہ سے زیادہ کتنے دنوں پر محیط ہو سکتی ہے"
+      },
+      "help": {
+        "en": "A user handing their approvals to someone else (for example while on leave) may choose at most this many days at a time.",
+        "ur": "اپنی منظوریاں کسی اور کو سونپنے والا صارف (مثلاً چھٹی کے دوران) ایک وقت میں زیادہ سے زیادہ اتنے دن چن سکتا ہے۔"
+      }
+    },
+    {
+      "key": "wf.bulk_approval.max_items",
+      "module": "wf",
+      "type": "int",
+      "default": 100,
+      "validation": {
+        "min": 1,
+        "max": 500
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "workflow",
+      "unit": "tasks",
+      "name": {
+        "en": "Bulk approval size",
+        "ur": "اجتماعی منظوری کی حد"
+      },
+      "description": {
+        "en": "Most tasks approved in one bulk approval",
+        "ur": "ایک اجتماعی منظوری میں زیادہ سے زیادہ کام"
+      },
+      "help": {
+        "en": "An approver may approve at most this many tasks in one go, and only where the document type and the route step allow it. Each task is checked on its own.",
+        "ur": "منظور کنندہ ایک بار میں زیادہ سے زیادہ اتنے کام منظور کر سکتا ہے، اور صرف وہاں جہاں دستاویز کی قسم اور راستے کا مرحلہ اجازت دیں۔ ہر کام کی الگ جانچ ہوتی ہے۔"
+      }
     }
   ],
   "flags": []

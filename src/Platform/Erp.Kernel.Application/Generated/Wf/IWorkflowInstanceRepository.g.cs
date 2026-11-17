@@ -36,6 +36,7 @@ public static class WorkflowInstanceAccess
         "wf.workflow_instances",
         new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Wf.WorkflowInstance, global::System.Guid?>>>
         {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
             [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.User] = e => e.RequesterUserId,
         },
         new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Wf.WorkflowInstance, string?>>>());

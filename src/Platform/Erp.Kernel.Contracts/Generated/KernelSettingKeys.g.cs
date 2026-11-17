@@ -76,6 +76,18 @@ public static class KernelSettingKeys
 
     /// <summary>Percentage of a licence limit at which administrators are warned.</summary>
     public const string CfgLimitsWarningPercent = "cfg.limits.warning_percent";
+
+    /// <summary>Working days an approver has before a task moves up a level, when the route sets none.</summary>
+    public const string WfEscalationDefaultWorkingDays = "wf.escalation.default_working_days";
+
+    /// <summary>Days of the week the company does not work (for approval time limits).</summary>
+    public const string OrgWeeklyOffDays = "org.weekly_off_days";
+
+    /// <summary>Most days one delegation of approvals may cover.</summary>
+    public const string WfDelegationMaxDays = "wf.delegation.max_days";
+
+    /// <summary>Most tasks approved in one bulk approval.</summary>
+    public const string WfBulkApprovalMaxItems = "wf.bulk_approval.max_items";
 }
 
 /// <summary>Keys of the feature flags declared in the kernel settings manifest (FR-KRN-SET-05).</summary>

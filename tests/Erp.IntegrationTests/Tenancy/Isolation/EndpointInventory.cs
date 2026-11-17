@@ -81,6 +81,12 @@ public enum EndpointKind
 
     /// <summary>Workflow action on a route, version, task or request id (S1.10a): A's id on B's host is 404.</summary>
     WorkflowRecordAction,
+
+    /// <summary>Workflow create naming A's people (S1.10b delegations): refused on B's host (A's ids are unknown there), nothing written.</summary>
+    WorkflowCreate,
+
+    /// <summary>Workflow bulk action on A's task ids (S1.10b bulk approval): B's answer refuses each as not found.</summary>
+    WorkflowBulk,
 }
 
 /// <summary>One API endpoint as the API host maps it: method, route and the table it serves.</summary>
@@ -102,6 +108,8 @@ public sealed record ApiEndpoint(string Method, string Pattern, string? Resource
             {
                 case "catalog": return EndpointKind.WorkflowCatalog;
                 case "record_action": return EndpointKind.WorkflowRecordAction;
+                case "create": return EndpointKind.WorkflowCreate;
+                case "bulk": return EndpointKind.WorkflowBulk;
                 case not null: return EndpointKind.Unclassified;
             }
 

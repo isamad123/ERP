@@ -47,6 +47,29 @@ public sealed class TenantDirectory(ControlPlaneOptions options, TimeProvider? t
     public static Task<ResolvedTenant?> FindByCodeAsync(NpgsqlConnection connection, string code, CancellationToken cancellationToken) =>
         ReadAsync(connection, SelectTenant + " where t.code = $1", code, cancellationToken);
 
+    /// <summary>
+    /// Codes of the customers background work serves now (slice S1.10b escalation): active, with a ready production
+    /// database; only <paramref name="onlyCode"/> when given.
+    /// </summary>
+    public static async Task<IReadOnlyList<string>> ServedCodesAsync(NpgsqlConnection connection, string? onlyCode, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        await using var command = new NpgsqlCommand("""
+            select t.code from cp.tenants t join cp.tenant_databases d on d.tenant_id = t.id and d.env_type = 'production'
+            where t.status = 'active' and d.status = 'ready' and ($1::text is null or t.code = $1)
+            order by t.code
+            """, connection);
+        command.Parameters.Add(new NpgsqlParameter { Value = (object?)onlyCode ?? DBNull.Value, NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Text });
+        var codes = new List<string>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            codes.Add(reader.GetString(0));
+        }
+
+        return codes;
+    }
+
     /// <summary>Forgets cached lookups (after a lifecycle change made by this process).</summary>
     public void Invalidate() => _cache.Clear();
 
