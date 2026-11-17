@@ -24,17 +24,6 @@ public sealed class WorkflowHistoryResponse
     public global::System.Guid CreatedBy { get; init; }
 }
 
-/// <summary>Body of create and update calls for wf.workflow_history. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class WorkflowHistoryWriteRequest
-{
-    public global::System.Guid? InstanceId { get; init; }
-    public global::System.Guid? TaskId { get; init; }
-    public string? Event { get; init; }
-    public global::System.Guid? ActorId { get; init; }
-    public global::System.Guid? ActingForUserId { get; init; }
-    public global::System.Text.Json.JsonElement? Details { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for wf.workflow_history.</summary>
 public sealed class WorkflowHistoryListQuery
 {
@@ -47,7 +36,7 @@ public sealed class WorkflowHistoryListQuery
     public global::System.Guid? TaskId { get; init; }
 }
 
-/// <summary>Generated endpoints of wf.workflow_history: read, create. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of wf.workflow_history: read. Answers pass through field security (S1.06).</summary>
 internal static class WorkflowHistoryEndpoints
 {
     private const string Resource = "wf.workflow_history";
@@ -57,7 +46,6 @@ internal static class WorkflowHistoryEndpoints
         var group = app.MapGroup("/api/wf/workflow-history").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("wf.workflow_history.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "wf.workflow_history.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("wf.workflow_history.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "wf.workflow_history.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("wf.workflow_history.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "wf.workflow_history.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] WorkflowHistoryListQuery query, global::Erp.Kernel.Application.Generated.Wf.IWorkflowHistoryRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -76,27 +64,6 @@ internal static class WorkflowHistoryEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Wf.WorkflowHistoryAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(WorkflowHistoryWriteRequest request, global::Erp.Kernel.Application.Generated.Wf.IWorkflowHistoryRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "wf.workflow_history.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Wf.WorkflowHistoryAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Wf.WorkflowHistory();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/wf/workflow-history/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Wf.WorkflowHistoryAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static WorkflowHistoryResponse ToResponse(global::Erp.Kernel.Domain.Generated.Wf.WorkflowHistory row) => new()
     {
         Id = row.Id,
@@ -109,78 +76,4 @@ internal static class WorkflowHistoryEndpoints
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(WorkflowHistoryWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.InstanceId is null && (!update || access.CanEdit("instance_id")))
-        {
-            errors.Add("instanceId");
-        }
-        if (request.Event is null && (!update || access.CanEdit("event")))
-        {
-            errors.Add("event");
-        }
-        if (request.Details is null && (!update || access.CanEdit("details")))
-        {
-            errors.Add("details");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(WorkflowHistoryWriteRequest request, global::Erp.Kernel.Domain.Generated.Wf.WorkflowHistory row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("instance_id"))
-        {
-            row.InstanceId = request.InstanceId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.InstanceId, row.InstanceId, update))
-        {
-            denied.Add("instanceId");
-        }
-        if (access.CanEdit("task_id"))
-        {
-            row.TaskId = request.TaskId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TaskId, row.TaskId, update))
-        {
-            denied.Add("taskId");
-        }
-        if (access.CanEdit("event"))
-        {
-            row.Event = request.Event!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Event, row.Event, update))
-        {
-            denied.Add("event");
-        }
-        if (access.CanEdit("actor_id"))
-        {
-            row.ActorId = request.ActorId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ActorId, row.ActorId, update))
-        {
-            denied.Add("actorId");
-        }
-        if (access.CanEdit("acting_for_user_id"))
-        {
-            row.ActingForUserId = request.ActingForUserId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ActingForUserId, row.ActingForUserId, update))
-        {
-            denied.Add("actingForUserId");
-        }
-        if (access.CanEdit("details"))
-        {
-            row.Details = GeneratedEndpointSupport.ToDocument(request.Details)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Details, row.Details, update))
-        {
-            denied.Add("details");
-        }
-        return denied;
-    }
 }

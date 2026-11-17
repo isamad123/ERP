@@ -50,6 +50,11 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
             return await new SettingsProbe(fx, app).RunAsync(endpoint, ct);
         }
 
+        if (endpoint.Kind is EndpointKind.WorkflowCatalog or EndpointKind.WorkflowRecordAction)
+        {
+            return await new WorkflowProbe(fx, app).RunAsync(endpoint, ct);
+        }
+
         if (endpoint.Kind == EndpointKind.Licence)
         {
             return await new LicenceProbe(fx, app).RunAsync(endpoint, ct);

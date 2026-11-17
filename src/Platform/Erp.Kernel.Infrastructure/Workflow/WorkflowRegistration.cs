@@ -1,0 +1,39 @@
+using Erp.Kernel.Application.Workflow;
+using Erp.Kernel.Contracts.Workflow;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
+namespace Erp.Kernel.Infrastructure.Workflow;
+
+/// <summary>Service registration of the workflow engine (slice S1.10).</summary>
+public static class WorkflowRegistration
+{
+    /// <summary>
+    /// The engine, route administration and the document-type catalogue. Modules add their
+    /// <see cref="IWorkflowDocumentTypeSource"/>, <see cref="IWorkflowOutcomeHandler"/>s and, for HR, the
+    /// <see cref="IApproverDirectory"/>; without a directory, manager, department-head and position steps cannot be activated.
+    /// </summary>
+    public static IServiceCollection AddKernelWorkflow(this IServiceCollection services)
+    {
+        services.AddSingleton(sp => new WorkflowCatalog(sp.GetServices<IWorkflowDocumentTypeSource>()));
+        services.TryAddScoped<IApproverDirectory, NoApproverDirectory>();
+        services.AddScoped<WorkflowEngine>();
+        services.AddScoped<IWorkflowService>(sp => sp.GetRequiredService<WorkflowEngine>());
+        services.AddScoped<IWorkflowInbox>(sp => sp.GetRequiredService<WorkflowEngine>());
+        services.AddScoped<WorkflowAdministrationService>();
+        services.AddScoped<IWorkflowAdministration>(sp => sp.GetRequiredService<WorkflowAdministrationService>());
+        return services;
+    }
+}
+
+/// <summary>The kernel without HR: the directory answers nothing (S1.20 and S1.22 provide the HR implementation).</summary>
+internal sealed class NoApproverDirectory : IApproverDirectory
+{
+    public bool Supports(string kind) => false;
+
+    public Task<IReadOnlyList<Guid>> ManagersAsync(Guid userId, int levels, DateOnly asOf, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<Guid>>([]);
+
+    public Task<IReadOnlyList<Guid>> DepartmentHeadsAsync(Guid userId, Guid companyId, DateOnly asOf, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<Guid>>([]);
+
+    public Task<IReadOnlyList<Guid>> PositionHoldersAsync(string position, Guid companyId, DateOnly asOf, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<Guid>>([]);
+}

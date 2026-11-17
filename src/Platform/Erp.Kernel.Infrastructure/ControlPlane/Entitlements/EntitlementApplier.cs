@@ -83,6 +83,7 @@ public sealed class EntitlementApplier(ControlPlaneOptions options, ISecretStore
                 await Identity.IdentitySetup.EnsureAsync(owner, secrets, tenant.Code, migrations.AccessFolders(modules), cancellationToken).ConfigureAwait(false);
                 await Access.AccessSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
                 await Numbering.NumberingSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
+                await Workflow.WorkflowSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
             }
 
             await _provisioner.RecordVersionsAsync(actor, tenant, result, cancellationToken).ConfigureAwait(false);

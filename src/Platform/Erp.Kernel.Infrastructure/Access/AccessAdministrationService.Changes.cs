@@ -23,6 +23,10 @@ public sealed partial class AccessAdministrationService
         return AccessResult.Pending(id);
     }
 
+    /// <summary>Holds a change built by another kernel service for a second person (slice S1.10: route activation).</summary>
+    internal static Task<AccessResult> SubmitChangeAsync(NpgsqlConnection c, NpgsqlTransaction tx, AccessChange change, DateTimeOffset now, Guid by, CancellationToken ct) =>
+        SubmitAsync(c, tx, change, now, by, ct);
+
     public async Task<AccessResult> ApproveAsync(Guid requestId, string? reason, CancellationToken cancellationToken)
     {
         await ExpireOldRequestsAsync(cancellationToken).ConfigureAwait(false);
@@ -141,6 +145,13 @@ public sealed partial class AccessAdministrationService
             return AccessResult.Forbidden(CompanyNotCovered);
         }
 
+        // A held route activation (slice S1.10 ruling Q10): the approver must be allowed to activate routes themselves.
+        if (change.Kind is AccessChange.ActivateWorkflowVersion
+            && !await caller.CoversCompanyAsync(Contracts.Workflow.WorkflowPermissions.RoutesUpdate, null, ct).ConfigureAwait(false))
+        {
+            return AccessResult.Forbidden(Forbidden);
+        }
+
         var ownGain = change.Kind switch
         {
             AccessChange.Assign or AccessChange.AddMember => change.UserId == approver,
@@ -202,6 +213,7 @@ public sealed partial class AccessAdministrationService
             AccessChange.AddMember => await ApplyAddMemberAsync(c, tx, change, now, by, ct).ConfigureAwait(false),
             AccessChange.RemoveMember => await ApplyRemoveMemberAsync(c, tx, change, now, by, ct).ConfigureAwait(false),
             AccessChange.SetSetting or AccessChange.ChangeSetting => await ApplySettingAsync(c, tx, change, now, by, ct).ConfigureAwait(false),
+            AccessChange.ActivateWorkflowVersion => AccessResult.Done(await Workflow.WorkflowAdministrationService.ApplyHeldActivationAsync(c, tx, change.WorkflowVersionId!.Value, now, by, ct).ConfigureAwait(false)),
             _ => AccessResult.Invalid("errors.data.invalid_request"),
         };
 

@@ -76,3 +76,10 @@ public sealed record SettingsEndpointMetadata(string Kind, string Resource, stri
 /// customer; the query string names months only).
 /// </summary>
 public sealed record LicenceEndpointMetadata(string Kind, string Permission);
+
+/// <summary>
+/// Marks a workflow endpoint (slice S1.10) for the tenant-isolation suite: <see cref="Kind"/> is <c>catalog</c> (a list of
+/// the bound customer's own document types, routes or inbox tasks) or <c>record_action</c> (a route with the
+/// <c>{id}</c> of a route, version, task or request: another customer's id is 404).
+/// </summary>
+public sealed record WorkflowEndpointMetadata(string Kind, string Resource, string Permission);

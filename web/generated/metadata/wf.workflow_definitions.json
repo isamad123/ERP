@@ -11,14 +11,6 @@
     {
       "action": "read",
       "permission": "wf.workflow_definitions.read"
-    },
-    {
-      "action": "create",
-      "permission": "wf.workflow_definitions.create"
-    },
-    {
-      "action": "update",
-      "permission": "wf.workflow_definitions.update"
     }
   ],
   "companyScoped": false,
@@ -31,6 +23,7 @@
     "nameI18n",
     "documentType",
     "activeVersionId",
+    "requiresApproval",
     "status",
     "isActive"
   ],
@@ -87,6 +80,16 @@
       "filter": true,
       "labelKey": "fields.wf.workflow_definitions.active_version_id",
       "references": "wf.workflow_versions"
+    },
+    {
+      "column": "requires_approval",
+      "field": "requiresApproval",
+      "kind": "Bool",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.wf.workflow_definitions.requires_approval"
     },
     {
       "column": "status",

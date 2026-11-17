@@ -14,14 +14,6 @@
     {
       "action": "read",
       "permission": "wf.workflow_versions.read"
-    },
-    {
-      "action": "create",
-      "permission": "wf.workflow_versions.create"
-    },
-    {
-      "action": "update",
-      "permission": "wf.workflow_versions.update"
     }
   ],
   "companyScoped": false,

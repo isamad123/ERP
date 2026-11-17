@@ -12,10 +12,6 @@
     {
       "action": "read",
       "permission": "wf.workflow_history.read"
-    },
-    {
-      "action": "create",
-      "permission": "wf.workflow_history.create"
     }
   ],
   "companyScoped": false,

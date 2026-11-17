@@ -334,6 +334,9 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
         // Numbering settings and a default scheme per company and registered document type (slice S1.08 Q7).
         await Numbering.NumberingSetup.EnsureAsync(connection, transaction, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
 
+        // Default approval route per registered document type (slice S1.10, FR-KRN-TEN-02 "seed default workflows").
+        await Workflow.WorkflowSetup.EnsureAsync(connection, transaction, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
+
         // First tenant administrator: invited, no password. Invitation e-mail and sign-in are slices S1.05 and S1.11.
         await Sql.ExecuteAsync(connection, transaction, """
             insert into iam.users (id, username, email, display_name, default_company_id, language, time_zone, is_system, status, created_at, created_by, updated_at, updated_by)

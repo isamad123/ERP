@@ -51,6 +51,7 @@ public static class WorkflowInstanceAccess
         new("started_at", "StartedAt", null),
         new("completed_at", "CompletedAt", null),
         new("context", "Context", null),
+        new("subject_user_ids", "SubjectUserIds", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

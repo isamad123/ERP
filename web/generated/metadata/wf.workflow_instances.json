@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "wf.workflow_instances.read"
-    },
-    {
-      "action": "create",
-      "permission": "wf.workflow_instances.create"
-    },
-    {
-      "action": "update",
-      "permission": "wf.workflow_instances.update"
     }
   ],
   "companyScoped": true,
@@ -134,6 +126,16 @@
       "labelKey": "fields.wf.workflow_instances.context"
     },
     {
+      "column": "subject_user_ids",
+      "field": "subjectUserIds",
+      "kind": "UuidArray",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.wf.workflow_instances.subject_user_ids"
+    },
+    {
       "column": "status",
       "field": "status",
       "kind": "Enum",
@@ -162,6 +164,10 @@
         {
           "value": "failed",
           "labelKey": "options.wf.workflow_instances.status.failed"
+        },
+        {
+          "value": "returned",
+          "labelKey": "options.wf.workflow_instances.status.returned"
         }
       ]
     },

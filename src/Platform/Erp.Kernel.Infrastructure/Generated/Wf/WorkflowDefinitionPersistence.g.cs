@@ -21,6 +21,7 @@ internal sealed class WorkflowDefinitionConfiguration : IEntityTypeConfiguration
         builder.Property(e => e.NameI18n).HasColumnName("name_i18n").HasColumnType("jsonb").IsRequired();
         builder.Property(e => e.DocumentType).HasColumnName("document_type").HasColumnType("text").IsRequired();
         builder.Property(e => e.ActiveVersionId).HasColumnName("active_version_id").HasColumnType("uuid");
+        builder.Property(e => e.RequiresApproval).HasColumnName("requires_approval").HasColumnType("boolean");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.IsActive).HasColumnName("is_active").HasColumnType("boolean");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");

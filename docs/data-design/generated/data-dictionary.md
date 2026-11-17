@@ -7104,6 +7104,7 @@ Requirements: KRN-WFL-01. Source: kernel.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| requires_approval | boolean | no | false | copied from the document type at creation: activating a version needs maker-checker (CR-041) |
 
 Constraints:
 
@@ -7172,10 +7173,11 @@ Requirements: KRN-WFL-01, KRN-WFL-10. Source: kernel.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| subject_user_ids | uuid[] | no | '{}'::uuid[] | the people the document is about; excluded from approving like the requester (CR-041, Q6) |
 
 Constraints:
 
-- `ck_workflow_instances_status` CHECK ((status = ANY (ARRAY['running'::text, 'approved'::text, 'rejected'::text, 'cancelled'::text, 'failed'::text])))
+- `ck_workflow_instances_status` CHECK ((status = ANY (ARRAY['running'::text, 'approved'::text, 'rejected'::text, 'cancelled'::text, 'failed'::text, 'returned'::text])))
 - `fk_workflow_instances_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_workflow_instances_requester_user_id` FOREIGN KEY (requester_user_id) REFERENCES iam.users(id)
 - `fk_workflow_instances_version_id` FOREIGN KEY (version_id) REFERENCES wf.workflow_versions(id)
@@ -7189,9 +7191,13 @@ Indexes:
 - `ix_workflow_instances_status` CREATE INDEX ix_workflow_instances_status ON wf.workflow_instances USING btree (status) WHERE (status = 'running'::text)
 - `ix_workflow_instances_version_id` CREATE INDEX ix_workflow_instances_version_id ON wf.workflow_instances USING btree (version_id)
 
+Triggers:
+
+- `tg_workflow_instances_parties_fixed` CREATE TRIGGER tg_workflow_instances_parties_fixed BEFORE UPDATE OF requester_user_id, subject_user_ids ON wf.workflow_instances FOR EACH ROW EXECUTE FUNCTION wf.tg_workflow_instances_parties_fixed()
+
 ### wf.workflow_tasks
 
-Requirements: KRN-WFL-07, KRN-WFL-08, KRN-WFL-09, HRM-ROL-04, FR-XM-32. Pending rule (S1.10, placeholder wf.todo_workflow_tasks_no_self_approval): assignee_user_id is distinct from the instance requester (FR-XM-32), enforced by trigger Source: kernel.yaml.
+Requirements: KRN-WFL-07, KRN-WFL-08, KRN-WFL-09, HRM-ROL-04, FR-XM-32. Rule (implemented in S1.10a): assignee_user_id is distinct from the instance requester (FR-XM-32), enforced by trigger Source: kernel.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -7212,6 +7218,10 @@ Requirements: KRN-WFL-07, KRN-WFL-08, KRN-WFL-09, HRM-ROL-04, FR-XM-32. Pending 
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| info_requested_at | timestamp with time zone | yes |  | set while a question to the requester is unanswered (CR-041, Q7) |
+| info_requested_by | uuid | yes |  | the approver who asked (CR-041, Q7) |
+| claimed_at | timestamp with time zone | yes |  | when a role-queue task was claimed (CR-041, Q4) |
+| escalation_level | integer | no | 0 | default 0; levels moved up by escalation (CR-041, Q9) |
 
 Constraints:
 
@@ -7229,6 +7239,10 @@ Indexes:
 - `ix_workflow_tasks_assignee_user_id` CREATE INDEX ix_workflow_tasks_assignee_user_id ON wf.workflow_tasks USING btree (assignee_user_id)
 - `ix_workflow_tasks_assignee_user_id_status` CREATE INDEX ix_workflow_tasks_assignee_user_id_status ON wf.workflow_tasks USING btree (assignee_user_id, status) WHERE (status = 'pending'::text)
 - `ix_workflow_tasks_instance_id` CREATE INDEX ix_workflow_tasks_instance_id ON wf.workflow_tasks USING btree (instance_id)
+
+Triggers:
+
+- `tg_workflow_tasks_no_self_approval` CREATE TRIGGER tg_workflow_tasks_no_self_approval BEFORE INSERT OR UPDATE OF assignee_user_id, acted_by, instance_id ON wf.workflow_tasks FOR EACH ROW EXECUTE FUNCTION wf.tg_workflow_tasks_no_self_approval()
 
 ### wf.workflow_versions
 
@@ -7309,7 +7323,8 @@ Constraints:
 - `org.tg_companies_default_branch` 
 - `org.todo_org_unit_links_parent_cycle` Pending rule for org.org_unit_links, owned by S1.14: parent_unit_id: fk org.org_units; null for root; cycle check by trigger
 - `wf.tg_refuse_change` 
-- `wf.todo_workflow_tasks_no_self_approval` Pending rule for wf.workflow_tasks, owned by S1.10: assignee_user_id is distinct from the instance requester (FR-XM-32), enforced by trigger
+- `wf.tg_workflow_instances_parties_fixed` 
+- `wf.tg_workflow_tasks_no_self_approval` 
 
 ## Control-plane database
 

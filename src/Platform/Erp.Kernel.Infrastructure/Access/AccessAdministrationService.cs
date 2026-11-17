@@ -6,6 +6,7 @@ using Erp.BuildingBlocks.Domain.Time;
 using Erp.Kernel.Application.Access;
 using Erp.Kernel.Contracts.Access;
 using Erp.Kernel.Infrastructure.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
 namespace Erp.Kernel.Infrastructure.Access;
@@ -438,6 +439,18 @@ public sealed partial class AccessAdministrationService(
 
             case AccessChange.SetSetting:
                 return await ValidateSettingAsync(c, tx, change, ct).ConfigureAwait(false);
+
+            case AccessChange.ActivateWorkflowVersion:
+            {
+                // Slice S1.10 ruling Q10: the draft is unchanged since the request and still passes every check.
+                if (change.WorkflowVersionId is not { } versionId || change.WorkflowVersionRowVersion is not { } rowVersion)
+                {
+                    return AccessResult.Invalid("errors.data.invalid_request");
+                }
+
+                var workflow = services.GetRequiredService<Workflow.WorkflowAdministrationService>();
+                return await workflow.ValidateActivationAsync(c, tx, versionId, rowVersion, ct).ConfigureAwait(false) is { } refused ? AccessResult.Invalid(refused) : null;
+            }
 
             case AccessChange.ChangeSetting:
                 return await ValidateHeldSettingAsync(c, tx, change, ct).ConfigureAwait(false);

@@ -49,17 +49,6 @@ export interface Delegation
     rowVersion: number;
 }
 
-export interface DelegationWrite
-{
-    fromUserId: string;
-    toUserId: string;
-    scope: unknown;
-    validFrom: string;
-    validTo: string;
-    reason?: string | null;
-    status: 'active' | 'revoked';
-}
-
 export interface DelegationListQuery
 {
     after?: string;
@@ -73,8 +62,6 @@ export const delegations =
 {
     list: (query: DelegationListQuery = {}) => request<PagedResult<Delegation>>('GET', '/api/iam/delegations', { query }),
     get: (id: string) => request<Delegation>('GET', `/api/iam/delegations/${id}`),
-    create: (body: DelegationWrite) => request<Delegation>('POST', '/api/iam/delegations', { body }),
-    update: (id: string, body: DelegationWrite & { rowVersion: number }) => request<Delegation>('PUT', `/api/iam/delegations/${id}`, { body }),
 };
 
 /** iam.field_policies: Field-level security per role. Field rules (S1.06) may leave a field out or mask it as text. */

@@ -27,6 +27,9 @@ public sealed partial class WorkflowDefinition : global::Erp.BuildingBlocks.Doma
     /// <summary>active_version_id: fk wf.workflow_versions</summary>
     public global::System.Guid? ActiveVersionId { get; set; }
 
+    /// <summary>requires_approval: copied from the document type at creation: activating a version needs maker-checker (CR-041)</summary>
+    public bool RequiresApproval { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

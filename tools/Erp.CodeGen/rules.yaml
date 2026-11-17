@@ -305,6 +305,45 @@ tables:
     checks:
       - text: "assignee_user_id is distinct from the instance requester (FR-XM-32), enforced by trigger"
         stub: { name: workflow_tasks_no_self_approval, owner: S1.10 }
+        # S1.10a (slice S1.10 ruling Q6, CR-041): nobody approves their own request. A task may not be assigned to, or
+        # decided by, the request's requester or one of the people the document is about (subject_user_ids). The engine
+        # refuses these cases first with a clear message; the trigger stops any other path. The requester and subjects
+        # are fixed once the request exists (function wf.tg_workflow_instances_parties_fixed below, after the column).
+        implemented:
+          slice: S1.10a
+          triggers:
+            - [wf.workflow_tasks, tg_workflow_tasks_no_self_approval]
+          sql: |
+            create or replace function wf.tg_workflow_tasks_no_self_approval() returns trigger
+            language plpgsql as $fn$
+            declare
+                requester uuid;
+                subjects uuid[];
+            begin
+                if new.assignee_user_id is null and new.acted_by is null then
+                    return new;
+                end if;
+                select i.requester_user_id, i.subject_user_ids into requester, subjects
+                from wf.workflow_instances i where i.id = new.instance_id;
+                if not found then
+                    return new; -- the foreign key refuses the row
+                end if;
+                if new.assignee_user_id is not null
+                   and (new.assignee_user_id = requester or new.assignee_user_id = any(coalesce(subjects, '{}'))) then
+                    raise exception 'workflow task %: the assignee is the requester or a subject of the request (FR-XM-32)', new.id
+                        using errcode = '23514', constraint = 'ck_workflow_tasks_no_self_approval';
+                end if;
+                if new.acted_by is not null
+                   and (new.acted_by = requester or new.acted_by = any(coalesce(subjects, '{}'))) then
+                    raise exception 'workflow task %: the decider is the requester or a subject of the request (FR-XM-32)', new.id
+                        using errcode = '23514', constraint = 'ck_workflow_tasks_no_self_approval';
+                end if;
+                return new;
+            end
+            $fn$;
+            create or replace trigger tg_workflow_tasks_no_self_approval before insert or update of assignee_user_id, acted_by, instance_id
+                on wf.workflow_tasks for each row execute function wf.tg_workflow_tasks_no_self_approval();
+
 
   doc.templates:
     notes:
@@ -754,3 +793,23 @@ functions:
           for each statement execute function cfg.tg_config_version('flags');
       create or replace trigger tg_feature_flag_overrides_config_version after insert or update or delete or truncate on cfg.feature_flag_overrides
           for each statement execute function cfg.tg_config_version('flags');
+
+  - slice: S1.10a
+    name: wf.tg_workflow_instances_parties_fixed
+    purpose: "Nobody approves their own request (FR-XM-32; slice S1.10 ruling Q6): the requester and the people a request is about (subject_user_ids, CR-041) are fixed once the request exists, so the self-approval trigger on wf.workflow_tasks cannot be side-stepped by editing the request. In the functions file because the trigger names the column the S1.10a design file adds."
+    triggers:
+      - [wf.workflow_instances, tg_workflow_instances_parties_fixed]
+    sql: |
+      create or replace function wf.tg_workflow_instances_parties_fixed() returns trigger
+      language plpgsql as $fn$
+      begin
+          if new.requester_user_id is distinct from old.requester_user_id
+             or new.subject_user_ids is distinct from old.subject_user_ids then
+              raise exception 'workflow request %: the requester and the people it is about cannot change (FR-XM-32)', old.id
+                  using errcode = '23514', constraint = 'ck_workflow_instances_parties_fixed';
+          end if;
+          return new;
+      end
+      $fn$;
+      create or replace trigger tg_workflow_instances_parties_fixed before update of requester_user_id, subject_user_ids
+          on wf.workflow_instances for each row execute function wf.tg_workflow_instances_parties_fixed();
