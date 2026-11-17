@@ -71,10 +71,10 @@ internal static class RunEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/job/runs").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("job.runs.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "job.runs.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("job.runs.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "job.runs.read"));
-        group.MapPost("/", CreateAsync).WithName("job.runs.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "job.runs.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("job.runs.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "job.runs.update"));
+        group.MapGet("/", ListAsync).WithName("job.runs.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "job.runs.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("job.runs.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "job.runs.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
+        group.MapPost("/", CreateAsync).WithName("job.runs.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "job.runs.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
+        group.MapPut("/{id:guid}", UpdateAsync).WithName("job.runs.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "job.runs.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] RunListQuery query, global::Erp.Kernel.Application.Generated.Job.IRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

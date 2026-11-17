@@ -161,6 +161,16 @@ The generator writes each module's document types as `<Module>NumberingTypes.g.c
 | `triggers` of a `rules.yaml` function | `triggers: [[cfg.settings, tg_settings_config_version]]` | The triggers the reviewed SQL creates, so the expected catalogue knows them. |
 | `<module>.Infrastructure/Settings/settings.yaml` | see the kernel's | One manifest per module: settings (key, type, default, validation, layers, role_rule, tighten_only, self_service, visible, requires_approval, area, unit, name, description and help in English and Urdu) and feature flags (key, default, entitlement_key, texts). The generator checks every default against the kernel's setting rules and writes `Access/settings.g.json` (registered by `migrate` and provisioning) and `<Module>SettingKeys.g.cs`. A key starts with one of the module's ids; a setting dropped from the manifest is kept hidden, never deleted. |
 
+## Entitlement keys (slice S1.09b, CR-036, CR-039, CR-040)
+
+| Key | Example | Meaning |
+| --- | --- | --- |
+| `- defaults:` entry | `- defaults:` / `  entitlement: hrm.core` (before the first table of the file) | The feature key (D-24) of every table of the file. Every customer-database table needs one; control-plane tables have none. |
+| `entitlement` on a table | `entitlement: hrm.learning` | Overrides the file's key. The generated endpoints carry it (`EntitlementMetadata`); a customer not licensed for the key or the table's module gets 404, exactly as for a path that does not exist (ruling Q9). People and time `hrm.core`, payroll `hrm.payroll`, forms and performance `hrm.performance`, learning `hrm.learning`, kernel `platform.base`. |
+| `uniques_replaced_in` | `uniques_replaced_in: {S1.09b: [[tenant_id, "where status not in ('superseded', 'scheduled')"]]}` | A partial unique key of the first migrations gets a new condition: the frozen file keeps the old one, the slice's design migration drops and recreates the index. |
+| `uniques_added_in` with a condition | `uniques_added_in: {S1.09b: [[source_event_id, "where source_event_id is not null"]]}` | A partial unique key added later (a unique index); it may cover a column the same slice adds. |
+| Control-plane changes later | `added_in: {S1.09b: [source_event_id]}`, `enum_added_in` on `cp.*` | Besides whole tables (S1.07), a control-plane table may later gain optional columns, enum values and unique keys, in `V…__controlplane__design_<slice>.sql`. |
+
 ## Cross-module rules enforced in the data design
 
 | Rule | Where |

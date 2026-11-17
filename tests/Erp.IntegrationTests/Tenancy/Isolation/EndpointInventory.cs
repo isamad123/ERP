@@ -72,10 +72,13 @@ public enum EndpointKind
 
     /// <summary>Change of the signed-in user's own value (S1.09a): B's session never changes anything of A's.</summary>
     SettingsSelf,
+
+    /// <summary>Licence read (S1.09b: capabilities, licence page, usage): B's answer shows B's licence and usage only.</summary>
+    Licence,
 }
 
 /// <summary>One API endpoint as the API host maps it: method, route and the table it serves.</summary>
-public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null, string? AuditKind = null, string? NumberingKind = null, string? SettingsKind = null)
+public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null, string? AuditKind = null, string? NumberingKind = null, string? SettingsKind = null, string? LicenceKind = null)
 {
     private const string IdSegment = "/{id:guid}";
 
@@ -89,6 +92,11 @@ public sealed record ApiEndpoint(string Method, string Pattern, string? Resource
     {
         get
         {
+            if (LicenceKind is not null)
+            {
+                return LicenceKind is "capabilities" or "licence" or "usage" ? EndpointKind.Licence : EndpointKind.Unclassified;
+            }
+
             switch (SettingsKind)
             {
                 case "read": return EndpointKind.SettingsRead;
@@ -208,12 +216,14 @@ public static class EndpointInventory
             var audit = endpoint.Metadata.GetMetadata<AuditEndpointMetadata>();
             var numbering = endpoint.Metadata.GetMetadata<NumberingEndpointMetadata>();
             var settings = endpoint.Metadata.GetMetadata<SettingsEndpointMetadata>();
-            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource ?? audit?.Resource ?? numbering?.Resource ?? settings?.Resource;
+            var licence = endpoint.Metadata.GetMetadata<LicenceEndpointMetadata>();
+            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource ?? audit?.Resource ?? numbering?.Resource ?? settings?.Resource
+                ?? (licence is null ? null : "cp.entitlements");
             var identity = endpoint.Metadata.GetMetadata<IdentityEndpointMetadata>()?.Kind;
             var anonymous = endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null || endpoint.Metadata.GetMetadata<IAuthorizeData>() is null;
             foreach (var method in methods is { Count: > 0 } ? methods : ["*"])
             {
-                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind, audit?.Kind, numbering?.Kind, settings?.Kind));
+                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind, audit?.Kind, numbering?.Kind, settings?.Kind, licence?.Kind));
             }
         }
 

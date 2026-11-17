@@ -203,7 +203,7 @@ public static class IdentityEndpoints
         {
             AdminOutcome.Done => Results.NoContent(),
             AdminOutcome.NotFound => NotFoundResult(),
-            _ => Problem(result.Error == "errors.user.limit_reached" ? StatusCodes.Status409Conflict : StatusCodes.Status400BadRequest, result.Error ?? InvalidRequest, null),
+            _ => Problem(StatusCodes.Status400BadRequest, result.Error ?? InvalidRequest, null),
         };
     }
 
@@ -223,7 +223,7 @@ public static class IdentityEndpoints
         {
             AuthOutcome.Failed => FailedResult(),
             AuthOutcome.Invalid => Problem(
-                result.Errors is { } e && e.Contains("errors.user.limit_reached") ? StatusCodes.Status409Conflict : StatusCodes.Status400BadRequest,
+                StatusCodes.Status400BadRequest,
                 InvalidRequest,
                 result.Errors),
             AuthOutcome.Tokens => Results.Ok(new AuthResponse("tokens", result.Tokens!.AccessToken, result.Tokens.AccessTokenExpiresAt, result.Tokens.RefreshToken,

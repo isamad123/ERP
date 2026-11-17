@@ -17,6 +17,8 @@ using Erp.Kernel.Application.Numbering;
 using Erp.Kernel.Contracts.Numbering;
 using Erp.Kernel.Infrastructure.Numbering;
 using Erp.Kernel.Api.Settings;
+using Erp.Kernel.Api.Entitlements;
+using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Application.Settings;
 using Erp.Kernel.Contracts.Settings;
 using Erp.Kernel.Infrastructure.Settings;
@@ -27,6 +29,8 @@ using Erp.Kernel.Api.Generated;
 using Erp.Kernel.Infrastructure.Access;
 using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
+using Erp.Kernel.Infrastructure.Entitlements;
+using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Erp.Kernel.Infrastructure.Generated;
 using Erp.Kernel.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -70,7 +74,8 @@ public static class ApiHost
         services.AddScoped<IAuditContext, HttpAuditContext>();
         services.AddScoped<IAuditQueryService, AuditQueryService>();
         services.AddScoped<IAuditVerifier, AuditVerifier>();
-        services.AddDbContext<KernelDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp));
+        services.AddDbContext<KernelDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp)
+            .AddInterceptors(sp.GetRequiredService<CompanyLimitInterceptor>())); // the company limit, after the audit interceptor (S1.09b)
         services.AddDbContext<HrmDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp));
         services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
         services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
@@ -114,7 +119,18 @@ public static class ApiHost
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton(new SettingsCacheOptions(TimeSpan.FromMilliseconds(config.GetValue("Settings:RefreshMilliseconds", 1000))));
         services.AddSingleton<SettingsCache>();
-        services.AddScoped<ILicensedFeatures, LocalEntitlementFeatures>();
+        // Entitlements (S1.09b): the licence of each request is worked out from the stored entitlements and the customer's day.
+        services.AddSingleton<ILicenceResolver, LicenceResolver>();
+        services.AddScoped<ILicensedFeatures, EntitlementFeatures>();
+        services.AddScoped<ILicenceService, LicenceService>();
+        // Limits (S1.09b, ruling Q7): one guard; the kernel counts named users, concurrent users and companies.
+        services.AddSingleton<ILimitCounter, NamedUserCounter>();
+        services.AddSingleton<ILimitCounter, ConcurrentUserCounter>();
+        services.AddSingleton<ILimitCounter, CompanyCounter>();
+        services.AddScoped<LimitWarnings>();
+        services.AddScoped<ILimitWarningSource>(sp => sp.GetRequiredService<LimitWarnings>());
+        services.AddScoped<ILimitGuard, LimitGuard>();
+        services.AddSingleton<CompanyLimitInterceptor>();
         services.AddScoped<SettingsService>();
         services.AddScoped<ISettings>(sp => sp.GetRequiredService<SettingsService>());
         services.AddScoped<IFeatureFlags>(sp => sp.GetRequiredService<SettingsService>());
@@ -146,6 +162,7 @@ public static class ApiHost
         var app = builder.Build();
         app.UseErpAuditCorrelation();
         app.UseRouting();
+        app.UseErpLimitResponses();
         app.UseErpTenantResolution();
         app.UseAuthentication();
         app.UseErpTokenTenantCheck();
@@ -158,6 +175,7 @@ public static class ApiHost
         api.MapAuditEndpoints();
         api.MapNumberingEndpoints();
         api.MapSettingsEndpoints();
+        api.MapLicenceEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();
         return app;

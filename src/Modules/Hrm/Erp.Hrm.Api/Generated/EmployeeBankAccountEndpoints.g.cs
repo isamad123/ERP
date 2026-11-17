@@ -71,10 +71,10 @@ internal static class EmployeeBankAccountEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/hrm/employee-bank-accounts").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("hrm.employee_bank_accounts.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.employee_bank_accounts.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.employee_bank_accounts.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.employee_bank_accounts.read"));
-        group.MapPost("/", CreateAsync).WithName("hrm.employee_bank_accounts.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.employee_bank_accounts.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.employee_bank_accounts.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.employee_bank_accounts.update"));
+        group.MapGet("/", ListAsync).WithName("hrm.employee_bank_accounts.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.employee_bank_accounts.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.employee_bank_accounts.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.employee_bank_accounts.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
+        group.MapPost("/", CreateAsync).WithName("hrm.employee_bank_accounts.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.employee_bank_accounts.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
+        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.employee_bank_accounts.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.employee_bank_accounts.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] EmployeeBankAccountListQuery query, global::Erp.Hrm.Application.Generated.IEmployeeBankAccountRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

@@ -45,6 +45,11 @@ public sealed record EntitlementPayload(string Tenant, int Version, string Editi
             expires is null ? null : DateOnly.ParseExact(expires, "yyyy-MM-dd", CultureInfo.InvariantCulture),
             json["claims"] as JsonObject ?? throw new InvalidDataException("The entitlement has no claims object."));
         _ = payload.Modules;
+        if (payload.ExpiresAt is { } end && end < payload.EffectiveFrom)
+        {
+            throw new InvalidDataException("The entitlement ends before it starts.");
+        }
+
         return payload.Version < 1 ? throw new InvalidDataException("The entitlement version starts at 1.") : payload;
     }
 
@@ -55,7 +60,8 @@ public sealed record EntitlementPayload(string Tenant, int Version, string Editi
 /// <summary>
 /// An entitlement as the vendor issues it: payload, signing key id and an ECDSA P-256 / SHA-256 signature (IEEE P1363
 /// format) over the canonical JSON of the payload. Only public keys are held by the platform (cp.signing_keys);
-/// the private key stays with the issuer. Editing, history and the state machine are slice S1.09.
+/// the private key stays with the issuer. Claims are checked by <see cref="EntitlementVerifier"/>; applying, history and the
+/// state machine are slice S1.09b (<see cref="EntitlementApplier"/>, <c>LicenceStates</c>).
 /// </summary>
 public sealed record SignedEntitlement(EntitlementPayload Payload, string KeyId, byte[] Signature)
 {

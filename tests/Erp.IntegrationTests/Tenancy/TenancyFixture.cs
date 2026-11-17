@@ -172,12 +172,86 @@ public sealed class TenancyFixture : IAsyncLifetime
 
     public ProvisioningRequest Request(string code, IReadOnlyList<string>? modules = null, string? entitlementTenant = null, ECDsa? signer = null)
     {
-        var payload = new EntitlementPayload(entitlementTenant ?? code, 1, "business", new DateOnly(2026, 11, 1), null,
-            new JsonObject { ["modules"] = new JsonArray([.. (modules ?? ["hrm"]).Select(m => (JsonNode)m)]), ["limits"] = new JsonObject { ["employees"] = 100 } });
+        var payload = new EntitlementPayload(entitlementTenant ?? code, 1, "business", new DateOnly(2026, 11, 1), null, Claims(modules ?? ["hrm"]));
         var pem = (signer ?? _entitlementKey).ExportECPrivateKeyPem();
         var signed = SignedEntitlement.Sign(payload, "it-" + Suffix, pem);
         return new ProvisioningRequest(code, "Customer " + code.ToUpperInvariant(), [HostOf(code)], "pk-1", "PK", "PKR", "sme", ClusterName,
             "Customer " + code.ToUpperInvariant() + " (Private) Limited", "admin@" + code + ".example.test", "First Admin", signed.ToFileJson());
+    }
+
+    /// <summary>
+    /// Claims in the S1.09b format (ruling Q1): every HR feature key when the hrm module is licensed, no limits unless given
+    /// (a missing limit means no limit).
+    /// </summary>
+    public static JsonObject Claims(IReadOnlyList<string> modules, JsonObject? limits = null, IReadOnlyList<string>? features = null) => new()
+    {
+        ["deployment"] = "saas",
+        ["modules"] = new JsonArray([.. modules.Select(m => (JsonNode)m)]),
+        ["features"] = new JsonArray([.. (features ?? (modules.Contains("hrm") ? ["platform.base", "hrm.core", "hrm.payroll", "hrm.performance", "hrm.learning"] : ["platform.base"])).Select(f => (JsonNode)f)]),
+        ["packs"] = new JsonArray("pack.country.pk"),
+        ["limits"] = limits ?? [],
+    };
+
+    /// <summary>Signs a payload with this fixture's registered entitlement key (or <paramref name="signer"/>), as the issuer would.</summary>
+    public string Sign(EntitlementPayload payload, ECDsa? signer = null, string? keyId = null) =>
+        SignedEntitlement.Sign(payload, keyId ?? "it-" + Suffix, (signer ?? _entitlementKey).ExportECPrivateKeyPem()).ToFileJson();
+
+    public string EntitlementKeyId => "it-" + Suffix;
+
+    /// <summary>
+    /// Test shortcut: changes the stored claims of the customer's entitlement in force in the control plane (the source the
+    /// API reads, S1.09b) at <paramref name="path"/>; a null value removes the entry. Returns the claims before the change.
+    /// </summary>
+    public async Task<string> SetClaimAsync(string code, string path, JsonNode? value, CancellationToken cancellationToken)
+    {
+        await using var cp = await OpenControlPlaneAsync(cancellationToken);
+        var before = await ScalarTextAsync(cp, "select e.claims::text from cp.entitlements e join cp.tenants t on t.id = e.tenant_id where t.code = $1 and e.status not in ('superseded', 'scheduled')", cancellationToken, code);
+        const string Where = "from cp.tenants t where t.id = e.tenant_id and t.code = $1 and e.status not in ('superseded', 'scheduled')";
+        if (value is null)
+        {
+            await ExecAsync(cp, "update cp.entitlements e set claims = claims #- $2::text[] " + Where, cancellationToken, code, path.Split(','));
+        }
+        else
+        {
+            await ExecAsync(cp, "update cp.entitlements e set claims = jsonb_set(claims, $2::text[], $3::jsonb) " + Where, cancellationToken, code, path.Split(','), value.ToJsonString());
+        }
+
+        return before;
+    }
+
+    /// <summary>
+    /// Test shortcut: moves the end date of the customer's entitlement in force so that today (Asia/Karachi) is
+    /// <paramref name="daysAfterEnd"/> days after it (null: perpetual). With the default periods (30, 14, 30 days, ruling Q4):
+    /// −29..0 Warning, 1..14 Grace, 15..44 Read-only, 45 on Locked. The state follows from the date (S1.09b).
+    /// </summary>
+    public async Task SetDaysAfterEndAsync(string code, int? daysAfterEnd, CancellationToken cancellationToken)
+    {
+        var today = Erp.Kernel.Domain.Entitlements.LicenceStates.Today(DateTimeOffset.UtcNow, Erp.Kernel.Domain.Entitlements.LicenceStates.Zone("Asia/Karachi"));
+        await using var cp = await OpenControlPlaneAsync(cancellationToken);
+        await ExecAsync(cp, """
+            update cp.entitlements e set expires_at = $2, effective_from = least(e.effective_from, coalesce($2, e.effective_from))
+            from cp.tenants t where t.id = e.tenant_id and t.code = $1 and e.status not in ('superseded', 'scheduled')
+            """, cancellationToken, code, daysAfterEnd is { } d ? today.AddDays(-d) : DBNull.Value);
+    }
+
+    /// <summary>Puts back claims returned by <see cref="SetClaimAsync"/>.</summary>
+    public async Task RestoreClaimsAsync(string code, string claims, CancellationToken cancellationToken)
+    {
+        await using var cp = await OpenControlPlaneAsync(cancellationToken);
+        await ExecAsync(cp, "update cp.entitlements e set claims = $2::jsonb from cp.tenants t where t.id = e.tenant_id and t.code = $1 and e.status not in ('superseded', 'scheduled')", cancellationToken, code, claims);
+    }
+
+    public static async Task<string> ScalarTextAsync(NpgsqlConnection connection, string sql, CancellationToken cancellationToken, params object[] values)
+    {
+#pragma warning disable CA2100 // test SQL text
+        await using var command = new NpgsqlCommand(sql, connection);
+#pragma warning restore CA2100
+        foreach (var value in values)
+        {
+            command.Parameters.Add(new NpgsqlParameter { Value = value });
+        }
+
+        return (string)(await command.ExecuteScalarAsync(cancellationToken))!;
     }
 
     /// <summary>Remembers the code so the database and logins are dropped afterwards, even if provisioning fails.</summary>

@@ -14,10 +14,14 @@ namespace Erp.Kernel.Infrastructure.ControlPlane.Platform;
 public sealed class ControlPlaneAdmin(ControlPlaneOptions options, ISecretStore secrets, IClock clock)
 {
     /// <summary>Modules the platform knows (mirrors module manifests). Display names here are operator-facing only.</summary>
+    /// <summary>
+    /// The modules of this product with the D-24 feature keys each unlocks (slice S1.09b: from the entitlement key catalogue;
+    /// the kernel's key is platform.base). <c>migrate</c> brings cp.module_catalog in step.
+    /// </summary>
     public static readonly IReadOnlyList<(string ModuleId, string Name, string Kind, string[] EntitlementKeys)> Modules =
     [
-        ("kernel", "Platform kernel", "kernel", []),
-        ("hrm", "Human resources (HRMIS)", "business", ["hrm"]),
+        ("kernel", "Platform kernel", "kernel", [.. Erp.Kernel.Infrastructure.Entitlements.EntitlementCatalogs.Keys.KeysOf("kernel")]),
+        ("hrm", "Human resources (HRMIS)", "business", [.. Erp.Kernel.Infrastructure.Entitlements.EntitlementCatalogs.Keys.KeysOf("hrm")]),
     ];
 
     public async Task<NpgsqlConnection> OpenAsync(CancellationToken cancellationToken)
@@ -62,6 +66,14 @@ public sealed class ControlPlaneAdmin(ControlPlaneOptions options, ISecretStore 
             if (inserted > 0)
             {
                 await PlatformAudit.WriteAsync(connection, null, clock, actor, "module_catalog.add", null, new { module_id = moduleId }, cancellationToken).ConfigureAwait(false);
+            }
+            else if (await Sql.ExecuteAsync(connection, null, """
+                update cp.module_catalog set entitlement_keys = $2, updated_at = $3, updated_by = $4, row_version = row_version + 1
+                where module_id = $1 and entitlement_keys is distinct from $2
+                """, cancellationToken, moduleId, keys, now, actor.Id).ConfigureAwait(false) > 0)
+            {
+                // Slice S1.09b: the keys follow the entitlement key catalogue (D-24); earlier releases stored "hrm".
+                await PlatformAudit.WriteAsync(connection, null, clock, actor, "module_catalog.keys", null, new { module_id = moduleId, entitlement_keys = keys }, cancellationToken).ConfigureAwait(false);
             }
         }
 

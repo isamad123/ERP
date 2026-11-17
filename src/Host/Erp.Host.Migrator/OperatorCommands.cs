@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.BuildingBlocks.Infrastructure.Time;
@@ -14,6 +15,7 @@ using Erp.Kernel.Infrastructure.ControlPlane.Platform;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Erp.Kernel.Infrastructure.Identity;
+using Npgsql;
 
 namespace Erp.Host.Migrator;
 
@@ -32,6 +34,14 @@ public static class OperatorCommands
                                                          (password from ERP_CLUSTER_ADMIN_PASSWORD)
           signing-key add --key-id <id> --public-key <file.pem> [--purpose entitlement]
           entitlement sign --payload <file.json> --key-id <id> --private-key <file.pem> --out <file.json>
+          entitlement draft --edition <starter|business|enterprise> --tenant <code> --out <file.json> [--from <yyyy-mm-dd>] [--to <yyyy-mm-dd>]
+                                                         unsigned payload of the next version, pre-filled from the edition template
+          entitlement apply --tenant <code> --file <signed.json>
+                                                         checks and applies a signed entitlement (future start date: scheduled)
+          entitlement history --tenant <code>
+          licence refresh [--tenant <code>]              records licence-state changes, activates scheduled entitlements,
+                                                         takes usage readings (the worker does this every hour)
+          usage statement --tenant <code> --month <yyyymm>
           tenant provision --code <c> --name <n> --host <h[,h2]> --region <r> --country <CC> --currency <CUR>
                            --size-profile <micro|sme|mid|enterprise> --cluster <n> --legal-name <n>
                            --admin-email <e> --admin-name <n> --entitlement <file.json>
@@ -75,6 +85,11 @@ public static class OperatorCommands
                 "cluster add" => await ClusterAddAsync(context, cancellationToken).ConfigureAwait(false),
                 "signing-key add" => await SigningKeyAddAsync(context, cancellationToken).ConfigureAwait(false),
                 "entitlement sign" => await EntitlementSignAsync(context).ConfigureAwait(false),
+                "entitlement draft" => await EntitlementDraftAsync(context, cancellationToken).ConfigureAwait(false),
+                "entitlement apply" => await EntitlementApplyAsync(context, cancellationToken).ConfigureAwait(false),
+                "entitlement history" => await EntitlementHistoryAsync(context, cancellationToken).ConfigureAwait(false),
+                "licence refresh" => await LicenceRefreshAsync(context, cancellationToken).ConfigureAwait(false),
+                "usage statement" => await UsageStatementAsync(context, cancellationToken).ConfigureAwait(false),
                 "tenant provision" => await ProvisionAsync(context, cancellationToken).ConfigureAwait(false),
                 "tenant list" => await ListAsync(context, cancellationToken).ConfigureAwait(false),
                 "tenant admin-activation-link" => await ActivationLinkAsync(context, cancellationToken).ConfigureAwait(false),
@@ -181,6 +196,82 @@ public static class OperatorCommands
         return 0;
     }
 
+    private static async Task<int> EntitlementDraftAsync(Context c, CancellationToken cancellationToken)
+    {
+        var edition = c.Option("edition");
+        if (edition is not ("starter" or "business" or "enterprise"))
+        {
+            throw new ArgumentException("--edition is starter, business or enterprise (the three templates, D-26).");
+        }
+
+        var folder = Env("ERP_TEMPLATES_ROOT") ?? Path.Combine(AppContext.BaseDirectory, "EntitlementTemplates");
+        var template = JsonNode.Parse(await File.ReadAllTextAsync(Path.Combine(folder, edition + ".json"), cancellationToken).ConfigureAwait(false)) as JsonObject
+            ?? throw new InvalidDataException("The template is not a JSON object.");
+        var payload = await Applier(c).DraftAsync(c.Option("tenant"), template, Date(c.OptionalOption("from")), Date(c.OptionalOption("to")), cancellationToken).ConfigureAwait(false);
+        await File.WriteAllTextAsync(c.Option("out"), payload.ToJsonString(new JsonSerializerOptions { WriteIndented = true }), cancellationToken).ConfigureAwait(false);
+        await c.Output.WriteLineAsync($"entitlement draft for {c.Option("tenant")} v{payload["version"]}: written to {c.Option("out")}; review every value (the template's are placeholders), then sign it").ConfigureAwait(false);
+        return 0;
+    }
+
+    private static async Task<int> EntitlementApplyAsync(Context c, CancellationToken cancellationToken)
+    {
+        var actor = await c.ActorAsync(cancellationToken).ConfigureAwait(false);
+        var result = await Applier(c).ApplyAsync(actor, c.Option("tenant"), await File.ReadAllTextAsync(c.Option("file"), cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+        var modules = result.ModulesInstalled.Count == 0 ? "no new modules" : "installed " + string.Join(", ", result.ModulesInstalled);
+        await c.Output.WriteLineAsync(result.Status == "scheduled"
+            ? $"{result.Tenant}: entitlement v{result.Version} scheduled from {result.EffectiveFrom:yyyy-MM-dd} ({modules})"
+            : $"{result.Tenant}: entitlement v{result.Version} in force, state {result.Status}{(result.Superseded is { } old ? $", supersedes v{old}" : string.Empty)} ({modules}); API hosts apply it within their host cache time").ConfigureAwait(false);
+        return 0;
+    }
+
+    private static async Task<int> EntitlementHistoryAsync(Context c, CancellationToken cancellationToken)
+    {
+        await c.Output.WriteLineAsync("version\tedition\tstatus\tfrom\tto\tstate_since\tapplied_at\tapplied_by\tmodules").ConfigureAwait(false);
+        foreach (var r in await Applier(c).HistoryAsync(c.Option("tenant"), cancellationToken).ConfigureAwait(false))
+        {
+            await c.Output.WriteLineAsync(string.Join('\t', r.Version.ToString(CultureInfo.InvariantCulture), r.Edition, r.Status, r.EffectiveFrom.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                r.ExpiresAt?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "perpetual", r.StateSince.ToString("u", CultureInfo.InvariantCulture),
+                r.CreatedAt.ToString("u", CultureInfo.InvariantCulture), r.AppliedBy, string.Join(',', r.Modules))).ConfigureAwait(false);
+        }
+
+        return 0;
+    }
+
+    private static async Task<int> LicenceRefreshAsync(Context c, CancellationToken cancellationToken)
+    {
+        var outcomes = await new LicenceMaintenance(Context.ControlPlane, c.Secrets, c.Clock).RunAsync(c.OptionalOption("tenant"), cancellationToken).ConfigureAwait(false);
+        foreach (var o in outcomes)
+        {
+            await c.Output.WriteLineAsync(o.Error is null
+                ? $"{o.Code}: state {o.State}{(o.Changed ? $" (was {o.PreviousState})" : string.Empty)}{(o.Activated is { } v ? $", scheduled v{v} now in force" : string.Empty)}, {o.Readings} usage readings, {o.LimitEventsCopied} limit events copied"
+                : $"{o.Code}: FAILED: {o.Error}").ConfigureAwait(false);
+        }
+
+        return outcomes.Any(o => o.Error is not null) ? 3 : 0;
+    }
+
+    private static async Task<int> UsageStatementAsync(Context c, CancellationToken cancellationToken)
+    {
+        await using var cp = new NpgsqlConnection(Context.ControlPlane.ConnectionString);
+        await cp.OpenAsync(cancellationToken).ConfigureAwait(false);
+        var statement = await UsageMeters.StatementAsync(cp, c.Option("tenant"), c.Option("month"), cancellationToken).ConfigureAwait(false);
+        await c.Output.WriteLineAsync($"usage statement {c.Option("tenant")} {statement.Period}").ConfigureAwait(false);
+        await c.Output.WriteLineAsync("meter\tvalue\tlimit\tpercent").ConfigureAwait(false);
+        foreach (var l in statement.Lines)
+        {
+            await c.Output.WriteLineAsync(string.Join('\t', l.Meter, l.Value.ToString(CultureInfo.InvariantCulture),
+                l.Limit?.ToString(CultureInfo.InvariantCulture) ?? "none", l.Percent?.ToString(CultureInfo.InvariantCulture) ?? "-")).ConfigureAwait(false);
+        }
+
+        await c.Output.WriteLineAsync($"highest percent: {statement.HighestPercent?.ToString(CultureInfo.InvariantCulture) ?? "-"}").ConfigureAwait(false);
+        return 0;
+    }
+
+    private static EntitlementApplier Applier(Context c) => new(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations);
+
+    private static DateOnly? Date(string? value) =>
+        value is null ? null : DateOnly.ParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+
     private static async Task<int> ProvisionAsync(Context c, CancellationToken cancellationToken)
     {
         var actor = await c.ActorAsync(cancellationToken).ConfigureAwait(false);
@@ -268,7 +359,7 @@ public static class OperatorCommands
         var to = DateOnly.ParseExact(c.Option("to"), "yyyy-MM-dd", CultureInfo.InvariantCulture);
         var host = await Erp.Kernel.Infrastructure.ControlPlane.Tenancy.TenantHosts.PrimaryAsync(Context.ControlPlane, code, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Customer {code} is not registered.");
-        var tenant = await new Erp.Kernel.Infrastructure.ControlPlane.Tenancy.TenantDirectory(Context.ControlPlane, c.Clock).FindByHostAsync(host, cancellationToken).ConfigureAwait(false)
+        var tenant = await new Erp.Kernel.Infrastructure.ControlPlane.Tenancy.TenantDirectory(Context.ControlPlane).FindByHostAsync(host, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Customer {code} has no database yet.");
         var copies = await AuditAnchorCopies.ReadAsync(Context.ControlPlane, code, from, to, cancellationToken).ConfigureAwait(false);
         await using var db = await new TenantProvisioner(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations).OpenTenantAsync(tenant, TenantLogins.ReadWrite, cancellationToken).ConfigureAwait(false);

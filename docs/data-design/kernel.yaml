@@ -1,6 +1,10 @@
 # Kernel tables inside every tenant database. Spec 02 and spec 03 sections 5 and 6, trimmed to Release 1.0.
 # ---------------- iam: identity and access ----------------
 
+# Slice S1.09b (ruling Q9, CR-036): kernel endpoints answer every licensed customer (feature key platform.base).
+- defaults:
+  entitlement: platform.base
+
 - table: iam.users
   purpose: "People who sign in (employees, HR, admins)"
   traits: [std, soft]

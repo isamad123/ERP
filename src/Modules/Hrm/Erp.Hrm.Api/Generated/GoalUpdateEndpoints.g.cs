@@ -53,9 +53,9 @@ internal static class GoalUpdateEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/hrm/goal-updates").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("hrm.goal_updates.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.goal_updates.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.goal_updates.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.goal_updates.read"));
-        group.MapPost("/", CreateAsync).WithName("hrm.goal_updates.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.goal_updates.create"));
+        group.MapGet("/", ListAsync).WithName("hrm.goal_updates.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.goal_updates.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.goal_updates.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.goal_updates.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapPost("/", CreateAsync).WithName("hrm.goal_updates.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.goal_updates.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] GoalUpdateListQuery query, global::Erp.Hrm.Application.Generated.IGoalUpdateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

@@ -499,7 +499,10 @@ public sealed class GeneratorTests
         var files = Generator.Generate(Root).Files;
         var manifest = System.Text.Json.JsonDocument.Parse(files["src/Platform/Erp.Kernel.Infrastructure/Access/settings.g.json"]).RootElement;
         var settings = manifest.GetProperty("settings").EnumerateArray().ToList();
-        Assert.Equal(22, settings.Count);
+        Assert.Equal(23, settings.Count); // 22 of S1.09a plus cfg.limits.warning_percent (S1.09b, ruling Q7)
+        var warning = settings.Single(s => s.GetProperty("key").GetString() == "cfg.limits.warning_percent");
+        Assert.Equal(90, warning.GetProperty("default").GetInt32());
+        Assert.Equal("""{"min":50,"max":99}""", string.Concat(warning.GetProperty("validation").GetRawText().Where(ch => !char.IsWhiteSpace(ch))));
         var mfa = settings.Single(s => s.GetProperty("key").GetString() == "iam.mfa.required");
         Assert.Equal("any", mfa.GetProperty("roleRule").GetString());
         Assert.True(mfa.GetProperty("tightenOnly").GetBoolean());

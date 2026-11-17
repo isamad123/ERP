@@ -13,7 +13,6 @@
   "errors.password.reused": "ایسا پاس ورڈ چنیں جو آپ نے حال ہی میں استعمال نہ کیا ہو۔",
   "errors.password.too_short": "پاس ورڈ بہت چھوٹا ہے۔",
   "errors.password.too_simple": "بڑے اور چھوٹے حروف، ہندسے اور علامات ملا کر استعمال کریں۔",
-  "errors.user.limit_reached": "آپ کی رکنیت میں صارفین کی حد پوری ہو چکی ہے۔ کسی دوسرے صارف کو غیر فعال کریں یا مزید صارفین طلب کریں۔",
   "errors.user.no_password": "اس صارف نے ابھی پاس ورڈ مقرر نہیں کیا۔",
   "errors.user.not_locked": "یہ صارف بند نہیں ہے۔",
   "errors.user.reason_required": "وجہ درج کریں۔",

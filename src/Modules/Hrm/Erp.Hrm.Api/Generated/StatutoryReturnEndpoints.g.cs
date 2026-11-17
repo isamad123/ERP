@@ -61,9 +61,9 @@ internal static class StatutoryReturnEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/hrm/statutory-returns").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("hrm.statutory_returns.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.statutory_returns.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.statutory_returns.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.statutory_returns.read"));
-        group.MapPost("/", CreateAsync).WithName("hrm.statutory_returns.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.statutory_returns.create"));
+        group.MapGet("/", ListAsync).WithName("hrm.statutory_returns.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.statutory_returns.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.statutory_returns.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.statutory_returns.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
+        group.MapPost("/", CreateAsync).WithName("hrm.statutory_returns.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.statutory_returns.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] StatutoryReturnListQuery query, global::Erp.Hrm.Application.Generated.IStatutoryReturnRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

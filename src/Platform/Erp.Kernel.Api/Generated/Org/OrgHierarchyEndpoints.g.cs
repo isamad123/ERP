@@ -53,10 +53,10 @@ internal static class OrgHierarchyEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/org/org-hierarchies").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("org.org_hierarchies.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.org_hierarchies.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("org.org_hierarchies.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.org_hierarchies.read"));
-        group.MapPost("/", CreateAsync).WithName("org.org_hierarchies.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "org.org_hierarchies.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("org.org_hierarchies.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "org.org_hierarchies.update"));
+        group.MapGet("/", ListAsync).WithName("org.org_hierarchies.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.org_hierarchies.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("org.org_hierarchies.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.org_hierarchies.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
+        group.MapPost("/", CreateAsync).WithName("org.org_hierarchies.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "org.org_hierarchies.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
+        group.MapPut("/{id:guid}", UpdateAsync).WithName("org.org_hierarchies.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "org.org_hierarchies.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] OrgHierarchyListQuery query, global::Erp.Kernel.Application.Generated.Org.IOrgHierarchyRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

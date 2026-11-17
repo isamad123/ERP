@@ -61,10 +61,10 @@ internal static class OrgUnitLinkEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/org/org-unit-links").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("org.org_unit_links.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.org_unit_links.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("org.org_unit_links.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.org_unit_links.read"));
-        group.MapPost("/", CreateAsync).WithName("org.org_unit_links.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "org.org_unit_links.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("org.org_unit_links.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "org.org_unit_links.update"));
+        group.MapGet("/", ListAsync).WithName("org.org_unit_links.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.org_unit_links.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("org.org_unit_links.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.org_unit_links.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
+        group.MapPost("/", CreateAsync).WithName("org.org_unit_links.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "org.org_unit_links.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
+        group.MapPut("/{id:guid}", UpdateAsync).WithName("org.org_unit_links.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "org.org_unit_links.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] OrgUnitLinkListQuery query, global::Erp.Kernel.Application.Generated.Org.IOrgUnitLinkRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

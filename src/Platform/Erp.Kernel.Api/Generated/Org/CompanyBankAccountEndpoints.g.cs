@@ -47,9 +47,9 @@ internal static class CompanyBankAccountEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/org/company-bank-accounts").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("org.company_bank_accounts.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.company_bank_accounts.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("org.company_bank_accounts.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.company_bank_accounts.read"));
-        group.MapDelete("/{id:guid}", DeleteAsync).WithName("org.company_bank_accounts.delete").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "delete", "org.company_bank_accounts.delete"));
+        group.MapGet("/", ListAsync).WithName("org.company_bank_accounts.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.company_bank_accounts.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("org.company_bank_accounts.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.company_bank_accounts.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
+        group.MapDelete("/{id:guid}", DeleteAsync).WithName("org.company_bank_accounts.delete").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "delete", "org.company_bank_accounts.delete"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] CompanyBankAccountListQuery query, global::Erp.Kernel.Application.Generated.Org.ICompanyBankAccountRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

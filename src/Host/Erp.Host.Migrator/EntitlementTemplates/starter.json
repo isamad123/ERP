@@ -1,0 +1,33 @@
+{
+  "_comment": "Edition template (D-26, slice S1.09 ruling Q2): used only by `entitlement draft` to pre-fill a new entitlement; every value is written out in full into the signed entitlement, so changing this file never changes what a customer already has. Behaviour follows keys and limits only, never the edition name (spec 16 SC-3).",
+  "_placeholder": "Every value below is a placeholder, to be set by the product owner.",
+  "edition": "starter",
+  "claims": {
+    "deployment": "saas",
+    "modules": [
+      "hrm"
+    ],
+    "features": [
+      "platform.base",
+      "hrm.core"
+    ],
+    "packs": [
+      "pack.country.pk"
+    ],
+    "addons": [],
+    "limits": {
+      "users.named": 25,
+      "users.concurrent": 25,
+      "companies": 1,
+      "employees.active": 50,
+      "storage.gb": 10
+    },
+    "term": {
+      "warning_days": 30,
+      "grace_days": 14,
+      "read_only_days": 30
+    },
+    "support_tier": "standard",
+    "source": false
+  }
+}

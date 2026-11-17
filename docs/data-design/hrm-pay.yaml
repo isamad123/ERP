@@ -1,6 +1,10 @@
 # HRMIS: payroll, statutory tables, tax, payments, final settlement, loans, expenses, compensation and benefits,
 # compliance. Spec 06a sections 14 to 17. Multi-currency payroll is Release 1.1: each pay group has one currency.
 
+# Slice S1.09b (ruling Q9, CR-036): payroll, loans, expenses and compensation tables belong to feature key hrm.payroll.
+- defaults:
+  entitlement: hrm.payroll
+
 - table: hrm.pay_groups
   traits: [std, co, soft, name]
   columns:

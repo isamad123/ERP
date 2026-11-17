@@ -61,7 +61,7 @@ public sealed class AnchorPublisher(ControlPlaneOptions options, ISecretStore se
     {
         var host = await TenantHosts.PrimaryAsync(options, code, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Customer {code} is not registered.");
-        var tenant = await new TenantDirectory(options, clock).FindByHostAsync(host, cancellationToken).ConfigureAwait(false)
+        var tenant = await new TenantDirectory(options).FindByHostAsync(host, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Customer {code} has no database yet.");
         var now = clock.UtcNow;
         var today = DateOnly.FromDateTime(now.UtcDateTime);

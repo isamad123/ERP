@@ -1,0 +1,18 @@
+{
+  "errors.licence.locked": "The licence is locked. You can still sign in, see the licence page and export your data. Contact your provider to renew it.",
+  "errors.licence.limit_reached": "A licence limit has been reached. Contact your provider to raise it.",
+  "errors.licence.limit_reached.users.named": "The licence's limit of named users has been reached. Disable another user, or contact your provider to raise it.",
+  "errors.licence.limit_reached.users.concurrent": "The licence's limit of users signed in at the same time has been reached. Try again when someone signs out, or contact your provider to raise it.",
+  "errors.licence.limit_reached.companies": "The licence's limit of companies has been reached. Contact your provider to raise it.",
+  "errors.licence.limit_reached.employees.active": "The licence's limit of active employees has been reached. Contact your provider to raise it.",
+  "errors.licence.limit_reached.storage.gb": "The licence's storage limit has been reached. Contact your provider to raise it.",
+  "errors.licence.limit_reached.api.calls": "The licence's limit of API calls has been reached. Contact your provider to raise it.",
+  "errors.licence.usage_range_invalid": "Give the months as yyyymm, with the first not after the last, and at most 36 months.",
+  "permissions.cfg.licence.read": "See the licence page and the usage statements",
+  "licence.states.active": "Active",
+  "licence.states.warning": "Expiring soon",
+  "licence.states.grace": "Grace period",
+  "licence.states.read_only": "Read-only",
+  "licence.states.locked": "Locked",
+  "licence.warnings.limit": "{limit} is at {percent} percent of the licence limit."
+}

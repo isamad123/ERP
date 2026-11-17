@@ -51,8 +51,8 @@ internal static class NumberingSchemeEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/cfg/numbering-schemes").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("cfg.numbering_schemes.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.numbering_schemes.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("cfg.numbering_schemes.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.numbering_schemes.read"));
+        group.MapGet("/", ListAsync).WithName("cfg.numbering_schemes.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.numbering_schemes.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("cfg.numbering_schemes.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.numbering_schemes.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] NumberingSchemeListQuery query, global::Erp.Kernel.Application.Generated.Cfg.INumberingSchemeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

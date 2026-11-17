@@ -17,6 +17,9 @@ public interface ILicenseEventRepository : global::Erp.BuildingBlocks.Applicatio
 {
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.LicenseEvent>> ListAsync(LicenseEventFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 
+    /// <summary>Rows matching (source_event_id); at most PageRequest.MaxLimit rows.</summary>
+    global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.LicenseEvent>> FindBySourceEventIdAsync(global::System.Guid? sourceEventId, global::System.Threading.CancellationToken cancellationToken);
+
     /// <summary>Rows matching (tenant_id, occurred_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.LicenseEvent>> FindByTenantIdAndOccurredAtAsync(global::System.Guid tenantId, global::System.DateTimeOffset occurredAt, global::System.Threading.CancellationToken cancellationToken);
 }
@@ -38,6 +41,7 @@ public static class LicenseEventAccess
         new("to_state", "ToState", null),
         new("occurred_at", "OccurredAt", null),
         new("details", "Details", null),
+        new("source_event_id", "SourceEventId", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
     ]);

@@ -159,17 +159,15 @@ public sealed class TenantIsolationAndResolutionTests(TenancyFixture fx)
     }
 
     [Fact]
-    public async Task FR_KRN_TEN_09_read_only_entitlement_serves_reads_and_refuses_changes_and_locked_refuses_all()
+    public async Task FR_KRN_TEN_09_FR_KRN_ENT_04_read_only_serves_reads_and_refuses_changes_and_locked_serves_only_the_licence_page_and_exports()
     {
         var ct = TestContext.Current.CancellationToken;
         var code = "r" + fx.Suffix;
         await fx.ProvisionAsync(code, ct);
         using var client = fx.Client(TenancyFixture.HostOf(code), fx.Token(code));
 
-        // The entitlement state machine is slice S1.09; here the state is set directly in the control plane.
-        await using var cp = await fx.OpenControlPlaneAsync(ct);
-        const string SetState = "update cp.entitlements e set status = $2 from cp.tenants t where t.id = e.tenant_id and t.code = $1 and e.status <> 'superseded'";
-        await TenancyFixture.ExecAsync(cp, SetState, ct, code, "read_only");
+        // Slice S1.09b: the state follows from the end date on the customer's day (ruling Q6); here the end date is moved.
+        await fx.SetDaysAfterEndAsync(code, 20, ct); // read-only (grace 14 days, then 30 days read-only)
         using (var read = await client.GetAsync("/api/org/companies", ct))
         {
             Assert.Equal(HttpStatusCode.OK, read.StatusCode);
@@ -181,13 +179,25 @@ public sealed class TenantIsolationAndResolutionTests(TenancyFixture fx)
             Assert.Contains(TenantResolution.ReadOnly, await write.Content.ReadAsStringAsync(ct), StringComparison.Ordinal);
         }
 
-        await TenancyFixture.ExecAsync(cp, SetState, ct, code, "locked");
+        await fx.SetDaysAfterEndAsync(code, 60, ct); // locked
         using (var read = await client.GetAsync("/api/org/companies", ct))
         {
             Assert.Equal(HttpStatusCode.Forbidden, read.StatusCode);
+            Assert.Contains(TenantResolution.LicenceLocked, await read.Content.ReadAsStringAsync(ct), StringComparison.Ordinal);
         }
 
-        await TenancyFixture.ExecAsync(cp, SetState, ct, code, "grace");
+        using (var licence = await client.GetAsync("/api/cfg/licence", ct))
+        {
+            Assert.Equal(HttpStatusCode.OK, licence.StatusCode);
+            Assert.Contains("\"state\":\"locked\"", await licence.Content.ReadAsStringAsync(ct), StringComparison.Ordinal);
+        }
+
+        using (var export = await client.GetAsync("/api/aud/export", ct))
+        {
+            Assert.Equal(HttpStatusCode.OK, export.StatusCode);
+        }
+
+        await fx.SetDaysAfterEndAsync(code, 5, ct); // grace: full use
         using (var write = await client.PostAsJsonAsync("/api/org/companies", Company("GR" + fx.Suffix), ct))
         {
             Assert.Equal(HttpStatusCode.Created, write.StatusCode);

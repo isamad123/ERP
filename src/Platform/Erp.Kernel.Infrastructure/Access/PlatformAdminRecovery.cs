@@ -199,7 +199,7 @@ public sealed class PlatformAdminRecovery(ControlPlaneOptions options, ISecretSt
 
         var host = await TenantHosts.PrimaryAsync(options, tenantCode, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Customer {tenantCode} is not registered.");
-        var tenant = await new TenantDirectory(options, clock).FindByHostAsync(host, cancellationToken).ConfigureAwait(false)
+        var tenant = await new TenantDirectory(options).FindByHostAsync(host, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Customer {tenantCode} has no database yet.");
         var now = clock.UtcNow;
         (bool Changed, List<string> Messages, string EventType, string AggregateType, Guid AggregateId, object Details) result;

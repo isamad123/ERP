@@ -397,23 +397,6 @@ internal static class IdentityDb
         await Audit.AuditTrail.RecordEventAsync(c, tx, eventType, "iam.user", userId, actor, now, payload, ct).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// The entitlement's user limit (<c>claims.limits.users</c>, ruling P4) and the users counting against it. Takes a
-    /// transaction-level lock so two activations cannot both take the last seat.
-    /// </summary>
-    public static async Task<bool> SeatAvailableAsync(NpgsqlConnection c, NpgsqlTransaction tx, CancellationToken ct)
-    {
-        await ExecuteAsync(c, tx, "select pg_advisory_xact_lock(hashtext('iam.user_limit'))", ct).ConfigureAwait(false);
-        var limit = await ScalarAsync<string>(c, tx, "select payload -> 'payload' -> 'claims' -> 'limits' ->> 'users' from meta.local_entitlement order by created_at desc limit 1", ct).ConfigureAwait(false);
-        if (!int.TryParse(limit, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var max))
-        {
-            return true;
-        }
-
-        var used = await ScalarAsync<long>(c, tx, "select count(*) from iam.users where not is_system and not is_deleted and status in ('active', 'locked')", ct).ConfigureAwait(false);
-        return used < max;
-    }
-
     private static IPAddress? ParseIp(string? ip) => IPAddress.TryParse(ip, out var parsed) ? parsed : null;
 
     private static string? Truncate(string? value, int max) => value is null ? null : value.Length <= max ? value : value[..max];

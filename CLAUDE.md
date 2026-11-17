@@ -123,6 +123,10 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
   through the settings services (`/api/cfg/settings`, `/api/cfg/feature-flags`). Hosts re-check `cfg.config_versions` every
   `Settings:RefreshMilliseconds` (default 1000; tests use 0). The two-process test starts `src/Host/Erp.Host.Api/bin/<config>/net10.0/Erp.Host.Api.dll`,
   so build the solution before the integration tests.
+- Entitlements (S1.09b): claims follow the D-24 key catalogue (`Erp.Kernel.Infrastructure/Entitlements/entitlement-keys.json`); data-design
+  key `entitlement:` (file `- defaults:` entry, table override) gates generated endpoints. Operator commands `entitlement draft|apply|history`,
+  `licence refresh`, `usage statement`; the worker host runs the hourly licence loop. Tests change a licence through
+  `TenancyFixture.SetClaimAsync` / `SetDaysAfterEndAsync` (the API reads `cp.entitlements`, never `meta.local_entitlement`).
 - Not yet automated: secret scan; invariant tests other than invariant 6.
 
 ## Where things are

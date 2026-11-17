@@ -1,6 +1,7 @@
 #pragma warning disable CA1861 // literal test data arrays, each used once
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Erp.IntegrationTests.Access;
 using Erp.IntegrationTests.Tenancy;
 using Erp.Kernel.Contracts.Settings;
@@ -95,7 +96,7 @@ public sealed class SettingsTests(TenancyFixture fx) : IAsyncLifetime
 
         Assert.False(await _h.ScalarAsync<bool>("select is_visible from cfg.settings where key = $1", Ct, Orphan));
         Assert.Equal("7", await _h.ScalarAsync<string>("select value::text from cfg.setting_values where setting_key = $1", Ct, Orphan));
-        Assert.Equal(22L, await _h.ScalarAsync<long>("select count(*) from cfg.settings where module_id in ('iam', 'cfg', 'org') and is_visible", Ct));
+        Assert.Equal(23L, await _h.ScalarAsync<long>("select count(*) from cfg.settings where module_id in ('iam', 'cfg', 'org') and is_visible", Ct)); // + cfg.limits.warning_percent (S1.09b)
         Assert.Equal(HttpStatusCode.NotFound, (await _h.GetAsync(admin, $"{Api}/{Orphan}", Ct)).Status);
         Assert.Equal(SettingsErrors.Unknown, (await _h.PutAsync(admin, $"{Api}/{Orphan}", Set("tenant", null, 8), Ct)).Text("title"));
     }
@@ -335,7 +336,7 @@ public sealed class SettingsTests(TenancyFixture fx) : IAsyncLifetime
         var company = await _h.CompanyAsync(Ct);
         var flag = "test.flag_" + Guid.NewGuid().ToString("N")[..8];
         var licensedFlag = flag + "_lic";
-        var feature = "test.feature_" + Guid.NewGuid().ToString("N")[..8];
+        var feature = "hrm.relations"; // a catalogue key the test customer is not licensed for (S1.09b: claims follow the key catalogue)
         await _h.ExecAsync("""
             insert into cfg.feature_flags (key, default_enabled, description_i18n, module_id, entitlement_key, name_i18n, help_i18n)
             values ($1, false, '{"en":"Test flag","ur":"آزمائشی فلیگ"}', 'test', null, '{"en":"T","ur":"ٹ"}', '{"en":"H","ur":"م"}'),
@@ -374,16 +375,15 @@ public sealed class SettingsTests(TenancyFixture fx) : IAsyncLifetime
         // Not licensed: off whatever the overrides say; licensed through the entitlement copy: on.
         Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(admin, $"/api/cfg/feature-flags/{licensedFlag}", Flag("tenant", null, true), Ct)).Status);
         Assert.Equal((false, "entitlement"), await StateAsync(licensedFlag));
-        var entitlement = await _h.ScalarAsync<Guid>("select id from meta.local_entitlement order by created_at desc limit 1", Ct);
-        var original = await _h.ScalarAsync<string>("select payload::text from meta.local_entitlement where id = $1", Ct, entitlement);
+        // Slice S1.09b: the licensed features are the claims of the entitlement in force in the control plane.
+        var original = await _h.Fixture.SetClaimAsync(_h.Code, "features", new JsonArray("platform.base", "hrm.core", "hrm.payroll", "hrm.performance", "hrm.learning", feature), Ct);
         try
         {
-            await _h.ExecAsync("update meta.local_entitlement set payload = jsonb_set(payload, '{payload,claims,features}', jsonb_build_array($2::text)) where id = $1", Ct, entitlement, feature);
             Assert.Equal((true, "tenant"), await StateAsync(licensedFlag));
         }
         finally
         {
-            await _h.ExecAsync("update meta.local_entitlement set payload = $2::jsonb where id = $1", Ct, entitlement, original);
+            await _h.Fixture.RestoreClaimsAsync(_h.Code, original, CancellationToken.None);
         }
     }
 

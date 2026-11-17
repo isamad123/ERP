@@ -2,6 +2,7 @@ using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.Kernel.Application.Identity;
+using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Domain.Identity;
 using Npgsql;
 
@@ -204,10 +205,8 @@ public sealed class AccountService(
 /// Administrator actions on users (FR-ADM-USR-03, FR-ADM-USR-05; rulings P2 to P4). Each action raises a domain event
 /// with the acting administrator (ruling Q4). System users and other customers' users are never found.
 /// </summary>
-public sealed class UserAdministrationService(ITenantConnectionProvider database, IClock clock, ICurrentActor actor) : IUserAdministrationService
-{
-    public const string UserLimitReached = "errors.user.limit_reached";
-    public const string NotLocked = "errors.user.not_locked";
+public sealed class UserAdministrationService(ITenantConnectionProvider database, IClock clock, ICurrentActor actor, ILimitGuard limits) : IUserAdministrationService
+{    public const string NotLocked = "errors.user.not_locked";
     public const string NoPassword = "errors.user.no_password";
     public const string ReasonRequired = "errors.user.reason_required";
     public const string TransitionNotAllowed = "errors.user.transition_not_allowed";
@@ -272,9 +271,10 @@ public sealed class UserAdministrationService(ITenantConnectionProvider database
                 return new AdminResult(AdminOutcome.Invalid, TransitionNotAllowed);
             }
 
-            if (status == UserStatuses.Active && !UserStatuses.CountsAgainstLimit(account.Status) && !await IdentityDb.SeatAvailableAsync(c, tx, cancellationToken).ConfigureAwait(false))
+            // Named users (FR-KRN-IAM-18, FR-ADM-USR-08; slice S1.09b): a user who already holds a seat (locked) keeps it.
+            if (status == UserStatuses.Active)
             {
-                return new AdminResult(AdminOutcome.Invalid, UserLimitReached);
+                await limits.TakeAsync(LimitKeys.NamedUsers, tx, userId, cancellationToken).ConfigureAwait(false);
             }
 
             // The last tenant admin cannot be disabled or archived (spec 02 BR; slice S1.06 item 9).

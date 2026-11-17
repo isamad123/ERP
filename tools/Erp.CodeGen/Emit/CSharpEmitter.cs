@@ -834,7 +834,7 @@ public static class CSharpEmitter
     }
 
     private static void Map(CodeWriter w, string method, string pattern, string handler, string name, string action, Table t) =>
-        w.Line($"group.{method}({pattern}, {handler}).WithName({CodeWriter.CSharpString(t.FullName + "." + name)}).WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, {CodeWriter.CSharpString(action)}, {CodeWriter.CSharpString(N.Permission(t, action))}));");
+        w.Line($"group.{method}({pattern}, {handler}).WithName({CodeWriter.CSharpString(t.FullName + "." + name)}).WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, {CodeWriter.CSharpString(action)}, {CodeWriter.CSharpString(N.Permission(t, action))}), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata({CodeWriter.CSharpString(t.Entitlement!)}, {CodeWriter.CSharpString(t.Module)}));");
 
     private static string ResponseType(Column c)
     {

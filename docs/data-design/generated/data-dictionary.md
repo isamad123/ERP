@@ -7393,14 +7393,14 @@ Constraints:
 
 - `ck_entitlements_edition` CHECK ((edition = ANY (ARRAY['starter'::text, 'business'::text, 'enterprise'::text])))
 - `ck_entitlements_signing_key_id_code` CHECK ((((length(signing_key_id) >= 1) AND (length(signing_key_id) <= 40)) AND (signing_key_id = btrim(signing_key_id))))
-- `ck_entitlements_status` CHECK ((status = ANY (ARRAY['active'::text, 'warning'::text, 'grace'::text, 'read_only'::text, 'locked'::text, 'superseded'::text])))
+- `ck_entitlements_status` CHECK ((status = ANY (ARRAY['active'::text, 'warning'::text, 'grace'::text, 'read_only'::text, 'locked'::text, 'superseded'::text, 'scheduled'::text])))
 - `fk_entitlements_tenant_id` FOREIGN KEY (tenant_id) REFERENCES cp.tenants(id)
 - `pk_entitlements` PRIMARY KEY (id)
 - `uq_entitlements_tenant_id_version` UNIQUE (tenant_id, version)
 
 Indexes:
 
-- `uq_entitlements_tenant_id` CREATE UNIQUE INDEX uq_entitlements_tenant_id ON cp.entitlements USING btree (tenant_id) WHERE (status <> 'superseded'::text)
+- `uq_entitlements_tenant_id` CREATE UNIQUE INDEX uq_entitlements_tenant_id ON cp.entitlements USING btree (tenant_id) WHERE (status <> ALL (ARRAY['superseded'::text, 'scheduled'::text]))
 
 ### cp.license_events
 
@@ -7417,6 +7417,7 @@ Entitlement state changes and limit breaches. Requirements: KRN-ENT-04. Source: 
 | details | jsonb | no |  |  |
 | created_at | timestamp with time zone | no |  |  |
 | created_by | uuid | no |  |  |
+| source_event_id | uuid | yes |  | the customer's security event a limit event was copied from (copied once, CR-039) |
 
 Constraints:
 
@@ -7427,6 +7428,7 @@ Constraints:
 Indexes:
 
 - `ix_license_events_tenant_id_occurred_at` CREATE INDEX ix_license_events_tenant_id_occurred_at ON cp.license_events USING btree (tenant_id, occurred_at)
+- `uq_license_events_source_event_id` CREATE UNIQUE INDEX uq_license_events_source_event_id ON cp.license_events USING btree (source_event_id) NULLS NOT DISTINCT WHERE (source_event_id IS NOT NULL)
 
 Triggers:
 

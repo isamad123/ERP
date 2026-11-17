@@ -62,7 +62,7 @@
 - table: cp.entitlements
   purpose: "Signed entitlement per tenant (edition, modules, limits, term); history kept"
   traits: [std]
-  status: [active, warning, grace, read_only, locked, superseded]
+  status: [active, warning, grace, read_only, locked, superseded, scheduled]
   columns:
     - [tenant_id, uuid, req, fk cp.tenants]
     - [version, int, req]
@@ -74,6 +74,10 @@
     - [expires_at, date, opt]
     - [state_since, ts, req]
   unique: [[tenant_id, version], [tenant_id, "where status <> 'superseded'"]]
+  # S1.09b (ruling Q3, CR-036 item 6): an entitlement with a future start date waits as `scheduled`; the one-current key
+  # ignores scheduled rows as well as superseded ones.
+  enum_added_in: {S1.09b: {status: [scheduled]}}
+  uniques_replaced_in: {S1.09b: [[tenant_id, "where status not in ('superseded', 'scheduled')"]]}
   reqs: [KRN-ENT-01, KRN-ENT-03, KRN-ENT-04, KRN-ENT-05, ADM-PLT-03]
 
 - table: cp.license_events
@@ -86,7 +90,12 @@
     - [to_state, text, opt]
     - [occurred_at, ts, req]
     - [details, json, req]
+    - [source_event_id, uuid, opt, "the customer's security event a limit event was copied from (copied once, CR-039)"]
   indexes: [[tenant_id, occurred_at]]
+  # S1.09b (CR-039): limit warnings and refusals are recorded in the customer database first; the licence loop copies
+  # each one here exactly once, keyed by the customer's security-event id.
+  added_in: {S1.09b: [source_event_id]}
+  uniques_added_in: {S1.09b: [[source_event_id, "where source_event_id is not null"]]}
   reqs: [KRN-ENT-04]
 
 - table: cp.signing_keys

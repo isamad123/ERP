@@ -19,6 +19,7 @@
   "settings.areas.security.approvals": "Approvals",
   "settings.areas.numbering": "Numbering",
   "settings.areas.organization": "Organisation",
+  "settings.areas.licence": "Licence",
   "settings.layers.product": "Product default",
   "settings.layers.pack": "Pack",
   "settings.layers.tenant": "Organisation",

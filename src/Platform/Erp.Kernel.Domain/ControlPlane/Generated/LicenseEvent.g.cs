@@ -33,6 +33,9 @@ public sealed partial class LicenseEvent : global::Erp.BuildingBlocks.Domain.Ent
     /// <summary>details</summary>
     public global::System.Text.Json.JsonDocument Details { get; set; } = null!;
 
+    /// <summary>source_event_id: the customer's security event a limit event was copied from (copied once, CR-039)</summary>
+    public global::System.Guid? SourceEventId { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

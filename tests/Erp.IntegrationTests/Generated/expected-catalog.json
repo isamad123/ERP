@@ -3731,7 +3731,8 @@
             "grace",
             "read_only",
             "locked",
-            "superseded"
+            "superseded",
+            "scheduled"
           ]
         },
         {
@@ -3918,9 +3919,21 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "source_event_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
-      "uniques": [],
+      "uniques": [
+        "uq_license_events_source_event_id"
+      ],
       "checks": [
         "ck_license_events_event_type_code"
       ],

@@ -1,6 +1,10 @@
 # HRMIS: devices, shifts, rosters, attendance, overtime, leave. Spec 06a sections 9 (ATT-01 to ATT-21) and 10.
 # Geo-fences, location evidence and mobile capture are Release 1.1.
 
+# Slice S1.09b (ruling Q9, CR-036): time and leave tables belong to feature key hrm.core.
+- defaults:
+  entitlement: hrm.core
+
 - table: hrm.attendance_devices
   purpose: Biometric and kiosk devices by site (ATT-02)
   traits: [std, co, soft]

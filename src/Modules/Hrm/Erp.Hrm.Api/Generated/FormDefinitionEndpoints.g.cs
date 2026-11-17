@@ -66,11 +66,11 @@ internal static class FormDefinitionEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/hrm/form-definitions").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("hrm.form_definitions.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.form_definitions.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.form_definitions.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.form_definitions.read"));
-        group.MapPost("/", CreateAsync).WithName("hrm.form_definitions.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.form_definitions.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.form_definitions.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.form_definitions.update"));
-        group.MapDelete("/{id:guid}", DeleteAsync).WithName("hrm.form_definitions.delete").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "delete", "hrm.form_definitions.delete"));
+        group.MapGet("/", ListAsync).WithName("hrm.form_definitions.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.form_definitions.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.form_definitions.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.form_definitions.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapPost("/", CreateAsync).WithName("hrm.form_definitions.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.form_definitions.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.form_definitions.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.form_definitions.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapDelete("/{id:guid}", DeleteAsync).WithName("hrm.form_definitions.delete").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "delete", "hrm.form_definitions.delete"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] FormDefinitionListQuery query, global::Erp.Hrm.Application.Generated.IFormDefinitionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

@@ -693,6 +693,38 @@
         "en": "IANA time zone name, for example Asia/Karachi. It decides which day \"today\" is. Without a value, the default of the company's country applies.",
         "ur": "IANA ٹائم زون کا نام، مثلاً Asia/Karachi۔ اسی سے طے ہوتا ہے کہ \"آج\" کون سا دن ہے۔ قدر نہ ہونے پر کمپنی کے ملک کا طے شدہ ٹائم زون لاگو ہوتا ہے۔"
       }
+    },
+    {
+      "key": "cfg.limits.warning_percent",
+      "module": "cfg",
+      "type": "int",
+      "default": 90,
+      "validation": {
+        "min": 50,
+        "max": 99
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "licence",
+      "unit": "percent",
+      "name": {
+        "en": "Licence limit warning",
+        "ur": "لائسنس کی حد کی تنبیہ"
+      },
+      "description": {
+        "en": "Percentage of a licence limit at which administrators are warned",
+        "ur": "لائسنس کی حد کا وہ فیصد جس پر منتظمین کو تنبیہ کی جاتی ہے"
+      },
+      "help": {
+        "en": "When users, concurrent users or companies reach this percentage of the licence limit, a warning is shown and announced once. At 100 percent new ones are refused.",
+        "ur": "جب صارفین، بیک وقت صارفین یا کمپنیاں لائسنس کی حد کے اس فیصد تک پہنچیں تو ایک بار تنبیہ دکھائی اور بھیجی جاتی ہے۔ 100 فیصد پر نئے رد کر دیے جاتے ہیں۔"
+      }
     }
   ],
   "flags": []

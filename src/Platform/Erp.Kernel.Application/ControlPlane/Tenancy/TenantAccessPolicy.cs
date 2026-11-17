@@ -4,11 +4,13 @@ namespace Erp.Kernel.Application.ControlPlane.Tenancy;
 
 /// <summary>
 /// FR-KRN-TEN-09 and the approved S1.03 plan: the access mode is the most restrictive of what the tenant status, the
-/// database status and the entitlement state allow. Data is never deleted or hidden by this; only serving stops.
+/// database status and the licence state allow. Data is never deleted or hidden by this; only serving stops. Slice S1.09b:
+/// the licence state is worked out from the entitlement's dates (<see cref="Erp.Kernel.Domain.Entitlements.LicenceStates"/>);
+/// a suspended customer is served exactly as a locked licence (ruling Q5): sign-in, the licence page and the allowed exports.
 /// </summary>
 public static class TenantAccessPolicy
 {
-    public static TenantAccessMode Decide(string tenantStatus, string databaseStatus, string? entitlementStatus)
+    public static TenantAccessMode Decide(string tenantStatus, string databaseStatus, string? licenceState)
     {
         var byTenant = tenantStatus switch
         {
@@ -26,7 +28,7 @@ public static class TenantAccessPolicy
             _ => TenantAccessMode.NotFound,
         };
 
-        var byEntitlement = entitlementStatus switch
+        var byEntitlement = licenceState switch
         {
             "active" or "warning" or "grace" => TenantAccessMode.Full,
             "read_only" => TenantAccessMode.ReadOnly,
