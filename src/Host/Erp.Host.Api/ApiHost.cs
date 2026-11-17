@@ -27,6 +27,8 @@ using Erp.Kernel.Api.Generated;
 using Erp.Kernel.Infrastructure.Access;
 using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
+using Erp.Kernel.Infrastructure.Entitlements;
+using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Erp.Kernel.Infrastructure.Generated;
 using Erp.Kernel.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -114,7 +116,9 @@ public static class ApiHost
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton(new SettingsCacheOptions(TimeSpan.FromMilliseconds(config.GetValue("Settings:RefreshMilliseconds", 1000))));
         services.AddSingleton<SettingsCache>();
-        services.AddScoped<ILicensedFeatures, LocalEntitlementFeatures>();
+        // Entitlements (S1.09b): the licence of each request is worked out from the stored entitlements and the customer's day.
+        services.AddSingleton<ILicenceResolver, LicenceResolver>();
+        services.AddScoped<ILicensedFeatures, EntitlementFeatures>();
         services.AddScoped<SettingsService>();
         services.AddScoped<ISettings>(sp => sp.GetRequiredService<SettingsService>());
         services.AddScoped<IFeatureFlags>(sp => sp.GetRequiredService<SettingsService>());

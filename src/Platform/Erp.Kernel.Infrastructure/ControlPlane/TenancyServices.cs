@@ -20,6 +20,7 @@ public static class TenancyServices
         services.AddScoped<TenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
         services.AddScoped<ITenantConnectionProvider>(sp => sp.GetRequiredService<TenantContext>());
+        services.AddScoped<ICurrentLicence>(sp => sp.GetRequiredService<TenantContext>());
         return services;
     }
 }

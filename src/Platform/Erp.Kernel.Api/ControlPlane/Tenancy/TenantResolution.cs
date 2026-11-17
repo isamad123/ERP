@@ -3,6 +3,7 @@ using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Contracts.Api;
 using Erp.Kernel.Application.ControlPlane.Tenancy;
+using Erp.Kernel.Domain.Entitlements;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 
@@ -14,9 +15,6 @@ public sealed class TenantResolutionOptions
     /// <summary>Paths served without a customer (liveness checks of the load balancer).</summary>
     public IReadOnlyList<string> PathsWithoutTenant { get; init; } = ["/health"];
 
-    /// <summary>Database schema → module, for endpoints of business modules (a module that is not installed has no API, FR-KRN-ENT-03).</summary>
-    public IReadOnlyDictionary<string, string> SchemaModules { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal) { ["hrm"] = "hrm" };
-
     /// <summary>Name of the token claim that carries the customer code (issued by the identity slice S1.05).</summary>
     public string TenantClaim { get; init; } = "tenant";
 }
@@ -24,14 +22,18 @@ public sealed class TenantResolutionOptions
 /// <summary>
 /// Binds every request to exactly one customer (FR-KRN-TEN-03, FR-KRN-TEN-04). The customer comes only from the
 /// request's host name looked up in cp.tenant_domains; the body, query string and other headers are never read.
-/// Unknown host → 404. The access mode (FR-KRN-TEN-09) is enforced here: unavailable → 503, locked → 403,
-/// read-only → 403 for any method that changes data. Titles are localization keys.
+/// Unknown host → 404. Slice S1.09b: the licence is worked out for the customer's day (FR-KRN-ENT-04); an endpoint of a
+/// module or feature the customer is not licensed for, or whose module is not installed, answers exactly like a path that
+/// does not exist (FR-KRN-ENT-03, ruling Q9). The access mode (FR-KRN-TEN-09) is then enforced: unavailable → 503;
+/// locked licence or suspended customer → 403 except sign-in steps and endpoints marked allowed when locked (ruling Q5);
+/// read-only → 403 for any method that changes data, except sign-in steps. Titles are localization keys.
 /// </summary>
 public static class TenantResolution
 {
     public const string NotFound = "errors.tenant.not_found";
     public const string Unavailable = "errors.tenant.unavailable";
     public const string Locked = "errors.tenant.locked";
+    public const string LicenceLocked = "errors.licence.locked";
     public const string ReadOnly = "errors.tenant.read_only";
     public const string WrongTenantToken = "errors.auth.token_for_another_tenant";
 
@@ -57,13 +59,35 @@ public static class TenantResolution
                 return;
             }
 
-            var mode = TenantAccessPolicy.Decide(tenant.Status, tenant.DatabaseStatus, tenant.EntitlementStatus);
+            // The registry and the database decide first; their database is not touched when they already refuse.
+            switch (TenantAccessPolicy.Decide(tenant.Status, tenant.DatabaseStatus, LicenceStates.Active))
+            {
+                case TenantAccessMode.NotFound:
+                    await ProblemAsync(context, StatusCodes.Status404NotFound, NotFound).ConfigureAwait(false);
+                    return;
+                case TenantAccessMode.Unavailable:
+                    await ProblemAsync(context, StatusCodes.Status503ServiceUnavailable, Unavailable).ConfigureAwait(false);
+                    return;
+            }
+
+            var factory = (ITenantDataSourceFactory)services.GetService(typeof(ITenantDataSourceFactory))!;
+            var dataSource = await factory.GetAsync(tenant, context.RequestAborted).ConfigureAwait(false);
+            var licence = await ((ILicenceResolver)services.GetService(typeof(ILicenceResolver))!).ResolveAsync(tenant, dataSource, context.RequestAborted).ConfigureAwait(false);
+            var mode = TenantAccessPolicy.Decide(tenant.Status, tenant.DatabaseStatus, licence.State);
+
+            var endpoint = context.GetEndpoint();
+            if (endpoint is null || !Serves(endpoint, tenant, licence))
+            {
+                // Exactly what routing answers for a path that does not exist: 404, no body (ruling Q9).
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
             var refusal = mode switch
             {
-                TenantAccessMode.NotFound => (StatusCodes.Status404NotFound, NotFound),
-                TenantAccessMode.Unavailable => (StatusCodes.Status503ServiceUnavailable, Unavailable),
-                TenantAccessMode.Locked => (StatusCodes.Status403Forbidden, Locked),
-                TenantAccessMode.ReadOnly when !IsReadOnlyMethod(context.Request.Method) && !AllowedWhenReadOnly(context) => (StatusCodes.Status403Forbidden, ReadOnly),
+                TenantAccessMode.Locked when !AllowedWhenLocked(endpoint) =>
+                    (StatusCodes.Status403Forbidden, tenant.Status == "suspended" ? Locked : LicenceLocked),
+                TenantAccessMode.ReadOnly when !IsReadOnlyMethod(context.Request.Method) && !AllowedWhenReadOnly(endpoint) => (StatusCodes.Status403Forbidden, ReadOnly),
                 _ => ((int Status, string Title)?)null,
             };
             if (refusal is { } r)
@@ -72,18 +96,27 @@ public static class TenantResolution
                 return;
             }
 
-            var resource = context.GetEndpoint()?.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource;
-            if (resource is not null && settings.SchemaModules.TryGetValue(resource[..resource.IndexOf('.', StringComparison.Ordinal)], out var module) && !tenant.InstalledModules.Contains(module))
-            {
-                await ProblemAsync(context, StatusCodes.Status404NotFound, NotFound).ConfigureAwait(false);
-                return;
-            }
-
-            var factory = (ITenantDataSourceFactory)services.GetService(typeof(ITenantDataSourceFactory))!;
-            var dataSource = await factory.GetAsync(tenant, context.RequestAborted).ConfigureAwait(false);
-            ((TenantContext)services.GetService(typeof(TenantContext))!).Bind(tenant, mode, dataSource);
+            ((TenantContext)services.GetService(typeof(TenantContext))!).Bind(tenant, mode, dataSource, licence);
             await next(context).ConfigureAwait(false);
         });
+    }
+
+    /// <summary>
+    /// The endpoint exists for the customer (FR-KRN-ENT-03): its module is installed and licensed, and its feature key is
+    /// licensed. A customer with no readable entitlement is Locked; its endpoints are left to the access mode.
+    /// </summary>
+    public static bool Serves(Endpoint endpoint, ResolvedTenant tenant, LicenceSnapshot licence)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        ArgumentNullException.ThrowIfNull(tenant);
+        ArgumentNullException.ThrowIfNull(licence);
+        var key = endpoint.Metadata.GetMetadata<EntitlementMetadata>() ?? EntitlementMetadata.Kernel;
+        if (key.Module != EntitlementMetadata.KernelModule && !tenant.InstalledModules.Contains(key.Module))
+        {
+            return false;
+        }
+
+        return licence.Claims is null || (licence.HasModule(key.Module) && licence.IsLicensed(key.FeatureKey));
     }
 
     /// <summary>
@@ -108,8 +141,12 @@ public static class TenantResolution
     }
 
     /// <summary>Sign-in steps (S1.05) still work in read-only mode, so users can reach the data the mode keeps visible.</summary>
-    private static bool AllowedWhenReadOnly(HttpContext context) =>
-        context.GetEndpoint()?.Metadata.GetMetadata<IdentityEndpointMetadata>() is { AllowedWhenReadOnly: true };
+    private static bool AllowedWhenReadOnly(Endpoint endpoint) =>
+        endpoint.Metadata.GetMetadata<IdentityEndpointMetadata>() is { AllowedWhenReadOnly: true };
+
+    /// <summary>Locked (ruling Q5): sign-in steps, and the licence page, capabilities and exports marked allowed when locked.</summary>
+    private static bool AllowedWhenLocked(Endpoint endpoint) =>
+        AllowedWhenReadOnly(endpoint) || endpoint.Metadata.GetMetadata<AllowedWhenLockedMetadata>() is not null;
 
     private static bool IsReadOnlyMethod(string method) => HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method);
 

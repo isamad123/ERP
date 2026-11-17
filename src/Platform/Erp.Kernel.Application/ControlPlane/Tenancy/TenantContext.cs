@@ -7,11 +7,12 @@ namespace Erp.Kernel.Application.ControlPlane.Tenancy;
 /// The per-request (scoped) binding to one customer. It is bound once, by the resolution middleware or by the
 /// migrator; binding twice is refused so no code path can switch customers in the middle of a request.
 /// </summary>
-public sealed class TenantContext : ITenantContext, ITenantConnectionProvider
+public sealed class TenantContext : ITenantContext, ITenantConnectionProvider, ICurrentLicence
 {
     private static readonly IReadOnlySet<string> NoModules = new HashSet<string>(StringComparer.Ordinal);
     private ResolvedTenant? _tenant;
     private DbDataSource? _dataSource;
+    private LicenceSnapshot? _licence;
 
     public bool IsResolved => _tenant is not null;
 
@@ -26,7 +27,10 @@ public sealed class TenantContext : ITenantContext, ITenantConnectionProvider
 
     public DbDataSource DataSource => _dataSource ?? throw new InvalidOperationException("No customer database is bound to this request.");
 
-    public void Bind(ResolvedTenant tenant, TenantAccessMode accessMode, DbDataSource? dataSource)
+    /// <summary>The licence the request is served under (slice S1.09b); bound with the customer.</summary>
+    public LicenceSnapshot Licence => _licence ?? throw new InvalidOperationException("No licence is bound to this request.");
+
+    public void Bind(ResolvedTenant tenant, TenantAccessMode accessMode, DbDataSource? dataSource, LicenceSnapshot? licence = null)
     {
         ArgumentNullException.ThrowIfNull(tenant);
         if (_tenant is not null)
@@ -37,5 +41,6 @@ public sealed class TenantContext : ITenantContext, ITenantConnectionProvider
         _tenant = tenant;
         AccessMode = accessMode;
         _dataSource = dataSource;
+        _licence = licence;
     }
 }

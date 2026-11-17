@@ -1,0 +1,39 @@
+{
+  "_comment": "Entitlement key catalogue (spec 14 section 8, D-24; slice S1.09 ruling Q1) for the modules this product has. Every key needs platform.base; a key needs its parent; a feature key needs its module in claims.modules; a module needs its base key (ruling B3). Packs and add-ons belong to the kernel. Keys of modules that do not exist yet (fin, prc, inv, ast, sal, scm) are added with their modules. Editions are not named here (spec 16 SC-3).",
+  "modules": {
+    "hrm": "hrm.core"
+  },
+  "features": [
+    { "key": "platform.base", "parent": null, "module": "kernel" },
+    { "key": "hrm.core", "parent": "platform.base", "module": "hrm" },
+    { "key": "hrm.payroll", "parent": "hrm.core", "module": "hrm" },
+    { "key": "hrm.recruitment", "parent": "hrm.core", "module": "hrm" },
+    { "key": "hrm.performance", "parent": "hrm.core", "module": "hrm" },
+    { "key": "hrm.learning", "parent": "hrm.core", "module": "hrm" },
+    { "key": "hrm.relations", "parent": "hrm.core", "module": "hrm" },
+    { "key": "hrm.us", "parent": "hrm.core", "module": "hrm" }
+  ],
+  "addons": [
+    { "key": "ai.gateway", "parent": "platform.base", "module": "kernel" },
+    { "key": "ai.assistant", "parent": "ai.gateway", "module": "kernel" },
+    { "key": "ai.nlq", "parent": "ai.gateway", "module": "kernel" },
+    { "key": "ai.docint", "parent": "ai.gateway", "module": "kernel" },
+    { "key": "ai.predictive", "parent": "ai.gateway", "module": "kernel" },
+    { "key": "ai.config", "parent": "ai.gateway", "module": "kernel" },
+    { "key": "ai.migration", "parent": "ai.gateway", "module": "kernel" },
+    { "key": "analytics.pro", "parent": "platform.base", "module": "kernel" },
+    { "key": "analytics.extract", "parent": "platform.base", "module": "kernel" },
+    { "key": "analytics.superset", "parent": "platform.base", "module": "kernel" },
+    { "key": "portal.supplier", "parent": "platform.base", "module": "kernel" },
+    { "key": "portal.customer", "parent": "platform.base", "module": "kernel" },
+    { "key": "portal.carrier", "parent": "platform.base", "module": "kernel" },
+    { "key": "mobile.apps", "parent": "platform.base", "module": "kernel" },
+    { "key": "integration.premium", "parent": "platform.base", "module": "kernel" }
+  ],
+  "packs": [
+    { "key": "pack.country.pk", "parent": "platform.base", "module": "kernel" },
+    { "key": "pack.country.sa", "parent": "platform.base", "module": "kernel" },
+    { "key": "pack.country.us", "parent": "platform.base", "module": "kernel" }
+  ],
+  "limits": ["users.named", "users.concurrent", "companies", "employees.active", "storage.gb", "api.calls", "ai.tokens", "portal.external_users"]
+}

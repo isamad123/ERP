@@ -2,11 +2,13 @@ using System.Text.Json;
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.Kernel.Application.ControlPlane.Tenancy;
+using Erp.Kernel.Domain.Entitlements;
 using Erp.Kernel.Infrastructure.ControlPlane.Entitlements;
 using Erp.Kernel.Infrastructure.ControlPlane.Migration;
 using Erp.Kernel.Infrastructure.ControlPlane.Platform;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Erp.Kernel.Infrastructure.ControlPlane.Tenancy;
+using Erp.Kernel.Infrastructure.Entitlements;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -138,8 +140,13 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
     }
 
     /// <summary>A connection to the customer's own database as one of its logins (no pooling: provisioning and migration only).</summary>
-    public async Task<NpgsqlConnection> OpenTenantAsync(ResolvedTenant tenant, string loginKind, CancellationToken cancellationToken)
+    public Task<NpgsqlConnection> OpenTenantAsync(ResolvedTenant tenant, string loginKind, CancellationToken cancellationToken) =>
+        OpenTenantAsync(secrets, tenant, loginKind, cancellationToken);
+
+    /// <summary>The same, for services that hold only the secret store (the licence loop of the worker host, S1.09b).</summary>
+    public static async Task<NpgsqlConnection> OpenTenantAsync(ISecretStore secrets, ResolvedTenant tenant, string loginKind, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(secrets);
         ArgumentNullException.ThrowIfNull(tenant);
         var credential = DatabaseCredential.Parse(await secrets.GetAsync(TenantLogins.SecretRef(tenant.AppSecretRef, loginKind), cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"No {loginKind} credential is stored for customer {tenant.Code}."));
@@ -172,15 +179,9 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var now = clock.UtcNow;
 
-        var publicKey = await Sql.ScalarAsync<byte[]>(connection, transaction, """
-            select public_key from cp.signing_keys
-            where key_id = $1 and purpose = 'entitlement' and revoked_at is null and valid_from <= $2 and (valid_to is null or valid_to > $2)
-            """, cancellationToken, entitlement.KeyId, now).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Signing key '{entitlement.KeyId}' is not a valid entitlement key.");
-        if (!entitlement.Verify(publicKey))
-        {
-            throw new InvalidOperationException("The entitlement signature is not valid.");
-        }
+        // Signing key, signature and claims (slice S1.09b: one verifier for provisioning and `entitlement apply`).
+        await EntitlementVerifier.VerifyAsync(connection, transaction, entitlement, now, cancellationToken).ConfigureAwait(false);
+        EntitlementApplier.RefuseExpired(entitlement.Payload, LicenceStates.Today(now, LicenceStates.Zone(null)));
 
         var cluster = await ReadClusterAsync(connection, transaction, request.ClusterName, cancellationToken).ConfigureAwait(false);
         var existing = await TenantDirectory.ReadAsync(connection, TenantDirectory.SelectTenant + " where t.code = $1", request.Code, cancellationToken).ConfigureAwait(false);
@@ -271,27 +272,24 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
 
     private async Task StoreEntitlementAsync(PlatformActor actor, Registration registration, SignedEntitlement entitlement, CancellationToken cancellationToken)
     {
+        // The first entitlement is in force from provisioning (ruling B1: a customer is set up before go-live); its state
+        // follows from its end date on the customer's day (default time zone until the customer changes org.time_zone).
         var now = clock.UtcNow;
         var payload = entitlement.Payload;
+        var state = LicenceStates.Decide(payload.ExpiresAt, EntitlementCatalogs.Parse(payload.Claims).Term, LicenceStates.Today(now, LicenceStates.Zone(null)));
         await using (var connection = await OpenControlPlaneAsync(cancellationToken).ConfigureAwait(false))
         {
-            await using var command = Sql.Command(connection, null, """
-                insert into cp.entitlements (id, tenant_id, version, edition, claims, signature, signing_key_id, effective_from, expires_at, state_since, status, created_at, created_by, updated_at, updated_by)
-                values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'active', $10, $11, $10, $11)
-                on conflict (tenant_id, version) do nothing
-                """, [Guid.CreateVersion7(now), registration.TenantId, payload.Version, payload.Edition, null, entitlement.Signature, entitlement.KeyId, payload.EffectiveFrom, payload.ExpiresAt, now, actor.Id]);
-            command.Parameters[4] = new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb, Value = payload.Claims.ToJsonString() };
-            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            await EntitlementApplier.InsertAsync(connection, null, registration.TenantId, entitlement, state, now, actor.Id, cancellationToken).ConfigureAwait(false);
         }
 
         await using var tenant = await OpenTenantAsync(registration.Tenant, TenantLogins.Owner, cancellationToken).ConfigureAwait(false);
-        await using var local = Sql.Command(tenant, null, """
-            insert into meta.local_entitlement (id, payload, signature, state, state_since, highest_time_seen, created_at, created_by, updated_at, updated_by)
-            select $1, $2, $3, 'active', $4, $4, $4, $5, $4, $5
-            where not exists (select 1 from meta.local_entitlement)
-            """, [Guid.CreateVersion7(now), null, entitlement.Signature, now, BaselineSeed.SystemUserId]);
-        local.Parameters[1] = new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb, Value = JsonSerializer.Serialize(new { payload = payload.ToJson(), key_id = entitlement.KeyId }) };
-        await local.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        await using var tx = await tenant.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        if (await CustomerLicence.CopyVersionAsync(tenant, tx, cancellationToken).ConfigureAwait(false) == 0)
+        {
+            await CustomerLicence.ReplaceCopyAsync(tenant, tx, payload, entitlement.KeyId, entitlement.Signature, state, now, cancellationToken).ConfigureAwait(false);
+        }
+
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     // ------------------------------------------------------------------ step 5: baseline data and first administrator

@@ -10,7 +10,7 @@ public sealed record TenantSummary(
 
 /// <summary>
 /// Customer lifecycle actions available in Release 1.0 (FR-KRN-TEN-09, FR-ADM-PLT-11): suspend and resume. Neither
-/// deletes or changes customer data; a suspended customer is served nothing (locked) until resumed. Move, export,
+/// deletes or changes customer data; a suspended customer is served as a locked licence (sign-in, licence page and allowed exports only; slice S1.09 ruling Q5) until resumed. Move, export,
 /// offboard and delete are later releases. Every action is recorded in cp.platform_audit.
 /// </summary>
 public sealed class TenantLifecycle(ControlPlaneOptions options, IClock clock)

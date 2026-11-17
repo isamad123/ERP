@@ -57,7 +57,7 @@ public sealed class ProvisioningAndMigrationTests(TenancyFixture fx)
         var result = await fx.ProvisionAsync(code, ct);
         Assert.False(result.AlreadyProvisioned);
         var tenant = await fx.TenantAsync(code, ct);
-        Assert.Equal(("active", "ready", "active"), (tenant.Status, tenant.DatabaseStatus, tenant.EntitlementStatus));
+        Assert.Equal(("active", "ready", "active"), (tenant.Status, tenant.DatabaseStatus, tenant.Entitlements.Single().Status));
 
         await using var cp = await fx.OpenControlPlaneAsync(ct);
         Assert.Equal(1010101, await TenancyFixture.CountAsync(cp, ControlPlaneCounts, ct, code));

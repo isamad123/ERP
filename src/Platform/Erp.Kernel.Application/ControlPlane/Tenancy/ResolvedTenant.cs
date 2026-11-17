@@ -1,6 +1,9 @@
 namespace Erp.Kernel.Application.ControlPlane.Tenancy;
 
-/// <summary>A customer as the control plane knows it: registry row, its production database and its current entitlement state.</summary>
+/// <summary>
+/// A customer as the control plane knows it: registry row, its production database, its stored entitlements (current and
+/// scheduled; the state is worked out from their dates, slice S1.09b) and the modules installed in its database.
+/// </summary>
 public sealed record ResolvedTenant(
     Guid TenantId,
     string Code,
@@ -11,7 +14,7 @@ public sealed record ResolvedTenant(
     string ClusterHost,
     int ClusterPort,
     string AppSecretRef,
-    string? EntitlementStatus,
+    IReadOnlyList<EntitlementRecord> Entitlements,
     IReadOnlySet<string> InstalledModules);
 
 /// <summary>Looks customers up in the control plane (cp.tenant_domains, FR-KRN-TEN-04).</summary>

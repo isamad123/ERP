@@ -1,6 +1,7 @@
 using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
+using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Erp.Kernel.Contracts.Settings;
 using Erp.Kernel.Domain.Settings;
 using Erp.Kernel.Infrastructure.Identity;
@@ -111,18 +112,10 @@ public sealed class SettingsService(
 }
 
 /// <summary>
-/// Licensed features from the customer's copy of the signed entitlement (<c>claims.features</c> of meta.local_entitlement;
-/// slice S1.09a, until S1.09b's entitlement service replaces it behind <see cref="ILicensedFeatures"/>). A missing list
-/// means no feature is licensed.
+/// Licensed features of the request (FR-KRN-ENT-03; slice S1.09b replaces the S1.09a reading of meta.local_entitlement): the
+/// claims of the entitlement in force, bound with the customer by tenant resolution. No database read.
 /// </summary>
-public sealed class LocalEntitlementFeatures(ITenantConnectionProvider connections) : ILicensedFeatures
+public sealed class EntitlementFeatures(ICurrentLicence licence) : ILicensedFeatures
 {
-    public async Task<bool> IsLicensedAsync(string featureKey, CancellationToken cancellationToken)
-    {
-        await using var c = await IdentityDb.OpenAsync(connections.DataSource, cancellationToken).ConfigureAwait(false);
-        return await IdentityDb.ScalarAsync<bool>(c, null, """
-            select coalesce((select jsonb_typeof(f) = 'array' and f ? $1
-                             from (select payload -> 'payload' -> 'claims' -> 'features' as f from meta.local_entitlement order by created_at desc limit 1) e), false)
-            """, cancellationToken, featureKey).ConfigureAwait(false);
-    }
+    public Task<bool> IsLicensedAsync(string featureKey, CancellationToken cancellationToken) => Task.FromResult(licence.Licence.IsLicensed(featureKey));
 }

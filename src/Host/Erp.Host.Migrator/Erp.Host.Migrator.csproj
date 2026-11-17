@@ -23,5 +23,6 @@
     <!-- Access manifests (S1.06): permission catalogues and baseline roles, registered by `migrate` and provisioning. -->
     <None Include="../../Platform/Erp.Kernel.Infrastructure/Access/*.json" LinkBase="migrations/src/Platform/Erp.Kernel.Infrastructure/Access" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../Modules/Hrm/Erp.Hrm.Infrastructure/Access/*.json" LinkBase="migrations/src/Modules/Hrm/Erp.Hrm.Infrastructure/Access" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="EntitlementTemplates/*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
