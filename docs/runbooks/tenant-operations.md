@@ -77,7 +77,9 @@ WARNING and changes nothing: run `tenant admin-role-repair`.
 
 Every change-log entry of a customer is linked to the one before it by a SHA-256 hash; each day's last hash is that
 day's anchor (`aud.chain_anchors`). Copy the anchors of finished days to the control plane once a day (a scheduled job
-comes with S1.11; until then run it by hand or from the host's scheduler):
+comes with S1.11; until then run it by hand or from the host's scheduler). A day counts as finished once the customer's
+chain has an entry on a later day, or a full day after it ended (UTC), whichever comes first: until then an entry stamped
+just before midnight can still land on it (review S1.07 finding 2). A day not yet finished is simply copied on a later run.
 
 ```bash
 dotnet run --project src/Host/Erp.Host.Migrator -- audit anchors-publish                 # every customer

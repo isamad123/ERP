@@ -276,7 +276,9 @@ public sealed class AuditQueryService(
                 }
                 else if (!maps.TryGetValue((row.EntityType, row.CompanyId), out map))
                 {
-                    map = await fields.ForAsync(resource.Fields, "read", row.CompanyId, cancellationToken).ConfigureAwait(false);
+                    // A search across records (review S1.07 finding 1): only roles that see every record of the company count,
+                    // so a role that opens a field on its own rows only (the Employee's own salary) does not open it here.
+                    map = await fields.ForEveryRowAsync(resource.Fields, resource.IsScoped, "read", row.CompanyId, cancellationToken).ConfigureAwait(false);
                     maps[(row.EntityType, row.CompanyId)] = map;
                 }
             }
@@ -286,7 +288,11 @@ public sealed class AuditQueryService(
             {
                 var field = (string?)stored["field"] ?? string.Empty;
                 var known = resource?.Fields.Find(field);
-                var level = known is null || map is null ? FieldAccessLevel.ReadOnly : map.Of(field);
+                // A classed value whose field security cannot be decided here (a table without its own API, or a field the
+                // catalogue does not know) stays hidden (review S1.07 finding 4); unclassed values of such entries are shown.
+                var level = known is null || map is null
+                    ? stored["class"] is null ? FieldAccessLevel.ReadOnly : FieldAccessLevel.Hidden
+                    : map.Of(field);
                 if (level == FieldAccessLevel.Hidden)
                 {
                     changes.Add(new JsonObject { ["field"] = field, ["hidden"] = true });
@@ -294,6 +300,18 @@ public sealed class AuditQueryService(
                 }
 
                 var change = await reader.ReadAsync(row.EntityType, stored, row.SubjectPersonId, cancellationToken).ConfigureAwait(false);
+                if (known is { IsCustom: true } && map is not null)
+                {
+                    // Each custom field follows its own rule (FR-KRN-MET-02; review S1.07 finding 3).
+                    foreach (var side in new[] { "before", "after" })
+                    {
+                        if (change[side] is JsonObject custom)
+                        {
+                            FieldShaping.ShapeCustom(custom, map);
+                        }
+                    }
+                }
+
                 if (level == FieldAccessLevel.Masked)
                 {
                     foreach (var side in new[] { "before", "after" })
