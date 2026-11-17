@@ -111,7 +111,8 @@ public sealed record EntitlementClaims(
                     throw new InvalidDataException($"claims.limits: '{key}' is not a limit key (spec 14 section 8.3).");
                 }
 
-                if (value is not JsonValue v || !v.TryGetValue<long>(out var number) || number < 0)
+                if (value is not JsonValue v || v.GetValueKind() != System.Text.Json.JsonValueKind.Number
+                    || !long.TryParse(v.ToJsonString(), NumberStyles.None, CultureInfo.InvariantCulture, out var number))
                 {
                     throw new InvalidDataException($"claims.limits.{key} must be a whole number of 0 or more.");
                 }
@@ -172,7 +173,8 @@ public sealed record EntitlementClaims(
     private static int Days(JsonObject term, string name, int fallback) => term[name] switch
     {
         null => fallback,
-        JsonValue v when v.TryGetValue<int>(out var days) && days is >= 0 and <= MaxPeriodDays => days,
+        JsonValue v when v.GetValueKind() == System.Text.Json.JsonValueKind.Number
+            && int.TryParse(v.ToJsonString(), NumberStyles.None, CultureInfo.InvariantCulture, out var days) && days <= MaxPeriodDays => days,
         _ => throw new InvalidDataException($"claims.term.{name} must be a whole number of days from 0 to {MaxPeriodDays}."),
     };
 
