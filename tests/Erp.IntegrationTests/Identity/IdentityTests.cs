@@ -424,25 +424,22 @@ public sealed class IdentityTests(TenancyFixture fx) : IAsyncLifetime
         var (disabledId, _, _) = await h.ActiveUserAsync(A, ct);
         Assert.Equal(HttpStatusCode.NoContent, (await h.PostAsync(A, $"/api/iam/users/{disabledId}/status", new { status = "disabled", reason = "seat test" }, h.AdminToken(A), ct)).Status);
         var used = await h.CountAsync(A, "select count(*) from iam.users where not is_system and not is_deleted and status in ('active', 'locked')", ct);
-        await using (var owner = await h.OwnerAsync(A, ct))
-        {
-            await IdentityHarness.ExecAsync(owner, "update meta.local_entitlement set payload = jsonb_set(payload, '{payload,claims,limits,users}', to_jsonb($1::int))", ct, (int)used);
-        }
-
+        // Slice S1.09b: the limit is claims.limits["users.named"] of the entitlement in force (ruling Q1), enforced by the limit guard.
+        var claims = await h.Fixture.SetClaimAsync(A, "limits,users.named", (int)used, ct);
         try
         {
             var refused = await h.PostAsync(A, "/api/iam/auth/activate", new { token, newPassword = IdentityHarness.Password }, ct: ct);
             Assert.Equal(HttpStatusCode.Conflict, refused.Status);
-            Assert.Contains("errors.user.limit_reached", refused.Body, StringComparison.Ordinal);
+            Assert.Contains("errors.licence.limit_reached", refused.Body, StringComparison.Ordinal);
+            Assert.Contains("users.named", refused.Body, StringComparison.Ordinal);
             Assert.Equal("invited", await h.StatusAsync(A, pendingId, ct));
             var reEnable = await h.PostAsync(A, $"/api/iam/users/{disabledId}/status", new { status = "active", reason = "back" }, h.AdminToken(A), ct);
             Assert.Equal(HttpStatusCode.Conflict, reEnable.Status);
-            Assert.Contains("errors.user.limit_reached", reEnable.Body, StringComparison.Ordinal);
+            Assert.Contains("errors.licence.limit_reached", reEnable.Body, StringComparison.Ordinal);
         }
         finally
         {
-            await using var owner = await h.OwnerAsync(A, CancellationToken.None);
-            await IdentityHarness.ExecAsync(owner, "update meta.local_entitlement set payload = payload #- '{payload,claims,limits,users}'", CancellationToken.None);
+            await h.Fixture.RestoreClaimsAsync(A, claims, CancellationToken.None);
         }
 
         Assert.Equal("tokens", (await h.PostAsync(A, "/api/iam/auth/activate", new { token, newPassword = IdentityHarness.Password }, ct: ct)).Text("outcome"));

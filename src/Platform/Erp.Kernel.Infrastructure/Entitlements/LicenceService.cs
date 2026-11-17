@@ -3,6 +3,7 @@ using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Contracts.Settings;
 using Erp.Kernel.Infrastructure.ControlPlane;
+using Erp.Kernel.Infrastructure.ControlPlane.Entitlements;
 using Erp.Kernel.Infrastructure.Identity;
 using Erp.Kernel.Infrastructure.Settings;
 using Npgsql;

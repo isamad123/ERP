@@ -3,7 +3,7 @@ using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Infrastructure.ControlPlane.Platform;
 using Npgsql;
 
-namespace Erp.Kernel.Infrastructure.Entitlements;
+namespace Erp.Kernel.Infrastructure.ControlPlane.Entitlements;
 
 /// <summary>One daily reading of a meter (ruling Q8).</summary>
 public sealed record UsageReading(string Meter, long Value);

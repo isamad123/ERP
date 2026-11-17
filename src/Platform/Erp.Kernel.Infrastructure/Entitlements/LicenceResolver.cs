@@ -53,7 +53,7 @@ public static class LicenceSnapshots
 /// </summary>
 public sealed class LicenceResolver(SettingsCache cache, IClock clock) : ILicenceResolver
 {
-    private readonly ConcurrentDictionary<Guid, EntitlementClaims?> _claims = new();
+    private readonly ConcurrentDictionary<string, EntitlementClaims?> _claims = new(StringComparer.Ordinal); // by claims text: stored claims never change once signed
 
     public async ValueTask<LicenceSnapshot> ResolveAsync(ResolvedTenant tenant, DbDataSource dataSource, CancellationToken cancellationToken)
     {
@@ -71,6 +71,6 @@ public sealed class LicenceResolver(SettingsCache cache, IClock clock) : ILicenc
             }
         }
 
-        return LicenceSnapshots.Compute(tenant.Entitlements, timeZone, clock.UtcNow, r => _claims.GetOrAdd(r.Id, _ => LicenceSnapshots.TryParse(r)));
+        return LicenceSnapshots.Compute(tenant.Entitlements, timeZone, clock.UtcNow, r => _claims.GetOrAdd(r.ClaimsJson, _ => LicenceSnapshots.TryParse(r)));
     }
 }

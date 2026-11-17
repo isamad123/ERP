@@ -14,7 +14,6 @@ using Erp.Kernel.Infrastructure.ControlPlane.Migration;
 using Erp.Kernel.Infrastructure.ControlPlane.Platform;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
-using Erp.Kernel.Infrastructure.Entitlements;
 using Erp.Kernel.Infrastructure.Identity;
 using Npgsql;
 
