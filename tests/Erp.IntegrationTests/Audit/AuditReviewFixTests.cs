@@ -165,6 +165,18 @@ public sealed class AuditReviewFixTests(TenancyFixture fx) : IAsyncLifetime
         Assert.False(change.ContainsKey("after"));
     }
 
+    // ------------------------------------------------------------------ finding 6 (CR-033)
+
+    [Fact]
+    public void PAY_32_review_S107_6_CR033_the_payroll_calculation_trace_is_not_written_to_the_change_log()
+    {
+        // The trace holds salary inputs in plain text; the pay result's own entries record the change (product owner, 2026-11-17).
+        var trace = Erp.Hrm.Infrastructure.Generated.HrmAuditCatalog.All.Single(t => t.Table == "hrm.pay_traces");
+        Assert.False(trace.Audited);
+        Assert.Contains("CR-033", trace.Reason, StringComparison.Ordinal);
+        Assert.True(Erp.Hrm.Infrastructure.Generated.HrmAuditCatalog.All.Single(t => t.Table == "hrm.pay_results").Audited);
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private async Task AppendAsync(string code, DateTimeOffset at, string entityType = "org.companies")
