@@ -32,6 +32,12 @@ public static class Validator
             problems.AddRange(AuditProblems(table));
         }
 
+        // Document types of the numbering key (S1.08) are one registry for the whole customer database.
+        foreach (var duplicate in model.Tables.SelectMany(t => t.Numbering).GroupBy(n => n.DocumentType, StringComparer.Ordinal).Where(g => g.Count() > 1))
+        {
+            problems.Add($"numbering document type {duplicate.Key} is declared more than once");
+        }
+
         // Index and constraint names share one namespace per schema in PostgreSQL.
         foreach (var schema in model.Tables.GroupBy(t => (t.Database, t.Schema)))
         {
@@ -111,7 +117,8 @@ public static class Validator
             yield return $"{table}: index {index.Name} added later must be a plain index on an existing table";
         }
 
-        foreach (var column in table.Columns.Where(c => c.ApiReadOnly && c.Required && c.Default is null && c.Name != "status"))
+        // A numbered column is filled by the numbering service on create (S1.08), so it needs no default.
+        foreach (var column in table.Columns.Where(c => c.ApiReadOnly && c.Required && c.Default is null && c.Name != "status" && !table.Numbering.Exists(n => n.Column == c.Name)))
         {
             yield return $"{table}.{column.Name}: api_read_only on a required column needs a database default";
         }

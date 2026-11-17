@@ -592,12 +592,18 @@
     - [branch_id, uuid, opt, fk org.branches]
     - [document_type, text, req, "e.g. hrm.employee_no, hrm.leave_request"]
     - [pattern, text, req, "e.g. EMP-{seq:5}"]
-    - [reset_rule, "enum(never,yearly,monthly)", req]
+    - [reset_rule, "enum(never,yearly,monthly,fiscal_yearly)", req]
     - [gap_free, bool, req]
     - [start_value, big, req]
   unique: [[company_id, branch_id, document_type, "where status='active'"]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, branch: branch_id}
+  # S1.08 (CR-033): fiscal-year reset (Q5); no company for tenant-wide document types only (Q6, checked by the scheme
+  # service); a branch needs a company; schemes change only through the scheme services (Q8, Q11).
+  enum_added_in: {S1.08: {reset_rule: [fiscal_yearly]}}
+  optional_added_in: {S1.08: [company_id]}
+  checks_added_in: {S1.08: [a branch scheme belongs to a company]}
+  api_actions: [read]
   reqs: [KRN-NUM-01, KRN-NUM-02, HRM-EMP-04]
 
 - table: cfg.numbering_counters
@@ -619,9 +625,14 @@
     - [scheme_id, uuid, req, fk cfg.numbering_schemes]
     - [number, text, req]
     - [reason, text, req]
+    - [document_id, uuid, opt, "the cancelled document (no FK: it lives in its module's schema)"]
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
   audit: false
   audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
+  # S1.08 (CR-033, Q10): the cancelled document, one void per number; voids are recorded by modules through the kernel.
+  added_in: {S1.08: [document_id]}
+  uniques_added_in: {S1.08: [[scheme_id, number]]}
+  api_actions: [read]
   reqs: [KRN-NUM-05]
 
 - table: cfg.installed_packs

@@ -64,7 +64,7 @@ internal sealed class NumberingSchemeRepository(
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
         await PageAsync((await QueryAsync(cancellationToken).ConfigureAwait(false)).Where(e => e.CompanyId == companyId), page, cancellationToken).ConfigureAwait(false);
 
-    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme>> FindByCompanyIdAndBranchIdAndDocumentTypeAsync(global::System.Guid companyId, global::System.Guid? branchId, string documentType, global::System.Threading.CancellationToken cancellationToken)
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme>> FindByCompanyIdAndBranchIdAndDocumentTypeAsync(global::System.Guid? companyId, global::System.Guid? branchId, string documentType, global::System.Threading.CancellationToken cancellationToken)
     {
         var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         return await query.Where(e => e.CompanyId == companyId && e.BranchId == branchId && e.DocumentType == documentType).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);

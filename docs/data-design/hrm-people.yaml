@@ -23,6 +23,8 @@
   scope: {person: id}
   # S1.07 (CR-026, Q5): personal fields; the audit log encrypts their values with the person's key (R-21).
   field_class: {date_of_birth: personal, religion: personal}
+  # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
+  numbering: {column: person_no, type: hrm.person_no, assign: create, tenant_wide: yes, default: "P-{seq:6}", reset: never}
   reqs: [EMP-01, EMP-15, FR-XM-28]
 
 - table: hrm.person_identifiers
@@ -145,6 +147,8 @@
   indexes: [[person_id], [company_id, status]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: id, person: person_id, attributes: [status, employee_type]}
+  # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
+  numbering: {column: employee_no, type: hrm.employee_no, assign: create, override: yes, default: "EMP-{seq:5}", reset: never}
   reqs: [EMP-02, EMP-04, EMP-07, EMP-15, EMP-17, FR-XM-30]
 
 - table: hrm.employment_assignments
@@ -205,6 +209,8 @@
   indexes: [[employment_id], [end_date]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
+  numbering: {column: contract_no, type: hrm.contract_no, assign: create, default: "CON-{yyyy}-{seq:5}", reset: yearly, date: start_date}
   reqs: [EMP-09]
 
 - table: hrm.probation_records
@@ -293,6 +299,8 @@
   unique: [[company_id, request_no]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, branch: branch_id, employment: employment_id}
+  # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
+  numbering: {column: request_no, type: hrm.service_request_no, assign: create, default: "SR-{yyyy}-{seq:5}", reset: yearly}
   reqs: [DOC-07, SSP-12]
 
 - table: hrm.employee_letters
@@ -317,6 +325,8 @@
   indexes: [[employment_id]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
+  numbering: {column: letter_no, type: hrm.letter_no, assign: post, gap_free: yes, default: "LTR-{yyyy}-{seq:5}", reset: yearly}
   reqs: [DOC-04, DOC-05, DOC-07, DOC-08, CMP-06]
 
 - table: hrm.grades

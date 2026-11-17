@@ -363,7 +363,7 @@ Requirements: KRN-NUM-01, KRN-NUM-02, HRM-EMP-04. Source: kernel.yaml.
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
 | id | uuid | no |  |  |
-| company_id | uuid | no |  |  |
+| company_id | uuid | yes |  |  |
 | branch_id | uuid | yes |  | fk org.branches |
 | document_type | text | no |  | e.g. hrm.employee_no, hrm.leave_request |
 | pattern | text | no |  | e.g. EMP-{seq:5} |
@@ -379,7 +379,8 @@ Requirements: KRN-NUM-01, KRN-NUM-02, HRM-EMP-04. Source: kernel.yaml.
 
 Constraints:
 
-- `ck_numbering_schemes_reset_rule` CHECK ((reset_rule = ANY (ARRAY['never'::text, 'yearly'::text, 'monthly'::text])))
+- `ck_numbering_schemes_branch_company` CHECK (((branch_id IS NULL) OR (company_id IS NOT NULL)))
+- `ck_numbering_schemes_reset_rule` CHECK ((reset_rule = ANY (ARRAY['never'::text, 'yearly'::text, 'monthly'::text, 'fiscal_yearly'::text])))
 - `ck_numbering_schemes_status` CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
 - `fk_numbering_schemes_branch_id` FOREIGN KEY (company_id, branch_id) REFERENCES org.branches(company_id, id)
 - `fk_numbering_schemes_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
@@ -403,11 +404,13 @@ Requirements: KRN-NUM-05. Source: kernel.yaml.
 | reason | text | no |  |  |
 | created_at | timestamp with time zone | no |  |  |
 | created_by | uuid | no |  |  |
+| document_id | uuid | yes |  | the cancelled document (no FK: it lives in its module's schema) |
 
 Constraints:
 
 - `fk_numbering_voids_scheme_id` FOREIGN KEY (scheme_id) REFERENCES cfg.numbering_schemes(id)
 - `pk_numbering_voids` PRIMARY KEY (id)
+- `uq_numbering_voids_scheme_id_number` UNIQUE (scheme_id, number)
 
 Indexes:
 
@@ -7214,6 +7217,9 @@ Constraints:
 - `aud.ensure_subject_key` 
 - `aud.mark_anchor_verified` 
 - `aud.tg_refuse_change` 
+- `cfg.numbering_next` 
+- `cfg.numbering_series_root` 
+- `cfg.numbering_series_state` 
 - `cfg.tg_refuse_change` 
 - `doc.tg_refuse_change` 
 - `hrm.tg_refuse_change` 

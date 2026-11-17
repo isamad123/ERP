@@ -339,6 +339,70 @@ public sealed class GeneratorTests
     public void Naming_singular_entity_names(string table, string expected) => Assert.Equal(expected, Naming.Singular(table));
 
     [Fact]
+    public void S108_CR033_numbering_changes_go_to_new_files_and_the_frozen_cfg_file_stays()
+    {
+        var files = Generator.Generate(Root).Files;
+        const string Frozen = "V202611150004__kernel__cfg.sql";
+        var frozen = files[SqlEmitter.KernelMigrations + "/" + Frozen];
+        Assert.Equal(File.ReadAllText(Path.Combine(Root, SqlEmitter.KernelMigrations, Frozen)), frozen);
+        Assert.Contains("company_id uuid not null,", frozen[frozen.IndexOf("create table if not exists cfg.numbering_schemes", StringComparison.Ordinal)..], StringComparison.Ordinal);
+        Assert.Contains("check (reset_rule in ('never', 'yearly', 'monthly'))", frozen, StringComparison.Ordinal);
+        Assert.Contains("ix_numbering_voids_scheme_id", frozen, StringComparison.Ordinal);
+
+        var design = files[SqlEmitter.KernelMigrations + "/V202611150305__kernel__design_s1_08.sql"];
+        Assert.Contains("alter table cfg.numbering_schemes alter column company_id drop not null;", design, StringComparison.Ordinal);
+        Assert.Contains("add constraint ck_numbering_schemes_reset_rule check (reset_rule in ('never', 'yearly', 'monthly', 'fiscal_yearly'));", design, StringComparison.Ordinal);
+        Assert.Contains("add constraint ck_numbering_schemes_branch_company check (branch_id is null or company_id is not null);", design, StringComparison.Ordinal);
+        Assert.Contains("alter table cfg.numbering_voids add column if not exists document_id uuid;", design, StringComparison.Ordinal);
+        Assert.Contains("add constraint uq_numbering_voids_scheme_id_number unique (scheme_id, number);", design, StringComparison.Ordinal);
+
+        var functions = files[SqlEmitter.KernelMigrations + "/V202611150335__kernel__functions_s1_08.sql"];
+        Assert.Contains("create or replace function cfg.numbering_next(", functions, StringComparison.Ordinal);
+        Assert.Contains("set lock_timeout = '5s'", functions, StringComparison.Ordinal);
+        Assert.Contains("grant execute on function cfg.numbering_next(uuid, bigint, text, timestamptz) to app_rw;", functions, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void S108_FR_KRN_NUM_03_numbered_columns_are_filled_by_the_numbering_service_and_never_accepted_from_the_caller()
+    {
+        var files = Generator.Generate(Root).Files;
+        var employments = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/EmploymentEndpoints.g.cs"];
+        var request = employments[employments.IndexOf("public sealed class EmploymentWriteRequest", StringComparison.Ordinal)..employments.IndexOf("public sealed class EmploymentListQuery", StringComparison.Ordinal)];
+        Assert.DoesNotContain("EmployeeNo", request, StringComparison.Ordinal);
+        Assert.Contains("row.EmployeeNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest(\"hrm.employee_no\", row.CompanyId, null, null)", employments, StringComparison.Ordinal);
+        Assert.Contains("NumberRequest(\"hrm.contract_no\", row.CompanyId, null, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/ContractEndpoints.g.cs"], StringComparison.Ordinal);
+        Assert.Contains("NumberRequest(\"hrm.person_no\", null, null, null)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/PersonEndpoints.g.cs"], StringComparison.Ordinal);
+        Assert.Contains("NumberRequest(\"hrm.leave_request_no\", row.CompanyId, row.BranchId, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/LeaveRequestEndpoints.g.cs"], StringComparison.Ordinal);
+
+        var registry = files["src/Modules/Hrm/Erp.Hrm.Infrastructure/Generated/HrmNumberingTypes.g.cs"];
+        Assert.Equal(9, Model.Value.Tables.Sum(t => t.Numbering.Count));
+        Assert.Contains("new(\"hrm.employee_no\", \"hrm\", \"hrm.employments\", \"employee_no\", \"create\", false, true, false, \"EMP-{seq:5}\", \"never\", false),", registry, StringComparison.Ordinal);
+        Assert.Contains("\"hrm.person_no\"", files["src/Modules/Hrm/Erp.Hrm.Infrastructure/Access/numbering.g.json"], StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("default: \"EMP-{seq:5}\", reset: never}", "default: \"EMP-{seq:5}\", reset: yearly}", "errors.numbering.pattern_year_needed")]
+    [InlineData("assign: create, override: yes", "assign: create, gap_free: yes, override: yes", "cannot be gap-free")]
+    [InlineData("type: hrm.employee_no", "type: hrm.letter_no", "declared more than once")]
+    public void S108_Validator_stops_on_an_invalid_numbering_key(string from, string to, string message)
+    {
+        var root = CopyDesign();
+        try
+        {
+            var file = Path.Combine(root, "docs", "data-design", "hrm-people.yaml");
+            var text = File.ReadAllText(file);
+            Assert.Contains(from, text, StringComparison.Ordinal);
+            File.WriteAllText(file, text.Replace(from, to, StringComparison.Ordinal));
+            var error = Assert.Throws<DesignException>(() => Generator.LoadModel(root));
+            Assert.Contains(message, error.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Validator_stops_on_untranslated_design_text_instead_of_guessing()
     {
         var root = CopyDesign();

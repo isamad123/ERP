@@ -286,6 +286,11 @@ tables:
         text: "fk org.org_units; null for root; cycle check by trigger"
         stub: { name: org_unit_links_parent_cycle, owner: S1.14 }
 
+  cfg.numbering_schemes:
+    checks:
+      - text: "a branch scheme belongs to a company"
+        check: { name: ck_numbering_schemes_branch_company, sql: "branch_id is null or company_id is not null" }
+
   cfg.numbering_counters:
     notes:
       - text: "Gap-free schemes lock this row in the transaction; gap-allowed schemes use a PostgreSQL sequence per scheme."
@@ -596,3 +601,126 @@ functions:
       $fn$;
       revoke all on function aud.append_changes(jsonb) from public;
       grant execute on function aud.append_changes(jsonb) to app_rw, app_audit;
+
+  - slice: S1.08
+    name: cfg.numbering_series_root
+    purpose: "The scheme that owns a scheme's series (slice S1.08 ruling Q8, P1): schemes of the same company, branch, document type and pattern share one series; its counters and sequences belong to the member that issued the first number (the oldest such member), else to the scheme itself. Decided by issued numbers, not by creation time, so adding a scheme to a series can never move its counters."
+    sql: |
+      create or replace function cfg.numbering_series_root(p_scheme_id uuid)
+      returns uuid
+      language sql stable security definer
+      set search_path = pg_catalog, pg_temp
+      as $fn$
+          select coalesce((
+              select r.id from cfg.numbering_schemes n
+              join cfg.numbering_schemes r on r.company_id is not distinct from n.company_id and r.branch_id is not distinct from n.branch_id
+                   and r.document_type = n.document_type and r.pattern = n.pattern
+              where n.id = p_scheme_id
+                and (exists (select 1 from cfg.numbering_counters c where c.scheme_id = r.id)
+                     or exists (select 1 from pg_class k join pg_namespace ns on ns.oid = k.relnamespace
+                                where ns.nspname = 'cfg' and k.relkind = 'S'
+                                  and left(k.relname, 40) = 'numseq_' || replace(r.id::text, '-', '') || '_'))
+              order by r.created_at, r.id limit 1), p_scheme_id)
+      $fn$;
+      revoke all on function cfg.numbering_series_root(uuid) from public;
+      grant execute on function cfg.numbering_series_root(uuid) to app_rw, app_ro;
+
+  - slice: S1.08
+    name: cfg.numbering_next
+    purpose: "The next running value of a numbering scheme (FR-KRN-NUM-02, FR-KRN-NUM-06; slice S1.08 rulings Q2, Q3, Q8): owned by the database owner, run with its rights; the application can only call it. The scheme row is held FOR SHARE (a scheme edit or retirement waits for allocations in flight) and must still be active at the version the caller read. A scheme continues its series (same company, branch, document type and pattern, Q8): the counters and sequences of cfg.numbering_series_root. Gap-free: the counter row is created or advanced in the caller's transaction and stays locked to its commit, so a rollback gives the number back; a wait of more than 5 seconds fails (lock_not_available). Gap-allowed: a PostgreSQL sequence per series and period, created on first use (cache 1, so numbers come out in time order); sequences are never rolled back, so callers never wait on each other."
+    sql: |
+      create or replace function cfg.numbering_next(p_scheme_id uuid, p_row_version bigint, p_scope_key text, p_now timestamptz)
+      returns bigint
+      language plpgsql security definer
+      set search_path = pg_catalog, pg_temp
+      set lock_timeout = '5s'
+      as $fn$
+      declare
+          s record;
+          root uuid;
+          seq_name text;
+          v bigint;
+          attempt integer := 0;
+      begin
+          if p_scope_key is null or p_scope_key !~ '^(all|[0-9]{4}|[0-9]{4}-[0-9]{2}|fy[0-9]{4})$' then
+              raise exception 'cfg.numbering_next: scope key % is not a period', p_scope_key using errcode = '22023';
+          end if;
+
+          select n.company_id, n.branch_id, n.document_type, n.pattern, n.gap_free, n.start_value, n.status, n.row_version
+          into s from cfg.numbering_schemes n where n.id = p_scheme_id for share;
+          if not found or s.status <> 'active' or s.row_version <> p_row_version then
+              raise exception 'cfg.numbering_next: scheme % is retired or changed', p_scheme_id using errcode = 'ER801';
+          end if;
+
+          root := cfg.numbering_series_root(p_scheme_id);
+
+          if s.gap_free then
+              insert into cfg.numbering_counters as c (scheme_id, scope_key, last_value, updated_at)
+              values (root, p_scope_key, s.start_value, p_now)
+              on conflict (scheme_id, scope_key) do update set last_value = c.last_value + 1, updated_at = excluded.updated_at
+              returning c.last_value into v;
+              return v;
+          end if;
+
+          seq_name := 'numseq_' || replace(root::text, '-', '') || '_' || replace(p_scope_key, '-', '_');
+          loop
+              attempt := attempt + 1;
+              begin
+                  return nextval(('cfg.' || seq_name)::regclass);
+              exception when undefined_table then
+                  if attempt > 3 then
+                      raise;
+                  end if;
+                  begin
+                      execute format('create sequence cfg.%I as bigint start with %s minvalue 1 cache 1 no cycle', seq_name, s.start_value);
+                      execute format('comment on sequence cfg.%I is %L', seq_name, 'Gap-allowed numbering series ' || root::text || ', period ' || p_scope_key || ' (S1.08)');
+                  exception when duplicate_table or unique_violation then
+                      null; -- another session created it first
+                  end;
+              end;
+          end loop;
+      end
+      $fn$;
+      revoke all on function cfg.numbering_next(uuid, bigint, text, timestamptz) from public;
+      grant execute on function cfg.numbering_next(uuid, bigint, text, timestamptz) to app_rw;
+
+  - slice: S1.08
+    name: cfg.numbering_series_state
+    purpose: "What a scheme's series has issued, per period (slice S1.08 rulings Q8, Q9, Q10): the last value of each gap-free counter and gap-allowed sequence of the series the scheme belongs to. Used to lock a scheme after first use, to refuse a manual number the series could still produce and for the void report. Read-only; run with the owner's rights because the application cannot read the sequences."
+    sql: |
+      create or replace function cfg.numbering_series_state(p_scheme_id uuid)
+      returns table (scope_key text, last_value bigint, gap_free boolean)
+      language plpgsql stable security definer
+      set search_path = pg_catalog, pg_temp
+      as $fn$
+      declare
+          root uuid;
+          prefix text;
+          rel record;
+          lv bigint;
+          called boolean;
+      begin
+          if not exists (select 1 from cfg.numbering_schemes where id = p_scheme_id) then
+              return;
+          end if;
+          root := cfg.numbering_series_root(p_scheme_id);
+
+          return query select c.scope_key, c.last_value, true from cfg.numbering_counters c where c.scheme_id = root;
+
+          prefix := 'numseq_' || replace(root::text, '-', '') || '_';
+          for rel in
+              select c.relname from pg_class c join pg_namespace ns on ns.oid = c.relnamespace
+              where ns.nspname = 'cfg' and c.relkind = 'S' and left(c.relname, length(prefix)) = prefix
+          loop
+              execute format('select last_value, is_called from cfg.%I', rel.relname) into lv, called;
+              if called then
+                  scope_key := regexp_replace(substr(rel.relname, length(prefix) + 1), '^([0-9]{4})_([0-9]{2})$', '\1-\2');
+                  last_value := lv;
+                  gap_free := false;
+                  return next;
+              end if;
+          end loop;
+      end
+      $fn$;
+      revoke all on function cfg.numbering_series_state(uuid) from public;
+      grant execute on function cfg.numbering_series_state(uuid) to app_rw, app_ro;

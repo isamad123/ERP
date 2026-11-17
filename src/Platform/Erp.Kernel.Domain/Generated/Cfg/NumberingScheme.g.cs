@@ -10,13 +10,13 @@ namespace Erp.Kernel.Domain.Generated.Cfg;
 /// cfg.numbering_schemes: NumberingScheme.
 /// Requirements: KRN-NUM-01, KRN-NUM-02, HRM-EMP-04.
 /// </summary>
-public sealed partial class NumberingScheme : global::Erp.BuildingBlocks.Domain.Entities.IEntity, global::Erp.BuildingBlocks.Domain.Entities.ICreationAudited, global::Erp.BuildingBlocks.Domain.Entities.IVersioned, global::Erp.BuildingBlocks.Domain.Entities.ICompanyScoped
+public sealed partial class NumberingScheme : global::Erp.BuildingBlocks.Domain.Entities.IEntity, global::Erp.BuildingBlocks.Domain.Entities.ICreationAudited, global::Erp.BuildingBlocks.Domain.Entities.IVersioned
 {
     /// <summary>id</summary>
     public global::System.Guid Id { get; set; }
 
     /// <summary>company_id</summary>
-    public global::System.Guid CompanyId { get; set; }
+    public global::System.Guid? CompanyId { get; set; }
 
     /// <summary>branch_id: fk org.branches</summary>
     public global::System.Guid? BranchId { get; set; }

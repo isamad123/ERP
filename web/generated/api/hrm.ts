@@ -899,7 +899,6 @@ export interface ContractWrite
 {
     companyId: string;
     employmentId: string;
-    contractNo: string;
     startDate: string;
     endDate?: string | null;
     renewalNoticeDays?: number | null;
@@ -1265,7 +1264,6 @@ export interface EmployeeLetter
 export interface EmployeeLetterWrite
 {
     companyId: string;
-    letterNo: string;
     employmentId: string;
     templateId: string;
     letterType: string;
@@ -1502,7 +1500,6 @@ export interface EmploymentWrite
 {
     companyId: string;
     personId: string;
-    employeeNo: string;
     employeeType: string;
     joiningDate: string;
     serviceStartDate: string;
@@ -1662,7 +1659,6 @@ export interface ExpenseClaimWrite
 {
     companyId: string;
     branchId?: string | null;
-    claimNo: string;
     employmentId: string;
     currencyCode: string;
     totalAmount: number;
@@ -2421,7 +2417,6 @@ export interface LeaveRequestWrite
 {
     companyId: string;
     branchId?: string | null;
-    requestNo: string;
     employmentId: string;
     leaveTypeId: string;
     startDate: string;
@@ -2777,7 +2772,6 @@ export interface Loan
 export interface LoanWrite
 {
     companyId: string;
-    loanNo: string;
     employmentId: string;
     loanTypeId: string;
     principal: number;
@@ -3569,7 +3563,6 @@ export interface PayRun
 export interface PayRunWrite
 {
     companyId: string;
-    runNo: string;
     payGroupId: string;
     payPeriodId: string;
     kind: 'regular' | 'bonus' | 'correction' | 'final_settlement' | 'advance';
@@ -3978,7 +3971,6 @@ export interface Person
 
 export interface PersonWrite
 {
-    personNo: string;
     firstName: string;
     middleName?: string | null;
     lastName?: string | null;
@@ -5099,7 +5091,6 @@ export interface ServiceRequestWrite
 {
     companyId: string;
     branchId?: string | null;
-    requestNo: string;
     employmentId: string;
     kind: string;
     templateId?: string | null;

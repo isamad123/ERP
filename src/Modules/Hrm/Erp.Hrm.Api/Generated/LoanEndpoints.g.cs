@@ -38,7 +38,6 @@ public sealed class LoanResponse
 public sealed class LoanWriteRequest
 {
     public global::System.Guid? CompanyId { get; init; }
-    public string? LoanNo { get; init; }
     public global::System.Guid? EmploymentId { get; init; }
     public global::System.Guid? LoanTypeId { get; init; }
     public decimal? Principal { get; init; }
@@ -107,7 +106,7 @@ internal static class LoanEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.LoanAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LoanWriteRequest request, global::Erp.Hrm.Application.Generated.ILoanRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LoanWriteRequest request, global::Erp.Hrm.Application.Generated.ILoanRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Numbering.INumberAllocator numbers, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.loans.create", async () =>
         {
             var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.LoanAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
@@ -124,6 +123,7 @@ internal static class LoanEndpoints
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            row.LoanNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.loan_no", row.CompanyId, null, null), cancellationToken).ConfigureAwait(false);
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created("/api/hrm/loans/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.LoanAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
@@ -185,10 +185,6 @@ internal static class LoanEndpoints
         {
             errors.Add("companyId");
         }
-        if (request.LoanNo is null && (!update || access.CanEdit("loan_no")))
-        {
-            errors.Add("loanNo");
-        }
         if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
         {
             errors.Add("employmentId");
@@ -234,14 +230,6 @@ internal static class LoanEndpoints
             {
                 denied.Add("companyId");
             }
-        }
-        if (access.CanEdit("loan_no"))
-        {
-            row.LoanNo = request.LoanNo!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LoanNo, row.LoanNo, update))
-        {
-            denied.Add("loanNo");
         }
         if (access.CanEdit("employment_id"))
         {

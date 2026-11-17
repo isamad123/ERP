@@ -40,7 +40,6 @@ public sealed class EmployeeLetterResponse
 public sealed class EmployeeLetterWriteRequest
 {
     public global::System.Guid? CompanyId { get; init; }
-    public string? LetterNo { get; init; }
     public global::System.Guid? EmploymentId { get; init; }
     public global::System.Guid? TemplateId { get; init; }
     public string? LetterType { get; init; }
@@ -109,7 +108,7 @@ internal static class EmployeeLetterEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmployeeLetterAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(EmployeeLetterWriteRequest request, global::Erp.Hrm.Application.Generated.IEmployeeLetterRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(EmployeeLetterWriteRequest request, global::Erp.Hrm.Application.Generated.IEmployeeLetterRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Numbering.INumberAllocator numbers, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.employee_letters.create", async () =>
         {
             var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.EmployeeLetterAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
@@ -126,6 +125,7 @@ internal static class EmployeeLetterEndpoints
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            row.LetterNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.letter_no", row.CompanyId, null, null), cancellationToken).ConfigureAwait(false);
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created("/api/hrm/employee-letters/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmployeeLetterAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
@@ -189,10 +189,6 @@ internal static class EmployeeLetterEndpoints
         {
             errors.Add("companyId");
         }
-        if (request.LetterNo is null && (!update || access.CanEdit("letter_no")))
-        {
-            errors.Add("letterNo");
-        }
         if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
         {
             errors.Add("employmentId");
@@ -234,14 +230,6 @@ internal static class EmployeeLetterEndpoints
             {
                 denied.Add("companyId");
             }
-        }
-        if (access.CanEdit("letter_no"))
-        {
-            row.LetterNo = request.LetterNo!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LetterNo, row.LetterNo, update))
-        {
-            denied.Add("letterNo");
         }
         if (access.CanEdit("employment_id"))
         {

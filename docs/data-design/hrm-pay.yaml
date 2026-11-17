@@ -173,6 +173,8 @@
   indexes: [[pay_group_id, pay_period_id]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
+  numbering: {column: run_no, type: hrm.pay_run_no, assign: post, gap_free: yes, default: "PR-{yyyy}{mm}-{seq:2}", reset: monthly}
   reqs: [PAY-10, PAY-14, PAY-15, PAY-34]
   notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33); status column may still advance (paid, posted, closed) through the run service only."
 
@@ -482,6 +484,8 @@
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   field_class: {principal: salary}
+  # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
+  numbering: {column: loan_no, type: hrm.loan_no, assign: post, gap_free: yes, default: "LN-{yyyy}-{seq:5}", reset: yearly}
   reqs: [LON-01, LON-02, LON-03, LON-05]
 
 - table: hrm.loan_installments
@@ -548,6 +552,8 @@
   unique: [[company_id, claim_no]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, branch: branch_id, employment: employment_id}
+  # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
+  numbering: {column: claim_no, type: hrm.expense_claim_no, assign: post, gap_free: yes, default: "EXP-{yyyy}-{seq:5}", reset: yearly}
   reqs: [EXP-02, EXP-05, EXP-06]
 
 - table: hrm.expense_claim_lines

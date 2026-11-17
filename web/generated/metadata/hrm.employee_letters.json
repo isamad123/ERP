@@ -70,7 +70,7 @@
       "field": "letterNo",
       "kind": "Text",
       "required": true,
-      "readOnly": false,
+      "readOnly": true,
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.employee_letters.letter_no"

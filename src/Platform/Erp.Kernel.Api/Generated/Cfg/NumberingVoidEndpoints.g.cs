@@ -17,16 +17,9 @@ public sealed class NumberingVoidResponse
     public global::System.Guid SchemeId { get; init; }
     public string Number { get; init; } = null!;
     public string Reason { get; init; } = null!;
+    public global::System.Guid? DocumentId { get; init; }
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
-}
-
-/// <summary>Body of create and update calls for cfg.numbering_voids. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class NumberingVoidWriteRequest
-{
-    public global::System.Guid? SchemeId { get; init; }
-    public string? Number { get; init; }
-    public string? Reason { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for cfg.numbering_voids.</summary>
@@ -39,7 +32,7 @@ public sealed class NumberingVoidListQuery
     public global::System.Guid? SchemeId { get; init; }
 }
 
-/// <summary>Generated endpoints of cfg.numbering_voids: read, create. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of cfg.numbering_voids: read. Answers pass through field security (S1.06).</summary>
 internal static class NumberingVoidEndpoints
 {
     private const string Resource = "cfg.numbering_voids";
@@ -49,7 +42,6 @@ internal static class NumberingVoidEndpoints
         var group = app.MapGroup("/api/cfg/numbering-voids").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("cfg.numbering_voids.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.numbering_voids.read"));
         group.MapGet("/{id:guid}", GetAsync).WithName("cfg.numbering_voids.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.numbering_voids.read"));
-        group.MapPost("/", CreateAsync).WithName("cfg.numbering_voids.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "cfg.numbering_voids.create"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] NumberingVoidListQuery query, global::Erp.Kernel.Application.Generated.Cfg.INumberingVoidRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -68,84 +60,14 @@ internal static class NumberingVoidEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.NumberingVoidAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(NumberingVoidWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.INumberingVoidRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.numbering_voids.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.NumberingVoidAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/numbering-voids/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.NumberingVoidAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static NumberingVoidResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid row) => new()
     {
         Id = row.Id,
         SchemeId = row.SchemeId,
         Number = row.Number,
         Reason = row.Reason,
+        DocumentId = row.DocumentId,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(NumberingVoidWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.SchemeId is null && (!update || access.CanEdit("scheme_id")))
-        {
-            errors.Add("schemeId");
-        }
-        if (request.Number is null && (!update || access.CanEdit("number")))
-        {
-            errors.Add("number");
-        }
-        if (request.Reason is null && (!update || access.CanEdit("reason")))
-        {
-            errors.Add("reason");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(NumberingVoidWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("scheme_id"))
-        {
-            row.SchemeId = request.SchemeId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SchemeId, row.SchemeId, update))
-        {
-            denied.Add("schemeId");
-        }
-        if (access.CanEdit("number"))
-        {
-            row.Number = request.Number!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Number, row.Number, update))
-        {
-            denied.Add("number");
-        }
-        if (access.CanEdit("reason"))
-        {
-            row.Reason = request.Reason!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Reason, row.Reason, update))
-        {
-            denied.Add("reason");
-        }
-        return denied;
-    }
 }

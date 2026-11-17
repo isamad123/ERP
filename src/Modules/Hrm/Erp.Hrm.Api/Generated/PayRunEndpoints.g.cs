@@ -41,7 +41,6 @@ public sealed class PayRunResponse
 public sealed class PayRunWriteRequest
 {
     public global::System.Guid? CompanyId { get; init; }
-    public string? RunNo { get; init; }
     public global::System.Guid? PayGroupId { get; init; }
     public global::System.Guid? PayPeriodId { get; init; }
     public string? Kind { get; init; }
@@ -111,7 +110,7 @@ internal static class PayRunEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PayRunAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PayRunWriteRequest request, global::Erp.Hrm.Application.Generated.IPayRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PayRunWriteRequest request, global::Erp.Hrm.Application.Generated.IPayRunRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Numbering.INumberAllocator numbers, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_runs.create", async () =>
         {
             var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PayRunAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
@@ -128,6 +127,7 @@ internal static class PayRunEndpoints
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            row.RunNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.pay_run_no", row.CompanyId, null, null), cancellationToken).ConfigureAwait(false);
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created("/api/hrm/pay-runs/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PayRunAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
@@ -192,10 +192,6 @@ internal static class PayRunEndpoints
         {
             errors.Add("companyId");
         }
-        if (request.RunNo is null && (!update || access.CanEdit("run_no")))
-        {
-            errors.Add("runNo");
-        }
         if (request.PayGroupId is null && (!update || access.CanEdit("pay_group_id")))
         {
             errors.Add("payGroupId");
@@ -241,14 +237,6 @@ internal static class PayRunEndpoints
             {
                 denied.Add("companyId");
             }
-        }
-        if (access.CanEdit("run_no"))
-        {
-            row.RunNo = request.RunNo!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RunNo, row.RunNo, update))
-        {
-            denied.Add("runNo");
         }
         if (access.CanEdit("pay_group_id"))
         {

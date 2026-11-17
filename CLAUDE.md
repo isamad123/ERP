@@ -92,7 +92,8 @@ higher one is a defect in the lower one: stop and report it.
 Run from the repository root. Tests use Microsoft Testing Platform (`global.json`), so `dotnet test` takes `--project`/`--solution`.
 - Restore and build (warnings are errors; this is also the lint step: analysers + `.editorconfig`): `dotnet build Erp.sln -v q`
 - Local PostgreSQL 16 for integration tests (when Docker is not running):
-  `sudo service postgresql start && sudo -u postgres psql -c "alter user postgres password 'postgres'"` then
+  `sudo service postgresql start && sudo -u postgres psql -c "alter user postgres password 'postgres'"` (once per server, for the
+  100-transaction numbering test, S1.08: `sudo -u postgres psql -c "alter system set max_connections = 300" && sudo service postgresql restart`) then
   `export ERP_TEST_PG="Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=postgres"`.
   Without `ERP_TEST_PG` the tests start `postgres:16` through Testcontainers (needs Docker).
 - All tests: `dotnet test --solution Erp.sln --no-build`
@@ -115,7 +116,9 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
 - Access control (S1.06): `generate` also writes each module's permission manifest (`*/Access/permissions.g.json`); baseline roles are
   data in `*/Access/baseline-roles.json`, applied by provisioning and `migrate`. Access tests use the real engine (`tests/Erp.IntegrationTests/Access`);
   the isolation suite keeps allow-all doubles (`AllowAllAccess`).
-- Not yet automated: secret scan, invariant tests.
+- Numbering (S1.08): one kernel service (`INumberAllocator`) gives every document number; tables declare `numbering:` in the data design.
+  Default schemes are seeded by provisioning and `migrate` (`NumberingSetup`). Invariant 6 tests: `--filter-trait "Invariant=6"`.
+- Not yet automated: secret scan; invariant tests other than invariant 6.
 
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.

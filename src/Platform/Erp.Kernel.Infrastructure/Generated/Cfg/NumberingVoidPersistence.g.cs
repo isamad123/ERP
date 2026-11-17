@@ -20,6 +20,7 @@ internal sealed class NumberingVoidConfiguration : IEntityTypeConfiguration<glob
         builder.Property(e => e.SchemeId).HasColumnName("scheme_id").HasColumnType("uuid");
         builder.Property(e => e.Number).HasColumnName("number").HasColumnType("text").IsRequired();
         builder.Property(e => e.Reason).HasColumnName("reason").HasColumnType("text").IsRequired();
+        builder.Property(e => e.DocumentId).HasColumnName("document_id").HasColumnType("uuid");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
     }
@@ -43,5 +44,11 @@ internal sealed class NumberingVoidRepository(
             query = query.Where(e => e.SchemeId == schemeIdFilter);
         }
         return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid>> FindBySchemeIdAndNumberAsync(global::System.Guid schemeId, string number, global::System.Threading.CancellationToken cancellationToken)
+    {
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.SchemeId == schemeId && e.Number == number).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

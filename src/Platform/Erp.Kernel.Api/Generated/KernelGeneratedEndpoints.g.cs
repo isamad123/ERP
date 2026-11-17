@@ -107,6 +107,10 @@ internal static class GeneratedEndpointSupport
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.ErrorCode, detail: ex.Constraint);
         }
+        catch (global::Erp.Kernel.Contracts.Numbering.NumberingException ex)
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.ErrorKey);
+        }
     }
 
     public static IResult NotFound() => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "errors.data.not_found");

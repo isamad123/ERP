@@ -70,6 +70,15 @@ jobs:
       - name: Architecture tests
         run: dotnet test --project tests/Erp.ArchitectureTests --no-build -c Release --report-xunit-trx --results-directory logs/test-results
 
+      - name: PostgreSQL connection limit (the numbering tests run 100 concurrent transactions, S1.08)
+        # The service starts with the image default of 100 connections; the invariant-6 test needs 100 at once plus the
+        # other test classes running in parallel. Raised to 300 and the service restarted.
+        run: |
+          docker exec ${{ job.services.postgres.id }} psql -U erp -d erp_test -qc "alter system set max_connections = 300"
+          docker restart ${{ job.services.postgres.id }}
+          for i in $(seq 1 60); do docker exec ${{ job.services.postgres.id }} pg_isready -U erp -d erp_test && break; sleep 1; done
+          docker exec ${{ job.services.postgres.id }} psql -U erp -d erp_test -tc "show max_connections"
+
       - name: PostgreSQL 16 client tools (pg_dump and pg_restore for the backup and restore test, S1.03)
         # The client tools must match the server's major version (16). The runner's own tools may be newer and its
         # distribution may not package version 16, so the tools run from the same postgres:16 image as the service.

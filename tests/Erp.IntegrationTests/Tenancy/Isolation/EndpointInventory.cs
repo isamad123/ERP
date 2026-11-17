@@ -51,10 +51,22 @@ public enum EndpointKind
 
     /// <summary>Chain check (S1.07): checks only the bound customer's chain.</summary>
     AuditVerify,
+
+    /// <summary>Numbering scheme create (S1.08): a body naming A's company is refused on B's host and creates nothing in A.</summary>
+    NumberingCreate,
+
+    /// <summary>Action on a numbering scheme's route (S1.08): A's scheme id on B's host is 404.</summary>
+    NumberingRecordAction,
+
+    /// <summary>Registered document types (S1.08): B's list shows nothing of A's, even when the query names A's company.</summary>
+    NumberingCatalog,
+
+    /// <summary>Void report (S1.08): A's scheme named in the query string on B's host is 404.</summary>
+    NumberingQuery,
 }
 
 /// <summary>One API endpoint as the API host maps it: method, route and the table it serves.</summary>
-public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null, string? AuditKind = null)
+public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null, string? AuditKind = null, string? NumberingKind = null)
 {
     private const string IdSegment = "/{id:guid}";
 
@@ -68,6 +80,15 @@ public sealed record ApiEndpoint(string Method, string Pattern, string? Resource
     {
         get
         {
+            switch (NumberingKind)
+            {
+                case "create": return EndpointKind.NumberingCreate;
+                case "record_action": return EndpointKind.NumberingRecordAction;
+                case "catalog": return EndpointKind.NumberingCatalog;
+                case "query": return EndpointKind.NumberingQuery;
+                case not null: return EndpointKind.Unclassified;
+            }
+
             switch (AuditKind)
             {
                 case "query": return EndpointKind.AuditQuery;
@@ -168,12 +189,13 @@ public static class EndpointInventory
             var methods = endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods;
             var access = endpoint.Metadata.GetMetadata<AccessEndpointMetadata>();
             var audit = endpoint.Metadata.GetMetadata<AuditEndpointMetadata>();
-            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource ?? audit?.Resource;
+            var numbering = endpoint.Metadata.GetMetadata<NumberingEndpointMetadata>();
+            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource ?? audit?.Resource ?? numbering?.Resource;
             var identity = endpoint.Metadata.GetMetadata<IdentityEndpointMetadata>()?.Kind;
             var anonymous = endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null || endpoint.Metadata.GetMetadata<IAuthorizeData>() is null;
             foreach (var method in methods is { Count: > 0 } ? methods : ["*"])
             {
-                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind, audit?.Kind));
+                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind, audit?.Kind, numbering?.Kind));
             }
         }
 

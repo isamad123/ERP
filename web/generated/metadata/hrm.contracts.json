@@ -77,7 +77,7 @@
       "field": "contractNo",
       "kind": "Text",
       "required": true,
-      "readOnly": false,
+      "readOnly": true,
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.contracts.contract_no"

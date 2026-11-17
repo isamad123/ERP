@@ -181,11 +181,11 @@ export const labels =
 export interface NumberingScheme
 {
     id: string;
-    companyId: string;
+    companyId: string | null;
     branchId: string | null;
     documentType: string;
     pattern: string;
-    resetRule: 'never' | 'yearly' | 'monthly';
+    resetRule: 'never' | 'yearly' | 'monthly' | 'fiscal_yearly';
     gapFree: boolean;
     startValue: number;
     status: 'active' | 'retired';
@@ -194,18 +194,6 @@ export interface NumberingScheme
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface NumberingSchemeWrite
-{
-    companyId: string;
-    branchId?: string | null;
-    documentType: string;
-    pattern: string;
-    resetRule: 'never' | 'yearly' | 'monthly';
-    gapFree?: boolean;
-    startValue: number;
-    status: 'active' | 'retired';
 }
 
 export interface NumberingSchemeListQuery
@@ -221,8 +209,6 @@ export const numberingSchemes =
 {
     list: (query: NumberingSchemeListQuery = {}) => request<PagedResult<NumberingScheme>>('GET', '/api/cfg/numbering-schemes', { query }),
     get: (id: string) => request<NumberingScheme>('GET', `/api/cfg/numbering-schemes/${id}`),
-    create: (body: NumberingSchemeWrite) => request<NumberingScheme>('POST', '/api/cfg/numbering-schemes', { body }),
-    update: (id: string, body: NumberingSchemeWrite & { rowVersion: number }) => request<NumberingScheme>('PUT', `/api/cfg/numbering-schemes/${id}`, { body }),
 };
 
 /** cfg.numbering_voids: NumberingVoid. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -232,15 +218,9 @@ export interface NumberingVoid
     schemeId: string;
     number: string;
     reason: string;
+    documentId: string | null;
     createdAt: string;
     createdBy: string;
-}
-
-export interface NumberingVoidWrite
-{
-    schemeId: string;
-    number: string;
-    reason: string;
 }
 
 export interface NumberingVoidListQuery
@@ -254,7 +234,6 @@ export const numberingVoids =
 {
     list: (query: NumberingVoidListQuery = {}) => request<PagedResult<NumberingVoid>>('GET', '/api/cfg/numbering-voids', { query }),
     get: (id: string) => request<NumberingVoid>('GET', `/api/cfg/numbering-voids/${id}`),
-    create: (body: NumberingVoidWrite) => request<NumberingVoid>('POST', '/api/cfg/numbering-voids', { body }),
 };
 
 /** cfg.option_list_items: OptionListItem. Field rules (S1.06) may leave a field out or mask it as text. */

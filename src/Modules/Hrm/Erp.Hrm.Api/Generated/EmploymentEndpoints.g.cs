@@ -40,7 +40,6 @@ public sealed class EmploymentWriteRequest
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? PersonId { get; init; }
-    public string? EmployeeNo { get; init; }
     public string? EmployeeType { get; init; }
     public global::System.DateOnly? JoiningDate { get; init; }
     public global::System.DateOnly? ServiceStartDate { get; init; }
@@ -103,7 +102,7 @@ internal static class EmploymentEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmploymentAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(EmploymentWriteRequest request, global::Erp.Hrm.Application.Generated.IEmploymentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(EmploymentWriteRequest request, global::Erp.Hrm.Application.Generated.IEmploymentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Numbering.INumberAllocator numbers, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.employments.create", async () =>
         {
             var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.EmploymentAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
@@ -120,6 +119,7 @@ internal static class EmploymentEndpoints
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            row.EmployeeNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.employee_no", row.CompanyId, null, null), cancellationToken).ConfigureAwait(false);
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created("/api/hrm/employments/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmploymentAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
@@ -186,10 +186,6 @@ internal static class EmploymentEndpoints
         {
             errors.Add("personId");
         }
-        if (request.EmployeeNo is null && (!update || access.CanEdit("employee_no")))
-        {
-            errors.Add("employeeNo");
-        }
         if (request.EmployeeType is null && (!update || access.CanEdit("employee_type")))
         {
             errors.Add("employeeType");
@@ -235,14 +231,6 @@ internal static class EmploymentEndpoints
         else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PersonId, row.PersonId, update))
         {
             denied.Add("personId");
-        }
-        if (access.CanEdit("employee_no"))
-        {
-            row.EmployeeNo = request.EmployeeNo!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmployeeNo, row.EmployeeNo, update))
-        {
-            denied.Add("employeeNo");
         }
         if (access.CanEdit("employee_type"))
         {

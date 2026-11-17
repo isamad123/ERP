@@ -41,7 +41,6 @@ public sealed class PersonResponse
 /// <summary>Body of create and update calls for hrm.persons. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
 public sealed class PersonWriteRequest
 {
-    public string? PersonNo { get; init; }
     public string? FirstName { get; init; }
     public string? MiddleName { get; init; }
     public string? LastName { get; init; }
@@ -103,7 +102,7 @@ internal static class PersonEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PersonAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PersonWriteRequest request, global::Erp.Hrm.Application.Generated.IPersonRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PersonWriteRequest request, global::Erp.Hrm.Application.Generated.IPersonRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Numbering.INumberAllocator numbers, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.persons.create", async () =>
         {
             var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PersonAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
@@ -120,6 +119,7 @@ internal static class PersonEndpoints
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            row.PersonNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.person_no", null, null, null), cancellationToken).ConfigureAwait(false);
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created("/api/hrm/persons/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PersonAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
@@ -193,10 +193,6 @@ internal static class PersonEndpoints
     private static global::System.Collections.Generic.List<string> Validate(PersonWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var errors = new global::System.Collections.Generic.List<string>();
-        if (request.PersonNo is null && (!update || access.CanEdit("person_no")))
-        {
-            errors.Add("personNo");
-        }
         if (request.FirstName is null && (!update || access.CanEdit("first_name")))
         {
             errors.Add("firstName");
@@ -216,14 +212,6 @@ internal static class PersonEndpoints
     private static global::System.Collections.Generic.List<string> Apply(PersonWriteRequest request, global::Erp.Hrm.Domain.Generated.Person row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
     {
         var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("person_no"))
-        {
-            row.PersonNo = request.PersonNo!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PersonNo, row.PersonNo, update))
-        {
-            denied.Add("personNo");
-        }
         if (access.CanEdit("first_name"))
         {
             row.FirstName = request.FirstName!;

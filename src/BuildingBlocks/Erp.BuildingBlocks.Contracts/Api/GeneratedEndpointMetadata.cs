@@ -32,3 +32,10 @@ public sealed record AccessEndpointMetadata(string Kind, string Resource, string
 /// <c>verify</c> (chain check of the bound customer).
 /// </summary>
 public sealed record AuditEndpointMetadata(string Kind, string Resource, string Permission);
+
+/// <summary>
+/// Marks a numbering endpoint (slice S1.08) for the tenant-isolation suite: <see cref="Kind"/> is <c>create</c> (POST of a
+/// new scheme), <c>record_action</c> (a route with the scheme's <c>{id}</c>), <c>catalog</c> (the registered document
+/// types, optionally for one company) or <c>query</c> (the void report of a scheme named in the query string).
+/// </summary>
+public sealed record NumberingEndpointMetadata(string Kind, string Resource, string Permission);

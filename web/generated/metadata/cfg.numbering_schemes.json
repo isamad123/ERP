@@ -13,14 +13,6 @@
     {
       "action": "read",
       "permission": "cfg.numbering_schemes.read"
-    },
-    {
-      "action": "create",
-      "permission": "cfg.numbering_schemes.create"
-    },
-    {
-      "action": "update",
-      "permission": "cfg.numbering_schemes.update"
     }
   ],
   "companyScoped": true,
@@ -56,7 +48,7 @@
       "column": "company_id",
       "field": "companyId",
       "kind": "Uuid",
-      "required": true,
+      "required": false,
       "readOnly": false,
       "system": false,
       "filter": true,
@@ -115,6 +107,10 @@
         {
           "value": "monthly",
           "labelKey": "options.cfg.numbering_schemes.reset_rule.monthly"
+        },
+        {
+          "value": "fiscal_yearly",
+          "labelKey": "options.cfg.numbering_schemes.reset_rule.fiscal_yearly"
         }
       ]
     },
