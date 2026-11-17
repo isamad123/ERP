@@ -1,0 +1,18 @@
+{
+  "errors.licence.locked": "لائسنس مقفل ہے۔ آپ اب بھی سائن اِن کر سکتے ہیں، لائسنس کا صفحہ دیکھ سکتے ہیں اور اپنا ڈیٹا برآمد کر سکتے ہیں۔ تجدید کے لیے اپنے فراہم کنندہ سے رابطہ کریں۔",
+  "errors.licence.limit_reached": "لائسنس کی ایک حد پوری ہو چکی ہے۔ اسے بڑھانے کے لیے اپنے فراہم کنندہ سے رابطہ کریں۔",
+  "errors.licence.limit_reached.users.named": "لائسنس میں نامزد صارفین کی حد پوری ہو چکی ہے۔ کسی دوسرے صارف کو غیر فعال کریں، یا حد بڑھانے کے لیے اپنے فراہم کنندہ سے رابطہ کریں۔",
+  "errors.licence.limit_reached.users.concurrent": "لائسنس میں ایک وقت میں سائن اِن صارفین کی حد پوری ہو چکی ہے۔ کسی کے سائن آؤٹ ہونے پر دوبارہ کوشش کریں، یا حد بڑھانے کے لیے اپنے فراہم کنندہ سے رابطہ کریں۔",
+  "errors.licence.limit_reached.companies": "لائسنس میں کمپنیوں کی حد پوری ہو چکی ہے۔ اسے بڑھانے کے لیے اپنے فراہم کنندہ سے رابطہ کریں۔",
+  "errors.licence.limit_reached.employees.active": "لائسنس میں فعال ملازمین کی حد پوری ہو چکی ہے۔ اسے بڑھانے کے لیے اپنے فراہم کنندہ سے رابطہ کریں۔",
+  "errors.licence.limit_reached.storage.gb": "لائسنس میں ذخیرے کی حد پوری ہو چکی ہے۔ اسے بڑھانے کے لیے اپنے فراہم کنندہ سے رابطہ کریں۔",
+  "errors.licence.limit_reached.api.calls": "لائسنس میں API کالز کی حد پوری ہو چکی ہے۔ اسے بڑھانے کے لیے اپنے فراہم کنندہ سے رابطہ کریں۔",
+  "errors.licence.usage_range_invalid": "مہینے yyyymm کی صورت میں دیں، پہلا آخری کے بعد نہ ہو، اور زیادہ سے زیادہ 36 مہینے۔",
+  "permissions.cfg.licence.read": "لائسنس کا صفحہ اور استعمال کے گوشوارے دیکھیں",
+  "licence.states.active": "فعال",
+  "licence.states.warning": "جلد ختم ہونے والا",
+  "licence.states.grace": "رعایتی مدت",
+  "licence.states.read_only": "صرف پڑھنے کے لیے",
+  "licence.states.locked": "مقفل",
+  "licence.warnings.limit": "{limit} لائسنس کی حد کے {percent} فیصد پر ہے۔"
+}

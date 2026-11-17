@@ -13,7 +13,6 @@
   "errors.password.reused": "Choose a password you have not used recently.",
   "errors.password.too_short": "The password is too short.",
   "errors.password.too_simple": "Use a mix of upper-case and lower-case letters, digits and symbols.",
-  "errors.user.limit_reached": "Your subscription's user limit has been reached. Disable another user or ask for more users.",
   "errors.user.no_password": "This user has not set a password yet.",
   "errors.user.not_locked": "This user is not locked.",
   "errors.user.reason_required": "Enter a reason.",

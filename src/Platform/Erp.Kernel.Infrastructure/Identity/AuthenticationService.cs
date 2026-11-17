@@ -4,6 +4,7 @@ using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.Kernel.Application.Identity;
+using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Domain.Identity;
 using Npgsql;
 
@@ -22,7 +23,8 @@ public sealed class AuthenticationService(
     IClock clock,
     IPasswordHasher hasher,
     IAccessTokenIssuer issuer,
-    IFieldEncryptorProvider encryptors) : IAuthenticationService
+    IFieldEncryptorProvider encryptors,
+    ILimitGuard limits) : IAuthenticationService
 {
     private const int MaxLoginLength = 320;
     private const int MaxPasswordLength = 1024;
@@ -319,10 +321,8 @@ public sealed class AuthenticationService(
             return new AuthResult(AuthOutcome.Invalid, Errors: errors);
         }
 
-        if (!await IdentityDb.SeatAvailableAsync(connection, tx, cancellationToken).ConfigureAwait(false))
-        {
-            return AuthResult.Invalid(UserAdministrationService.UserLimitReached);
-        }
+        // Named users (FR-KRN-IAM-18; slice S1.09b limit guard, ruling Q7): refused at the limit with LimitReachedException.
+        await limits.TakeAsync(LimitKeys.NamedUsers, tx, account.Id, cancellationToken).ConfigureAwait(false);
 
         await IdentityDb.SetPasswordAsync(connection, tx, account.Id, hasher.Hash(newPassword!), hasher.Algorithm, account.Id, now, cancellationToken).ConfigureAwait(false);
         await IdentityDb.UseTokenAsync(connection, tx, token.Id, account.Id, now, cancellationToken).ConfigureAwait(false);
@@ -365,6 +365,8 @@ public sealed class AuthenticationService(
         }
 
         await IdentityDb.ResetFailuresAsync(connection, tx, account.Id, cancellationToken).ConfigureAwait(false);
+        // Concurrent users (FR-ADM-USR-08; ruling Q7, B2): a new session needs a seat unless the user already holds one.
+        await limits.TakeAsync(LimitKeys.ConcurrentUsers, tx, account.Id, cancellationToken).ConfigureAwait(false);
         var sessionId = Guid.CreateVersion7(now);
         var refresh = SessionTokens.New(sessionId);
         await IdentityDb.InsertSessionAsync(connection, tx, sessionId, account.Id, now, now.AddMinutes(policy.Session.AbsoluteMinutes), client, OpaqueTokens.Hash(refresh), cancellationToken).ConfigureAwait(false);

@@ -73,6 +73,9 @@ public static class KernelSettingKeys
 
     /// <summary>Time zone of the company (IANA name, for example Asia/Karachi).</summary>
     public const string OrgTimeZone = "org.time_zone";
+
+    /// <summary>Percentage of a licence limit at which administrators are warned.</summary>
+    public const string CfgLimitsWarningPercent = "cfg.limits.warning_percent";
 }
 
 /// <summary>Keys of the feature flags declared in the kernel settings manifest (FR-KRN-SET-05).</summary>

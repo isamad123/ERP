@@ -79,7 +79,7 @@ public static class AuditEndpoints
                 http.Response.Headers["X-Export-Rows"] = export.Rows.ToString(CultureInfo.InvariantCulture);
                 http.Response.Headers["X-Export-Truncated"] = export.Truncated ? "true" : "false";
                 return Results.File(Encoding.UTF8.GetBytes(export.Csv), "text/csv; charset=utf-8", "change-log.csv");
-            }, ct)),
+            }, ct)).WithMetadata(new AllowedWhenLockedMetadata()), // the export the specification allows when locked (slice S1.09 ruling Q5)
             "query", "aud.change_log", AuditPermissions.Export);
 
         Tag(aud.MapPost("/verify", (VerifyRequest body, IAuditVerifier v, IPermissionChecker p, CancellationToken ct) =>

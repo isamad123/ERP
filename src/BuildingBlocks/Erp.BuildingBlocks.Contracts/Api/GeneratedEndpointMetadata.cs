@@ -69,3 +69,10 @@ public sealed record NumberingEndpointMetadata(string Kind, string Resource, str
 /// a company, a user group or a history row) or <c>self</c> (a change of the signed-in user's own value).
 /// </summary>
 public sealed record SettingsEndpointMetadata(string Kind, string Resource, string Permission);
+
+/// <summary>
+/// Marks a licence endpoint (slice S1.09b) for the tenant-isolation suite: <see cref="Kind"/> is <c>capabilities</c> (what the
+/// signed-in caller's customer may use), <c>licence</c> (the licence page) or <c>usage</c> (monthly statements of the bound
+/// customer; the query string names months only).
+/// </summary>
+public sealed record LicenceEndpointMetadata(string Kind, string Permission);
