@@ -79,7 +79,7 @@
       "field": "requestNo",
       "kind": "Text",
       "required": true,
-      "readOnly": false,
+      "readOnly": true,
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.service_requests.request_no"

@@ -279,6 +279,8 @@
   indexes: [[employment_id, start_date], [company_id, status]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, branch: branch_id, employment: employment_id}
+  # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
+  numbering: {column: request_no, type: hrm.leave_request_no, assign: post, gap_free: yes, default: "LV-{yyyy}-{seq:6}", reset: yearly, date: start_date}
   reqs: [LVE-04, LVE-05, LVE-06, LVE-15, LVE-16]
 
 - table: hrm.leave_request_days

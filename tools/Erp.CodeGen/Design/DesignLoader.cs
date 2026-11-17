@@ -13,7 +13,8 @@ public static partial class DesignLoader
 
     private static readonly string[] KnownKeys =
         ["table", "purpose", "traits", "status", "columns", "unique", "indexes", "eff_key", "key", "checks", "notes", "partition", "reqs",
-         "added_in", "updatable_added_in", "api_read_only", "scope", "field_class", "api_actions", "audit", "audit_reason", "indexes_added_in"];
+         "added_in", "updatable_added_in", "api_read_only", "scope", "field_class", "api_actions", "audit", "audit_reason", "indexes_added_in",
+         "numbering", "optional_added_in", "enum_added_in", "checks_added_in", "uniques_added_in"];
 
     /// <summary>Data-scope dimensions a table may declare in <c>scope:</c> (CR-018).</summary>
     public static readonly string[] ScopeDimensions = ["company", "branch", "org_unit", "employment", "person", "user"];
@@ -108,8 +109,10 @@ public static partial class DesignLoader
         ReadChecks(table, map, tableRules, rules);
         ReadNotes(table, map, tableRules, rules);
         ReadLaterChanges(table, map);
+        ReadChecksAddedIn(table, map, tableRules, rules);
         ReadAccessKeys(table, map);
         ReadAuditKeys(table, map);
+        ReadNumbering(table, map);
         return table;
     }
 
@@ -171,6 +174,59 @@ public static partial class DesignLoader
             table.Column(name).ApiReadOnly = true;
         }
 
+        // optional_added_in: {S1.08: [column, ...]} (S1.08, CR-033): required columns made optional; the frozen file keeps NOT NULL.
+        foreach (var (slice, names) in YamlNode.Map(map.GetValueOrDefault("optional_added_in"), table.FullName + ".optional_added_in"))
+        {
+            foreach (var name in YamlNode.Texts(names, table.FullName + ".optional_added_in"))
+            {
+                var column = table.Column(name);
+                if (!column.Required || column.AddedIn is not null || column.Default is not null)
+                {
+                    throw new DesignException(table.FullName, $"optional_added_in: {name} must be a required column of the first migrations without a default");
+                }
+
+                column.Required = false;
+                column.OptionalIn = SliceId(slice, table.FullName);
+            }
+        }
+
+        // enum_added_in: {S1.08: {column: [value, ...]}} (S1.08, CR-033): values added to an existing enum; the slice's
+        // design migration replaces the column's check, the frozen file keeps the first list.
+        foreach (var (slice, raw) in YamlNode.Map(map.GetValueOrDefault("enum_added_in"), table.FullName + ".enum_added_in"))
+        {
+            foreach (var (name, values) in YamlNode.Map(raw, table.FullName + ".enum_added_in"))
+            {
+                var column = table.Column(name);
+                var added = YamlNode.Texts(values, table.FullName + ".enum_added_in." + name).ToList();
+                if (column.Kind != ColumnKind.Enum || column.AddedIn is not null || added.Count == 0 || added.Except(column.EnumValues).Any() || added.Count >= column.EnumValues.Count)
+                {
+                    throw new DesignException(table.FullName, $"enum_added_in: {name} must be an enum column of the first migrations listing some of its values");
+                }
+
+                var check = Naming.DbName("ck", table.Name, [column.Name]);
+                var index = table.Checks.FindIndex(c => c.Name == check);
+                var baseValues = column.EnumValues.Except(added).Select(Naming.SqlString);
+                table.Checks[index] = table.Checks[index] with { BaseSql = $"{column.Name} in ({string.Join(", ", baseValues)})", ReplacedIn = SliceId(slice, table.FullName) };
+            }
+        }
+
+        // uniques_added_in: {S1.08: [[column, ...], ...]} (S1.08, CR-033): plain unique keys the slice's design migration adds.
+        foreach (var (slice, raw) in YamlNode.Map(map.GetValueOrDefault("uniques_added_in"), table.FullName + ".uniques_added_in"))
+        {
+            foreach (var key in YamlNode.List(raw, table.FullName + ".uniques_added_in"))
+            {
+                var items = YamlNode.Texts(key, table.FullName + ".uniques_added_in").ToList();
+                if (items.Count == 0 || !items.All(Naming.IsIdentifier))
+                {
+                    throw new DesignException(table.FullName, "uniques_added_in lists plain column names only");
+                }
+
+                CheckItems(table, items, "unique");
+                var nullable = items.Any(i => !table.Column(i).Required);
+                table.Uniques.Add(new UniqueKey(Naming.DbName("uq", table.Name, items), items, null, nullable, SliceId(slice, table.FullName)));
+            }
+        }
+
         // indexes_added_in: {S1.07: [[column, ...], ...]} (S1.07, CR-029): indexes the slice's design migration creates.
         foreach (var (slice, raw) in YamlNode.Map(map.GetValueOrDefault("indexes_added_in"), table.FullName + ".indexes_added_in"))
         {
@@ -182,6 +238,124 @@ public static partial class DesignLoader
             }
         }
     }
+
+    /// <summary>
+    /// <c>checks_added_in: {S1.08: ["text", ...]}</c> (S1.08, CR-033): checks the slice's design migration adds, each
+    /// translated by a reviewed entry of rules.yaml like the <c>checks</c> key.
+    /// </summary>
+    private static void ReadChecksAddedIn(Table table, IReadOnlyDictionary<string, object?> map, TableRules tableRules, RuleBook rules)
+    {
+        foreach (var (slice, raw) in YamlNode.Map(map.GetValueOrDefault("checks_added_in"), table.FullName + ".checks_added_in"))
+        {
+            foreach (var text in YamlNode.Texts(raw, table.FullName + ".checks_added_in"))
+            {
+                var action = tableRules.Checks.Find(a => a.Text == text)
+                    ?? throw new DesignException(table.FullName, $"untranslated check \"{text}\": add it to tools/Erp.CodeGen/rules.yaml after review");
+                var check = action.Check ?? throw new DesignException(table.FullName, $"checks_added_in \"{text}\" must translate to a check");
+                rules.MarkUsed(table.FullName, text);
+                table.Checks.Add(check with { AddedIn = SliceId(slice, table.FullName) });
+            }
+        }
+    }
+
+    /// <summary>
+    /// Numbering key (slice S1.08 Q1, CR-033): <c>numbering: {column, type, assign: create|post, gap_free, override,
+    /// tenant_wide, default, reset, date}</c>, one map or a list of maps. The column becomes read-only in the generated API
+    /// (FR-KRN-NUM-03). The default pattern must pass the same rules as a customer's pattern (Q4).
+    /// </summary>
+    private static void ReadNumbering(Table table, IReadOnlyDictionary<string, object?> map)
+    {
+        if (!map.TryGetValue("numbering", out var raw) || raw is null)
+        {
+            return;
+        }
+
+        List<object?> entries = raw is List<object?> list ? list : [raw];
+        foreach (var entry in entries)
+        {
+            var where = table.FullName + ".numbering";
+            var m = YamlNode.Map(entry, where);
+            var unknown = m.Keys.Except(NumberingKeys).ToList();
+            if (unknown.Count > 0)
+            {
+                throw new DesignException(table.FullName, "unknown numbering keys: " + string.Join(", ", unknown));
+            }
+
+            var column = table.Column(YamlNode.Text(m.GetValueOrDefault("column"), where + ".column"));
+            if (column.Kind is not ColumnKind.Text || !column.Required)
+            {
+                throw new DesignException(table.FullName, $"numbering column {column.Name} must be a required text column");
+            }
+
+            var type = YamlNode.Text(m.GetValueOrDefault("type"), where + ".type");
+            if (!DocumentTypePattern().IsMatch(type) || !type.StartsWith(table.Schema + ".", StringComparison.Ordinal))
+            {
+                throw new DesignException(table.FullName, $"numbering type '{type}' must look like {table.Schema}.employee_no");
+            }
+
+            var assign = YamlNode.Text(m.GetValueOrDefault("assign"), where + ".assign");
+            if (assign is not ("create" or "post"))
+            {
+                throw new DesignException(table.FullName, "numbering assign must be create or post");
+            }
+
+            bool Flag(string key)
+            {
+                var text = YamlNode.OptionalText(m, key, where) ?? "no";
+                return text switch
+                {
+                    "yes" or "true" or "True" => true,
+                    "no" or "false" or "False" => false,
+                    _ => throw new DesignException(table.FullName, $"numbering {key} must be yes or no"),
+                };
+            }
+
+            var gapFree = Flag("gap_free");
+            var allowOverride = Flag("override");
+            var tenantWide = Flag("tenant_wide");
+            if (assign == "create" && gapFree)
+            {
+                throw new DesignException(table.FullName, "a number given on create cannot be gap-free: gap-free numbers are given only at posting (S1.08 Q3)");
+            }
+
+            if (allowOverride && gapFree)
+            {
+                throw new DesignException(table.FullName, "a manual override is allowed only for gap-allowed series (S1.08 Q9)");
+            }
+
+            var company = table.ScopeLocators.GetValueOrDefault("company") ?? (table.HasColumn("company_id") ? "company_id" : null);
+            if (tenantWide == (company is not null))
+            {
+                throw new DesignException(table.FullName, tenantWide ? "a tenant-wide document type cannot have a company column" : "a company document type needs a company column (or tenant_wide: yes)");
+            }
+
+            string? branch = table.HasColumn("branch_id") ? "branch_id" : null;
+            var date = YamlNode.OptionalText(m, "date", where);
+            if (date is not null && table.Column(date).Kind is not ColumnKind.Date)
+            {
+                throw new DesignException(table.FullName, $"numbering date {date} must be a date column");
+            }
+
+            var pattern = YamlNode.Text(m.GetValueOrDefault("default"), where + ".default");
+            var reset = YamlNode.OptionalText(m, "reset", where) ?? "never";
+            try
+            {
+                Erp.Kernel.Domain.Numbering.NumberPattern.Validate(pattern, reset, new Erp.Kernel.Domain.Numbering.PatternContext(!tenantWide, branch is not null));
+            }
+            catch (Erp.Kernel.Domain.Numbering.NumberPatternException ex)
+            {
+                throw new DesignException(table.FullName, $"numbering default pattern '{pattern}' ({reset}) is refused: {ex.ErrorKey}");
+            }
+
+            column.ApiReadOnly = true;
+            table.Numbering.Add(new NumberingDef(column.Name, type, assign, gapFree, allowOverride, tenantWide, pattern, reset, date, company, branch));
+        }
+    }
+
+    private static readonly string[] NumberingKeys = ["column", "type", "assign", "gap_free", "override", "tenant_wide", "default", "reset", "date"];
+
+    [GeneratedRegex(@"^[a-z]+\.[a-z][a-z0-9_]{1,60}$")]
+    private static partial Regex DocumentTypePattern();
 
     /// <summary>
     /// Audit keys (slice S1.07 Q4, CR-026): <c>audit: false</c> with <c>audit_reason: "..."</c> takes the table out of the
@@ -1026,12 +1200,15 @@ public static partial class DesignLoader
         }
     }
 
-    /// <summary>True when a full (non-partial) key or index already starts with exactly these columns.</summary>
+    /// <summary>
+    /// True when a full (non-partial) key or index of the first migrations already starts with exactly these columns. Keys
+    /// added later (S1.08) do not count: the frozen file created the foreign-key index and it stays.
+    /// </summary>
     public static bool IsCovered(Table table, IReadOnlyList<string> columns)
     {
         bool Leads(IReadOnlyList<string> items) => items.Count >= columns.Count && items.Take(columns.Count).SequenceEqual(columns);
         return Leads(table.PrimaryKey)
-            || table.Uniques.Exists(u => u.Where is null && Leads(u.Items))
+            || table.Uniques.Exists(u => u.Where is null && u.AddedIn is null && Leads(u.Items))
             || table.Indexes.Exists(i => i.Where is null && Leads(i.Items));
     }
 

@@ -1,9 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <DefineConstants>$(DefineConstants);ERP_CODEGEN</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/BuildingBlocks/Erp.BuildingBlocks.Infrastructure/Erp.BuildingBlocks.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The numbering pattern rules (slice S1.08) are pure code shared with the kernel, so default patterns are checked by the same rules. -->
+    <Compile Include="../../src/Platform/Erp.Kernel.Domain/Numbering/NumberPattern.cs" Link="Design/NumberPattern.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="YamlDotNet" />

@@ -11,10 +11,6 @@
     {
       "action": "read",
       "permission": "cfg.numbering_voids.read"
-    },
-    {
-      "action": "create",
-      "permission": "cfg.numbering_voids.create"
     }
   ],
   "companyScoped": false,
@@ -25,7 +21,8 @@
   "listFields": [
     "schemeId",
     "number",
-    "reason"
+    "reason",
+    "documentId"
   ],
   "fields": [
     {
@@ -68,6 +65,16 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.cfg.numbering_voids.reason"
+    },
+    {
+      "column": "document_id",
+      "field": "documentId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.cfg.numbering_voids.document_id"
     },
     {
       "column": "created_at",

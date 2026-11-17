@@ -16,6 +16,9 @@ public sealed record NumberingVoidFilter
 public interface INumberingVoidRepository : global::Erp.BuildingBlocks.Application.Data.IRepository<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid>
 {
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid>> ListAsync(NumberingVoidFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
+
+    /// <summary>Rows matching (scheme_id, number); at most PageRequest.MaxLimit rows.</summary>
+    global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid>> FindBySchemeIdAndNumberAsync(global::System.Guid schemeId, string number, global::System.Threading.CancellationToken cancellationToken);
 }
 
 /// <summary>How data scopes locate rows of cfg.numbering_voids and which fields its API shows (slice S1.06, CR-018).</summary>
@@ -32,6 +35,7 @@ public static class NumberingVoidAccess
         new("scheme_id", "SchemeId", null),
         new("number", "Number", null),
         new("reason", "Reason", null),
+        new("document_id", "DocumentId", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
     ]);

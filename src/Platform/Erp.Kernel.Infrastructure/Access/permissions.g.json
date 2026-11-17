@@ -81,27 +81,9 @@
       "sensitive": false
     },
     {
-      "code": "cfg.numbering_schemes.create",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.numbering_schemes.create",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.numbering_schemes.update",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.numbering_schemes.update",
-      "sensitive": false
-    },
-    {
       "code": "cfg.numbering_voids.read",
       "module": "cfg",
       "descriptionKey": "permissions.cfg.numbering_voids.read",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.numbering_voids.create",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.numbering_voids.create",
       "sensitive": false
     },
     {

@@ -106,6 +106,12 @@ public static class CSharpEmitter
             output.Add($"{N.ModuleFolder(sample)}/Erp.{project}.Api/Generated/{project}GeneratedEndpoints.g.cs", EndpointRoot(project, apiTables));
             output.Add($"{N.ModuleFolder(sample)}/Erp.{project}.Contracts/Generated/{project}Permissions.g.cs", Permissions(project, apiTables));
             output.Add($"{N.ModuleFolder(sample)}/Erp.{project}.Infrastructure/Access/permissions.g.json", PermissionManifest(module.Key, apiTables));
+            var numbered = tables.Where(t => t.Numbering.Count > 0).ToList();
+            if (numbered.Count > 0)
+            {
+                output.Add($"{infraRoot}/{project}NumberingTypes.g.cs", NumberingTypes(project, numbered));
+                output.Add($"{N.ModuleFolder(sample)}/Erp.{project}.Infrastructure/Access/numbering.g.json", NumberingManifest(module.Key, numbered));
+            }
         }
     }
 
@@ -167,7 +173,8 @@ public static class CSharpEmitter
             list.Add(ns + "ISoftDeletable");
         }
 
-        if (t.IsCompanyScoped)
+        // A company made optional later (optional_added_in, S1.08: tenant-wide numbering schemes) is not ICompanyScoped.
+        if (t.IsCompanyScoped && t.Column("company_id").Required)
         {
             list.Add(ns + "ICompanyScoped");
         }
@@ -628,7 +635,8 @@ public static class CSharpEmitter
                 ? "request." + N.Property(t, t.Column(companyLocator))
                 : "null";
             w.Line();
-            w.Line($"private static global::System.Threading.Tasks.Task<IResult> CreateAsync({entity}WriteRequest request, {repo} repository, {permissions}, {fields}, {ct}) =>");
+            var numbers = t.Numbering.Count > 0 ? ", global::Erp.Kernel.Contracts.Numbering.INumberAllocator numbers" : string.Empty;
+            w.Line($"private static global::System.Threading.Tasks.Task<IResult> CreateAsync({entity}WriteRequest request, {repo} repository, {permissions}, {fields}{numbers}, {ct}) =>");
             w.Line($"    GeneratedEndpointSupport.RunAsync(permissions, {CodeWriter.CSharpString(N.Permission(t, "create"))}, async () =>");
             w.Line("    {");
             w.Line($"        var access = await fields.ForAsync({access}.Fields, \"create\", {createCompany}, cancellationToken).ConfigureAwait(false);");
@@ -645,6 +653,15 @@ public static class CSharpEmitter
             w.Line("            return GeneratedEndpointSupport.NotEditable(denied);");
             w.Line("        }");
             w.Line();
+            foreach (var n in t.Numbering)
+            {
+                // FR-KRN-NUM-03 (S1.08): the number is given by the kernel numbering service, never by the caller.
+                var company = n.CompanyColumn is null ? "null" : "row." + N.Property(t, t.Column(n.CompanyColumn));
+                var branch = n.BranchColumn is null ? "null" : "row." + N.Property(t, t.Column(n.BranchColumn));
+                var date = n.DateColumn is null ? "null" : "row." + N.Property(t, t.Column(n.DateColumn));
+                w.Line($"        row.{N.Property(t, t.Column(n.Column))} = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest({CodeWriter.CSharpString(n.DocumentType)}, {company}, {branch}, {date}), cancellationToken).ConfigureAwait(false);");
+            }
+
             w.Line("        await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);");
             w.Line($"        return TypedResults.Created({CodeWriter.CSharpString(N.Route(t) + "/")} + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, {access}.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));");
             w.Line("    }, cancellationToken);");
@@ -901,6 +918,9 @@ public static class CSharpEmitter
         w.Open("catch (global::Erp.BuildingBlocks.Application.Data.DataValidationException ex)");
         w.Line("return TypedResults.Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.ErrorCode, detail: ex.Constraint);");
         w.Close();
+        w.Open("catch (global::Erp.Kernel.Contracts.Numbering.NumberingException ex)");
+        w.Line("return TypedResults.Problem(statusCode: StatusCodes.Status400BadRequest, title: ex.ErrorKey);");
+        w.Close();
         w.Close().Line();
         w.Line("public static IResult NotFound() => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: \"errors.data.not_found\");");
         w.Line();
@@ -1031,6 +1051,64 @@ public static class CSharpEmitter
             ["_generated"] = $"{OutputSet.Marker} by tools/Erp.CodeGen from docs/data-design/*.yaml; do not edit",
             ["module"] = module,
             ["permissions"] = items,
+        };
+        return root.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }) + "\n";
+    }
+
+    /// <summary>The document types of a module's numbered columns (data design key <c>numbering</c>, S1.08), read by the kernel at run time.</summary>
+    private static string NumberingTypes(string project, List<Table> tables)
+    {
+        var w = new CodeWriter();
+        w.Line(Header).Line($"namespace Erp.{project}.Infrastructure.Generated;").Line();
+        w.Line($"/// <summary>Numbered document types of the {project} module (data design key numbering, slice S1.08 Q1, CR-033).</summary>");
+        w.Open($"public sealed class {project}NumberingTypes : global::Erp.Kernel.Contracts.Numbering.IDocumentTypeSource");
+        w.Line("public global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Contracts.Numbering.DocumentType> Types { get; } =");
+        w.Line("[");
+        foreach (var t in tables)
+        {
+            foreach (var n in t.Numbering)
+            {
+                w.Line($"    new({CodeWriter.CSharpString(n.DocumentType)}, {CodeWriter.CSharpString(ModuleId(t))}, {CodeWriter.CSharpString(t.FullName)}, {CodeWriter.CSharpString(n.Column)}, {CodeWriter.CSharpString(n.Assign)}, {Bool(n.GapFreeAllowed)}, {Bool(n.OverrideAllowed)}, {Bool(n.TenantWide)}, {CodeWriter.CSharpString(n.DefaultPattern)}, {CodeWriter.CSharpString(n.DefaultReset)}, {Bool(n.BranchColumn is not null)}),");
+            }
+        }
+
+        w.Line("];");
+        w.Close();
+        return w.ToString();
+
+        static string Bool(bool b) => b ? "true" : "false";
+    }
+
+    /// <summary>The same document types as JSON, read by provisioning and <c>migrate</c> to seed default schemes (Q7).</summary>
+    private static string NumberingManifest(string module, List<Table> tables)
+    {
+        var items = new System.Text.Json.Nodes.JsonArray();
+        foreach (var t in tables)
+        {
+            foreach (var n in t.Numbering)
+            {
+                items.Add(new System.Text.Json.Nodes.JsonObject
+                {
+                    ["code"] = n.DocumentType,
+                    ["module"] = ModuleId(t),
+                    ["table"] = t.FullName,
+                    ["column"] = n.Column,
+                    ["assign"] = n.Assign,
+                    ["gapFreeAllowed"] = n.GapFreeAllowed,
+                    ["overrideAllowed"] = n.OverrideAllowed,
+                    ["tenantWide"] = n.TenantWide,
+                    ["defaultPattern"] = n.DefaultPattern,
+                    ["defaultReset"] = n.DefaultReset,
+                    ["hasBranch"] = n.BranchColumn is not null,
+                });
+            }
+        }
+
+        var root = new System.Text.Json.Nodes.JsonObject
+        {
+            ["_generated"] = $"{OutputSet.Marker} by tools/Erp.CodeGen from docs/data-design/*.yaml; do not edit",
+            ["module"] = module,
+            ["documentTypes"] = items,
         };
         return root.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }) + "\n";
     }

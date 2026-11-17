@@ -74,6 +74,7 @@
         "org.*",
         "cfg.numbering_schemes.*",
         "cfg.numbering_voids.*",
+        "cfg.numbering.void_report",
         "cfg.setting_values.read",
         "cfg.custom_field_defs.read",
         "doc.templates.*",
@@ -157,6 +158,7 @@
       "permissions": [
         "iam.self.manage",
         "cfg.*.read",
+        "cfg.numbering.void_report",
         "doc.*.read",
         "iam.*.read",
         "itg.*.read",

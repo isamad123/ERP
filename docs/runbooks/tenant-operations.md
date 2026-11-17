@@ -52,6 +52,10 @@ with S1.11. To issue a new link (the old one stops working): `M tenant admin-act
 Provisioning and `M migrate` also register the identity and access settings (`cfg.settings`, keys `iam.*`, rulings Q5, Q6, Q10), the permission catalogue and the baseline roles (S1.06; `migrate` adds new permissions only to baseline roles the customer never edited), and
 create the customer's field-encryption key in the secret store (`tenants/<code>/field-key-v1`). Back up the secret store:
 without that key the customer's authenticator secrets cannot be read.
+Since S1.08 they also register the numbering settings (`cfg.numbering.fiscal_year_start_month`, `org.time_zone`) and give
+every company a default numbering scheme for every registered document type it has none of (person numbers once per
+customer). A company added later gets its defaults at the next `migrate`, or on its first document. A scheme an
+administrator retired is never re-created.
 
 Customer codes are 2 to 30 lower-case letters or digits, starting with a letter (they become host, database and login names).
 

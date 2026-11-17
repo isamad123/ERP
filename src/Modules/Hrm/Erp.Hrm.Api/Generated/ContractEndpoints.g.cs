@@ -36,7 +36,6 @@ public sealed class ContractWriteRequest
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? EmploymentId { get; init; }
-    public string? ContractNo { get; init; }
     public global::System.DateOnly? StartDate { get; init; }
     public global::System.DateOnly? EndDate { get; init; }
     public int? RenewalNoticeDays { get; init; }
@@ -97,7 +96,7 @@ internal static class ContractEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ContractAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ContractWriteRequest request, global::Erp.Hrm.Application.Generated.IContractRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ContractWriteRequest request, global::Erp.Hrm.Application.Generated.IContractRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Numbering.INumberAllocator numbers, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.contracts.create", async () =>
         {
             var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ContractAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
@@ -114,6 +113,7 @@ internal static class ContractEndpoints
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            row.ContractNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.contract_no", row.CompanyId, null, row.StartDate), cancellationToken).ConfigureAwait(false);
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created("/api/hrm/contracts/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ContractAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
@@ -176,10 +176,6 @@ internal static class ContractEndpoints
         {
             errors.Add("employmentId");
         }
-        if (request.ContractNo is null && (!update || access.CanEdit("contract_no")))
-        {
-            errors.Add("contractNo");
-        }
         if (request.StartDate is null && (!update || access.CanEdit("start_date")))
         {
             errors.Add("startDate");
@@ -221,14 +217,6 @@ internal static class ContractEndpoints
         else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
         {
             denied.Add("employmentId");
-        }
-        if (access.CanEdit("contract_no"))
-        {
-            row.ContractNo = request.ContractNo!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ContractNo, row.ContractNo, update))
-        {
-            denied.Add("contractNo");
         }
         if (access.CanEdit("start_date"))
         {

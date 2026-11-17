@@ -45,7 +45,13 @@ public sealed class Column
     /// <summary>PostgreSQL type as written in DDL, for example <c>numeric(19,4)</c> or <c>character(3)</c>.</summary>
     public required string SqlType { get; init; }
 
-    public required bool Required { get; init; }
+    public required bool Required { get; set; }
+
+    /// <summary>
+    /// Slice that made a required column optional after the release's first migrations were merged (design key
+    /// <c>optional_added_in</c>, S1.08 CR-033). The frozen file still says NOT NULL; the slice's design migration drops it.
+    /// </summary>
+    public string? OptionalIn { get; set; }
 
     /// <summary>Allowed values for enum columns and the trait status column.</summary>
     public IReadOnlyList<string> EnumValues { get; init; } = [];
@@ -86,7 +92,8 @@ public sealed class Column
 }
 
 /// <summary>A unique key (constraint or unique index). Items are column names or expressions such as <c>lower(code)</c>.</summary>
-public sealed record UniqueKey(string Name, IReadOnlyList<string> Items, string? Where, bool NullsNotDistinct)
+/// <remarks><see cref="AddedIn"/>: slice whose design migration adds the key (design key <c>uniques_added_in</c>, S1.08).</remarks>
+public sealed record UniqueKey(string Name, IReadOnlyList<string> Items, string? Where, bool NullsNotDistinct, string? AddedIn = null)
 {
     public bool IsPlain => Where is null && Items.All(Naming.IsIdentifier);
 }
@@ -97,7 +104,11 @@ public sealed record IndexDef(string Name, IReadOnlyList<string> Items, string? 
 public sealed record ExclusionDef(string Name, IReadOnlyList<string> Elements, string? Where);
 
 /// <summary>A check constraint. <see cref="AddedIn"/>: slice whose design migration adds it (the check of an enum column added later).</summary>
-public sealed record CheckDef(string Name, string Sql, string? AddedIn = null);
+/// <remarks>
+/// <see cref="ReplacedIn"/> and <see cref="BaseSql"/> (design key <c>enum_added_in</c>, S1.08): the frozen file created the
+/// check as <see cref="BaseSql"/>; the slice's design migration replaces it with <see cref="Sql"/>.
+/// </remarks>
+public sealed record CheckDef(string Name, string Sql, string? AddedIn = null, string? BaseSql = null, string? ReplacedIn = null);
 
 public sealed record ForeignKey(string Name, IReadOnlyList<string> Columns, string TargetTable, IReadOnlyList<string> TargetColumns)
 {
@@ -189,6 +200,7 @@ public sealed class Table
     public IEnumerable<string> ChangedIn =>
         new[] { AddedIn }.Concat(Columns.Select(c => c.AddedIn)).Concat(UpdatableAddedIn.Select(u => u.Slice)).Concat(CommentsAddedIn.Select(c => c.Slice))
             .Concat(Indexes.Select(i => i.AddedIn)).Concat(Checks.Select(c => c.AddedIn))
+            .Concat(Columns.Select(c => c.OptionalIn)).Concat(Checks.Select(c => c.ReplacedIn)).Concat(Uniques.Select(u => u.AddedIn))
             .Where(s => s is not null).Select(s => s!).Distinct(StringComparer.Ordinal);
 
     /// <summary>
@@ -236,6 +248,9 @@ public sealed class Table
     public string? AuditKeyColumn =>
         HasIdKey ? "id" : PrimaryKey.FirstOrDefault(k => Columns.Exists(c => c.Name == k && c.Kind == ColumnKind.Uuid));
 
+    /// <summary>Numbered columns of the table (design key <c>numbering</c>, S1.08 CR-033).</summary>
+    public List<NumberingDef> Numbering { get; } = [];
+
     public bool IsSoftDeleted => Traits.Contains("soft");
 
     public bool IsCompanyScoped => Traits.Contains("co");
@@ -259,6 +274,26 @@ public sealed class Table
 
     public override string ToString() => FullName;
 }
+
+/// <summary>
+/// One numbered column (design key <c>numbering</c>, slice S1.08, CR-033): the document type code, when the number is
+/// given (<c>create</c>: the generated API fills it; <c>post</c>: the module's post service calls the allocator), whether
+/// customers may switch the series to gap-free, whether a typed-in number may replace it (HRM-EMP-04), whether one
+/// series serves the whole customer (no company, Q6), the default pattern and reset rule (Q7), the column holding the
+/// document's business date (Q5) and whether the table has a branch (<c>{branch}</c> and branch schemes, Q4, P2).
+/// </summary>
+public sealed record NumberingDef(
+    string Column,
+    string DocumentType,
+    string Assign,
+    bool GapFreeAllowed,
+    bool OverrideAllowed,
+    bool TenantWide,
+    string DefaultPattern,
+    string DefaultReset,
+    string? DateColumn,
+    string? CompanyColumn,
+    string? BranchColumn);
 
 /// <summary>A database function a slice writes (rules.yaml <c>functions</c>, slice S1.07): reviewed SQL, emitted as a migration.</summary>
 public sealed record FunctionDef(string Slice, string Name, string Purpose, string Sql);

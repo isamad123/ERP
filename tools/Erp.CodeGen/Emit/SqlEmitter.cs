@@ -196,6 +196,27 @@ public static class SqlEmitter
                 b.Append(CultureInfo.InvariantCulture, $"        alter table {table.FullName} add constraint {check.Name} check ({check.Sql});\n    end if;\nend $do$;\n");
             }
 
+            // Required columns made optional (optional_added_in, S1.08): expand only.
+            foreach (var column in table.Columns.Where(c => c.OptionalIn == slice))
+            {
+                b.Append(CultureInfo.InvariantCulture, $"alter table {table.FullName} alter column {column.Name} drop not null;\n");
+            }
+
+            // Enum values added (enum_added_in, S1.08): the check is replaced by the wider one; existing rows stay valid.
+            foreach (var check in table.Checks.Where(c => c.ReplacedIn == slice))
+            {
+                b.Append(CultureInfo.InvariantCulture, $"alter table {table.FullName} drop constraint if exists {check.Name};\n");
+                b.Append(CultureInfo.InvariantCulture, $"alter table {table.FullName} add constraint {check.Name} check ({check.Sql});\n");
+            }
+
+            // Unique keys added (uniques_added_in, S1.08).
+            foreach (var unique in table.Uniques.Where(u => u.AddedIn == slice))
+            {
+                var nulls = unique.NullsNotDistinct ? " nulls not distinct" : string.Empty;
+                b.Append(CultureInfo.InvariantCulture, $"do $do$ begin\n    if not exists (select 1 from pg_constraint where conname = {Naming.SqlString(unique.Name)} and conrelid = {Naming.SqlString(table.FullName)}::regclass) then\n");
+                b.Append(CultureInfo.InvariantCulture, $"        alter table {table.FullName} add constraint {unique.Name} unique{nulls} ({string.Join(", ", unique.Items)});\n    end if;\nend $do$;\n");
+            }
+
             foreach (var index in table.Indexes.Where(i => i.AddedIn == slice))
             {
                 b.Append(CultureInfo.InvariantCulture, $"create index if not exists {index.Name} on {table.FullName} ({string.Join(", ", index.Items)}); -- {index.Purpose}\n");
@@ -406,7 +427,7 @@ public static class SqlEmitter
                 line.Append(CultureInfo.InvariantCulture, $" generated always as ({column.GeneratedExpression}) stored");
             }
 
-            if (column.Required)
+            if (column.Required || (baseOnly && column.OptionalIn is not null))
             {
                 line.Append(" not null");
             }
@@ -420,7 +441,7 @@ public static class SqlEmitter
         }
 
         lines.Add($"    constraint pk_{table.Name} primary key ({string.Join(", ", table.PrimaryKey)})");
-        foreach (var unique in table.Uniques.Where(u => u.IsPlain))
+        foreach (var unique in table.Uniques.Where(u => u.IsPlain && (!baseOnly || u.AddedIn is null)))
         {
             var nulls = unique.NullsNotDistinct ? " nulls not distinct" : string.Empty;
             lines.Add($"    constraint {unique.Name} unique{nulls} ({string.Join(", ", unique.Items)})");
@@ -428,7 +449,7 @@ public static class SqlEmitter
 
         foreach (var check in table.Checks.Where(c => !baseOnly || c.AddedIn is null))
         {
-            lines.Add($"    constraint {check.Name} check ({check.Sql})");
+            lines.Add($"    constraint {check.Name} check ({(baseOnly && check.BaseSql is not null ? check.BaseSql : check.Sql)})");
         }
 
         foreach (var exclusion in table.Exclusions)
@@ -445,7 +466,7 @@ public static class SqlEmitter
             b.Append(Partitions(table, partition, settings));
         }
 
-        foreach (var unique in table.Uniques.Where(u => !u.IsPlain))
+        foreach (var unique in table.Uniques.Where(u => !u.IsPlain && (!baseOnly || u.AddedIn is null)))
         {
             var nulls = unique.NullsNotDistinct ? " nulls not distinct" : string.Empty;
             var where = unique.Where is null ? string.Empty : $" where ({unique.Where})";

@@ -24,6 +24,9 @@ public sealed partial class NumberingVoid : global::Erp.BuildingBlocks.Domain.En
     /// <summary>reason</summary>
     public string Reason { get; set; } = null!;
 
+    /// <summary>document_id: the cancelled document (no FK: it lives in its module's schema)</summary>
+    public global::System.Guid? DocumentId { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

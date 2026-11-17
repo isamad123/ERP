@@ -139,6 +139,19 @@ needs (S1.07: the audit writers) are reviewed SQL in `tools/Erp.CodeGen/rules.ya
 the slice's `functions_<slice>` migration, so every migration file stays generated. Control-plane tables can be added
 later too (`added_in: <slice>`, file `V…__controlplane__design_<slice>.sql`).
 
+## Numbering keys (slice S1.08, CR-033, CR-035)
+
+| Key | Example | Meaning |
+| --- | --- | --- |
+| `numbering` | `numbering: {column: employee_no, type: hrm.employee_no, assign: create, override: yes, default: "EMP-{seq:5}", reset: never}` | The column's number comes from the kernel numbering service. `type` is the document type code; `assign` is `create` (the generated create fills it) or `post` (the module's post service does; until then the generated create numbers it while the series is gap-allowed, ruling P5); `gap_free: yes` lets customers switch the series to gap-free (never with `assign: create`); `override: yes` allows a typed-in number (HRM-EMP-04); `tenant_wide: yes` for one series per customer (no company); `default` and `reset` give the default scheme (Q7); `date` names the column with the business date that decides the period (Q5). The column becomes read-only in the generated API (FR-KRN-NUM-03). The default pattern is checked by the same rules as a customer's pattern. |
+| `optional_added_in` | `optional_added_in: {S1.08: [company_id]}` | A required column made optional later: the frozen file keeps NOT NULL, the slice's design migration drops it. |
+| `enum_added_in` | `enum_added_in: {S1.08: {reset_rule: [fiscal_yearly]}}` | Values added to an existing enum: the column lists all values; the frozen file keeps the first list, the slice's design migration replaces the check. |
+| `checks_added_in` | `checks_added_in: {S1.08: [a branch scheme belongs to a company]}` | Checks the slice's design migration adds, each translated by a reviewed rules.yaml entry. |
+| `uniques_added_in` | `uniques_added_in: {S1.08: [[scheme_id, number]]}` | Plain unique keys the slice's design migration adds; the foreign-key index of the frozen file stays. |
+
+The generator writes each module's document types as `<Module>NumberingTypes.g.cs` (read by the API host) and
+`Infrastructure/Access/numbering.g.json` (read by provisioning and `migrate` to seed default schemes).
+
 ## Cross-module rules enforced in the data design
 
 | Rule | Where |

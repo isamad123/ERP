@@ -22,7 +22,7 @@ public interface INumberingSchemeRepository : global::Erp.BuildingBlocks.Applica
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 
     /// <summary>Rows matching (company_id, branch_id, document_type); at most PageRequest.MaxLimit rows.</summary>
-    global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme>> FindByCompanyIdAndBranchIdAndDocumentTypeAsync(global::System.Guid companyId, global::System.Guid? branchId, string documentType, global::System.Threading.CancellationToken cancellationToken);
+    global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingScheme>> FindByCompanyIdAndBranchIdAndDocumentTypeAsync(global::System.Guid? companyId, global::System.Guid? branchId, string documentType, global::System.Threading.CancellationToken cancellationToken);
 }
 
 /// <summary>How data scopes locate rows of cfg.numbering_schemes and which fields its API shows (slice S1.06, CR-018).</summary>

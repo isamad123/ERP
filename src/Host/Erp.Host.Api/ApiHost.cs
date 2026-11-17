@@ -12,6 +12,10 @@ using Erp.Kernel.Api.Access;
 using Erp.Kernel.Api.Audit;
 using Erp.Kernel.Infrastructure.Audit;
 using Erp.Kernel.Api.Identity;
+using Erp.Kernel.Api.Numbering;
+using Erp.Kernel.Application.Numbering;
+using Erp.Kernel.Contracts.Numbering;
+using Erp.Kernel.Infrastructure.Numbering;
 using Erp.Kernel.Application.Access;
 using Erp.Kernel.Application.Audit;
 using Erp.Kernel.Application.Identity;
@@ -93,6 +97,13 @@ public static class ApiHost
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IUserAdministrationService, UserAdministrationService>();
 
+        // Numbering (S1.08): one kernel service gives every document number; modules declare their document types.
+        services.AddSingleton<IDocumentTypeSource, HrmNumberingTypes>();
+        services.AddSingleton(sp => new DocumentTypeRegistry(sp.GetServices<IDocumentTypeSource>()));
+        services.AddScoped<INumberAllocator, NumberAllocator>();
+        services.AddScoped<INumberVoids, NumberVoids>();
+        services.AddScoped<INumberingAdministration, NumberingAdministrationService>();
+
         var keys = signing.Validation.Concat((config.GetSection("Auth:SigningPublicKeys").Get<string[]>() ?? []).Select(ToKey)).ToList();
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
         {
@@ -129,6 +140,7 @@ public static class ApiHost
         api.MapIdentityAccountEndpoints();
         api.MapAccessEndpoints();
         api.MapAuditEndpoints();
+        api.MapNumberingEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();
         return app;

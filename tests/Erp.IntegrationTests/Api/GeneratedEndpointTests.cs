@@ -35,6 +35,7 @@ public sealed class GeneratedEndpointTests : IAsyncLifetime
     private readonly TestPermissions _permissions = new();
     private ScratchDatabase? _database;
     private WebApplication? _app;
+    private NpgsqlDataSource? _numbers;
     private HttpClient? _client;
 
     private HttpClient Client => _client!;
@@ -57,6 +58,11 @@ public sealed class GeneratedEndpointTests : IAsyncLifetime
         builder.Services.AddSingleton<IFieldAccess, AllowAllAccess.AllFields>();
         builder.Services.AddSingleton<IPermissionChecker>(_permissions);
         builder.Services.AddSingleton<ISensitiveAccessLog>(new RecordingAccessLog()); // S1.07: generated reads log sensitive views
+        // S1.08: generated creates of numbered tables take their number from the kernel numbering service.
+        _numbers = NpgsqlDataSource.Create(_database.ConnectionString);
+        builder.Services.AddSingleton<global::Erp.BuildingBlocks.Application.Tenancy.ITenantConnectionProvider>(new FixedTenant(_numbers));
+        builder.Services.AddSingleton(new global::Erp.Kernel.Infrastructure.Numbering.DocumentTypeRegistry([new HrmNumberingTypes()]));
+        builder.Services.AddScoped<global::Erp.Kernel.Contracts.Numbering.INumberAllocator, global::Erp.Kernel.Infrastructure.Numbering.NumberAllocator>();
         _app = builder.Build();
         _app.MapKernelGeneratedEndpoints();
         _app.MapHrmGeneratedEndpoints();
@@ -70,6 +76,11 @@ public sealed class GeneratedEndpointTests : IAsyncLifetime
         if (_app is not null)
         {
             await _app.DisposeAsync();
+        }
+
+        if (_numbers is not null)
+        {
+            await _numbers.DisposeAsync();
         }
 
         if (_database is not null)
@@ -249,6 +260,11 @@ public sealed class GeneratedEndpointTests : IAsyncLifetime
     }
 
     private sealed record TestActor(Guid UserId) : ICurrentActor;
+
+    private sealed class FixedTenant(NpgsqlDataSource source) : global::Erp.BuildingBlocks.Application.Tenancy.ITenantConnectionProvider
+    {
+        public System.Data.Common.DbDataSource DataSource => source;
+    }
 
     private sealed class TestClock(DateTimeOffset now) : IClock
     {
