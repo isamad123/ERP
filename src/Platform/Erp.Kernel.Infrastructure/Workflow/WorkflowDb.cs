@@ -60,7 +60,9 @@ internal sealed record TaskRow(
     Guid? InfoRequestedBy,
     DateTimeOffset? ClaimedAt,
     DateTimeOffset CreatedAt,
-    long RowVersion);
+    long RowVersion,
+    int EscalationLevel,
+    DateTimeOffset? EscalatedAt);
 
 /// <summary>
 /// One unit of workflow work on one transaction: SQL, the decision history (append-only), events in
@@ -91,11 +93,14 @@ internal sealed class WorkflowWork(NpgsqlConnection connection, NpgsqlTransactio
 
     public Guid NewId() => Guid.CreateVersion7(Now);
 
+    /// <summary>Working calendars of companies read in this unit (time limits, S1.10b).</summary>
+    public Dictionary<Guid, CompanyCalendar> Calendars { get; } = [];
+
     // ------------------------------------------------------------------ rows
 
     private const string InstanceColumns = "id, company_id, version_id, document_type, document_id, requester_user_id, subject_user_ids, started_at, completed_at, context::text, status, row_version";
 
-    private const string TaskColumns = "id, instance_id, step_key, assignee_user_id, assignee_role_id, acting_for_user_id, due_at, acted_by, acted_at, comment, status, info_requested_at, info_requested_by, claimed_at, created_at, row_version";
+    private const string TaskColumns = "id, instance_id, step_key, assignee_user_id, assignee_role_id, acting_for_user_id, due_at, acted_by, acted_at, comment, status, info_requested_at, info_requested_by, claimed_at, created_at, row_version, escalation_level, escalated_at";
 
     public async Task<InstanceRow?> InstanceAsync(Guid id, bool lockRow, CancellationToken ct)
     {
@@ -148,7 +153,8 @@ internal sealed class WorkflowWork(NpgsqlConnection connection, NpgsqlTransactio
 
     private static TaskRow ReadTask(NpgsqlDataReader r) => new(
         r.GetGuid(0), r.GetGuid(1), r.GetString(2), NullableGuid(r, 3), NullableGuid(r, 4), NullableGuid(r, 5), NullableTime(r, 6), NullableGuid(r, 7), NullableTime(r, 8),
-        r.IsDBNull(9) ? null : r.GetString(9), r.GetString(10), NullableTime(r, 11), NullableGuid(r, 12), NullableTime(r, 13), r.GetFieldValue<DateTimeOffset>(14), r.GetInt64(15));
+        r.IsDBNull(9) ? null : r.GetString(9), r.GetString(10), NullableTime(r, 11), NullableGuid(r, 12), NullableTime(r, 13), r.GetFieldValue<DateTimeOffset>(14), r.GetInt64(15),
+        r.GetInt32(16), NullableTime(r, 17));
 
     public static Guid? NullableGuid(NpgsqlDataReader r, int i) => r.IsDBNull(i) ? null : r.GetGuid(i);
 

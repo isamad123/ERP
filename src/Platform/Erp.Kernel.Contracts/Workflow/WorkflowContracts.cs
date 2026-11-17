@@ -170,6 +170,9 @@ public static class WorkflowEvents
     public const string InstanceReturned = "kernel.workflow.instance_returned";
     public const string InstanceCompleted = "kernel.workflow.instance_completed";
     public const string VersionActivated = "kernel.workflow.version_activated";
+
+    /// <summary>A task passed its time limit and moved to the next level (FR-XM-32, HRM-NTF-11; slice S1.10b, ruling Q9).</summary>
+    public const string TaskEscalated = "kernel.workflow.task_escalated";
     public const string DefinitionDeactivated = "kernel.workflow.definition_deactivated";
 }
 
@@ -184,14 +187,45 @@ public static class WorkflowPermissions
     public const string TasksRead = "wf.workflow_tasks.read";
     public const string TasksDecide = "wf.workflow_tasks.update";
     public const string RequestsRead = "wf.workflow_instances.read";
+    public const string DelegationsRead = "iam.delegations.read";
     public const string DelegationsCreate = "iam.delegations.create";
     public const string DelegationsUpdate = "iam.delegations.update";
+
+    /// <summary>Pass any task of a request in the administrator's companies to another person (slice S1.10b, ruling Q13).</summary>
+    public const string TasksReassign = "wf.workflow_tasks.reassign";
+
+    /// <summary>Cancel a running or returned request of the administrator's companies, with a reason (ruling Q13).</summary>
+    public const string RequestsCancel = "wf.workflow_instances.cancel";
 
     public static IReadOnlyList<PermissionDefinition> All { get; } =
     [
         new(RoutesUpdate, "wf", "permissions.wf.workflow_definitions.update", false),
         new(TasksDecide, "wf", "permissions.wf.workflow_tasks.update", false),
+        new(TasksReassign, "wf", "permissions.wf.workflow_tasks.reassign", false),
+        new(RequestsCancel, "wf", "permissions.wf.workflow_instances.cancel", false),
         new(DelegationsCreate, "iam", "permissions.iam.delegations.create", false),
         new(DelegationsUpdate, "iam", "permissions.iam.delegations.update", false),
     ];
+}
+
+/// <summary>A task waiting for the person's decision (FR-XM-29).</summary>
+public sealed record OpenApprovalTask(Guid TaskId, Guid InstanceId, string DocumentType, Guid DocumentId, Guid CompanyId, string StepKey, DateTimeOffset? DueAt);
+
+/// <summary>A request of the person, or about the person, that has not ended (running, or returned for correction).</summary>
+public sealed record OpenApprovalRequest(Guid InstanceId, string DocumentType, Guid DocumentId, Guid CompanyId, string Status, Guid RequesterUserId, bool IsRequester);
+
+/// <summary>What is still open for one person in the approval engine.</summary>
+public sealed record OpenApprovals(IReadOnlyList<OpenApprovalTask> TasksToDecide, IReadOnlyList<OpenApprovalRequest> OpenRequests)
+{
+    public bool Any => TasksToDecide.Count > 0 || OpenRequests.Count > 0;
+}
+
+/// <summary>
+/// Questions other modules ask the approval engine (slice S1.10b, ruling Q13). Final settlement (S1.25) is blocked while a
+/// person has open approvals (FR-XM-29): tasks they must still decide, and requests they raised or that are about them.
+/// Every document type is counted, licensed or not. Read on the caller's transaction when given.
+/// </summary>
+public interface IWorkflowQueries
+{
+    Task<OpenApprovals> OpenApprovalsOfAsync(Guid userId, DbTransaction? transaction, CancellationToken cancellationToken);
 }

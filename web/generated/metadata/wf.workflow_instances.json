@@ -19,6 +19,7 @@
   "softDelete": false,
   "appendOnly": false,
   "scope": {
+    "company": "companyId",
     "user": "requesterUserId"
   },
   "listFields": [

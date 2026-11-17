@@ -116,6 +116,10 @@ internal sealed class ApproverResolution(IApproverDirectory directory)
         return await AccessDb.IdsAsync(command, ct).ConfigureAwait(false);
     }
 
+    /// <summary>Whether a user holds a permission today for any company.</summary>
+    public static async Task<bool> HoldsAnyAsync(WorkflowWork work, Guid userId, string permission, CancellationToken ct) =>
+        (await AccessSnapshot.LoadAsync(work.Connection, work.Transaction, userId, Today(work), ct).ConfigureAwait(false)).Holds(permission);
+
     /// <summary>Whether a user (not necessarily the caller) holds a permission for the company today, by the access engine's rules.</summary>
     public static async Task<bool> HoldsAsync(WorkflowWork work, Guid userId, string permission, Guid companyId, CancellationToken ct)
     {

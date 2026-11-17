@@ -20,6 +20,10 @@ public static class WorkflowRegistration
         services.AddScoped<WorkflowEngine>();
         services.AddScoped<IWorkflowService>(sp => sp.GetRequiredService<WorkflowEngine>());
         services.AddScoped<IWorkflowInbox>(sp => sp.GetRequiredService<WorkflowEngine>());
+        services.AddScoped<IWorkflowMonitor>(sp => sp.GetRequiredService<WorkflowEngine>());
+        services.AddScoped<IWorkflowQueries>(sp => sp.GetRequiredService<WorkflowEngine>());
+        services.AddScoped<DelegationService>();
+        services.AddScoped<IDelegationService>(sp => sp.GetRequiredService<DelegationService>());
         services.AddScoped<WorkflowAdministrationService>();
         services.AddScoped<IWorkflowAdministration>(sp => sp.GetRequiredService<WorkflowAdministrationService>());
         return services;

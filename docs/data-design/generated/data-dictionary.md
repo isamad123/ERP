@@ -7239,6 +7239,7 @@ Indexes:
 - `ix_workflow_tasks_assignee_user_id` CREATE INDEX ix_workflow_tasks_assignee_user_id ON wf.workflow_tasks USING btree (assignee_user_id)
 - `ix_workflow_tasks_assignee_user_id_status` CREATE INDEX ix_workflow_tasks_assignee_user_id_status ON wf.workflow_tasks USING btree (assignee_user_id, status) WHERE (status = 'pending'::text)
 - `ix_workflow_tasks_instance_id` CREATE INDEX ix_workflow_tasks_instance_id ON wf.workflow_tasks USING btree (instance_id)
+- `ix_workflow_tasks_status_due_at` CREATE INDEX ix_workflow_tasks_status_due_at ON wf.workflow_tasks USING btree (status, due_at)
 
 Triggers:
 

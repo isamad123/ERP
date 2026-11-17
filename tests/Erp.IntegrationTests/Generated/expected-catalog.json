@@ -43375,6 +43375,7 @@
       "indexes": [
         "ix_workflow_tasks_assignee_user_id_status",
         "ix_workflow_tasks_instance_id",
+        "ix_workflow_tasks_status_due_at",
         "ix_workflow_tasks_assignee_user_id",
         "ix_workflow_tasks_assignee_role_id",
         "ix_workflow_tasks_acted_by"

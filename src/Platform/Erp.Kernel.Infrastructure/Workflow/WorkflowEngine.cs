@@ -4,6 +4,7 @@ using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.Kernel.Application.Workflow;
+using Erp.Kernel.Contracts.Generated;
 using Erp.Kernel.Contracts.Settings;
 using Erp.Kernel.Contracts.Workflow;
 using Erp.Kernel.Domain.Workflow;
@@ -26,9 +27,15 @@ namespace Erp.Kernel.Infrastructure.Workflow;
 /// <item>Several people found for one step each get a task; the first decision closes the others (ruling R1).</item>
 /// <item>Decisions lock the request, then the task, so two people deciding the same request run one after the other.
 /// The module's outcome handler runs in the same transaction as the final decision (ruling Q11).</item>
+/// <item>Delegation (slice S1.10b, ruling Q8): a delegate decides a task assigned to the delegator with the delegator's
+/// right to decide; the task, the history and the outcome record "acted by the delegate, for the delegator".</item>
+/// <item>Every task gets a time limit in working days (ruling Q9); escalation is <see cref="EscalateAsync"/>.</item>
 /// </list>
+/// The engine is split over partial files: this one (module side, routing, decisions), <c>WorkflowEngine.Reading.cs</c>
+/// (inbox, counts, my requests, task details), <c>WorkflowEngine.Escalation.cs</c> and <c>WorkflowEngine.Monitor.cs</c>
+/// (administration and the FR-XM-29 query).
 /// </summary>
-public sealed class WorkflowEngine(
+public sealed partial class WorkflowEngine(
     ITenantConnectionProvider tenant,
     IClock clock,
     ICurrentActor actor,
@@ -36,7 +43,7 @@ public sealed class WorkflowEngine(
     WorkflowCatalog catalog,
     IApproverDirectory directory,
     IEnumerable<IWorkflowOutcomeHandler> handlers)
-    : IWorkflowService, IWorkflowInbox
+    : IWorkflowService, IWorkflowInbox, IWorkflowMonitor, IWorkflowQueries
 {
     public const string TaskNotFound = "errors.workflow.task_not_found";
     public const string RequestNotFound = "errors.workflow.request_not_found";
@@ -240,32 +247,42 @@ public sealed class WorkflowEngine(
     }
 
     /// <summary>A role queue gets one task; people get one task each (ruling R1).</summary>
-    private static async Task<List<Guid>> AssignAsync(WorkflowWork work, Request request, RouteStep step, Guid? roleId, List<Guid> people, string via, CancellationToken ct)
+    private static async Task<List<Guid>> AssignAsync(WorkflowWork work, Request request, RouteStep step, Guid? roleId, List<Guid> people, string via, CancellationToken ct,
+        int level = 0, TaskRow? from = null)
     {
         if (roleId is { } role)
         {
-            return [await InsertTaskAsync(work, request, step.Key, null, role, people, via, ct).ConfigureAwait(false)];
+            return [await InsertTaskAsync(work, request, step.Key, null, role, people, via, ct, level, from).ConfigureAwait(false)];
         }
 
         var ids = new List<Guid>();
         foreach (var person in people)
         {
-            ids.Add(await InsertTaskAsync(work, request, step.Key, person, null, [person], via, ct).ConfigureAwait(false));
+            ids.Add(await InsertTaskAsync(work, request, step.Key, person, null, [person], via, ct, level, from).ConfigureAwait(false));
         }
 
         return ids;
     }
 
-    private static async Task<Guid> InsertTaskAsync(WorkflowWork work, Request request, string stepKey, Guid? userId, Guid? roleId, IReadOnlyList<Guid> recipients, string via, CancellationToken ct)
+    /// <summary>
+    /// Opens a task with its time limit (ruling Q9): the step's working days, else the company's default. A task opened in
+    /// place of <paramref name="from"/> (reassignment, escalation) keeps a question still waiting for the requester (ruling P6).
+    /// </summary>
+    private static async Task<Guid> InsertTaskAsync(WorkflowWork work, Request request, string stepKey, Guid? userId, Guid? roleId, IReadOnlyList<Guid> recipients, string via,
+        CancellationToken ct, int level = 0, TaskRow? from = null)
     {
         var id = work.NewId();
+        var due = await DueAtAsync(work, request, stepKey, ct).ConfigureAwait(false);
+        var (askedAt, askedBy) = from is { InfoRequestedAt: { } at } ? (at, from.InfoRequestedBy) : ((DateTimeOffset?)null, (Guid?)null);
         await work.ExecuteAsync("""
-            insert into wf.workflow_tasks (id, instance_id, step_key, assignee_user_id, assignee_role_id, status, escalation_level, created_at, created_by, updated_at, updated_by, row_version)
-            values ($1, $2, $3, $4, $5, 'pending', 0, $6, $7, $6, $7, 1)
-            """, ct, id, request.Instance.Id, stepKey, userId, roleId, work.Now, work.Actor).ConfigureAwait(false);
+            insert into wf.workflow_tasks (id, instance_id, step_key, assignee_user_id, assignee_role_id, status, due_at, escalation_level, info_requested_at, info_requested_by,
+                created_at, created_by, updated_at, updated_by, row_version)
+            values ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $10, $11, 1)
+            """, ct, id, request.Instance.Id, stepKey, userId, roleId, due, level, askedAt, askedBy, work.Now, work.Actor).ConfigureAwait(false);
         work.Change("wf.workflow_tasks", id, request.Instance.CompanyId, "create",
-            ("instance_id", null, request.Instance.Id), ("step_key", null, stepKey), ("assignee_user_id", null, userId), ("assignee_role_id", null, roleId), ("status", null, "pending"));
-        await work.HistoryAsync(request.Instance.Id, id, "task_assigned", work.Actor, null, new { step = stepKey, assignee_user_id = userId, assignee_role_id = roleId, via }, ct).ConfigureAwait(false);
+            ("instance_id", null, request.Instance.Id), ("step_key", null, stepKey), ("assignee_user_id", null, userId), ("assignee_role_id", null, roleId), ("status", null, "pending"),
+            ("due_at", null, due), ("escalation_level", null, level));
+        await work.HistoryAsync(request.Instance.Id, id, "task_assigned", work.Actor, null, new { step = stepKey, assignee_user_id = userId, assignee_role_id = roleId, via, due_at = due, escalation_level = level }, ct).ConfigureAwait(false);
         await work.RaiseAsync(WorkflowEvents.TaskAssigned, "wf.workflow_task", id, Payload(request, id, recipients, null), ct).ConfigureAwait(false);
         return id;
     }
@@ -274,89 +291,111 @@ public sealed class WorkflowEngine(
     private static async Task<Guid> CannotAssignAsync(WorkflowWork work, Request request, RouteStep step, string reason, CancellationToken ct)
     {
         var id = work.NewId();
+        var due = await DueAtAsync(work, request, step.Key, ct).ConfigureAwait(false);
         await work.ExecuteAsync("""
-            insert into wf.workflow_tasks (id, instance_id, step_key, status, escalation_level, created_at, created_by, updated_at, updated_by, row_version)
-            values ($1, $2, $3, 'pending', 0, $4, $5, $4, $5, 1)
-            """, ct, id, request.Instance.Id, step.Key, work.Now, work.Actor).ConfigureAwait(false);
-        work.Change("wf.workflow_tasks", id, request.Instance.CompanyId, "create", ("instance_id", null, request.Instance.Id), ("step_key", null, step.Key), ("status", null, "pending"));
+            insert into wf.workflow_tasks (id, instance_id, step_key, status, due_at, escalation_level, created_at, created_by, updated_at, updated_by, row_version)
+            values ($1, $2, $3, 'pending', $4, 0, $5, $6, $5, $6, 1)
+            """, ct, id, request.Instance.Id, step.Key, due, work.Now, work.Actor).ConfigureAwait(false);
+        work.Change("wf.workflow_tasks", id, request.Instance.CompanyId, "create", ("instance_id", null, request.Instance.Id), ("step_key", null, step.Key), ("status", null, "pending"), ("due_at", null, due));
         await work.HistoryAsync(request.Instance.Id, id, "cannot_assign", work.Actor, null, new { step = step.Key, reason }, ct).ConfigureAwait(false);
         return id;
+    }
+
+    /// <summary>When a task opened now on the step becomes late (ruling Q9, S1.10b ruling P3).</summary>
+    private static async Task<DateTimeOffset> DueAtAsync(WorkflowWork work, Request request, string stepKey, CancellationToken ct, DateTimeOffset? arrived = null)
+    {
+        var calendar = await WorkflowTime.CalendarAsync(work, request.Instance.CompanyId, ct).ConfigureAwait(false);
+        var step = request.Route.Steps.FirstOrDefault(s => s.Key == stepKey);
+        return calendar.DueAt(arrived ?? work.Now, step?.TimeLimitWorkingDays);
     }
 
     // ================================================================== decisions (IWorkflowInbox)
 
     public Task<DecisionResult> ApproveAsync(Guid taskId, DecisionRequest request, CancellationToken cancellationToken) =>
-        DecideAsync(taskId, async (work, req, task, ct) =>
+        ApproveCoreAsync(taskId, Trim(request?.Comment), bulk: false, cancellationToken);
+
+    private Task<DecisionResult> ApproveCoreAsync(Guid taskId, string? comment, bool bulk, CancellationToken cancellationToken) =>
+        DecideAsync(taskId, async (work, req, task, actingFor, ct) =>
         {
-            await ActOnTaskAsync(work, req, task, "approved", Trim(request?.Comment), ct).ConfigureAwait(false);
-            await work.HistoryAsync(req.Instance.Id, task.Id, "approved", work.Actor, null, new { step = task.StepKey, comment = Trim(request?.Comment) }, ct).ConfigureAwait(false);
+            await ActOnTaskAsync(work, req, task, "approved", comment, actingFor, ct).ConfigureAwait(false);
+            await work.HistoryAsync(req.Instance.Id, task.Id, "approved", work.Actor, actingFor, new { step = task.StepKey, comment, bulk }, ct).ConfigureAwait(false);
             await CloseOthersAsync(work, req, task.Id, "decided_by_other", ct).ConfigureAwait(false);
             var index = req.Route.Steps.ToList().FindIndex(s => s.Key == task.StepKey);
             var opened = await AdvanceAsync(work, req, index + 1, ct).ConfigureAwait(false);
             if (opened.Count == 0)
             {
-                await CompleteAsync(work, req, WorkflowOutcomes.Approved, Trim(request?.Comment), ct).ConfigureAwait(false);
+                await CompleteAsync(work, req, WorkflowOutcomes.Approved, comment, actingFor, ct).ConfigureAwait(false);
                 return new DecisionResult(req.Instance.Id, "approved", []);
             }
 
             return new DecisionResult(req.Instance.Id, "running", opened);
-        }, cancellationToken);
+        }, cancellationToken, requireBulk: bulk);
 
     public Task<DecisionResult> RejectAsync(Guid taskId, DecisionRequest request, CancellationToken cancellationToken) =>
-        DecideAsync(taskId, async (work, req, task, ct) =>
+        DecideAsync(taskId, async (work, req, task, actingFor, ct) =>
         {
             var reason = Trim(request?.Comment) ?? throw new WorkflowException("errors.workflow.reason_required");
-            await ActOnTaskAsync(work, req, task, "rejected", reason, ct).ConfigureAwait(false);
-            await work.HistoryAsync(req.Instance.Id, task.Id, "rejected", work.Actor, null, new { step = task.StepKey, reason }, ct).ConfigureAwait(false);
+            await ActOnTaskAsync(work, req, task, "rejected", reason, actingFor, ct).ConfigureAwait(false);
+            await work.HistoryAsync(req.Instance.Id, task.Id, "rejected", work.Actor, actingFor, new { step = task.StepKey, reason }, ct).ConfigureAwait(false);
             await CloseOthersAsync(work, req, task.Id, "decided_by_other", ct).ConfigureAwait(false);
-            await CompleteAsync(work, req, WorkflowOutcomes.Rejected, reason, ct).ConfigureAwait(false);
+            await CompleteAsync(work, req, WorkflowOutcomes.Rejected, reason, actingFor, ct).ConfigureAwait(false);
             return new DecisionResult(req.Instance.Id, "rejected", []);
         }, cancellationToken);
 
     public Task<DecisionResult> ReturnAsync(Guid taskId, DecisionRequest request, CancellationToken cancellationToken) =>
-        DecideAsync(taskId, async (work, req, task, ct) =>
+        DecideAsync(taskId, async (work, req, task, actingFor, ct) =>
         {
             var reason = Trim(request?.Comment) ?? throw new WorkflowException("errors.workflow.reason_required");
-            await ActOnTaskAsync(work, req, task, "changes_requested", reason, ct).ConfigureAwait(false);
-            await work.HistoryAsync(req.Instance.Id, task.Id, "returned", work.Actor, null, new { step = task.StepKey, reason }, ct).ConfigureAwait(false);
+            await ActOnTaskAsync(work, req, task, "changes_requested", reason, actingFor, ct).ConfigureAwait(false);
+            await work.HistoryAsync(req.Instance.Id, task.Id, "returned", work.Actor, actingFor, new { step = task.StepKey, reason }, ct).ConfigureAwait(false);
             await CloseOthersAsync(work, req, task.Id, "decided_by_other", ct).ConfigureAwait(false);
-            await CompleteAsync(work, req, WorkflowOutcomes.Returned, reason, ct).ConfigureAwait(false);
+            await CompleteAsync(work, req, WorkflowOutcomes.Returned, reason, actingFor, ct).ConfigureAwait(false);
             return new DecisionResult(req.Instance.Id, "returned", []);
         }, cancellationToken);
 
+    /// <summary>
+    /// Passes the task to another eligible person (ruling Q7): by its assignee (or their delegate), or by an administrator
+    /// holding <c>wf.workflow_tasks.reassign</c> for the request's company (ruling Q13; also a task nobody could be found for).
+    /// </summary>
     public Task<DecisionResult> ReassignAsync(Guid taskId, ReassignRequest request, CancellationToken cancellationToken) =>
-        DecideAsync(taskId, async (work, req, task, ct) =>
+        DecideAsync(taskId, (work, req, task, actingFor, ct) => ReassignCoreAsync(work, req, task, actingFor, request?.ToUserId, Trim(request?.Reason), ct), cancellationToken, allowAdministrator: true);
+
+    private static async Task<DecisionResult> ReassignCoreAsync(WorkflowWork work, Request req, TaskRow task, Guid? actingFor, Guid? toUserId, string? reason, CancellationToken ct)
+    {
+        if (reason is null)
         {
-            var reason = Trim(request?.Reason) ?? throw new WorkflowException("errors.workflow.reason_required");
-            var to = request!.ToUserId ?? throw new WorkflowException("errors.workflow.reassign_target_required");
-            if (to == work.Actor)
-            {
-                throw new WorkflowException("errors.workflow.reassign_to_self");
-            }
+            throw new WorkflowException("errors.workflow.reason_required");
+        }
 
-            if (req.Instance.Excludes(to))
-            {
-                throw new WorkflowException("errors.workflow.assignee_excluded"); // FR-XM-32: not even by reassignment
-            }
+        var to = toUserId ?? throw new WorkflowException("errors.workflow.reassign_target_required");
+        if (to == work.Actor || to == task.AssigneeUserId)
+        {
+            throw new WorkflowException("errors.workflow.reassign_to_self");
+        }
 
-            if (!await ApproverResolution.ActiveUserAsync(work, to, ct).ConfigureAwait(false))
-            {
-                throw new WorkflowException("errors.workflow.assignee_not_active");
-            }
+        if (req.Instance.Excludes(to))
+        {
+            throw new WorkflowException("errors.workflow.assignee_excluded"); // FR-XM-32: not even by reassignment
+        }
 
-            if (!await CanDecideAsync(work, req, to, ct).ConfigureAwait(false))
-            {
-                throw new WorkflowException("errors.workflow.assignee_cannot_decide");
-            }
+        if (!await ApproverResolution.ActiveUserAsync(work, to, ct).ConfigureAwait(false))
+        {
+            throw new WorkflowException("errors.workflow.assignee_not_active");
+        }
 
-            await ActOnTaskAsync(work, req, task, "reassigned", reason, ct).ConfigureAwait(false);
-            await work.HistoryAsync(req.Instance.Id, task.Id, "reassigned", work.Actor, null, new { step = task.StepKey, to_user_id = to, reason }, ct).ConfigureAwait(false);
-            var opened = await InsertTaskAsync(work, req, task.StepKey, to, null, [to], "reassigned", ct).ConfigureAwait(false);
-            return new DecisionResult(req.Instance.Id, "running", [.. (await OpenTasksAsync(work, req.Instance.Id, ct).ConfigureAwait(false)).Where(id => id != task.Id).Append(opened).Distinct()]);
-        }, cancellationToken);
+        if (!await CanDecideAsync(work, req, to, ct).ConfigureAwait(false))
+        {
+            throw new WorkflowException("errors.workflow.assignee_cannot_decide");
+        }
+
+        await ActOnTaskAsync(work, req, task, "reassigned", reason, actingFor, ct, claim: false).ConfigureAwait(false);
+        await work.HistoryAsync(req.Instance.Id, task.Id, "reassigned", work.Actor, actingFor, new { step = task.StepKey, to_user_id = to, reason }, ct).ConfigureAwait(false);
+        var opened = await InsertTaskAsync(work, req, task.StepKey, to, null, [to], "reassigned", ct, task.EscalationLevel, task).ConfigureAwait(false);
+        return new DecisionResult(req.Instance.Id, "running", [.. (await OpenTasksAsync(work, req.Instance.Id, ct).ConfigureAwait(false)).Where(id => id != task.Id).Append(opened).Distinct()]);
+    }
 
     public Task<DecisionResult> AskAsync(Guid taskId, AskRequest request, CancellationToken cancellationToken) =>
-        DecideAsync(taskId, async (work, req, task, ct) =>
+        DecideAsync(taskId, async (work, req, task, actingFor, ct) =>
         {
             var question = Trim(request?.Question) ?? throw new WorkflowException("errors.workflow.question_required");
             if (task.InfoRequestedAt is not null)
@@ -371,7 +410,7 @@ public sealed class WorkflowEngine(
                 """, ct, task.Id, work.Actor, work.Now).ConfigureAwait(false);
             work.Change("wf.workflow_tasks", task.Id, req.Instance.CompanyId, "update", ("info_requested_at", null, work.Now), ("info_requested_by", null, work.Actor),
                 ("assignee_user_id", task.AssigneeUserId, task.AssigneeUserId ?? work.Actor));
-            await work.HistoryAsync(req.Instance.Id, task.Id, "info_requested", work.Actor, null, new { step = task.StepKey, question }, ct).ConfigureAwait(false);
+            await work.HistoryAsync(req.Instance.Id, task.Id, "info_requested", work.Actor, actingFor, new { step = task.StepKey, question }, ct).ConfigureAwait(false);
             await work.RaiseAsync(WorkflowEvents.InfoRequested, "wf.workflow_instance", req.Instance.Id, Payload(req, task.Id, [req.Instance.RequesterUserId], null), ct).ConfigureAwait(false);
             return new DecisionResult(req.Instance.Id, "running", await OpenTasksAsync(work, req.Instance.Id, ct).ConfigureAwait(false));
         }, cancellationToken);
@@ -414,16 +453,185 @@ public sealed class WorkflowEngine(
             var reason = Trim(request?.Reason);
             await CloseOthersAsync(work, req, null, "withdrawn", ct).ConfigureAwait(false);
             await work.HistoryAsync(req.Instance.Id, null, "withdrawn", work.Actor, null, new { reason }, ct).ConfigureAwait(false);
-            await CompleteAsync(work, req, WorkflowOutcomes.Cancelled, reason, ct).ConfigureAwait(false);
+            await CompleteAsync(work, req, WorkflowOutcomes.Cancelled, reason, null, ct).ConfigureAwait(false);
             return new DecisionResult(req.Instance.Id, "cancelled", []);
         }, cancellationToken);
 
     /// <summary>
-    /// One decision on one task, in its own transaction: the request is locked, then the task; the caller must be the task's
-    /// assignee or, for a queue task, an eligible holder of its role (who then claims it); never the requester or a subject;
-    /// and must hold the document type's decide permission for the request's company.
+    /// Takes a role-queue task (KRN-WFL-02; slice S1.10 ruling Q4): an eligible holder of the role who may decide the request
+    /// becomes its assignee. The request, then the task, are locked, so of two holders claiming at once one wins and the
+    /// other is told it was taken (409).
     /// </summary>
-    private async Task<DecisionResult> DecideAsync(Guid taskId, Func<WorkflowWork, Request, TaskRow, CancellationToken, Task<DecisionResult>> action, CancellationToken ct)
+    public Task<DecisionResult> ClaimAsync(Guid taskId, CancellationToken cancellationToken) =>
+        OnTaskAsync(taskId, async (work, req, task, ct) =>
+        {
+            if (task.AssigneeRoleId is null || req.Instance.Excludes(work.Actor)
+                || !(await ApproverResolution.RoleHoldersAsync(work, task.AssigneeRoleId.Value, req.Instance.CompanyId, ApproverResolution.Today(work), ct).ConfigureAwait(false)).Contains(work.Actor))
+            {
+                throw new KeyNotFoundException(TaskNotFound);
+            }
+
+            if (task.Status != "pending")
+            {
+                throw new WorkflowException("errors.workflow.task_not_pending");
+            }
+
+            if (task.AssigneeUserId is not null)
+            {
+                throw new WorkflowException("errors.workflow.task_claimed");
+            }
+
+            RunningOnly(req);
+            if (!await CanDecideAsync(work, req, work.Actor, ct).ConfigureAwait(false))
+            {
+                throw new WorkflowException("errors.workflow.no_decide_permission");
+            }
+
+            await work.ExecuteAsync("""
+                update wf.workflow_tasks set assignee_user_id = $2, claimed_at = $3, updated_at = $3, updated_by = $2, row_version = row_version + 1 where id = $1
+                """, ct, task.Id, work.Actor, work.Now).ConfigureAwait(false);
+            work.Change("wf.workflow_tasks", task.Id, req.Instance.CompanyId, "update", ("assignee_user_id", null, work.Actor), ("claimed_at", null, work.Now));
+            await work.HistoryAsync(req.Instance.Id, task.Id, "claimed", work.Actor, null, new { step = task.StepKey, role_id = task.AssigneeRoleId }, ct).ConfigureAwait(false);
+            return new DecisionResult(req.Instance.Id, "running", await OpenTasksAsync(work, req.Instance.Id, ct).ConfigureAwait(false));
+        }, cancellationToken);
+
+    /// <summary>Gives a claimed queue task back to the role's queue: only the claimer, and not while their question waits.</summary>
+    public Task<DecisionResult> ReleaseAsync(Guid taskId, CancellationToken cancellationToken) =>
+        OnTaskAsync(taskId, async (work, req, task, ct) =>
+        {
+            if (task.AssigneeRoleId is null || task.ClaimedAt is null || task.AssigneeUserId != work.Actor)
+            {
+                throw new KeyNotFoundException(TaskNotFound);
+            }
+
+            if (task.Status != "pending")
+            {
+                throw new WorkflowException("errors.workflow.task_not_pending");
+            }
+
+            RunningOnly(req);
+            if (task.InfoRequestedAt is not null)
+            {
+                throw new WorkflowException("errors.workflow.info_pending");
+            }
+
+            await work.ExecuteAsync("""
+                update wf.workflow_tasks set assignee_user_id = null, claimed_at = null, updated_at = $2, updated_by = $3, row_version = row_version + 1 where id = $1
+                """, ct, task.Id, work.Now, work.Actor).ConfigureAwait(false);
+            work.Change("wf.workflow_tasks", task.Id, req.Instance.CompanyId, "update", ("assignee_user_id", work.Actor, null), ("claimed_at", task.ClaimedAt, null));
+            await work.HistoryAsync(req.Instance.Id, task.Id, "released", work.Actor, null, new { step = task.StepKey, role_id = task.AssigneeRoleId }, ct).ConfigureAwait(false);
+            var holders = await ApproverResolution.RoleHoldersAsync(work, task.AssigneeRoleId.Value, req.Instance.CompanyId, ApproverResolution.Today(work), ct).ConfigureAwait(false);
+            await work.RaiseAsync(WorkflowEvents.TaskAssigned, "wf.workflow_task", task.Id, Payload(req, task.Id, [.. holders.Where(p => !req.Instance.Excludes(p))], null), ct).ConfigureAwait(false);
+            return new DecisionResult(req.Instance.Id, "running", await OpenTasksAsync(work, req.Instance.Id, ct).ConfigureAwait(false));
+        }, cancellationToken);
+
+    /// <summary>
+    /// Approves several tasks (KRN-WFL-08; ruling Q12): at most <c>wf.bulk_approval.max_items</c>; each task is checked and
+    /// decided in its own transaction exactly as a single approval, and only where the document type and the step allow
+    /// bulk approval. One result per task.
+    /// </summary>
+    public async Task<BulkResult> BulkApproveAsync(BulkApproveRequest request, CancellationToken cancellationToken)
+    {
+        var ids = (request?.TaskIds ?? []).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            throw new WorkflowException("errors.workflow.bulk_empty");
+        }
+
+        if (ids.Count > await IntSettingAsync(KernelSettingKeys.WfBulkApprovalMaxItems, 100, cancellationToken).ConfigureAwait(false))
+        {
+            throw new WorkflowException("errors.workflow.bulk_too_many");
+        }
+
+        var comment = Trim(request!.Comment);
+        var results = new List<TaskActionResult>();
+        foreach (var id in ids)
+        {
+            results.Add(await OneAsync(id, () => ApproveCoreAsync(id, comment, bulk: true, cancellationToken)).ConfigureAwait(false));
+        }
+
+        return new BulkResult(results.Count(r => r.Outcome == "approved"), results.Count(r => r.Outcome == "refused"), results);
+    }
+
+    /// <summary>One task of a bulk action: its result, or the refusal's key (the other tasks go on).</summary>
+    private static async Task<TaskActionResult> OneAsync(Guid taskId, Func<Task<DecisionResult>> action, string done = "approved")
+    {
+        try
+        {
+            var result = await action().ConfigureAwait(false);
+            return new TaskActionResult(taskId, done, result.Status, null);
+        }
+        catch (WorkflowException ex)
+        {
+            return new TaskActionResult(taskId, "refused", null, ex.ErrorKey);
+        }
+        catch (KeyNotFoundException ex) when (ex.Message.StartsWith("errors.", StringComparison.Ordinal))
+        {
+            return new TaskActionResult(taskId, "refused", null, ex.Message);
+        }
+    }
+
+    /// <summary>A customer-wide whole-number setting, read on its own connection.</summary>
+    private async Task<int> IntSettingAsync(string key, int fallback, CancellationToken ct)
+    {
+        await using var c = await IdentityDb.OpenAsync(tenant.DataSource, ct).ConfigureAwait(false);
+        var resolved = await Settings.SettingsStore.ResolveAsync(c, null, [key], null, null, DateOnly.FromDateTime(clock.UtcNow.UtcDateTime), ct).ConfigureAwait(false);
+        return resolved.TryGetValue(key, out var v) && v.Value.ValueKind == JsonValueKind.Number && v.Value.TryGetInt32(out var n) ? n : fallback;
+    }
+
+    /// <summary>
+    /// One decision on one task, in its own transaction: the request is locked, then the task. The caller must be the
+    /// task's assignee, an active delegate of the assignee (deciding with the assignee's rights, ruling Q8), or, for a queue
+    /// task nobody has claimed, an eligible holder of its role (who then claims it); never the requester or a subject; and
+    /// must hold the document type's decide permission for the request's company (for a delegate: the delegator must).
+    /// With <paramref name="allowAdministrator"/>, an administrator holding <c>wf.workflow_tasks.reassign</c> for the
+    /// request's company may act too (reassignment, ruling Q13). With <paramref name="requireBulk"/>, the document type and
+    /// the step must allow bulk approval.
+    /// </summary>
+    private async Task<DecisionResult> DecideAsync(Guid taskId, Func<WorkflowWork, Request, TaskRow, Guid?, CancellationToken, Task<DecisionResult>> action, CancellationToken ct,
+        bool allowAdministrator = false, bool requireBulk = false) =>
+        await OnTaskAsync(taskId, async (work, request, task, c) =>
+        {
+            var capacity = await CapacityAsync(work, request, task, work.Actor, c).ConfigureAwait(false);
+            var administrator = false;
+            if (capacity is null && allowAdministrator && !request.Instance.Excludes(work.Actor)
+                && (await WorkflowCoverage.ForAsync(work, work.Actor, WorkflowPermissions.TasksReassign, c).ConfigureAwait(false)).CoversCompany(request.Instance.CompanyId))
+            {
+                administrator = true;
+            }
+            else if (capacity is null)
+            {
+                // A holder of the queue who lost the race to another holder is told it was taken (409), not "not found".
+                if (task.AssigneeRoleId is not null && task.ClaimedAt is not null && !request.Instance.Excludes(work.Actor)
+                    && (await ApproverResolution.RoleHoldersAsync(work, task.AssigneeRoleId.Value, request.Instance.CompanyId, ApproverResolution.Today(work), c).ConfigureAwait(false)).Contains(work.Actor))
+                {
+                    throw new WorkflowException(task.Status == "pending" ? "errors.workflow.task_claimed" : "errors.workflow.task_not_pending");
+                }
+
+                throw new KeyNotFoundException(TaskNotFound);
+            }
+
+            if (task.Status != "pending")
+            {
+                throw new WorkflowException("errors.workflow.task_not_pending");
+            }
+
+            RunningOnly(request);
+            if (requireBulk && !(request.Type.BulkApproval && request.Route.Steps.FirstOrDefault(s => s.Key == task.StepKey)?.BulkApproval == true))
+            {
+                throw new WorkflowException("errors.workflow.bulk_not_allowed");
+            }
+
+            if (!administrator && !await CanDecideAsync(work, request, capacity!.ActingFor ?? work.Actor, c).ConfigureAwait(false))
+            {
+                throw new WorkflowException("errors.workflow.no_decide_permission");
+            }
+
+            return await action(work, request, task, capacity?.ActingFor, c).ConfigureAwait(false);
+        }, ct).ConfigureAwait(false);
+
+    /// <summary>Loads and locks a task's request (first) and the task (second) in a new transaction, runs the action and commits.</summary>
+    private async Task<DecisionResult> OnTaskAsync(Guid taskId, Func<WorkflowWork, Request, TaskRow, CancellationToken, Task<DecisionResult>> action, CancellationToken ct)
     {
         await using var c = await IdentityDb.OpenAsync(tenant.DataSource, ct).ConfigureAwait(false);
         await using var tx = await c.BeginTransactionAsync(ct).ConfigureAwait(false);
@@ -433,37 +641,18 @@ public sealed class WorkflowEngine(
         var instance = await work.InstanceAsync(instanceId, lockRow: true, ct).ConfigureAwait(false) ?? throw new KeyNotFoundException(TaskNotFound);
         var task = await work.TaskAsync(taskId, lockRow: true, ct).ConfigureAwait(false) ?? throw new KeyNotFoundException(TaskNotFound);
         var request = await LoadAsync(work, instance, ct).ConfigureAwait(false) ?? throw new KeyNotFoundException(TaskNotFound);
-        if (!await MayDecideAsync(work, request, task, work.Actor, ct).ConfigureAwait(false))
-        {
-            // A holder of the queue who lost the race to another holder is told it was decided (409), not "not found".
-            if (task.Status != "pending" && task.AssigneeRoleId is not null && task.ClaimedAt is not null
-                && await MayDecideAsync(work, request, task with { AssigneeUserId = null }, work.Actor, ct).ConfigureAwait(false))
-            {
-                throw new WorkflowException("errors.workflow.task_not_pending");
-            }
-
-            throw new KeyNotFoundException(TaskNotFound);
-        }
-
-        if (task.Status != "pending")
-        {
-            throw new WorkflowException("errors.workflow.task_not_pending");
-        }
-
-        if (instance.Status != "running")
-        {
-            throw new WorkflowException("errors.workflow.request_not_running");
-        }
-
-        if (!await CanDecideAsync(work, request, work.Actor, ct).ConfigureAwait(false))
-        {
-            throw new WorkflowException("errors.workflow.no_decide_permission");
-        }
-
         var result = await action(work, request, task, ct).ConfigureAwait(false);
         await work.FlushAsync(ct).ConfigureAwait(false);
         await tx.CommitAsync(ct).ConfigureAwait(false);
         return result;
+    }
+
+    private static void RunningOnly(Request request)
+    {
+        if (request.Instance.Status != "running")
+        {
+            throw new WorkflowException("errors.workflow.request_not_running");
+        }
     }
 
     /// <summary>An action of the requester on their own request (answer a question, withdraw).</summary>
@@ -484,38 +673,72 @@ public sealed class WorkflowEngine(
         return result;
     }
 
-    /// <summary>Whether the user may act on the task: its assignee, or (unassigned queue task) an eligible holder of its role.</summary>
-    private static async Task<bool> MayDecideAsync(WorkflowWork work, Request request, TaskRow task, Guid userId, CancellationToken ct)
+    /// <summary>In what capacity a user may act on a task; <see cref="ActingFor"/> is the delegator for a delegate.</summary>
+    private sealed record Capacity(Guid? ActingFor);
+
+    /// <summary>
+    /// Whether, and for whom, the user may act on the task: its assignee; an active delegate of its assignee for this
+    /// request's document type and company (ruling Q8; tasks the assignee holds personally, ruling P2); or, for a queue
+    /// task nobody has claimed, an eligible holder of its role. Never the requester or a subject (FR-XM-32).
+    /// </summary>
+    private static async Task<Capacity?> CapacityAsync(WorkflowWork work, Request request, TaskRow task, Guid userId, CancellationToken ct)
     {
         if (request.Instance.Excludes(userId))
         {
-            return false;
+            return null;
         }
 
         if (task.AssigneeUserId is { } assignee)
         {
-            return assignee == userId;
+            if (assignee == userId)
+            {
+                return new Capacity(null);
+            }
+
+            return await DelegatedAsync(work, assignee, userId, request.Instance.DocumentType, request.Instance.CompanyId, ct).ConfigureAwait(false) ? new Capacity(assignee) : null;
         }
 
         return task.AssigneeRoleId is { } role
-            && (await ApproverResolution.RoleHoldersAsync(work, role, request.Instance.CompanyId, ApproverResolution.Today(work), ct).ConfigureAwait(false)).Contains(userId);
+            && (await ApproverResolution.RoleHoldersAsync(work, role, request.Instance.CompanyId, ApproverResolution.Today(work), ct).ConfigureAwait(false)).Contains(userId)
+            ? new Capacity(null)
+            : null;
     }
+
+    /// <summary>
+    /// The SQL test "an active delegation from <c>{from}</c> to <c>{to}</c> covers the request now" (ruling Q8): status active,
+    /// now within its time, the request's document type and company inside its lists (an empty list: all). Only the
+    /// delegator's own tasks are matched, so a delegation is never passed on.
+    /// </summary>
+    internal static string DelegationCovers(string from, string to, string now, string documentType, string company) => $"""
+        exists (select 1 from iam.delegations dl
+                where dl.from_user_id = {from} and dl.to_user_id = {to} and dl.status = 'active'
+                  and dl.valid_from <= {now} and dl.valid_to > {now}
+                  and (jsonb_array_length(coalesce(dl.scope -> 'document_types', '[]'::jsonb)) = 0 or (dl.scope -> 'document_types') ? {documentType})
+                  and (jsonb_array_length(coalesce(dl.scope -> 'company_ids', '[]'::jsonb)) = 0 or (dl.scope -> 'company_ids') ? ({company})::text))
+        """;
+
+    private static Task<bool> DelegatedAsync(WorkflowWork work, Guid from, Guid to, string documentType, Guid companyId, CancellationToken ct) =>
+        work.ScalarAsync<bool>("select " + DelegationCovers("$1", "$2", "$3", "$4", "$5"), ct, from, to, work.Now, documentType, companyId);
 
     /// <summary>The right to decide (ruling Q14): <c>wf.workflow_tasks.update</c> and the document type's own decide permission, for the request's company.</summary>
     private static async Task<bool> CanDecideAsync(WorkflowWork work, Request request, Guid userId, CancellationToken ct) =>
         await ApproverResolution.HoldsAsync(work, userId, WorkflowPermissions.TasksDecide, request.Instance.CompanyId, ct).ConfigureAwait(false)
         && (request.Type.DecidePermission is not { } own || await ApproverResolution.HoldsAsync(work, userId, own, request.Instance.CompanyId, ct).ConfigureAwait(false));
 
-    /// <summary>Records the caller's decision on the task (claiming a queue task in the same statement).</summary>
-    private static async Task ActOnTaskAsync(WorkflowWork work, Request request, TaskRow task, string status, string? comment, CancellationToken ct)
+    /// <summary>
+    /// Records the caller's action on the task, and for whom (a delegate's delegator). Deciding an unclaimed queue task
+    /// claims it in the same statement; a reassignment by an administrator does not.
+    /// </summary>
+    private static async Task ActOnTaskAsync(WorkflowWork work, Request request, TaskRow task, string status, string? comment, Guid? actingFor, CancellationToken ct, bool claim = true)
     {
         await work.ExecuteAsync("""
-            update wf.workflow_tasks set assignee_user_id = coalesce(assignee_user_id, $2), claimed_at = case when assignee_user_id is null then $3 else claimed_at end,
-                status = $4, acted_by = $2, acted_at = $3, comment = $5, updated_at = $3, updated_by = $2, row_version = row_version + 1
+            update wf.workflow_tasks set assignee_user_id = case when $7 then coalesce(assignee_user_id, $2) else assignee_user_id end,
+                claimed_at = case when $7 and assignee_user_id is null and assignee_role_id is not null then $3 else claimed_at end,
+                status = $4, acted_by = $2, acted_at = $3, comment = $5, acting_for_user_id = $6, updated_at = $3, updated_by = $2, row_version = row_version + 1
             where id = $1
-            """, ct, task.Id, work.Actor, work.Now, status, comment).ConfigureAwait(false);
-        work.Change("wf.workflow_tasks", task.Id, request.Instance.CompanyId, "status", ("status", task.Status, status), ("acted_by", null, work.Actor),
-            ("assignee_user_id", task.AssigneeUserId, task.AssigneeUserId ?? work.Actor), ("comment", task.Comment, comment));
+            """, ct, task.Id, work.Actor, work.Now, status, comment, actingFor, claim).ConfigureAwait(false);
+        work.Change("wf.workflow_tasks", task.Id, request.Instance.CompanyId, "status", ("status", task.Status, status), ("acted_by", null, work.Actor), ("acting_for_user_id", null, actingFor),
+            ("assignee_user_id", task.AssigneeUserId, claim ? task.AssigneeUserId ?? work.Actor : task.AssigneeUserId), ("comment", task.Comment, comment));
     }
 
     /// <summary>Closes the request's other open tasks (another holder decided, or the request ended).</summary>
@@ -532,18 +755,18 @@ public sealed class WorkflowEngine(
     }
 
     /// <summary>Ends (or returns) the request, tells the module in the same transaction, and raises the event.</summary>
-    private async Task CompleteAsync(WorkflowWork work, Request request, string outcome, string? comment, CancellationToken ct)
+    private async Task CompleteAsync(WorkflowWork work, Request request, string outcome, string? comment, Guid? actingFor, CancellationToken ct)
     {
         var status = outcome; // approved, rejected, returned, cancelled are also the request's statuses
         await work.ExecuteAsync("""
             update wf.workflow_instances set status = $2, completed_at = $3, updated_at = $4, updated_by = $5, row_version = row_version + 1 where id = $1
             """, ct, request.Instance.Id, status, outcome == WorkflowOutcomes.Returned ? null : work.Now, work.Now, work.Actor).ConfigureAwait(false);
         work.Change("wf.workflow_instances", request.Instance.Id, request.Instance.CompanyId, "status", ("status", request.Instance.Status, status));
-        await work.HistoryAsync(request.Instance.Id, null, "completed", work.Actor, null, new { outcome }, ct).ConfigureAwait(false);
+        await work.HistoryAsync(request.Instance.Id, null, "completed", work.Actor, actingFor, new { outcome }, ct).ConfigureAwait(false);
 
         var handler = handlers.FirstOrDefault(h => h.DocumentType == request.Type.Code)
             ?? throw new InvalidOperationException($"No workflow outcome handler is registered for document type {request.Type.Code}.");
-        await handler.OnOutcomeAsync(new WorkflowOutcome(request.Instance.Id, request.Type.Code, request.Instance.DocumentId, request.Instance.CompanyId, outcome, work.Actor, null, comment, work.Now),
+        await handler.OnOutcomeAsync(new WorkflowOutcome(request.Instance.Id, request.Type.Code, request.Instance.DocumentId, request.Instance.CompanyId, outcome, work.Actor, actingFor, comment, work.Now),
             work.Transaction, ct).ConfigureAwait(false);
 
         var people = request.Instance.SubjectUserIds.Prepend(request.Instance.RequesterUserId).Distinct().ToList();
@@ -553,99 +776,6 @@ public sealed class WorkflowEngine(
 
     private static async Task<List<Guid>> OpenTasksAsync(WorkflowWork work, Guid instanceId, CancellationToken ct) =>
         [.. (await work.TasksOfAsync(instanceId, ct).ConfigureAwait(false)).Where(t => t.Status == "pending").Select(t => t.Id)];
-
-    // ================================================================== reading (IWorkflowInbox)
-
-    public async Task<IReadOnlyList<InboxItem>> InboxAsync(CancellationToken cancellationToken)
-    {
-        await using var c = await IdentityDb.OpenAsync(tenant.DataSource, cancellationToken).ConfigureAwait(false);
-        await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var work = new WorkflowWork(c, tx, clock.UtcNow, actor.UserId);
-        var rows = new List<(Guid TaskId, string Step, Guid? Assignee, Guid? Role, DateTimeOffset Created, DateTimeOffset? Due, bool Waiting, Guid InstanceId)>();
-        await using (var command = work.Command(Access.AccessSnapshot.AssignmentsCte + """
-            select t.id, t.step_key, t.assignee_user_id, t.assignee_role_id, t.created_at, t.due_at, t.info_requested_at is not null, t.instance_id
-            from wf.workflow_tasks t
-            join wf.workflow_instances i on i.id = t.instance_id and i.status = 'running'
-            where t.status = 'pending'
-              and (t.assignee_user_id = $1
-                   or (t.assignee_user_id is null and t.assignee_role_id is not null
-                       and exists (select 1 from valid v where v.role_id = t.assignee_role_id and (v.company_id is null or v.company_id = i.company_id))
-                       and i.requester_user_id <> $1 and not ($1 = any(i.subject_user_ids))))
-            order by t.created_at, t.id
-            limit 1000
-            """, work.Actor, ApproverResolution.Today(work)))
-        await using (var r = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
-        {
-            while (await r.ReadAsync(cancellationToken).ConfigureAwait(false))
-            {
-                rows.Add((r.GetGuid(0), r.GetString(1), WorkflowWork.NullableGuid(r, 2), WorkflowWork.NullableGuid(r, 3), r.GetFieldValue<DateTimeOffset>(4),
-                    WorkflowWork.NullableTime(r, 5), r.GetBoolean(6), r.GetGuid(7)));
-            }
-        }
-
-        var items = new List<InboxItem>();
-        var requests = new Dictionary<Guid, Request?>();
-        foreach (var row in rows)
-        {
-            if (!requests.TryGetValue(row.InstanceId, out var request))
-            {
-                var instance = await work.InstanceAsync(row.InstanceId, lockRow: false, cancellationToken).ConfigureAwait(false);
-                requests[row.InstanceId] = request = instance is null ? null : await LoadAsync(work, instance, cancellationToken).ConfigureAwait(false);
-            }
-
-            if (request is null)
-            {
-                continue; // document type not registered or not licensed (ruling Q11)
-            }
-
-            items.Add(new InboxItem(row.TaskId, request.Instance.Id, request.Type.Code, request.Instance.DocumentId, request.Instance.CompanyId, Titles(request),
-                Link(request), row.Step, StepName(request, row.Step), request.Instance.RequesterUserId, row.Created, row.Due, row.Assignee is null, row.Role, row.Waiting));
-        }
-
-        return items;
-    }
-
-    public async Task<WorkflowTaskDetail?> TaskAsync(Guid taskId, CancellationToken cancellationToken)
-    {
-        await using var c = await IdentityDb.OpenAsync(tenant.DataSource, cancellationToken).ConfigureAwait(false);
-        await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var work = new WorkflowWork(c, tx, clock.UtcNow, actor.UserId);
-        if (await work.TaskAsync(taskId, lockRow: false, cancellationToken).ConfigureAwait(false) is not { } task
-            || await work.InstanceAsync(task.InstanceId, lockRow: false, cancellationToken).ConfigureAwait(false) is not { } instance
-            || await LoadAsync(work, instance, cancellationToken).ConfigureAwait(false) is not { } request
-            || !await MayDecideAsync(work, request, task, work.Actor, cancellationToken).ConfigureAwait(false))
-        {
-            return null;
-        }
-
-        var history = new List<WorkflowHistoryView>();
-        await using (var command = work.Command("select id, task_id, event, actor_id, acting_for_user_id, created_at, details::text from wf.workflow_history where instance_id = $1 order by created_at, id", instance.Id))
-        await using (var r = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
-        {
-            while (await r.ReadAsync(cancellationToken).ConfigureAwait(false))
-            {
-                using var details = JsonDocument.Parse(r.GetString(6));
-                history.Add(new WorkflowHistoryView(r.GetGuid(0), WorkflowWork.NullableGuid(r, 1), r.GetString(2), WorkflowWork.NullableGuid(r, 3), WorkflowWork.NullableGuid(r, 4),
-                    r.GetFieldValue<DateTimeOffset>(5), details.RootElement.Clone()));
-            }
-        }
-
-        return new WorkflowTaskDetail(TaskView(request, task), InstanceView(request), history);
-    }
-
-    internal static WorkflowTaskView TaskViewOf(IReadOnlyDictionary<string, string> stepName, TaskRow t) =>
-        new(t.Id, t.StepKey, stepName, t.Status, t.AssigneeUserId, t.AssigneeRoleId, t.ActingForUserId, t.ActedBy, t.ActedAt, t.Comment, t.DueAt, t.InfoRequestedAt, t.InfoRequestedBy, t.ClaimedAt, t.RowVersion);
-
-    private static WorkflowTaskView TaskView(Request request, TaskRow t) => TaskViewOf(StepName(request, t.StepKey), t);
-
-    private static WorkflowInstanceView InstanceView(Request request)
-    {
-        var i = request.Instance;
-        using var context = JsonDocument.Parse(i.ContextJson);
-        var values = context.RootElement.TryGetProperty("values", out var v) ? v.Clone() : JsonSerializer.SerializeToElement(new Dictionary<string, string>());
-        return new WorkflowInstanceView(i.Id, i.VersionId, i.DocumentType, i.DocumentId, i.CompanyId, i.Status, i.RequesterUserId, i.SubjectUserIds, i.StartedAt, i.CompletedAt,
-            values, Titles(request), Link(request));
-    }
 
     // ================================================================== helpers
 

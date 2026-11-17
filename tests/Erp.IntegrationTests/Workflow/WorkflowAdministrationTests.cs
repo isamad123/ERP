@@ -1,6 +1,9 @@
 using System.Net;
+using Erp.BuildingBlocks.Contracts.Api;
 using Erp.IntegrationTests.Tenancy;
 using Erp.Kernel.Infrastructure.Workflow;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using static Erp.IntegrationTests.Workflow.WorkflowRig;
 
 namespace Erp.IntegrationTests.Workflow;
@@ -265,11 +268,25 @@ public sealed class WorkflowAdministrationTests(TenancyFixture fx) : IAsyncLifet
     public async Task FR_KRN_WFL_09_CR041_the_generated_writes_of_the_workflow_tables_and_delegations_are_closed()
     {
         var admin = await _w.AdminAsync(Ct);
-        foreach (var path in new[] { "/api/wf/workflow-definitions", "/api/wf/workflow-versions", "/api/wf/workflow-instances", "/api/wf/workflow-tasks", "/api/wf/workflow-history", "/api/iam/delegations" })
+        foreach (var path in new[] { "/api/wf/workflow-definitions", "/api/wf/workflow-versions", "/api/wf/workflow-instances", "/api/wf/workflow-tasks", "/api/wf/workflow-history" })
         {
             var write = await _w.PostAsync(admin, path, new { }, Ct);
             Assert.Contains(write.Status, new[] { HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed });
             Assert.Equal(HttpStatusCode.OK, (await _w.GetAsync(admin, path, Ct)).Status);
         }
+
+        // No generated endpoint of these tables writes (CR-041). POST /api/iam/delegations is the delegation service of
+        // S1.10b (ruling Q14), not a generated create: an empty body is refused and nothing is written.
+        var generatedWrites = _w.App.Services.GetRequiredService<EndpointDataSource>().Endpoints
+            .Select(e => e.Metadata.GetMetadata<GeneratedEndpointMetadata>())
+            .Where(m => m is not null && (m.Resource.StartsWith("wf.", StringComparison.Ordinal) || m.Resource == "iam.delegations") && m.Action != "read")
+            .ToList();
+        Assert.Empty(generatedWrites);
+        var before = await _w.H.ScalarAsync<long>("select count(*) from iam.delegations", Ct);
+        var refused = await _w.PostAsync(admin, "/api/iam/delegations", new { }, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.Status);
+        Assert.Contains("errors.delegation.from_required", refused.Body, StringComparison.Ordinal);
+        Assert.Equal(before, await _w.H.ScalarAsync<long>("select count(*) from iam.delegations", Ct));
+        Assert.Equal(HttpStatusCode.OK, (await _w.GetAsync(admin, "/api/iam/delegations", Ct)).Status);
     }
 }

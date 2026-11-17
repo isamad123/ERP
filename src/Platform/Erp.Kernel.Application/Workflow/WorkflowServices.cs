@@ -83,7 +83,11 @@ public interface IWorkflowAdministration
     Task<WorkflowDefinitionView> DeactivateAsync(Guid definitionId, DeactivateDefinitionRequest request, CancellationToken cancellationToken);
 }
 
-/// <summary>A task in the caller's inbox: their own, or a queue task of a role they hold that they may take.</summary>
+/// <summary>
+/// A task in the caller's inbox (slice S1.10 rulings Q12, Q8): their own, a queue task of a role they hold that they may
+/// claim (<see cref="Queue"/>), or a task of someone who delegated to them (<see cref="ActingForUserId"/>: "for Sara").
+/// <see cref="BulkApproval"/> says whether the document type and the step allow bulk approval.
+/// </summary>
 public sealed record InboxItem(
     Guid TaskId,
     Guid InstanceId,
@@ -99,7 +103,69 @@ public sealed record InboxItem(
     DateTimeOffset? DueAt,
     bool Queue,
     Guid? RoleId,
-    bool WaitingForInformation);
+    bool WaitingForInformation,
+    string Module,
+    Guid? ActingForUserId,
+    bool Overdue,
+    int EscalationLevel,
+    bool BulkApproval);
+
+/// <summary>
+/// Inbox filters (ruling Q12); all optional. <see cref="Sort"/> is <c>received</c> (default, oldest first) or <c>due</c>
+/// (soonest first, tasks without a time limit last). <see cref="Limit"/> is 1 to 1000 (default 1000).
+/// </summary>
+public sealed record InboxQuery(
+    string? Module = null,
+    string? DocumentType = null,
+    Guid? CompanyId = null,
+    Guid? RequesterUserId = null,
+    string? Step = null,
+    bool? Waiting = null,
+    bool? Overdue = null,
+    DateTimeOffset? ReceivedFrom = null,
+    DateTimeOffset? ReceivedTo = null,
+    string? Sort = null,
+    int? Limit = null);
+
+/// <summary>Open tasks of one document type in the caller's inbox, and how many are past their time limit.</summary>
+public sealed record InboxTypeCount(string DocumentType, string Module, IReadOnlyDictionary<string, string> Name, int Count, int Overdue);
+
+/// <summary>
+/// Counts for menus and badges (ruling Q12). <see cref="ChangeApprovals"/> is the number of pending maker-checker
+/// requests of other people the caller may be asked to decide (S1.06; decided on their own endpoints).
+/// </summary>
+public sealed record InboxCounts(int Total, int Overdue, IReadOnlyList<InboxTypeCount> DocumentTypes, int ChangeApprovals);
+
+/// <summary>Approve several tasks at once (ruling Q12): each is checked and decided on its own.</summary>
+public sealed record BulkApproveRequest(IReadOnlyList<Guid>? TaskIds, string? Comment);
+
+/// <summary>The result for one task: <c>approved</c>, or <c>refused</c> with the reason's localization key.</summary>
+public sealed record TaskActionResult(Guid TaskId, string Outcome, string? Status, string? Error);
+
+public sealed record BulkResult(int Done, int Refused, IReadOnlyList<TaskActionResult> Results);
+
+/// <summary>A task now open on one of the caller's requests: who must decide it and by when.</summary>
+public sealed record MyRequestTask(Guid TaskId, string StepKey, IReadOnlyDictionary<string, string> StepName, Guid? AssigneeUserId, Guid? AssigneeRoleId, DateTimeOffset? DueAt, bool Overdue);
+
+/// <summary>A question an approver asked that waits for the requester's answer.</summary>
+public sealed record WaitingQuestion(Guid TaskId, Guid? AskedBy, DateTimeOffset AskedAt, string? Question);
+
+/// <summary>One of the caller's own requests ("my requests", ruling Q12).</summary>
+public sealed record MyRequestView(
+    Guid Id,
+    string DocumentType,
+    Guid DocumentId,
+    Guid CompanyId,
+    IReadOnlyDictionary<string, string> Title,
+    string Link,
+    string Status,
+    DateTimeOffset StartedAt,
+    DateTimeOffset? CompletedAt,
+    IReadOnlyList<MyRequestTask> CurrentTasks,
+    IReadOnlyList<WaitingQuestion> Questions);
+
+/// <summary><see cref="Status"/>: running, returned, approved, rejected, cancelled (default: running and returned). <see cref="Limit"/> 1 to 200.</summary>
+public sealed record MyRequestsQuery(string? Status = null, int? Limit = null);
 
 public sealed record WorkflowTaskView(
     Guid Id,
@@ -116,7 +182,9 @@ public sealed record WorkflowTaskView(
     DateTimeOffset? InfoRequestedAt,
     Guid? InfoRequestedBy,
     DateTimeOffset? ClaimedAt,
-    long RowVersion);
+    long RowVersion,
+    int EscalationLevel,
+    DateTimeOffset? EscalatedAt);
 
 public sealed record WorkflowInstanceView(
     Guid Id,
@@ -155,7 +223,9 @@ public sealed record DecisionResult(Guid InstanceId, string Status, IReadOnlyLis
 /// <summary>The approver's and the requester's side of a request (slice S1.10 build item 5 and the inbox list, rulings Q7, Q12).</summary>
 public interface IWorkflowInbox
 {
-    Task<IReadOnlyList<InboxItem>> InboxAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<InboxItem>> InboxAsync(InboxQuery query, CancellationToken cancellationToken);
+
+    Task<InboxCounts> CountsAsync(CancellationToken cancellationToken);
 
     Task<WorkflowTaskDetail?> TaskAsync(Guid taskId, CancellationToken cancellationToken);
 
@@ -172,4 +242,132 @@ public interface IWorkflowInbox
     Task<DecisionResult> AnswerAsync(Guid instanceId, AnswerRequest request, CancellationToken cancellationToken);
 
     Task<DecisionResult> WithdrawAsync(Guid instanceId, WithdrawRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Takes a role-queue task (KRN-WFL-02 "queue with claim"): only one holder can have it.</summary>
+    Task<DecisionResult> ClaimAsync(Guid taskId, CancellationToken cancellationToken);
+
+    /// <summary>Gives a claimed queue task back to the role's queue (the claimer only, not while their question waits).</summary>
+    Task<DecisionResult> ReleaseAsync(Guid taskId, CancellationToken cancellationToken);
+
+    Task<BulkResult> BulkApproveAsync(BulkApproveRequest request, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<MyRequestView>> MyRequestsAsync(MyRequestsQuery query, CancellationToken cancellationToken);
+}
+
+// ====================================================================== administration (build item 9, ruling Q13)
+
+/// <summary>
+/// Monitor filters: <see cref="Status"/> (default running and returned), <see cref="Overdue"/> (a task past its time
+/// limit), <see cref="CannotAssign"/> (a task nobody could be found for). <see cref="Limit"/> 1 to 500 (default 200);
+/// <see cref="After"/> continues from the last id of the previous page (newest first).
+/// </summary>
+public sealed record MonitorQuery(
+    string? DocumentType = null,
+    string? Status = null,
+    Guid? CompanyId = null,
+    bool? Overdue = null,
+    bool? CannotAssign = null,
+    Guid? After = null,
+    int? Limit = null);
+
+/// <summary>A request as the monitor lists it.</summary>
+public sealed record MonitorItem(
+    Guid Id,
+    string DocumentType,
+    Guid DocumentId,
+    Guid CompanyId,
+    string Status,
+    Guid RequesterUserId,
+    DateTimeOffset StartedAt,
+    DateTimeOffset? CompletedAt,
+    IReadOnlyDictionary<string, string> Title,
+    string Link,
+    int OpenTasks,
+    bool Overdue,
+    bool CannotAssign);
+
+/// <summary>A request with all its tasks and its decision history.</summary>
+public sealed record RequestDetail(WorkflowInstanceView Request, IReadOnlyList<WorkflowTaskView> Tasks, IReadOnlyList<WorkflowHistoryView> History);
+
+public sealed record CancelRequest(string? Reason);
+
+/// <summary>An open task of a user, for the administrator (ADM-USR-03).</summary>
+public sealed record UserOpenTask(
+    Guid TaskId,
+    Guid InstanceId,
+    string DocumentType,
+    Guid DocumentId,
+    Guid CompanyId,
+    IReadOnlyDictionary<string, string> Title,
+    string StepKey,
+    DateTimeOffset ReceivedAt,
+    DateTimeOffset? DueAt,
+    bool Overdue);
+
+public sealed record ReassignAllRequest(Guid? ToUserId, string? Reason);
+
+/// <summary>Administration of requests (ADM-USR-03, FR-XM-29; slice S1.10 ruling Q13).</summary>
+public interface IWorkflowMonitor
+{
+    Task<IReadOnlyList<MonitorItem>> RequestsAsync(MonitorQuery query, CancellationToken cancellationToken);
+
+    Task<RequestDetail?> RequestAsync(Guid instanceId, CancellationToken cancellationToken);
+
+    Task<DecisionResult> CancelAsync(Guid instanceId, CancelRequest request, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<UserOpenTask>> OpenTasksOfAsync(Guid userId, CancellationToken cancellationToken);
+
+    Task<BulkResult> ReassignOpenTasksAsync(Guid userId, ReassignAllRequest request, CancellationToken cancellationToken);
+}
+
+// ====================================================================== delegation (build item 6, ruling Q8)
+
+/// <summary>
+/// A delegation: <see cref="FromUserId"/> (administrators only; self-service delegates the caller's own approvals) hands
+/// approvals to <see cref="ToUserId"/> from the first day to the last day (whole days in the customer's time zone),
+/// for the document types and companies listed (empty or absent: all).
+/// </summary>
+public sealed record DelegationRequest(
+    Guid? FromUserId,
+    Guid? ToUserId,
+    DateOnly? From,
+    DateOnly? To,
+    IReadOnlyList<string>? DocumentTypes,
+    IReadOnlyList<Guid>? CompanyIds,
+    string? Reason);
+
+/// <summary>A delegation; <see cref="InForce"/> is true while it is active and today is within its days.</summary>
+public sealed record DelegationView(
+    Guid Id,
+    Guid FromUserId,
+    Guid ToUserId,
+    DateOnly From,
+    DateOnly To,
+    DateTimeOffset ValidFrom,
+    DateTimeOffset ValidTo,
+    IReadOnlyList<string> DocumentTypes,
+    IReadOnlyList<Guid> CompanyIds,
+    string? Reason,
+    string Status,
+    bool InForce,
+    long RowVersion);
+
+/// <summary>The caller's delegations: given to others, and received from others.</summary>
+public sealed record MyDelegations(IReadOnlyList<DelegationView> Given, IReadOnlyList<DelegationView> Received);
+
+public sealed record RevokeDelegationRequest(string? Reason);
+
+/// <summary>Delegation and out-of-office substitution (KRN-WFL-05, HRM-SSP-07, ADM-ROL-09; ruling Q8).</summary>
+public interface IDelegationService
+{
+    Task<MyDelegations> MineAsync(CancellationToken cancellationToken);
+
+    Task<DelegationView> CreateMineAsync(DelegationRequest request, CancellationToken cancellationToken);
+
+    Task<DelegationView> RevokeMineAsync(Guid id, RevokeDelegationRequest request, CancellationToken cancellationToken);
+
+    /// <summary>An administrator delegates on behalf of <see cref="DelegationRequest.FromUserId"/>.</summary>
+    Task<DelegationView> CreateAsync(DelegationRequest request, CancellationToken cancellationToken);
+
+    Task<DelegationView> RevokeAsync(Guid id, RevokeDelegationRequest request, CancellationToken cancellationToken);
 }

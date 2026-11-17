@@ -154,6 +154,17 @@ usage readings and copies limit events. To run it at once: `M licence refresh [-
 Usage statement of a month: `M usage statement --tenant acme --month 202611` (each meter, its limit and percentage; the monthly
 value is the highest daily reading, API calls the total).
 
+## Approval escalation (S1.10b, FR-XM-32)
+The worker host also runs approval escalation every `Workflow__EscalationIntervalSeconds` (default 60) for every active
+customer whose access mode is full: an open approval task past its time limit (working days in the company's time zone,
+weekly off days `org.weekly_off_days` and the company's public and religious holidays not counted) moves to the next level
+(the approver's manager, else the step's escalation user or role), at most three levels; nothing is ever approved
+automatically. A task with nobody above stays open and shows as overdue in `GET /api/wf/instances?overdue=true`. The first run
+after upgrading gives open tasks created before S1.10b their time limit. To run it at once:
+`M workflow escalate [--tenant acme]` (prints escalated, overdue and time limits set per customer; exit code 3 if a customer failed).
+Modules that send documents for approval register their document types (and HR its approver directory) in the worker host as
+in the API host; tasks of types the worker does not know are left alone.
+
 ## Customer list (FR-ADM-PLT-01)
 `M tenant list`: code, status, database status, region, cluster, edition, entitlement state, modules, schema version, legal
 hold, last backup and last restore test.

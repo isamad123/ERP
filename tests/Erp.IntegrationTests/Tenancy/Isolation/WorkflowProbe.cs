@@ -12,12 +12,15 @@ using Npgsql;
 namespace Erp.IntegrationTests.Tenancy.Isolation;
 
 /// <summary>
-/// The cross-customer probe of the workflow endpoints (slice S1.10a). Each customer gets fresh material: two active
-/// administrators and a requester, the test module's routes, a draft version, and a running request whose task is
-/// assigned to the first administrator (waiting for the requester's answer when the answer endpoint is probed). Then, as for the other probes:
+/// The cross-customer probe of the workflow endpoints (slices S1.10a and S1.10b). Each customer gets fresh material: two
+/// active administrators and a requester, the test module's routes, a draft version, a running request whose task is
+/// assigned to the first administrator (waiting for the requester's answer when the answer endpoint is probed; a role-queue
+/// task, claimed by the first administrator for "release", when the claim endpoints are probed) and a delegation from the
+/// first administrator to the second. Then, as for the other probes:
 /// <list type="number">
 /// <item>B's host and token aimed at A's ids (route and body), with and without headers naming A: actions on A's route,
-/// version, task or request are 404; lists answer B's own data only; never 5xx.</item>
+/// version, task, request, user or delegation are 404; lists answer B's own data only; a create naming A's people is
+/// refused; a bulk action on A's tasks refuses each as not found; never 5xx.</item>
 /// <item>Crossed host and token, missing or forged token: 401; unknown host: 404.</item>
 /// <item>A's database is unchanged; then a positive control on A's own host (as A's administrator, or as A's requester for
 /// the requester's endpoints) shows the endpoint works for A.</item>
@@ -25,16 +28,20 @@ namespace Erp.IntegrationTests.Tenancy.Isolation;
 /// </summary>
 public sealed class WorkflowProbe(IsolationFixture fx, WebApplication app)
 {
-    private sealed record Material(Guid Admin, Guid OtherAdmin, Guid Requester, Guid Definition, Guid Draft, Guid Instance, Guid Task);
+    private sealed record Material(Guid Admin, Guid OtherAdmin, Guid Requester, Guid Definition, Guid Draft, Guid Instance, Guid Task, Guid Delegation);
 
     public async Task<IReadOnlyList<string>> RunAsync(ApiEndpoint endpoint, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(endpoint);
         var failures = new List<string>();
         var question = endpoint.Pattern.EndsWith("/answer", StringComparison.Ordinal); // the requester answers only a question asked
-        var a = await MaterialAsync(fx.CodeA, question, ct);
-        var b = await MaterialAsync(fx.CodeB, question, ct);
-        var markers = new[] { a.Admin, a.OtherAdmin, a.Requester, a.Definition, a.Draft, a.Instance, a.Task }.Select(g => g.ToString()).ToArray();
+        var queue = endpoint.Pattern.EndsWith("/claim", StringComparison.Ordinal) ? QueueTask.Unclaimed
+            : endpoint.Pattern.EndsWith("/release", StringComparison.Ordinal) ? QueueTask.Claimed : QueueTask.None;
+        var a = await MaterialAsync(fx.CodeA, question, queue, ct);
+        var b = await MaterialAsync(fx.CodeB, question, queue, ct);
+        // A bulk answer repeats the task ids the caller sent (its own input), so A's task id is not a leak marker there.
+        var markers = new[] { a.Admin, a.OtherAdmin, a.Requester, a.Definition, a.Draft, a.Instance, a.Delegation }
+            .Concat(endpoint.Kind == EndpointKind.WorkflowBulk ? [] : new[] { a.Task }).Select(g => g.ToString()).ToArray();
         var method = new HttpMethod(endpoint.Method);
         var (path, body, asRequester) = Target(endpoint, a);
         var tokenA = fx.Tenancy.Token(fx.CodeA, user: asRequester ? a.Requester : a.Admin);
@@ -56,6 +63,15 @@ public sealed class WorkflowProbe(IsolationFixture fx, WebApplication app)
             else if (endpoint.Kind == EndpointKind.WorkflowCatalog && reply.Status != HttpStatusCode.OK)
             {
                 failures.Add($"{endpoint} [{label}]: B's own list was refused ({(int)reply.Status}); the path was not exercised. {Short(reply.Body)}");
+            }
+            else if (endpoint.Kind == EndpointKind.WorkflowCreate && reply.Status != HttpStatusCode.BadRequest)
+            {
+                failures.Add($"{endpoint} [{label}]: expected 400 for a create naming A's people, got {(int)reply.Status}. {Short(reply.Body)}");
+            }
+            else if (endpoint.Kind == EndpointKind.WorkflowBulk && (reply.Status != HttpStatusCode.OK || !reply.Body.Contains("errors.workflow.task_not_found", StringComparison.Ordinal)
+                || reply.Body.Contains("\"approved\"", StringComparison.Ordinal)))
+            {
+                failures.Add($"{endpoint} [{label}]: expected every one of A's tasks refused as not found, got {(int)reply.Status}. {Short(reply.Body)}");
             }
 
             var leaked = markers.Where(m => reply.Body.Contains(m, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -118,15 +134,39 @@ public sealed class WorkflowProbe(IsolationFixture fx, WebApplication app)
             "POST /api/wf/tasks/{id:guid}/ask" => ($"/api/wf/tasks/{m.Task}/ask", Json(new { question = "probe" }), false),
             "POST /api/wf/instances/{id:guid}/answer" => ($"/api/wf/instances/{m.Instance}/answer", Json(new { answer = "probe" }), true),
             "POST /api/wf/instances/{id:guid}/withdraw" => ($"/api/wf/instances/{m.Instance}/withdraw", Json(new { reason = "probe" }), true),
+            "GET /api/wf/inbox/counts" or "GET /api/wf/instances" => (endpoint.Pattern, null, false),
+            "GET /api/wf/my-requests" => (endpoint.Pattern, null, true),
+            "POST /api/wf/tasks/{id:guid}/claim" or "POST /api/wf/tasks/{id:guid}/release" => (endpoint.Pattern.Replace("{id:guid}", m.Task.ToString(), StringComparison.Ordinal), null, false),
+            "POST /api/wf/tasks/bulk-approve" => (endpoint.Pattern, Json(new { taskIds = new[] { m.Task } }), false),
+            "GET /api/wf/instances/{id:guid}" => ($"/api/wf/instances/{m.Instance}", null, false),
+            "POST /api/wf/instances/{id:guid}/cancel" => ($"/api/wf/instances/{m.Instance}/cancel", Json(new { reason = "probe" }), false),
+            "GET /api/wf/users/{id:guid}/open-tasks" => ($"/api/wf/users/{m.Admin}/open-tasks", null, false),
+            "POST /api/wf/users/{id:guid}/reassign-open-tasks" => ($"/api/wf/users/{m.Admin}/reassign-open-tasks", Json(new { toUserId = m.OtherAdmin, reason = "probe" }), false),
+            "GET /api/iam/me/delegations/" => (endpoint.Pattern, null, false),
+            "POST /api/iam/me/delegations/" => (endpoint.Pattern, Json(new { toUserId = m.OtherAdmin, from = Tomorrow.AddDays(10), to = Tomorrow.AddDays(11), reason = "probe" }), false),
+            "POST /api/iam/delegations/" => (endpoint.Pattern, Json(new { fromUserId = m.Requester, toUserId = m.OtherAdmin, from = Tomorrow, to = Tomorrow.AddDays(1), reason = "probe" }), false),
+            "POST /api/iam/me/delegations/{id:guid}/revoke" or "POST /api/iam/delegations/{id:guid}/revoke"
+                => (endpoint.Pattern.Replace("{id:guid}", m.Delegation.ToString(), StringComparison.Ordinal), Json(new { reason = "probe" }), false),
             _ => throw new InvalidOperationException($"No probe target for workflow endpoint {key}; extend WorkflowProbe."),
         };
     }
 
+    /// <summary>A day that is in the future in every time zone (delegations cannot start in the past).</summary>
+    private static DateOnly Tomorrow => DateOnly.FromDateTime(DateTime.UtcNow).AddDays(2);
+
+    private enum QueueTask
+    {
+        None,
+        Unclaimed,
+        Claimed,
+    }
+
     /// <summary>
     /// Fresh material in one customer, written as the database owner would: the test module's routes, an active
-    /// expense route (definition row version 1 by the time a probe deactivates it), a draft, and a running request.
+    /// expense route (definition row version 1 by the time a probe deactivates it), a draft, a running request and a
+    /// delegation.
     /// </summary>
-    private async Task<Material> MaterialAsync(string code, bool question, CancellationToken ct)
+    private async Task<Material> MaterialAsync(string code, bool question, QueueTask queue, CancellationToken ct)
     {
         var system = BaselineSeed.SystemUserId;
         await using var c = await fx.OpenAdminAsync(code, ct);
@@ -166,10 +206,17 @@ public sealed class WorkflowProbe(IsolationFixture fx, WebApplication app)
             values ($1, $2, $3, $4, $5, $6, now(), '{"values": {}}', 'running', now(), $6, now(), $6)
             """, ct, instance, company, version, WorkflowRig.Expense, Guid.CreateVersion7(), requester);
         await ExecAsync(c, """
-            insert into wf.workflow_tasks (id, instance_id, step_key, assignee_user_id, status, info_requested_at, info_requested_by, created_at, created_by, updated_at, updated_by)
-            values ($1, $2, 'probe', $3, 'pending', case when $5 then now() end, case when $5 then $3 end, now(), $4, now(), $4)
-            """, ct, task, instance, admin, requester, question);
-        return new Material(admin, other, requester, definition, draft, instance, task);
+            insert into wf.workflow_tasks (id, instance_id, step_key, assignee_user_id, assignee_role_id, claimed_at, status, info_requested_at, info_requested_by, created_at, created_by, updated_at, updated_by)
+            select $1, $2, 'probe', case when $6 <> 1 then $3 end, case when $6 > 0 then r.id end, case when $6 = 2 then now() end,
+                   'pending', case when $5 then now() end, case when $5 then $3 end, now(), $4, now(), $4
+            from iam.roles r where r.code = 'tenant_admin'
+            """, ct, task, instance, admin, requester, question, (int)queue);
+        var delegation = Guid.CreateVersion7();
+        await ExecAsync(c, """
+            insert into iam.delegations (id, from_user_id, to_user_id, scope, valid_from, valid_to, reason, status, created_at, created_by, updated_at, updated_by)
+            values ($1, $2, $3, '{"document_types": [], "company_ids": []}', now() - interval '1 day', now() + interval '5 days', 'probe', 'active', now(), $2, now(), $2)
+            """, ct, delegation, admin, other);
+        return new Material(admin, other, requester, definition, draft, instance, task, delegation);
     }
 
     private async Task<Reply> SendAsync(string host, string? token, HttpMethod method, string pathAndQuery, string? body, bool hints, CancellationToken ct)

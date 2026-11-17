@@ -96,7 +96,7 @@ public sealed class SettingsTests(TenancyFixture fx) : IAsyncLifetime
 
         Assert.False(await _h.ScalarAsync<bool>("select is_visible from cfg.settings where key = $1", Ct, Orphan));
         Assert.Equal("7", await _h.ScalarAsync<string>("select value::text from cfg.setting_values where setting_key = $1", Ct, Orphan));
-        Assert.Equal(23L, await _h.ScalarAsync<long>("select count(*) from cfg.settings where module_id in ('iam', 'cfg', 'org') and is_visible", Ct)); // + cfg.limits.warning_percent (S1.09b)
+        Assert.Equal(24L, await _h.ScalarAsync<long>("select count(*) from cfg.settings where module_id in ('iam', 'cfg', 'org') and is_visible", Ct)); // + cfg.limits.warning_percent (S1.09b), org.weekly_off_days (S1.10b)
         Assert.Equal(HttpStatusCode.NotFound, (await _h.GetAsync(admin, $"{Api}/{Orphan}", Ct)).Status);
         Assert.Equal(SettingsErrors.Unknown, (await _h.PutAsync(admin, $"{Api}/{Orphan}", Set("tenant", null, 8), Ct)).Text("title"));
     }

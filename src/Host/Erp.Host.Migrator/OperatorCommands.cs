@@ -15,6 +15,8 @@ using Erp.Kernel.Infrastructure.ControlPlane.Platform;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Erp.Kernel.Infrastructure.Identity;
+using Erp.Kernel.Infrastructure.Workflow;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
 namespace Erp.Host.Migrator;
@@ -42,6 +44,8 @@ public static class OperatorCommands
           licence refresh [--tenant <code>]              records licence-state changes, activates scheduled entitlements,
                                                          takes usage readings (the worker does this every hour)
           usage statement --tenant <code> --month <yyyymm>
+          workflow escalate [--tenant <code>]            moves approval tasks past their time limit to the next level
+                                                         (the worker does this every minute; never approves anything)
           tenant provision --code <c> --name <n> --host <h[,h2]> --region <r> --country <CC> --currency <CUR>
                            --size-profile <micro|sme|mid|enterprise> --cluster <n> --legal-name <n>
                            --admin-email <e> --admin-name <n> --entitlement <file.json>
@@ -90,6 +94,7 @@ public static class OperatorCommands
                 "entitlement history" => await EntitlementHistoryAsync(context, cancellationToken).ConfigureAwait(false),
                 "licence refresh" => await LicenceRefreshAsync(context, cancellationToken).ConfigureAwait(false),
                 "usage statement" => await UsageStatementAsync(context, cancellationToken).ConfigureAwait(false),
+                "workflow escalate" => await WorkflowEscalateAsync(context, cancellationToken).ConfigureAwait(false),
                 "tenant provision" => await ProvisionAsync(context, cancellationToken).ConfigureAwait(false),
                 "tenant list" => await ListAsync(context, cancellationToken).ConfigureAwait(false),
                 "tenant admin-activation-link" => await ActivationLinkAsync(context, cancellationToken).ConfigureAwait(false),
@@ -235,6 +240,29 @@ public static class OperatorCommands
         }
 
         return 0;
+    }
+
+    /// <summary>One escalation run for every served customer, or one (slice S1.10b), as the worker's loop does it.</summary>
+    private static async Task<int> WorkflowEscalateAsync(Context c, CancellationToken cancellationToken)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(c.Clock);
+        services.AddSingleton(TimeProvider.System);
+        services.AddWorkflowEscalation(Context.ControlPlane, c.Secrets, TimeSpan.Zero);
+        await using var provider = services.BuildServiceProvider();
+        var failed = false;
+        foreach (var o in await provider.GetRequiredService<WorkflowEscalationRunner>().RunAsync(c.OptionalOption("tenant"), cancellationToken).ConfigureAwait(false))
+        {
+            failed |= o.Error is not null;
+            await c.Output.WriteLineAsync(o switch
+            {
+                { Error: { } error } => $"{o.Code}: FAILED: {error}",
+                { Skipped: { } mode } => $"{o.Code}: skipped (access mode {mode})",
+                _ => $"{o.Code}: {o.Run!.Escalated} escalated, {o.Run.NotPossible} with nobody above (overdue), {o.Run.DueDatesSet} time limits set",
+            }).ConfigureAwait(false);
+        }
+
+        return failed ? 3 : 0;
     }
 
     private static async Task<int> LicenceRefreshAsync(Context c, CancellationToken cancellationToken)

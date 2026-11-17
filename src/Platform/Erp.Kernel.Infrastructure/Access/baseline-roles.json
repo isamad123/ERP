@@ -92,7 +92,9 @@
         "iam.users.unlock",
         "iam.users.read_sessions",
         "iam.roles.assign",
-        "aud.history.view"
+        "aud.history.view",
+        "wf.workflow_instances.read",
+        "wf.workflow_tasks.reassign"
       ],
       "scopes": {
         "*": "all"
@@ -118,13 +120,17 @@
         "aud.history.view",
         "wf.workflow_tasks.read",
         "wf.workflow_tasks.update",
-        "wf.workflow_instances.read"
+        "wf.workflow_instances.read",
+        "iam.delegations.read",
+        "iam.delegations.create",
+        "iam.delegations.update"
       ],
       "scopes": {
         "*": "all",
         "ntf.in_app_items": "own",
         "wf.workflow_tasks": "own",
-        "wf.workflow_instances": "own"
+        "wf.workflow_instances": "own",
+        "iam.delegations": "own"
       },
       "fields": []
     },
@@ -147,13 +153,17 @@
         "wf.workflow_tasks.read",
         "wf.workflow_tasks.update",
         "aud.history.view",
-        "wf.workflow_instances.read"
+        "wf.workflow_instances.read",
+        "iam.delegations.read",
+        "iam.delegations.create",
+        "iam.delegations.update"
       ],
       "scopes": {
         "*": "all",
         "ntf.in_app_items": "own",
         "wf.workflow_tasks": "own",
-        "wf.workflow_instances": "own"
+        "wf.workflow_instances": "own",
+        "iam.delegations": "own"
       },
       "fields": []
     },

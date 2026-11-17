@@ -179,6 +179,17 @@ public sealed class GeneratorTests
     }
 
     [Fact]
+    public void S110b_CR043_a_later_part_of_a_slice_gets_its_own_design_file_and_the_first_part_keeps_its_name()
+    {
+        var files = Generator.Generate(Root).Files;
+        Assert.True(files.ContainsKey(SqlEmitter.KernelMigrations + "/V202611150307__kernel__design_s1_10a.sql")); // merged, frozen
+        var design = files[SqlEmitter.KernelMigrations + "/V202611151307__kernel__design_s1_10b.sql"];
+        Assert.Contains("create index if not exists ix_workflow_tasks_status_due_at on wf.workflow_tasks (status, due_at);", design, StringComparison.Ordinal);
+        Assert.DoesNotContain("add column", design, StringComparison.Ordinal);
+        Assert.DoesNotContain("V202611150307__kernel__design_s1_10b.sql", string.Join("\n", files.Keys), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void S103_spec03_roles_app_rw_cannot_update_or_delete_append_only_tables()
     {
         var files = Generator.Generate(Root).Files;
@@ -517,7 +528,12 @@ public sealed class GeneratorTests
         var files = Generator.Generate(Root).Files;
         var manifest = System.Text.Json.JsonDocument.Parse(files["src/Platform/Erp.Kernel.Infrastructure/Access/settings.g.json"]).RootElement;
         var settings = manifest.GetProperty("settings").EnumerateArray().ToList();
-        Assert.Equal(23, settings.Count); // 22 of S1.09a plus cfg.limits.warning_percent (S1.09b, ruling Q7)
+        Assert.Equal(27, settings.Count); // 22 of S1.09a, cfg.limits.warning_percent (S1.09b, ruling Q7), four of S1.10b (CR-041)
+        var off = settings.Single(s => s.GetProperty("key").GetString() == "org.weekly_off_days");
+        Assert.Equal("""["saturday","sunday"]""", string.Concat(off.GetProperty("default").GetRawText().Where(ch => !char.IsWhiteSpace(ch)))); // ruling Q16
+        Assert.Equal(2, settings.Single(s => s.GetProperty("key").GetString() == "wf.escalation.default_working_days").GetProperty("default").GetInt32()); // ruling Q9
+        Assert.Equal(90, settings.Single(s => s.GetProperty("key").GetString() == "wf.delegation.max_days").GetProperty("default").GetInt32()); // ruling Q8
+        Assert.Equal(100, settings.Single(s => s.GetProperty("key").GetString() == "wf.bulk_approval.max_items").GetProperty("default").GetInt32()); // ruling Q12
         var warning = settings.Single(s => s.GetProperty("key").GetString() == "cfg.limits.warning_percent");
         Assert.Equal(90, warning.GetProperty("default").GetInt32());
         Assert.Equal("""{"min":50,"max":99}""", string.Concat(warning.GetProperty("validation").GetRawText().Where(ch => !char.IsWhiteSpace(ch))));

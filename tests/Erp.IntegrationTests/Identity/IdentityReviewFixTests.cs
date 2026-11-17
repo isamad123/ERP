@@ -95,7 +95,7 @@ public sealed class IdentityReviewFixTests(TenancyFixture fx) : IAsyncLifetime
                 h.RefreshAsync(A, latest.Text("refreshToken")!, ct),
                 h.PostAsync(A, $"/api/iam/users/{userId}/status", new { status = "disabled", reason = "race" }, h.AdminToken(A), ct));
             Assert.All(disable, a => Assert.True((int)a.Status < 500, $"server error {a.Status}: {a.Body}"));
-            Assert.Equal(HttpStatusCode.NoContent, disable[1].Status);
+            IdentityTests.AssertDisabled(disable[1]);
         }
     }
 
