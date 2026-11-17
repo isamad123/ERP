@@ -25,18 +25,6 @@ public sealed class SettingValueResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for cfg.setting_values. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class SettingValueWriteRequest
-{
-    public string? SettingKey { get; init; }
-    public string? Layer { get; init; }
-    public global::System.Guid? ScopeId { get; init; }
-    public global::System.Text.Json.JsonElement? Value { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for cfg.setting_values.</summary>
 public sealed class SettingValueListQuery
 {
@@ -47,7 +35,7 @@ public sealed class SettingValueListQuery
     public string? SettingKey { get; init; }
 }
 
-/// <summary>Generated endpoints of cfg.setting_values: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of cfg.setting_values: read. Answers pass through field security (S1.06).</summary>
 internal static class SettingValueEndpoints
 {
     private const string Resource = "cfg.setting_values";
@@ -57,8 +45,6 @@ internal static class SettingValueEndpoints
         var group = app.MapGroup("/api/cfg/setting-values").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("cfg.setting_values.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.setting_values.read"));
         group.MapGet("/{id:guid}", GetAsync).WithName("cfg.setting_values.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.setting_values.read"));
-        group.MapPost("/", CreateAsync).WithName("cfg.setting_values.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "cfg.setting_values.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("cfg.setting_values.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "cfg.setting_values.update"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] SettingValueListQuery query, global::Erp.Kernel.Application.Generated.Cfg.ISettingValueRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -77,53 +63,6 @@ internal static class SettingValueEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.SettingValueAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(SettingValueWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ISettingValueRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.setting_values.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.SettingValueAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Cfg.SettingValue();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/setting-values/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.SettingValueAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, SettingValueWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ISettingValueRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.setting_values.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Cfg.SettingValueAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.SettingValueAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static SettingValueResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.SettingValue row) => new()
     {
         Id = row.Id,
@@ -137,66 +76,4 @@ internal static class SettingValueEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(SettingValueWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.SettingKey is null && (!update || access.CanEdit("setting_key")))
-        {
-            errors.Add("settingKey");
-        }
-        if (request.Layer is null && (!update || access.CanEdit("layer")))
-        {
-            errors.Add("layer");
-        }
-        if (request.Value is null && (!update || access.CanEdit("value")))
-        {
-            errors.Add("value");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(SettingValueWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.SettingValue row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("setting_key"))
-        {
-            row.SettingKey = request.SettingKey!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SettingKey, row.SettingKey, update))
-        {
-            denied.Add("settingKey");
-        }
-        if (access.CanEdit("layer"))
-        {
-            row.Layer = request.Layer!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Layer, row.Layer, update))
-        {
-            denied.Add("layer");
-        }
-        if (access.CanEdit("scope_id"))
-        {
-            row.ScopeId = request.ScopeId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ScopeId, row.ScopeId, update))
-        {
-            denied.Add("scopeId");
-        }
-        if (access.CanEdit("value"))
-        {
-            row.Value = GeneratedEndpointSupport.ToDocument(request.Value)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Value, row.Value, update))
-        {
-            denied.Add("value");
-        }
-        return denied;
-    }
 }

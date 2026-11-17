@@ -1,94 +1,59 @@
 using System.Text.Json;
+using Erp.Kernel.Contracts.Generated;
 using Erp.Kernel.Domain.Identity;
+using Erp.Kernel.Domain.Settings;
+using Erp.Kernel.Infrastructure.Settings;
 using Npgsql;
 using NpgsqlTypes;
 
 namespace Erp.Kernel.Infrastructure.Identity;
 
 /// <summary>
-/// Identity settings registered in cfg.settings (slice S1.05 build items 2, 4, 5; FR-ADM-USR-20, 21, 24). Shipped
-/// defaults are product-owner ruling Q5; customers change them in cfg.setting_values (screens: S1.15). Seeded
-/// idempotently by key whenever a customer database is migrated.
+/// Identity settings (slice S1.05 build items 2, 4, 5; FR-ADM-USR-20, 21, 24). Since slice S1.09a they are declared in the
+/// kernel settings manifest (<c>Settings/settings.yaml</c>) with the same keys, defaults, rules and texts, registered by
+/// <see cref="Settings.SettingsSetup"/>, and resolved by the one settings resolver; customers change them through the
+/// settings services (screens: S1.15).
 /// </summary>
 public static class IdentitySettings
 {
-    public const string PasswordMinLength = "iam.password.min_length";
-    public const string PasswordMinCharacterKinds = "iam.password.min_character_kinds";
-    public const string PasswordHistoryCount = "iam.password.history_count";
-    public const string PasswordExpiryDays = "iam.password.expiry_days";
-    public const string LockoutThreshold = "iam.lockout.threshold";
-    public const string LockoutMinutes = "iam.lockout.minutes";
-    public const string SessionIdleMinutes = "iam.session.idle_minutes";
-    public const string SessionAbsoluteMinutes = "iam.session.absolute_minutes";
-    public const string SessionMaxConcurrent = "iam.session.max_concurrent";
-    public const string SessionRememberDeviceDays = "iam.session.remember_device_days";
-    public const string MfaRequired = "iam.mfa.required";
-    public const string MfaGraceDays = "iam.mfa.grace_days";
-    public const string MfaRecoveryCodes = "iam.mfa.recovery_codes";
-    public const string MfaAllowedMethods = "iam.mfa.allowed_methods";
-    public const string ActivationTokenHours = "iam.activation.token_hours";
-    public const string ChallengeMinutes = "iam.sign_in.challenge_minutes";
+    public const string PasswordMinLength = KernelSettingKeys.IamPasswordMinLength;
+    public const string PasswordMinCharacterKinds = KernelSettingKeys.IamPasswordMinCharacterKinds;
+    public const string PasswordHistoryCount = KernelSettingKeys.IamPasswordHistoryCount;
+    public const string PasswordExpiryDays = KernelSettingKeys.IamPasswordExpiryDays;
+    public const string LockoutThreshold = KernelSettingKeys.IamLockoutThreshold;
+    public const string LockoutMinutes = KernelSettingKeys.IamLockoutMinutes;
+    public const string SessionIdleMinutes = KernelSettingKeys.IamSessionIdleMinutes;
+    public const string SessionAbsoluteMinutes = KernelSettingKeys.IamSessionAbsoluteMinutes;
+    public const string SessionMaxConcurrent = KernelSettingKeys.IamSessionMaxConcurrent;
+    public const string SessionRememberDeviceDays = KernelSettingKeys.IamSessionRememberDeviceDays;
+    public const string MfaRequired = KernelSettingKeys.IamMfaRequired;
+    public const string MfaGraceDays = KernelSettingKeys.IamMfaGraceDays;
+    public const string MfaRecoveryCodes = KernelSettingKeys.IamMfaRecoveryCodes;
+    public const string MfaAllowedMethods = KernelSettingKeys.IamMfaAllowedMethods;
+    public const string ActivationTokenHours = KernelSettingKeys.IamActivationTokenHours;
+    public const string ChallengeMinutes = KernelSettingKeys.IamSignInChallengeMinutes;
 
     // Slice S1.06 (rulings Q6, Q10): privileged roles and maker-checker.
-    public const string MfaRequiredForPrivileged = "iam.mfa.required_for_privileged";
-    public const string PrivilegedPasswordMinLength = "iam.password.privileged_min_length";
-    public const string MakerCheckerSensitiveRoles = "iam.maker_checker.sensitive_roles";
-    public const string MakerCheckerExpiryDays = "iam.maker_checker.expiry_days";
+    public const string MfaRequiredForPrivileged = KernelSettingKeys.IamMfaRequiredForPrivileged;
+    public const string PrivilegedPasswordMinLength = KernelSettingKeys.IamPasswordPrivilegedMinLength;
+    public const string MakerCheckerSensitiveRoles = KernelSettingKeys.IamMakerCheckerSensitiveRoles;
+    public const string MakerCheckerExpiryDays = KernelSettingKeys.IamMakerCheckerExpiryDays;
 
-    /// <summary>Definition of one setting: key, type, default (JSON), minimum, layers and descriptions (en, ur).</summary>
-    public sealed record Definition(string Key, string DataType, string DefaultJson, int? Min, string[] Layers, string English, string Urdu);
-
-    public static IReadOnlyList<Definition> All { get; } =
+    /// <summary>The identity and access settings this class reads (all <c>iam.*</c> keys of the kernel manifest).</summary>
+    public static IReadOnlyList<string> All { get; } =
     [
-        new(PasswordMinLength, "int", "10", 6, ["tenant"], "Minimum password length", "پاس ورڈ کی کم از کم لمبائی"),
-        new(PasswordMinCharacterKinds, "int", "3", 1, ["tenant"], "Character kinds required (of upper, lower, digit, symbol)", "درکار حروف کی اقسام (بڑے، چھوٹے، ہندسے، علامات میں سے)"),
-        new(PasswordHistoryCount, "int", "5", 0, ["tenant"], "Previous passwords that cannot be reused", "پچھلے پاس ورڈ جو دوبارہ استعمال نہیں ہو سکتے"),
-        new(PasswordExpiryDays, "int", "0", 0, ["tenant"], "Days until a password expires (0 = never)", "پاس ورڈ کی میعاد کے دن (0 = کبھی نہیں)"),
-        new(LockoutThreshold, "int", "5", 0, ["tenant"], "Failed sign-ins before the account locks (0 = never)", "اکاؤنٹ بند ہونے سے پہلے ناکام سائن ان (0 = کبھی نہیں)"),
-        new(LockoutMinutes, "int", "15", 1, ["tenant"], "Minutes an automatic lock lasts", "خودکار بندش کے منٹ"),
-        new(SessionIdleMinutes, "int", "30", 5, ["tenant"], "Minutes without activity before a session ends", "غیر فعالیت کے منٹ جن کے بعد سیشن ختم ہو جاتا ہے"),
-        new(SessionAbsoluteMinutes, "int", "720", 5, ["tenant"], "Maximum session length in minutes", "سیشن کی زیادہ سے زیادہ مدت منٹوں میں"),
-        new(SessionMaxConcurrent, "int", "3", 1, ["tenant"], "Sessions a user may hold at once", "ایک صارف کے بیک وقت سیشن"),
-        new(SessionRememberDeviceDays, "int", "0", 0, ["tenant"], "Days a trusted device is remembered (0 = off; used from slice S1.12)", "قابل اعتماد آلہ یاد رکھنے کے دن (0 = بند)"),
-        new(MfaRequired, "bool", "false", null, ["tenant", "role", "user"], "Second factor required at sign-in", "سائن ان پر دوسرا مرحلہ لازمی"),
-        new(MfaGraceDays, "int", "7", 0, ["tenant"], "Days allowed to enrol a second factor once required", "لازمی ہونے کے بعد دوسرا مرحلہ اندراج کرنے کے دن"),
-        new(MfaRecoveryCodes, "int", "10", 1, ["tenant"], "Recovery codes issued at enrolment", "اندراج پر جاری کردہ بحالی کوڈ"),
-        new(MfaAllowedMethods, "list", "[\"totp\"]", null, ["tenant"], "Allowed second-factor methods", "دوسرے مرحلے کے اجازت یافتہ طریقے"),
-        new(ActivationTokenHours, "int", "72", 1, ["tenant"], "Hours an account activation link stays valid", "اکاؤنٹ فعال کرنے کا لنک کتنے گھنٹے درست رہتا ہے"),
-        new(ChallengeMinutes, "int", "10", 1, ["tenant"], "Minutes to complete a sign-in step (second factor, password change)", "سائن ان کا اگلا مرحلہ مکمل کرنے کے منٹ"),
-        new(MfaRequiredForPrivileged, "bool", "true", null, ["tenant"], "Second factor required for users holding a privileged role", "مراعات یافتہ کردار رکھنے والے صارفین کے لیے دوسرا مرحلہ لازمی"),
-        new(PrivilegedPasswordMinLength, "int", "14", 6, ["tenant"], "Minimum password length for users holding a privileged role", "مراعات یافتہ کردار رکھنے والے صارفین کے پاس ورڈ کی کم از کم لمبائی"),
-        new(MakerCheckerSensitiveRoles, "bool", "true", null, ["tenant"], "Changes to roles with sensitive permissions need a second person's approval", "حساس اجازتوں والے کرداروں میں تبدیلی کے لیے دوسرے شخص کی منظوری درکار"),
-        new(MakerCheckerExpiryDays, "int", "7", 1, ["tenant"], "Days a change waiting for approval stays open", "منظوری کی منتظر تبدیلی کتنے دن کھلی رہتی ہے"),
+        PasswordMinLength, PasswordMinCharacterKinds, PasswordHistoryCount, PasswordExpiryDays, LockoutThreshold, LockoutMinutes,
+        SessionIdleMinutes, SessionAbsoluteMinutes, SessionMaxConcurrent, SessionRememberDeviceDays, MfaRequired, MfaGraceDays,
+        MfaRecoveryCodes, MfaAllowedMethods, ActivationTokenHours, ChallengeMinutes, MfaRequiredForPrivileged, PrivilegedPasswordMinLength,
+        MakerCheckerSensitiveRoles, MakerCheckerExpiryDays,
     ];
 
-    /// <summary>Registers or refreshes the definitions; customer values in cfg.setting_values are never touched.</summary>
-    public static async Task SeedAsync(NpgsqlConnection connection, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(connection);
-        foreach (var d in All)
-        {
-            await using var command = new NpgsqlCommand("""
-                insert into cfg.settings (key, module_id, data_type, default_value, validation, allowed_layers, requires_approval, description_i18n)
-                values ($1, 'iam', $2, $3, $4, $5, false, $6)
-                on conflict (key) do update set data_type = excluded.data_type, default_value = excluded.default_value,
-                    validation = excluded.validation, allowed_layers = excluded.allowed_layers, description_i18n = excluded.description_i18n
-                """, connection);
-            command.Parameters.Add(new NpgsqlParameter { Value = d.Key });
-            command.Parameters.Add(new NpgsqlParameter { Value = d.DataType });
-            command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb, Value = d.DefaultJson });
-            command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb, Value = d.Min is { } min ? JsonSerializer.Serialize(new { min }) : "{}" });
-            command.Parameters.Add(new NpgsqlParameter { Value = d.Layers });
-            command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Jsonb, Value = JsonSerializer.Serialize(new Dictionary<string, string> { ["en"] = d.English, ["ur"] = d.Urdu }) });
-            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-        }
-    }
-
     /// <summary>
-    /// The effective values for one user: user layer, then tenant layer, then the shipped default. Values are kept within
-    /// each definition's minimum, and a value that is not a whole number falls back to the default, so a bad stored
-    /// value can never break sign-in (S1.05 review finding 10). MFA is required when the customer OR the user's own
-    /// setting requires it: a user setting can tighten the customer's rule but never relax it (product owner, 2026-11-16).
+    /// The effective values for one user, from the settings resolver (slice S1.09a): the user's value, then the customer's,
+    /// then the shipped default. A stored value the setting no longer accepts (below its minimum, not a whole number) is
+    /// skipped and the next layer used, so a bad stored value can never break sign-in (S1.05 review finding 10). MFA is
+    /// required when the customer OR the user's own setting requires it: a user setting can tighten the customer's rule but
+    /// never relax it (product owner, 2026-11-16; the setting is tighten-only, CR-037).
     /// </summary>
     /// <remarks>
     /// Role layer (slice S1.06 item 9, FR-ADM-USR-20, FR-ADM-USR-21, ruling Q10): MFA is also required when a role the
@@ -100,47 +65,15 @@ public static class IdentitySettings
     public static async Task<IdentityPolicy> ReadAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, Guid? userId, DateTimeOffset now, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(connection);
-        await using var command = new NpgsqlCommand("""
-            select s.key, s.default_value, t.value, t.updated_at, u.value, u.updated_at
-            from cfg.settings s
-            left join cfg.setting_values t on t.setting_key = s.key and t.layer = 'tenant' and t.scope_id is null
-            left join cfg.setting_values u on u.setting_key = s.key and u.layer = 'user' and u.scope_id = $1 and 'user' = any (s.allowed_layers)
-            where s.module_id = 'iam'
-            """, connection, transaction);
-        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid, Value = (object?)userId ?? DBNull.Value });
-        var rows = new Dictionary<string, Layers>(StringComparer.Ordinal);
-        await using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
-        {
-            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-            {
-                rows[reader.GetString(0)] = new Layers(
-                    Parse(reader.GetString(1)),
-                    reader.IsDBNull(2) ? null : Parse(reader.GetString(2)),
-                    reader.IsDBNull(3) ? null : reader.GetFieldValue<DateTimeOffset>(3),
-                    reader.IsDBNull(4) ? null : Parse(reader.GetString(4)),
-                    reader.IsDBNull(5) ? null : reader.GetFieldValue<DateTimeOffset>(5));
-            }
-        }
+        var definitions = await SettingsStore.DefinitionsAsync(connection, transaction, All, cancellationToken).ConfigureAwait(false);
+        var stored = (await SettingsStore.ValuesAsync(connection, transaction, All, null, [], userId, cancellationToken).ConfigureAwait(false))
+            .ToLookup(v => v.Key, StringComparer.Ordinal);
+        var resolved = definitions.ToDictionary(d => d.Key, d => SettingResolution.Resolve(d.Value.Definition, stored[d.Key].Select(v => v.Value)), StringComparer.Ordinal);
 
-        int Int(string key)
-        {
-            var definition = All.First(d => d.Key == key);
-            var fallback = int.Parse(definition.DefaultJson, System.Globalization.CultureInfo.InvariantCulture);
-            var value = rows.TryGetValue(key, out var layers) && layers.Effective is { ValueKind: JsonValueKind.Number } number && number.TryGetInt32(out var parsed)
-                ? parsed
-                : fallback;
-            return definition.Min is { } min ? Math.Max(min, value) : value;
-        }
+        int Int(string key) => resolved[key].Value.GetInt32();
+        bool Bool(string key) => resolved[key].Value.ValueKind == JsonValueKind.True;
 
-        bool Bool(string key)
-        {
-            var definition = All.First(d => d.Key == key);
-            return rows.TryGetValue(key, out var layers) && layers.Effective.ValueKind is JsonValueKind.True or JsonValueKind.False
-                ? layers.Effective.ValueKind == JsonValueKind.True
-                : definition.DefaultJson == "true";
-        }
-
-        var (mfaRequired, mfaSince) = MfaRequirement(rows.GetValueOrDefault(MfaRequired));
+        var (mfaRequired, mfaSince) = MfaRequirement(definitions[MfaRequired].Definition, stored[MfaRequired].Select(v => v.Value).ToList());
         var roles = userId is { } user ? await RoleFactsAsync(connection, transaction, user, DateOnly.FromDateTime(now.UtcDateTime), cancellationToken).ConfigureAwait(false) : RoleFacts.None;
         var since = new List<DateTimeOffset?> { mfaRequired ? mfaSince : null };
         if (roles.MfaSince is { } byRole)
@@ -152,16 +85,16 @@ public static class IdentitySettings
         if (roles.PrivilegedSince is { } privileged && Bool(MfaRequiredForPrivileged))
         {
             mfaRequired = true;
-            var setAt = rows.GetValueOrDefault(MfaRequiredForPrivileged)?.TenantSince;
+            var setAt = resolved[MfaRequiredForPrivileged].Layer == SettingLayers.Tenant
+                ? stored[MfaRequiredForPrivileged].FirstOrDefault(v => v.Value.Layer == SettingLayers.Tenant)?.Value.UpdatedAt
+                : null;
             since.Add(setAt is { } t && t > privileged ? t : privileged);
         }
 
         // Null when only the shipped default requires it (grace counts from activation), else the earliest applying start.
         mfaSince = since.Where(d => d is not null).Min();
         var minLength = roles.PrivilegedSince is null ? Int(PasswordMinLength) : Math.Max(Int(PasswordMinLength), Int(PrivilegedPasswordMinLength));
-        var methods = rows.TryGetValue(MfaAllowedMethods, out var am) && am.Effective is { ValueKind: JsonValueKind.Array } list
-            ? list.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String).Select(e => e.GetString()!).ToList()
-            : ["totp"];
+        var methods = resolved[MfaAllowedMethods].Value.EnumerateArray().Select(e => e.GetString()!).ToList();
         return new IdentityPolicy(
             new PasswordPolicy(minLength, Int(PasswordMinCharacterKinds), Int(PasswordHistoryCount), Int(PasswordExpiryDays), Int(LockoutThreshold), Int(LockoutMinutes)),
             new SessionPolicy(Int(SessionIdleMinutes), Int(SessionAbsoluteMinutes), Int(SessionMaxConcurrent), Int(SessionRememberDeviceDays)),
@@ -171,19 +104,18 @@ public static class IdentitySettings
     }
 
     /// <summary>
-    /// Required when the customer's value (or the shipped default) or the user's own value is true. The grace period
-    /// starts at the earliest time a layer that requires it was set (null when only the default requires it).
+    /// Required when the customer's valid value (or the shipped default) or the user's own valid value is true. The grace
+    /// period starts at the earliest time a layer that requires it was set (null when only the default requires it).
     /// </summary>
-    private static (bool Required, DateTimeOffset? Since) MfaRequirement(Layers? layers)
+    private static (bool Required, DateTimeOffset? Since) MfaRequirement(SettingDefinition definition, IReadOnlyList<StoredSettingValue> values)
     {
-        if (layers is null)
-        {
-            return (false, null);
-        }
-
-        var byCustomer = (layers.Tenant ?? layers.Default).ValueKind == JsonValueKind.True;
-        var byUser = layers.User is { ValueKind: JsonValueKind.True };
-        var since = new[] { byCustomer && layers.Tenant is not null ? layers.TenantSince : null, byUser ? layers.UserSince : null }
+        StoredSettingValue? Valid(string layer) =>
+            values.FirstOrDefault(v => v.Layer == layer && definition.Validation.Problem(definition.DataType, v.Value) is null);
+        var tenant = Valid(SettingLayers.Tenant);
+        var user = Valid(SettingLayers.User);
+        var byCustomer = (tenant?.Value ?? definition.Default).ValueKind == JsonValueKind.True;
+        var byUser = user is { Value.ValueKind: JsonValueKind.True };
+        var since = new[] { byCustomer && tenant is not null ? tenant.UpdatedAt : (DateTimeOffset?)null, byUser ? user!.UpdatedAt : null }
             .Where(d => d is not null).Min();
         return (byCustomer || byUser, since);
     }
@@ -216,17 +148,6 @@ public static class IdentitySettings
     {
         public static RoleFacts None { get; } = new(null, null);
     }
-
-    private static JsonElement Parse(string json)
-    {
-        using var doc = JsonDocument.Parse(json);
-        return doc.RootElement.Clone();
-    }
-
-    private sealed record Layers(JsonElement Default, JsonElement? Tenant, DateTimeOffset? TenantSince, JsonElement? User, DateTimeOffset? UserSince)
-    {
-        public JsonElement Effective => User ?? Tenant ?? Default;
-    }
 }
 
 /// <summary>All identity policies that apply to one user at one moment.</summary>
@@ -238,9 +159,14 @@ public sealed record IdentityPolicy(PasswordPolicy Password, SessionPolicy Sessi
 /// </summary>
 public static class IdentitySetup
 {
-    public static async Task EnsureAsync(NpgsqlConnection owner, BuildingBlocks.Application.Tenancy.ISecretStore secrets, string tenantCode, CancellationToken cancellationToken)
+    /// <summary>Registers the kernel's settings (its embedded manifest, slice S1.09a) and ensures the field key.</summary>
+    public static Task EnsureAsync(NpgsqlConnection owner, BuildingBlocks.Application.Tenancy.ISecretStore secrets, string tenantCode, CancellationToken cancellationToken) =>
+        EnsureAsync(owner, secrets, tenantCode, [], cancellationToken);
+
+    /// <summary>Registers the settings of the installed modules' manifests (slice S1.09a) and ensures the field key.</summary>
+    public static async Task EnsureAsync(NpgsqlConnection owner, BuildingBlocks.Application.Tenancy.ISecretStore secrets, string tenantCode, IReadOnlyList<string> manifestFolders, CancellationToken cancellationToken)
     {
-        await IdentitySettings.SeedAsync(owner, cancellationToken).ConfigureAwait(false);
+        await Settings.SettingsSetup.EnsureAsync(owner, null, manifestFolders, cancellationToken).ConfigureAwait(false);
         await TenantFieldKeys.EnsureAsync(secrets, tenantCode, cancellationToken).ConfigureAwait(false);
     }
 }

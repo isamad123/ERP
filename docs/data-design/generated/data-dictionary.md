@@ -2,12 +2,12 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 218 tables. Control-plane database: 14 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 219 tables. Control-plane database: 14 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
 | customer | aud | 7 |
-| customer | cfg | 17 |
+| customer | cfg | 18 |
 | customer | doc | 7 |
 | customer | hrm | 112 |
 | customer | iam | 23 |
@@ -197,6 +197,21 @@ Constraints:
 
 - `pk_subject_keys` PRIMARY KEY (person_id)
 
+### cfg.config_versions
+
+Change counters of settings and feature flags, raised by trigger, so every host refreshes its cache (KRN-SET-06). Requirements: KRN-SET-06. Source: kernel.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| name | text | no |  | pk; settings or flags |
+| version | bigint | no | 0 | default 0 |
+| changed_at | timestamp with time zone | no |  |  |
+
+Constraints:
+
+- `ck_config_versions_name_code` CHECK ((((length(name) >= 1) AND (length(name) <= 40)) AND (name = btrim(name))))
+- `pk_config_versions` PRIMARY KEY (name)
+
 ### cfg.custom_field_defs
 
 Requirements: KRN-MET-01, KRN-MET-02, KRN-MET-05. Source: kernel.yaml.
@@ -263,6 +278,10 @@ Constraints:
 - `pk_feature_flag_overrides` PRIMARY KEY (id)
 - `uq_feature_flag_overrides_flag_key_layer_scope_id` UNIQUE NULLS NOT DISTINCT (flag_key, layer, scope_id)
 
+Triggers:
+
+- `tg_feature_flag_overrides_config_version` CREATE TRIGGER tg_feature_flag_overrides_config_version AFTER INSERT OR DELETE OR UPDATE OR TRUNCATE ON cfg.feature_flag_overrides FOR EACH STATEMENT EXECUTE FUNCTION cfg.tg_config_version('flags')
+
 ### cfg.feature_flags
 
 Requirements: KRN-SET-05. Source: kernel.yaml.
@@ -272,11 +291,22 @@ Requirements: KRN-SET-05. Source: kernel.yaml.
 | key | text | no |  | pk |
 | default_enabled | boolean | no | false |  |
 | description_i18n | jsonb | no |  |  |
+| module_id | text | yes |  | module that declares the flag |
+| entitlement_key | text | yes |  | feature key that must be licensed, e.g. hrm.payroll; unlicensed means always off |
+| name_i18n | jsonb | yes |  | short name per language |
+| help_i18n | jsonb | yes |  | help text per language |
 
 Constraints:
 
 - `ck_feature_flags_description_i18n_object` CHECK ((jsonb_typeof(description_i18n) = 'object'::text))
+- `ck_feature_flags_help_i18n_object` CHECK ((jsonb_typeof(help_i18n) = 'object'::text))
+- `ck_feature_flags_module_id_code` CHECK ((((length(module_id) >= 1) AND (length(module_id) <= 40)) AND (module_id = btrim(module_id))))
+- `ck_feature_flags_name_i18n_object` CHECK ((jsonb_typeof(name_i18n) = 'object'::text))
 - `pk_feature_flags` PRIMARY KEY (key)
+
+Triggers:
+
+- `tg_feature_flags_config_version` CREATE TRIGGER tg_feature_flags_config_version AFTER INSERT OR DELETE OR UPDATE OR TRUNCATE ON cfg.feature_flags FOR EACH STATEMENT EXECUTE FUNCTION cfg.tg_config_version('flags')
 
 ### cfg.inbox_messages
 
@@ -579,6 +609,10 @@ Constraints:
 - `pk_setting_values` PRIMARY KEY (id)
 - `uq_setting_values_setting_key_layer_scope_id` UNIQUE NULLS NOT DISTINCT (setting_key, layer, scope_id)
 
+Triggers:
+
+- `tg_setting_values_config_version` CREATE TRIGGER tg_setting_values_config_version AFTER INSERT OR DELETE OR UPDATE OR TRUNCATE ON cfg.setting_values FOR EACH STATEMENT EXECUTE FUNCTION cfg.tg_config_version('settings')
+
 ### cfg.settings
 
 Setting definitions registered from manifests. Requirements: KRN-SET-01, ADM-SET-01. Source: kernel.yaml.
@@ -593,13 +627,29 @@ Setting definitions registered from manifests. Requirements: KRN-SET-01, ADM-SET
 | allowed_layers | text[] | no | '{}'::text[] | product, pack, tenant, company, role, user |
 | requires_approval | boolean | no | false |  |
 | description_i18n | jsonb | no |  |  |
+| is_visible | boolean | no | true | default true; hidden settings change only through migrations and packs |
+| area | text | yes |  | group in the settings centre, e.g. security.passwords |
+| name_i18n | jsonb | yes |  | short name per language |
+| help_i18n | jsonb | yes |  | help text per language |
+| unit | text | yes |  | e.g. days, minutes, characters |
+| role_rule | text | yes |  | how values of several roles combine; the role layer needs one |
+| self_service | boolean | no | false | the user may set their own user-layer value |
+| tighten_only | boolean | no | false | yes/no settings only: role and user values can only switch it on (CR-037) |
 
 Constraints:
 
+- `ck_settings_area_code` CHECK ((((length(area) >= 1) AND (length(area) <= 40)) AND (area = btrim(area))))
 - `ck_settings_data_type` CHECK ((data_type = ANY (ARRAY['bool'::text, 'int'::text, 'decimal'::text, 'text'::text, 'choice'::text, 'list'::text, 'json'::text])))
 - `ck_settings_description_i18n_object` CHECK ((jsonb_typeof(description_i18n) = 'object'::text))
+- `ck_settings_help_i18n_object` CHECK ((jsonb_typeof(help_i18n) = 'object'::text))
 - `ck_settings_module_id_code` CHECK ((((length(module_id) >= 1) AND (length(module_id) <= 40)) AND (module_id = btrim(module_id))))
+- `ck_settings_name_i18n_object` CHECK ((jsonb_typeof(name_i18n) = 'object'::text))
+- `ck_settings_role_rule` CHECK ((role_rule = ANY (ARRAY['any'::text, 'all'::text, 'lowest'::text, 'highest'::text])))
 - `pk_settings` PRIMARY KEY (key)
+
+Triggers:
+
+- `tg_settings_config_version` CREATE TRIGGER tg_settings_config_version AFTER INSERT OR DELETE OR UPDATE OR TRUNCATE ON cfg.settings FOR EACH STATEMENT EXECUTE FUNCTION cfg.tg_config_version('settings')
 
 ### cfg.setup_tasks
 
@@ -7220,6 +7270,7 @@ Constraints:
 - `cfg.numbering_next` 
 - `cfg.numbering_series_root` 
 - `cfg.numbering_series_state` 
+- `cfg.tg_config_version` 
 - `cfg.tg_refuse_change` 
 - `doc.tg_refuse_change` 
 - `hrm.tg_refuse_change` 

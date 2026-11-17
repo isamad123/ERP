@@ -77,14 +77,6 @@ export interface FeatureFlagOverride
     rowVersion: number;
 }
 
-export interface FeatureFlagOverrideWrite
-{
-    flagKey: string;
-    layer: 'tenant' | 'company' | 'user_group';
-    scopeId?: string | null;
-    enabled?: boolean;
-}
-
 export interface FeatureFlagOverrideListQuery
 {
     after?: string;
@@ -96,8 +88,6 @@ export const featureFlagOverrides =
 {
     list: (query: FeatureFlagOverrideListQuery = {}) => request<PagedResult<FeatureFlagOverride>>('GET', '/api/cfg/feature-flag-overrides', { query }),
     get: (id: string) => request<FeatureFlagOverride>('GET', `/api/cfg/feature-flag-overrides/${id}`),
-    create: (body: FeatureFlagOverrideWrite) => request<FeatureFlagOverride>('POST', '/api/cfg/feature-flag-overrides', { body }),
-    update: (id: string, body: FeatureFlagOverrideWrite & { rowVersion: number }) => request<FeatureFlagOverride>('PUT', `/api/cfg/feature-flag-overrides/${id}`, { body }),
 };
 
 /** cfg.installed_packs: InstalledPack. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -369,17 +359,6 @@ export interface SettingValueHistory
     createdBy: string;
 }
 
-export interface SettingValueHistoryWrite
-{
-    settingValueId: string;
-    settingKey: string;
-    layer: string;
-    scopeId?: string | null;
-    oldValue?: unknown | null;
-    newValue?: unknown | null;
-    reason?: string | null;
-}
-
 export interface SettingValueHistoryListQuery
 {
     after?: string;
@@ -390,7 +369,6 @@ export const settingValueHistory =
 {
     list: (query: SettingValueHistoryListQuery = {}) => request<PagedResult<SettingValueHistory>>('GET', '/api/cfg/setting-value-history', { query }),
     get: (id: string) => request<SettingValueHistory>('GET', `/api/cfg/setting-value-history/${id}`),
-    create: (body: SettingValueHistoryWrite) => request<SettingValueHistory>('POST', '/api/cfg/setting-value-history', { body }),
 };
 
 /** cfg.setting_values: SettingValue. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -408,14 +386,6 @@ export interface SettingValue
     rowVersion: number;
 }
 
-export interface SettingValueWrite
-{
-    settingKey: string;
-    layer: 'pack' | 'tenant' | 'company' | 'role' | 'user';
-    scopeId?: string | null;
-    value: unknown;
-}
-
 export interface SettingValueListQuery
 {
     after?: string;
@@ -427,8 +397,6 @@ export const settingValues =
 {
     list: (query: SettingValueListQuery = {}) => request<PagedResult<SettingValue>>('GET', '/api/cfg/setting-values', { query }),
     get: (id: string) => request<SettingValue>('GET', `/api/cfg/setting-values/${id}`),
-    create: (body: SettingValueWrite) => request<SettingValue>('POST', '/api/cfg/setting-values', { body }),
-    update: (id: string, body: SettingValueWrite & { rowVersion: number }) => request<SettingValue>('PUT', `/api/cfg/setting-values/${id}`, { body }),
 };
 
 /** cfg.setup_tasks: First-run wizard progress and readiness checklist per module (ADM-ONB-01 to 03). Field rules (S1.06) may leave a field out or mask it as text. */

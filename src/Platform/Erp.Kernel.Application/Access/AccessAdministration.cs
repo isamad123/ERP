@@ -105,6 +105,12 @@ public interface IAccessSettingsService
 {
     /// <summary>Sets one value; <paramref name="layer"/> defaults to tenant, <paramref name="scopeId"/> names the role or user of those layers.</summary>
     Task<AccessResult> SetAsync(string key, string? layer, Guid? scopeId, System.Text.Json.JsonElement? value, string? reason, CancellationToken cancellationToken);
+
+    /// <summary>Sets one value as the revert of a history row (slice S1.09a, FR-ADM-SET-06).</summary>
+    Task<AccessResult> SetAsync(string key, string? layer, Guid? scopeId, System.Text.Json.JsonElement? value, string? reason, Guid? revertedFrom, CancellationToken cancellationToken);
+
+    /// <summary>Removes one layer's value, so the inherited value applies again (slice S1.09a, FR-ADM-SET-03).</summary>
+    Task<AccessResult> ResetAsync(string key, string? layer, Guid? scopeId, string? reason, Guid? revertedFrom, CancellationToken cancellationToken);
 }
 
 /// <summary>Giving a role to a user or a group, per company or all companies, with dates and a reason (FR-ADM-ROL-04, FR-ADM-USR-06).</summary>

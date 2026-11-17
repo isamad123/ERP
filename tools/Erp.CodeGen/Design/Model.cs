@@ -296,7 +296,8 @@ public sealed record NumberingDef(
     string? BranchColumn);
 
 /// <summary>A database function a slice writes (rules.yaml <c>functions</c>, slice S1.07): reviewed SQL, emitted as a migration.</summary>
-public sealed record FunctionDef(string Slice, string Name, string Purpose, string Sql);
+/// <remarks><paramref name="Triggers"/>: the triggers the SQL creates, as (table, trigger name) (slice S1.09a).</remarks>
+public sealed record FunctionDef(string Slice, string Name, string Purpose, string Sql, IReadOnlyList<(string Table, string Trigger)> Triggers);
 
 public sealed class DesignModel
 {

@@ -63,10 +63,19 @@ public enum EndpointKind
 
     /// <summary>Void report (S1.08): A's scheme named in the query string on B's host is 404.</summary>
     NumberingQuery,
+
+    /// <summary>Settings or flags read (S1.09a): a query naming A's company, role or user answers B's data only.</summary>
+    SettingsRead,
+
+    /// <summary>Settings or flags change (S1.09a): a body or route naming A's company, group or history row is refused on B's host.</summary>
+    SettingsWrite,
+
+    /// <summary>Change of the signed-in user's own value (S1.09a): B's session never changes anything of A's.</summary>
+    SettingsSelf,
 }
 
 /// <summary>One API endpoint as the API host maps it: method, route and the table it serves.</summary>
-public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null, string? AuditKind = null, string? NumberingKind = null)
+public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null, string? AuditKind = null, string? NumberingKind = null, string? SettingsKind = null)
 {
     private const string IdSegment = "/{id:guid}";
 
@@ -80,6 +89,14 @@ public sealed record ApiEndpoint(string Method, string Pattern, string? Resource
     {
         get
         {
+            switch (SettingsKind)
+            {
+                case "read": return EndpointKind.SettingsRead;
+                case "write": return EndpointKind.SettingsWrite;
+                case "self": return EndpointKind.SettingsSelf;
+                case not null: return EndpointKind.Unclassified;
+            }
+
             switch (NumberingKind)
             {
                 case "create": return EndpointKind.NumberingCreate;
@@ -190,12 +207,13 @@ public static class EndpointInventory
             var access = endpoint.Metadata.GetMetadata<AccessEndpointMetadata>();
             var audit = endpoint.Metadata.GetMetadata<AuditEndpointMetadata>();
             var numbering = endpoint.Metadata.GetMetadata<NumberingEndpointMetadata>();
-            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource ?? audit?.Resource ?? numbering?.Resource;
+            var settings = endpoint.Metadata.GetMetadata<SettingsEndpointMetadata>();
+            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource ?? audit?.Resource ?? numbering?.Resource ?? settings?.Resource;
             var identity = endpoint.Metadata.GetMetadata<IdentityEndpointMetadata>()?.Kind;
             var anonymous = endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null || endpoint.Metadata.GetMetadata<IAuthorizeData>() is null;
             foreach (var method in methods is { Count: > 0 } ? methods : ["*"])
             {
-                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind, audit?.Kind, numbering?.Kind));
+                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind, audit?.Kind, numbering?.Kind, settings?.Kind));
             }
         }
 

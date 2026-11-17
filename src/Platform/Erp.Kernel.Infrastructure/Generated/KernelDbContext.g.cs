@@ -22,6 +22,7 @@ public sealed partial class KernelDbContext(DbContextOptions<KernelDbContext> op
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Aud.OutboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Aud.SecurityEventConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Aud.SubjectKeyConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.ConfigVersionConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.CustomFieldDefConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.FeatureFlagOverrideConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.FeatureFlagConfiguration());

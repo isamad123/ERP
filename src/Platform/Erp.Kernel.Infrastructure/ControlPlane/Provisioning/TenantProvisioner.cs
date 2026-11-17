@@ -83,7 +83,7 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
             await using (var owner = await OpenTenantAsync(registration.Tenant, TenantLogins.Owner, cancellationToken).ConfigureAwait(false))
             {
                 var result = await TenantSchemaMigrator.ApplyAsync(owner, migrations.TenantScripts(modules), clock, BaselineSeed.SystemUserId, cancellationToken).ConfigureAwait(false);
-                await Identity.IdentitySetup.EnsureAsync(owner, secrets, request.Code, cancellationToken).ConfigureAwait(false);
+                await Identity.IdentitySetup.EnsureAsync(owner, secrets, request.Code, migrations.AccessFolders(modules), cancellationToken).ConfigureAwait(false);
                 await RecordVersionsAsync(actor, registration.Tenant, result, cancellationToken).ConfigureAwait(false);
             }
 

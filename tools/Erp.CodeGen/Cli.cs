@@ -75,6 +75,7 @@ public static class Generator
         CSharpEmitter.Emit(model, output);
         TypeScriptEmitter.Emit(model, output);
         CatalogEmitter.Emit(model, output);
+        SettingsEmitter.Emit(SettingsManifestLoader.Load(root, model.Settings), output);
         return output;
     }
 }

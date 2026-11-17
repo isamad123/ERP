@@ -439,6 +439,9 @@ public sealed partial class AccessAdministrationService(
             case AccessChange.SetSetting:
                 return await ValidateSettingAsync(c, tx, change, ct).ConfigureAwait(false);
 
+            case AccessChange.ChangeSetting:
+                return await ValidateHeldSettingAsync(c, tx, change, ct).ConfigureAwait(false);
+
             case AccessChange.SetDataScopes:
                 foreach (var scope in change.Scopes!)
                 {

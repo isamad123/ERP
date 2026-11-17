@@ -45,6 +45,11 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
             return await new NumberingProbe(fx, app).RunAsync(endpoint, ct);
         }
 
+        if (endpoint.Kind is EndpointKind.SettingsRead or EndpointKind.SettingsWrite or EndpointKind.SettingsSelf)
+        {
+            return await new SettingsProbe(fx, app).RunAsync(endpoint, ct);
+        }
+
         if (endpoint.Kind is EndpointKind.AuditQuery or EndpointKind.AuditRecord or EndpointKind.AuditSelf or EndpointKind.AuditVerify)
         {
             return await new AuditProbe(fx, app).RunAsync(endpoint, ct);

@@ -42,6 +42,7 @@ public sealed class TenancyFixture : IAsyncLifetime
     private readonly ECDsa _entitlementKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
     private ScratchDatabase? _controlPlane;
     private string? _folder;
+    private byte[] _secretsKey = [];
 
     public string Suffix { get; } = Guid.NewGuid().ToString("N")[..6].Replace('-', 'x');
 
@@ -74,7 +75,8 @@ public sealed class TenancyFixture : IAsyncLifetime
         _controlPlane = await ScratchDatabase.CreateAsync(_server.ConnectionString, "erp_it_cp_" + Suffix, ct);
         _folder = Directory.CreateTempSubdirectory("erp-s103-").FullName;
         Options = new ControlPlaneOptions { ConnectionString = _controlPlane.ConnectionString, HostCacheSeconds = 0, StatementTimeoutSeconds = 30 };
-        Secrets = new EncryptedFileSecretStore(Path.Combine(_folder, "secrets.bin"), RandomNumberGenerator.GetBytes(32));
+        _secretsKey = RandomNumberGenerator.GetBytes(32);
+        Secrets = new EncryptedFileSecretStore(Path.Combine(_folder, "secrets.bin"), _secretsKey);
         await TokenSigningKeys.EnsureAsync(Secrets, "it-" + Suffix, ct); // as the migrator's `migrate` command does (S1.05)
 
         var admin = new ControlPlaneAdmin(Options, Secrets, Clock);
@@ -106,6 +108,7 @@ public sealed class TenancyFixture : IAsyncLifetime
         builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.None);
         builder.Configuration["ConnectionStrings:ControlPlane"] = Options.ConnectionString;
         builder.Configuration["Tenancy:HostCacheSeconds"] = "0";
+        builder.Configuration["Settings:RefreshMilliseconds"] = "0"; // tests write settings with SQL and read them at once (S1.09a)
         builder.Configuration["Auth:Issuer"] = Issuer;
         builder.Configuration["Auth:Audience"] = Audience;
         builder.Configuration["Auth:SigningPublicKeys:0"] = _tokenKey.ExportSubjectPublicKeyInfoPem();
@@ -203,6 +206,22 @@ public sealed class TenancyFixture : IAsyncLifetime
         await connection.OpenAsync(cancellationToken);
         return connection;
     }
+
+    /// <summary>
+    /// The settings a separately started API host process needs to serve this fixture's customers (slice S1.09a: a change
+    /// made on one host is seen by another process): control plane, secret file and key, issuer, audience and the test
+    /// token key. Settings left out keep their production defaults.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> ApiProcessEnvironment() => new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["ConnectionStrings__ControlPlane"] = Options.ConnectionString,
+        ["ERP_SECRETS_FILE"] = Path.Combine(_folder!, "secrets.bin"),
+        ["ERP_SECRETS_KEY"] = Convert.ToBase64String(_secretsKey),
+        ["Auth__Issuer"] = Issuer,
+        ["Auth__Audience"] = Audience,
+        ["Auth__SigningPublicKeys__0"] = _tokenKey.ExportSubjectPublicKeyInfoPem(),
+        ["Tenancy__HostCacheSeconds"] = "0",
+    };
 
     /// <summary>An HTTP client whose requests carry the customer's host name.</summary>
     public HttpClient Client(string host, string? token = null) => Client(App, host, token);

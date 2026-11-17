@@ -782,6 +782,63 @@
     {
       "database": "tenant",
       "schema": "cfg",
+      "name": "config_versions",
+      "module": "kernel",
+      "traits": [],
+      "requirements": [
+        "KRN-SET-06"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "name"
+      ],
+      "columns": [
+        {
+          "name": "name",
+          "kind": "Code",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "changed_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [],
+      "checks": [
+        "ck_config_versions_name_code"
+      ],
+      "exclusions": [],
+      "foreign_keys": [],
+      "indexes": [],
+      "triggers": [],
+      "append_only_updatable": [],
+      "has_api": false,
+      "full_name": "cfg.config_versions"
+    },
+    {
+      "database": "tenant",
+      "schema": "cfg",
       "name": "custom_field_defs",
       "module": "kernel",
       "traits": [
@@ -1185,7 +1242,9 @@
         }
       ],
       "indexes": [],
-      "triggers": [],
+      "triggers": [
+        "tg_feature_flag_overrides_config_version"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "cfg.feature_flag_overrides"
@@ -1233,16 +1292,61 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "module_id",
+          "kind": "Code",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "entitlement_key",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "name_i18n",
+          "kind": "I18n",
+          "type": "jsonb",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "help_i18n",
+          "kind": "I18n",
+          "type": "jsonb",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [],
       "checks": [
-        "ck_feature_flags_description_i18n_object"
+        "ck_feature_flags_description_i18n_object",
+        "ck_feature_flags_module_id_code",
+        "ck_feature_flags_name_i18n_object",
+        "ck_feature_flags_help_i18n_object"
       ],
       "exclusions": [],
       "foreign_keys": [],
       "indexes": [],
-      "triggers": [],
+      "triggers": [
+        "tg_feature_flags_config_version"
+      ],
       "append_only_updatable": [],
       "has_api": false,
       "full_name": "cfg.feature_flags"
@@ -2810,7 +2914,9 @@
         }
       ],
       "indexes": [],
-      "triggers": [],
+      "triggers": [
+        "tg_setting_values_config_version"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "cfg.setting_values"
@@ -2917,18 +3023,109 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "is_visible",
+          "kind": "Bool",
+          "type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "area",
+          "kind": "Code",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "name_i18n",
+          "kind": "I18n",
+          "type": "jsonb",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "help_i18n",
+          "kind": "I18n",
+          "type": "jsonb",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "unit",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "role_rule",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "any",
+            "all",
+            "lowest",
+            "highest"
+          ]
+        },
+        {
+          "name": "self_service",
+          "kind": "Bool",
+          "type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "tighten_only",
+          "kind": "Bool",
+          "type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [],
       "checks": [
         "ck_settings_module_id_code",
         "ck_settings_data_type",
-        "ck_settings_description_i18n_object"
+        "ck_settings_description_i18n_object",
+        "ck_settings_area_code",
+        "ck_settings_name_i18n_object",
+        "ck_settings_help_i18n_object",
+        "ck_settings_role_rule"
       ],
       "exclusions": [],
       "foreign_keys": [],
       "indexes": [],
-      "triggers": [],
+      "triggers": [
+        "tg_settings_config_version"
+      ],
       "append_only_updatable": [],
       "has_api": false,
       "full_name": "cfg.settings"

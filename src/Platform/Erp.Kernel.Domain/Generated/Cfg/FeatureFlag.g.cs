@@ -20,4 +20,16 @@ public sealed partial class FeatureFlag
 
     /// <summary>description_i18n</summary>
     public global::System.Text.Json.JsonDocument DescriptionI18n { get; set; } = null!;
+
+    /// <summary>module_id: module that declares the flag</summary>
+    public string? ModuleId { get; set; }
+
+    /// <summary>entitlement_key: feature key that must be licensed, e.g. hrm.payroll; unlicensed means always off</summary>
+    public string? EntitlementKey { get; set; }
+
+    /// <summary>name_i18n: short name per language</summary>
+    public global::System.Text.Json.JsonDocument? NameI18n { get; set; }
+
+    /// <summary>help_i18n: help text per language</summary>
+    public global::System.Text.Json.JsonDocument? HelpI18n { get; set; }
 }

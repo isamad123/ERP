@@ -26,7 +26,7 @@ public sealed partial class AccessAdministrationService
     public async Task<AccessResult> ApproveAsync(Guid requestId, string? reason, CancellationToken cancellationToken)
     {
         await ExpireOldRequestsAsync(cancellationToken).ConfigureAwait(false);
-        return await RunAsync(AccessControlPermissions.ApproveChanges, async (c, tx, now, by) =>
+        var result = await RunAsync(AccessControlPermissions.ApproveChanges, async (c, tx, now, by) =>
         {
             if (await LockRequestAsync(c, tx, requestId, cancellationToken).ConfigureAwait(false) is not { } request)
             {
@@ -82,6 +82,8 @@ public sealed partial class AccessAdministrationService
             await AccessDb.RaiseAsync(c, tx, AccessEvents.ChangeApproved, "iam.maker_checker_request", requestId, by, now, new { action = change.Kind, requested_by = request.RequestedBy, reason }, cancellationToken).ConfigureAwait(false);
             return AccessResult.Done(applied.Id ?? requestId);
         }, cancellationToken).ConfigureAwait(false);
+        SettingsChanged(result);
+        return result;
     }
 
     public async Task<AccessResult> RejectAsync(Guid requestId, string? reason, CancellationToken cancellationToken)
@@ -127,6 +129,14 @@ public sealed partial class AccessAdministrationService
         if (change.Kind is AccessChange.Assign or AccessChange.AssignGroup or AccessChange.EndAssignment or AccessChange.EndGroupRole
             && !(await caller.CoversCompanyAsync(AccessControlPermissions.ApproveChanges, change.CompanyId, ct).ConfigureAwait(false)
                  && await caller.CoversCompanyAsync(AccessControlPermissions.AssignRoles, change.CompanyId, ct).ConfigureAwait(false)))
+        {
+            return AccessResult.Forbidden(CompanyNotCovered);
+        }
+
+        // A held setting change (slice S1.09a): the approver must be allowed to make the change themselves, for the company
+        // of a company-layer value or for all companies otherwise (ruling Q16).
+        if (change.Kind is AccessChange.ChangeSetting
+            && !await caller.CoversCompanyAsync(Contracts.Settings.SettingsPermissions.Update, change.SettingLayer == "company" ? change.SettingScopeId : null, ct).ConfigureAwait(false))
         {
             return AccessResult.Forbidden(CompanyNotCovered);
         }
@@ -191,7 +201,7 @@ public sealed partial class AccessAdministrationService
             AccessChange.EndGroupRole => await ApplyEndAsync(c, tx, change, now, by, group: true, ct).ConfigureAwait(false),
             AccessChange.AddMember => await ApplyAddMemberAsync(c, tx, change, now, by, ct).ConfigureAwait(false),
             AccessChange.RemoveMember => await ApplyRemoveMemberAsync(c, tx, change, now, by, ct).ConfigureAwait(false),
-            AccessChange.SetSetting => await ApplySettingAsync(c, tx, change, now, by, ct).ConfigureAwait(false),
+            AccessChange.SetSetting or AccessChange.ChangeSetting => await ApplySettingAsync(c, tx, change, now, by, ct).ConfigureAwait(false),
             _ => AccessResult.Invalid("errors.data.invalid_request"),
         };
 

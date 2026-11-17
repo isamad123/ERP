@@ -24,5 +24,13 @@ internal sealed class SettingConfiguration : IEntityTypeConfiguration<global::Er
         builder.Property(e => e.AllowedLayers).HasColumnName("allowed_layers").HasColumnType("text[]").IsRequired();
         builder.Property(e => e.RequiresApproval).HasColumnName("requires_approval").HasColumnType("boolean");
         builder.Property(e => e.DescriptionI18n).HasColumnName("description_i18n").HasColumnType("jsonb").IsRequired();
+        builder.Property(e => e.IsVisible).HasColumnName("is_visible").HasColumnType("boolean");
+        builder.Property(e => e.Area).HasColumnName("area").HasColumnType("text");
+        builder.Property(e => e.NameI18n).HasColumnName("name_i18n").HasColumnType("jsonb");
+        builder.Property(e => e.HelpI18n).HasColumnName("help_i18n").HasColumnType("jsonb");
+        builder.Property(e => e.Unit).HasColumnName("unit").HasColumnType("text");
+        builder.Property(e => e.RoleRule).HasColumnName("role_rule").HasColumnType("text");
+        builder.Property(e => e.SelfService).HasColumnName("self_service").HasColumnType("boolean");
+        builder.Property(e => e.TightenOnly).HasColumnName("tighten_only").HasColumnType("boolean");
     }
 }

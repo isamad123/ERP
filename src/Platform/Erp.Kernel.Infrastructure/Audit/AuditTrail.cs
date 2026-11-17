@@ -42,6 +42,9 @@ public static class AuditTrail
         [IdentityEvents.UserLocked] = "status",
         [IdentityEvents.UserUnlocked] = "status",
         [IdentityEvents.UserStatusChanged] = "status",
+        [AccessEvents.SettingReset] = "delete",
+        [Contracts.Settings.SettingsEvents.Reset] = "delete",
+        [Contracts.Settings.SettingsEvents.FlagReset] = "delete",
     };
 
     /// <summary>

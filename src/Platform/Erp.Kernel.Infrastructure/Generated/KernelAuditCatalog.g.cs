@@ -18,6 +18,7 @@ public static class KernelAuditCatalog
         new(typeof(global::Erp.Kernel.Domain.Generated.Aud.OutboxMessage), "aud.outbox_messages", false, "machinery: transactional outbox and inbox (S1.07 Q4)", "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Aud.SecurityEvent), "aud.security_events", false, "the audit tables themselves (S1.07 Q4)", "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Aud.SubjectKey), "aud.subject_keys", false, "the audit tables themselves: key material (S1.07 Q4)", "person_id", null, "person_id", null, null),
+        new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.ConfigVersion), "cfg.config_versions", false, "machinery: change counters raised by trigger on every settings or flags change (S1.09a Q13)", null, null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef), "cfg.custom_field_defs", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride), "cfg.feature_flag_overrides", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlag), "cfg.feature_flags", false, "flag definitions keyed by code, registered from manifests by migrations (no uuid key, no API) (S1.07 Q4)", null, null, null, null, null),

@@ -215,14 +215,17 @@ public sealed class AccessReviewFixTests(TenancyFixture fx) : IAsyncLifetime
         var checker = await _h.UserAsync(Ct, null, "tenant_admin");
         await SetMakerCheckerAsync(null, on: true); // a stored tenant value, whichever test ran first
 
-        // The generated settings API refuses iam.* keys (create and update).
+        // The generated settings API cannot change iam.* keys (create and update). Since slice S1.09a (CR-036 part 4) its
+        // write routes do not exist at all; the EF guard behind them still refuses such writes (KernelDbContext.UseAccessService).
         var generated = await _h.PostAsync(admin, "/api/cfg/setting-values", new { settingKey = "iam.maker_checker.sensitive_roles", layer = "user", scopeId = admin, value = false }, Ct);
-        Assert.Equal(HttpStatusCode.Forbidden, generated.Status);
-        Assert.Equal(KernelDbContext.UseAccessService, generated.Text("title"));
+        Assert.True(generated.Status is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed, $"generated create: {(int)generated.Status}");
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from cfg.setting_values where setting_key = 'iam.maker_checker.sensitive_roles' and layer = 'user'", Ct));
         var existing = await _h.ScalarAsync<Guid>("select id from cfg.setting_values where setting_key = 'iam.maker_checker.sensitive_roles' and layer = 'tenant' and scope_id is null", Ct);
         var version = await _h.ScalarAsync<long>("select row_version from cfg.setting_values where id = $1", Ct, existing);
         var update = await _h.PutAsync(admin, $"/api/cfg/setting-values/{existing}", new { settingKey = "iam.maker_checker.sensitive_roles", layer = "tenant", value = false, rowVersion = version }, Ct);
-        Assert.Equal(HttpStatusCode.Forbidden, update.Status);
+        Assert.True(update.Status is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed, $"generated update: {(int)update.Status}");
+        Assert.Equal("true", await _h.ScalarAsync<string>("select value::text from cfg.setting_values where id = $1", Ct, existing));
+        Assert.Equal(version, await _h.ScalarAsync<long>("select row_version from cfg.setting_values where id = $1", Ct, existing));
 
         // The service validates, records history and an event.
         Assert.Equal("errors.settings.unknown_key", (await _h.PutAsync(admin, "/api/iam/settings/cfg.other", new { value = 1, reason = "t" }, Ct)).Text("title"));

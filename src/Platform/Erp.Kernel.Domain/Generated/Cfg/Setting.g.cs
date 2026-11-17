@@ -35,4 +35,28 @@ public sealed partial class Setting
 
     /// <summary>description_i18n</summary>
     public global::System.Text.Json.JsonDocument DescriptionI18n { get; set; } = null!;
+
+    /// <summary>is_visible: default true; hidden settings change only through migrations and packs</summary>
+    public bool IsVisible { get; set; } = true;
+
+    /// <summary>area: group in the settings centre, e.g. security.passwords</summary>
+    public string? Area { get; set; }
+
+    /// <summary>name_i18n: short name per language</summary>
+    public global::System.Text.Json.JsonDocument? NameI18n { get; set; }
+
+    /// <summary>help_i18n: help text per language</summary>
+    public global::System.Text.Json.JsonDocument? HelpI18n { get; set; }
+
+    /// <summary>unit: e.g. days, minutes, characters</summary>
+    public string? Unit { get; set; }
+
+    /// <summary>role_rule: how values of several roles combine; the role layer needs one</summary>
+    public string? RoleRule { get; set; }
+
+    /// <summary>self_service: the user may set their own user-layer value</summary>
+    public bool SelfService { get; set; }
+
+    /// <summary>tighten_only: yes/no settings only: role and user values can only switch it on (CR-037)</summary>
+    public bool TightenOnly { get; set; }
 }

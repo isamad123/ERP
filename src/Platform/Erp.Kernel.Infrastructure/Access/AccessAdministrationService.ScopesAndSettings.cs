@@ -141,16 +141,37 @@ public sealed partial class AccessAdministrationService : IAccessSettingsService
     // ================================================================== iam.* settings
 
     public Task<AccessResult> SetAsync(string key, string? layer, Guid? scopeId, JsonElement? value, string? reason, CancellationToken cancellationToken) =>
-        RunAsync(ManageSettings, async (c, tx, now, by) =>
+        SetAsync(key, layer, scopeId, value, reason, null, cancellationToken);
+
+    /// <remarks><paramref name="revertedFrom"/>: the history row a revert restores (slice S1.09a).</remarks>
+    public async Task<AccessResult> SetAsync(string key, string? layer, Guid? scopeId, JsonElement? value, string? reason, Guid? revertedFrom, CancellationToken cancellationToken)
+    {
+        if (value is not { ValueKind: not JsonValueKind.Undefined } v)
+        {
+            return string.IsNullOrWhiteSpace(reason) ? AccessResult.Invalid(ReasonRequired) : AccessResult.Invalid(SettingValueInvalid);
+        }
+
+        return await ChangeIdentitySettingAsync(key, layer, scopeId, v.GetRawText(), reason, revertedFrom, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Removes a layer's value of an <c>iam.*</c> setting (reset to inherited, slice S1.09a), with the same rules as a change.</summary>
+    public Task<AccessResult> ResetAsync(string key, string? layer, Guid? scopeId, string? reason, Guid? revertedFrom, CancellationToken cancellationToken) =>
+        ChangeIdentitySettingAsync(key, layer, scopeId, null, reason, revertedFrom, cancellationToken);
+
+    private async Task<AccessResult> ChangeIdentitySettingAsync(string key, string? layer, Guid? scopeId, string? valueJson, string? reason, Guid? revertedFrom, CancellationToken cancellationToken)
+    {
+        var result = await RunAsync(ManageSettings, async (c, tx, now, by) =>
         {
             if (string.IsNullOrWhiteSpace(reason))
             {
                 return AccessResult.Invalid(ReasonRequired);
             }
 
-            if (value is not { ValueKind: not JsonValueKind.Undefined } v)
+            // Identity settings belong to the whole customer: a Company Admin's company-scoped settings permission (S1.09a,
+            // ruling Q16) does not reach them.
+            if (!await caller.CoversCompanyAsync(ManageSettings, null, cancellationToken).ConfigureAwait(false))
             {
-                return AccessResult.Invalid(SettingValueInvalid);
+                return AccessResult.Forbidden(CompanyNotCovered);
             }
 
             var change = new AccessChange
@@ -159,7 +180,9 @@ public sealed partial class AccessAdministrationService : IAccessSettingsService
                 SettingKey = key,
                 SettingLayer = layer ?? "tenant",
                 SettingScopeId = scopeId,
-                SettingValue = v.GetRawText(),
+                SettingValue = valueJson,
+                SettingReset = valueJson is null,
+                SettingRevertedFrom = revertedFrom,
                 Reason = reason,
                 SettingRowId = await IdentityDb.ScalarAsync<Guid?>(c, tx, """
                     select id from cfg.setting_values where setting_key = $1 and layer = $2 and scope_id is not distinct from $3
@@ -170,8 +193,10 @@ public sealed partial class AccessAdministrationService : IAccessSettingsService
                 return invalid;
             }
 
-            // Switching off maker-checker or privileged MFA needs a second administrator when there is one (finding 5).
-            if (TwoPersonSwitches.Contains(key) && change.SettingLayer == "tenant" && change.SettingValue == "false"
+            // Switching off maker-checker or privileged MFA needs a second administrator when there is one (finding 5); a
+            // reset switches to the shipped default.
+            var after = valueJson ?? await IdentityDb.ScalarAsync<string>(c, tx, "select default_value::text from cfg.settings where key = $1", cancellationToken, key).ConfigureAwait(false);
+            if (TwoPersonSwitches.Contains(key) && change.SettingLayer == "tenant" && after == "false"
                 && await AccessDb.SettingOnAsync(c, tx, key, cancellationToken).ConfigureAwait(false)
                 && (await TenantAdminGuard.CountAsync(c, tx, Today(now), cancellationToken).ConfigureAwait(false)).Active >= 2)
             {
@@ -179,18 +204,74 @@ public sealed partial class AccessAdministrationService : IAccessSettingsService
             }
 
             return await ApplySettingAsync(c, tx, change, now, by, cancellationToken).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
+        SettingsChanged(result);
+        return result;
+    }
+
+    /// <summary>
+    /// Holds a change of a setting that needs approval (slice S1.09a, FR-ADM-SET-04, ruling Q12) as a maker-checker request.
+    /// The settings service has validated it and checked the caller's right; the approval checks both again.
+    /// </summary>
+    public Task<AccessResult> HoldSettingChangeAsync(string key, string layer, Guid? scopeId, string? valueJson, string reason, Guid? revertedFrom, CancellationToken cancellationToken) =>
+        RunAsync(Contracts.Settings.SettingsPermissions.Update, async (c, tx, now, by) =>
+        {
+            var change = new AccessChange
+            {
+                Kind = AccessChange.ChangeSetting,
+                SettingKey = key,
+                SettingLayer = layer,
+                SettingScopeId = scopeId,
+                SettingValue = valueJson,
+                SettingReset = valueJson is null,
+                SettingRevertedFrom = revertedFrom,
+                Reason = reason,
+                SettingRowId = await IdentityDb.ScalarAsync<Guid?>(c, tx, """
+                    select id from cfg.setting_values where setting_key = $1 and layer = $2 and scope_id is not distinct from $3
+                    """, cancellationToken, key, layer, scopeId).ConfigureAwait(false) ?? Guid.CreateVersion7(now),
+            };
+            return await ValidateHeldSettingAsync(c, tx, change, cancellationToken).ConfigureAwait(false)
+                ?? await SubmitAsync(c, tx, change, now, by, cancellationToken).ConfigureAwait(false);
         }, cancellationToken);
 
-    /// <summary>The key is an identity or access setting, the layer is one it allows, the scope exists and the value has the setting's type.</summary>
+    /// <summary>A held setting change is still valid when it is decided: same checks as when it was made (definitions may have changed).</summary>
+    private static async Task<AccessResult?> ValidateHeldSettingAsync(NpgsqlConnection c, NpgsqlTransaction tx, AccessChange change, CancellationToken ct)
+    {
+        if (change.SettingKey is not { } key || key.StartsWith("iam.", StringComparison.Ordinal) || change.SettingLayer is not { } layer)
+        {
+            return AccessResult.Invalid(SettingUnknown);
+        }
+
+        var definition = (await Settings.SettingsStore.DefinitionsAsync(c, tx, [key], ct).ConfigureAwait(false)).GetValueOrDefault(key);
+        JsonElement? value = change.SettingReset ? null : Settings.SettingsStore.Json(change.SettingValue ?? "null");
+        return await Settings.SettingWrites.ProblemAsync(c, tx, definition, layer, change.SettingScopeId, value, ct).ConfigureAwait(false) is { } problem
+            ? AccessResult.Invalid(problem)
+            : null;
+    }
+
+    /// <summary>After a settings change this host drops its cached values, so the change is in force here at once (S1.09a).</summary>
+    private void SettingsChanged(AccessResult result)
+    {
+        if (result.Outcome == AccessOutcome.Done)
+        {
+            (services.GetService(typeof(Settings.SettingsService)) as Settings.SettingsService)?.Invalidate();
+        }
+    }
+
+    /// <summary>
+    /// The key is an identity or access setting, the layer is one it allows, the scope exists and the value has the setting's
+    /// type and rules. Since slice S1.09a the definition comes from cfg.settings (the kernel manifest), not from code.
+    /// </summary>
     private static async Task<AccessResult?> ValidateSettingAsync(NpgsqlConnection c, NpgsqlTransaction tx, AccessChange change, CancellationToken ct)
     {
-        if (IdentitySettings.All.FirstOrDefault(d => d.Key == change.SettingKey) is not { } definition)
+        if (change.SettingKey is not { } key || !key.StartsWith("iam.", StringComparison.Ordinal)
+            || (await Settings.SettingsStore.DefinitionsAsync(c, tx, [key], ct).ConfigureAwait(false)).GetValueOrDefault(key) is not { IsVisible: true } definition)
         {
             return AccessResult.Invalid(SettingUnknown);
         }
 
         var layer = change.SettingLayer;
-        if (layer is null || !definition.Layers.Contains(layer) || (layer == "tenant") != (change.SettingScopeId is null))
+        if (layer is null || layer == "pack" || !definition.Layers.Contains(layer) || (layer == "tenant") != (change.SettingScopeId is null))
         {
             return AccessResult.Invalid(SettingLayerInvalid);
         }
@@ -204,45 +285,27 @@ public sealed partial class AccessAdministrationService : IAccessSettingsService
             }
         }
 
-        using var doc = JsonDocument.Parse(change.SettingValue ?? "null");
-        var value = doc.RootElement;
-        var ok = definition.DataType switch
+        if (layer == "company"
+            && !await IdentityDb.ScalarAsync<bool>(c, tx, "select exists (select 1 from org.companies where id = $1 and not is_deleted)", ct, change.SettingScopeId).ConfigureAwait(false))
         {
-            "bool" => value.ValueKind is JsonValueKind.True or JsonValueKind.False,
-            "int" => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) && (definition.Min is not { } min || number >= min),
-            "list" => value.ValueKind == JsonValueKind.Array && value.EnumerateArray().All(e => e.ValueKind == JsonValueKind.String),
-            _ => false,
-        };
-        return ok ? null : AccessResult.Invalid(SettingValueInvalid);
+            return AccessResult.Invalid(SettingLayerInvalid);
+        }
+
+        // A reset carries no value (S1.09a): nothing to check.
+        if (change.SettingReset)
+        {
+            return null;
+        }
+
+        using var doc = JsonDocument.Parse(change.SettingValue ?? "null");
+        return definition.Definition.Validation.Problem(definition.DataType, doc.RootElement) is null ? null : AccessResult.Invalid(SettingValueInvalid);
     }
 
-    /// <summary>Writes the value, its history row (FR-KRN-SET-04) and an <c>iam.setting_changed</c> event.</summary>
+    /// <summary>Writes (or removes) the value with its history row and event (FR-KRN-SET-04), through the one settings writer.</summary>
     private static async Task<AccessResult> ApplySettingAsync(NpgsqlConnection c, NpgsqlTransaction tx, AccessChange change, DateTimeOffset now, Guid by, CancellationToken ct)
     {
-        var old = await IdentityDb.ScalarAsync<string>(c, tx, """
-            select value::text from cfg.setting_values where setting_key = $1 and layer = $2 and scope_id is not distinct from $3 for update
-            """, ct, change.SettingKey, change.SettingLayer, change.SettingScopeId).ConfigureAwait(false);
-        var id = await IdentityDb.ScalarAsync<Guid>(c, tx, """
-            insert into cfg.setting_values (id, setting_key, layer, scope_id, value, created_at, created_by, updated_at, updated_by)
-            values ($1, $2, $3, $4, $5, $6, $7, $6, $7)
-            on conflict (setting_key, layer, scope_id) do update set value = excluded.value, updated_at = excluded.updated_at,
-                updated_by = excluded.updated_by, row_version = cfg.setting_values.row_version + 1
-            returning id
-            """, ct, change.SettingRowId, change.SettingKey, change.SettingLayer, change.SettingScopeId, new JsonPayload(change.SettingValue!), now, by).ConfigureAwait(false);
-        await IdentityDb.ExecuteAsync(c, tx, """
-            insert into cfg.setting_value_history (id, setting_value_id, setting_key, layer, scope_id, old_value, new_value, reason, created_at, created_by)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            """, ct, Guid.CreateVersion7(now), id, change.SettingKey, change.SettingLayer, change.SettingScopeId,
-            old is null ? null : new JsonPayload(old), new JsonPayload(change.SettingValue!), change.Reason, now, by).ConfigureAwait(false);
-        await AccessDb.RaiseAsync(c, tx, AccessEvents.SettingChanged, "cfg.setting_value", id, by, now, new
-        {
-            key = change.SettingKey,
-            layer = change.SettingLayer,
-            scope_id = change.SettingScopeId,
-            old_value = old is null ? (JsonElement?)null : JsonDocument.Parse(old).RootElement,
-            new_value = JsonDocument.Parse(change.SettingValue!).RootElement,
-            reason = change.Reason,
-        }, ct).ConfigureAwait(false);
-        return AccessResult.Done(id);
+        var id = await Settings.SettingWrites.ApplyAsync(c, tx, change.SettingKey!, change.SettingLayer!, change.SettingScopeId,
+            change.SettingReset ? null : change.SettingValue, change.Reason, change.SettingRevertedFrom, change.SettingRowId, now, by, ct).ConfigureAwait(false);
+        return id is { } written ? AccessResult.Done(written) : AccessResult.Invalid(Contracts.Settings.SettingsErrors.NothingToReset);
     }
 }

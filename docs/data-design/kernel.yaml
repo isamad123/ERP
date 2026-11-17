@@ -481,9 +481,19 @@
     - [allowed_layers, "text[]", req, "product, pack, tenant, company, role, user"]
     - [requires_approval, bool, req]
     - [description_i18n, i18n, req]
+    - [is_visible, bool, req, "default true; hidden settings change only through migrations and packs"]
+    - [area, code, opt, "group in the settings centre, e.g. security.passwords"]
+    - [name_i18n, i18n, opt, short name per language]
+    - [help_i18n, i18n, opt, help text per language]
+    - [unit, text, opt, "e.g. days, minutes, characters"]
+    - [role_rule, "enum(any,all,lowest,highest)", opt, how values of several roles combine; the role layer needs one]
+    - [self_service, bool, req, the user may set their own user-layer value]
+    - [tighten_only, bool, req, "yes/no settings only: role and user values can only switch it on (CR-037)"]
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
   audit: false
   audit_reason: "setting definitions keyed by code, registered from manifests by migrations (no uuid key, no API); values are audited in cfg.setting_values (S1.07 Q4)"
+  # S1.09a (CR-036 part 1, Q10, Q11; CR-037 tighten_only): manifest columns; spec 03 section 5.4 has is_visible.
+  added_in: {S1.09a: [is_visible, area, name_i18n, help_i18n, unit, role_rule, self_service, tighten_only]}
   reqs: [KRN-SET-01, ADM-SET-01]
 
 - table: cfg.setting_values
@@ -494,6 +504,8 @@
     - [scope_id, uuid, opt, "company, role or user id; null for tenant"]
     - [value, json, req]
   unique: [[setting_key, layer, scope_id]]
+  # S1.09a (CR-036 part 4, Q12): values change only through the settings change service (history, approval, audit).
+  api_actions: [read]
   reqs: [KRN-SET-02, ADM-SET-03]
 
 - table: cfg.setting_value_history
@@ -510,6 +522,8 @@
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
   audit: false
   audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
+  # S1.09a (CR-037): history rows are written only by the settings services, never through the generated API.
+  api_actions: [read]
   reqs: [KRN-SET-04, ADM-SET-06]
 
 - table: cfg.feature_flags
@@ -518,9 +532,15 @@
     - [key, text, req, pk]
     - [default_enabled, bool, req]
     - [description_i18n, i18n, req]
+    - [module_id, code, opt, module that declares the flag]
+    - [entitlement_key, text, opt, "feature key that must be licensed, e.g. hrm.payroll; unlicensed means always off"]
+    - [name_i18n, i18n, opt, short name per language]
+    - [help_i18n, i18n, opt, help text per language]
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
   audit: false
   audit_reason: "flag definitions keyed by code, registered from manifests by migrations (no uuid key, no API) (S1.07 Q4)"
+  # S1.09a (CR-036 part 2, Q14; CR-037 names and help).
+  added_in: {S1.09a: [module_id, entitlement_key, name_i18n, help_i18n]}
   reqs: [KRN-SET-05]
 
 - table: cfg.feature_flag_overrides
@@ -531,7 +551,22 @@
     - [scope_id, uuid, opt]
     - [enabled, bool, req]
   unique: [[flag_key, layer, scope_id]]
+  # S1.09a (CR-036 part 4, Q14): overrides change only through the settings change service (reason, audit).
+  api_actions: [read]
   reqs: [KRN-SET-05]
+
+- table: cfg.config_versions
+  purpose: Change counters of settings and feature flags, raised by trigger, so every host refreshes its cache (KRN-SET-06)
+  key: [name]
+  added_in: S1.09a
+  columns:
+    - [name, code, req, "pk; settings or flags"]
+    - [version, big, req, default 0]
+    - [changed_at, ts, req]
+  # S1.09a (CR-036 part 3, Q13 option A).
+  audit: false
+  audit_reason: "machinery: change counters raised by trigger on every settings or flags change (S1.09a Q13)"
+  reqs: [KRN-SET-06]
 
 - table: cfg.custom_field_defs
   traits: [std]

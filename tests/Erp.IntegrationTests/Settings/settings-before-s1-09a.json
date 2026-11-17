@@ -1,0 +1,376 @@
+{
+  "_comment": "Settings registered by the hand-written seeds of S1.05 (IdentitySettings.All), S1.06 and S1.08 (NumberingSettings.SeedAsync), captured from commit 999970f before slice S1.09a moved them into manifests. FR-KRN-SET-01 acceptance: the manifests change no key, module, type, default, validation, layers, approval flag or description.",
+  "settings": [
+    {
+      "key": "iam.password.min_length",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 10,
+      "validation": {
+        "min": 6
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Minimum password length",
+        "ur": "پاس ورڈ کی کم از کم لمبائی"
+      }
+    },
+    {
+      "key": "iam.password.min_character_kinds",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 3,
+      "validation": {
+        "min": 1
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Character kinds required (of upper, lower, digit, symbol)",
+        "ur": "درکار حروف کی اقسام (بڑے، چھوٹے، ہندسے، علامات میں سے)"
+      }
+    },
+    {
+      "key": "iam.password.history_count",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 5,
+      "validation": {
+        "min": 0
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Previous passwords that cannot be reused",
+        "ur": "پچھلے پاس ورڈ جو دوبارہ استعمال نہیں ہو سکتے"
+      }
+    },
+    {
+      "key": "iam.password.expiry_days",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 0,
+      "validation": {
+        "min": 0
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Days until a password expires (0 = never)",
+        "ur": "پاس ورڈ کی میعاد کے دن (0 = کبھی نہیں)"
+      }
+    },
+    {
+      "key": "iam.lockout.threshold",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 5,
+      "validation": {
+        "min": 0
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Failed sign-ins before the account locks (0 = never)",
+        "ur": "اکاؤنٹ بند ہونے سے پہلے ناکام سائن ان (0 = کبھی نہیں)"
+      }
+    },
+    {
+      "key": "iam.lockout.minutes",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 15,
+      "validation": {
+        "min": 1
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Minutes an automatic lock lasts",
+        "ur": "خودکار بندش کے منٹ"
+      }
+    },
+    {
+      "key": "iam.session.idle_minutes",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 30,
+      "validation": {
+        "min": 5
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Minutes without activity before a session ends",
+        "ur": "غیر فعالیت کے منٹ جن کے بعد سیشن ختم ہو جاتا ہے"
+      }
+    },
+    {
+      "key": "iam.session.absolute_minutes",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 720,
+      "validation": {
+        "min": 5
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Maximum session length in minutes",
+        "ur": "سیشن کی زیادہ سے زیادہ مدت منٹوں میں"
+      }
+    },
+    {
+      "key": "iam.session.max_concurrent",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 3,
+      "validation": {
+        "min": 1
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Sessions a user may hold at once",
+        "ur": "ایک صارف کے بیک وقت سیشن"
+      }
+    },
+    {
+      "key": "iam.session.remember_device_days",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 0,
+      "validation": {
+        "min": 0
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Days a trusted device is remembered (0 = off; used from slice S1.12)",
+        "ur": "قابل اعتماد آلہ یاد رکھنے کے دن (0 = بند)"
+      }
+    },
+    {
+      "key": "iam.mfa.required",
+      "module_id": "iam",
+      "data_type": "bool",
+      "default_value": false,
+      "validation": {},
+      "allowed_layers": [
+        "tenant",
+        "role",
+        "user"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Second factor required at sign-in",
+        "ur": "سائن ان پر دوسرا مرحلہ لازمی"
+      }
+    },
+    {
+      "key": "iam.mfa.grace_days",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 7,
+      "validation": {
+        "min": 0
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Days allowed to enrol a second factor once required",
+        "ur": "لازمی ہونے کے بعد دوسرا مرحلہ اندراج کرنے کے دن"
+      }
+    },
+    {
+      "key": "iam.mfa.recovery_codes",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 10,
+      "validation": {
+        "min": 1
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Recovery codes issued at enrolment",
+        "ur": "اندراج پر جاری کردہ بحالی کوڈ"
+      }
+    },
+    {
+      "key": "iam.mfa.allowed_methods",
+      "module_id": "iam",
+      "data_type": "list",
+      "default_value": [
+        "totp"
+      ],
+      "validation": {},
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Allowed second-factor methods",
+        "ur": "دوسرے مرحلے کے اجازت یافتہ طریقے"
+      }
+    },
+    {
+      "key": "iam.activation.token_hours",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 72,
+      "validation": {
+        "min": 1
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Hours an account activation link stays valid",
+        "ur": "اکاؤنٹ فعال کرنے کا لنک کتنے گھنٹے درست رہتا ہے"
+      }
+    },
+    {
+      "key": "iam.sign_in.challenge_minutes",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 10,
+      "validation": {
+        "min": 1
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Minutes to complete a sign-in step (second factor, password change)",
+        "ur": "سائن ان کا اگلا مرحلہ مکمل کرنے کے منٹ"
+      }
+    },
+    {
+      "key": "iam.mfa.required_for_privileged",
+      "module_id": "iam",
+      "data_type": "bool",
+      "default_value": true,
+      "validation": {},
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Second factor required for users holding a privileged role",
+        "ur": "مراعات یافتہ کردار رکھنے والے صارفین کے لیے دوسرا مرحلہ لازمی"
+      }
+    },
+    {
+      "key": "iam.password.privileged_min_length",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 14,
+      "validation": {
+        "min": 6
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Minimum password length for users holding a privileged role",
+        "ur": "مراعات یافتہ کردار رکھنے والے صارفین کے پاس ورڈ کی کم از کم لمبائی"
+      }
+    },
+    {
+      "key": "iam.maker_checker.sensitive_roles",
+      "module_id": "iam",
+      "data_type": "bool",
+      "default_value": true,
+      "validation": {},
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Changes to roles with sensitive permissions need a second person's approval",
+        "ur": "حساس اجازتوں والے کرداروں میں تبدیلی کے لیے دوسرے شخص کی منظوری درکار"
+      }
+    },
+    {
+      "key": "iam.maker_checker.expiry_days",
+      "module_id": "iam",
+      "data_type": "int",
+      "default_value": 7,
+      "validation": {
+        "min": 1
+      },
+      "allowed_layers": [
+        "tenant"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Days a change waiting for approval stays open",
+        "ur": "منظوری کی منتظر تبدیلی کتنے دن کھلی رہتی ہے"
+      }
+    },
+    {
+      "key": "cfg.numbering.fiscal_year_start_month",
+      "module_id": "cfg",
+      "data_type": "int",
+      "default_value": 1,
+      "validation": {
+        "min": 1,
+        "max": 12
+      },
+      "allowed_layers": [
+        "tenant",
+        "company"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Month the fiscal year starts in (1 = January); used by fiscal-year numbering",
+        "ur": "مالی سال کس مہینے سے شروع ہوتا ہے (1 = جنوری)؛ مالی سال کی نمبرنگ کے لیے"
+      }
+    },
+    {
+      "key": "org.time_zone",
+      "module_id": "org",
+      "data_type": "text",
+      "default_value": "Asia/Karachi",
+      "validation": {},
+      "allowed_layers": [
+        "tenant",
+        "company"
+      ],
+      "requires_approval": false,
+      "description_i18n": {
+        "en": "Time zone of the company (IANA name, for example Asia/Karachi)",
+        "ur": "کمپنی کا ٹائم زون (IANA نام، مثلاً Asia/Karachi)"
+      }
+    }
+  ]
+}

@@ -152,6 +152,15 @@ later too (`added_in: <slice>`, file `V…__controlplane__design_<slice>.sql`).
 The generator writes each module's document types as `<Module>NumberingTypes.g.cs` (read by the API host) and
 `Infrastructure/Access/numbering.g.json` (read by provisioning and `migrate` to seed default schemes).
 
+## Settings keys and manifests (slice S1.09a, CR-036, CR-037, CR-038)
+
+| Key or file | Example | Meaning |
+| --- | --- | --- |
+| `added_in` on a required column with a default | `[is_visible, bool, req, "default true; …"]` + `added_in: {S1.09a: [is_visible]}` | The slice's design migration adds the column `not null default …` (no table rewrite; every existing row gets the default). A required column without a constant default, or a required `code`, `i18n` or enum column, cannot come later. Optional `code` and `i18n` columns added later come with their checks. |
+| Slice id with a part letter | `S1.09a`, `S1.09b` | A slice built in parts (ruling Q0): each part's files keep the slice's number and carry the letter in the name (`V202611150306__kernel__design_s1_09a.sql`). |
+| `triggers` of a `rules.yaml` function | `triggers: [[cfg.settings, tg_settings_config_version]]` | The triggers the reviewed SQL creates, so the expected catalogue knows them. |
+| `<module>.Infrastructure/Settings/settings.yaml` | see the kernel's | One manifest per module: settings (key, type, default, validation, layers, role_rule, tighten_only, self_service, visible, requires_approval, area, unit, name, description and help in English and Urdu) and feature flags (key, default, entitlement_key, texts). The generator checks every default against the kernel's setting rules and writes `Access/settings.g.json` (registered by `migrate` and provisioning) and `<Module>SettingKeys.g.cs`. A key starts with one of the module's ids; a setting dropped from the manifest is kept hidden, never deleted. |
+
 ## Cross-module rules enforced in the data design
 
 | Rule | Where |

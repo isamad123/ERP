@@ -25,18 +25,6 @@ public sealed class FeatureFlagOverrideResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for cfg.feature_flag_overrides. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class FeatureFlagOverrideWriteRequest
-{
-    public string? FlagKey { get; init; }
-    public string? Layer { get; init; }
-    public global::System.Guid? ScopeId { get; init; }
-    public bool? Enabled { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for cfg.feature_flag_overrides.</summary>
 public sealed class FeatureFlagOverrideListQuery
 {
@@ -47,7 +35,7 @@ public sealed class FeatureFlagOverrideListQuery
     public string? FlagKey { get; init; }
 }
 
-/// <summary>Generated endpoints of cfg.feature_flag_overrides: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of cfg.feature_flag_overrides: read. Answers pass through field security (S1.06).</summary>
 internal static class FeatureFlagOverrideEndpoints
 {
     private const string Resource = "cfg.feature_flag_overrides";
@@ -57,8 +45,6 @@ internal static class FeatureFlagOverrideEndpoints
         var group = app.MapGroup("/api/cfg/feature-flag-overrides").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("cfg.feature_flag_overrides.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.feature_flag_overrides.read"));
         group.MapGet("/{id:guid}", GetAsync).WithName("cfg.feature_flag_overrides.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.feature_flag_overrides.read"));
-        group.MapPost("/", CreateAsync).WithName("cfg.feature_flag_overrides.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "cfg.feature_flag_overrides.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("cfg.feature_flag_overrides.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "cfg.feature_flag_overrides.update"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] FeatureFlagOverrideListQuery query, global::Erp.Kernel.Application.Generated.Cfg.IFeatureFlagOverrideRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -77,53 +63,6 @@ internal static class FeatureFlagOverrideEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.FeatureFlagOverrideAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(FeatureFlagOverrideWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IFeatureFlagOverrideRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.feature_flag_overrides.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.FeatureFlagOverrideAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/feature-flag-overrides/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.FeatureFlagOverrideAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, FeatureFlagOverrideWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IFeatureFlagOverrideRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.feature_flag_overrides.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Cfg.FeatureFlagOverrideAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.FeatureFlagOverrideAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static FeatureFlagOverrideResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride row) => new()
     {
         Id = row.Id,
@@ -137,65 +76,4 @@ internal static class FeatureFlagOverrideEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(FeatureFlagOverrideWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.FlagKey is null && (!update || access.CanEdit("flag_key")))
-        {
-            errors.Add("flagKey");
-        }
-        if (request.Layer is null && (!update || access.CanEdit("layer")))
-        {
-            errors.Add("layer");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(FeatureFlagOverrideWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("flag_key"))
-        {
-            row.FlagKey = request.FlagKey!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FlagKey, row.FlagKey, update))
-        {
-            denied.Add("flagKey");
-        }
-        if (access.CanEdit("layer"))
-        {
-            row.Layer = request.Layer!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Layer, row.Layer, update))
-        {
-            denied.Add("layer");
-        }
-        if (access.CanEdit("scope_id"))
-        {
-            row.ScopeId = request.ScopeId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ScopeId, row.ScopeId, update))
-        {
-            denied.Add("scopeId");
-        }
-        if (access.CanEdit("enabled"))
-        {
-            if (request.Enabled is not null)
-            {
-                row.Enabled = request.Enabled!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Enabled, row.Enabled, update))
-        {
-            denied.Add("enabled");
-        }
-        return denied;
-    }
 }
