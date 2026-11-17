@@ -14,6 +14,7 @@ Every command is recorded in `cp.platform_audit` against the platform user named
 | `ERP_CLUSTER_ADMIN_PASSWORD` | Only for `cluster add` |
 | `ERP_BACKUP_KEY` | Backup encryption key (base64 of 32 bytes); see tenant-backup-restore.md |
 | `ERP_MIGRATIONS_ROOT` | Optional; defaults to the migration files shipped next to the executable |
+| `ERP_TEMPLATES_ROOT` | Optional; folder of the edition templates for `entitlement draft` (defaults to `EntitlementTemplates` next to the executable) |
 
 The API host reads `ConnectionStrings__ControlPlane`, `ERP_SECRETS_FILE`, `ERP_SECRETS_KEY`, `Auth__Issuer`, `Auth__Audience`
 and optionally `Tenancy__StatementTimeoutSeconds` (30), `Tenancy__HostCacheSeconds` (30) and `Tenancy__MaxPoolSizePerTenant` (20).
@@ -37,7 +38,8 @@ refuses to start when no key exists. `Auth__SigningPublicKeys__0` may add a furt
    time; a two-phase rotation without restarts is planned with the hosting slice (S1.05 review finding 8).
 
 ## Provision a customer (FR-KRN-TEN-02)
-1. Issuer signs the entitlement (payload: `tenant`, `version`, `edition`, `effective_from`, `expires_at`, `claims.modules`, limits):
+1. Issuer signs the entitlement (payload: `tenant`, `version`, `edition`, `effective_from`, `expires_at`, `claims`; the claims
+   format is in `docs/registers/contracts.md`, S1.09b; `M entitlement draft` writes a payload to start from):
    `M entitlement sign --payload acme-payload.json --key-id ent-2026-1 --private-key ent-private.pem --out acme-entitlement.json`
 2. `M tenant provision --code acme --name "Acme Textiles" --host acme.example.com --region pk-1 --country PK --currency PKR --size-profile sme --cluster pk-main --legal-name "Acme Textiles (Private) Limited" --admin-email hr.admin@acme.example --admin-name "Acme HR Admin" --entitlement acme-entitlement.json`
 
@@ -124,8 +126,33 @@ failed. Fix and run again: customers in maintenance are retried. Every applied f
 customer's `meta.schema_history`; a file changed after it was applied is refused.
 
 ## Suspend and resume (FR-KRN-TEN-09, FR-ADM-PLT-11)
-`M tenant suspend --code acme --reason "..."` and `M tenant resume --code acme --reason "..."`. Nothing is deleted. A suspended
-customer gets 403 `errors.tenant.locked`. API hosts apply the change within `Tenancy__HostCacheSeconds`.
+`M tenant suspend --code acme --reason "..."` and `M tenant resume --code acme --reason "..."`. Nothing is deleted. Since S1.09b
+a suspended customer is served exactly as a locked licence: users can sign in, see the licence page and run the audit export;
+everything else gets 403 `errors.tenant.locked`. API hosts apply the change within `Tenancy__HostCacheSeconds`.
+
+## Entitlements and licence states (S1.09b; FR-ADM-PLT-03, FR-KRN-ENT-04, FR-KRN-ENT-06)
+1. Draft the next version from an edition template (every template value is a placeholder until the product owner sets it):
+   `M entitlement draft --edition business --tenant acme --from 2027-01-01 --to 2027-12-31 --out acme-v2.json`. Review every value.
+2. The issuer signs it off-line: `M entitlement sign --payload acme-v2.json --key-id ent-2026-1 --private-key ent-private.pem --out acme-v2-signed.json`.
+   The person who signs is not the operator who applies (ruling Q3).
+3. Apply: `M entitlement apply --tenant acme --file acme-v2-signed.json`. Refused with the reason when the signing key is unknown,
+   revoked or not valid, the signature does not match (file changed), the customer code differs, the version is not higher than
+   the last one, the claims break the key catalogue, or the end date has passed. Newly licensed modules get their schema first.
+   A start date of today or earlier (the customer's day) puts it in force at once, without downtime (API hosts within
+   `Tenancy__HostCacheSeconds`); a future start date stores it as `scheduled` and it is in force from that day. A module no
+   longer licensed keeps its schema and data; its endpoints answer 404 until it is licensed again.
+4. History: `M entitlement history --tenant acme` (versions, statuses, dates, who applied).
+
+States follow the end date (`expires_at` is the last licensed day) on the customer's day (`org.time_zone`): Active, Warning
+(last 30 days), Grace (14 days after), Read-only (30 days), Locked; the periods can be set per contract in `claims.term`.
+Read-only: sign-in, reading and export only. Locked: sign-in, licence page, capabilities and the audit export only. No state
+deletes or hides data. The worker host (`dotnet Erp.Host.Worker.dll`, settings `ERP_CONTROL_PLANE`, `ERP_SECRETS_FILE`,
+`ERP_SECRETS_KEY`, `Licence__IntervalMinutes` default 60) records each change once (`cp.license_events`, the customer's security
+events, outbox event `kernel.licence.state_changed` for the e-mails of S1.11), activates scheduled entitlements, takes the daily
+usage readings and copies limit events. To run it at once: `M licence refresh [--tenant acme]` (exit code 3 if a customer failed).
+
+Usage statement of a month: `M usage statement --tenant acme --month 202611` (each meter, its limit and percentage; the monthly
+value is the highest daily reading, API calls the total).
 
 ## Customer list (FR-ADM-PLT-01)
 `M tenant list`: code, status, database status, region, cluster, edition, entitlement state, modules, schema version, legal
