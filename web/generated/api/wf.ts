@@ -11,6 +11,7 @@ export interface WorkflowDefinition
     nameI18n: Record<string, string>;
     documentType: string;
     activeVersionId: string | null;
+    requiresApproval: boolean;
     status: 'active' | 'inactive';
     isActive: boolean;
     createdAt: string;
@@ -18,16 +19,6 @@ export interface WorkflowDefinition
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface WorkflowDefinitionWrite
-{
-    code: string;
-    nameI18n: Record<string, string>;
-    documentType: string;
-    activeVersionId?: string | null;
-    status: 'active' | 'inactive';
-    isActive?: boolean;
 }
 
 export interface WorkflowDefinitionListQuery
@@ -43,8 +34,6 @@ export const workflowDefinitions =
 {
     list: (query: WorkflowDefinitionListQuery = {}) => request<PagedResult<WorkflowDefinition>>('GET', '/api/wf/workflow-definitions', { query }),
     get: (id: string) => request<WorkflowDefinition>('GET', `/api/wf/workflow-definitions/${id}`),
-    create: (body: WorkflowDefinitionWrite) => request<WorkflowDefinition>('POST', '/api/wf/workflow-definitions', { body }),
-    update: (id: string, body: WorkflowDefinitionWrite & { rowVersion: number }) => request<WorkflowDefinition>('PUT', `/api/wf/workflow-definitions/${id}`, { body }),
 };
 
 /** wf.workflow_history: WorkflowHistory. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -61,16 +50,6 @@ export interface WorkflowHistory
     createdBy: string;
 }
 
-export interface WorkflowHistoryWrite
-{
-    instanceId: string;
-    taskId?: string | null;
-    event: string;
-    actorId?: string | null;
-    actingForUserId?: string | null;
-    details: unknown;
-}
-
 export interface WorkflowHistoryListQuery
 {
     after?: string;
@@ -83,7 +62,6 @@ export const workflowHistory =
 {
     list: (query: WorkflowHistoryListQuery = {}) => request<PagedResult<WorkflowHistory>>('GET', '/api/wf/workflow-history', { query }),
     get: (id: string) => request<WorkflowHistory>('GET', `/api/wf/workflow-history/${id}`),
-    create: (body: WorkflowHistoryWrite) => request<WorkflowHistory>('POST', '/api/wf/workflow-history', { body }),
 };
 
 /** wf.workflow_instances: WorkflowInstance. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -98,25 +76,13 @@ export interface WorkflowInstance
     startedAt: string;
     completedAt: string | null;
     context: unknown;
-    status: 'running' | 'approved' | 'rejected' | 'cancelled' | 'failed';
+    subjectUserIds: string[];
+    status: 'running' | 'approved' | 'rejected' | 'cancelled' | 'failed' | 'returned';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface WorkflowInstanceWrite
-{
-    companyId: string;
-    versionId: string;
-    documentType: string;
-    documentId: string;
-    requesterUserId: string;
-    startedAt: string;
-    completedAt?: string | null;
-    context: unknown;
-    status: 'running' | 'approved' | 'rejected' | 'cancelled' | 'failed';
 }
 
 export interface WorkflowInstanceListQuery
@@ -126,15 +92,13 @@ export interface WorkflowInstanceListQuery
     companyId?: string;
     versionId?: string;
     requesterUserId?: string;
-    status?: 'running' | 'approved' | 'rejected' | 'cancelled' | 'failed';
+    status?: 'running' | 'approved' | 'rejected' | 'cancelled' | 'failed' | 'returned';
 }
 
 export const workflowInstances =
 {
     list: (query: WorkflowInstanceListQuery = {}) => request<PagedResult<WorkflowInstance>>('GET', '/api/wf/workflow-instances', { query }),
     get: (id: string) => request<WorkflowInstance>('GET', `/api/wf/workflow-instances/${id}`),
-    create: (body: WorkflowInstanceWrite) => request<WorkflowInstance>('POST', '/api/wf/workflow-instances', { body }),
-    update: (id: string, body: WorkflowInstanceWrite & { rowVersion: number }) => request<WorkflowInstance>('PUT', `/api/wf/workflow-instances/${id}`, { body }),
 };
 
 /** wf.workflow_tasks: WorkflowTask. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -151,27 +115,16 @@ export interface WorkflowTask
     actedBy: string | null;
     actedAt: string | null;
     comment: string | null;
+    infoRequestedAt: string | null;
+    infoRequestedBy: string | null;
+    claimedAt: string | null;
+    escalationLevel: number;
     status: 'pending' | 'approved' | 'rejected' | 'changes_requested' | 'reassigned' | 'skipped' | 'escalated';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface WorkflowTaskWrite
-{
-    instanceId: string;
-    stepKey: string;
-    assigneeUserId?: string | null;
-    assigneeRoleId?: string | null;
-    actingForUserId?: string | null;
-    dueAt?: string | null;
-    escalatedAt?: string | null;
-    actedBy?: string | null;
-    actedAt?: string | null;
-    comment?: string | null;
-    status: 'pending' | 'approved' | 'rejected' | 'changes_requested' | 'reassigned' | 'skipped' | 'escalated';
 }
 
 export interface WorkflowTaskListQuery
@@ -189,8 +142,6 @@ export const workflowTasks =
 {
     list: (query: WorkflowTaskListQuery = {}) => request<PagedResult<WorkflowTask>>('GET', '/api/wf/workflow-tasks', { query }),
     get: (id: string) => request<WorkflowTask>('GET', `/api/wf/workflow-tasks/${id}`),
-    create: (body: WorkflowTaskWrite) => request<WorkflowTask>('POST', '/api/wf/workflow-tasks', { body }),
-    update: (id: string, body: WorkflowTaskWrite & { rowVersion: number }) => request<WorkflowTask>('PUT', `/api/wf/workflow-tasks/${id}`, { body }),
 };
 
 /** wf.workflow_versions: Immutable once active. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -210,16 +161,6 @@ export interface WorkflowVersion
     rowVersion: number;
 }
 
-export interface WorkflowVersionWrite
-{
-    definitionId: string;
-    version: number;
-    definition: unknown;
-    activatedAt?: string | null;
-    activatedBy?: string | null;
-    status: 'draft' | 'active' | 'retired';
-}
-
 export interface WorkflowVersionListQuery
 {
     after?: string;
@@ -232,6 +173,4 @@ export const workflowVersions =
 {
     list: (query: WorkflowVersionListQuery = {}) => request<PagedResult<WorkflowVersion>>('GET', '/api/wf/workflow-versions', { query }),
     get: (id: string) => request<WorkflowVersion>('GET', `/api/wf/workflow-versions/${id}`),
-    create: (body: WorkflowVersionWrite) => request<WorkflowVersion>('POST', '/api/wf/workflow-versions', { body }),
-    update: (id: string, body: WorkflowVersionWrite & { rowVersion: number }) => request<WorkflowVersion>('PUT', `/api/wf/workflow-versions/${id}`, { body }),
 };

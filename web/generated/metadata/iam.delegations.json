@@ -14,21 +14,15 @@
     {
       "action": "read",
       "permission": "iam.delegations.read"
-    },
-    {
-      "action": "create",
-      "permission": "iam.delegations.create"
-    },
-    {
-      "action": "update",
-      "permission": "iam.delegations.update"
     }
   ],
   "companyScoped": false,
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
-  "scope": {},
+  "scope": {
+    "user": "fromUserId"
+  },
   "listFields": [
     "fromUserId",
     "toUserId",

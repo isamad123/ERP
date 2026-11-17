@@ -75,10 +75,16 @@ public enum EndpointKind
 
     /// <summary>Licence read (S1.09b: capabilities, licence page, usage): B's answer shows B's licence and usage only.</summary>
     Licence,
+
+    /// <summary>Workflow list (S1.10a: document types, routes, inbox): B's answer shows nothing of A's.</summary>
+    WorkflowCatalog,
+
+    /// <summary>Workflow action on a route, version, task or request id (S1.10a): A's id on B's host is 404.</summary>
+    WorkflowRecordAction,
 }
 
 /// <summary>One API endpoint as the API host maps it: method, route and the table it serves.</summary>
-public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null, string? AuditKind = null, string? NumberingKind = null, string? SettingsKind = null, string? LicenceKind = null)
+public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null, string? AuditKind = null, string? NumberingKind = null, string? SettingsKind = null, string? LicenceKind = null, string? WorkflowKind = null)
 {
     private const string IdSegment = "/{id:guid}";
 
@@ -92,6 +98,13 @@ public sealed record ApiEndpoint(string Method, string Pattern, string? Resource
     {
         get
         {
+            switch (WorkflowKind)
+            {
+                case "catalog": return EndpointKind.WorkflowCatalog;
+                case "record_action": return EndpointKind.WorkflowRecordAction;
+                case not null: return EndpointKind.Unclassified;
+            }
+
             if (LicenceKind is not null)
             {
                 return LicenceKind is "capabilities" or "licence" or "usage" ? EndpointKind.Licence : EndpointKind.Unclassified;
@@ -217,13 +230,14 @@ public static class EndpointInventory
             var numbering = endpoint.Metadata.GetMetadata<NumberingEndpointMetadata>();
             var settings = endpoint.Metadata.GetMetadata<SettingsEndpointMetadata>();
             var licence = endpoint.Metadata.GetMetadata<LicenceEndpointMetadata>();
-            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource ?? audit?.Resource ?? numbering?.Resource ?? settings?.Resource
+            var workflow = endpoint.Metadata.GetMetadata<WorkflowEndpointMetadata>();
+            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource ?? audit?.Resource ?? numbering?.Resource ?? settings?.Resource ?? workflow?.Resource
                 ?? (licence is null ? null : "cp.entitlements");
             var identity = endpoint.Metadata.GetMetadata<IdentityEndpointMetadata>()?.Kind;
             var anonymous = endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null || endpoint.Metadata.GetMetadata<IAuthorizeData>() is null;
             foreach (var method in methods is { Count: > 0 } ? methods : ["*"])
             {
-                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind, audit?.Kind, numbering?.Kind, settings?.Kind, licence?.Kind));
+                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind, audit?.Kind, numbering?.Kind, settings?.Kind, licence?.Kind, workflow?.Kind));
             }
         }
 

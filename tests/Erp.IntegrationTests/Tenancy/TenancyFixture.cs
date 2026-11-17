@@ -88,7 +88,9 @@ public sealed class TenancyFixture : IAsyncLifetime
         await ProvisionAsync(CodeA, ct);
         await ProvisionAsync(CodeB, ct);
 
-        App = await StartAppAsync(null, ct);
+        // The test workflow module (slice S1.10a): its document types and outcome handlers, so the isolation suite can probe
+        // the workflow endpoints with real requests (the production host has no document types yet).
+        App = await StartAppAsync(null, ct, Workflow.WorkflowRig.RegisterTestModule);
     }
 
     /// <summary>

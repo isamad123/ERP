@@ -42658,6 +42658,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "requires_approval",
+          "kind": "Bool",
+          "type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -42959,7 +42969,8 @@
             "approved",
             "rejected",
             "cancelled",
-            "failed"
+            "failed",
+            "returned"
           ]
         },
         {
@@ -43006,6 +43017,16 @@
           "name": "row_version",
           "kind": "BigInteger",
           "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "subject_user_ids",
+          "kind": "UuidArray",
+          "type": "uuid[]",
           "not_null": true,
           "has_default": true,
           "generated": false,
@@ -43058,7 +43079,9 @@
         "ix_workflow_instances_version_id",
         "ix_workflow_instances_requester_user_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_workflow_instances_parties_fixed"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "wf.workflow_instances"
@@ -43260,6 +43283,46 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "info_requested_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "info_requested_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "claimed_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "escalation_level",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [],
@@ -43316,7 +43379,9 @@
         "ix_workflow_tasks_assignee_role_id",
         "ix_workflow_tasks_acted_by"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_workflow_tasks_no_self_approval"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "wf.workflow_tasks"
@@ -43688,13 +43753,6 @@
       "table": "org.org_unit_links",
       "owner": "S1.14",
       "rule": "parent_unit_id: fk org.org_units; null for root; cycle check by trigger"
-    },
-    {
-      "schema": "wf",
-      "function": "todo_workflow_tasks_no_self_approval",
-      "table": "wf.workflow_tasks",
-      "owner": "S1.10",
-      "rule": "assignee_user_id is distinct from the instance requester (FR-XM-32), enforced by trigger"
     }
   ]
 }

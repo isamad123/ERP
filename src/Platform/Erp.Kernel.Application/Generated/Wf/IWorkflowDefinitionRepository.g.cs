@@ -38,6 +38,7 @@ public static class WorkflowDefinitionAccess
         new("name_i18n", "NameI18n", null),
         new("document_type", "DocumentType", null),
         new("active_version_id", "ActiveVersionId", null),
+        new("requires_approval", "RequiresApproval", null),
         new("status", "Status", null),
         new("is_active", "IsActive", null),
         new("created_at", "CreatedAt", null),

@@ -274,6 +274,9 @@
     - [valid_to, ts, req]
     - [reason, text, opt]
   indexes: [[to_user_id, valid_from]]
+  # S1.10a (CR-041 item 4, Q14): delegations change only through the delegation service (S1.10b); "own" is a data scope.
+  scope: {user: from_user_id}
+  api_actions: [read]
   reqs: [KRN-WFL-05, ADM-ROL-09, HRM-ROL-05, HRM-SSP-07]
 
 - table: iam.maker_checker_requests
@@ -718,7 +721,11 @@
   columns:
     - [document_type, text, req]
     - [active_version_id, uuid, opt, fk wf.workflow_versions]
+    - [requires_approval, bool, req, "copied from the document type at creation: activating a version needs maker-checker (CR-041)"]
   unique: [[lower(code)]]
+  # S1.10a (CR-041 items 3 and 4, Q10, Q14): routes change only through the workflow administration service.
+  added_in: {S1.10a: [requires_approval]}
+  api_actions: [read]
   reqs: [KRN-WFL-01]
   notes: "active_version_id uses composite FK (id, active_version_id) -> wf.workflow_versions (parent_id, id)."
 
@@ -733,11 +740,13 @@
     - [activated_at, ts, opt]
     - [activated_by, uuid, opt]
   unique: [[definition_id, version]]
+  # S1.10a (CR-041 item 4, Q14): drafts are edited and activated only through the workflow administration service.
+  api_actions: [read]
   reqs: [KRN-WFL-01, KRN-WFL-02, KRN-WFL-03, KRN-WFL-10]
 
 - table: wf.workflow_instances
   traits: [std, co]
-  status: [running, approved, rejected, cancelled, failed]
+  status: [running, approved, rejected, cancelled, failed, returned]
   columns:
     - [version_id, uuid, req, fk wf.workflow_versions]
     - [document_type, text, req]
@@ -746,7 +755,12 @@
     - [started_at, ts, req]
     - [completed_at, ts, opt]
     - [context, json, req, "values used by conditions, frozen at start"]
+    - [subject_user_ids, "uuid[]", req, "the people the document is about; excluded from approving like the requester (CR-041, Q6)"]
   indexes: [[document_type, document_id], [status, "partial where status='running'"]]
+  # S1.10a (CR-041 items 1 and 4, Q6, Q7, Q14): status returned (waiting for the requester), subjects; engine writes only.
+  enum_added_in: {S1.10a: {status: [returned]}}
+  added_in: {S1.10a: [subject_user_ids]}
+  api_actions: [read]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {user: requester_user_id}
   reqs: [KRN-WFL-01, KRN-WFL-10]
@@ -765,8 +779,15 @@
     - [acted_by, uuid, opt, fk iam.users]
     - [acted_at, ts, opt]
     - [comment, text, opt]
+    - [info_requested_at, ts, opt, "set while a question to the requester is unanswered (CR-041, Q7)"]
+    - [info_requested_by, uuid, opt, "the approver who asked (CR-041, Q7)"]
+    - [claimed_at, ts, opt, "when a role-queue task was claimed (CR-041, Q4)"]
+    - [escalation_level, int, req, "default 0; levels moved up by escalation (CR-041, Q9)"]
   checks: ["assignee_user_id is distinct from the instance requester (FR-XM-32), enforced by trigger"]
   indexes: [[assignee_user_id, status, "partial where status='pending'"], [instance_id]]
+  # S1.10a (CR-041 items 2 and 4, Q4, Q7, Q9, Q14): engine columns; tasks change only through the engine.
+  added_in: {S1.10a: [info_requested_at, info_requested_by, claimed_at, escalation_level]}
+  api_actions: [read]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {user: assignee_user_id}
   reqs: [KRN-WFL-07, KRN-WFL-08, KRN-WFL-09, HRM-ROL-04, FR-XM-32]
@@ -784,6 +805,8 @@
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
   audit: false
   audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
+  # S1.10a (CR-041 item 4, Q14): written only by the engine.
+  api_actions: [read]
   reqs: [KRN-WFL-05, KRN-WFL-07]
 
 - table: aud.change_log

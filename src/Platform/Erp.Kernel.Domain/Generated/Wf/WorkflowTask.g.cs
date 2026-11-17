@@ -45,6 +45,18 @@ public sealed partial class WorkflowTask : global::Erp.BuildingBlocks.Domain.Ent
     /// <summary>comment</summary>
     public string? Comment { get; set; }
 
+    /// <summary>info_requested_at: set while a question to the requester is unanswered (CR-041, Q7)</summary>
+    public global::System.DateTimeOffset? InfoRequestedAt { get; set; }
+
+    /// <summary>info_requested_by: the approver who asked (CR-041, Q7)</summary>
+    public global::System.Guid? InfoRequestedBy { get; set; }
+
+    /// <summary>claimed_at: when a role-queue task was claimed (CR-041, Q4)</summary>
+    public global::System.DateTimeOffset? ClaimedAt { get; set; }
+
+    /// <summary>escalation_level: default 0; levels moved up by escalation (CR-041, Q9)</summary>
+    public int EscalationLevel { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

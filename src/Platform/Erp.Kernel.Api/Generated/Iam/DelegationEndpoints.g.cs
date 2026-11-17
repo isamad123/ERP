@@ -28,21 +28,6 @@ public sealed class DelegationResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for iam.delegations. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class DelegationWriteRequest
-{
-    public global::System.Guid? FromUserId { get; init; }
-    public global::System.Guid? ToUserId { get; init; }
-    public global::System.Text.Json.JsonElement? Scope { get; init; }
-    public global::System.DateTimeOffset? ValidFrom { get; init; }
-    public global::System.DateTimeOffset? ValidTo { get; init; }
-    public string? Reason { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for iam.delegations.</summary>
 public sealed class DelegationListQuery
 {
@@ -57,7 +42,7 @@ public sealed class DelegationListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of iam.delegations: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of iam.delegations: read. Answers pass through field security (S1.06).</summary>
 internal static class DelegationEndpoints
 {
     private const string Resource = "iam.delegations";
@@ -67,8 +52,6 @@ internal static class DelegationEndpoints
         var group = app.MapGroup("/api/iam/delegations").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("iam.delegations.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.delegations.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("iam.delegations.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "iam.delegations.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("iam.delegations.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "iam.delegations.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("iam.delegations.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "iam.delegations.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] DelegationListQuery query, global::Erp.Kernel.Application.Generated.Iam.IDelegationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -87,53 +70,6 @@ internal static class DelegationEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Iam.DelegationAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(DelegationWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IDelegationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.delegations.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Iam.DelegationAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Iam.Delegation();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/iam/delegations/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Iam.DelegationAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, DelegationWriteRequest request, global::Erp.Kernel.Application.Generated.Iam.IDelegationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "iam.delegations.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Iam.DelegationAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Iam.DelegationAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static DelegationResponse ToResponse(global::Erp.Kernel.Domain.Generated.Iam.Delegation row) => new()
     {
         Id = row.Id,
@@ -150,102 +86,4 @@ internal static class DelegationEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(DelegationWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.FromUserId is null && (!update || access.CanEdit("from_user_id")))
-        {
-            errors.Add("fromUserId");
-        }
-        if (request.ToUserId is null && (!update || access.CanEdit("to_user_id")))
-        {
-            errors.Add("toUserId");
-        }
-        if (request.Scope is null && (!update || access.CanEdit("scope")))
-        {
-            errors.Add("scope");
-        }
-        if (request.ValidFrom is null && (!update || access.CanEdit("valid_from")))
-        {
-            errors.Add("validFrom");
-        }
-        if (request.ValidTo is null && (!update || access.CanEdit("valid_to")))
-        {
-            errors.Add("validTo");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(DelegationWriteRequest request, global::Erp.Kernel.Domain.Generated.Iam.Delegation row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("from_user_id"))
-        {
-            row.FromUserId = request.FromUserId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FromUserId, row.FromUserId, update))
-        {
-            denied.Add("fromUserId");
-        }
-        if (access.CanEdit("to_user_id"))
-        {
-            row.ToUserId = request.ToUserId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ToUserId, row.ToUserId, update))
-        {
-            denied.Add("toUserId");
-        }
-        if (access.CanEdit("scope"))
-        {
-            row.Scope = GeneratedEndpointSupport.ToDocument(request.Scope)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Scope, row.Scope, update))
-        {
-            denied.Add("scope");
-        }
-        if (access.CanEdit("valid_from"))
-        {
-            row.ValidFrom = request.ValidFrom!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidFrom, row.ValidFrom, update))
-        {
-            denied.Add("validFrom");
-        }
-        if (access.CanEdit("valid_to"))
-        {
-            row.ValidTo = request.ValidTo!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidTo, row.ValidTo, update))
-        {
-            denied.Add("validTo");
-        }
-        if (access.CanEdit("reason"))
-        {
-            row.Reason = request.Reason;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Reason, row.Reason, update))
-        {
-            denied.Add("reason");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
 }

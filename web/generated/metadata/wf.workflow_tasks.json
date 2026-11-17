@@ -15,14 +15,6 @@
     {
       "action": "read",
       "permission": "wf.workflow_tasks.read"
-    },
-    {
-      "action": "create",
-      "permission": "wf.workflow_tasks.create"
-    },
-    {
-      "action": "update",
-      "permission": "wf.workflow_tasks.update"
     }
   ],
   "companyScoped": false,
@@ -156,6 +148,46 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.wf.workflow_tasks.comment"
+    },
+    {
+      "column": "info_requested_at",
+      "field": "infoRequestedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.wf.workflow_tasks.info_requested_at"
+    },
+    {
+      "column": "info_requested_by",
+      "field": "infoRequestedBy",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.wf.workflow_tasks.info_requested_by"
+    },
+    {
+      "column": "claimed_at",
+      "field": "claimedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.wf.workflow_tasks.claimed_at"
+    },
+    {
+      "column": "escalation_level",
+      "field": "escalationLevel",
+      "kind": "Int4",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.wf.workflow_tasks.escalation_level"
     },
     {
       "column": "status",

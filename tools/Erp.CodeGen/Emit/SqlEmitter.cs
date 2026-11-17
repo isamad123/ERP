@@ -280,7 +280,13 @@ public static class SqlEmitter
         b.Append('\n');
         foreach (var table in tables)
         {
-            b.Append(Comments(table, baseOnly: false, asOfSlice: slice));
+            // Rules files (V…02xx) run before every design file (V…03xx), so a rule implemented by any slice is already in
+            // force here: the comment says so instead of repeating "Pending rule" (S1.10a; no earlier design file touched
+            // a table with an implemented rule, so frozen files are unchanged).
+            var implemented = model.ImplementedStubs.Where(st => st.Table == table.FullName).ToList();
+            b.Append(Comments(table, c => implemented.Find(st => c.StartsWith($"Pending rule ({st.Owner}, placeholder {table.Schema}.{st.FunctionName}): ", StringComparison.Ordinal)) is { } st
+                ? $"Rule (implemented in {st.Implementation!.Slice}): {st.Rule}"
+                : c, baseOnly: false, asOfSlice: slice));
         }
 
         return b.ToString().TrimEnd('\n') + "\n";

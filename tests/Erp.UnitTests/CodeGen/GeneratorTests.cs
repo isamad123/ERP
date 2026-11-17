@@ -127,11 +127,11 @@ public sealed class GeneratorTests
     public void Rules_every_free_text_rule_becomes_sql_or_a_tracked_placeholder()
     {
         var stubs = Model.Value.Stubs.ToList();
-        Assert.Equal(29, stubs.Count); // 30 from S1.02; S1.03 implemented SC-2 (org.branches)
+        Assert.Equal(28, stubs.Count); // 30 from S1.02; S1.03 implemented SC-2 (org.branches), S1.10a FR-XM-32 (wf.workflow_tasks)
         Assert.Equal(30, Model.Value.AllStubs.Count());
         Assert.All(stubs, s => Assert.Matches(@"^S1\.\d{2}$", s.Owner));
         Assert.Contains(stubs, s => s.Name == "attendance_periods_lock" && s.Owner == "S1.31"); // FR-XM-26
-        Assert.Contains(stubs, s => s.Name == "workflow_tasks_no_self_approval" && s.Owner == "S1.10"); // FR-XM-32
+        Assert.Contains(Model.Value.ImplementedStubs, s => s.Name == "workflow_tasks_no_self_approval" && s.Owner == "S1.10"); // FR-XM-32
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public sealed class GeneratorTests
     [Fact]
     public void S103_implemented_rule_goes_into_a_new_migration_and_leaves_the_merged_one_unchanged()
     {
-        var implemented = Assert.Single(Model.Value.ImplementedStubs);
+        var implemented = Assert.Single(Model.Value.ImplementedStubs, s => s.Implementation!.Slice == "S1.03");
         Assert.Equal("branches_default_branch_per_company", implemented.Name);
         var files = Generator.Generate(Root).Files;
 
@@ -158,6 +158,24 @@ public sealed class GeneratorTests
         Assert.Contains("drop function if exists org.todo_branches_default_branch_per_company();", rules, StringComparison.Ordinal);
         Assert.Contains("create or replace trigger tg_companies_default_branch", rules, StringComparison.Ordinal);
         Assert.Contains("create or replace trigger tg_branches_keep_one_per_company", rules, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FR_XM_32_S110a_self_approval_rule_replaces_its_placeholder_in_a_new_migration()
+    {
+        var implemented = Assert.Single(Model.Value.ImplementedStubs, s => s.Implementation!.Slice == "S1.10a");
+        Assert.Equal("workflow_tasks_no_self_approval", implemented.Name);
+        var files = Generator.Generate(Root).Files;
+
+        // The merged S1.02 migration still creates the placeholder; the S1.10a rules file drops it and adds the task trigger.
+        Assert.Contains("create or replace function wf.todo_workflow_tasks_no_self_approval()", files[SqlEmitter.KernelMigrations + "/V202611150005__kernel__wf.sql"], StringComparison.Ordinal);
+        var rules = files[SqlEmitter.KernelMigrations + "/V202611150208__kernel__rules_s1_10a.sql"];
+        Assert.Contains("drop function if exists wf.todo_workflow_tasks_no_self_approval();", rules, StringComparison.Ordinal);
+        Assert.Contains("create or replace trigger tg_workflow_tasks_no_self_approval", rules, StringComparison.Ordinal);
+        Assert.DoesNotContain("tg_workflow_instances_parties_fixed", rules, StringComparison.Ordinal);
+
+        // The trigger that fixes requester and subjects names a column the S1.10a design file adds, so it comes after it.
+        Assert.Contains("create or replace trigger tg_workflow_instances_parties_fixed", files[SqlEmitter.KernelMigrations + "/V202611150337__kernel__functions_s1_10a.sql"], StringComparison.Ordinal);
     }
 
     [Fact]

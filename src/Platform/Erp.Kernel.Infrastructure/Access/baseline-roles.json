@@ -115,11 +115,16 @@
         "org.org_unit_types.read",
         "ntf.in_app_items.read",
         "ntf.in_app_items.update",
-        "aud.history.view"
+        "aud.history.view",
+        "wf.workflow_tasks.read",
+        "wf.workflow_tasks.update",
+        "wf.workflow_instances.read"
       ],
       "scopes": {
         "*": "all",
-        "ntf.in_app_items": "own"
+        "ntf.in_app_items": "own",
+        "wf.workflow_tasks": "own",
+        "wf.workflow_instances": "own"
       },
       "fields": []
     },
@@ -141,12 +146,14 @@
         "ntf.in_app_items.update",
         "wf.workflow_tasks.read",
         "wf.workflow_tasks.update",
-        "aud.history.view"
+        "aud.history.view",
+        "wf.workflow_instances.read"
       ],
       "scopes": {
         "*": "all",
         "ntf.in_app_items": "own",
-        "wf.workflow_tasks": "own"
+        "wf.workflow_tasks": "own",
+        "wf.workflow_instances": "own"
       },
       "fields": []
     },

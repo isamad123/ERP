@@ -43,6 +43,7 @@ public sealed class FleetMigrator(ControlPlaneOptions options, ISecretStore secr
                     await Identity.IdentitySetup.EnsureAsync(owner, secrets, tenant.Code, migrations.AccessFolders(modules), cancellationToken).ConfigureAwait(false);
                     access = await Access.AccessSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), clock.UtcNow, cancellationToken).ConfigureAwait(false);
                     await Numbering.NumberingSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), clock.UtcNow, cancellationToken).ConfigureAwait(false);
+                    await Workflow.WorkflowSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), clock.UtcNow, cancellationToken).ConfigureAwait(false);
                 }
 
                 await provisioner.RecordVersionsAsync(actor, tenant, result, cancellationToken).ConfigureAwait(false);

@@ -27,6 +27,10 @@ internal sealed class WorkflowTaskConfiguration : IEntityTypeConfiguration<globa
         builder.Property(e => e.ActedBy).HasColumnName("acted_by").HasColumnType("uuid");
         builder.Property(e => e.ActedAt).HasColumnName("acted_at").HasColumnType("timestamptz");
         builder.Property(e => e.Comment).HasColumnName("comment").HasColumnType("text");
+        builder.Property(e => e.InfoRequestedAt).HasColumnName("info_requested_at").HasColumnType("timestamptz");
+        builder.Property(e => e.InfoRequestedBy).HasColumnName("info_requested_by").HasColumnType("uuid");
+        builder.Property(e => e.ClaimedAt).HasColumnName("claimed_at").HasColumnType("timestamptz");
+        builder.Property(e => e.EscalationLevel).HasColumnName("escalation_level").HasColumnType("integer");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");

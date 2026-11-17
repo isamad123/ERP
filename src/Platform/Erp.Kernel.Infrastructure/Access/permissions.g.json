@@ -255,18 +255,6 @@
       "sensitive": false
     },
     {
-      "code": "iam.delegations.create",
-      "module": "iam",
-      "descriptionKey": "permissions.iam.delegations.create",
-      "sensitive": false
-    },
-    {
-      "code": "iam.delegations.update",
-      "module": "iam",
-      "descriptionKey": "permissions.iam.delegations.update",
-      "sensitive": false
-    },
-    {
       "code": "iam.field_policies.read",
       "module": "iam",
       "descriptionKey": "permissions.iam.field_policies.read",
@@ -807,27 +795,9 @@
       "sensitive": false
     },
     {
-      "code": "wf.workflow_definitions.create",
-      "module": "wf",
-      "descriptionKey": "permissions.wf.workflow_definitions.create",
-      "sensitive": false
-    },
-    {
-      "code": "wf.workflow_definitions.update",
-      "module": "wf",
-      "descriptionKey": "permissions.wf.workflow_definitions.update",
-      "sensitive": false
-    },
-    {
       "code": "wf.workflow_history.read",
       "module": "wf",
       "descriptionKey": "permissions.wf.workflow_history.read",
-      "sensitive": false
-    },
-    {
-      "code": "wf.workflow_history.create",
-      "module": "wf",
-      "descriptionKey": "permissions.wf.workflow_history.create",
       "sensitive": false
     },
     {
@@ -837,51 +807,15 @@
       "sensitive": false
     },
     {
-      "code": "wf.workflow_instances.create",
-      "module": "wf",
-      "descriptionKey": "permissions.wf.workflow_instances.create",
-      "sensitive": false
-    },
-    {
-      "code": "wf.workflow_instances.update",
-      "module": "wf",
-      "descriptionKey": "permissions.wf.workflow_instances.update",
-      "sensitive": false
-    },
-    {
       "code": "wf.workflow_tasks.read",
       "module": "wf",
       "descriptionKey": "permissions.wf.workflow_tasks.read",
       "sensitive": false
     },
     {
-      "code": "wf.workflow_tasks.create",
-      "module": "wf",
-      "descriptionKey": "permissions.wf.workflow_tasks.create",
-      "sensitive": false
-    },
-    {
-      "code": "wf.workflow_tasks.update",
-      "module": "wf",
-      "descriptionKey": "permissions.wf.workflow_tasks.update",
-      "sensitive": false
-    },
-    {
       "code": "wf.workflow_versions.read",
       "module": "wf",
       "descriptionKey": "permissions.wf.workflow_versions.read",
-      "sensitive": false
-    },
-    {
-      "code": "wf.workflow_versions.create",
-      "module": "wf",
-      "descriptionKey": "permissions.wf.workflow_versions.create",
-      "sensitive": false
-    },
-    {
-      "code": "wf.workflow_versions.update",
-      "module": "wf",
-      "descriptionKey": "permissions.wf.workflow_versions.update",
       "sensitive": false
     }
   ]

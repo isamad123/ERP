@@ -26,6 +26,9 @@ internal sealed record AccessChange
     /// <summary>A change of a setting that needs approval (slice S1.09a, FR-ADM-SET-04); any key but <c>iam.*</c>.</summary>
     public const string ChangeSetting = "cfg.setting.change";
 
+    /// <summary>Activation of a route version of a sensitive document type (slice S1.10 ruling Q10).</summary>
+    public const string ActivateWorkflowVersion = "wf.version.activate";
+
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
     public required string Kind { get; init; }
@@ -75,6 +78,12 @@ internal sealed record AccessChange
     /// <summary>The history row a revert restores (slice S1.09a, FR-ADM-SET-06).</summary>
     public Guid? SettingRevertedFrom { get; init; }
 
+    /// <summary>The draft route version an activation applies to (slice S1.10).</summary>
+    public Guid? WorkflowVersionId { get; init; }
+
+    /// <summary>The draft's row version when activation was requested: an edit afterwards makes the request void.</summary>
+    public long? WorkflowVersionRowVersion { get; init; }
+
     public IReadOnlyList<RoleScopeChange>? Scopes { get; init; }
 
     public IReadOnlyList<RoleFieldChange>? Fields { get; init; }
@@ -99,6 +108,7 @@ internal sealed record AccessChange
         AddMember or RemoveMember or AssignGroup => ("iam.user_groups", GroupId!.Value),
         Assign => ("iam.users", UserId!.Value),
         SetSetting or ChangeSetting => ("cfg.setting_values", SettingRowId!.Value),
+        ActivateWorkflowVersion => ("wf.workflow_versions", WorkflowVersionId!.Value),
         _ => ("iam.roles", RoleId!.Value),
     };
 }

@@ -25,6 +25,7 @@ internal sealed class WorkflowInstanceConfiguration : IEntityTypeConfiguration<g
         builder.Property(e => e.StartedAt).HasColumnName("started_at").HasColumnType("timestamptz");
         builder.Property(e => e.CompletedAt).HasColumnName("completed_at").HasColumnType("timestamptz");
         builder.Property(e => e.Context).HasColumnName("context").HasColumnType("jsonb").IsRequired();
+        builder.Property(e => e.SubjectUserIds).HasColumnName("subject_user_ids").HasColumnType("uuid[]").IsRequired();
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");

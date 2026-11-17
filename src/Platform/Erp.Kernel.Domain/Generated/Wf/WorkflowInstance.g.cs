@@ -39,6 +39,9 @@ public sealed partial class WorkflowInstance : global::Erp.BuildingBlocks.Domain
     /// <summary>context: values used by conditions, frozen at start</summary>
     public global::System.Text.Json.JsonDocument Context { get; set; } = null!;
 
+    /// <summary>subject_user_ids: the people the document is about; excluded from approving like the requester (CR-041, Q6)</summary>
+    public global::System.Guid[] SubjectUserIds { get; set; } = [];
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 
