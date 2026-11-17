@@ -43,8 +43,8 @@ internal static class FeatureFlagOverrideEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/cfg/feature-flag-overrides").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("cfg.feature_flag_overrides.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.feature_flag_overrides.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("cfg.feature_flag_overrides.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.feature_flag_overrides.read"));
+        group.MapGet("/", ListAsync).WithName("cfg.feature_flag_overrides.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.feature_flag_overrides.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("cfg.feature_flag_overrides.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.feature_flag_overrides.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] FeatureFlagOverrideListQuery query, global::Erp.Kernel.Application.Generated.Cfg.IFeatureFlagOverrideRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

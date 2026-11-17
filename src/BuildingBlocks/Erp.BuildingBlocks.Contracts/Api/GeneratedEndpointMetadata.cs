@@ -6,6 +6,29 @@ namespace Erp.BuildingBlocks.Contracts.Api;
 /// </summary>
 public sealed record GeneratedEndpointMetadata(string Resource, string Action, string Permission);
 
+/// <summary>
+/// The entitlement feature key and module an endpoint belongs to (FR-KRN-ENT-03; slice S1.09 ruling Q9). For a customer
+/// not licensed for the key or the module the endpoint answers exactly like one that does not exist. Generated endpoints
+/// take the key from the data design (<c>entitlement:</c>); an endpoint without this metadata belongs to the kernel
+/// (<see cref="PlatformBase"/>).
+/// </summary>
+public sealed record EntitlementMetadata(string FeatureKey, string Module)
+{
+    public const string PlatformBase = "platform.base";
+
+    public const string KernelModule = "kernel";
+
+    public static EntitlementMetadata Kernel { get; } = new(PlatformBase, KernelModule);
+}
+
+/// <summary>
+/// Marks an endpoint that still answers while the customer's licence is locked or the customer is suspended (FR-KRN-ENT-04,
+/// FR-KRN-TEN-09; slice S1.09 ruling Q5): the licence page, the capabilities of the web shell and the exports the
+/// specification allows. Its own permission check still applies. Sign-in steps are marked by
+/// <see cref="IdentityEndpointMetadata.AllowedWhenReadOnly"/>, which covers locked as well.
+/// </summary>
+public sealed record AllowedWhenLockedMetadata;
+
 /// <summary>One keyset page of results; <see cref="Next"/> is passed back as <c>after</c> to read the next page.</summary>
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, Guid? Next);
 

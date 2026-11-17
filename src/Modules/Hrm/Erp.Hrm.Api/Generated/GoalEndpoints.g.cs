@@ -83,10 +83,10 @@ internal static class GoalEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/hrm/goals").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("hrm.goals.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.goals.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.goals.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.goals.read"));
-        group.MapPost("/", CreateAsync).WithName("hrm.goals.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.goals.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.goals.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.goals.update"));
+        group.MapGet("/", ListAsync).WithName("hrm.goals.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.goals.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.goals.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.goals.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapPost("/", CreateAsync).WithName("hrm.goals.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.goals.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.goals.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.goals.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] GoalListQuery query, global::Erp.Hrm.Application.Generated.IGoalRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

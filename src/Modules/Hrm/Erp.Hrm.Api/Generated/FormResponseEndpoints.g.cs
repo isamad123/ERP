@@ -75,10 +75,10 @@ internal static class FormResponseEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/hrm/form-responses").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("hrm.form_responses.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.form_responses.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.form_responses.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.form_responses.read"));
-        group.MapPost("/", CreateAsync).WithName("hrm.form_responses.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.form_responses.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.form_responses.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.form_responses.update"));
+        group.MapGet("/", ListAsync).WithName("hrm.form_responses.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.form_responses.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.form_responses.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.form_responses.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapPost("/", CreateAsync).WithName("hrm.form_responses.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.form_responses.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.form_responses.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.form_responses.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] FormResponseListQuery query, global::Erp.Hrm.Application.Generated.IFormResponseRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

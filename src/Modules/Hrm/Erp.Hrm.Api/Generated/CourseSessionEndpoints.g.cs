@@ -71,10 +71,10 @@ internal static class CourseSessionEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/hrm/course-sessions").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("hrm.course_sessions.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.course_sessions.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.course_sessions.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.course_sessions.read"));
-        group.MapPost("/", CreateAsync).WithName("hrm.course_sessions.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.course_sessions.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.course_sessions.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.course_sessions.update"));
+        group.MapGet("/", ListAsync).WithName("hrm.course_sessions.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.course_sessions.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.learning", "hrm"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.course_sessions.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.course_sessions.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.learning", "hrm"));
+        group.MapPost("/", CreateAsync).WithName("hrm.course_sessions.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.course_sessions.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.learning", "hrm"));
+        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.course_sessions.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.course_sessions.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.learning", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] CourseSessionListQuery query, global::Erp.Hrm.Application.Generated.ICourseSessionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

@@ -1,6 +1,10 @@
 # HRMIS: forms, performance management, learning. Spec 06a sections 19 and 20 (1.0 items only).
 # Calibration, 9-box, continuous feedback, improvement plans, needs analysis and cost reports are Release 1.1.
 
+# Slice S1.09b (ruling Q9, CR-036): forms and performance tables belong to hrm.performance; learning tables override it with hrm.learning.
+- defaults:
+  entitlement: hrm.performance
+
 - table: hrm.form_definitions
   purpose: "Configurable forms for appraisals and probation reviews (PRF-03, ONB-12)"
   traits: [std, co, soft, name]
@@ -125,6 +129,7 @@
   reqs: [PRF-02]
 
 - table: hrm.courses
+  entitlement: hrm.learning
   traits: [std, co, soft, name]
   columns:
     - [delivery, "enum(classroom,online,external,on_the_job,blended)", req]
@@ -141,6 +146,7 @@
   reqs: [LND-01, LND-05]
 
 - table: hrm.course_sessions
+  entitlement: hrm.learning
   traits: [std, co]
   status: [planned, open, full, in_progress, completed, cancelled]
   columns:
@@ -157,6 +163,7 @@
   reqs: [LND-02]
 
 - table: hrm.session_enrollments
+  entitlement: hrm.learning
   traits: [std, co]
   status: [nominated, enrolled, waitlisted, attended, no_show, completed, failed, withdrawn]
   columns:
@@ -173,6 +180,7 @@
   reqs: [LND-02, LND-03]
 
 - table: hrm.learning_records
+  entitlement: hrm.learning
   purpose: "Completed learning per employee, including external training and certificates"
   traits: [std, co]
   columns:
@@ -191,6 +199,7 @@
   reqs: [LND-03, LND-05]
 
 - table: hrm.mandatory_training_rules
+  entitlement: hrm.learning
   traits: [std, co]
   status: [active, inactive]
   columns:
@@ -203,6 +212,7 @@
   reqs: [LND-04]
 
 - table: hrm.training_requirements
+  entitlement: hrm.learning
   purpose: Materialized due items per employee for compliance reporting and reminders
   traits: [std, co]
   status: [due, overdue, completed, waived]
@@ -217,6 +227,7 @@
   reqs: [LND-04]
 
 - table: hrm.training_bonds
+  entitlement: hrm.learning
   traits: [std, co]
   status: [active, fulfilled, recovered, waived]
   columns:

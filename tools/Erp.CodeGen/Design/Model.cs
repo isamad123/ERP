@@ -92,10 +92,14 @@ public sealed class Column
 }
 
 /// <summary>A unique key (constraint or unique index). Items are column names or expressions such as <c>lower(code)</c>.</summary>
-/// <remarks><see cref="AddedIn"/>: slice whose design migration adds the key (design key <c>uniques_added_in</c>, S1.08).</remarks>
-public sealed record UniqueKey(string Name, IReadOnlyList<string> Items, string? Where, bool NullsNotDistinct, string? AddedIn = null)
+/// <remarks>
+/// <see cref="AddedIn"/>: slice whose design migration adds the key (design key <c>uniques_added_in</c>, S1.08).
+/// <see cref="ReplacedIn"/> and <see cref="BaseWhere"/> (design key <c>uniques_replaced_in</c>, S1.09b): the frozen file
+/// created the partial key with <see cref="BaseWhere"/>; the slice's design migration recreates it with <see cref="Where"/>.
+/// </remarks>
+public sealed record UniqueKey(string Name, IReadOnlyList<string> Items, string? Where, bool NullsNotDistinct, string? AddedIn = null, string? BaseWhere = null, string? ReplacedIn = null)
 {
-    public bool IsPlain => Where is null && Items.All(Naming.IsIdentifier);
+    public bool IsPlain => Where is null && BaseWhere is null && Items.All(Naming.IsIdentifier);
 }
 
 /// <summary>An index. <see cref="AddedIn"/>: slice whose design migration creates it (design key <c>indexes_added_in</c>, S1.07).</summary>
@@ -152,6 +156,13 @@ public sealed class Table
 
     public string? Purpose { get; init; }
 
+    /// <summary>
+    /// The entitlement feature key the table belongs to (design key <c>entitlement:</c>, file default with a table override;
+    /// slice S1.09 ruling Q9, CR-036): its generated endpoints answer only for customers licensed for the key. Customer-database
+    /// tables always have one; control-plane tables never do.
+    /// </summary>
+    public string? Entitlement { get; init; }
+
     public required IReadOnlyList<string> Traits { get; init; }
 
     public required IReadOnlyList<string> Requirements { get; init; }
@@ -200,7 +211,7 @@ public sealed class Table
     public IEnumerable<string> ChangedIn =>
         new[] { AddedIn }.Concat(Columns.Select(c => c.AddedIn)).Concat(UpdatableAddedIn.Select(u => u.Slice)).Concat(CommentsAddedIn.Select(c => c.Slice))
             .Concat(Indexes.Select(i => i.AddedIn)).Concat(Checks.Select(c => c.AddedIn))
-            .Concat(Columns.Select(c => c.OptionalIn)).Concat(Checks.Select(c => c.ReplacedIn)).Concat(Uniques.Select(u => u.AddedIn))
+            .Concat(Columns.Select(c => c.OptionalIn)).Concat(Checks.Select(c => c.ReplacedIn)).Concat(Uniques.Select(u => u.AddedIn)).Concat(Uniques.Select(u => u.ReplacedIn))
             .Where(s => s is not null).Select(s => s!).Distinct(StringComparer.Ordinal);
 
     /// <summary>

@@ -74,9 +74,12 @@ public static class Validator
             yield return $"{table}: added_in is supported for kernel and control-plane tables only (module design migrations are not built yet)";
         }
 
-        if (table.Database == DatabaseKind.ControlPlane && table.ChangedIn.Any() && table.AddedIn is null)
+        // Control plane (S1.07 whole tables; S1.09b also optional columns, enum values and unique keys, CR-036, CR-039).
+        if (table.Database == DatabaseKind.ControlPlane && table.AddedIn is null
+            && (table.Columns.Exists(c => c.AddedIn is not null && c.Required) || table.Columns.Exists(c => c.OptionalIn is not null)
+                || table.Checks.Exists(c => c.AddedIn is not null) || table.Indexes.Exists(i => i.AddedIn is not null) || table.UpdatableAddedIn.Count > 0))
         {
-            yield return $"{table}: on the control plane only whole tables can be added later (added_in: <slice>)";
+            yield return $"{table}: on the control plane a table changed later may only gain optional columns, enum values and unique keys";
         }
 
         if (table.AddedIn is not null && table.Stubs.Count > 0)
@@ -108,10 +111,10 @@ public static class Validator
                 yield return $"{table}.{column.Name}: a column added later must be optional, or required with a constant default (bool, number or text), without generated value (expand only)";
             }
 
-            if (table.ForeignKeys.Exists(f => f.Columns.Contains(column.Name)) || table.Uniques.Exists(u => u.Items.Contains(column.Name))
+            if (table.ForeignKeys.Exists(f => f.Columns.Contains(column.Name)) || table.Uniques.Exists(u => u.Items.Contains(column.Name) && u.AddedIn != column.AddedIn)
                 || table.Indexes.Exists(i => i.Items.Contains(column.Name)) || table.Checks.Exists(c => c.AddedIn != column.AddedIn && c.Sql.Contains(column.Name, StringComparison.Ordinal)))
             {
-                yield return $"{table}.{column.Name}: a column added later cannot have keys, indexes or checks yet";
+                yield return $"{table}.{column.Name}: a column added later cannot have keys, indexes or checks yet (except a unique key added by the same slice, S1.09b)";
             }
         }
 

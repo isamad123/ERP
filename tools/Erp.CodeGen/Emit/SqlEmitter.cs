@@ -166,6 +166,13 @@ public static class SqlEmitter
         return b.ToString();
     }
 
+    private static string UniqueIndex(Table table, UniqueKey unique, string? condition)
+    {
+        var nulls = unique.NullsNotDistinct ? " nulls not distinct" : string.Empty;
+        var where = condition is null ? string.Empty : $" where ({condition})";
+        return $"create unique index if not exists {unique.Name} on {table.FullName} ({string.Join(", ", unique.Items)}){nulls}{where};\n";
+    }
+
     /// <summary>
     /// Design changes of one slice after the release's first migrations were merged (data design key <c>added_in</c>,
     /// CR-010): new tables with their keys, foreign keys, grants and comments; new nullable columns; more columns an
@@ -218,8 +225,20 @@ public static class SqlEmitter
                 b.Append(CultureInfo.InvariantCulture, $"alter table {table.FullName} add constraint {check.Name} check ({check.Sql});\n");
             }
 
-            // Unique keys added (uniques_added_in, S1.08).
-            foreach (var unique in table.Uniques.Where(u => u.AddedIn == slice))
+            // Unique keys added (uniques_added_in, S1.08); a partial one is a unique index (S1.09b).
+            foreach (var unique in table.Uniques.Where(u => u.AddedIn == slice && !u.IsPlain))
+            {
+                b.Append(UniqueIndex(table, unique, unique.Where));
+            }
+
+            // Partial unique keys with a new condition (uniques_replaced_in, S1.09b): dropped and recreated in the same file.
+            foreach (var unique in table.Uniques.Where(u => u.ReplacedIn == slice))
+            {
+                b.Append(CultureInfo.InvariantCulture, $"drop index if exists {table.Schema}.{unique.Name};\n");
+                b.Append(UniqueIndex(table, unique, unique.Where));
+            }
+
+            foreach (var unique in table.Uniques.Where(u => u.AddedIn == slice && u.IsPlain))
             {
                 var nulls = unique.NullsNotDistinct ? " nulls not distinct" : string.Empty;
                 b.Append(CultureInfo.InvariantCulture, $"do $do$ begin\n    if not exists (select 1 from pg_constraint where conname = {Naming.SqlString(unique.Name)} and conrelid = {Naming.SqlString(table.FullName)}::regclass) then\n");
@@ -477,9 +496,7 @@ public static class SqlEmitter
 
         foreach (var unique in table.Uniques.Where(u => !u.IsPlain && (!baseOnly || u.AddedIn is null)))
         {
-            var nulls = unique.NullsNotDistinct ? " nulls not distinct" : string.Empty;
-            var where = unique.Where is null ? string.Empty : $" where ({unique.Where})";
-            b.Append(CultureInfo.InvariantCulture, $"create unique index if not exists {unique.Name} on {table.FullName} ({string.Join(", ", unique.Items)}){nulls}{where};\n");
+            b.Append(UniqueIndex(table, unique, baseOnly && unique.ReplacedIn is not null ? unique.BaseWhere : unique.Where));
         }
 
         foreach (var index in table.Indexes.Where(i => !baseOnly || i.AddedIn is null))

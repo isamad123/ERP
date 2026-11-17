@@ -73,10 +73,10 @@ internal static class ReviewParticipantEndpoints
     public static void Map(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/hrm/review-participants").WithTags(Resource);
-        group.MapGet("/", ListAsync).WithName("hrm.review_participants.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.review_participants.read"));
-        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.review_participants.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.review_participants.read"));
-        group.MapPost("/", CreateAsync).WithName("hrm.review_participants.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.review_participants.create"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.review_participants.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.review_participants.update"));
+        group.MapGet("/", ListAsync).WithName("hrm.review_participants.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.review_participants.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapGet("/{id:guid}", GetAsync).WithName("hrm.review_participants.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.review_participants.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapPost("/", CreateAsync).WithName("hrm.review_participants.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.review_participants.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
+        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.review_participants.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.review_participants.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.performance", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ReviewParticipantListQuery query, global::Erp.Hrm.Application.Generated.IReviewParticipantRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>

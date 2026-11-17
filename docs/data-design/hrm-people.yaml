@@ -1,6 +1,10 @@
 # HRMIS: people, employment, structure, policies, documents, self-service requests, onboarding and exit.
 # Spec 06a sections 5 to 8, 11, 12, 27. All tables in schema hrm.
 
+# Slice S1.09b (ruling Q9, CR-036): people tables belong to feature key hrm.core.
+- defaults:
+  entitlement: hrm.core
+
 - table: hrm.persons
   purpose: One row per human (FR-XM-28). Employments hang off the person
   traits: [std, soft, cust]

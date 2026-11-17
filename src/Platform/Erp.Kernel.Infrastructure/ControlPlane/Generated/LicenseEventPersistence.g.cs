@@ -23,6 +23,7 @@ internal sealed class LicenseEventConfiguration : IEntityTypeConfiguration<globa
         builder.Property(e => e.ToState).HasColumnName("to_state").HasColumnType("text");
         builder.Property(e => e.OccurredAt).HasColumnName("occurred_at").HasColumnType("timestamptz");
         builder.Property(e => e.Details).HasColumnName("details").HasColumnType("jsonb").IsRequired();
+        builder.Property(e => e.SourceEventId).HasColumnName("source_event_id").HasColumnType("uuid");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
     }
@@ -46,6 +47,12 @@ internal sealed class LicenseEventRepository(
             query = query.Where(e => e.TenantId == tenantIdFilter);
         }
         return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.LicenseEvent>> FindBySourceEventIdAsync(global::System.Guid? sourceEventId, global::System.Threading.CancellationToken cancellationToken)
+    {
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.SourceEventId == sourceEventId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.LicenseEvent>> FindByTenantIdAndOccurredAtAsync(global::System.Guid tenantId, global::System.DateTimeOffset occurredAt, global::System.Threading.CancellationToken cancellationToken)

@@ -14,7 +14,10 @@ public static partial class DesignLoader
     private static readonly string[] KnownKeys =
         ["table", "purpose", "traits", "status", "columns", "unique", "indexes", "eff_key", "key", "checks", "notes", "partition", "reqs",
          "added_in", "updatable_added_in", "api_read_only", "scope", "field_class", "api_actions", "audit", "audit_reason", "indexes_added_in",
-         "numbering", "optional_added_in", "enum_added_in", "checks_added_in", "uniques_added_in"];
+         "numbering", "optional_added_in", "enum_added_in", "checks_added_in", "uniques_added_in", "uniques_replaced_in", "entitlement"];
+
+    /// <summary>Keys of a design file's <c>defaults</c> entry (slice S1.09b): values every table of the file takes unless it overrides them.</summary>
+    private static readonly string[] DefaultKeys = ["defaults", "entitlement"];
 
     /// <summary>Data-scope dimensions a table may declare in <c>scope:</c> (CR-018).</summary>
     public static readonly string[] ScopeDimensions = ["company", "branch", "org_unit", "employment", "person", "user"];
@@ -37,9 +40,17 @@ public static partial class DesignLoader
         foreach (var file in Directory.GetFiles(designFolder, "*.yaml").OrderBy(f => f, StringComparer.Ordinal))
         {
             var fileName = Path.GetFileName(file);
+            string? fileEntitlement = null;
             foreach (var entry in YamlNode.List(YamlNode.Load(file), fileName))
             {
-                tables.Add(ReadTable(YamlNode.Map(entry, fileName), fileName, settings, rules, pending));
+                var map = YamlNode.Map(entry, fileName);
+                if (map.ContainsKey("defaults"))
+                {
+                    fileEntitlement = ReadDefaults(map, fileName, tables.Exists(t => t.SourceFile == fileName));
+                    continue;
+                }
+
+                tables.Add(ReadTable(map, fileName, settings, rules, pending, fileEntitlement));
             }
         }
 
@@ -67,7 +78,29 @@ public static partial class DesignLoader
         return model;
     }
 
-    private static Table ReadTable(IReadOnlyDictionary<string, object?> map, string file, Settings settings, RuleBook rules, List<PendingFk> pending)
+    /// <summary>
+    /// The file's <c>- defaults: {}</c> entry, before its first table (slice S1.09b): <c>entitlement: hrm.core</c> names the
+    /// feature key of every table of the file that does not give its own (ruling Q9, CR-036).
+    /// </summary>
+    private static string? ReadDefaults(IReadOnlyDictionary<string, object?> map, string file, bool afterTables)
+    {
+        var unknown = map.Keys.Except(DefaultKeys).ToList();
+        if (unknown.Count > 0 || afterTables || map["defaults"] is not null)
+        {
+            throw new DesignException(file, "a `- defaults:` entry comes before the first table and holds only `entitlement:` (unknown: " + string.Join(", ", unknown) + ")");
+        }
+
+        return map.GetValueOrDefault("entitlement") is string key ? EntitlementKey(key, file) : null;
+    }
+
+    /// <summary>A D-24 feature key: lower-case dot-separated words, for example <c>platform.base</c> or <c>hrm.payroll</c>.</summary>
+    private static string EntitlementKey(string key, string where) =>
+        EntitlementKeyPattern().IsMatch(key) ? key : throw new DesignException(where, $"entitlement '{key}' is not a feature key such as hrm.core");
+
+    [GeneratedRegex("^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$")]
+    private static partial Regex EntitlementKeyPattern();
+
+    private static Table ReadTable(IReadOnlyDictionary<string, object?> map, string file, Settings settings, RuleBook rules, List<PendingFk> pending, string? fileEntitlement)
     {
         var fullName = YamlNode.Text(map["table"], file + " table");
         var unknownKeys = map.Keys.Except(KnownKeys).ToList();
@@ -97,7 +130,14 @@ public static partial class DesignLoader
             Traits = traits,
             Requirements = YamlNode.Texts(map.GetValueOrDefault("reqs"), fullName),
             AddedIn = map.GetValueOrDefault("added_in") is string slice ? SliceId(slice, fullName) : null,
+            Entitlement = map.GetValueOrDefault("entitlement") is string key ? EntitlementKey(key, fullName) : fileEntitlement,
         };
+        if (table.Database == DatabaseKind.ControlPlane ? table.Entitlement is not null : table.Entitlement is null)
+        {
+            throw new DesignException(fullName, table.Database == DatabaseKind.ControlPlane
+                ? "control-plane tables have no entitlement key"
+                : "every customer-database table needs an entitlement key (file `- defaults: {entitlement: ...}` or the table's `entitlement:`)");
+        }
         var tableRules = rules.For(fullName);
 
         AddColumns(table, map, tableRules, rules, pending);
@@ -224,14 +264,34 @@ public static partial class DesignLoader
             foreach (var key in YamlNode.List(raw, table.FullName + ".uniques_added_in"))
             {
                 var items = YamlNode.Texts(key, table.FullName + ".uniques_added_in").ToList();
+                var where = TrailingWhere(items);
                 if (items.Count == 0 || !items.All(Naming.IsIdentifier))
                 {
-                    throw new DesignException(table.FullName, "uniques_added_in lists plain column names only");
+                    throw new DesignException(table.FullName, "uniques_added_in lists plain column names only (optionally followed by \"where ...\")");
                 }
 
                 CheckItems(table, items, "unique");
                 var nullable = items.Any(i => !table.Column(i).Required);
-                table.Uniques.Add(new UniqueKey(Naming.DbName("uq", table.Name, items), items, null, nullable, SliceId(slice, table.FullName)));
+                table.Uniques.Add(new UniqueKey(Naming.DbName("uq", table.Name, items), items, AndNotDeleted(table, where), nullable, SliceId(slice, table.FullName)));
+            }
+        }
+
+        // uniques_replaced_in: {S1.09b: [[column, ..., "where ..."], ...]} (S1.09b, CR-036 item 6): the partial unique key on
+        // these columns gets a new condition; the frozen file keeps the first one, the slice's design migration recreates it.
+        foreach (var (slice, raw) in YamlNode.Map(map.GetValueOrDefault("uniques_replaced_in"), table.FullName + ".uniques_replaced_in"))
+        {
+            foreach (var key in YamlNode.List(raw, table.FullName + ".uniques_replaced_in"))
+            {
+                var items = YamlNode.Texts(key, table.FullName + ".uniques_replaced_in").ToList();
+                var where = TrailingWhere(items);
+                var index = table.Uniques.FindIndex(u => u.Items.SequenceEqual(items) && u.Where is not null && u.AddedIn is null && u.ReplacedIn is null);
+                if (where is null || index < 0)
+                {
+                    throw new DesignException(table.FullName, "uniques_replaced_in names a partial unique key of the first migrations by its columns and gives its new \"where ...\"");
+                }
+
+                var old = table.Uniques[index];
+                table.Uniques[index] = old with { Where = AndNotDeleted(table, where), BaseWhere = old.Where, ReplacedIn = SliceId(slice, table.FullName) };
             }
         }
 
@@ -905,6 +965,19 @@ public static partial class DesignLoader
 
     private static string? AndNotDeleted(Table table, string? where) =>
         !table.IsSoftDeleted ? where : where is null ? "not is_deleted" : $"({where}) and not is_deleted";
+
+    /// <summary>Removes and returns a trailing <c>"where ..."</c> item (the condition of a partial unique key), or null.</summary>
+    private static string? TrailingWhere(List<string> items)
+    {
+        if (items.Count == 0 || !items[^1].StartsWith("where ", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var where = items[^1]["where ".Length..];
+        items.RemoveAt(items.Count - 1);
+        return where;
+    }
 
     private static void CheckItems(Table table, List<string> items, string what)
     {
