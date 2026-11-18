@@ -260,6 +260,9 @@ internal sealed class PurgeJob(IClock clock) : IJobHandler
             delete from job.runs r where r.status in ('succeeded', 'failed', 'cancelled') and r.finished_at < $1
               and not exists (select 1 from itg.import_batches b where b.job_run_id = r.id)
             """, cancellationToken, now.AddDays(-days)).ConfigureAwait(false);
+        var kept = await SettingsStore.ResolveAsync(c, null, [KernelSettingKeys.NtfInAppRetentionDays], null, null, today, cancellationToken).ConfigureAwait(false);
+        var itemDays = kept.TryGetValue(KernelSettingKeys.NtfInAppRetentionDays, out var k) && k.Value.ValueKind == JsonValueKind.Number && k.Value.TryGetInt32(out var m) && m >= 30 ? m : 180;
+        var items = await IdentityDb.ExecuteAsync(c, null, "delete from ntf.in_app_items where created_at < $1", cancellationToken, now.AddDays(-itemDays)).ConfigureAwait(false);
         var events = 0;
         var inbox = 0;
         foreach (var schema in await OpsAlerts.OutboxSchemasAsync(c, cancellationToken, "DELETE").ConfigureAwait(false))
@@ -270,6 +273,6 @@ internal sealed class PurgeJob(IClock clock) : IJobHandler
 #pragma warning restore CA2100
         }
 
-        await job.LogAsync("info", string.Create(CultureInfo.InvariantCulture, $"{runs} finished run(s) older than {days} days, {events} delivered event(s) and {inbox} inbox row(s) older than {KernelJobs.EventRetentionDays} days removed"), cancellationToken).ConfigureAwait(false);
+        await job.LogAsync("info", string.Create(CultureInfo.InvariantCulture, $"{runs} finished run(s) older than {days} days, {items} notification item(s) older than {itemDays} days, {events} delivered event(s) and {inbox} inbox row(s) older than {KernelJobs.EventRetentionDays} days removed"), cancellationToken).ConfigureAwait(false);
     }
 }

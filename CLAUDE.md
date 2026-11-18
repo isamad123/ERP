@@ -81,6 +81,7 @@ higher one is a defect in the lower one: stop and report it.
 - `main` is the single line of development. Every slice starts from the latest `main`.
 - Work on the session's branch, then open a pull request to `main` and merge it once CI is green
   and the slice report is done. Do not leave finished work on side branches.
+- Standing instruction (product owner, 2026-11-18): commit, push, open the pull request and merge it yourself when CI is green and the slice report is done. Do not ask for permission each time.
 - Never merge with failing CI. If `main` moved on, update the branch from `main` and rerun CI before merging.
 
 ## Slice report (always end with this)
@@ -134,6 +135,9 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
   handlers `IJobHandler`, consumers `IEventConsumer`; the worker host (`WorkerHost.Configure`) runs `JobWorker` and `EventDispatcher`.
   Tests build workers through `JobRig` (`tests/Erp.IntegrationTests/Jobs/JobSupport.cs`): `rig.Worker()`, `rig.QueueAsync`, `rig.RunUntilIdleAsync`,
   time moves with `rig.Clock`. The job centre API is under `/api/jobs` (generated `/api/job/*` only read).
+- Notifications (S1.11b1): catalogue of notifiable events in `<module>.Infrastructure/Access/notification-events.json` (seeded by `migrate` and provisioning, `NotificationSetup`),
+  consumer `ntf.notifications` registered in `WorkerHost.Configure`; customer texts and rules change only through `/api/ntf/*` (generated `ntf` endpoints read only). Tests: `tests/Erp.IntegrationTests/Notifications`
+  (events are written to the outbox as the kernel writes them and handled by the real `EventDispatcher` through `JobRig`).
 - Not yet automated: secret scan; invariant tests other than invariant 6.
 
 ## Where things are

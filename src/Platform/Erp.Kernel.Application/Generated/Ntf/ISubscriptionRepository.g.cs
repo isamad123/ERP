@@ -36,6 +36,8 @@ public static class SubscriptionAccess
         new("channels", "Channels", null),
         new("company_id", "CompanyId", null),
         new("is_mandatory", "IsMandatory", null),
+        new("name", "Name", null),
+        new("condition", "Condition", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
         new("updated_at", "UpdatedAt", null),

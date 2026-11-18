@@ -60,6 +60,11 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
             return await new JobProbe(fx, app).RunAsync(endpoint, ct);
         }
 
+        if (endpoint.Kind is EndpointKind.NotificationCatalog or EndpointKind.NotificationRecordAction)
+        {
+            return await new NotificationProbe(fx, app).RunAsync(endpoint, ct);
+        }
+
         if (endpoint.Kind == EndpointKind.Licence)
         {
             return await new LicenceProbe(fx, app).RunAsync(endpoint, ct);

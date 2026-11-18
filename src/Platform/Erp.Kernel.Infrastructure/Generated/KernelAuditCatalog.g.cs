@@ -86,7 +86,7 @@ public static class KernelAuditCatalog
         new(typeof(global::Erp.Kernel.Domain.Generated.Meta.LocalEntitlement), "meta.local_entitlement", false, "machinery: copy of the signed entitlement; licence changes are security events (S1.07 Q4)", "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Meta.OutboxMessage), "meta.outbox_messages", false, "machinery: transactional outbox and inbox (S1.07 Q4)", "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Meta.SchemaHistory), "meta.schema_history", false, "append-only: the row itself is the record and is never changed (S1.07 Q4)", "id", null, null, null, null),
-        new(typeof(global::Erp.Kernel.Domain.Generated.Ntf.InAppItem), "ntf.in_app_items", true, null, "id", null, null, null, null),
+        new(typeof(global::Erp.Kernel.Domain.Generated.Ntf.InAppItem), "ntf.in_app_items", false, "a person's own notification item: created by the notification consumer, only its read state changes; delivery results of audited events go to the audit log (S1.11b1)", "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Ntf.InboxMessage), "ntf.inbox_messages", false, "machinery: transactional outbox and inbox (S1.07 Q4)", "message_id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage), "ntf.outbound_messages", false, "machinery: delivery queue; delivery audit is HRM-NTF-16 (S1.11) (S1.07 Q4)", "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Ntf.OutboxMessage), "ntf.outbox_messages", false, "machinery: transactional outbox and inbox (S1.07 Q4)", "id", null, null, null, null),

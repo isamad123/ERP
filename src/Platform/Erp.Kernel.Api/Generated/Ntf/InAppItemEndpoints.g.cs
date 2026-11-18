@@ -20,25 +20,13 @@ public sealed class InAppItemResponse
     public string Body { get; init; } = null!;
     public string? Link { get; init; }
     public global::System.DateTimeOffset? ReadAt { get; init; }
+    public string? DedupKey { get; init; }
+    public string? EventGroup { get; init; }
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for ntf.in_app_items. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class InAppItemWriteRequest
-{
-    public global::System.Guid? UserId { get; init; }
-    public string? EventCode { get; init; }
-    public string? Title { get; init; }
-    public string? Body { get; init; }
-    public string? Link { get; init; }
-    public global::System.DateTimeOffset? ReadAt { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for ntf.in_app_items.</summary>
@@ -51,7 +39,7 @@ public sealed class InAppItemListQuery
     public global::System.Guid? UserId { get; init; }
 }
 
-/// <summary>Generated endpoints of ntf.in_app_items: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of ntf.in_app_items: read. Answers pass through field security (S1.06).</summary>
 internal static class InAppItemEndpoints
 {
     private const string Resource = "ntf.in_app_items";
@@ -61,8 +49,6 @@ internal static class InAppItemEndpoints
         var group = app.MapGroup("/api/ntf/in-app-items").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("ntf.in_app_items.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "ntf.in_app_items.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("ntf.in_app_items.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "ntf.in_app_items.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("ntf.in_app_items.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "ntf.in_app_items.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("ntf.in_app_items.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "ntf.in_app_items.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] InAppItemListQuery query, global::Erp.Kernel.Application.Generated.Ntf.IInAppItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -81,53 +67,6 @@ internal static class InAppItemEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Ntf.InAppItemAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(InAppItemWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.IInAppItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "ntf.in_app_items.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Ntf.InAppItemAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Ntf.InAppItem();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/ntf/in-app-items/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Ntf.InAppItemAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, InAppItemWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.IInAppItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "ntf.in_app_items.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Ntf.InAppItemAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Ntf.InAppItemAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static InAppItemResponse ToResponse(global::Erp.Kernel.Domain.Generated.Ntf.InAppItem row) => new()
     {
         Id = row.Id,
@@ -137,92 +76,12 @@ internal static class InAppItemEndpoints
         Body = row.Body,
         Link = row.Link,
         ReadAt = row.ReadAt,
+        DedupKey = row.DedupKey,
+        EventGroup = row.EventGroup,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
         UpdatedAt = row.UpdatedAt,
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(InAppItemWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.UserId is null && (!update || access.CanEdit("user_id")))
-        {
-            errors.Add("userId");
-        }
-        if (request.EventCode is null && (!update || access.CanEdit("event_code")))
-        {
-            errors.Add("eventCode");
-        }
-        if (request.Title is null && (!update || access.CanEdit("title")))
-        {
-            errors.Add("title");
-        }
-        if (request.Body is null && (!update || access.CanEdit("body")))
-        {
-            errors.Add("body");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(InAppItemWriteRequest request, global::Erp.Kernel.Domain.Generated.Ntf.InAppItem row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("user_id"))
-        {
-            row.UserId = request.UserId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.UserId, row.UserId, update))
-        {
-            denied.Add("userId");
-        }
-        if (access.CanEdit("event_code"))
-        {
-            row.EventCode = request.EventCode!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EventCode, row.EventCode, update))
-        {
-            denied.Add("eventCode");
-        }
-        if (access.CanEdit("title"))
-        {
-            row.Title = request.Title!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Title, row.Title, update))
-        {
-            denied.Add("title");
-        }
-        if (access.CanEdit("body"))
-        {
-            row.Body = request.Body!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Body, row.Body, update))
-        {
-            denied.Add("body");
-        }
-        if (access.CanEdit("link"))
-        {
-            row.Link = request.Link;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Link, row.Link, update))
-        {
-            denied.Add("link");
-        }
-        if (access.CanEdit("read_at"))
-        {
-            row.ReadAt = request.ReadAt;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReadAt, row.ReadAt, update))
-        {
-            denied.Add("readAt");
-        }
-        return denied;
-    }
 }

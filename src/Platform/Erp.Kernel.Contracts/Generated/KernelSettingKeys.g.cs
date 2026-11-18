@@ -94,6 +94,9 @@ public static class KernelSettingKeys
 
     /// <summary>Days a finished background run and its log stay in the job centre.</summary>
     public const string JobRetentionRunDays = "job.retention.run_days";
+
+    /// <summary>Days a notification item stays in a person's notification centre.</summary>
+    public const string NtfInAppRetentionDays = "ntf.in_app.retention_days";
 }
 
 /// <summary>Keys of the feature flags declared in the kernel settings manifest (FR-KRN-SET-05).</summary>

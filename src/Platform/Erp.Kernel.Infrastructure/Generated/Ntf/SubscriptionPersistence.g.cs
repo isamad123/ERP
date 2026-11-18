@@ -22,6 +22,8 @@ internal sealed class SubscriptionConfiguration : IEntityTypeConfiguration<globa
         builder.Property(e => e.Channels).HasColumnName("channels").HasColumnType("text[]").IsRequired();
         builder.Property(e => e.CompanyId).HasColumnName("company_id").HasColumnType("uuid");
         builder.Property(e => e.IsMandatory).HasColumnName("is_mandatory").HasColumnType("boolean");
+        builder.Property(e => e.Name).HasColumnName("name").HasColumnType("text");
+        builder.Property(e => e.Condition).HasColumnName("condition").HasColumnType("jsonb");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");

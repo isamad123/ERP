@@ -23,6 +23,8 @@ internal sealed class InAppItemConfiguration : IEntityTypeConfiguration<global::
         builder.Property(e => e.Body).HasColumnName("body").HasColumnType("text").IsRequired();
         builder.Property(e => e.Link).HasColumnName("link").HasColumnType("text");
         builder.Property(e => e.ReadAt).HasColumnName("read_at").HasColumnType("timestamptz");
+        builder.Property(e => e.DedupKey).HasColumnName("dedup_key").HasColumnType("text");
+        builder.Property(e => e.EventGroup).HasColumnName("event_group").HasColumnType("text");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");
@@ -49,6 +51,12 @@ internal sealed class InAppItemRepository(
             query = query.Where(e => e.UserId == userIdFilter);
         }
         return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.InAppItem>> FindByUserIdAndDedupKeyAsync(global::System.Guid userId, string? dedupKey, global::System.Threading.CancellationToken cancellationToken)
+    {
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.UserId == userId && e.DedupKey == dedupKey).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.InAppItem>> FindByUserIdAndReadAtAndCreatedAtAsync(global::System.Guid userId, global::System.DateTimeOffset? readAt, global::System.DateTimeOffset createdAt, global::System.Threading.CancellationToken cancellationToken)

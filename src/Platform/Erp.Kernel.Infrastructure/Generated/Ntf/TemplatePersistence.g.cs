@@ -23,6 +23,7 @@ internal sealed class TemplateConfiguration : IEntityTypeConfiguration<global::E
         builder.Property(e => e.Subject).HasColumnName("subject").HasColumnType("text");
         builder.Property(e => e.Body).HasColumnName("body").HasColumnType("text").IsRequired();
         builder.Property(e => e.Version).HasColumnName("version").HasColumnType("integer");
+        builder.Property(e => e.Source).HasColumnName("source").HasColumnType("text").IsRequired();
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");

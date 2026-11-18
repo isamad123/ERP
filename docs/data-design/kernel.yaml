@@ -988,7 +988,11 @@
     - [subject, text, opt]
     - [body, text, req]
     - [version, int, req]
+    - [source, "enum(product,tenant)", req, "default product; version 1 is the product text, a customer edit is a new tenant version (CR-048, Q15)"]
   unique: [[event_code, channel, language, version]]
+  # S1.11b1 (CR-048): templates change only through the notification template service (check of field classes, versions).
+  added_in: {S1.11b: [source]}
+  api_actions: [read]
   reqs: [KRN-NTF-02, HRM-NTF-03]
 
 - table: ntf.subscriptions
@@ -999,6 +1003,11 @@
     - [channels, "text[]", req]
     - [company_id, uuid, opt]
     - [is_mandatory, bool, req]
+    - [name, text, opt, "short name of the rule (CR-048)"]
+    - [condition, json, opt, "structured condition on the event fields, same format as workflow (CR-048, Q14)"]
+  # S1.11b1 (CR-048): rules change only through the subscription service (audience and condition checks).
+  added_in: {S1.11b: [name, condition]}
+  api_actions: [read]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
   reqs: [KRN-NTF-03]
@@ -1046,7 +1055,16 @@
     - [body, text, req]
     - [link, text, opt]
     - [read_at, ts, opt]
+    - [dedup_key, text, opt, "event id and recipient: one item per event and person (CR-048, KRN-NTF-05)"]
+    - [event_group, code, opt, "preference group of the event (CR-048)"]
   indexes: [[user_id, read_at, created_at]]
+  # S1.11b1 (CR-048): items are written by the notification consumer; a person reads, marks and searches only their own.
+  added_in: {S1.11b: [dedup_key, event_group]}
+  uniques_added_in: {S1.11b: [[user_id, dedup_key, "where dedup_key is not null"]]}
+  api_actions: [read]
+  # S1.11b1 (CR-048): the consumer writes items and a person marks their own read; the item itself is the record (delivery audit HRM-NTF-16).
+  audit: false
+  audit_reason: "a person's own notification item: created by the notification consumer, only its read state changes; delivery results of audited events go to the audit log (S1.11b1)"
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {user: user_id}
   reqs: [HRM-NTF-09]

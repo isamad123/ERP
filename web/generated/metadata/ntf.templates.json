@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "ntf.templates.read"
-    },
-    {
-      "action": "create",
-      "permission": "ntf.templates.create"
-    },
-    {
-      "action": "update",
-      "permission": "ntf.templates.update"
     }
   ],
   "companyScoped": false,
@@ -34,6 +26,7 @@
     "subject",
     "body",
     "version",
+    "source",
     "status"
   ],
   "fields": [
@@ -117,6 +110,26 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.ntf.templates.version"
+    },
+    {
+      "column": "source",
+      "field": "source",
+      "kind": "Enum",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.ntf.templates.source",
+      "options": [
+        {
+          "value": "product",
+          "labelKey": "options.ntf.templates.source.product"
+        },
+        {
+          "value": "tenant",
+          "labelKey": "options.ntf.templates.source.tenant"
+        }
+      ]
     },
     {
       "column": "status",

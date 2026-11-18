@@ -528,7 +528,7 @@ public sealed class GeneratorTests
         var files = Generator.Generate(Root).Files;
         var manifest = System.Text.Json.JsonDocument.Parse(files["src/Platform/Erp.Kernel.Infrastructure/Access/settings.g.json"]).RootElement;
         var settings = manifest.GetProperty("settings").EnumerateArray().ToList();
-        Assert.Equal(29, settings.Count); // 22 of S1.09a, cfg.limits.warning_percent (S1.09b, ruling Q7), four of S1.10b (CR-041), two of S1.11a (Q9, P3)
+        Assert.Equal(30, settings.Count); // 22 of S1.09a, cfg.limits.warning_percent (S1.09b, ruling Q7), four of S1.10b (CR-041), two of S1.11a (Q9, P3), ntf.in_app.retention_days (S1.11b1)
         Assert.Equal(50, settings.Single(s => s.GetProperty("key").GetString() == "aud.alerts.sensitive_people_per_hour").GetProperty("default").GetInt32()); // S1.11 ruling Q9
         Assert.Equal(30, settings.Single(s => s.GetProperty("key").GetString() == "job.retention.run_days").GetProperty("default").GetInt32()); // S1.11a P3
         var off = settings.Single(s => s.GetProperty("key").GetString() == "org.weekly_off_days");

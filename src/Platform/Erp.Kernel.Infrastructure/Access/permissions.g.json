@@ -471,18 +471,6 @@
       "sensitive": false
     },
     {
-      "code": "ntf.in_app_items.create",
-      "module": "ntf",
-      "descriptionKey": "permissions.ntf.in_app_items.create",
-      "sensitive": false
-    },
-    {
-      "code": "ntf.in_app_items.update",
-      "module": "ntf",
-      "descriptionKey": "permissions.ntf.in_app_items.update",
-      "sensitive": false
-    },
-    {
       "code": "ntf.outbound_messages.read",
       "module": "ntf",
       "descriptionKey": "permissions.ntf.outbound_messages.read",
@@ -507,33 +495,9 @@
       "sensitive": false
     },
     {
-      "code": "ntf.subscriptions.create",
-      "module": "ntf",
-      "descriptionKey": "permissions.ntf.subscriptions.create",
-      "sensitive": false
-    },
-    {
-      "code": "ntf.subscriptions.update",
-      "module": "ntf",
-      "descriptionKey": "permissions.ntf.subscriptions.update",
-      "sensitive": false
-    },
-    {
       "code": "ntf.templates.read",
       "module": "ntf",
       "descriptionKey": "permissions.ntf.templates.read",
-      "sensitive": false
-    },
-    {
-      "code": "ntf.templates.create",
-      "module": "ntf",
-      "descriptionKey": "permissions.ntf.templates.create",
-      "sensitive": false
-    },
-    {
-      "code": "ntf.templates.update",
-      "module": "ntf",
-      "descriptionKey": "permissions.ntf.templates.update",
       "sensitive": false
     },
     {

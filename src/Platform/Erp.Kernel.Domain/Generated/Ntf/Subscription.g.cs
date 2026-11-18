@@ -30,6 +30,12 @@ public sealed partial class Subscription : global::Erp.BuildingBlocks.Domain.Ent
     /// <summary>is_mandatory</summary>
     public bool IsMandatory { get; set; }
 
+    /// <summary>name: short name of the rule (CR-048)</summary>
+    public string? Name { get; set; }
+
+    /// <summary>condition: structured condition on the event fields, same format as workflow (CR-048, Q14)</summary>
+    public global::System.Text.Json.JsonDocument? Condition { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

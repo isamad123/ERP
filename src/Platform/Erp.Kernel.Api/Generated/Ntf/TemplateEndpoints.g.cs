@@ -20,27 +20,13 @@ public sealed class TemplateResponse
     public string? Subject { get; init; }
     public string Body { get; init; } = null!;
     public int Version { get; init; }
+    public string Source { get; init; } = null!;
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for ntf.templates. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class TemplateWriteRequest
-{
-    public string? EventCode { get; init; }
-    public string? Channel { get; init; }
-    public string? Language { get; init; }
-    public string? Subject { get; init; }
-    public string? Body { get; init; }
-    public int? Version { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for ntf.templates.</summary>
@@ -53,7 +39,7 @@ public sealed class TemplateListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of ntf.templates: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of ntf.templates: read. Answers pass through field security (S1.06).</summary>
 internal static class TemplateEndpoints
 {
     private const string Resource = "ntf.templates";
@@ -63,8 +49,6 @@ internal static class TemplateEndpoints
         var group = app.MapGroup("/api/ntf/templates").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("ntf.templates.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "ntf.templates.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("ntf.templates.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "ntf.templates.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("ntf.templates.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "ntf.templates.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("ntf.templates.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "ntf.templates.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] TemplateListQuery query, global::Erp.Kernel.Application.Generated.Ntf.ITemplateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -83,53 +67,6 @@ internal static class TemplateEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Ntf.TemplateAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(TemplateWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.ITemplateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "ntf.templates.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Ntf.TemplateAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Ntf.Template();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/ntf/templates/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Ntf.TemplateAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, TemplateWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.ITemplateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "ntf.templates.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Ntf.TemplateAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Ntf.TemplateAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static TemplateResponse ToResponse(global::Erp.Kernel.Domain.Generated.Ntf.Template row) => new()
     {
         Id = row.Id,
@@ -139,6 +76,7 @@ internal static class TemplateEndpoints
         Subject = row.Subject,
         Body = row.Body,
         Version = row.Version,
+        Source = row.Source,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -146,102 +84,4 @@ internal static class TemplateEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(TemplateWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.EventCode is null && (!update || access.CanEdit("event_code")))
-        {
-            errors.Add("eventCode");
-        }
-        if (request.Channel is null && (!update || access.CanEdit("channel")))
-        {
-            errors.Add("channel");
-        }
-        if (request.Language is null && (!update || access.CanEdit("language")))
-        {
-            errors.Add("language");
-        }
-        if (request.Body is null && (!update || access.CanEdit("body")))
-        {
-            errors.Add("body");
-        }
-        if (request.Version is null && (!update || access.CanEdit("version")))
-        {
-            errors.Add("version");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(TemplateWriteRequest request, global::Erp.Kernel.Domain.Generated.Ntf.Template row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("event_code"))
-        {
-            row.EventCode = request.EventCode!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EventCode, row.EventCode, update))
-        {
-            denied.Add("eventCode");
-        }
-        if (access.CanEdit("channel"))
-        {
-            row.Channel = request.Channel!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Channel, row.Channel, update))
-        {
-            denied.Add("channel");
-        }
-        if (access.CanEdit("language"))
-        {
-            row.Language = request.Language!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Language, row.Language, update))
-        {
-            denied.Add("language");
-        }
-        if (access.CanEdit("subject"))
-        {
-            row.Subject = request.Subject;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Subject, row.Subject, update))
-        {
-            denied.Add("subject");
-        }
-        if (access.CanEdit("body"))
-        {
-            row.Body = request.Body!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Body, row.Body, update))
-        {
-            denied.Add("body");
-        }
-        if (access.CanEdit("version"))
-        {
-            row.Version = request.Version!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Version, row.Version, update))
-        {
-            denied.Add("version");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
 }
