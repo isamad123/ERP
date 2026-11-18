@@ -210,4 +210,30 @@ public sealed class AttachmentTests(TenancyFixture fx) : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.Created, (await _rig.UploadAsync(user, record, "fits.pdf", DocumentRig.PdfBytes("fits"), Ct)).Status);
     }
+
+    [Fact]
+    public async Task S111c1_KRN_WFL_07_the_people_of_a_request_attach_and_read_evidence_on_a_decision_and_nobody_else_can()
+    {
+        var approver = await _rig.UserAsync(Ct, "business_user");
+        var requester = await _rig.UserAsync(Ct, "business_user");
+        var other = await _rig.UserAsync(Ct, "tenant_admin"); // even an administrator is not part of the request
+        var task = await _rig.WorkflowTaskAsync(approver, requester, Ct);
+
+        var byApprover = await _rig.UploadAsync(approver, task, "quote.pdf", DocumentRig.PdfBytes("quote"), Ct, ownerType: "wf.workflow_tasks");
+        Assert.True(byApprover.Status == HttpStatusCode.Created, byApprover.Text);
+        var byRequester = await _rig.UploadAsync(requester, task, "receipt.pdf", DocumentRig.PdfBytes("receipt"), Ct, ownerType: "wf.workflow_tasks");
+        Assert.Equal(HttpStatusCode.Created, byRequester.Status);
+        Assert.Equal(2, (await _rig.GetAsync(requester, $"/api/doc/attachments?ownerType=wf.workflow_tasks&ownerId={task}", Ct)).Json.GetArrayLength());
+        Assert.Equal(HttpStatusCode.OK, (await _rig.GetAsync(approver, $"/api/doc/attachments/{IdOf(byRequester)}/content", Ct)).Status);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await _rig.UploadAsync(other, task, "x.pdf", DocumentRig.PdfBytes("x"), Ct, ownerType: "wf.workflow_tasks")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await _rig.GetAsync(other, $"/api/doc/attachments/{IdOf(byApprover)}/content", Ct)).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await _rig.GetAsync(other, $"/api/doc/attachments?ownerType=wf.workflow_tasks&ownerId={task}", Ct)).Status);
+
+        // Once the task is decided the approver can still read but not add; the requester's request is no longer open either.
+        await _rig.ExecAsync("update wf.workflow_tasks set status = 'approved', acted_by = $2 where id = $1", Ct, task, approver);
+        await _rig.ExecAsync("update wf.workflow_instances set status = 'approved' where id = (select instance_id from wf.workflow_tasks where id = $1)", Ct, task);
+        Assert.Equal(HttpStatusCode.Forbidden, (await _rig.UploadAsync(approver, task, "late.pdf", DocumentRig.PdfBytes("late"), Ct, ownerType: "wf.workflow_tasks")).Status);
+        Assert.Equal(HttpStatusCode.OK, (await _rig.GetAsync(approver, $"/api/doc/attachments/{IdOf(byApprover)}/content", Ct)).Status);
+    }
 }

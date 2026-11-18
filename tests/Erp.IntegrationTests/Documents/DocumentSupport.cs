@@ -17,6 +17,18 @@ using Npgsql;
 
 namespace Erp.IntegrationTests.Documents;
 
+/// <summary>Services that give a test host a folder file store and a scanner that finds nothing.</summary>
+public static class DocumentTestServices
+{
+    public static void Register(IServiceCollection services, string root)
+    {
+        services.RemoveAll<IFileStore>();
+        services.AddSingleton<IFileStore>(new LocalFolderFileStore(root));
+        services.RemoveAll<IVirusScanner>();
+        services.AddSingleton<IVirusScanner>(new FakeScanner());
+    }
+}
+
 /// <summary>What a test says about one record that carries files: who may read, change and read sensitive files of it.</summary>
 public sealed class TestRecordBook
 {
@@ -258,6 +270,33 @@ public sealed class DocumentRig : IAsyncDisposable
 
     /// <summary>The scan logic the scan job runs, bound to this customer (the job itself needs a worker host).</summary>
     public FileScanning Scanning() => new(Store, new FileEncryption(new FixedTenant(Code), _fx.Secrets), Scanner, Clock);
+
+    /// <summary>A pending approval task for <paramref name="assignee"/> on a request by <paramref name="requester"/> (the rows the engine would write).</summary>
+    public async Task<Guid> WorkflowTaskAsync(Guid assignee, Guid requester, CancellationToken ct, string? code = null)
+    {
+        var system = BaselineSeed.SystemUserId;
+        var (definition, version, instance, task) = (Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
+        var type = "doc-test-" + definition.ToString("N")[..12];
+        await using var c = await _fx.OpenTenantAsync(code ?? Code, TenantLogins.Owner, ct);
+        var company = await ScalarAsync<Guid>(c, "select id from org.companies where not is_deleted order by created_at limit 1", ct);
+        await ExecInAsync(c, """
+            insert into wf.workflow_definitions (id, code, name_i18n, document_type, status, is_active, requires_approval, created_at, created_by, updated_at, updated_by, row_version)
+            values ($1, $2, '{"en":"Doc test","ur":"جانچ"}', $2, 'active', true, false, now(), $3, now(), $3, 1)
+            """, ct, definition, type, system);
+        await ExecInAsync(c, """
+            insert into wf.workflow_versions (id, definition_id, version, definition, status, activated_at, activated_by, created_at, created_by, updated_at, updated_by)
+            values ($1, $2, 1, '{"steps": []}'::jsonb, 'active', now(), $3, now(), $3, now(), $3)
+            """, ct, version, definition, system);
+        await ExecInAsync(c, """
+            insert into wf.workflow_instances (id, company_id, version_id, document_type, document_id, requester_user_id, started_at, context, status, created_at, created_by, updated_at, updated_by)
+            values ($1, $2, $3, $4, $5, $6, now(), '{"values": {}}', 'running', now(), $6, now(), $6)
+            """, ct, instance, company, version, type, Guid.CreateVersion7(), requester);
+        await ExecInAsync(c, """
+            insert into wf.workflow_tasks (id, instance_id, step_key, assignee_user_id, status, created_at, created_by, updated_at, updated_by)
+            values ($1, $2, 'probe', $3, 'pending', now(), $4, now(), $4)
+            """, ct, task, instance, assignee, requester);
+        return task;
+    }
 
     public static byte[] PdfBytes(string extra = "") => Encoding.UTF8.GetBytes(Pdf + extra);
 
