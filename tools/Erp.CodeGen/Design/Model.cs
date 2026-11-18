@@ -208,6 +208,13 @@ public sealed class Table
     public IEnumerable<string> BaseAppendOnlyUpdatable => AppendOnlyUpdatable.Where(c => !UpdatableAddedIn.Exists(u => u.Column == c));
 
     /// <summary>Slices whose design migration changes this table (added table, columns or exceptions).</summary>
+    /// <summary>
+    /// Slice whose design migration adds a foreign key: the slice that added its column after the first migrations
+    /// (S1.11a, CR-045: <c>job.runs.actor_user_id</c>); null for keys of the first migrations or of a table added later.
+    /// </summary>
+    public string? ForeignKeyAddedIn(ForeignKey fk) =>
+        AddedIn is null ? fk.Columns.Select(c => Columns.Find(x => x.Name == c)?.AddedIn).FirstOrDefault(a => a is not null) : null;
+
     public IEnumerable<string> ChangedIn =>
         new[] { AddedIn }.Concat(Columns.Select(c => c.AddedIn)).Concat(UpdatableAddedIn.Select(u => u.Slice)).Concat(CommentsAddedIn.Select(c => c.Slice))
             .Concat(Indexes.Select(i => i.AddedIn)).Concat(Checks.Select(c => c.AddedIn))

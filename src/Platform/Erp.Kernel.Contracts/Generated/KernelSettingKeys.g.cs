@@ -88,6 +88,12 @@ public static class KernelSettingKeys
 
     /// <summary>Most tasks approved in one bulk approval.</summary>
     public const string WfBulkApprovalMaxItems = "wf.bulk_approval.max_items";
+
+    /// <summary>Sensitive records one user may open or export in an hour before administrators are alerted.</summary>
+    public const string AudAlertsSensitivePeoplePerHour = "aud.alerts.sensitive_people_per_hour";
+
+    /// <summary>Days a finished background run and its log stay in the job centre.</summary>
+    public const string JobRetentionRunDays = "job.retention.run_days";
 }
 
 /// <summary>Keys of the feature flags declared in the kernel settings manifest (FR-KRN-SET-05).</summary>

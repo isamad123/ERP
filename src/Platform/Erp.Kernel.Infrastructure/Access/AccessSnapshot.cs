@@ -121,6 +121,22 @@ internal sealed class AccessSnapshot
 {
     public static AccessSnapshot Empty { get; } = new([], new Dictionary<Guid, RoleRules>());
 
+    /// <summary>The fixed id of the synthetic role of a job actor's grant (never stored).</summary>
+    public static readonly Guid JobGrantRoleId = new("01900000-0000-7000-8000-000000000b00");
+
+    /// <summary>
+    /// The snapshot of a job actor (slice S1.11 ruling Q4, R-009): one synthetic role, valid for all companies, holding
+    /// exactly the declared permissions with scope "all" and no field rules (so salary stays hidden, GHR-06).
+    /// </summary>
+    public static AccessSnapshot ForGrant(IReadOnlySet<string> permissions)
+    {
+        ArgumentNullException.ThrowIfNull(permissions);
+        var role = new RoleRules();
+        role.Permissions.UnionWith(permissions);
+        role.Scopes[RoleRules.AnyResource] = new ScopeRule(ScopeRule.All, [], false, []);
+        return new AccessSnapshot([new Assignment(JobGrantRoleId, null, DateTimeOffset.MinValue)], new Dictionary<Guid, RoleRules> { [JobGrantRoleId] = role });
+    }
+
     public AccessSnapshot(IReadOnlyList<Assignment> assignments, IReadOnlyDictionary<Guid, RoleRules> roles)
     {
         Assignments = assignments;

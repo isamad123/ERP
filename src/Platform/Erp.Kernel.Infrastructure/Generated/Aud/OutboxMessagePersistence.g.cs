@@ -24,5 +24,8 @@ internal sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<glob
         builder.Property(e => e.Payload).HasColumnName("payload").HasColumnType("jsonb").IsRequired();
         builder.Property(e => e.Headers).HasColumnName("headers").HasColumnType("jsonb").IsRequired();
         builder.Property(e => e.PublishedAt).HasColumnName("published_at").HasColumnType("timestamptz");
+        builder.Property(e => e.Attempts).HasColumnName("attempts").HasColumnType("integer");
+        builder.Property(e => e.NextAttemptAt).HasColumnName("next_attempt_at").HasColumnType("timestamptz");
+        builder.Property(e => e.LastError).HasColumnName("last_error").HasColumnType("text");
     }
 }

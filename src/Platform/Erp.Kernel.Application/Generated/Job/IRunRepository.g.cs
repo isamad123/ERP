@@ -10,6 +10,8 @@ namespace Erp.Kernel.Application.Generated.Job;
 public sealed record RunFilter
 {
     public global::System.Guid? DefinitionId { get; init; }
+    public global::System.Guid? ResultFileId { get; init; }
+    public global::System.Guid? ActorUserId { get; init; }
     public string? Status { get; init; }
 }
 
@@ -17,6 +19,9 @@ public sealed record RunFilter
 public interface IRunRepository : global::Erp.BuildingBlocks.Application.Data.IMutableRepository<global::Erp.Kernel.Domain.Generated.Job.Run>
 {
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Job.Run>> ListAsync(RunFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
+
+    /// <summary>Rows matching (definition_id, scheduled_for); at most PageRequest.MaxLimit rows.</summary>
+    global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Job.Run>> FindByDefinitionIdAndScheduledForAsync(global::System.Guid definitionId, global::System.DateTimeOffset? scheduledFor, global::System.Threading.CancellationToken cancellationToken);
 
     /// <summary>Rows matching (status, created_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Job.Run>> FindByStatusAndCreatedAtAsync(string status, global::System.DateTimeOffset createdAt, global::System.Threading.CancellationToken cancellationToken);
@@ -46,6 +51,14 @@ public static class RunAccess
         new("requested_by", "RequestedBy", null),
         new("lease_owner", "LeaseOwner", null),
         new("lease_expires_at", "LeaseExpiresAt", null),
+        new("parameters", "Parameters", null),
+        new("priority", "Priority", null),
+        new("attempt", "Attempt", null),
+        new("scheduled_for", "ScheduledFor", null),
+        new("cancel_requested_at", "CancelRequestedAt", null),
+        new("result_file_id", "ResultFileId", null),
+        new("actor_user_id", "ActorUserId", null),
+        new("next_attempt_at", "NextAttemptAt", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

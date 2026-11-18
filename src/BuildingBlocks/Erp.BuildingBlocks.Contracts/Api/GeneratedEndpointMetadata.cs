@@ -83,3 +83,10 @@ public sealed record LicenceEndpointMetadata(string Kind, string Permission);
 /// <c>{id}</c> of a route, version, task or request: another customer's id is 404).
 /// </summary>
 public sealed record WorkflowEndpointMetadata(string Kind, string Resource, string Permission);
+
+/// <summary>
+/// Marks a job-centre endpoint (slice S1.11a) for the tenant-isolation suite: <see cref="Kind"/> is <c>catalog</c> (a list or
+/// the health numbers of the bound customer) or <c>record_action</c> (a route with the <c>{id}</c> of a job or a run: another
+/// customer's id is 404).
+/// </summary>
+public sealed record JobEndpointMetadata(string Kind, string Resource, string Permission);

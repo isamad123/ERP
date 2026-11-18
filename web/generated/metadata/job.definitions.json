@@ -11,14 +11,6 @@
     {
       "action": "read",
       "permission": "job.definitions.read"
-    },
-    {
-      "action": "create",
-      "permission": "job.definitions.create"
-    },
-    {
-      "action": "update",
-      "permission": "job.definitions.update"
     }
   ],
   "companyScoped": false,
@@ -31,7 +23,10 @@
     "moduleId",
     "concurrencyLimit",
     "timeoutSeconds",
-    "isEnabled"
+    "isEnabled",
+    "ownerUserId",
+    "priority",
+    "source"
   ],
   "fields": [
     {
@@ -125,6 +120,47 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.job.definitions.is_enabled"
+    },
+    {
+      "column": "owner_user_id",
+      "field": "ownerUserId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": true,
+      "labelKey": "fields.job.definitions.owner_user_id",
+      "references": "iam.users"
+    },
+    {
+      "column": "priority",
+      "field": "priority",
+      "kind": "Int4",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.job.definitions.priority"
+    },
+    {
+      "column": "source",
+      "field": "source",
+      "kind": "Enum",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.job.definitions.source",
+      "options": [
+        {
+          "value": "product",
+          "labelKey": "options.job.definitions.source.product"
+        },
+        {
+          "value": "tenant",
+          "labelKey": "options.job.definitions.source.tenant"
+        }
+      ]
     },
     {
       "column": "created_at",

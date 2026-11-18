@@ -130,6 +130,10 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
 - Workflow (S1.10a, S1.10b): document types in `<module>.Infrastructure/Access/workflow.json`; engine `Erp.Kernel.Infrastructure/Workflow/WorkflowEngine*.cs`.
   Escalation runs in the worker host every minute and on demand with `workflow escalate [--tenant]`; tests run it through
   `WorkflowRig.EscalateAsync` and move time with `WorkflowRig.ClockAt` (see `docs/handoff/2026-11-17-S1.10b.md`).
+- Jobs and events (S1.11a): job manifests in `<module>.Infrastructure/Access/jobs.json` (seeded by `migrate` and provisioning, `JobSetup`),
+  handlers `IJobHandler`, consumers `IEventConsumer`; the worker host (`WorkerHost.Configure`) runs `JobWorker` and `EventDispatcher`.
+  Tests build workers through `JobRig` (`tests/Erp.IntegrationTests/Jobs/JobSupport.cs`): `rig.Worker()`, `rig.QueueAsync`, `rig.RunUntilIdleAsync`,
+  time moves with `rig.Clock`. The job centre API is under `/api/jobs` (generated `/api/job/*` only read).
 - Not yet automated: secret scan; invariant tests other than invariant 6.
 
 ## Where things are

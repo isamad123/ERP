@@ -272,6 +272,28 @@ settings:
     name: {en: "Bulk approval size", ur: "اجتماعی منظوری کی حد"}
     description: {en: "Most tasks approved in one bulk approval", ur: "ایک اجتماعی منظوری میں زیادہ سے زیادہ کام"}
     help: {en: "An approver may approve at most this many tasks in one go, and only where the document type and the route step allow it. Each task is checked on its own.", ur: "منظور کنندہ ایک بار میں زیادہ سے زیادہ اتنے کام منظور کر سکتا ہے، اور صرف وہاں جہاں دستاویز کی قسم اور راستے کا مرحلہ اجازت دیں۔ ہر کام کی الگ جانچ ہوتی ہے۔"}
+  # Slice S1.11a (ruling Q9, P4): the unusual-access alert of FR-HRM-PRV-05.
+  - key: aud.alerts.sensitive_people_per_hour
+    type: int
+    default: 50
+    validation: {min: 1, max: 100000}
+    layers: [tenant]
+    area: security.audit
+    unit: records per hour
+    name: {en: "Unusual access alert", ur: "غیر معمولی رسائی کا انتباہ"}
+    description: {en: "Sensitive records one user may open or export in an hour before administrators are alerted", ur: "حساس ریکارڈ جو ایک صارف ایک گھنٹے میں کھول یا برآمد کر سکتا ہے، اس سے زیادہ پر منتظمین کو انتباہ"}
+    help: {en: "When one user opens or exports the salary, personal or other sensitive data of more than this many different records within one hour, Tenant Admins and Auditors are alerted. Exports count every exported row.", ur: "جب ایک صارف ایک گھنٹے کے اندر اس سے زیادہ مختلف ریکارڈز کی تنخواہ، ذاتی یا دیگر حساس معلومات کھولے یا برآمد کرے تو ٹیننٹ منتظمین اور آڈیٹرز کو انتباہ بھیجا جاتا ہے۔ برآمد میں ہر برآمد شدہ قطار شمار ہوتی ہے۔"}
+  # Slice S1.11a (P3; spec 03 section 8, FR-HRM-DAT-04): how long finished background runs are kept.
+  - key: job.retention.run_days
+    type: int
+    default: 30
+    validation: {min: 7, max: 3660}
+    layers: [tenant]
+    area: jobs
+    unit: days
+    name: {en: "Keep finished background runs", ur: "مکمل شدہ پس منظر کے کام محفوظ رکھنا"}
+    description: {en: "Days a finished background run and its log stay in the job centre", ur: "دن جن تک مکمل شدہ پس منظر کا کام اور اس کا ریکارڈ جاب سینٹر میں رہتا ہے"}
+    help: {en: "Runs that succeeded, failed or were cancelled are removed from the job centre after this many days by the daily clean-up.", ur: "کامیاب، ناکام یا منسوخ شدہ کام روزانہ کی صفائی کے ذریعے اتنے دن بعد جاب سینٹر سے ہٹا دیے جاتے ہیں۔"}
 
 # Release 1.0 has no requirement that needs a specific flag yet (ruling Q14): the mechanism ships with an empty list.
 flags: []

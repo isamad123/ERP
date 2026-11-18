@@ -34,4 +34,13 @@ public sealed partial class OutboxMessage : global::Erp.BuildingBlocks.Domain.En
 
     /// <summary>published_at</summary>
     public global::System.DateTimeOffset? PublishedAt { get; set; }
+
+    /// <summary>attempts: failed deliveries so far (CR-045, Q7)</summary>
+    public int Attempts { get; set; }
+
+    /// <summary>next_attempt_at: a failed message waits until this time (CR-045, Q7)</summary>
+    public global::System.DateTimeOffset? NextAttemptAt { get; set; }
+
+    /// <summary>last_error: why the last delivery failed (CR-045, Q7)</summary>
+    public string? LastError { get; set; }
 }

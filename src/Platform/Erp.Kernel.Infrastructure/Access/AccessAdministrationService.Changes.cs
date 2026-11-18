@@ -176,8 +176,15 @@ public sealed partial class AccessAdministrationService
     /// Pending requests older than <c>iam.maker_checker.expiry_days</c> (default 7) become expired and apply nothing. Run
     /// before every decision in its own transaction, so an expiry is recorded even when the decision is refused.
     /// </summary>
-    private async Task ExpireOldRequestsAsync(CancellationToken ct)
+    private Task<int> ExpireOldRequestsAsync(CancellationToken ct) => ExpirePendingAsync(ct);
+
+    /// <summary>
+    /// The expiry above as its own step (slice S1.11 Build item 5): the daily job <c>kernel.maker_checker_expire</c> calls it,
+    /// so requests nobody touches also expire on time. Returns the number of requests that expired.
+    /// </summary>
+    public async Task<int> ExpirePendingAsync(CancellationToken ct)
     {
+        var expired = 0;
         var now = clock.UtcNow;
         var by = actor.UserId;
         await using var c = await IdentityDb.OpenAsync(tenant.DataSource, ct).ConfigureAwait(false);
@@ -192,10 +199,12 @@ public sealed partial class AccessAdministrationService
             foreach (var id in await AccessDb.IdsAsync(command, ct).ConfigureAwait(false))
             {
                 await AccessDb.RaiseAsync(c, tx, AccessEvents.ChangeExpired, "iam.maker_checker_request", id, by, now, new { expiry_days = days }, ct).ConfigureAwait(false);
+                expired++;
             }
         }
 
         await tx.CommitAsync(ct).ConfigureAwait(false);
+        return expired;
     }
 
     // ================================================================== applying a change

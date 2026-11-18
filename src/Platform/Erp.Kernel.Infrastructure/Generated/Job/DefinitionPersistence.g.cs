@@ -25,6 +25,9 @@ internal sealed class DefinitionConfiguration : IEntityTypeConfiguration<global:
         builder.Property(e => e.TimeoutSeconds).HasColumnName("timeout_seconds").HasColumnType("integer");
         builder.Property(e => e.RetryPolicy).HasColumnName("retry_policy").HasColumnType("jsonb").IsRequired();
         builder.Property(e => e.IsEnabled).HasColumnName("is_enabled").HasColumnType("boolean");
+        builder.Property(e => e.OwnerUserId).HasColumnName("owner_user_id").HasColumnType("uuid");
+        builder.Property(e => e.Priority).HasColumnName("priority").HasColumnType("integer");
+        builder.Property(e => e.Source).HasColumnName("source").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");
@@ -46,6 +49,10 @@ internal sealed class DefinitionRepository(
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
         var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        if (filter.OwnerUserId is { } ownerUserIdFilter)
+        {
+            query = query.Where(e => e.OwnerUserId == ownerUserIdFilter);
+        }
         return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 

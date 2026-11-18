@@ -1188,7 +1188,14 @@
     - [timeout_seconds, int, req]
     - [retry_policy, json, req]
     - [is_enabled, bool, req]
+    - [owner_user_id, uuid, opt, "fk iam.users; who hears about failures (CR-045)"]
+    - [priority, int, req, "default 0; higher runs first within a customer (CR-045, Q5)"]
+    - [source, "enum(product,tenant)", req, "default product; product jobs come from the module job manifests (CR-045)"]
   unique: [[code]]
+  # S1.11a (CR-045 item 1): owner, priority and source of a job.
+  added_in: {S1.11a: [owner_user_id, priority, source]}
+  # S1.11a (CR-046 item 2, P2): definitions change only through the job centre service and the job manifest seeding.
+  api_actions: [read]
   reqs: [KRN-JOB-01]
 
 - table: job.runs
@@ -1205,7 +1212,21 @@
     - [requested_by, uuid, opt]
     - [lease_owner, text, opt, worker holding the run (runs once across workers)]
     - [lease_expires_at, ts, opt]
+    - [parameters, json, opt, "parameters of this run (CR-045)"]
+    - [priority, int, req, "default 0; copied from the definition when the run is queued (CR-045, Q5)"]
+    - [attempt, int, req, "default 0; attempts started so far (CR-045)"]
+    - [scheduled_for, ts, opt, "the schedule slot this run is for; one run per slot (CR-045)"]
+    - [cancel_requested_at, ts, opt, "cancel asked; the run stops at its next chunk (CR-045)"]
+    - [result_file_id, uuid, opt, "fk doc.files; result to download (CR-045, part S1.11c)"]
+    - [actor_user_id, uuid, opt, "fk iam.users; the person whose rights a requested run uses; empty: the job actor (CR-045, Q4)"]
+    - [next_attempt_at, ts, opt, "a queued retry waits until this time (CR-046 item 1, P1)"]
   indexes: [[status, created_at]]
+  # S1.11a (CR-045 item 1, CR-046 item 1): run parameters, priority, attempts, schedule slot, cancel, result and actor.
+  added_in: {S1.11a: [parameters, priority, attempt, scheduled_for, cancel_requested_at, result_file_id, actor_user_id, next_attempt_at]}
+  uniques_added_in: {S1.11a: [[definition_id, scheduled_for, "where scheduled_for is not null"]]}
+  indexes_added_in: {S1.11a: [[status, priority, created_at]]}
+  # S1.11a (CR-046 item 2, P2): runs change only through the scheduler and the job centre service.
+  api_actions: [read]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
@@ -1221,6 +1242,8 @@
     - [level, "enum(info,warning,error)", req]
     - [message, text, req]
   indexes: [[run_id, created_at]]
+  # S1.11a (CR-046 item 2, P2): logs are written by the runner only.
+  api_actions: [read]
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
   audit: false
   audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
