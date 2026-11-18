@@ -81,6 +81,7 @@ higher one is a defect in the lower one: stop and report it.
 - `main` is the single line of development. Every slice starts from the latest `main`.
 - Work on the session's branch, then open a pull request to `main` and merge it once CI is green
   and the slice report is done. Do not leave finished work on side branches.
+- Standing instruction (product owner, 2026-11-18): commit, push, open the pull request and merge it yourself when CI is green and the slice report is done. Do not ask for permission each time.
 - Never merge with failing CI. If `main` moved on, update the branch from `main` and rerun CI before merging.
 
 ## Slice report (always end with this)
