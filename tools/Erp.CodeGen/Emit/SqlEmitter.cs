@@ -60,6 +60,15 @@ public static class SqlEmitter
             output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "design_" + slice.Replace(".", "_", StringComparison.Ordinal).Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant())}", DesignChanges(model, slice, "kernel"));
         }
 
+        // Design changes of hrm tables (S1.11a onwards: the outbox retry columns, CR-045 item 2): the same sequence as the
+        // kernel's design file of the slice, in the hrm migrations folder.
+        foreach (var slice in model.Tables.Where(t => t.Module == "hrm").SelectMany(t => t.ChangedIn).Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal))
+        {
+            var revision = slice.Contains("-r", StringComparison.Ordinal) ? int.Parse(slice[^1..], CultureInfo.InvariantCulture) : 0;
+            var sequence = 180 + (60 * revision) + RuleSliceOrder(slice.Split('-')[0]) + LaterPartOffset(slice);
+            output.Add($"{HrmMigrations}/{FileName(s, sequence, "hrm", "design_" + slice.Replace(".", "_", StringComparison.Ordinal).Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant())}", DesignChanges(model, slice, "hrm"));
+        }
+
         // Database functions written by a slice (rules.yaml `functions`, S1.07): after that slice's design file.
         foreach (var group in model.Functions.GroupBy(f => f.Slice).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
@@ -266,6 +275,15 @@ public static class SqlEmitter
             }
         }
 
+        // Foreign keys on columns added to an existing table (S1.11a); their indexes are among the slice's indexes above.
+        foreach (var table in tables.Where(t => t.AddedIn != slice))
+        {
+            foreach (var fk in table.ForeignKeys.Where(f => table.ForeignKeyAddedIn(f) == slice))
+            {
+                b.Append(AddForeignKey(table, fk));
+            }
+        }
+
         foreach (var table in tables.Where(t => t.AddedIn != slice && t.UpdatableAddedIn.Exists(u => u.Slice == slice)))
         {
             var asOf = table.AppendOnlyUpdatable.Where(c => table.UpdatableAddedIn.Find(u => u.Column == c) is not { Slice: { } later } || UpTo(later, slice));
@@ -397,7 +415,7 @@ public static class SqlEmitter
 
         foreach (var table in tables)
         {
-            foreach (var fk in table.ForeignKeys.Where(f => crossSchemaForeignKeys || !f.CrossesSchema(schema)))
+            foreach (var fk in table.ForeignKeys.Where(f => (crossSchemaForeignKeys || !f.CrossesSchema(schema)) && table.ForeignKeyAddedIn(f) is null))
             {
                 b.Append(AddForeignKey(table, fk));
             }
@@ -421,7 +439,7 @@ public static class SqlEmitter
         var b = new StringBuilder(Header("Foreign keys between kernel schemas, added after every kernel table exists"));
         foreach (var table in tables.Where(t => t.AddedIn is null).OrderBy(t => t.FullName, StringComparer.Ordinal))
         {
-            foreach (var fk in table.ForeignKeys.Where(f => f.CrossesSchema(table.Schema)))
+            foreach (var fk in table.ForeignKeys.Where(f => f.CrossesSchema(table.Schema) && table.ForeignKeyAddedIn(f) is null))
             {
                 b.Append(AddForeignKey(table, fk));
             }

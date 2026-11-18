@@ -17,7 +17,9 @@ using Erp.Kernel.Application.Numbering;
 using Erp.Kernel.Contracts.Numbering;
 using Erp.Kernel.Infrastructure.Numbering;
 using Erp.Kernel.Api.Settings;
+using Erp.Kernel.Api.Jobs;
 using Erp.Kernel.Api.Workflow;
+using Erp.Kernel.Infrastructure.Jobs;
 using Erp.Kernel.Infrastructure.Workflow;
 using Erp.Kernel.Api.Entitlements;
 using Erp.Kernel.Contracts.Entitlements;
@@ -142,6 +144,9 @@ public static class ApiHost
         // and, for HR, the approver directory; routes are data seeded by provisioning and migrate.
         services.AddKernelWorkflow();
 
+        // Job centre (S1.11a): lists and queues runs; the worker host runs them. Modules register their job manifests here too.
+        services.AddKernelJobCentre();
+
         var keys = signing.Validation.Concat((config.GetSection("Auth:SigningPublicKeys").Get<string[]>() ?? []).Select(ToKey)).ToList();
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
         {
@@ -183,6 +188,7 @@ public static class ApiHost
         api.MapSettingsEndpoints();
         api.MapLicenceEndpoints();
         api.MapWorkflowEndpoints();
+        api.MapJobEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();
         return app;

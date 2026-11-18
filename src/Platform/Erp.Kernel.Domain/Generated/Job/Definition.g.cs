@@ -39,6 +39,15 @@ public sealed partial class Definition : global::Erp.BuildingBlocks.Domain.Entit
     /// <summary>is_enabled</summary>
     public bool IsEnabled { get; set; }
 
+    /// <summary>owner_user_id: fk iam.users; who hears about failures (CR-045)</summary>
+    public global::System.Guid? OwnerUserId { get; set; }
+
+    /// <summary>priority: default 0; higher runs first within a customer (CR-045, Q5)</summary>
+    public int Priority { get; set; }
+
+    /// <summary>source: default product; product jobs come from the module job manifests (CR-045)</summary>
+    public string Source { get; set; } = "product";
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

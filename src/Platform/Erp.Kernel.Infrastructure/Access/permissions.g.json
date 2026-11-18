@@ -453,45 +453,15 @@
       "sensitive": false
     },
     {
-      "code": "job.definitions.create",
-      "module": "job",
-      "descriptionKey": "permissions.job.definitions.create",
-      "sensitive": false
-    },
-    {
-      "code": "job.definitions.update",
-      "module": "job",
-      "descriptionKey": "permissions.job.definitions.update",
-      "sensitive": false
-    },
-    {
       "code": "job.run_logs.read",
       "module": "job",
       "descriptionKey": "permissions.job.run_logs.read",
       "sensitive": false
     },
     {
-      "code": "job.run_logs.create",
-      "module": "job",
-      "descriptionKey": "permissions.job.run_logs.create",
-      "sensitive": false
-    },
-    {
       "code": "job.runs.read",
       "module": "job",
       "descriptionKey": "permissions.job.runs.read",
-      "sensitive": false
-    },
-    {
-      "code": "job.runs.create",
-      "module": "job",
-      "descriptionKey": "permissions.job.runs.create",
-      "sensitive": false
-    },
-    {
-      "code": "job.runs.update",
-      "module": "job",
-      "descriptionKey": "permissions.job.runs.update",
       "sensitive": false
     },
     {

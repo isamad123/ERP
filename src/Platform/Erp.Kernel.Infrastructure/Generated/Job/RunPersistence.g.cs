@@ -27,6 +27,14 @@ internal sealed class RunConfiguration : IEntityTypeConfiguration<global::Erp.Ke
         builder.Property(e => e.RequestedBy).HasColumnName("requested_by").HasColumnType("uuid");
         builder.Property(e => e.LeaseOwner).HasColumnName("lease_owner").HasColumnType("text");
         builder.Property(e => e.LeaseExpiresAt).HasColumnName("lease_expires_at").HasColumnType("timestamptz");
+        builder.Property(e => e.Parameters).HasColumnName("parameters").HasColumnType("jsonb");
+        builder.Property(e => e.Priority).HasColumnName("priority").HasColumnType("integer");
+        builder.Property(e => e.Attempt).HasColumnName("attempt").HasColumnType("integer");
+        builder.Property(e => e.ScheduledFor).HasColumnName("scheduled_for").HasColumnType("timestamptz");
+        builder.Property(e => e.CancelRequestedAt).HasColumnName("cancel_requested_at").HasColumnType("timestamptz");
+        builder.Property(e => e.ResultFileId).HasColumnName("result_file_id").HasColumnType("uuid");
+        builder.Property(e => e.ActorUserId).HasColumnName("actor_user_id").HasColumnType("uuid");
+        builder.Property(e => e.NextAttemptAt).HasColumnName("next_attempt_at").HasColumnType("timestamptz");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
@@ -53,11 +61,25 @@ internal sealed class RunRepository(
         {
             query = query.Where(e => e.DefinitionId == definitionIdFilter);
         }
+        if (filter.ResultFileId is { } resultFileIdFilter)
+        {
+            query = query.Where(e => e.ResultFileId == resultFileIdFilter);
+        }
+        if (filter.ActorUserId is { } actorUserIdFilter)
+        {
+            query = query.Where(e => e.ActorUserId == actorUserIdFilter);
+        }
         if (filter.Status is { } statusFilter)
         {
             query = query.Where(e => e.Status == statusFilter);
         }
         return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Job.Run>> FindByDefinitionIdAndScheduledForAsync(global::System.Guid definitionId, global::System.DateTimeOffset? scheduledFor, global::System.Threading.CancellationToken cancellationToken)
+    {
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.DefinitionId == definitionId && e.ScheduledFor == scheduledFor).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Job.Run>> FindByStatusAndCreatedAtAsync(string status, global::System.DateTimeOffset createdAt, global::System.Threading.CancellationToken cancellationToken)

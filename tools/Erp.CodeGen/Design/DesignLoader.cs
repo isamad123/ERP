@@ -1275,7 +1275,9 @@ public static partial class DesignLoader
             {
                 if (!IsCovered(table, fk.Columns))
                 {
-                    table.Indexes.Add(new IndexDef(Naming.DbName("ix", table.Name, fk.Columns), fk.Columns, null, "foreign key " + fk.Name));
+                    // A foreign key on a column added later (S1.11a) gets its index in that slice's design file.
+                    var addedIn = table.ForeignKeyAddedIn(fk);
+                    table.Indexes.Add(new IndexDef(Naming.DbName("ix", table.Name, fk.Columns), fk.Columns, null, "foreign key " + fk.Name, addedIn));
                 }
             }
         }
@@ -1294,6 +1296,9 @@ public static partial class DesignLoader
     }
 
     // ---------------------------------------------------------------- outbox and inbox (spec 03 section 7.5)
+
+    /// <summary>Slice whose design migrations add the retry columns to every outbox (CR-045 item 2).</summary>
+    public const string OutboxRetrySlice = "S1.11a";
 
     private static IEnumerable<Table> OutboxAndInbox(string schema, Settings settings)
     {
@@ -1320,6 +1325,11 @@ public static partial class DesignLoader
             new Column { Name = "payload", Kind = ColumnKind.Json, SqlType = "jsonb", Required = true, Origin = "outbox" },
             new Column { Name = "headers", Kind = ColumnKind.Json, SqlType = "jsonb", Required = true, Default = "'{}'::jsonb", Origin = "outbox" },
             new Column { Name = "published_at", Kind = ColumnKind.Timestamp, SqlType = "timestamptz", Required = false, Origin = "outbox" },
+
+            // Slice S1.11a (CR-045 item 2, ruling Q7): the dispatcher retries a failed delivery with growing waits.
+            new Column { Name = "attempts", Kind = ColumnKind.Int4, SqlType = "integer", Required = true, Default = "0", Origin = "outbox", AddedIn = OutboxRetrySlice, Comment = "failed deliveries so far (CR-045, Q7)" },
+            new Column { Name = "next_attempt_at", Kind = ColumnKind.Timestamp, SqlType = "timestamptz", Required = false, Origin = "outbox", AddedIn = OutboxRetrySlice, Comment = "a failed message waits until this time (CR-045, Q7)" },
+            new Column { Name = "last_error", Kind = ColumnKind.Text, SqlType = "text", Required = false, Origin = "outbox", AddedIn = OutboxRetrySlice, Comment = "why the last delivery failed (CR-045, Q7)" },
         ]);
         outbox.PrimaryKey.Add("id");
         outbox.Indexes.Add(new IndexDef(Naming.DbName("ix", "outbox_messages", ["occurred_at", "unpublished"]), ["occurred_at"], "published_at is null", "dispatcher reads unpublished messages in order"));

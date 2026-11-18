@@ -11,6 +11,7 @@ public static class AccessServices
     public static IServiceCollection AddKernelAccess(this IServiceCollection services)
     {
         services.AddScoped<AccessEngine>();
+        services.TryAddScoped<Jobs.JobRunContext>(); // S1.11a: unbound in requests; a job run binds its actor (R-009)
         services.AddScoped<IPermissionChecker>(sp => sp.GetRequiredService<AccessEngine>());
         services.AddScoped<IDataScopeFilter>(sp => sp.GetRequiredService<AccessEngine>());
         services.AddScoped<IFieldAccess>(sp => sp.GetRequiredService<AccessEngine>());

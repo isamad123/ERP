@@ -15,6 +15,9 @@ export interface Definition
     timeoutSeconds: number;
     retryPolicy: unknown;
     isEnabled: boolean;
+    ownerUserId: string | null;
+    priority: number;
+    source: 'product' | 'tenant';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
@@ -22,30 +25,17 @@ export interface Definition
     rowVersion: number;
 }
 
-export interface DefinitionWrite
-{
-    code: string;
-    moduleId: string;
-    schedule?: unknown | null;
-    parameters: unknown;
-    concurrencyLimit: number;
-    timeoutSeconds: number;
-    retryPolicy: unknown;
-    isEnabled?: boolean;
-}
-
 export interface DefinitionListQuery
 {
     after?: string;
     limit?: number;
+    ownerUserId?: string;
 }
 
 export const definitions =
 {
     list: (query: DefinitionListQuery = {}) => request<PagedResult<Definition>>('GET', '/api/job/definitions', { query }),
     get: (id: string) => request<Definition>('GET', `/api/job/definitions/${id}`),
-    create: (body: DefinitionWrite) => request<Definition>('POST', '/api/job/definitions', { body }),
-    update: (id: string, body: DefinitionWrite & { rowVersion: number }) => request<Definition>('PUT', `/api/job/definitions/${id}`, { body }),
 };
 
 /** job.run_logs: RunLog. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -59,13 +49,6 @@ export interface RunLog
     createdBy: string;
 }
 
-export interface RunLogWrite
-{
-    runId: string;
-    level: 'info' | 'warning' | 'error';
-    message: string;
-}
-
 export interface RunLogListQuery
 {
     after?: string;
@@ -76,7 +59,6 @@ export const runLogs =
 {
     list: (query: RunLogListQuery = {}) => request<PagedResult<RunLog>>('GET', '/api/job/run-logs', { query }),
     get: (id: string) => request<RunLog>('GET', `/api/job/run-logs/${id}`),
-    create: (body: RunLogWrite) => request<RunLog>('POST', '/api/job/run-logs', { body }),
 };
 
 /** job.runs: Run. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -93,6 +75,14 @@ export interface Run
     requestedBy: string | null;
     leaseOwner: string | null;
     leaseExpiresAt: string | null;
+    parameters: unknown | null;
+    priority: number;
+    attempt: number;
+    scheduledFor: string | null;
+    cancelRequestedAt: string | null;
+    resultFileId: string | null;
+    actorUserId: string | null;
+    nextAttemptAt: string | null;
     status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
     createdAt: string;
     createdBy: string;
@@ -101,26 +91,13 @@ export interface Run
     rowVersion: number;
 }
 
-export interface RunWrite
-{
-    definitionId: string;
-    companyId?: string | null;
-    progressPct?: number | null;
-    checkpoint?: unknown | null;
-    startedAt?: string | null;
-    finishedAt?: string | null;
-    error?: string | null;
-    requestedBy?: string | null;
-    leaseOwner?: string | null;
-    leaseExpiresAt?: string | null;
-    status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
-}
-
 export interface RunListQuery
 {
     after?: string;
     limit?: number;
     definitionId?: string;
+    resultFileId?: string;
+    actorUserId?: string;
     status?: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 }
 
@@ -128,6 +105,4 @@ export const runs =
 {
     list: (query: RunListQuery = {}) => request<PagedResult<Run>>('GET', '/api/job/runs', { query }),
     get: (id: string) => request<Run>('GET', `/api/job/runs/${id}`),
-    create: (body: RunWrite) => request<Run>('POST', '/api/job/runs', { body }),
-    update: (id: string, body: RunWrite & { rowVersion: number }) => request<Run>('PUT', `/api/job/runs/${id}`, { body }),
 };

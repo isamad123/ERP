@@ -24,7 +24,11 @@ namespace Erp.Kernel.Infrastructure.Access;
 /// on every API server; dates come from the injected clock.
 /// </para>
 /// </summary>
-public sealed class AccessEngine(ITenantConnectionProvider tenant, IClock clock, ICurrentActor actor, IWorkforceDirectory workforce)
+/// <para>
+/// A background job acting as the job actor (slice S1.11 ruling Q4, R-009) gets exactly the permissions its manifest
+/// declares, with scope "all" and no field rights, instead of roles read from the database (<see cref="Jobs.JobRunContext"/>).
+/// </para>
+public sealed class AccessEngine(ITenantConnectionProvider tenant, IClock clock, ICurrentActor actor, IWorkforceDirectory workforce, Jobs.JobRunContext? job = null)
     : IPermissionChecker, IDataScopeFilter, IFieldAccess, ICallerAccess
 {
     private static readonly MethodInfo GuidContains = ContainsOf<Guid?>();
@@ -41,6 +45,11 @@ public sealed class AccessEngine(ITenantConnectionProvider tenant, IClock clock,
 
     private async Task<AccessSnapshot> LoadAsync(CancellationToken cancellationToken)
     {
+        if (job is { IsBound: true, Grant: { } grant })
+        {
+            return AccessSnapshot.ForGrant(grant);
+        }
+
         await using var connection = (NpgsqlConnection)await tenant.DataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         return await AccessSnapshot.LoadAsync(connection, null, actor.UserId, Today, cancellationToken).ConfigureAwait(false);
     }

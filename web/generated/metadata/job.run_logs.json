@@ -11,10 +11,6 @@
     {
       "action": "read",
       "permission": "job.run_logs.read"
-    },
-    {
-      "action": "create",
-      "permission": "job.run_logs.create"
     }
   ],
   "companyScoped": false,

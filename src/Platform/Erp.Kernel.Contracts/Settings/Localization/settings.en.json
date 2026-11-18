@@ -20,6 +20,8 @@
   "settings.areas.numbering": "Numbering",
   "settings.areas.organization": "Organisation",
   "settings.areas.licence": "Licence",
+  "settings.areas.security.audit": "Audit",
+  "settings.areas.jobs": "Background jobs",
   "settings.layers.product": "Product default",
   "settings.layers.pack": "Pack",
   "settings.layers.tenant": "Organisation",

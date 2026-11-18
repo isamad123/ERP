@@ -69,9 +69,10 @@ public static class Validator
     /// </summary>
     private static IEnumerable<string> LaterChangeProblems(DesignModel model, Table table)
     {
-        if (table.ChangedIn.Any() && table.Module is not ("kernel" or "controlplane"))
+        // hrm design files exist from S1.11a (the outbox retry columns); other modules have no migrations yet.
+        if (table.ChangedIn.Any() && table.Module is not ("kernel" or "controlplane" or "hrm"))
         {
-            yield return $"{table}: added_in is supported for kernel and control-plane tables only (module design migrations are not built yet)";
+            yield return $"{table}: added_in is supported for kernel, hrm and control-plane tables only (other module design migrations are not built yet)";
         }
 
         // Control plane (S1.07 whole tables; S1.09b also optional columns, enum values and unique keys, CR-036, CR-039).
@@ -106,15 +107,19 @@ public static class Validator
             // stay valid). A required column may come later only with a constant default, which PostgreSQL 11+ adds without
             // rewriting the table and which every existing row then satisfies (S1.09a, CR-036).
             if ((column.Required && column.Default is null) || (!column.Required && column.Default is not null) || column.IsGenerated
-                || (column.Required && column.Kind is ColumnKind.Code or ColumnKind.I18n or ColumnKind.Enum))
+                || (column.Required && column.Kind is ColumnKind.Code or ColumnKind.I18n))
             {
                 yield return $"{table}.{column.Name}: a column added later must be optional, or required with a constant default (bool, number or text), without generated value (expand only)";
             }
 
-            if (table.ForeignKeys.Exists(f => f.Columns.Contains(column.Name)) || table.Uniques.Exists(u => u.Items.Contains(column.Name) && u.AddedIn != column.AddedIn)
-                || table.Indexes.Exists(i => i.Items.Contains(column.Name)) || table.Checks.Exists(c => c.AddedIn != column.AddedIn && c.Sql.Contains(column.Name, StringComparison.Ordinal)))
+            // A required enum column may come later with one of its values as default (S1.11a, job.definitions.source): every
+            // existing row takes the default, which passes the column's check added in the same file. Keys, indexes and
+            // foreign keys on the column are allowed when the same slice adds them (S1.09b unique keys; S1.11a indexes and
+            // foreign keys, CR-045), so its design migration creates them together.
+            if (table.ForeignKeys.Exists(f => f.Columns.Contains(column.Name) && table.ForeignKeyAddedIn(f) != column.AddedIn) || table.Uniques.Exists(u => u.Items.Contains(column.Name) && u.AddedIn != column.AddedIn)
+                || table.Indexes.Exists(i => i.Items.Contains(column.Name) && i.AddedIn != column.AddedIn) || table.Checks.Exists(c => c.AddedIn != column.AddedIn && c.Sql.Contains(column.Name, StringComparison.Ordinal)))
             {
-                yield return $"{table}.{column.Name}: a column added later cannot have keys, indexes or checks yet (except a unique key added by the same slice, S1.09b)";
+                yield return $"{table}.{column.Name}: a column added later cannot have keys, indexes or checks yet, except ones the same slice adds (S1.09b, S1.11a)";
             }
         }
 

@@ -45,6 +45,30 @@ public sealed partial class Run : global::Erp.BuildingBlocks.Domain.Entities.IEn
     /// <summary>lease_expires_at</summary>
     public global::System.DateTimeOffset? LeaseExpiresAt { get; set; }
 
+    /// <summary>parameters: parameters of this run (CR-045)</summary>
+    public global::System.Text.Json.JsonDocument? Parameters { get; set; }
+
+    /// <summary>priority: default 0; copied from the definition when the run is queued (CR-045, Q5)</summary>
+    public int Priority { get; set; }
+
+    /// <summary>attempt: default 0; attempts started so far (CR-045)</summary>
+    public int Attempt { get; set; }
+
+    /// <summary>scheduled_for: the schedule slot this run is for; one run per slot (CR-045)</summary>
+    public global::System.DateTimeOffset? ScheduledFor { get; set; }
+
+    /// <summary>cancel_requested_at: cancel asked; the run stops at its next chunk (CR-045)</summary>
+    public global::System.DateTimeOffset? CancelRequestedAt { get; set; }
+
+    /// <summary>result_file_id: fk doc.files; result to download (CR-045, part S1.11c)</summary>
+    public global::System.Guid? ResultFileId { get; set; }
+
+    /// <summary>actor_user_id: fk iam.users; the person whose rights a requested run uses; empty: the job actor (CR-045, Q4)</summary>
+    public global::System.Guid? ActorUserId { get; set; }
+
+    /// <summary>next_attempt_at: a queued retry waits until this time (CR-046 item 1, P1)</summary>
+    public global::System.DateTimeOffset? NextAttemptAt { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

@@ -14,14 +14,6 @@
     {
       "action": "read",
       "permission": "job.runs.read"
-    },
-    {
-      "action": "create",
-      "permission": "job.runs.create"
-    },
-    {
-      "action": "update",
-      "permission": "job.runs.update"
     }
   ],
   "companyScoped": false,
@@ -152,6 +144,88 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.job.runs.lease_expires_at"
+    },
+    {
+      "column": "parameters",
+      "field": "parameters",
+      "kind": "Json",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.job.runs.parameters"
+    },
+    {
+      "column": "priority",
+      "field": "priority",
+      "kind": "Int4",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.job.runs.priority"
+    },
+    {
+      "column": "attempt",
+      "field": "attempt",
+      "kind": "Int4",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.job.runs.attempt"
+    },
+    {
+      "column": "scheduled_for",
+      "field": "scheduledFor",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.job.runs.scheduled_for"
+    },
+    {
+      "column": "cancel_requested_at",
+      "field": "cancelRequestedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.job.runs.cancel_requested_at"
+    },
+    {
+      "column": "result_file_id",
+      "field": "resultFileId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": true,
+      "labelKey": "fields.job.runs.result_file_id",
+      "references": "doc.files"
+    },
+    {
+      "column": "actor_user_id",
+      "field": "actorUserId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": true,
+      "labelKey": "fields.job.runs.actor_user_id",
+      "references": "iam.users"
+    },
+    {
+      "column": "next_attempt_at",
+      "field": "nextAttemptAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.job.runs.next_attempt_at"
     },
     {
       "column": "status",

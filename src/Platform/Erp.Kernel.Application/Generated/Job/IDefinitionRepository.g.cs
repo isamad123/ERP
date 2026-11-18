@@ -9,6 +9,7 @@ namespace Erp.Kernel.Application.Generated.Job;
 /// <summary>Equality filters for listing job.definitions (foreign keys and status). Null means no filter.</summary>
 public sealed record DefinitionFilter
 {
+    public global::System.Guid? OwnerUserId { get; init; }
 }
 
 /// <summary>Generated repository of job.definitions.</summary>
@@ -39,6 +40,9 @@ public static class DefinitionAccess
         new("timeout_seconds", "TimeoutSeconds", null),
         new("retry_policy", "RetryPolicy", null),
         new("is_enabled", "IsEnabled", null),
+        new("owner_user_id", "OwnerUserId", null),
+        new("priority", "Priority", null),
+        new("source", "Source", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
         new("updated_at", "UpdatedAt", null),
