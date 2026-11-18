@@ -20,6 +20,7 @@ public static class NotificationEndpoints
     private const string Preferences = "ntf.preferences";
     private const string Templates = "ntf.templates";
     private const string Subscriptions = "ntf.subscriptions";
+    private const string Deliveries = "ntf.outbound_messages";
 
     public static IEndpointRouteBuilder MapNotificationEndpoints(this IEndpointRouteBuilder app)
     {
@@ -80,6 +81,24 @@ public static class NotificationEndpoints
                 await s.DeleteSubscriptionAsync(id, rowVersion, ct).ConfigureAwait(false);
                 return Results.NoContent();
             })), "record_action", Subscriptions, NotificationPermissions.SubscriptionsDelete);
+
+        // The e-mail delivery log (slice S1.11b2; KRN-NTF-05, ADM-OPS-04, ADM-OPS-05) and "test send to myself" (KRN-NTF-02).
+        Tag(g.MapGet("/deliveries", ([AsParameters] DeliveryParameters q, IDeliveryLog s, CancellationToken ct) =>
+            RunAsync(async () => Results.Ok(await s.ListAsync(new DeliveryQuery(q.Status, q.UserId, q.EventCode, q.CompanyId, q.Recipient, q.From, q.To, q.Limit, q.Offset), ct).ConfigureAwait(false)))),
+            "catalog", Deliveries, NotificationPermissions.DeliveriesRead);
+        Tag(g.MapGet("/deliveries/summary", (IDeliveryLog s, CancellationToken ct) =>
+            RunAsync(async () => Results.Ok(await s.SummaryAsync(ct).ConfigureAwait(false)))), "catalog", Deliveries, NotificationPermissions.DeliveriesRead);
+        Tag(g.MapGet("/deliveries/{id:guid}", (Guid id, IDeliveryLog s, CancellationToken ct) =>
+            RunAsync(async () => await s.GetAsync(id, ct).ConfigureAwait(false) is { } found ? Results.Ok(found) : Results.Problem(statusCode: 404, title: NotificationErrors.NotFound))),
+            "record_action", Deliveries, NotificationPermissions.DeliveriesRead);
+        Tag(g.MapPost("/deliveries/{id:guid}/resend", (Guid id, IDeliveryLog s, CancellationToken ct) =>
+            RunAsync(async () =>
+            {
+                var copy = await s.ResendAsync(id, ct).ConfigureAwait(false);
+                return Results.Created("/api/ntf/deliveries/" + copy.Id, copy);
+            })), "record_action", Deliveries, NotificationPermissions.DeliveriesResend);
+        Tag(g.MapPost("/text-templates/test-send", (TestSendRequest body, IDeliveryLog s, CancellationToken ct) =>
+            RunAsync(async () => Results.Accepted(null, await s.TestSendAsync(body, ct).ConfigureAwait(false)))), "catalog", Templates, NotificationPermissions.TemplatesTestSend);
         return app;
     }
 
@@ -107,6 +126,28 @@ public static class NotificationEndpoints
         public string? Search { get; init; }
 
         public string? Group { get; init; }
+
+        public int? Limit { get; init; }
+
+        public int? Offset { get; init; }
+    }
+
+    /// <summary>Query string of <c>GET /api/ntf/deliveries</c>.</summary>
+    public sealed class DeliveryParameters
+    {
+        public string? Status { get; init; }
+
+        public Guid? UserId { get; init; }
+
+        public string? EventCode { get; init; }
+
+        public Guid? CompanyId { get; init; }
+
+        public string? Recipient { get; init; }
+
+        public DateTimeOffset? From { get; init; }
+
+        public DateTimeOffset? To { get; init; }
 
         public int? Limit { get; init; }
 

@@ -17,6 +17,7 @@ public static class NotificationRegistration
         services.AddSingleton(sp => new NotificationCatalog(sp.GetServices<NotificationManifestSource>()));
         services.AddScoped<INotificationCentre, NotificationCentreService>();
         services.AddScoped<INotificationAdmin, NotificationAdminService>();
+        services.AddScoped<IDeliveryLog, DeliveryLogService>();
         return services;
     }
 
