@@ -377,5 +377,44 @@ settings:
     description: {en: "Days a notification item stays in a person's notification centre", ur: "دن جن تک اطلاع کا اندراج کسی شخص کے اطلاعاتی مرکز میں رہتا ہے"}
     help: {en: "The daily clean-up removes notification items older than this many days. Approvals and decisions are always kept in the workflow history.", ur: "روزانہ کی صفائی اتنے دن سے پرانے اطلاعی اندراجات ہٹا دیتی ہے۔ منظوریاں اور فیصلے ورک فلو کی تاریخ میں ہمیشہ محفوظ رہتے ہیں۔"}
 
+  # Slice S1.11c1 (KRN-DOC-01, KRN-DOC-02, KRN-DOC-08, rulings Q21, Q22, Q25): file scanning, upload limits and expiry reminders.
+  - key: doc.scan.mode
+    type: text
+    default: "required"
+    validation: {choices: [required, "off"]}
+    layers: [tenant]
+    area: documents
+    name: {en: "Virus scanning of files", ur: "فائلوں کی وائرس اسکیننگ"}
+    description: {en: "Whether uploaded files must be scanned before they can be downloaded", ur: "کیا اپ لوڈ کی گئی فائلیں ڈاؤن لوڈ سے پہلے اسکین ہونا ضروری ہیں"}
+    help: {en: "required: a file waits until it is scanned clean (and keeps waiting if the scanner is down). off: files are available at once and the health page shows them as not scanned.", ur: "required: فائل اسکین ہو کر صاف نکلنے تک انتظار کرتی ہے (اور اسکینر بند ہو تو انتظار کرتی رہتی ہے)۔ off: فائلیں فوراً دستیاب ہوتی ہیں اور ہیلتھ صفحہ انہیں غیر اسکین شدہ دکھاتا ہے۔"}
+  - key: doc.upload.max_mb
+    type: int
+    default: 20
+    validation: {min: 1, max: 200}
+    layers: [tenant]
+    area: documents
+    unit: MB
+    name: {en: "Largest file", ur: "سب سے بڑی فائل"}
+    description: {en: "Most megabytes one uploaded file may have", ur: "ایک اپ لوڈ کی گئی فائل کے زیادہ سے زیادہ میگا بائٹس"}
+    help: {en: "Larger files are refused.", ur: "اس سے بڑی فائلیں مسترد کر دی جاتی ہیں۔"}
+  - key: doc.upload.allowed_types
+    type: list
+    default: ["pdf", "jpeg", "png", "word", "excel", "text", "csv"]
+    validation: {choices: [pdf, jpeg, png, word, excel, text, csv], max_items: 7}
+    layers: [tenant]
+    area: documents
+    name: {en: "Allowed file types", ur: "اجازت یافتہ فائل کی اقسام"}
+    description: {en: "The kinds of file that may be attached", ur: "فائل کی وہ اقسام جو منسلک کی جا سکتی ہیں"}
+    help: {en: "The kind is checked from the content of the file, not from its name.", ur: "قسم فائل کے مواد سے جانچی جاتی ہے، اس کے نام سے نہیں۔"}
+  - key: doc.expiry.reminder_days
+    type: list
+    default: ["30", "7", "0"]
+    validation: {max_items: 6}
+    layers: [tenant]
+    area: documents
+    name: {en: "Expiry reminders (days before)", ur: "میعاد ختم ہونے کی یاد دہانی (دن پہلے)"}
+    description: {en: "How many days before a document expires reminders are sent", ur: "دستاویز کی میعاد ختم ہونے سے کتنے دن پہلے یاد دہانی بھیجی جائے"}
+    help: {en: "For example 30, 7 and 0 (the day of expiry). Each reminder goes to the person who uploaded the file.", ur: "مثلاً 30، 7 اور 0 (میعاد ختم ہونے کا دن)۔ ہر یاد دہانی فائل اپ لوڈ کرنے والے کو جاتی ہے۔"}
+
 # Release 1.0 has no requirement that needs a specific flag yet (ruling Q14): the mechanism ships with an empty list.
 flags: []

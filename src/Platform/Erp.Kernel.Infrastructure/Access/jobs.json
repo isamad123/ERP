@@ -161,6 +161,54 @@
       "manual": true,
       "request_permission": "job.runs.create",
       "schedule_editable": false
+    },
+    {
+      "code": "kernel.doc_scan",
+      "name": {"en": "Virus scan of files", "ur": "فائلوں کی وائرس اسکیننگ"},
+      "description": {"en": "Checks uploaded files that are waiting for the virus scanner. Files stay unavailable until they are found clean.", "ur": "اپ لوڈ کی گئی وہ فائلیں جانچتا ہے جو وائرس اسکینر کی منتظر ہیں۔ صاف پائے جانے تک فائلیں دستیاب نہیں ہوتیں۔"},
+      "schedule": {"every_minutes": 10},
+      "permissions": [],
+      "retry": {"max_attempts": 2, "backoff_seconds": [300]},
+      "timeout_seconds": 900,
+      "priority": 30,
+      "concurrency": 1,
+      "runs_in": ["full"],
+      "entitlement": "platform.base",
+      "manual": true,
+      "request_permission": "job.runs.create",
+      "schedule_editable": false
+    },
+    {
+      "code": "kernel.doc_retention",
+      "name": {"en": "File retention", "ur": "فائلوں کی مدتِ برقراری"},
+      "description": {"en": "Applies the retention rules: archives or destroys files whose keeping time has ended. Files under legal hold are never touched.", "ur": "برقراری کے اصول لاگو کرتا ہے: جن فائلوں کی مدت ختم ہو گئی انہیں محفوظ شدہ یا ختم کرتا ہے۔ قانونی روک والی فائلوں کو کبھی نہیں چھوتا۔"},
+      "schedule": {"daily": {"at": "03:45"}},
+      "permissions": [],
+      "retry": {"max_attempts": 2, "backoff_seconds": [300]},
+      "timeout_seconds": 3600,
+      "priority": 20,
+      "concurrency": 1,
+      "runs_in": ["full"],
+      "entitlement": "platform.base",
+      "manual": true,
+      "request_permission": "job.runs.create",
+      "schedule_editable": false
+    },
+    {
+      "code": "kernel.doc_expiry",
+      "name": {"en": "Document expiry reminders", "ur": "دستاویز کی میعاد کی یاد دہانی"},
+      "description": {"en": "Reminds the person who uploaded a document when it is about to expire.", "ur": "دستاویز اپ لوڈ کرنے والے کو یاد دلاتا ہے کہ اس کی میعاد ختم ہونے والی ہے۔"},
+      "schedule": {"daily": {"at": "07:00"}},
+      "permissions": [],
+      "retry": {"max_attempts": 2, "backoff_seconds": [300]},
+      "timeout_seconds": 900,
+      "priority": 30,
+      "concurrency": 1,
+      "runs_in": ["full"],
+      "entitlement": "platform.base",
+      "manual": true,
+      "request_permission": "job.runs.create",
+      "schedule_editable": false
     }
   ]
 }

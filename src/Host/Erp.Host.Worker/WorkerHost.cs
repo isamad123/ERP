@@ -10,6 +10,7 @@ using Erp.Kernel.Contracts.Settings;
 using Erp.Kernel.Infrastructure.Access;
 using Erp.Kernel.Infrastructure.Audit;
 using Erp.Kernel.Infrastructure.ControlPlane;
+using Erp.Kernel.Infrastructure.Documents;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Erp.Kernel.Infrastructure.Entitlements;
 using Erp.Kernel.Infrastructure.Generated;
@@ -92,6 +93,9 @@ public static class WorkerHost
             config["Mail:Bounce:Host"], config.GetValue("Mail:Bounce:Port", 993), config["Mail:Bounce:Security"] ?? "ssl", config["Mail:Bounce:Username"], config["Mail:Bounce:PasswordRef"],
             config["Mail:Bounce:Folder"] ?? "INBOX",
             config["Alerts:OperatorEmail"]));
+
+        // Files (S1.11c1): the same store and scanner settings as the API host; the scan, retention and expiry jobs run here.
+        services.AddKernelDocuments(new FileStoreOptions(config["Files:Store"] ?? "local", config["Files:Root"]), new VirusScanOptions(config["Files:Scan:Host"], config.GetValue("Files:Scan:Port", 3310)));
 
         // Jobs and events (S1.11a, rulings Q5, Q7, P6).
         var lease = TimeSpan.FromSeconds(config.GetValue("Jobs:LeaseSeconds", 60));

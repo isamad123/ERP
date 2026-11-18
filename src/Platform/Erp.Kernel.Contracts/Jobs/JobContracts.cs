@@ -122,6 +122,7 @@ public static class AlertKinds
     public const string ClockAhead = "clock_ahead";
     public const string UnusualAccess = "unusual_access";
     public const string PartitionProblem = "partition_problem";
+    public const string DocumentInfected = "document_infected";
 }
 
 /// <summary>
