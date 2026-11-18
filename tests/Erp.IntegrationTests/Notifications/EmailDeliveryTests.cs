@@ -365,4 +365,48 @@ public sealed class EmailDeliveryTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from ntf.outbound_messages where user_id = $1", Ct, null, sent));
         Assert.Equal(1, await _rig.ScalarAsync<long>("select count(*) from ntf.outbound_messages where user_id = $1", Ct, null, waiting));
     }
+
+    [Fact]
+    public async Task S111b2_KRN_NTF_07_the_operator_sets_the_checked_sender_address_or_the_customers_own_mail_server_and_the_customer_sets_name_and_reply_to()
+    {
+        var setup = new MailSetup(fx.Options, fx.Secrets, _rig.Clock, fx.Migrations);
+        await SetAsync("ntf.email.sender_name", "\"Acme HR\"");
+        await SetAsync("ntf.email.reply_to", "\"hr@acme.test\"");
+
+        // The relay with the sender address checked on the customer's domain.
+        await setup.SetSenderAsync(_rig.Code, "notices@acme.test", "operator@erp.test", Ct);
+        var (first, firstAddress) = await UserAsync();
+        await EventAsync("wf", "kernel.workflow.task_assigned", Assigned([first]));
+        await DispatchAsync();
+        await SendAsync();
+        var relayed = Assert.Single(_mail.To(firstAddress));
+        Assert.Equal("notices@acme.test", relayed.From.Mailboxes.Single().Address);
+        Assert.Equal("Acme HR", relayed.From.Mailboxes.Single().Name);
+        Assert.Equal("hr@acme.test", relayed.ReplyTo.Mailboxes.Single().Address);
+
+        // The customer's own mail server (here a second test server); its password goes to the secret store only.
+        await using var own = new TestMailServer();
+        await setup.SetServerAsync(_rig.Code, "127.0.0.1", own.Port, "none", null, "it@acme.test", "s3cret-not-in-db", "operator@erp.test", Ct);
+        Assert.Equal("s3cret-not-in-db", await fx.Secrets.GetAsync(MailSetup.PasswordReference(_rig.Code), Ct));
+        Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from itg.connectors where config::text like '%s3cret%'", Ct));
+        var view = await setup.ShowAsync(_rig.Code, Ct);
+        Assert.Equal("smtp", view!.Provider);
+        Assert.True(view.HasPassword);
+        var (second, secondAddress) = await UserAsync();
+        await EventAsync("wf", "kernel.workflow.task_assigned", Assigned([second]));
+        await DispatchAsync();
+        await SendAsync();
+        Assert.Equal("it@acme.test", Assert.Single(own.To(secondAddress)).From.Mailboxes.Single().Address);
+        Assert.Empty(_mail.To(secondAddress));
+        Assert.Equal(2, await _rig.ScalarAsync<long>("select count(*) from aud.change_log where entity_type = 'itg.connectors'", Ct));
+
+        // Cleared: back to the operator relay and its own sender address.
+        Assert.True(await setup.ClearAsync(_rig.Code, "operator@erp.test", Ct));
+        var (third, thirdAddress) = await UserAsync();
+        await EventAsync("wf", "kernel.workflow.task_assigned", Assigned([third]));
+        await DispatchAsync();
+        await SendAsync();
+        Assert.Equal("no-reply@erp.test", Assert.Single(_mail.To(thirdAddress)).From.Mailboxes.Single().Address);
+        await Assert.ThrowsAsync<ArgumentException>(() => setup.SetSenderAsync(_rig.Code, "not an address", "operator@erp.test", Ct));
+    }
 }
