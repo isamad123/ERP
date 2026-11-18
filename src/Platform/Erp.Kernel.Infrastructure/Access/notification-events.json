@@ -1045,6 +1045,116 @@
      "body": "ایک مسئلے نے ماہانہ ذخیرے کی تیاری روک دی۔ آپریٹر کو دیکھنا ہوگا۔"
     }
    }
+  },
+  {
+   "code": "identity.invitation",
+   "direct": true,
+   "group": "system",
+   "mandatory": true,
+   "audited": false,
+   "fields": [
+    {
+     "name": "hours",
+     "type": "number",
+     "class": "general"
+    }
+   ],
+   "audience": {},
+   "texts": {
+    "en": {
+     "title": "Activate your account",
+     "body": "An account has been created for you. Use the button below within {hours} hours to choose your password and activate the account. If you did not expect this e-mail, ignore it."
+    },
+    "ur": {
+     "title": "اپنا اکاؤنٹ فعال کریں",
+     "body": "آپ کے لیے ایک اکاؤنٹ بنایا گیا ہے۔ {hours} گھنٹوں کے اندر نیچے دیے گئے بٹن سے اپنا پاس ورڈ منتخب کریں اور اکاؤنٹ فعال کریں۔ اگر آپ کو اس ای میل کی توقع نہیں تھی تو اسے نظر انداز کر دیں۔"
+    }
+   }
+  },
+  {
+   "code": "identity.password_reset",
+   "direct": true,
+   "group": "system",
+   "mandatory": true,
+   "audited": false,
+   "fields": [
+    {
+     "name": "minutes",
+     "type": "number",
+     "class": "general"
+    }
+   ],
+   "audience": {},
+   "texts": {
+    "en": {
+     "title": "Reset your password",
+     "body": "We received a request to reset your password. Use the button below within {minutes} minutes to choose a new password; the link works once. If you did not ask for this, ignore this e-mail and your password stays the same."
+    },
+    "ur": {
+     "title": "اپنا پاس ورڈ دوبارہ ترتیب دیں",
+     "body": "ہمیں آپ کا پاس ورڈ دوبارہ ترتیب دینے کی درخواست ملی ہے۔ {minutes} منٹ کے اندر نیچے دیے گئے بٹن سے نیا پاس ورڈ منتخب کریں؛ لنک صرف ایک بار کام کرتا ہے۔ اگر یہ درخواست آپ نے نہیں کی تو اس ای میل کو نظر انداز کر دیں، آپ کا پاس ورڈ وہی رہے گا۔"
+    }
+   }
+  },
+  {
+   "code": "identity.email_code",
+   "direct": true,
+   "group": "system",
+   "mandatory": true,
+   "audited": false,
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "minutes",
+     "type": "number",
+     "class": "general"
+    }
+   ],
+   "audience": {},
+   "texts": {
+    "en": {
+     "title": "Your sign-in code",
+     "body": "Your sign-in code is {code}. It is valid for {minutes} minutes and works once. Never share this code with anyone."
+    },
+    "ur": {
+     "title": "آپ کا سائن ان کوڈ",
+     "body": "آپ کا سائن ان کوڈ {code} ہے۔ یہ {minutes} منٹ تک درست ہے اور صرف ایک بار کام کرتا ہے۔ یہ کوڈ کبھی کسی کو نہ بتائیں۔"
+    }
+   }
+  },
+  {
+   "code": "identity.enrolment_code",
+   "direct": true,
+   "group": "system",
+   "mandatory": true,
+   "audited": false,
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "minutes",
+     "type": "number",
+     "class": "general"
+    }
+   ],
+   "audience": {},
+   "texts": {
+    "en": {
+     "title": "Confirm your new authenticator",
+     "body": "Someone signed in with your password and is adding an authenticator app to your account. If this is you, enter the code {code} within {minutes} minutes. If it is not you, do not use the code and change your password at once."
+    },
+    "ur": {
+     "title": "اپنی نئی تصدیقی ایپ کی تصدیق کریں",
+     "body": "کسی نے آپ کے پاس ورڈ سے سائن ان کیا ہے اور آپ کے اکاؤنٹ میں تصدیقی ایپ شامل کر رہا ہے۔ اگر یہ آپ ہیں تو {minutes} منٹ کے اندر کوڈ {code} درج کریں۔ اگر یہ آپ نہیں ہیں تو کوڈ استعمال نہ کریں اور فوراً اپنا پاس ورڈ تبدیل کریں۔"
+    }
+   }
   }
  ]
 }

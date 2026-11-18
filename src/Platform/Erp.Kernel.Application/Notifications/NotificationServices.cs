@@ -114,3 +114,35 @@ public interface INotificationAdmin
     /// <summary>Removes a rule (the change log keeps what it was).</summary>
     Task DeleteSubscriptionAsync(Guid id, long rowVersion, CancellationToken cancellationToken);
 }
+
+/// <summary>One message of the delivery log (KRN-NTF-05, ADM-OPS-04; slice S1.11b2). <see cref="Resendable"/> is false for identity e-mails.</summary>
+public sealed record DeliveryView(Guid Id, DateTimeOffset CreatedAt, string Channel, string Status, string Recipient, Guid? UserId, string? EventCode, Guid? CompanyId,
+    string Subject, int Attempts, DateTimeOffset? NextAttemptAt, string? Error, string? ProviderRef, DateTimeOffset UpdatedAt, bool Resendable);
+
+/// <summary>A message with its text (the stored text; a sign-in link or code is never shown).</summary>
+public sealed record DeliveryDetail(DeliveryView Message, string Body, string? Link, string Language, Guid? ResendOf);
+
+public sealed record DeliveryQuery(string? Status = null, Guid? UserId = null, string? EventCode = null, Guid? CompanyId = null, string? Recipient = null,
+    DateTimeOffset? From = null, DateTimeOffset? To = null, int? Limit = null, int? Offset = null);
+
+/// <summary>The delivery numbers of the operations screen (ADM-OPS-05): waiting now, and results of the last 24 hours.</summary>
+public sealed record DeliverySummary(int Queued, int Retrying, int Sent24h, int Failed24h, int Dead24h, DateTimeOffset? OldestQueuedAt);
+
+/// <summary>A test e-mail of a text to the signed-in person (KRN-NTF-02 "test send"): the event, language, the text and sample values.</summary>
+public sealed record TestSendRequest(string EventCode, string Language, string? Subject, string Body, Dictionary<string, JsonElement>? Sample);
+
+/// <summary>The e-mail delivery log and its actions (slice S1.11b2 Build items 12 and 14; screens in S1.16).</summary>
+public interface IDeliveryLog
+{
+    Task<IReadOnlyList<DeliveryView>> ListAsync(DeliveryQuery query, CancellationToken cancellationToken);
+
+    Task<DeliveryDetail?> GetAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Queues a copy of a message as a new message; the original stays as it was. Refused for identity e-mails.</summary>
+    Task<DeliveryView> ResendAsync(Guid id, CancellationToken cancellationToken);
+
+    Task<DeliverySummary> SummaryAsync(CancellationToken cancellationToken);
+
+    /// <summary>Queues the text as an e-mail to the signed-in person, marked as a test.</summary>
+    Task<DeliveryView> TestSendAsync(TestSendRequest request, CancellationToken cancellationToken);
+}

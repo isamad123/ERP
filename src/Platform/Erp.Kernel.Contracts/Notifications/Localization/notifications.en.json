@@ -22,5 +22,13 @@
   "permissions.ntf.subscriptions.create": "Add notification rules",
   "permissions.ntf.subscriptions.update": "Change notification rules",
   "permissions.ntf.subscriptions.delete": "Remove notification rules",
-  "permissions.ntf.catalogue.read": "See which events can send notifications"
+  "permissions.ntf.catalogue.read": "See which events can send notifications",
+  "notifications.email.open_button": "Open",
+  "notifications.email.footer": "This e-mail was sent automatically. You can choose which e-mails you receive in your notification settings.",
+  "errors.notification.delivery_not_resendable": "This message carried a sign-in link or code and cannot be sent again. Send a new link instead.",
+  "errors.notification.no_email_address": "You have no e-mail address to send to.",
+  "permissions.ntf.outbound_messages.read": "See the e-mail delivery log",
+  "permissions.ntf.outbound_messages.resend": "Send e-mails again from the delivery log",
+  "permissions.ntf.templates.test_send": "Send a test e-mail of a notification text to yourself",
+  "errors.notification.delivery_waiting": "This message is still waiting to be sent."
 }

@@ -445,8 +445,8 @@
         "ur": "دوسرے مرحلے کے اجازت یافتہ طریقے"
       },
       "help": {
-        "en": "The second-factor methods users may enrol; in this release the authenticator app (totp).",
-        "ur": "وہ طریقے جن کا صارفین اندراج کر سکتے ہیں؛ اس ریلیز میں تصدیقی ایپ (totp)۔"
+        "en": "The second-factor methods users may enrol: the authenticator app (totp) and, from slice S1.11b2, a code sent by e-mail (email).",
+        "ur": "وہ طریقے جن کا صارفین اندراج کر سکتے ہیں: تصدیقی ایپ (totp) اور، سلائس S1.11b2 سے، ای میل پر بھیجا گیا کوڈ (email)۔"
       }
     },
     {
@@ -929,6 +929,229 @@
       "help": {
         "en": "Runs that succeeded, failed or were cancelled are removed from the job centre after this many days by the daily clean-up.",
         "ur": "کامیاب، ناکام یا منسوخ شدہ کام روزانہ کی صفائی کے ذریعے اتنے دن بعد جاب سینٹر سے ہٹا دیے جاتے ہیں۔"
+      }
+    },
+    {
+      "key": "ntf.email.sender_name",
+      "module": "ntf",
+      "type": "text",
+      "default": "",
+      "validation": {
+        "max_length": 100
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "notifications",
+      "unit": null,
+      "name": {
+        "en": "E-mail sender name",
+        "ur": "ای میل بھیجنے والے کا نام"
+      },
+      "description": {
+        "en": "Name shown as the sender of notification e-mails",
+        "ur": "اطلاعی ای میلز میں بھیجنے والے کے طور پر دکھایا جانے والا نام"
+      },
+      "help": {
+        "en": "For example your company name. The sender address itself is set by the operator after the domain checks.",
+        "ur": "مثلاً آپ کی کمپنی کا نام۔ بھیجنے کا پتا ڈومین کی جانچ کے بعد آپریٹر طے کرتا ہے۔"
+      }
+    },
+    {
+      "key": "ntf.email.reply_to",
+      "module": "ntf",
+      "type": "text",
+      "default": "",
+      "validation": {
+        "pattern": "^$|^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+        "max_length": 254
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "notifications",
+      "unit": null,
+      "name": {
+        "en": "Reply-to address",
+        "ur": "جواب کا پتا"
+      },
+      "description": {
+        "en": "Address that receives replies to notification e-mails",
+        "ur": "وہ پتا جس پر اطلاعی ای میلز کے جوابات آتے ہیں"
+      },
+      "help": {
+        "en": "Leave empty when replies are not wanted.",
+        "ur": "اگر جوابات نہیں چاہییں تو خالی چھوڑ دیں۔"
+      }
+    },
+    {
+      "key": "ntf.email.per_minute",
+      "module": "ntf",
+      "type": "int",
+      "default": 60,
+      "validation": {
+        "min": 1,
+        "max": 1000
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "notifications",
+      "unit": "e-mails per minute",
+      "name": {
+        "en": "E-mails per minute",
+        "ur": "فی منٹ ای میلز"
+      },
+      "description": {
+        "en": "Most notification e-mails sent in one minute",
+        "ur": "ایک منٹ میں زیادہ سے زیادہ اطلاعی ای میلز"
+      },
+      "help": {
+        "en": "E-mails above this number wait for the next minute.",
+        "ur": "اس تعداد سے زیادہ ای میلز اگلے منٹ کا انتظار کرتی ہیں۔"
+      }
+    },
+    {
+      "key": "iam.password_reset.minutes",
+      "module": "iam",
+      "type": "int",
+      "default": 60,
+      "validation": {
+        "min": 5,
+        "max": 1440
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "security.accounts",
+      "unit": "minutes",
+      "name": {
+        "en": "Password reset link validity",
+        "ur": "پاس ورڈ ری سیٹ لنک کی مدت"
+      },
+      "description": {
+        "en": "Minutes a password reset link stays valid",
+        "ur": "پاس ورڈ ری سیٹ لنک کتنے منٹ درست رہتا ہے"
+      },
+      "help": {
+        "en": "A reset link works once, within this many minutes.",
+        "ur": "ری سیٹ لنک صرف ایک بار، اتنے منٹ کے اندر کام کرتا ہے۔"
+      }
+    },
+    {
+      "key": "iam.password_reset.per_hour",
+      "module": "iam",
+      "type": "int",
+      "default": 5,
+      "validation": {
+        "min": 1,
+        "max": 50
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "security.accounts",
+      "unit": null,
+      "name": {
+        "en": "Reset requests per hour",
+        "ur": "فی گھنٹہ ری سیٹ درخواستیں"
+      },
+      "description": {
+        "en": "Most password reset e-mails sent to one account in an hour",
+        "ur": "ایک گھنٹے میں ایک اکاؤنٹ کو زیادہ سے زیادہ پاس ورڈ ری سیٹ ای میلز"
+      },
+      "help": {
+        "en": "Further requests in the same hour get the same answer but no e-mail.",
+        "ur": "اسی گھنٹے میں مزید درخواستوں کو وہی جواب ملتا ہے مگر ای میل نہیں جاتی۔"
+      }
+    },
+    {
+      "key": "iam.email_code.minutes",
+      "module": "iam",
+      "type": "int",
+      "default": 10,
+      "validation": {
+        "min": 1,
+        "max": 60
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "security.mfa",
+      "unit": "minutes",
+      "name": {
+        "en": "E-mail code validity",
+        "ur": "ای میل کوڈ کی مدت"
+      },
+      "description": {
+        "en": "Minutes a sign-in code sent by e-mail stays valid",
+        "ur": "ای میل پر بھیجا گیا سائن ان کوڈ کتنے منٹ درست رہتا ہے"
+      },
+      "help": {
+        "en": "A code works once, within this many minutes.",
+        "ur": "کوڈ صرف ایک بار، اتنے منٹ کے اندر کام کرتا ہے۔"
+      }
+    },
+    {
+      "key": "iam.email_code.max_attempts",
+      "module": "iam",
+      "type": "int",
+      "default": 5,
+      "validation": {
+        "min": 1,
+        "max": 10
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "security.mfa",
+      "unit": null,
+      "name": {
+        "en": "E-mail code tries",
+        "ur": "ای میل کوڈ کی کوششیں"
+      },
+      "description": {
+        "en": "Wrong entries after which an e-mail code stops working",
+        "ur": "غلط اندراجات جن کے بعد ای میل کوڈ کام کرنا چھوڑ دیتا ہے"
+      },
+      "help": {
+        "en": "After this many wrong entries the person asks for a new code.",
+        "ur": "اتنی غلط کوششوں کے بعد صارف کو نیا کوڈ منگوانا ہوتا ہے۔"
       }
     },
     {

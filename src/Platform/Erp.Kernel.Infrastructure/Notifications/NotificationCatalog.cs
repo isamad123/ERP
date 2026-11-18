@@ -5,8 +5,16 @@ using Erp.Kernel.Domain.Workflow;
 
 namespace Erp.Kernel.Infrastructure.Notifications;
 
-/// <summary>The title and body of a product text in one language.</summary>
-public sealed record NotificationTextSpec(string Title, string Body);
+/// <summary>
+/// The title and body of a product text in one language. The e-mail of the event uses <see cref="EmailSubject"/> and
+/// <see cref="EmailBody"/> when the catalogue gives them, else the title and body (slice S1.11b2, plan point P5).
+/// </summary>
+public sealed record NotificationTextSpec(string Title, string Body, string? EmailSubject = null, string? EmailBody = null)
+{
+    public string MailSubject => EmailSubject ?? Title;
+
+    public string MailBody => EmailBody ?? Body;
+}
 
 /// <summary>Who an event names by itself: users held in payload properties, fixed role codes and role codes held in a payload property.</summary>
 public sealed record NotificationAudienceSpec(IReadOnlyList<string> UserProperties, IReadOnlyList<string> Roles, string? RoleProperty);
@@ -32,8 +40,15 @@ public sealed record NotificationEventSpec(
     IReadOnlyList<NotificationField> Fields,
     IReadOnlyDictionary<string, IReadOnlyList<string>> Choices,
     NotificationAudienceSpec Audience,
-    IReadOnlyDictionary<string, NotificationTextSpec> Texts)
+    IReadOnlyDictionary<string, NotificationTextSpec> Texts,
+    bool Direct = false)
 {
+    /// <summary>
+    /// A direct entry (the identity e-mails of slice S1.11b2) comes from no outbox event: the identity services queue its
+    /// e-mail themselves, because it carries a link or code that must never be written to an event. E-mail only.
+    /// </summary>
+    public bool EmailOnly => Direct;
+
     /// <summary>The fields as the workflow condition format sees them (rules of ruling Q14).</summary>
     public IReadOnlyDictionary<string, RouteField> RouteFields =>
         Fields.ToDictionary(f => f.Name, f => new RouteField(f.Name, f.Type, Choices.TryGetValue(f.Name, out var c) ? c : []), StringComparer.Ordinal);
@@ -136,13 +151,15 @@ public sealed partial class NotificationCatalog
             var texts = new Dictionary<string, NotificationTextSpec>(StringComparer.Ordinal);
             foreach (var language in e.GetProperty("texts").EnumerateObject())
             {
-                texts[language.Name] = new NotificationTextSpec(language.Value.GetProperty("title").GetString()!, language.Value.GetProperty("body").GetString()!);
+                var email = language.Value.TryGetProperty("email", out var mail) ? mail : (JsonElement?)null;
+                texts[language.Name] = new NotificationTextSpec(language.Value.GetProperty("title").GetString()!, language.Value.GetProperty("body").GetString()!,
+                    email?.GetProperty("subject").GetString(), email?.GetProperty("body").GetString());
             }
 
             specs.Add(new NotificationEventSpec(
                 e.GetProperty("code").GetString()!,
                 module,
-                e.GetProperty("source").GetString()!,
+                e.TryGetProperty("source", out var source) ? source.GetString()! : string.Empty,
                 e.TryGetProperty("when", out var when) ? when.EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString()!, StringComparer.Ordinal) : [],
                 e.GetProperty("group").GetString()!,
                 e.TryGetProperty("mandatory", out var m) && m.GetBoolean(),
@@ -160,7 +177,8 @@ public sealed partial class NotificationCatalog
                     audience.TryGetProperty("users", out var users) ? [.. users.EnumerateArray().Select(x => x.GetString()!)] : [],
                     audience.TryGetProperty("roles", out var roles) ? [.. roles.EnumerateArray().Select(x => x.GetString()!)] : [],
                     audience.TryGetProperty("role_property", out var rp) ? rp.GetString() : null),
-                texts));
+                texts,
+                e.TryGetProperty("direct", out var direct) && direct.GetBoolean()));
         }
 
         return specs;
@@ -181,7 +199,12 @@ public sealed partial class NotificationCatalog
             problems.Add("group must be one of " + string.Join(", ", Groups));
         }
 
-        if (spec.Audience.UserProperties.Count == 0 && spec.Audience.Roles.Count == 0 && spec.Audience.RoleProperty is null)
+        if (spec.Direct != (spec.Source.Length == 0))
+        {
+            problems.Add("an entry has an outbox source, or is direct (identity e-mails), never both or neither");
+        }
+
+        if (!spec.Direct && spec.Audience.UserProperties.Count == 0 && spec.Audience.Roles.Count == 0 && spec.Audience.RoleProperty is null)
         {
             problems.Add("audience names nobody");
         }
@@ -207,9 +230,15 @@ public sealed partial class NotificationCatalog
             {
                 problems.Add($"text {language}: {key}");
             }
+
+            // The e-mail text (its own, or the in-app text reused) must pass the e-mail check: no personal-class value (GHR-06).
+            foreach (var key in NotificationText.Check(text.MailSubject, map, "email").Concat(NotificationText.Check(text.MailBody, map, "email")).Distinct(StringComparer.Ordinal))
+            {
+                problems.Add($"e-mail text {language}: {key}");
+            }
         }
 
-        if (spec.LinkProperty is null && spec.LinkTemplate is null)
+        if (!spec.Direct && spec.LinkProperty is null && spec.LinkTemplate is null)
         {
             problems.Add("an event needs a deep link (link or link_template)");
         }

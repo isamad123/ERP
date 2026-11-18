@@ -22,6 +22,15 @@ public static class NotificationPermissions
     public const string SubscriptionsDelete = "ntf.subscriptions.delete";
     public const string CatalogueRead = "ntf.catalogue.read";
 
+    /// <summary>The delivery log (generated read permission of <c>ntf.outbound_messages</c>, scope company).</summary>
+    public const string DeliveriesRead = "ntf.outbound_messages.read";
+
+    /// <summary>Resend from the delivery log (slice S1.11b2).</summary>
+    public const string DeliveriesResend = "ntf.outbound_messages.resend";
+
+    /// <summary>Send a test e-mail of a text to oneself (KRN-NTF-02, slice S1.11b2).</summary>
+    public const string TemplatesTestSend = "ntf.templates.test_send";
+
     public static IReadOnlyList<PermissionDefinition> All { get; } =
     [
         new(ItemsUpdate, "ntf", "permissions.ntf.in_app_items.update", false),
@@ -32,6 +41,8 @@ public static class NotificationPermissions
         new(SubscriptionsUpdate, "ntf", "permissions.ntf.subscriptions.update", false),
         new(SubscriptionsDelete, "ntf", "permissions.ntf.subscriptions.delete", false),
         new(CatalogueRead, "ntf", "permissions.ntf.catalogue.read", false),
+        new(DeliveriesResend, "ntf", "permissions.ntf.outbound_messages.resend", false),
+        new(TemplatesTestSend, "ntf", "permissions.ntf.templates.test_send", false),
     ];
 }
 
@@ -68,6 +79,8 @@ public static class NotificationErrors
     public const string TemplateEmpty = "errors.notification.template_empty";
     public const string ConditionInvalid = "errors.notification.condition_invalid";
     public const string AudienceEmpty = "errors.notification.audience_empty";
+    public const string NotResendable = "errors.notification.delivery_not_resendable";
+    public const string NoEmailAddress = "errors.notification.no_email_address";
     public const string AudienceUnknown = "errors.notification.audience_unknown";
     public const string MandatoryPreference = "errors.notification.mandatory_preference";
     public const string QuietHoursInvalid = "errors.notification.quiet_hours_invalid";

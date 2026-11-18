@@ -58,6 +58,10 @@ public static class KernelJobs
         services.AddSingleton<IJobHandler, MakerCheckerExpireJob>();
         services.AddSingleton<IJobHandler, OpsAlertsJob>();
         services.AddSingleton<IJobHandler, PurgeJob>();
+
+        // E-mail (slice S1.11b2): the sender and the bounce reader; their mail settings come with the notification consumer.
+        services.AddSingleton<IJobHandler, Notifications.Email.EmailSendJob>();
+        services.AddSingleton<IJobHandler, Notifications.Email.EmailBounceJob>();
         return services;
     }
 

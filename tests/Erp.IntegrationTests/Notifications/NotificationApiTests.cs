@@ -121,8 +121,8 @@ public sealed class NotificationApiTests(TenancyFixture fx) : IAsyncLifetime
         Assert.True(edit.Status == HttpStatusCode.Created, edit.Body);
         Assert.Equal(2, edit.Json.GetProperty("version").GetInt32());
         Assert.Equal("tenant", edit.Json.GetProperty("source").GetString());
-        Assert.Equal("active", await ScalarAsync<string>("select status from ntf.templates where event_code = 'workflow.task_assigned' and language = 'en' and version = 2"));
-        Assert.Equal("retired", await ScalarAsync<string>("select status from ntf.templates where event_code = 'workflow.task_assigned' and language = 'en' and version = 1"));
+        Assert.Equal("active", await ScalarAsync<string>("select status from ntf.templates where event_code = 'workflow.task_assigned' and channel = 'in_app' and language = 'en' and version = 2"));
+        Assert.Equal("retired", await ScalarAsync<string>("select status from ntf.templates where event_code = 'workflow.task_assigned' and channel = 'in_app' and language = 'en' and version = 1"));
         Assert.Equal(2, await ScalarAsync<long>("select count(*) from aud.change_log where entity_type = 'ntf.templates' and actor_user_id = $1", admin));
 
         // A later product text replaces version 1 only; the customer's edit stays the active text.
@@ -131,21 +131,21 @@ public sealed class NotificationApiTests(TenancyFixture fx) : IAsyncLifetime
             : s).ToList();
         await using (var c = await _h.OwnerAsync(_code, Ct))
         {
-            Assert.Equal(1, await NotificationSetup.EnsureAsync(c, null, product, _h.Clock.UtcNow, Ct));
+            Assert.Equal(2, await NotificationSetup.EnsureAsync(c, null, product, _h.Clock.UtcNow, Ct)); // in-app and e-mail text (S1.11b2: the e-mail reuses it)
             Assert.Equal(0, await NotificationSetup.EnsureAsync(c, null, product, _h.Clock.UtcNow, Ct)); // idempotent
         }
 
-        Assert.Equal("A new product text.", await ScalarAsync<string>("select body from ntf.templates where event_code = 'workflow.task_assigned' and language = 'en' and version = 1"));
-        Assert.Equal("Open the request and decide.", await ScalarAsync<string>("select body from ntf.templates where event_code = 'workflow.task_assigned' and language = 'en' and status = 'active'"));
+        Assert.Equal("A new product text.", await ScalarAsync<string>("select body from ntf.templates where event_code = 'workflow.task_assigned' and channel = 'in_app' and language = 'en' and version = 1"));
+        Assert.Equal("Open the request and decide.", await ScalarAsync<string>("select body from ntf.templates where event_code = 'workflow.task_assigned' and channel = 'in_app' and language = 'en' and status = 'active'"));
 
         var back = await _h.PostAsync(admin, "/api/ntf/text-templates/restore", new { eventCode = "workflow.task_assigned", channel = "in_app", language = "en" }, Ct, _code);
         Assert.True(back.Status == HttpStatusCode.OK, back.Body);
         Assert.Equal("product", back.Json.GetProperty("source").GetString());
-        Assert.Equal("active", await ScalarAsync<string>("select status from ntf.templates where event_code = 'workflow.task_assigned' and language = 'en' and version = 1"));
-        Assert.Equal("retired", await ScalarAsync<string>("select status from ntf.templates where event_code = 'workflow.task_assigned' and language = 'en' and version = 2"));
+        Assert.Equal("active", await ScalarAsync<string>("select status from ntf.templates where event_code = 'workflow.task_assigned' and channel = 'in_app' and language = 'en' and version = 1"));
+        Assert.Equal("retired", await ScalarAsync<string>("select status from ntf.templates where event_code = 'workflow.task_assigned' and channel = 'in_app' and language = 'en' and version = 2"));
 
         var list = await _h.GetAsync(admin, "/api/ntf/text-templates?eventCode=workflow.task_assigned", Ct, _code);
-        Assert.Equal(3, list.Json.GetArrayLength()); // product en, customer en (now retired) and product ur
+        Assert.Equal(5, list.Json.GetArrayLength()); // in-app: product en, customer en (now retired) and product ur; e-mail (S1.11b2): product en and ur
     }
 
     [Fact]
@@ -163,7 +163,8 @@ public sealed class NotificationApiTests(TenancyFixture fx) : IAsyncLifetime
         var preview = await _h.PostAsync(admin, "/api/ntf/text-templates/preview", new { eventCode = "licence.limit_warning", channel = "in_app", language = "ur", subject = "حد", body = "{used} / {max} ({percent}%)", sample = new { used = 4500 } }, Ct, _code);
         Assert.True(preview.Status == HttpStatusCode.OK, preview.Body);
         Assert.Equal("4,500 / 1,250 (1,250%)", preview.Text("body"));
-        Assert.Equal("errors.notification.no_product_text", (await _h.PostAsync(admin, "/api/ntf/text-templates/restore", new { eventCode = "workflow.task_assigned", channel = "email", language = "en" }, Ct, _code)).Text("title"));
+        // Every event has product e-mail texts from S1.11b2; an identity e-mail has no in-app text, so there is none to go back to.
+        Assert.Equal("errors.notification.no_product_text", (await _h.PostAsync(admin, "/api/ntf/text-templates/restore", new { eventCode = "identity.email_code", channel = "in_app", language = "en" }, Ct, _code)).Text("title"));
     }
 
     [Fact]

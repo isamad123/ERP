@@ -6,6 +6,7 @@ using Erp.Kernel.Domain.Notifications;
 using Erp.Kernel.Domain.Workflow;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.Identity;
+using Erp.Kernel.Infrastructure.Notifications.Email;
 using Npgsql;
 
 namespace Erp.Kernel.Infrastructure.Notifications;
@@ -17,9 +18,12 @@ namespace Erp.Kernel.Infrastructure.Notifications;
 /// item per person in the recipient's language, English when there is no text in it, and never twice: the item carries
 /// the event id as its dedup key, so even a second dispatch of the same event adds nothing. It runs in the dispatcher's
 /// transaction, so the items and the delivery record stand or fall together. In-app items are always delivered (ruling
-/// Q11); preferences and quiet hours decide e-mail, which part S1.11b2 sends from the same recipient list.
+/// Q11). From the same recipient list it queues one e-mail per person (slice S1.11b2 Build item 12), unless the person
+/// switched the event group off; quiet hours hold it to their end; a mandatory event ignores both (ruling Q11). The e-mail
+/// row carries the event id and person as its dedup key and the event's time as its row time, so it is written once too
+/// (plan point P4). The <c>worker_stopped</c> alert is also e-mailed to the operator's address when one is set (P13).
 /// </summary>
-public sealed class NotificationConsumer(NotificationCatalog catalog, IClock clock) : IEventConsumer
+public sealed class NotificationConsumer(NotificationCatalog catalog, IClock clock, MailOptions mail) : IEventConsumer
 {
     public const string ConsumerName = "ntf.notifications";
 
@@ -48,8 +52,47 @@ public sealed class NotificationConsumer(NotificationCatalog catalog, IClock clo
             {
                 await WriteItemAsync(c, tx, spec, message, values, recipient.UserId, recipient.Language, now, cancellationToken).ConfigureAwait(false);
             }
+
+            foreach (var recipient in recipients.Where(r => r.Email))
+            {
+                await QueueEmailAsync(c, tx, spec, message, values, recipient, company, now, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (spec.Code == OperatorAlert && mail.OperatorEmail is { Length: > 0 } operatorAddress)
+            {
+                await EmailOutbox.QueueAsync(c, tx, spec, new QueuedEmail(null, operatorAddress, spec.Code, company, "en", values, LinkOf(spec, message, values, "en"),
+                    message.Id.ToString("N") + ":operator", message.OccurredAt, null), null, BaselineSeed.SystemUserId, now, cancellationToken).ConfigureAwait(false);
+            }
         }
     }
+
+    /// <summary>The alert the operator also hears about by e-mail (<c>Alerts:OperatorEmail</c>, plan point P13).</summary>
+    public const string OperatorAlert = "alert.worker_stopped";
+
+    private static async Task QueueEmailAsync(NpgsqlConnection c, NpgsqlTransaction tx, NotificationEventSpec spec, OutboxEvent message, Dictionary<string, JsonElement> values,
+        Recipient recipient, Guid? company, DateTimeOffset now, CancellationToken ct)
+    {
+        var person = (await ReadAsync(c, tx, "select email, time_zone from iam.users where id = $1", r => (Email: r.GetString(0), Zone: r.GetString(1)), ct, recipient.UserId).ConfigureAwait(false)).FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(person.Email))
+        {
+            return;
+        }
+
+        var (enabled, from, to) = await EmailOutbox.PreferencesAsync(c, tx, recipient.UserId, spec.Group, ct).ConfigureAwait(false);
+        var zone = TimeZoneInfo.TryFindSystemTimeZoneById(person.Zone, out var z) ? z : TimeZoneInfo.Utc;
+        var (timing, sendAt) = NotificationPolicy.Email(recipient.Mandatory, enabled, now, zone, from, to);
+        if (timing == EmailTiming.Skip)
+        {
+            return;
+        }
+
+        await EmailOutbox.QueueAsync(c, tx, spec, new QueuedEmail(recipient.UserId, person.Email, spec.Code, company, recipient.Language, values,
+            LinkOf(spec, message, values, recipient.Language), message.Id.ToString("N") + ":" + recipient.UserId.ToString("N"), message.OccurredAt,
+            timing == EmailTiming.Held ? sendAt : null), null, BaselineSeed.SystemUserId, now, ct).ConfigureAwait(false);
+    }
+
+    private static string? LinkOf(NotificationEventSpec spec, OutboxEvent message, Dictionary<string, JsonElement> values, string language) =>
+        spec.LinkProperty is { } lp ? Text(message.Payload, lp) : spec.LinkTemplate is { } template ? NotificationText.Render(template, values, language) : null;
 
     /// <summary>The values a template or condition may use: the declared fields found in the payload (or in the object named by <c>fields_from</c>).</summary>
     public static Dictionary<string, JsonElement> Values(NotificationEventSpec spec, JsonElement payload)
@@ -189,7 +232,7 @@ public sealed class NotificationConsumer(NotificationCatalog catalog, IClock clo
             : (spec.Texts[language == "ur" ? "ur" : "en"].Title, spec.Texts[language == "ur" ? "ur" : "en"].Body, language);
         var title = NotificationText.Render(subject, values, used);
         var text = NotificationText.Render(body, values, used);
-        var link = spec.LinkProperty is { } lp ? Text(message.Payload, lp) : spec.LinkTemplate is { } template ? NotificationText.Render(template, values, used) : null;
+        var link = LinkOf(spec, message, values, used);
         await IdentityDb.ExecuteAsync(c, tx, """
             insert into ntf.in_app_items (id, user_id, event_code, title, body, link, event_group, dedup_key, created_at, created_by, updated_at, updated_by, row_version)
             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $9, $10, 1)

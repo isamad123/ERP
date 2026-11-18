@@ -95,6 +95,27 @@ public static class KernelSettingKeys
     /// <summary>Days a finished background run and its log stay in the job centre.</summary>
     public const string JobRetentionRunDays = "job.retention.run_days";
 
+    /// <summary>Name shown as the sender of notification e-mails.</summary>
+    public const string NtfEmailSenderName = "ntf.email.sender_name";
+
+    /// <summary>Address that receives replies to notification e-mails.</summary>
+    public const string NtfEmailReplyTo = "ntf.email.reply_to";
+
+    /// <summary>Most notification e-mails sent in one minute.</summary>
+    public const string NtfEmailPerMinute = "ntf.email.per_minute";
+
+    /// <summary>Minutes a password reset link stays valid.</summary>
+    public const string IamPasswordResetMinutes = "iam.password_reset.minutes";
+
+    /// <summary>Most password reset e-mails sent to one account in an hour.</summary>
+    public const string IamPasswordResetPerHour = "iam.password_reset.per_hour";
+
+    /// <summary>Minutes a sign-in code sent by e-mail stays valid.</summary>
+    public const string IamEmailCodeMinutes = "iam.email_code.minutes";
+
+    /// <summary>Wrong entries after which an e-mail code stops working.</summary>
+    public const string IamEmailCodeMaxAttempts = "iam.email_code.max_attempts";
+
     /// <summary>Days a notification item stays in a person's notification centre.</summary>
     public const string NtfInAppRetentionDays = "ntf.in_app.retention_days";
 }
