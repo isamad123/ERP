@@ -159,6 +159,30 @@ public sealed class IdentityHarness(TenancyFixture fx, WebApplication app, TestC
         return list;
     }
 
+    /// <summary>
+    /// The link or code of the person's latest identity e-mail of the event (slice S1.11b2), decrypted with the customer's
+    /// field key exactly as the sender job does; null when there is none (or it was already sent and wiped).
+    /// </summary>
+    public async Task<IReadOnlyDictionary<string, string>?> EmailedAsync(string code, Guid userId, string eventCode, CancellationToken ct)
+    {
+        await using var owner = await OwnerAsync(code, ct);
+        await using var command = new NpgsqlCommand("select secret from ntf.outbound_messages where user_id = $1 and event_code = $2 order by created_at desc, xmin::text::bigint desc limit 1", owner);
+        command.Parameters.Add(new NpgsqlParameter { Value = userId });
+        command.Parameters.Add(new NpgsqlParameter { Value = eventCode });
+        if (await command.ExecuteScalarAsync(ct) is not byte[] secret)
+        {
+            return null;
+        }
+
+        var key = await fx.Secrets.GetAsync(TenantFieldKeys.Reference(code), ct) ?? throw new InvalidOperationException($"no field key for {code}");
+        var plain = new AesGcmFieldEncryptor(Convert.FromBase64String(key), TenantFieldKeys.KeyVersion).Decrypt(secret, Kernel.Infrastructure.Notifications.Email.EmailOutbox.SecretPurpose);
+        return JsonSerializer.Deserialize<Dictionary<string, string>>(plain);
+    }
+
+    /// <summary>The code of the person's latest e-mail of the event (sign-in or enrolment code).</summary>
+    public async Task<string> EmailedCodeAsync(string code, Guid userId, string eventCode, CancellationToken ct) =>
+        (await EmailedAsync(code, userId, eventCode, ct))?["code"] ?? throw new InvalidOperationException($"no {eventCode} e-mail for {userId}");
+
     /// <summary>Sets a customer-level (tenant layer) or user-level setting value; returns an undo action.</summary>
     public async Task<Func<Task>> SetSettingAsync(string code, string key, string json, Guid? userId, CancellationToken ct)
     {

@@ -110,6 +110,7 @@ public static class ApiHost
         services.AddSingleton<FieldKeyCache>();
         services.AddScoped<IFieldEncryptorProvider, TenantFieldEncryptorProvider>();
         services.AddScoped<IAuthenticationService, AuthenticationService>();
+        services.AddScoped<IIdentityEmailService, IdentityEmailService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IUserAdministrationService, UserAdministrationService>();
 

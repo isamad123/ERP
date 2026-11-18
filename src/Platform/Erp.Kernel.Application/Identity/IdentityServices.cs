@@ -37,7 +37,8 @@ public sealed record AuthResult(
     string? ChallengeToken = null,
     IReadOnlyList<string>? Errors = null,
     DateTimeOffset? MfaEnrolBy = null,
-    IReadOnlyList<string>? RecoveryCodes = null)
+    IReadOnlyList<string>? RecoveryCodes = null,
+    IReadOnlyList<string>? MfaMethods = null)
 {
     public static AuthResult Failed { get; } = new(AuthOutcome.Failed);
 
@@ -45,7 +46,19 @@ public sealed record AuthResult(
 }
 
 /// <summary>A started authenticator-app enrolment: the device stays pending until a first code confirms it.</summary>
-public sealed record MfaEnrolment(Guid DeviceId, string OtpAuthUri, string Secret);
+/// <summary>
+/// A started enrolment. An authenticator app (<see cref="Kind"/> <c>totp</c>) has its secret and enrolment link; an
+/// e-mail factor (<c>email</c>, slice S1.11b2, CR-009) has neither: its first code was e-mailed. <see cref="EmailCodeSent"/>
+/// says a code was e-mailed that the confirm step needs (the e-mail factor, or the late enrolment check of R-003).
+/// </summary>
+public sealed record MfaEnrolment(Guid DeviceId, string? OtpAuthUri, string? Secret, string Kind = "totp", bool EmailCodeSent = false);
+
+/// <summary>The kinds of second factor of release 1.0 (CR-009): the authenticator app and a code sent by e-mail.</summary>
+public static class MfaKinds
+{
+    public const string Totp = "totp";
+    public const string Email = "email";
+}
 
 public sealed record SessionView(Guid Id, DateTimeOffset IssuedAt, DateTimeOffset LastSeenAt, DateTimeOffset ExpiresAt, string? IpAddress, string? UserAgent, bool IsCurrent);
 
@@ -65,9 +78,17 @@ public interface IAuthenticationService
     Task<AuthResult> ChangeRequiredPasswordAsync(string? challengeToken, string? newPassword, ClientInfo client, CancellationToken cancellationToken);
 
     /// <summary>Starts the enrolment a user must complete after the grace period; null when the challenge is not valid.</summary>
-    Task<MfaEnrolment?> StartRequiredEnrolmentAsync(string? challengeToken, CancellationToken cancellationToken);
+    /// <remarks>
+    /// Slice S1.11b2 (R-003): an authenticator enrolled here also needs a code e-mailed to the person, so a password alone
+    /// cannot add a second factor; <paramref name="kind"/> <c>email</c> enrols the e-mail factor instead (when allowed).
+    /// </remarks>
+    Task<MfaEnrolment?> StartRequiredEnrolmentAsync(string? challengeToken, string? kind, CancellationToken cancellationToken);
 
-    Task<AuthResult> ConfirmRequiredEnrolmentAsync(string? challengeToken, Guid deviceId, string? code, ClientInfo client, CancellationToken cancellationToken);
+    /// <summary>
+    /// Confirms it: <paramref name="code"/> is the authenticator code, or the e-mailed code for the e-mail factor;
+    /// <paramref name="emailCode"/> is the e-mailed confirmation code an authenticator enrolled here needs (R-003).
+    /// </summary>
+    Task<AuthResult> ConfirmRequiredEnrolmentAsync(string? challengeToken, Guid deviceId, string? code, string? emailCode, ClientInfo client, CancellationToken cancellationToken);
 
     /// <summary>Rotates the refresh token (ruling P6). A reused, revoked or expired one gets <see cref="AuthOutcome.Failed"/>.</summary>
     Task<AuthResult> RefreshAsync(string? refreshToken, ClientInfo client, CancellationToken cancellationToken);
@@ -97,7 +118,8 @@ public interface IAccountService
 
     Task<IReadOnlyList<MfaDeviceView>> ListMfaDevicesAsync(Guid userId, CancellationToken cancellationToken);
 
-    Task<MfaEnrolment> StartMfaEnrolmentAsync(Guid userId, string? label, Reauthentication proof, CancellationToken cancellationToken);
+    /// <remarks><paramref name="kind"/> <c>email</c> (slice S1.11b2, CR-009) enrols the e-mail factor; its first code is e-mailed.</remarks>
+    Task<MfaEnrolment> StartMfaEnrolmentAsync(Guid userId, string? label, string? kind, Reauthentication proof, CancellationToken cancellationToken);
 
     /// <summary>Recovery codes (shown once) when the first device is confirmed, empty for a further device, null when the code is wrong.</summary>
     Task<IReadOnlyList<string>?> ConfirmMfaEnrolmentAsync(Guid userId, Guid deviceId, string? code, CancellationToken cancellationToken);
@@ -215,3 +237,38 @@ public sealed class ReauthenticationFailedException : Exception
 
 /// <summary>Proof that the signed-in person is present: the current password or a current authenticator code.</summary>
 public sealed record Reauthentication(string? CurrentPassword, string? Code);
+
+/// <summary>
+/// The identity e-mails (slice S1.11b2 Build item 16; KRN-IAM-01, KRN-IAM-02, ADM-USR-02, R-003; ruling Q16). Links and
+/// codes are e-mailed, never returned by the API and never written to an event.
+/// </summary>
+public interface IIdentityEmailService
+{
+    /// <summary>
+    /// Forgot password: e-mails a single-use reset link to an active account found by username or e-mail. It returns the
+    /// same, after about the same time, whether or not the account exists, and sends nothing beyond the hourly limit.
+    /// </summary>
+    Task RequestPasswordResetAsync(string? login, CancellationToken cancellationToken);
+
+    /// <summary>Sets a new password with a reset link: null when the link is not valid; empty when done; else the password errors.</summary>
+    Task<IReadOnlyList<string>?> ResetPasswordAsync(string? token, string? newPassword, CancellationToken cancellationToken);
+
+    /// <summary>E-mails a sign-in code for a second-factor challenge; false when the challenge or the e-mail factor is not valid.</summary>
+    Task<bool> SendSignInCodeAsync(string? challengeToken, CancellationToken cancellationToken);
+
+    /// <summary>An administrator sends (or sends again) an invited person's activation link (ADM-USR-02).</summary>
+    Task<AdminResult> SendInvitationAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>An administrator sends a person a password reset link.</summary>
+    Task<AdminResult> SendPasswordResetLinkAsync(Guid userId, string? reason, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// A second-factor request that cannot be served (slice S1.11b2): the method is not allowed for the customer, or too many
+/// codes were e-mailed in the last hour. The message is the localization key.
+/// </summary>
+public sealed class MfaRequestRefusedException(string errorKey) : Exception(errorKey)
+{
+    public const string MethodNotAllowed = "errors.mfa.method_not_allowed";
+    public const string TooManyCodes = "errors.mfa.too_many_codes";
+}

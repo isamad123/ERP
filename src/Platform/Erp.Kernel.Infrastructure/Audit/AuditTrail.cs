@@ -21,6 +21,7 @@ public static class AuditTrail
     {
         IdentityEvents.PasswordChanged, IdentityEvents.PasswordChangeForced, IdentityEvents.MfaEnrolled, IdentityEvents.MfaRemoved,
         IdentityEvents.MfaReset, IdentityEvents.SessionsRevoked, IdentityEvents.ActivationTokenIssued, IdentityEvents.RecoveryCodesRegenerated,
+        IdentityEvents.PasswordResetLinkSent, IdentityEvents.EmailCodeSent,
         AccessEvents.PermissionsRegistered,
     };
 

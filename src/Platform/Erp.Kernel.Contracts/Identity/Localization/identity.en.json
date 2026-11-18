@@ -23,5 +23,12 @@
   "permissions.iam.users.read_sessions": "View a user's active sessions",
   "permissions.iam.users.reset_mfa": "Reset a user's authenticator apps",
   "permissions.iam.users.revoke_sessions": "Sign a user out of all sessions",
-  "permissions.iam.users.unlock": "Unlock a user"
+  "permissions.iam.users.unlock": "Unlock a user",
+  "permissions.iam.users.send_invitation": "Send people their activation e-mail",
+  "permissions.iam.users.send_password_reset": "Send people a password reset link",
+  "errors.user.not_invited": "This person has already activated the account.",
+  "errors.user.reset_not_possible": "A reset link cannot be sent: the account is disabled, locked by an administrator or not activated yet.",
+  "errors.mfa.email_code_invalid": "The code from the e-mail is wrong or has expired. Ask for a new one.",
+  "errors.mfa.method_not_allowed": "This sign-in method is not available.",
+  "errors.mfa.too_many_codes": "Too many codes were sent in the last hour. Try again later."
 }

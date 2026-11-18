@@ -16,6 +16,8 @@ namespace Erp.Kernel.Infrastructure.Identity;
 /// Argon2id work, whether the user is unknown, the password wrong, or the account disabled or locked (ruling P5).
 /// Order of steps after the password: second factor (if a device is enrolled) → required password change →
 /// required MFA enrolment (after the grace period) → session.
+/// <para>Slice S1.11b2: the second factor may be a code sent by e-mail (CR-009) when the customer allows it; an authenticator
+/// enrolled at sign-in after the grace period also needs a code e-mailed to the person (R-003).</para>
 /// </summary>
 public sealed class AuthenticationService(
     ITenantConnectionProvider database,
@@ -24,7 +26,8 @@ public sealed class AuthenticationService(
     IPasswordHasher hasher,
     IAccessTokenIssuer issuer,
     IFieldEncryptorProvider encryptors,
-    ILimitGuard limits) : IAuthenticationService
+    ILimitGuard limits,
+    Notifications.NotificationCatalog catalog) : IAuthenticationService
 {
     private const int MaxLoginLength = 320;
     private const int MaxPasswordLength = 1024;
@@ -127,6 +130,17 @@ public sealed class AuthenticationService(
             }
         }
 
+        // The e-mail factor (slice S1.11b2, CR-009): the code e-mailed for this challenge, while the customer allows the method.
+        if (!ok && string.IsNullOrWhiteSpace(recoveryCode) && !string.IsNullOrWhiteSpace(code) && policy.Mfa.AllowedMethods.Contains(MfaKinds.Email, StringComparer.Ordinal)
+            && await IdentityDb.HasActiveEmailFactorAsync(connection, tx, account.Id, cancellationToken).ConfigureAwait(false))
+        {
+            ok = await EmailCodes.VerifyAsync(connection, tx, account.Id, EmailCodes.SignIn, token.Id, code, policy.Email.CodeAttempts, account.Id, now, cancellationToken).ConfigureAwait(false);
+            if (ok)
+            {
+                await IdentityDb.ExecuteAsync(connection, tx, "update iam.mfa_devices set last_used_at = $2 where user_id = $1 and kind = 'email' and status = 'active'", cancellationToken, account.Id, now).ConfigureAwait(false);
+            }
+        }
+
         if (!ok)
         {
             await CountFailureAsync(connection, tx, account, policy, now, cancellationToken).ConfigureAwait(false);
@@ -169,24 +183,49 @@ public sealed class AuthenticationService(
         return result;
     }
 
-    public async Task<MfaEnrolment?> StartRequiredEnrolmentAsync(string? challengeToken, CancellationToken cancellationToken)
+    public async Task<MfaEnrolment?> StartRequiredEnrolmentAsync(string? challengeToken, string? kind, CancellationToken cancellationToken)
     {
         var now = clock.UtcNow;
         await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var (token, account) = await ChallengeAsync(connection, tx, challengeToken, IdentityDb.MfaEnrolment, now, cancellationToken).ConfigureAwait(false);
-        if (token is null || account is null)
+        if (token is null || account is null || kind is not (null or MfaKinds.Totp or MfaKinds.Email))
         {
             return null;
         }
 
+        var policy = await IdentitySettings.ReadAsync(connection, tx, account.Id, now, cancellationToken).ConfigureAwait(false);
         var encryptor = await encryptors.GetAsync(cancellationToken).ConfigureAwait(false);
-        var enrolment = await MfaEnrolments.StartAsync(connection, tx, account, null, tenant.TenantCode, encryptor, now, cancellationToken).ConfigureAwait(false);
+        MfaEnrolment enrolment;
+        if (kind == MfaKinds.Email)
+        {
+            if (!policy.Mfa.AllowedMethods.Contains(MfaKinds.Email, StringComparer.Ordinal))
+            {
+                return null;
+            }
+
+            // The e-mail factor proves the mailbox by itself: its first code goes to the person's address.
+            enrolment = await MfaEnrolments.StartEmailAsync(connection, tx, account, now, cancellationToken).ConfigureAwait(false);
+            if (!await IdentityEmailService.EmailCodeForAsync(connection, tx, catalog, encryptor, account.Id, EmailCodes.SignIn, enrolment.DeviceId, IdentityMail.SignInCode, policy, now, cancellationToken).ConfigureAwait(false))
+            {
+                return null;
+            }
+        }
+        else
+        {
+            // R-003: a password alone must not add an authenticator after the grace period; a code to the person's mailbox confirms it.
+            enrolment = await MfaEnrolments.StartAsync(connection, tx, account, null, tenant.TenantCode, encryptor, now, cancellationToken).ConfigureAwait(false);
+            if (!await IdentityEmailService.EmailCodeForAsync(connection, tx, catalog, encryptor, account.Id, EmailCodes.EnrolmentConfirm, enrolment.DeviceId, IdentityMail.EnrolmentCode, policy, now, cancellationToken).ConfigureAwait(false))
+            {
+                return null;
+            }
+        }
+
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
-        return enrolment;
+        return enrolment with { EmailCodeSent = true };
     }
 
-    public async Task<AuthResult> ConfirmRequiredEnrolmentAsync(string? challengeToken, Guid deviceId, string? code, ClientInfo client, CancellationToken cancellationToken)
+    public async Task<AuthResult> ConfirmRequiredEnrolmentAsync(string? challengeToken, Guid deviceId, string? code, string? emailCode, ClientInfo client, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(client);
         var now = clock.UtcNow;
@@ -200,10 +239,28 @@ public sealed class AuthenticationService(
 
         var policy = await IdentitySettings.ReadAsync(connection, tx, account.Id, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         var encryptor = await encryptors.GetAsync(cancellationToken).ConfigureAwait(false);
-        var codes = await MfaEnrolments.ConfirmAsync(connection, tx, account.Id, deviceId, code, policy.Mfa, encryptor, hasher, now, cancellationToken).ConfigureAwait(false);
+        var kind = await IdentityDb.ScalarAsync<string?>(connection, tx, "select kind from iam.mfa_devices where id = $1 and user_id = $2 and status = 'pending'", cancellationToken, deviceId, account.Id).ConfigureAwait(false);
+        if (kind == MfaKinds.Totp
+            && !await EmailCodes.VerifyAsync(connection, tx, account.Id, EmailCodes.EnrolmentConfirm, deviceId, emailCode, policy.Email.CodeAttempts, account.Id, now, cancellationToken).ConfigureAwait(false))
+        {
+            // R-003: without the code from the person's mailbox the authenticator is not added; the wrong try is kept.
+            await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+            return AuthResult.Invalid(MfaEnrolments.EmailCodeInvalid);
+        }
+
+        var codes = await MfaEnrolments.ConfirmAsync(connection, tx, account.Id, deviceId, code, policy, encryptor, hasher, now, cancellationToken).ConfigureAwait(false);
         if (codes is null)
         {
-            await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+            if (kind == MfaKinds.Totp)
+            {
+                // A wrong authenticator code: the e-mailed code just checked stays usable for the next try.
+                await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             return AuthResult.Invalid(MfaEnrolments.CodeInvalid);
         }
 
@@ -341,7 +398,11 @@ public sealed class AuthenticationService(
         if (hasDevice && !mfaDone)
         {
             var challenge = await IdentityDb.IssueTokenAsync(connection, tx, account.Id, IdentityDb.MfaChallenge, policy.ChallengeLifetime, account.Id, now, cancellationToken).ConfigureAwait(false);
-            return new AuthResult(AuthOutcome.MfaRequired, ChallengeToken: challenge);
+            // Which factors the person can use now (slice S1.11b2): the sign-in screen offers "send me a code" for the e-mail factor.
+            var kinds = await Notifications.NotificationConsumer.ReadAsync(connection, tx, "select distinct kind from iam.mfa_devices where user_id = $1 and status = 'active' order by kind",
+                r => r.GetString(0), cancellationToken, account.Id).ConfigureAwait(false);
+            return new AuthResult(AuthOutcome.MfaRequired, ChallengeToken: challenge,
+                MfaMethods: [.. kinds.Where(k => k != MfaKinds.Email || policy.Mfa.AllowedMethods.Contains(MfaKinds.Email, StringComparer.Ordinal))]);
         }
 
         if (account.MustChange || (account.PasswordChangedAt is { } changed && PasswordRules.IsExpired(changed, now, policy.Password)))
@@ -469,6 +530,24 @@ internal static class Passwords
 internal static class MfaEnrolments
 {
     public const string CodeInvalid = "errors.mfa.code_invalid";
+    public const string EmailCodeInvalid = "errors.mfa.email_code_invalid";
+
+    /// <summary>A pending e-mail factor (slice S1.11b2, CR-009), labelled with the masked address; its first code is e-mailed by the caller.</summary>
+    public static async Task<MfaEnrolment> StartEmailAsync(NpgsqlConnection connection, NpgsqlTransaction tx, UserAccount account, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        if (await IdentityDb.HasActiveEmailFactorAsync(connection, tx, account.Id, cancellationToken).ConfigureAwait(false))
+        {
+            throw new MfaRequestRefusedException(MfaRequestRefusedException.MethodNotAllowed);
+        }
+
+        await IdentityDb.ExecuteAsync(connection, tx, "delete from iam.mfa_devices where user_id = $1 and status = 'pending'", cancellationToken, account.Id).ConfigureAwait(false);
+        var id = Guid.CreateVersion7(now);
+        await IdentityDb.ExecuteAsync(connection, tx, """
+            insert into iam.mfa_devices (id, user_id, kind, secret, label, last_used_at, status, created_at, created_by, updated_at, updated_by)
+            values ($1, $2, 'email', null, $3, null, 'pending', $4, $2, $4, $2)
+            """, cancellationToken, id, account.Id, IdentityMail.Masked(account.Email), now).ConfigureAwait(false);
+        return new MfaEnrolment(id, null, null, MfaKinds.Email);
+    }
 
     public static async Task<MfaEnrolment> StartAsync(NpgsqlConnection connection, NpgsqlTransaction tx, UserAccount account, string? label, string tenantCode, IFieldEncryptor encryptor, DateTimeOffset now, CancellationToken cancellationToken)
     {
@@ -484,8 +563,28 @@ internal static class MfaEnrolments
     }
 
     /// <summary>Activates a pending device with its first code; recovery codes for the first device, empty for another, null if the code is wrong.</summary>
-    public static async Task<IReadOnlyList<string>?> ConfirmAsync(NpgsqlConnection connection, NpgsqlTransaction tx, Guid userId, Guid deviceId, string? code, MfaPolicy policy, IFieldEncryptor encryptor, IPasswordHasher hasher, DateTimeOffset now, CancellationToken cancellationToken)
+    public static async Task<IReadOnlyList<string>?> ConfirmAsync(NpgsqlConnection connection, NpgsqlTransaction tx, Guid userId, Guid deviceId, string? code, IdentityPolicy policy, IFieldEncryptor encryptor, IPasswordHasher hasher, DateTimeOffset now, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(policy);
+
+        // The e-mail factor (slice S1.11b2): confirmed by the code e-mailed for this device.
+        var kind = await IdentityDb.ScalarAsync<string?>(connection, tx, "select kind from iam.mfa_devices where id = $1 and user_id = $2 and status = 'pending'", cancellationToken, deviceId, userId).ConfigureAwait(false);
+        if (kind == MfaKinds.Email)
+        {
+            var firstFactor = !await IdentityDb.HasActiveMfaAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
+            if (!policy.Mfa.AllowedMethods.Contains(MfaKinds.Email, StringComparer.Ordinal)
+                || !await EmailCodes.VerifyAsync(connection, tx, userId, EmailCodes.SignIn, deviceId, code, policy.Email.CodeAttempts, userId, now, cancellationToken).ConfigureAwait(false))
+            {
+                return null;
+            }
+
+            await IdentityDb.ExecuteAsync(connection, tx, """
+                update iam.mfa_devices set status = 'active', last_used_at = $3, updated_at = $3, updated_by = $2, row_version = row_version + 1 where id = $1 and user_id = $2
+                """, cancellationToken, deviceId, userId, now).ConfigureAwait(false);
+            await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.MfaEnrolled, userId, userId, now, new { device = deviceId, kind = MfaKinds.Email }, cancellationToken).ConfigureAwait(false);
+            return firstFactor ? await IdentityDb.NewRecoveryCodesAsync(connection, tx, userId, policy.Mfa.RecoveryCodeCount, hasher, userId, now, cancellationToken).ConfigureAwait(false) : [];
+        }
+
         var device = (await IdentityDb.MfaDevicesAsync(connection, tx, userId, "pending", cancellationToken).ConfigureAwait(false)).Find(d => d.Id == deviceId);
         if (device?.Secret is null)
         {
@@ -500,6 +599,6 @@ internal static class MfaEnrolments
         }
 
         await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.MfaEnrolled, userId, userId, now, new { device = device.Id, kind = "totp" }, cancellationToken).ConfigureAwait(false);
-        return first ? await IdentityDb.NewRecoveryCodesAsync(connection, tx, userId, policy.RecoveryCodeCount, hasher, userId, now, cancellationToken).ConfigureAwait(false) : [];
+        return first ? await IdentityDb.NewRecoveryCodesAsync(connection, tx, userId, policy.Mfa.RecoveryCodeCount, hasher, userId, now, cancellationToken).ConfigureAwait(false) : [];
     }
 }

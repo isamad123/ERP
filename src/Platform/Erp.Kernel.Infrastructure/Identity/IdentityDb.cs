@@ -33,6 +33,7 @@ internal static class IdentityDb
     public const string MfaChallenge = "mfa_challenge";
     public const string PasswordChange = "password_change";
     public const string MfaEnrolment = "mfa_enrolment";
+    public const string PasswordReset = "password_reset";
     public const string MfaSecretPurpose = "iam.mfa_devices.secret";
 
     public static async Task<NpgsqlConnection> OpenAsync(DbDataSource dataSource, CancellationToken cancellationToken) =>
@@ -314,6 +315,10 @@ internal static class IdentityDb
         return list;
     }
 
+    /// <summary>Whether the user has an active e-mail factor (slice S1.11b2, CR-009).</summary>
+    public static Task<bool> HasActiveEmailFactorAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, CancellationToken ct) =>
+        ScalarAsync<bool>(c, tx, "select exists (select 1 from iam.mfa_devices where user_id = $1 and kind = 'email' and status = 'active')", ct, userId);
+
     public static Task<bool> HasActiveMfaAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, CancellationToken ct) =>
         ScalarAsync<bool>(c, tx, "select exists (select 1 from iam.mfa_devices where user_id = $1 and status = 'active')", ct, userId);
 
@@ -420,4 +425,10 @@ public static class IdentityEvents
     public const string SessionsRevoked = "iam.sessions_revoked";
     public const string ActivationTokenIssued = "iam.activation_token_issued";
     public const string RecoveryCodesRegenerated = "iam.recovery_codes_regenerated";
+
+    /// <summary>A password reset link was e-mailed (slice S1.11b2): by the person (forgot password) or an administrator.</summary>
+    public const string PasswordResetLinkSent = "iam.password_reset_link_sent";
+
+    /// <summary>A sign-in or enrolment code was e-mailed (slice S1.11b2, CR-009, R-003). The code itself is never in the event.</summary>
+    public const string EmailCodeSent = "iam.email_code_sent";
 }

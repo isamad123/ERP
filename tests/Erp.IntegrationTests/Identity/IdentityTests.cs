@@ -271,8 +271,10 @@ public sealed class IdentityTests(TenancyFixture fx) : IAsyncLifetime
             var challenge = after.Text("challengeToken")!;
             var start = await h.PostAsync(A, "/api/iam/auth/mfa-enrolment", new { challengeToken = challenge }, ct: ct);
             var secret = start.Text("secret")!;
-            Assert.Equal(HttpStatusCode.BadRequest, (await h.PostAsync(A, "/api/iam/auth/mfa-enrolment/confirm", new { challengeToken = challenge, deviceId = start.Text("deviceId"), code = "000000" }, ct: ct)).Status);
-            var done = await h.PostAsync(A, "/api/iam/auth/mfa-enrolment/confirm", new { challengeToken = challenge, deviceId = start.Text("deviceId"), code = h.Code(secret) }, ct: ct);
+            // S1.11b2 (R-003): an enrolment after the grace period also needs the code e-mailed to the person.
+            var emailCode = await h.EmailedCodeAsync(A, userId, "identity.enrolment_code", ct);
+            Assert.Equal(HttpStatusCode.BadRequest, (await h.PostAsync(A, "/api/iam/auth/mfa-enrolment/confirm", new { challengeToken = challenge, deviceId = start.Text("deviceId"), code = "000000", emailCode }, ct: ct)).Status);
+            var done = await h.PostAsync(A, "/api/iam/auth/mfa-enrolment/confirm", new { challengeToken = challenge, deviceId = start.Text("deviceId"), code = h.Code(secret), emailCode }, ct: ct);
             Assert.Equal("tokens", done.Text("outcome"));
             Assert.Equal(10, done.Json.GetProperty("recoveryCodes").GetArrayLength());
             Assert.Equal("mfa_required", (await h.SignInAsync(A, username, IdentityHarness.Password, ct)).Text("outcome"));

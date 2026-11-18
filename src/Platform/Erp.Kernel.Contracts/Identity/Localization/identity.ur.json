@@ -23,5 +23,12 @@
   "permissions.iam.users.read_sessions": "صارف کے فعال سیشن دیکھیں",
   "permissions.iam.users.reset_mfa": "صارف کی تصدیقی ایپس دوبارہ ترتیب دیں",
   "permissions.iam.users.revoke_sessions": "صارف کو تمام سیشنز سے سائن آؤٹ کریں",
-  "permissions.iam.users.unlock": "صارف کو کھولیں"
+  "permissions.iam.users.unlock": "صارف کو کھولیں",
+  "permissions.iam.users.send_invitation": "لوگوں کو اکاؤنٹ فعال کرنے کی ای میل بھیجنا",
+  "permissions.iam.users.send_password_reset": "لوگوں کو پاس ورڈ ری سیٹ لنک بھیجنا",
+  "errors.user.not_invited": "یہ شخص اکاؤنٹ پہلے ہی فعال کر چکا ہے۔",
+  "errors.user.reset_not_possible": "ری سیٹ لنک نہیں بھیجا جا سکتا: اکاؤنٹ غیر فعال ہے، منتظم نے لاک کیا ہے یا ابھی فعال نہیں ہوا۔",
+  "errors.mfa.email_code_invalid": "ای میل والا کوڈ غلط ہے یا اس کی مدت ختم ہو گئی ہے۔ نیا کوڈ منگوائیں۔",
+  "errors.mfa.method_not_allowed": "سائن ان کا یہ طریقہ دستیاب نہیں۔",
+  "errors.mfa.too_many_codes": "پچھلے ایک گھنٹے میں بہت زیادہ کوڈ بھیجے گئے۔ بعد میں دوبارہ کوشش کریں۔"
 }

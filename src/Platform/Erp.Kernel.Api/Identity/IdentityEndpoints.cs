@@ -17,7 +17,17 @@ public sealed record RequiredPasswordRequest(string? ChallengeToken, string? New
 
 public sealed record ChallengeRequest(string? ChallengeToken);
 
-public sealed record EnrolmentConfirmRequest(string? ChallengeToken, Guid DeviceId, string? Code);
+/// <summary>Start of the required enrolment; <see cref="Kind"/> <c>totp</c> (default) or <c>email</c> (slice S1.11b2).</summary>
+public sealed record EnrolmentStartRequest(string? ChallengeToken, string? Kind);
+
+/// <summary>Confirm of the required enrolment; an authenticator also needs <see cref="EmailCode"/>, the code e-mailed at start (R-003).</summary>
+public sealed record EnrolmentConfirmRequest(string? ChallengeToken, Guid DeviceId, string? Code, string? EmailCode);
+
+/// <summary>Forgot password (slice S1.11b2): the username or e-mail address.</summary>
+public sealed record ForgotPasswordRequest(string? Login);
+
+/// <summary>A new password with the token of an e-mailed reset link (slice S1.11b2).</summary>
+public sealed record ResetPasswordRequest(string? Token, string? NewPassword);
 
 public sealed record RefreshRequest(string? RefreshToken);
 
@@ -25,7 +35,8 @@ public sealed record ActivateRequest(string? Token, string? NewPassword);
 
 public sealed record ChangePasswordRequest(string? CurrentPassword, string? NewPassword);
 
-public sealed record StartMfaRequest(string? Label, string? CurrentPassword, string? Code);
+/// <summary>Self-service enrolment; <see cref="Kind"/> <c>totp</c> (default) or <c>email</c> (slice S1.11b2, CR-009).</summary>
+public sealed record StartMfaRequest(string? Label, string? CurrentPassword, string? Code, string? Kind = null);
 
 /// <summary>Proof of presence for sensitive self-service actions: the current password or a current authenticator code.</summary>
 public sealed record ReauthRequest(string? CurrentPassword, string? Code);
@@ -45,7 +56,8 @@ public sealed record AuthResponse(
     Guid? SessionId = null,
     string? ChallengeToken = null,
     DateTimeOffset? MfaEnrolBy = null,
-    IReadOnlyList<string>? RecoveryCodes = null);
+    IReadOnlyList<string>? RecoveryCodes = null,
+    IReadOnlyList<string>? MfaMethods = null);
 
 public sealed record RecoveryCodesResponse(IReadOnlyList<string> RecoveryCodes);
 
@@ -73,10 +85,35 @@ public static class IdentityEndpoints
             Answer(s.CompleteMfaAsync(body.ChallengeToken, body.Code, body.RecoveryCode, Client(http), ct))));
         Anonymous(auth.MapPost("/password-change", (RequiredPasswordRequest body, IAuthenticationService s, HttpContext http, CancellationToken ct) =>
             Answer(s.ChangeRequiredPasswordAsync(body.ChallengeToken, body.NewPassword, Client(http), ct))));
-        Anonymous(auth.MapPost("/mfa-enrolment", async (ChallengeRequest body, IAuthenticationService s, CancellationToken ct) =>
-            await s.StartRequiredEnrolmentAsync(body.ChallengeToken, ct).ConfigureAwait(false) is { } enrolment ? Results.Ok(enrolment) : FailedResult()));
+        Anonymous(auth.MapPost("/mfa-enrolment", async (EnrolmentStartRequest body, IAuthenticationService s, CancellationToken ct) =>
+            await s.StartRequiredEnrolmentAsync(body.ChallengeToken, body.Kind, ct).ConfigureAwait(false) is { } enrolment ? Results.Ok(enrolment) : FailedResult()));
         Anonymous(auth.MapPost("/mfa-enrolment/confirm", (EnrolmentConfirmRequest body, IAuthenticationService s, HttpContext http, CancellationToken ct) =>
-            Answer(s.ConfirmRequiredEnrolmentAsync(body.ChallengeToken, body.DeviceId, body.Code, Client(http), ct))));
+            Answer(s.ConfirmRequiredEnrolmentAsync(body.ChallengeToken, body.DeviceId, body.Code, body.EmailCode, Client(http), ct))));
+
+        // Identity e-mails (slice S1.11b2; KRN-IAM-01, KRN-IAM-02, ruling Q16). Links and codes go out by e-mail only.
+        Anonymous(auth.MapPost("/password/forgot", async (ForgotPasswordRequest body, IIdentityEmailService s, CancellationToken ct) =>
+        {
+            await s.RequestPasswordResetAsync(body.Login, ct).ConfigureAwait(false);
+            return Results.Accepted(); // the same answer whether or not the account exists
+        }));
+        Anonymous(auth.MapPost("/password/reset", async (ResetPasswordRequest body, IIdentityEmailService s, CancellationToken ct) =>
+        {
+            try
+            {
+                return await s.ResetPasswordAsync(body.Token, body.NewPassword, ct).ConfigureAwait(false) switch
+                {
+                    null => FailedResult(),
+                    { Count: 0 } => Results.NoContent(),
+                    var errors => Problem(StatusCodes.Status400BadRequest, InvalidRequest, errors),
+                };
+            }
+            catch (PasswordHasherBusyException)
+            {
+                return BusyResult();
+            }
+        }));
+        Anonymous(auth.MapPost("/mfa/email-code", async (ChallengeRequest body, IIdentityEmailService s, CancellationToken ct) =>
+            await s.SendSignInCodeAsync(body.ChallengeToken, ct).ConfigureAwait(false) ? Results.Accepted() : FailedResult()));
         Anonymous(auth.MapPost("/refresh", (RefreshRequest body, IAuthenticationService s, HttpContext http, CancellationToken ct) =>
             Answer(s.RefreshAsync(body.RefreshToken, Client(http), ct))));
         Anonymous(auth.MapPost("/activate", (ActivateRequest body, IAuthenticationService s, HttpContext http, CancellationToken ct) =>
@@ -114,7 +151,7 @@ public static class IdentityEndpoints
         Self(me.MapGet("/mfa-devices", (IAccountService s, IPermissionChecker p, HttpContext http, CancellationToken ct) =>
             AsSelfAsync(p, http, ct: ct, action: async c => Results.Ok(await s.ListMfaDevicesAsync(c.UserId, ct).ConfigureAwait(false)))));
         Self(me.MapPost("/mfa-devices", (StartMfaRequest body, IAccountService s, IPermissionChecker p, HttpContext http, CancellationToken ct) =>
-            AsSelfAsync(p, http, ct: ct, action: async c => Results.Ok(await s.StartMfaEnrolmentAsync(c.UserId, body.Label, new Reauthentication(body.CurrentPassword, body.Code), ct).ConfigureAwait(false)))));
+            AsSelfAsync(p, http, ct: ct, action: async c => Results.Ok(await s.StartMfaEnrolmentAsync(c.UserId, body.Label, body.Kind, new Reauthentication(body.CurrentPassword, body.Code), ct).ConfigureAwait(false)))));
         Self(me.MapPost("/mfa-devices/{id:guid}/confirm", (Guid id, ConfirmMfaRequest body, IAccountService s, IPermissionChecker p, HttpContext http, CancellationToken ct) =>
             AsSelfAsync(p, http, ct: ct, action: async c => await s.ConfirmMfaEnrolmentAsync(c.UserId, id, body.Code, ct).ConfigureAwait(false) is { } codes
                 ? Results.Ok(new RecoveryCodesResponse(codes))
@@ -137,6 +174,10 @@ public static class IdentityEndpoints
             AdminAsync(p, IdentityPermissions.RevokeSessions, () => s.RevokeSessionsAsync(id, body.Reason, ct), ct)), IdentityPermissions.RevokeSessions);
         UserAction(users.MapPost("/{id:guid}/status", (Guid id, StatusRequest body, IUserAdministrationService s, IPermissionChecker p, CancellationToken ct) =>
             AdminAsync(p, IdentityPermissions.ChangeStatus, () => s.ChangeStatusAsync(id, body.Status, body.Reason, ct), ct)), IdentityPermissions.ChangeStatus);
+        UserAction(users.MapPost("/{id:guid}/invitation", (Guid id, IIdentityEmailService s, IPermissionChecker p, CancellationToken ct) =>
+            AdminAsync(p, IdentityPermissions.SendInvitation, () => s.SendInvitationAsync(id, ct), ct)), IdentityPermissions.SendInvitation);
+        UserAction(users.MapPost("/{id:guid}/password-reset-link", (Guid id, ReasonRequest body, IIdentityEmailService s, IPermissionChecker p, CancellationToken ct) =>
+            AdminAsync(p, IdentityPermissions.SendPasswordReset, () => s.SendPasswordResetLinkAsync(id, body.Reason, ct), ct)), IdentityPermissions.SendPasswordReset);
         UserAction(users.MapGet("/{id:guid}/sessions", async (Guid id, IUserAdministrationService s, IPermissionChecker p, CancellationToken ct) =>
         {
             if (!await p.HasPermissionAsync(IdentityPermissions.ReadSessions, ct).ConfigureAwait(false))
@@ -185,6 +226,10 @@ public static class IdentityEndpoints
         {
             return Problem(StatusCodes.Status400BadRequest, InvalidRequest, [ReauthenticationFailed]);
         }
+        catch (MfaRequestRefusedException e)
+        {
+            return Problem(StatusCodes.Status400BadRequest, InvalidRequest, [e.Message]);
+        }
         catch (PasswordHasherBusyException)
         {
             return BusyResult();
@@ -229,7 +274,7 @@ public static class IdentityEndpoints
                 result.Errors),
             AuthOutcome.Tokens => Results.Ok(new AuthResponse("tokens", result.Tokens!.AccessToken, result.Tokens.AccessTokenExpiresAt, result.Tokens.RefreshToken,
                 result.Tokens.SessionId, MfaEnrolBy: result.MfaEnrolBy, RecoveryCodes: result.RecoveryCodes)),
-            AuthOutcome.MfaRequired => Results.Ok(new AuthResponse("mfa_required", ChallengeToken: result.ChallengeToken)),
+            AuthOutcome.MfaRequired => Results.Ok(new AuthResponse("mfa_required", ChallengeToken: result.ChallengeToken, MfaMethods: result.MfaMethods)),
             AuthOutcome.PasswordChangeRequired => Results.Ok(new AuthResponse("password_change_required", ChallengeToken: result.ChallengeToken)),
             AuthOutcome.MfaEnrolmentRequired => Results.Ok(new AuthResponse("mfa_enrolment_required", ChallengeToken: result.ChallengeToken)),
             _ => throw new InvalidOperationException("Unknown sign-in outcome."),

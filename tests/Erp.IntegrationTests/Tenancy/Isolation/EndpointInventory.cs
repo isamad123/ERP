@@ -230,6 +230,12 @@ public static class EndpointInventory
         "POST /api/iam/auth/mfa-enrolment/confirm",
         "POST /api/iam/auth/refresh",
         "POST /api/iam/auth/activate",
+
+        // Slice S1.11b2 (security review, plan points P9 and P11): forgot password answers the same for any login; the
+        // reset needs the e-mailed single-use token; the e-mail code needs a valid second-factor challenge.
+        "POST /api/iam/auth/password/forgot",
+        "POST /api/iam/auth/password/reset",
+        "POST /api/iam/auth/mfa/email-code",
     };
 
     private static readonly Lazy<IReadOnlyList<ApiEndpoint>> Discovered = new(DiscoverFromHost);

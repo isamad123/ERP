@@ -38,6 +38,10 @@ public static class IdentitySettings
     public const string PrivilegedPasswordMinLength = KernelSettingKeys.IamPasswordPrivilegedMinLength;
     public const string MakerCheckerSensitiveRoles = KernelSettingKeys.IamMakerCheckerSensitiveRoles;
     public const string MakerCheckerExpiryDays = KernelSettingKeys.IamMakerCheckerExpiryDays;
+    public const string PasswordResetMinutes = KernelSettingKeys.IamPasswordResetMinutes;
+    public const string PasswordResetPerHour = KernelSettingKeys.IamPasswordResetPerHour;
+    public const string EmailCodeMinutes = KernelSettingKeys.IamEmailCodeMinutes;
+    public const string EmailCodeMaxAttempts = KernelSettingKeys.IamEmailCodeMaxAttempts;
 
     /// <summary>The identity and access settings this class reads (all <c>iam.*</c> keys of the kernel manifest).</summary>
     public static IReadOnlyList<string> All { get; } =
@@ -45,7 +49,7 @@ public static class IdentitySettings
         PasswordMinLength, PasswordMinCharacterKinds, PasswordHistoryCount, PasswordExpiryDays, LockoutThreshold, LockoutMinutes,
         SessionIdleMinutes, SessionAbsoluteMinutes, SessionMaxConcurrent, SessionRememberDeviceDays, MfaRequired, MfaGraceDays,
         MfaRecoveryCodes, MfaAllowedMethods, ActivationTokenHours, ChallengeMinutes, MfaRequiredForPrivileged, PrivilegedPasswordMinLength,
-        MakerCheckerSensitiveRoles, MakerCheckerExpiryDays,
+        MakerCheckerSensitiveRoles, MakerCheckerExpiryDays, PasswordResetMinutes, PasswordResetPerHour, EmailCodeMinutes, EmailCodeMaxAttempts,
     ];
 
     /// <summary>
@@ -100,7 +104,8 @@ public static class IdentitySettings
             new SessionPolicy(Int(SessionIdleMinutes), Int(SessionAbsoluteMinutes), Int(SessionMaxConcurrent), Int(SessionRememberDeviceDays)),
             new MfaPolicy(mfaRequired, mfaSince, Int(MfaGraceDays), Int(MfaRecoveryCodes), methods),
             TimeSpan.FromHours(Int(ActivationTokenHours)),
-            TimeSpan.FromMinutes(Int(ChallengeMinutes)));
+            TimeSpan.FromMinutes(Int(ChallengeMinutes)),
+            new EmailLinkPolicy(TimeSpan.FromMinutes(Int(PasswordResetMinutes)), Int(PasswordResetPerHour), TimeSpan.FromMinutes(Int(EmailCodeMinutes)), Int(EmailCodeMaxAttempts)));
     }
 
     /// <summary>
@@ -151,7 +156,13 @@ public static class IdentitySettings
 }
 
 /// <summary>All identity policies that apply to one user at one moment.</summary>
-public sealed record IdentityPolicy(PasswordPolicy Password, SessionPolicy Session, MfaPolicy Mfa, TimeSpan ActivationTokenLifetime, TimeSpan ChallengeLifetime);
+public sealed record IdentityPolicy(PasswordPolicy Password, SessionPolicy Session, MfaPolicy Mfa, TimeSpan ActivationTokenLifetime, TimeSpan ChallengeLifetime, EmailLinkPolicy Email);
+
+/// <summary>
+/// Reset links and e-mail codes (slice S1.11b2, ruling Q16): how long a reset link and a code stay valid, how many reset
+/// e-mails one account gets in an hour, and the wrong entries after which a code stops working.
+/// </summary>
+public sealed record EmailLinkPolicy(TimeSpan ResetLinkLifetime, int ResetLinksPerHour, TimeSpan CodeLifetime, int CodeAttempts);
 
 /// <summary>
 /// Identity set-up of a customer database, run after its migrations (provisioning and the fleet migrator): settings

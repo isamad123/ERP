@@ -16,6 +16,12 @@ public static class IdentityPermissions
     public const string ChangeStatus = "iam.users.change_status";
     public const string ReadSessions = "iam.users.read_sessions";
 
+    /// <summary>Send or send again an invited person's activation e-mail (slice S1.11b2, ADM-USR-02).</summary>
+    public const string SendInvitation = "iam.users.send_invitation";
+
+    /// <summary>Send a person a password reset link (slice S1.11b2, ruling Q16).</summary>
+    public const string SendPasswordReset = "iam.users.send_password_reset";
+
     public static IReadOnlyList<PermissionDefinition> All { get; } =
     [
         new(SelfManage, "iam", "permissions.iam.self.manage", false),
@@ -25,5 +31,7 @@ public static class IdentityPermissions
         new(RevokeSessions, "iam", "permissions.iam.users.revoke_sessions", true),
         new(ChangeStatus, "iam", "permissions.iam.users.change_status", true),
         new(ReadSessions, "iam", "permissions.iam.users.read_sessions", true),
+        new(SendInvitation, "iam", "permissions.iam.users.send_invitation", true),
+        new(SendPasswordReset, "iam", "permissions.iam.users.send_password_reset", true),
     ];
 }
