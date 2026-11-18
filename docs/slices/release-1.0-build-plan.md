@@ -18,7 +18,7 @@ Each slice is one fresh session. **Model** is what to select with `/model` befor
 | S1.08 | Numbering (gap-free and gap-allowed) | B | Opus |
 | S1.09 | Settings, feature flags, entitlements and licence states (built as S1.09a settings and flags, then S1.09b entitlements; ruling Q0) | B | Opus |
 | S1.10 | Workflow engine: linear and conditional approvals, delegation, escalation, inbox (built as S1.10a engine and decisions, then S1.10b delegation, escalation, inbox and administration; ruling Q0) | B | Opus |
-| S1.11 | Jobs (chunked, resumable, run-once), notifications (in-app, email), documents and templates (PDF) | C | Opus |
+| S1.11 | Jobs (chunked, resumable, run-once), notifications (in-app, email), documents and templates (PDF) (built as S1.11a jobs and events, then S1.11b notifications and identity e-mails, then S1.11c files and templates; ruling Q0) | C | Opus |
 | S1.12 | Web shell and design system: login, navigation, first list screen, first form screen, first approval screen (the patterns Sonnet copies) | C | Opus |
 
 ## Batch 2 — Foundation screens (Sonnet)
@@ -26,7 +26,7 @@ Each slice is one fresh session. **Model** is what to select with `/model` befor
 | --- | --- | --- | --- |
 | S1.13 | Admin console: users, groups, roles, permissions, data scopes, field security screens | D | Sonnet |
 | S1.14 | Organization screens: companies, branches, locations, units, hierarchies, org chart | D | Sonnet |
-| S1.15 | Settings centre, labels, custom fields, option lists, numbering screens, workflow route step-list editor (S1.10 ruling Q2) | D | Sonnet |
+| S1.15 | Settings centre, labels, custom fields, option lists, numbering screens, workflow route step-list editor (S1.10 ruling Q2), notification and document template editor (S1.11 ruling Q15) | D | Sonnet |
 | S1.16 | Import and export centre, job centre, notification log, system health, licence page | D | Sonnet |
 | S1.17 | Vendor platform console: customer list, provisioning wizard, entitlements | C | Sonnet |
 | S1.18 | First-run wizard and readiness checklist | C | Sonnet |
