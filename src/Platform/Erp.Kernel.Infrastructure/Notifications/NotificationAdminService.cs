@@ -272,7 +272,7 @@ public sealed class NotificationAdminService(
 
         if (relationships.Any(r => !Relationships.Contains(r, StringComparer.Ordinal))
             || (users.Length > 0 && await IdentityDb.ScalarAsync<long>(c, null, "select count(*) from iam.users where id = any($1) and not is_deleted and not is_system", ct, users).ConfigureAwait(false) != users.Length)
-            || (roles.Length > 0 && await IdentityDb.ScalarAsync<long>(c, null, "select count(*) from iam.roles where lower(code) = any($1) and not is_deleted", ct, roles).ConfigureAwait(false) != roles.Length)
+            || (roles.Length > 0 && await IdentityDb.ScalarAsync<long>(c, null, "select count(*) from iam.roles where lower(code) = any($1) and not is_deleted", ct, (object)roles).ConfigureAwait(false) != roles.Length)
             || (groups.Length > 0 && await IdentityDb.ScalarAsync<long>(c, null, "select count(*) from iam.user_groups where id = any($1) and not is_deleted", ct, groups).ConfigureAwait(false) != groups.Length))
         {
             throw new NotificationException(NotificationErrors.AudienceUnknown);
