@@ -143,6 +143,9 @@ Events written in the business transaction; the dispatcher publishes them (spec 
 | payload | jsonb | no |  |  |
 | headers | jsonb | no | '{}'::jsonb |  |
 | published_at | timestamp with time zone | yes |  |  |
+| attempts | integer | no | 0 | failed deliveries so far (CR-045, Q7) |
+| next_attempt_at | timestamp with time zone | yes |  | a failed message waits until this time (CR-045, Q7) |
+| last_error | text | yes |  | why the last delivery failed (CR-045, Q7) |
 
 Constraints:
 
@@ -522,6 +525,9 @@ Events written in the business transaction; the dispatcher publishes them (spec 
 | payload | jsonb | no |  |  |
 | headers | jsonb | no | '{}'::jsonb |  |
 | published_at | timestamp with time zone | yes |  |  |
+| attempts | integer | no | 0 | failed deliveries so far (CR-045, Q7) |
+| next_attempt_at | timestamp with time zone | yes |  | a failed message waits until this time (CR-045, Q7) |
+| last_error | text | yes |  | why the last delivery failed (CR-045, Q7) |
 
 Constraints:
 
@@ -790,6 +796,9 @@ Events written in the business transaction; the dispatcher publishes them (spec 
 | payload | jsonb | no |  |  |
 | headers | jsonb | no | '{}'::jsonb |  |
 | published_at | timestamp with time zone | yes |  |  |
+| attempts | integer | no | 0 | failed deliveries so far (CR-045, Q7) |
+| next_attempt_at | timestamp with time zone | yes |  | a failed message waits until this time (CR-045, Q7) |
+| last_error | text | yes |  | why the last delivery failed (CR-045, Q7) |
 
 Constraints:
 
@@ -3146,6 +3155,9 @@ Events written in the business transaction; the dispatcher publishes them (spec 
 | payload | jsonb | no |  |  |
 | headers | jsonb | no | '{}'::jsonb |  |
 | published_at | timestamp with time zone | yes |  |  |
+| attempts | integer | no | 0 | failed deliveries so far (CR-045, Q7) |
+| next_attempt_at | timestamp with time zone | yes |  | a failed message waits until this time (CR-045, Q7) |
+| last_error | text | yes |  | why the last delivery failed (CR-045, Q7) |
 
 Constraints:
 
@@ -5484,6 +5496,9 @@ Events written in the business transaction; the dispatcher publishes them (spec 
 | payload | jsonb | no |  |  |
 | headers | jsonb | no | '{}'::jsonb |  |
 | published_at | timestamp with time zone | yes |  |  |
+| attempts | integer | no | 0 | failed deliveries so far (CR-045, Q7) |
+| next_attempt_at | timestamp with time zone | yes |  | a failed message waits until this time (CR-045, Q7) |
+| last_error | text | yes |  | why the last delivery failed (CR-045, Q7) |
 
 Constraints:
 
@@ -6140,6 +6155,9 @@ Events written in the business transaction; the dispatcher publishes them (spec 
 | payload | jsonb | no |  |  |
 | headers | jsonb | no | '{}'::jsonb |  |
 | published_at | timestamp with time zone | yes |  |  |
+| attempts | integer | no | 0 | failed deliveries so far (CR-045, Q7) |
+| next_attempt_at | timestamp with time zone | yes |  | a failed message waits until this time (CR-045, Q7) |
+| last_error | text | yes |  | why the last delivery failed (CR-045, Q7) |
 
 Constraints:
 
@@ -6169,13 +6187,22 @@ Requirements: KRN-JOB-01. Source: kernel.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| owner_user_id | uuid | yes |  | fk iam.users; who hears about failures (CR-045) |
+| priority | integer | no | 0 | default 0; higher runs first within a customer (CR-045, Q5) |
+| source | text | no | 'product'::text | default product; product jobs come from the module job manifests (CR-045) |
 
 Constraints:
 
 - `ck_definitions_code_code` CHECK ((((length(code) >= 1) AND (length(code) <= 40)) AND (code = btrim(code))))
 - `ck_definitions_module_id_code` CHECK ((((length(module_id) >= 1) AND (length(module_id) <= 40)) AND (module_id = btrim(module_id))))
+- `ck_definitions_source` CHECK ((source = ANY (ARRAY['product'::text, 'tenant'::text])))
+- `fk_definitions_owner_user_id` FOREIGN KEY (owner_user_id) REFERENCES iam.users(id)
 - `pk_definitions` PRIMARY KEY (id)
 - `uq_definitions_code` UNIQUE (code)
+
+Indexes:
+
+- `ix_definitions_owner_user_id` CREATE INDEX ix_definitions_owner_user_id ON job.definitions USING btree (owner_user_id)
 
 ### job.inbox_messages
 
@@ -6205,6 +6232,9 @@ Events written in the business transaction; the dispatcher publishes them (spec 
 | payload | jsonb | no |  |  |
 | headers | jsonb | no | '{}'::jsonb |  |
 | published_at | timestamp with time zone | yes |  |  |
+| attempts | integer | no | 0 | failed deliveries so far (CR-045, Q7) |
+| next_attempt_at | timestamp with time zone | yes |  | a failed message waits until this time (CR-045, Q7) |
+| last_error | text | yes |  | why the last delivery failed (CR-045, Q7) |
 
 Constraints:
 
@@ -6266,17 +6296,31 @@ Requirements: KRN-JOB-02, KRN-JOB-03, KRN-JOB-05, HRM-PAY-34. Source: kernel.yam
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| parameters | jsonb | yes |  | parameters of this run (CR-045) |
+| priority | integer | no | 0 | default 0; copied from the definition when the run is queued (CR-045, Q5) |
+| attempt | integer | no | 0 | default 0; attempts started so far (CR-045) |
+| scheduled_for | timestamp with time zone | yes |  | the schedule slot this run is for; one run per slot (CR-045) |
+| cancel_requested_at | timestamp with time zone | yes |  | cancel asked; the run stops at its next chunk (CR-045) |
+| result_file_id | uuid | yes |  | fk doc.files; result to download (CR-045, part S1.11c) |
+| actor_user_id | uuid | yes |  | fk iam.users; the person whose rights a requested run uses; empty: the job actor (CR-045, Q4) |
+| next_attempt_at | timestamp with time zone | yes |  | a queued retry waits until this time (CR-046 item 1, P1) |
 
 Constraints:
 
 - `ck_runs_status` CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'succeeded'::text, 'failed'::text, 'cancelled'::text])))
+- `fk_runs_actor_user_id` FOREIGN KEY (actor_user_id) REFERENCES iam.users(id)
 - `fk_runs_definition_id` FOREIGN KEY (definition_id) REFERENCES job.definitions(id)
+- `fk_runs_result_file_id` FOREIGN KEY (result_file_id) REFERENCES doc.files(id)
 - `pk_runs` PRIMARY KEY (id)
 
 Indexes:
 
+- `ix_runs_actor_user_id` CREATE INDEX ix_runs_actor_user_id ON job.runs USING btree (actor_user_id)
 - `ix_runs_definition_id` CREATE INDEX ix_runs_definition_id ON job.runs USING btree (definition_id)
+- `ix_runs_result_file_id` CREATE INDEX ix_runs_result_file_id ON job.runs USING btree (result_file_id)
 - `ix_runs_status_created_at` CREATE INDEX ix_runs_status_created_at ON job.runs USING btree (status, created_at)
+- `ix_runs_status_priority_created_at` CREATE INDEX ix_runs_status_priority_created_at ON job.runs USING btree (status, priority, created_at)
+- `uq_runs_definition_id_scheduled_for` CREATE UNIQUE INDEX uq_runs_definition_id_scheduled_for ON job.runs USING btree (definition_id, scheduled_for) NULLS NOT DISTINCT WHERE (scheduled_for IS NOT NULL)
 
 ### meta.inbox_messages
 
@@ -6328,6 +6372,9 @@ Events written in the business transaction; the dispatcher publishes them (spec 
 | payload | jsonb | no |  |  |
 | headers | jsonb | no | '{}'::jsonb |  |
 | published_at | timestamp with time zone | yes |  |  |
+| attempts | integer | no | 0 | failed deliveries so far (CR-045, Q7) |
+| next_attempt_at | timestamp with time zone | yes |  | a failed message waits until this time (CR-045, Q7) |
+| last_error | text | yes |  | why the last delivery failed (CR-045, Q7) |
 
 Constraints:
 
@@ -6457,6 +6504,9 @@ Events written in the business transaction; the dispatcher publishes them (spec 
 | payload | jsonb | no |  |  |
 | headers | jsonb | no | '{}'::jsonb |  |
 | published_at | timestamp with time zone | yes |  |  |
+| attempts | integer | no | 0 | failed deliveries so far (CR-045, Q7) |
+| next_attempt_at | timestamp with time zone | yes |  | a failed message waits until this time (CR-045, Q7) |
+| last_error | text | yes |  | why the last delivery failed (CR-045, Q7) |
 
 Constraints:
 
@@ -6886,6 +6936,9 @@ Events written in the business transaction; the dispatcher publishes them (spec 
 | payload | jsonb | no |  |  |
 | headers | jsonb | no | '{}'::jsonb |  |
 | published_at | timestamp with time zone | yes |  |  |
+| attempts | integer | no | 0 | failed deliveries so far (CR-045, Q7) |
+| next_attempt_at | timestamp with time zone | yes |  | a failed message waits until this time (CR-045, Q7) |
+| last_error | text | yes |  | why the last delivery failed (CR-045, Q7) |
 
 Constraints:
 
@@ -7040,6 +7093,9 @@ Events written in the business transaction; the dispatcher publishes them (spec 
 | payload | jsonb | no |  |  |
 | headers | jsonb | no | '{}'::jsonb |  |
 | published_at | timestamp with time zone | yes |  |  |
+| attempts | integer | no | 0 | failed deliveries so far (CR-045, Q7) |
+| next_attempt_at | timestamp with time zone | yes |  | a failed message waits until this time (CR-045, Q7) |
+| last_error | text | yes |  | why the last delivery failed (CR-045, Q7) |
 
 Constraints:
 
@@ -7077,6 +7133,9 @@ Events written in the business transaction; the dispatcher publishes them (spec 
 | payload | jsonb | no |  |  |
 | headers | jsonb | no | '{}'::jsonb |  |
 | published_at | timestamp with time zone | yes |  |  |
+| attempts | integer | no | 0 | failed deliveries so far (CR-045, Q7) |
+| next_attempt_at | timestamp with time zone | yes |  | a failed message waits until this time (CR-045, Q7) |
+| last_error | text | yes |  | why the last delivery failed (CR-045, Q7) |
 
 Constraints:
 
@@ -7319,6 +7378,7 @@ Constraints:
 - `iam.tg_refuse_change` 
 - `itg.tg_refuse_change` 
 - `job.tg_refuse_change` 
+- `meta.ensure_partitions` 
 - `meta.tg_refuse_change` 
 - `org.tg_branches_keep_one_per_company` 
 - `org.tg_companies_default_branch` 

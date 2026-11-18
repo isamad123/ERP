@@ -146,8 +146,7 @@ everything else gets 403 `errors.tenant.locked`. API hosts apply the change with
 States follow the end date (`expires_at` is the last licensed day) on the customer's day (`org.time_zone`): Active, Warning
 (last 30 days), Grace (14 days after), Read-only (30 days), Locked; the periods can be set per contract in `claims.term`.
 Read-only: sign-in, reading and export only. Locked: sign-in, licence page, capabilities and the audit export only. No state
-deletes or hides data. The worker host (`dotnet Erp.Host.Worker.dll`, settings `ERP_CONTROL_PLANE`, `ERP_SECRETS_FILE`,
-`ERP_SECRETS_KEY`, `Licence__IntervalMinutes` default 60) records each change once (`cp.license_events`, the customer's security
+deletes or hides data. The worker host's hourly job `kernel.licence_refresh` (S1.11a; see "Background jobs") records each change once (`cp.license_events`, the customer's security
 events, outbox event `kernel.licence.state_changed` for the e-mails of S1.11), activates scheduled entitlements, takes the daily
 usage readings and copies limit events. To run it at once: `M licence refresh [--tenant acme]` (exit code 3 if a customer failed).
 
@@ -155,8 +154,8 @@ Usage statement of a month: `M usage statement --tenant acme --month 202611` (ea
 value is the highest daily reading, API calls the total).
 
 ## Approval escalation (S1.10b, FR-XM-32)
-The worker host also runs approval escalation every `Workflow__EscalationIntervalSeconds` (default 60) for every active
-customer whose access mode is full: an open approval task past its time limit (working days in the company's time zone,
+The worker host's job `kernel.workflow_escalate` runs approval escalation every minute (S1.11a) for every customer whose
+access mode is full: an open approval task past its time limit (working days in the company's time zone,
 weekly off days `org.weekly_off_days` and the company's public and religious holidays not counted) moves to the next level
 (the approver's manager, else the step's escalation user or role), at most three levels; nothing is ever approved
 automatically. A task with nobody above stays open and shows as overdue in `GET /api/wf/instances?overdue=true`. The first run
@@ -164,6 +163,31 @@ after upgrading gives open tasks created before S1.10b their time limit. To run 
 `M workflow escalate [--tenant acme]` (prints escalated, overdue and time limits set per customer; exit code 3 if a customer failed).
 Modules that send documents for approval register their document types (and HR its approver directory) in the worker host as
 in the API host; tasks of types the worker does not know are left alone.
+
+## Background jobs and events (S1.11a, FR-KRN-JOB-01 to FR-KRN-JOB-06)
+The worker host (`dotnet Erp.Host.Worker.dll`) runs the job scheduler and the event dispatcher for every active or suspended
+customer whose database is ready. Run one or more workers; each run is taken under a lease, so it runs once, and a run whose
+worker stops is taken over by another worker when its lease expires (it continues from its last checkpoint).
+Settings (environment variables): `ERP_CONTROL_PLANE`, `ERP_SECRETS_FILE`, `ERP_SECRETS_KEY`, `ERP_PLATFORM_ACTOR` (the
+platform user the daily audit-anchor copy acts as; without it that job fails with `errors.job.platform_actor_missing` and an
+alert), `Jobs__Slots` (4 runs at once per worker), `Jobs__PerTenantSlots` (2 per customer), `Jobs__LeaseSeconds` (60),
+`Jobs__PollMilliseconds` (2000), `Events__PollMilliseconds` (2000), `Events__BatchSize` (100), `Settings__RefreshMilliseconds`.
+The old settings `Licence__IntervalMinutes` and `Workflow__EscalationIntervalSeconds` are no longer read.
+
+Kernel jobs (times in the customer's `org.time_zone`; `migrate` and provisioning seed them in `job.definitions`):
+licence refresh (hourly at :05, every mode), approval escalation (every minute, full mode), audit anchor copy (01:15), audit
+check of the previous day with the clock check (02:30), monthly partitions three months ahead (00:45), expiry of
+maker-checker requests (00:20), operational checks (every 5 minutes), clean-up of finished runs after `job.retention.run_days`
+(30) and delivered events after 30 days (03:30). In read-only and locked mode only the licence, audit, partition, check and
+clean-up jobs run; a suspended customer runs only the licence refresh. A job of an unlicensed module never runs. After a pause
+only the most recent missed slot of a schedule runs. The job centre (`/api/jobs/...`) lists jobs and runs, starts a run,
+reruns, cancels, and changes the schedule of the jobs marked editable (maker-checker expiry, clean-up).
+
+Partitions: if `meta.ensure_partitions` reports `default_has_rows` (rows of a future month were written into the default
+partition, for example after a wrong clock), move those rows out of `<table>_default`, then rerun `kernel.partitions_ensure`.
+Health: `GET /api/jobs/health` shows queue depth, failed runs, event backlog per schema and the last time a worker started a
+run; if every worker stops, no alert can be sent (R-025), so watch that number from outside.
+The operator commands `licence refresh`, `workflow escalate`, `audit anchors-publish` and `audit verify` still work as before.
 
 ## Customer list (FR-ADM-PLT-01)
 `M tenant list`: code, status, database status, region, cluster, edition, entitlement state, modules, schema version, legal
