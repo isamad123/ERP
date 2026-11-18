@@ -134,6 +134,9 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
   handlers `IJobHandler`, consumers `IEventConsumer`; the worker host (`WorkerHost.Configure`) runs `JobWorker` and `EventDispatcher`.
   Tests build workers through `JobRig` (`tests/Erp.IntegrationTests/Jobs/JobSupport.cs`): `rig.Worker()`, `rig.QueueAsync`, `rig.RunUntilIdleAsync`,
   time moves with `rig.Clock`. The job centre API is under `/api/jobs` (generated `/api/job/*` only read).
+- Notifications (S1.11b1): catalogue of notifiable events in `<module>.Infrastructure/Access/notification-events.json` (seeded by `migrate` and provisioning, `NotificationSetup`),
+  consumer `ntf.notifications` registered in `WorkerHost.Configure`; customer texts and rules change only through `/api/ntf/*` (generated `ntf` endpoints read only). Tests: `tests/Erp.IntegrationTests/Notifications`
+  (events are written to the outbox as the kernel writes them and handled by the real `EventDispatcher` through `JobRig`).
 - Not yet automated: secret scan; invariant tests other than invariant 6.
 
 ## Where things are
