@@ -98,9 +98,10 @@ public static class Validator
 
         foreach (var column in table.Columns.Where(c => c.AddedIn is not null))
         {
-            if (table.AddedIn is not null)
+            // A table of a later slice may gain columns in a still later slice (S1.11b2), never in its own or an earlier one.
+            if (table.AddedIn is not null && Emit.SqlEmitter.UpTo(column.AddedIn!, table.AddedIn))
             {
-                yield return $"{table}.{column.Name}: column added_in on a table that is itself added later";
+                yield return $"{table}.{column.Name}: column added_in must be a slice after the one that added the table";
             }
 
             // An optional enum, code or i18n column may come later with its own value check (NULL passes it, so existing rows

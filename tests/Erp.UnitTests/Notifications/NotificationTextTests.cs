@@ -89,7 +89,8 @@ public sealed class NotificationTextTests
         {
             Assert.Empty(NotificationCatalog.Check(e));
             Assert.Matches(@"\p{IsArabic}", e.Texts["ur"].Title);
-            Assert.True(e.LinkProperty is not null || e.LinkTemplate is not null);
+            // Every event has a deep link, except the identity e-mails (S1.11b2, P5), whose link is the encrypted secret.
+            Assert.True(e.Direct || e.LinkProperty is not null || e.LinkTemplate is not null);
         });
         Assert.Equal(["workflow.task_assigned"], catalogue.ForSource("kernel.workflow.task_assigned").Select(e => e.Code));
         Assert.Equal(3, catalogue.ForSource("kernel.workflow.instance_completed").Count());

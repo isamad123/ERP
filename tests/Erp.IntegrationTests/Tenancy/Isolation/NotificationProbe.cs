@@ -24,7 +24,7 @@ public sealed class NotificationProbe(IsolationFixture fx, WebApplication app)
     private static readonly string[] AdminRole = ["tenant_admin"];
     private static readonly string[] InApp = ["in_app"];
 
-    private sealed record Material(Guid Admin, Guid Item, Guid Rule, long RuleVersion);
+    private sealed record Material(Guid Admin, Guid Item, Guid Rule, long RuleVersion, Guid Message);
 
     public async Task<IReadOnlyList<string>> RunAsync(ApiEndpoint endpoint, CancellationToken ct)
     {
@@ -32,7 +32,7 @@ public sealed class NotificationProbe(IsolationFixture fx, WebApplication app)
         var failures = new List<string>();
         var a = await MaterialAsync(fx.CodeA, ct);
         var b = await MaterialAsync(fx.CodeB, ct);
-        var markers = new[] { a.Admin, a.Item, a.Rule }.Select(g => g.ToString()).ToArray();
+        var markers = new[] { a.Admin, a.Item, a.Rule, a.Message }.Select(g => g.ToString()).ToArray();
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         var tokenA = fx.Tenancy.Token(fx.CodeA, user: a.Admin);
@@ -100,7 +100,11 @@ public sealed class NotificationProbe(IsolationFixture fx, WebApplication app)
         var key = endpoint.Method + " " + endpoint.Pattern;
         return key switch
         {
-            "GET /api/ntf/centre/items" or "GET /api/ntf/centre/unread-count" or "GET /api/ntf/centre/preferences" or "GET /api/ntf/catalogue" or "GET /api/ntf/text-templates" or "GET /api/ntf/rules" => (endpoint.Pattern, null),
+            "GET /api/ntf/centre/items" or "GET /api/ntf/centre/unread-count" or "GET /api/ntf/centre/preferences" or "GET /api/ntf/catalogue" or "GET /api/ntf/text-templates" or "GET /api/ntf/rules"
+                or "GET /api/ntf/deliveries" or "GET /api/ntf/deliveries/summary" => (endpoint.Pattern, null),
+            "GET /api/ntf/deliveries/{id:guid}" => ($"/api/ntf/deliveries/{m.Message}", null),
+            "POST /api/ntf/deliveries/{id:guid}/resend" => ($"/api/ntf/deliveries/{m.Message}/resend", "{}"),
+            "POST /api/ntf/text-templates/test-send" => (endpoint.Pattern, Json(new { eventCode = "workflow.task_assigned", language = "en", subject = "Probe", body = "Probe text" })),
             "POST /api/ntf/centre/items/read-all" => (endpoint.Pattern, "{}"),
             "PUT /api/ntf/centre/preferences" => (endpoint.Pattern, Json(new { preferences = new[] { new { eventGroup = "approvals", channel = "email", enabled = true } } })),
             "POST /api/ntf/centre/items/{id:guid}/read" => ($"/api/ntf/centre/items/{m.Item}/read", "{}"),
@@ -139,7 +143,13 @@ public sealed class NotificationProbe(IsolationFixture fx, WebApplication app)
             insert into ntf.subscriptions (id, event_code, audience, channels, is_mandatory, name, created_at, created_by, updated_at, updated_by)
             values ($1, 'workflow.task_assigned', '{"roles":["tenant_admin"]}', '{in_app}', false, 'Probe rule', now(), $2, now(), $2)
             """, ct, rule, system);
-        return new Material(admin, item, rule, 1);
+        // A finished e-mail of A's delivery log (S1.11b2), so resend and detail have a record to aim at.
+        var message = Guid.CreateVersion7();
+        await ExecAsync(c, """
+            insert into ntf.outbound_messages (id, created_at, channel, recipient, payload, attempts, status, user_id, event_code, created_by, updated_at, updated_by)
+            values ($1, now(), 'email', $2 || '@probe.test', '{"subject":"Probe mail","body":"Probe","language":"en"}', 1, 'failed', $3, 'workflow.task_assigned', $4, now(), $4)
+            """, ct, message, name, admin, system);
+        return new Material(admin, item, rule, 1, message);
     }
 
     private async Task<Reply> SendAsync(string host, string? token, HttpMethod method, string pathAndQuery, string? body, bool hints, CancellationToken ct)

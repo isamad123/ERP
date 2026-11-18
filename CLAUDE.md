@@ -138,6 +138,9 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
 - Notifications (S1.11b1): catalogue of notifiable events in `<module>.Infrastructure/Access/notification-events.json` (seeded by `migrate` and provisioning, `NotificationSetup`),
   consumer `ntf.notifications` registered in `WorkerHost.Configure`; customer texts and rules change only through `/api/ntf/*` (generated `ntf` endpoints read only). Tests: `tests/Erp.IntegrationTests/Notifications`
   (events are written to the outbox as the kernel writes them and handled by the real `EventDispatcher` through `JobRig`).
+- E-mail (S1.11b2): consumer `ntf.notifications` also queues `ntf.outbound_messages`; jobs `kernel.email_send` (every minute) and `kernel.email_bounces` (IMAP, 15 minutes) in the worker;
+  worker settings `Mail:*` and `Alerts:OperatorEmail`, operator commands `mail sender|server|clear|show` (`docs/runbooks/mail-setup.md`). Tests send to `TestMailServer` / `TestImapServer`
+  (`tests/Erp.IntegrationTests/Notifications`) through `TestMailServer.Use`; identity links and codes are read with `IdentityHarness.EmailedAsync` (decrypts the queued secret).
 - Not yet automated: secret scan; invariant tests other than invariant 6.
 
 ## Where things are

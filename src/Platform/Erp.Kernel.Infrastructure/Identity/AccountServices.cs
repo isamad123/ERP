@@ -14,7 +14,8 @@ public sealed class AccountService(
     ITenantContext tenant,
     IClock clock,
     IPasswordHasher hasher,
-    IFieldEncryptorProvider encryptors) : IAccountService
+    IFieldEncryptorProvider encryptors,
+    Notifications.NotificationCatalog catalog) : IAccountService
 {
     public const string CurrentPasswordWrong = "errors.password.current_wrong";
 
@@ -88,14 +89,40 @@ public sealed class AccountService(
         return list;
     }
 
-    public async Task<MfaEnrolment> StartMfaEnrolmentAsync(Guid userId, string? label, Reauthentication proof, CancellationToken cancellationToken)
+    public async Task<MfaEnrolment> StartMfaEnrolmentAsync(Guid userId, string? label, string? kind, Reauthentication proof, CancellationToken cancellationToken)
     {
         var now = clock.UtcNow;
         await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var account = await ReauthenticateAsync(connection, tx, userId, proof, now, cancellationToken).ConfigureAwait(false);
         var encryptor = await encryptors.GetAsync(cancellationToken).ConfigureAwait(false);
-        var enrolment = await MfaEnrolments.StartAsync(connection, tx, account, label, tenant.TenantCode, encryptor, now, cancellationToken).ConfigureAwait(false);
+        MfaEnrolment enrolment;
+        if (kind == MfaKinds.Email)
+        {
+            // The e-mail factor (slice S1.11b2, CR-009), when the customer allows it; its first code goes to the person's address.
+            var policy = await IdentitySettings.ReadAsync(connection, tx, userId, now, cancellationToken).ConfigureAwait(false);
+            if (!policy.Mfa.AllowedMethods.Contains(MfaKinds.Email, StringComparer.Ordinal))
+            {
+                throw new MfaRequestRefusedException(MfaRequestRefusedException.MethodNotAllowed);
+            }
+
+            enrolment = await MfaEnrolments.StartEmailAsync(connection, tx, account, now, cancellationToken).ConfigureAwait(false);
+            if (!await IdentityEmailService.EmailCodeForAsync(connection, tx, catalog, encryptor, userId, EmailCodes.SignIn, enrolment.DeviceId, IdentityMail.SignInCode, policy, now, cancellationToken).ConfigureAwait(false))
+            {
+                throw new MfaRequestRefusedException(MfaRequestRefusedException.TooManyCodes);
+            }
+
+            enrolment = enrolment with { EmailCodeSent = true };
+        }
+        else if (kind is null or MfaKinds.Totp)
+        {
+            enrolment = await MfaEnrolments.StartAsync(connection, tx, account, label, tenant.TenantCode, encryptor, now, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            throw new MfaRequestRefusedException(MfaRequestRefusedException.MethodNotAllowed);
+        }
+
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return enrolment;
     }
@@ -107,7 +134,7 @@ public sealed class AccountService(
         await using var tx = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var policy = await IdentitySettings.ReadAsync(connection, tx, userId, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         var encryptor = await encryptors.GetAsync(cancellationToken).ConfigureAwait(false);
-        var codes = await MfaEnrolments.ConfirmAsync(connection, tx, userId, deviceId, code, policy.Mfa, encryptor, hasher, now, cancellationToken).ConfigureAwait(false);
+        var codes = await MfaEnrolments.ConfirmAsync(connection, tx, userId, deviceId, code, policy, encryptor, hasher, now, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return codes;
     }

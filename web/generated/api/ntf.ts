@@ -48,6 +48,9 @@ export interface OutboundMessage
     nextAttemptAt: string | null;
     providerRef: string | null;
     error: string | null;
+    userId: string | null;
+    eventCode: string | null;
+    companyId: string | null;
     status: 'queued' | 'sent' | 'failed' | 'dead';
     createdAt: string;
     createdBy: string;
@@ -56,25 +59,12 @@ export interface OutboundMessage
     rowVersion: number;
 }
 
-export interface OutboundMessageWrite
-{
-    channel: string;
-    recipient: string;
-    templateId?: string | null;
-    payload: unknown;
-    dedupKey?: string | null;
-    attempts: number;
-    nextAttemptAt?: string | null;
-    providerRef?: string | null;
-    error?: string | null;
-    status: 'queued' | 'sent' | 'failed' | 'dead';
-}
-
 export interface OutboundMessageListQuery
 {
     after?: string;
     limit?: number;
     templateId?: string;
+    userId?: string;
     status?: 'queued' | 'sent' | 'failed' | 'dead';
 }
 
@@ -82,8 +72,6 @@ export const outboundMessages =
 {
     list: (query: OutboundMessageListQuery = {}) => request<PagedResult<OutboundMessage>>('GET', '/api/ntf/outbound-messages', { query }),
     get: (id: string) => request<OutboundMessage>('GET', `/api/ntf/outbound-messages/${id}`),
-    create: (body: OutboundMessageWrite) => request<OutboundMessage>('POST', '/api/ntf/outbound-messages', { body }),
-    update: (id: string, body: OutboundMessageWrite & { rowVersion: number }) => request<OutboundMessage>('PUT', `/api/ntf/outbound-messages/${id}`, { body }),
 };
 
 /** ntf.subscriptions: Subscription. Field rules (S1.06) may leave a field out or mask it as text. */

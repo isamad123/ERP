@@ -15,6 +15,7 @@ using Erp.Kernel.Infrastructure.ControlPlane.Platform;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Erp.Kernel.Infrastructure.Identity;
+using Erp.Kernel.Infrastructure.Notifications.Email;
 using Erp.Kernel.Infrastructure.Workflow;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -65,6 +66,13 @@ public static class OperatorCommands
                                                          exit code 3 when an anchor differs from its earlier copy
           audit verify --tenant <code> --from <yyyy-mm-dd> --to <yyyy-mm-dd>
                                                          recomputes the audit hash chain; exit code 3 names the first broken row
+          mail sender --tenant <code> --from <address>
+                                                         sender address on the customer's own domain, after the SPF and DKIM
+                                                         checks (docs/runbooks/mail-setup.md); sent through the operator relay
+          mail server --tenant <code> --host <h> --port <p> --security <starttls|ssl|none> --from <address> [--username <u>]
+                                                         the customer's own mail server (on-premises); password from ERP_MAIL_PASSWORD
+          mail clear --tenant <code>                     back to the operator relay and its sender address
+          mail show --tenant <code>
         """;
 
     public static async Task<int> RunAsync(string[] args, TextWriter output, TextWriter errors, CancellationToken cancellationToken)
@@ -108,6 +116,18 @@ public static class OperatorCommands
                 "tenant restore" => await RestoreAsync(context, cancellationToken).ConfigureAwait(false),
                 "audit anchors-publish" => await AnchorsPublishAsync(context, cancellationToken).ConfigureAwait(false),
                 "audit verify" => await AuditVerifyAsync(context, cancellationToken).ConfigureAwait(false),
+                "mail sender" => await MailAsync(context, (m, a) => m.SetSenderAsync(context.Option("tenant"), context.Option("from"), a, cancellationToken)).ConfigureAwait(false),
+                "mail server" => await MailAsync(context, (m, a) => m.SetServerAsync(context.Option("tenant"), context.Option("host"),
+                    Int(context.Option("port")), context.OptionalOption("security") ?? "starttls", context.OptionalOption("username"), context.Option("from"),
+                    Env("ERP_MAIL_PASSWORD"), a, cancellationToken)).ConfigureAwait(false),
+                "mail clear" => await MailAsync(context, async (m, a) =>
+                {
+                    if (!await m.ClearAsync(context.Option("tenant"), a, cancellationToken).ConfigureAwait(false))
+                    {
+                        await context.Output.WriteLineAsync("no mail connector was active").ConfigureAwait(false);
+                    }
+                }).ConfigureAwait(false),
+                "mail show" => await MailShowAsync(context, cancellationToken).ConfigureAwait(false),
                 _ => throw new ArgumentException($"Unknown command '{command}'.\n{Usage}"),
             };
         }
@@ -400,6 +420,25 @@ public static class OperatorCommands
         }
 
         return result.Intact ? 0 : 3;
+    }
+
+    /// <summary>Slice S1.11b2 (ruling Q10, plan point P2): a customer's mail connector; only a registered platform operator may change it.</summary>
+    private static async Task<int> MailAsync(Context c, Func<MailSetup, string, Task> action)
+    {
+        var actor = await c.ActorAsync(CancellationToken.None).ConfigureAwait(false);
+        await action(new MailSetup(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations), actor.Email).ConfigureAwait(false);
+        await c.Output.WriteLineAsync($"{c.Option("tenant")}: mail connector saved").ConfigureAwait(false);
+        return 0;
+    }
+
+    private static async Task<int> MailShowAsync(Context c, CancellationToken cancellationToken)
+    {
+        await c.ActorAsync(cancellationToken).ConfigureAwait(false);
+        var view = await new MailSetup(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations).ShowAsync(c.Option("tenant"), cancellationToken).ConfigureAwait(false);
+        await c.Output.WriteLineAsync(view is null
+            ? $"{c.Option("tenant")}: no mail connector (the operator relay and its sender address are used)"
+            : $"{c.Option("tenant")}: {view.Provider} {view.Status} from {view.FromAddress ?? "-"}{(view.Host is null ? string.Empty : $" via {view.Host}:{view.Port} ({view.Security}, user {view.Username ?? "-"}, password {(view.HasPassword ? "stored" : "none")})")}").ConfigureAwait(false);
+        return 0;
     }
 
     private static async Task<int> ListAsync(Context c, CancellationToken cancellationToken)

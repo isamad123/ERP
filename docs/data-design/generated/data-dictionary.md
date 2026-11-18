@@ -5470,10 +5470,11 @@ Single-use, expiring tokens for account activation and sign-in steps. Requiremen
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| attempts | integer | no | 0 | default 0; wrong e-mail codes entered against this token (CR-049, Q16: 5 tries) |
 
 Constraints:
 
-- `ck_one_time_tokens_purpose` CHECK ((purpose = ANY (ARRAY['activation'::text, 'mfa_challenge'::text, 'password_change'::text, 'mfa_enrolment'::text])))
+- `ck_one_time_tokens_purpose` CHECK ((purpose = ANY (ARRAY['activation'::text, 'mfa_challenge'::text, 'password_change'::text, 'mfa_enrolment'::text, 'password_reset'::text, 'email_code'::text, 'enrolment_confirm'::text])))
 - `fk_one_time_tokens_user_id` FOREIGN KEY (user_id) REFERENCES iam.users(id)
 - `pk_one_time_tokens` PRIMARY KEY (id)
 - `uq_one_time_tokens_token_hash` UNIQUE (token_hash)
@@ -6481,17 +6482,26 @@ Partitioned by range; 37 partitions.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| user_id | uuid | yes |  | fk iam.users; the person the message is for (none for the operator address) (CR-045) |
+| event_code | text | yes |  | catalogue event of the message (CR-045) |
+| company_id | uuid | yes |  | company of the event, for the delivery log filter and scope (CR-045) |
+| secret | bytea | yes |  | reset link or code of an identity e-mail, encrypted; cleared once the message is sent or ends (CR-049) |
 
 Constraints:
 
+- `ck_outbound_messages_event_code_code` CHECK ((((length(event_code) >= 1) AND (length(event_code) <= 40)) AND (event_code = btrim(event_code))))
 - `ck_outbound_messages_status` CHECK ((status = ANY (ARRAY['queued'::text, 'sent'::text, 'failed'::text, 'dead'::text])))
 - `fk_outbound_messages_template_id` FOREIGN KEY (template_id) REFERENCES ntf.templates(id)
+- `fk_outbound_messages_user_id` FOREIGN KEY (user_id) REFERENCES iam.users(id)
 - `pk_outbound_messages` PRIMARY KEY (id, created_at)
 
 Indexes:
 
+- `ix_outbound_messages_company_id` CREATE INDEX ix_outbound_messages_company_id ON ONLY ntf.outbound_messages USING btree (company_id)
+- `ix_outbound_messages_event_code_created_at` CREATE INDEX ix_outbound_messages_event_code_created_at ON ONLY ntf.outbound_messages USING btree (event_code, created_at)
 - `ix_outbound_messages_status_next_attempt_at` CREATE INDEX ix_outbound_messages_status_next_attempt_at ON ONLY ntf.outbound_messages USING btree (status, next_attempt_at) WHERE (status = 'queued'::text)
 - `ix_outbound_messages_template_id` CREATE INDEX ix_outbound_messages_template_id ON ONLY ntf.outbound_messages USING btree (template_id)
+- `ix_outbound_messages_user_id` CREATE INDEX ix_outbound_messages_user_id ON ONLY ntf.outbound_messages USING btree (user_id)
 - `uq_outbound_messages_dedup_key_created_at` CREATE UNIQUE INDEX uq_outbound_messages_dedup_key_created_at ON ONLY ntf.outbound_messages USING btree (dedup_key, created_at) NULLS NOT DISTINCT WHERE (dedup_key IS NOT NULL)
 
 ### ntf.outbox_messages

@@ -22,6 +22,7 @@ internal sealed class OneTimeTokenConfiguration : IEntityTypeConfiguration<globa
         builder.Property(e => e.TokenHash).HasColumnName("token_hash").HasColumnType("text").IsRequired();
         builder.Property(e => e.ExpiresAt).HasColumnName("expires_at").HasColumnType("timestamptz");
         builder.Property(e => e.UsedAt).HasColumnName("used_at").HasColumnType("timestamptz");
+        builder.Property(e => e.Attempts).HasColumnName("attempts").HasColumnType("integer");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");

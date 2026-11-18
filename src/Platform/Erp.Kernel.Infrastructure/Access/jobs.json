@@ -129,6 +129,38 @@
       "manual": true,
       "request_permission": "job.runs.create",
       "schedule_editable": true
+    },
+    {
+      "code": "kernel.email_send",
+      "name": {"en": "Send e-mails", "ur": "ای میلز بھیجنا"},
+      "description": {"en": "Sends the queued notification and sign-in e-mails through the mail server, tries refused ones again later and records each result in the delivery log.", "ur": "قطار میں موجود اطلاعی اور سائن ان ای میلز میل سرور کے ذریعے بھیجتا ہے، مسترد شدہ کو بعد میں دوبارہ آزماتا ہے اور ہر نتیجہ ترسیل کے ریکارڈ میں درج کرتا ہے۔"},
+      "schedule": {"every_minutes": 1},
+      "permissions": [],
+      "retry": {"max_attempts": 2, "backoff_seconds": [30]},
+      "timeout_seconds": 300,
+      "priority": 90,
+      "concurrency": 1,
+      "runs_in": ["full", "read_only", "locked"],
+      "entitlement": "platform.base",
+      "manual": true,
+      "request_permission": "job.runs.create",
+      "schedule_editable": false
+    },
+    {
+      "code": "kernel.email_bounces",
+      "name": {"en": "Read bounced e-mails", "ur": "واپس آنے والی ای میلز پڑھنا"},
+      "description": {"en": "Reads the bounce mailbox, when the operator has set one up, and marks e-mails that came back as failed with the reason.", "ur": "اگر آپریٹر نے واپسی کا میل باکس ترتیب دیا ہو تو اسے پڑھتا ہے اور واپس آنے والی ای میلز کو وجہ کے ساتھ ناکام درج کرتا ہے۔"},
+      "schedule": {"every_minutes": 15},
+      "permissions": [],
+      "retry": {"max_attempts": 2, "backoff_seconds": [300]},
+      "timeout_seconds": 600,
+      "priority": 30,
+      "concurrency": 1,
+      "runs_in": ["full", "read_only", "locked"],
+      "entitlement": "platform.base",
+      "manual": true,
+      "request_permission": "job.runs.create",
+      "schedule_editable": false
     }
   ]
 }

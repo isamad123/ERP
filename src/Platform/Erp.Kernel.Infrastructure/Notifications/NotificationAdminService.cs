@@ -206,7 +206,8 @@ public sealed class NotificationAdminService(
             throw new NotificationException(NotificationErrors.EventUnknown, 404);
         }
 
-        if (!NotificationChannels.All.Contains(channel, StringComparer.Ordinal))
+        // An identity e-mail (S1.11b2) has only an e-mail text.
+        if (!NotificationChannels.All.Contains(channel, StringComparer.Ordinal) || (spec.EmailOnly && channel != NotificationChannels.Email))
         {
             throw new NotificationException(NotificationErrors.ChannelUnknown);
         }

@@ -30,7 +30,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
 
     private sealed record Material(
         Guid UserId, string Username, Guid SessionId, string Refresh, string MfaChallenge, string PasswordChange, string MfaEnrolment,
-        string Activation, string RecoveryCode, Guid PendingDeviceId);
+        string Activation, string RecoveryCode, Guid PendingDeviceId, string PasswordReset);
 
     public async Task<IReadOnlyList<string>> RunAsync(ApiEndpoint endpoint, CancellationToken ct)
     {
@@ -50,14 +50,16 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             return failures;
         }
 
-        var markers = new[] { a.UserId.ToString(), a.SessionId.ToString(), a.PendingDeviceId.ToString(), sessionA.Value.SessionId.ToString(), a.Refresh, a.MfaChallenge, a.Activation };
+        var markers = new[] { a.UserId.ToString(), a.SessionId.ToString(), a.PendingDeviceId.ToString(), sessionA.Value.SessionId.ToString(), a.Refresh, a.MfaChallenge, a.Activation, a.PasswordReset };
         var method = new HttpMethod(endpoint.Method);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
 
         // B's host with B's own (or no) login, aimed at A.
         var (path, body, expected, callerToken) = endpoint.Kind switch
         {
-            EndpointKind.IdentityAnonymous => (endpoint.Pattern, AnonymousBody(endpoint.Pattern, a), (HttpStatusCode?)HttpStatusCode.Unauthorized, (string?)null),
+            // Forgot password answers 202 whatever the login (S1.11b2, no account enumeration); the check is that A is untouched.
+            EndpointKind.IdentityAnonymous => (endpoint.Pattern, AnonymousBody(endpoint.Pattern, a),
+                (HttpStatusCode?)(endpoint.Pattern == "/api/iam/auth/password/forgot" ? HttpStatusCode.Accepted : HttpStatusCode.Unauthorized), (string?)null),
             EndpointKind.IdentitySelf => SelfTarget(endpoint.Pattern, a, sessionB.Value.Access),
             _ => (endpoint.Pattern.Replace("{id:guid}", a.UserId.ToString(), StringComparison.Ordinal), "{\"reason\":\"probe\",\"status\":\"disabled\"}", (HttpStatusCode?)HttpStatusCode.NotFound, adminB),
         };
@@ -140,6 +142,9 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
         "/api/iam/auth/mfa-enrolment/confirm" => Json(new { challengeToken = a.MfaEnrolment, deviceId = a.PendingDeviceId, code = "123456" }),
         "/api/iam/auth/refresh" => Json(new { refreshToken = a.Refresh }),
         "/api/iam/auth/activate" => Json(new { token = a.Activation, newPassword = "Probe-New-Pass-22" }),
+        "/api/iam/auth/password/forgot" => Json(new { login = a.Username }),
+        "/api/iam/auth/password/reset" => Json(new { token = a.PasswordReset, newPassword = "Probe-New-Pass-22" }),
+        "/api/iam/auth/mfa/email-code" => Json(new { challengeToken = a.MfaChallenge }),
         _ => throw new InvalidOperationException($"No probe body for anonymous endpoint {pattern}; extend IdentityProbe."),
     };
 
@@ -166,13 +171,29 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
                 {
                     var secret = Base32.Decode(doc.RootElement.GetProperty("secret").GetString()!);
                     var code = Totp.Code(secret, Totp.StepAt(DateTimeOffset.UtcNow));
-                    reply = await SendAsync(fx.HostA, null, method, endpoint.Pattern, Json(new { challengeToken = a.MfaEnrolment, deviceId = doc.RootElement.GetProperty("deviceId").GetGuid(), code }), false, ct);
+                    var emailCode = await EmailedCodeAsync(fx.CodeA, a.UserId, "identity.enrolment_code", ct); // R-003 (S1.11b2)
+                    reply = await SendAsync(fx.HostA, null, method, endpoint.Pattern, Json(new { challengeToken = a.MfaEnrolment, deviceId = doc.RootElement.GetProperty("deviceId").GetGuid(), code, emailCode }), false, ct);
                 }
 
                 return reply.Status == HttpStatusCode.OK ? null : $"A's own enrolment was not confirmed ({(int)reply.Status}). {Short(reply.Body)}";
             case EndpointKind.IdentityAnonymous:
+                if (endpoint.Pattern == "/api/iam/auth/mfa/email-code")
+                {
+                    // The e-mail factor (S1.11b2): A allows it and A's probe user has one.
+                    await using var admin = await fx.OpenAdminAsync(fx.CodeA, ct);
+                    await ExecAsync(admin, """
+                        insert into cfg.setting_values (id, setting_key, layer, scope_id, value, created_at, created_by, updated_at, updated_by)
+                        values ($1, 'iam.mfa.allowed_methods', 'tenant', null, '["totp","email"]'::jsonb, now(), $2, now(), $2)
+                        on conflict (setting_key, layer, scope_id) do update set value = excluded.value
+                        """, ct, Guid.CreateVersion7(), BaselineSeed.SystemUserId);
+                    await ExecAsync(admin, """
+                        insert into iam.mfa_devices (id, user_id, kind, label, status, created_at, created_by, updated_at, updated_by)
+                        values ($1, $2, 'email', 'probe', 'active', now(), $2, now(), $2)
+                        """, ct, Guid.CreateVersion7(), a.UserId);
+                }
+
                 reply = await SendAsync(fx.HostA, null, method, endpoint.Pattern, AnonymousBody(endpoint.Pattern, a), false, ct);
-                return reply.Status == HttpStatusCode.OK ? null : $"A's own material was refused on A's host ({(int)reply.Status}). {Short(reply.Body)}";
+                return (int)reply.Status is >= 200 and < 300 ? null : $"A's own material was refused on A's host ({(int)reply.Status}). {Short(reply.Body)}";
             case EndpointKind.IdentitySelf:
                 var path = endpoint.Pattern
                     .Replace("/sessions/{id:guid}", "/sessions/" + a.SessionId, StringComparison.Ordinal)
@@ -218,6 +239,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             ["password_change"] = OpaqueTokens.New(),
             ["mfa_enrolment"] = OpaqueTokens.New(),
             ["activation"] = OpaqueTokens.New(),
+            ["password_reset"] = OpaqueTokens.New(),
         };
         var recovery = OpaqueTokens.NewRecoveryCode();
 
@@ -247,7 +269,20 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             insert into iam.mfa_devices (id, user_id, kind, secret, label, status, created_at, created_by, updated_at, updated_by)
             values ($1, $2, 'totp', $3, 'probe', 'pending', now(), $2, now(), $2)
             """, ct, device, user, await EncryptedSecretAsync(code, ct));
-        return new Material(user, username, session, refresh, tokens["mfa_challenge"], tokens["password_change"], tokens["mfa_enrolment"], tokens["activation"], recovery, device);
+        return new Material(user, username, session, refresh, tokens["mfa_challenge"], tokens["password_change"], tokens["mfa_enrolment"], tokens["activation"], recovery, device, tokens["password_reset"]);
+    }
+
+    /// <summary>The code of the latest identity e-mail of the event, decrypted with the customer's field key as the sender does (S1.11b2).</summary>
+    private async Task<string> EmailedCodeAsync(string code, Guid userId, string eventCode, CancellationToken ct)
+    {
+        await using var c = await fx.OpenAdminAsync(code, ct);
+        await using var command = new NpgsqlCommand("select secret from ntf.outbound_messages where user_id = $1 and event_code = $2 order by created_at desc, xmin::text::bigint desc limit 1", c);
+        command.Parameters.Add(new NpgsqlParameter { Value = userId });
+        command.Parameters.Add(new NpgsqlParameter { Value = eventCode });
+        var secret = (byte[])(await command.ExecuteScalarAsync(ct))!;
+        var key = await fx.Tenancy.Secrets.GetAsync(TenantFieldKeys.Reference(code), ct) ?? throw new InvalidOperationException($"no field key for {code}");
+        var plain = new AesGcmFieldEncryptor(Convert.FromBase64String(key), TenantFieldKeys.KeyVersion).Decrypt(secret, Kernel.Infrastructure.Notifications.Email.EmailOutbox.SecretPurpose);
+        return JsonSerializer.Deserialize<Dictionary<string, string>>(plain)!["code"];
     }
 
     /// <summary>An authenticator secret encrypted with the customer's own field key, as enrolment stores it.</summary>

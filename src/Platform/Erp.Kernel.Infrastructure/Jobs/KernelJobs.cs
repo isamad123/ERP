@@ -58,6 +58,10 @@ public static class KernelJobs
         services.AddSingleton<IJobHandler, MakerCheckerExpireJob>();
         services.AddSingleton<IJobHandler, OpsAlertsJob>();
         services.AddSingleton<IJobHandler, PurgeJob>();
+
+        // E-mail (slice S1.11b2): the sender and the bounce reader; their mail settings come with the notification consumer.
+        services.AddSingleton<IJobHandler, Notifications.Email.EmailSendJob>();
+        services.AddSingleton<IJobHandler, Notifications.Email.EmailBounceJob>();
         return services;
     }
 
@@ -242,7 +246,8 @@ internal sealed class OpsAlertsJob(IClock clock) : IJobHandler
 
 /// <summary>
 /// Daily clean-up (ruling P3; spec 03 section 8, FR-HRM-DAT-04): finished runs after <c>job.retention.run_days</c>
-/// (default 30; a run an import batch points to is kept), delivered outbox rows and inbox rows after 30 days. Run logs
+/// (default 30; a run an import batch points to is kept), delivered outbox rows, inbox rows and finished e-mails of the
+/// delivery log (S1.11b2) after 30 days. Run logs
 /// are append-only and go with their monthly partition (later slice).
 /// </summary>
 internal sealed class PurgeJob(IClock clock) : IJobHandler
@@ -263,6 +268,10 @@ internal sealed class PurgeJob(IClock clock) : IJobHandler
         var kept = await SettingsStore.ResolveAsync(c, null, [KernelSettingKeys.NtfInAppRetentionDays], null, null, today, cancellationToken).ConfigureAwait(false);
         var itemDays = kept.TryGetValue(KernelSettingKeys.NtfInAppRetentionDays, out var k) && k.Value.ValueKind == JsonValueKind.Number && k.Value.TryGetInt32(out var m) && m >= 30 ? m : 180;
         var items = await IdentityDb.ExecuteAsync(c, null, "delete from ntf.in_app_items where created_at < $1", cancellationToken, now.AddDays(-itemDays)).ConfigureAwait(false);
+
+        // The e-mail delivery log keeps finished messages 30 days (spec 03 section 8; slice S1.11b2); waiting ones stay.
+        var mails = await IdentityDb.ExecuteAsync(c, null, "delete from ntf.outbound_messages where status <> 'queued' and updated_at < $1", cancellationToken,
+            now.AddDays(-KernelJobs.EventRetentionDays)).ConfigureAwait(false);
         var events = 0;
         var inbox = 0;
         foreach (var schema in await OpsAlerts.OutboxSchemasAsync(c, cancellationToken, "DELETE").ConfigureAwait(false))
@@ -273,6 +282,6 @@ internal sealed class PurgeJob(IClock clock) : IJobHandler
 #pragma warning restore CA2100
         }
 
-        await job.LogAsync("info", string.Create(CultureInfo.InvariantCulture, $"{runs} finished run(s) older than {days} days, {items} notification item(s) older than {itemDays} days, {events} delivered event(s) and {inbox} inbox row(s) older than {KernelJobs.EventRetentionDays} days removed"), cancellationToken).ConfigureAwait(false);
+        await job.LogAsync("info", string.Create(CultureInfo.InvariantCulture, $"{runs} finished run(s) older than {days} days, {items} notification item(s) older than {itemDays} days, {mails} finished e-mail(s), {events} delivered event(s) and {inbox} inbox row(s) older than {KernelJobs.EventRetentionDays} days removed"), cancellationToken).ConfigureAwait(false);
     }
 }

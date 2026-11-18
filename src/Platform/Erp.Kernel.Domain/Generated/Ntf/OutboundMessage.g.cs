@@ -42,6 +42,18 @@ public sealed partial class OutboundMessage : global::Erp.BuildingBlocks.Domain.
     /// <summary>error</summary>
     public string? Error { get; set; }
 
+    /// <summary>user_id: fk iam.users; the person the message is for (none for the operator address) (CR-045)</summary>
+    public global::System.Guid? UserId { get; set; }
+
+    /// <summary>event_code: catalogue event of the message (CR-045)</summary>
+    public string? EventCode { get; set; }
+
+    /// <summary>company_id: company of the event, for the delivery log filter and scope (CR-045)</summary>
+    public global::System.Guid? CompanyId { get; set; }
+
+    /// <summary>secret: reset link or code of an identity e-mail, encrypted; cleared once the message is sent or ends (CR-049) (ciphertext; see IFieldEncryptor)</summary>
+    public byte[]? Secret { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

@@ -22,5 +22,13 @@
   "permissions.ntf.subscriptions.create": "اطلاعات کے قواعد شامل کریں",
   "permissions.ntf.subscriptions.update": "اطلاعات کے قواعد بدلیں",
   "permissions.ntf.subscriptions.delete": "اطلاعات کے قواعد ہٹائیں",
-  "permissions.ntf.catalogue.read": "دیکھیں کہ کن واقعات پر اطلاعات بھیجی جا سکتی ہیں"
+  "permissions.ntf.catalogue.read": "دیکھیں کہ کن واقعات پر اطلاعات بھیجی جا سکتی ہیں",
+  "notifications.email.open_button": "کھولیں",
+  "notifications.email.footer": "یہ ای میل خودکار طور پر بھیجی گئی ہے۔ آپ اپنی اطلاعات کی ترتیبات میں منتخب کر سکتے ہیں کہ کون سی ای میلز آپ کو ملیں۔",
+  "errors.notification.delivery_not_resendable": "اس پیغام میں سائن ان لنک یا کوڈ تھا اس لیے اسے دوبارہ نہیں بھیجا جا سکتا۔ اس کے بجائے نیا لنک بھیجیں۔",
+  "errors.notification.no_email_address": "آپ کا کوئی ای میل پتا نہیں جس پر بھیجا جا سکے۔",
+  "permissions.ntf.outbound_messages.read": "ای میل کی ترسیل کا ریکارڈ دیکھنا",
+  "permissions.ntf.outbound_messages.resend": "ترسیل کے ریکارڈ سے ای میلز دوبارہ بھیجنا",
+  "permissions.ntf.templates.test_send": "اطلاعی متن کی آزمائشی ای میل خود کو بھیجنا",
+  "errors.notification.delivery_waiting": "یہ پیغام ابھی بھیجے جانے کا منتظر ہے۔"
 }

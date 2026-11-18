@@ -16,6 +16,7 @@ using Erp.Kernel.Infrastructure.Generated;
 using Erp.Kernel.Infrastructure.Identity;
 using Erp.Kernel.Infrastructure.Jobs;
 using Erp.Kernel.Infrastructure.Notifications;
+using Erp.Kernel.Infrastructure.Notifications.Email;
 using Erp.Kernel.Infrastructure.Settings;
 using Erp.Kernel.Infrastructure.Workflow;
 using Microsoft.EntityFrameworkCore;
@@ -31,7 +32,8 @@ namespace Erp.Host.Worker;
 /// <para>Settings (environment variables, as the migrator's; docs/runbooks/tenant-operations.md): <c>ERP_CONTROL_PLANE</c>,
 /// <c>ERP_SECRETS_FILE</c>, <c>ERP_SECRETS_KEY</c>, <c>ERP_PLATFORM_ACTOR</c> (ruling P6); <c>Jobs:Slots</c> (4),
 /// <c>Jobs:PerTenantSlots</c> (2), <c>Jobs:LeaseSeconds</c> (60), <c>Jobs:PollMilliseconds</c> (2000),
-/// <c>Events:PollMilliseconds</c> (2000), <c>Events:BatchSize</c> (100), <c>Settings:RefreshMilliseconds</c> (1000).</para>
+/// <c>Events:PollMilliseconds</c> (2000), <c>Events:BatchSize</c> (100), <c>Settings:RefreshMilliseconds</c> (1000); the
+/// mail settings <c>Mail:*</c> and <c>Alerts:OperatorEmail</c> of S1.11b2 (see <see cref="MailOptions"/>).</para>
 /// </summary>
 public static class WorkerHost
 {
@@ -83,7 +85,13 @@ public static class WorkerHost
         services.AddKernelWorkflow();
 
         // Notifications (S1.11b1): the consumer that turns events into in-app items; modules register their catalogue sources here.
-        services.AddKernelNotificationConsumer();
+        // E-mail (S1.11b2, plan points P2, P6, P13; docs/runbooks/mail-setup.md): the operator's relay, bounce mailbox and alert address.
+        services.AddKernelNotificationConsumer(new MailOptions(
+            config["Mail:Smtp:Host"], config.GetValue("Mail:Smtp:Port", 587), config["Mail:Smtp:Security"] ?? "starttls", config["Mail:Smtp:Username"], config["Mail:Smtp:PasswordRef"],
+            config["Mail:From"],
+            config["Mail:Bounce:Host"], config.GetValue("Mail:Bounce:Port", 993), config["Mail:Bounce:Security"] ?? "ssl", config["Mail:Bounce:Username"], config["Mail:Bounce:PasswordRef"],
+            config["Mail:Bounce:Folder"] ?? "INBOX",
+            config["Alerts:OperatorEmail"]));
 
         // Jobs and events (S1.11a, rulings Q5, Q7, P6).
         var lease = TimeSpan.FromSeconds(config.GetValue("Jobs:LeaseSeconds", 60));
