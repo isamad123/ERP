@@ -6428,16 +6428,20 @@ Requirements: HRM-NTF-09. Source: kernel.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| dedup_key | text | yes |  | event id and recipient: one item per event and person (CR-048, KRN-NTF-05) |
+| event_group | text | yes |  | preference group of the event (CR-048) |
 
 Constraints:
 
 - `ck_in_app_items_event_code_code` CHECK ((((length(event_code) >= 1) AND (length(event_code) <= 40)) AND (event_code = btrim(event_code))))
+- `ck_in_app_items_event_group_code` CHECK ((((length(event_group) >= 1) AND (length(event_group) <= 40)) AND (event_group = btrim(event_group))))
 - `fk_in_app_items_user_id` FOREIGN KEY (user_id) REFERENCES iam.users(id)
 - `pk_in_app_items` PRIMARY KEY (id)
 
 Indexes:
 
 - `ix_in_app_items_user_id_read_at_created_at` CREATE INDEX ix_in_app_items_user_id_read_at_created_at ON ntf.in_app_items USING btree (user_id, read_at, created_at)
+- `uq_in_app_items_user_id_dedup_key` CREATE UNIQUE INDEX uq_in_app_items_user_id_dedup_key ON ntf.in_app_items USING btree (user_id, dedup_key) NULLS NOT DISTINCT WHERE (dedup_key IS NOT NULL)
 
 ### ntf.inbox_messages
 
@@ -6551,6 +6555,8 @@ Requirements: KRN-NTF-03. Source: kernel.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| name | text | yes |  | short name of the rule (CR-048) |
+| condition | jsonb | yes |  | structured condition on the event fields, same format as workflow (CR-048, Q14) |
 
 Constraints:
 
@@ -6576,11 +6582,13 @@ Requirements: KRN-NTF-02, HRM-NTF-03. Source: kernel.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| source | text | no | 'product'::text | default product; version 1 is the product text, a customer edit is a new tenant version (CR-048, Q15) |
 
 Constraints:
 
 - `ck_templates_channel` CHECK ((channel = ANY (ARRAY['in_app'::text, 'email'::text])))
 - `ck_templates_event_code_code` CHECK ((((length(event_code) >= 1) AND (length(event_code) <= 40)) AND (event_code = btrim(event_code))))
+- `ck_templates_source` CHECK ((source = ANY (ARRAY['product'::text, 'tenant'::text])))
 - `ck_templates_status` CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
 - `pk_templates` PRIMARY KEY (id)
 - `uq_templates_event_code_channel_language_version` UNIQUE (event_code, channel, language, version)
