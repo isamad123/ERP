@@ -23,30 +23,15 @@ public sealed class OutboundMessageResponse
     public global::System.DateTimeOffset? NextAttemptAt { get; init; }
     public string? ProviderRef { get; init; }
     public string? Error { get; init; }
+    public global::System.Guid? UserId { get; init; }
+    public string? EventCode { get; init; }
+    public global::System.Guid? CompanyId { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for ntf.outbound_messages. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class OutboundMessageWriteRequest
-{
-    public string? Channel { get; init; }
-    public string? Recipient { get; init; }
-    public global::System.Guid? TemplateId { get; init; }
-    public global::System.Text.Json.JsonElement? Payload { get; init; }
-    public string? DedupKey { get; init; }
-    public int? Attempts { get; init; }
-    public global::System.DateTimeOffset? NextAttemptAt { get; init; }
-    public string? ProviderRef { get; init; }
-    public string? Error { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for ntf.outbound_messages.</summary>
@@ -58,10 +43,12 @@ public sealed class OutboundMessageListQuery
 
     public global::System.Guid? TemplateId { get; init; }
 
+    public global::System.Guid? UserId { get; init; }
+
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of ntf.outbound_messages: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of ntf.outbound_messages: read. Answers pass through field security (S1.06).</summary>
 internal static class OutboundMessageEndpoints
 {
     private const string Resource = "ntf.outbound_messages";
@@ -71,15 +58,13 @@ internal static class OutboundMessageEndpoints
         var group = app.MapGroup("/api/ntf/outbound-messages").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("ntf.outbound_messages.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "ntf.outbound_messages.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("ntf.outbound_messages.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "ntf.outbound_messages.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("ntf.outbound_messages.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "ntf.outbound_messages.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("ntf.outbound_messages.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "ntf.outbound_messages.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] OutboundMessageListQuery query, global::Erp.Kernel.Application.Generated.Ntf.IOutboundMessageRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "ntf.outbound_messages.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Ntf.OutboundMessageFilter { TemplateId = query.TemplateId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Ntf.OutboundMessageFilter { TemplateId = query.TemplateId, UserId = query.UserId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Ntf.OutboundMessageAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
@@ -89,53 +74,6 @@ internal static class OutboundMessageEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Ntf.OutboundMessageAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(OutboundMessageWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.IOutboundMessageRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "ntf.outbound_messages.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Ntf.OutboundMessageAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/ntf/outbound-messages/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Ntf.OutboundMessageAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, OutboundMessageWriteRequest request, global::Erp.Kernel.Application.Generated.Ntf.IOutboundMessageRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "ntf.outbound_messages.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Ntf.OutboundMessageAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Ntf.OutboundMessageAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static OutboundMessageResponse ToResponse(global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage row) => new()
@@ -150,6 +88,9 @@ internal static class OutboundMessageEndpoints
         NextAttemptAt = row.NextAttemptAt,
         ProviderRef = row.ProviderRef,
         Error = row.Error,
+        UserId = row.UserId,
+        EventCode = row.EventCode,
+        CompanyId = row.CompanyId,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -157,122 +98,4 @@ internal static class OutboundMessageEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(OutboundMessageWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.Channel is null && (!update || access.CanEdit("channel")))
-        {
-            errors.Add("channel");
-        }
-        if (request.Recipient is null && (!update || access.CanEdit("recipient")))
-        {
-            errors.Add("recipient");
-        }
-        if (request.Payload is null && (!update || access.CanEdit("payload")))
-        {
-            errors.Add("payload");
-        }
-        if (request.Attempts is null && (!update || access.CanEdit("attempts")))
-        {
-            errors.Add("attempts");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(OutboundMessageWriteRequest request, global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("channel"))
-        {
-            row.Channel = request.Channel!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Channel, row.Channel, update))
-        {
-            denied.Add("channel");
-        }
-        if (access.CanEdit("recipient"))
-        {
-            row.Recipient = request.Recipient!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Recipient, row.Recipient, update))
-        {
-            denied.Add("recipient");
-        }
-        if (access.CanEdit("template_id"))
-        {
-            row.TemplateId = request.TemplateId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TemplateId, row.TemplateId, update))
-        {
-            denied.Add("templateId");
-        }
-        if (access.CanEdit("payload"))
-        {
-            row.Payload = GeneratedEndpointSupport.ToDocument(request.Payload)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Payload, row.Payload, update))
-        {
-            denied.Add("payload");
-        }
-        if (access.CanEdit("dedup_key"))
-        {
-            row.DedupKey = request.DedupKey;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DedupKey, row.DedupKey, update))
-        {
-            denied.Add("dedupKey");
-        }
-        if (access.CanEdit("attempts"))
-        {
-            row.Attempts = request.Attempts!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Attempts, row.Attempts, update))
-        {
-            denied.Add("attempts");
-        }
-        if (access.CanEdit("next_attempt_at"))
-        {
-            row.NextAttemptAt = request.NextAttemptAt;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.NextAttemptAt, row.NextAttemptAt, update))
-        {
-            denied.Add("nextAttemptAt");
-        }
-        if (access.CanEdit("provider_ref"))
-        {
-            row.ProviderRef = request.ProviderRef;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ProviderRef, row.ProviderRef, update))
-        {
-            denied.Add("providerRef");
-        }
-        if (access.CanEdit("error"))
-        {
-            row.Error = request.Error;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Error, row.Error, update))
-        {
-            denied.Add("error");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
 }

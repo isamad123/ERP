@@ -34077,7 +34077,10 @@
             "activation",
             "mfa_challenge",
             "password_change",
-            "mfa_enrolment"
+            "mfa_enrolment",
+            "password_reset",
+            "email_code",
+            "enrolment_confirm"
           ]
         },
         {
@@ -34154,6 +34157,16 @@
           "name": "row_version",
           "kind": "BigInteger",
           "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "attempts",
+          "kind": "Int4",
+          "type": "integer",
           "not_null": true,
           "has_default": true,
           "generated": false,
@@ -39478,12 +39491,53 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "user_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "event_code",
+          "kind": "Code",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "company_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "secret",
+          "kind": "Encrypted",
+          "type": "bytea",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": true,
+          "enum_values": []
         }
       ],
       "uniques": [
         "uq_outbound_messages_dedup_key_created_at"
       ],
       "checks": [
+        "ck_outbound_messages_event_code_code",
         "ck_outbound_messages_status"
       ],
       "exclusions": [],
@@ -39497,10 +39551,23 @@
           "target_columns": [
             "id"
           ]
+        },
+        {
+          "name": "fk_outbound_messages_user_id",
+          "columns": [
+            "user_id"
+          ],
+          "target": "iam.users",
+          "target_columns": [
+            "id"
+          ]
         }
       ],
       "indexes": [
         "ix_outbound_messages_status_next_attempt_at",
+        "ix_outbound_messages_user_id",
+        "ix_outbound_messages_event_code_created_at",
+        "ix_outbound_messages_company_id",
         "ix_outbound_messages_template_id"
       ],
       "triggers": [],

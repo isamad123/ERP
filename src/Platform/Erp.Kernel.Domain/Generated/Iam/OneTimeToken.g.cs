@@ -30,6 +30,9 @@ public sealed partial class OneTimeToken : global::Erp.BuildingBlocks.Domain.Ent
     /// <summary>used_at</summary>
     public global::System.DateTimeOffset? UsedAt { get; set; }
 
+    /// <summary>attempts: default 0; wrong e-mail codes entered against this token (CR-049, Q16: 5 tries)</summary>
+    public int Attempts { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

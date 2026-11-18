@@ -7,6 +7,7 @@
   <ItemGroup>
     <PackageReference Include="NSec.Cryptography" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+    <PackageReference Include="MailKit" />
   </ItemGroup>
   <ItemGroup>
     <!-- Slice S1.06: the unit tests check the engine's merge and scope rules directly. -->

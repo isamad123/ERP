@@ -13,21 +13,15 @@
     {
       "action": "read",
       "permission": "ntf.outbound_messages.read"
-    },
-    {
-      "action": "create",
-      "permission": "ntf.outbound_messages.create"
-    },
-    {
-      "action": "update",
-      "permission": "ntf.outbound_messages.update"
     }
   ],
   "companyScoped": false,
   "effectiveDated": false,
   "softDelete": false,
   "appendOnly": false,
-  "scope": {},
+  "scope": {
+    "company": "companyId"
+  },
   "listFields": [
     "channel",
     "recipient",
@@ -139,6 +133,38 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.ntf.outbound_messages.error"
+    },
+    {
+      "column": "user_id",
+      "field": "userId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": true,
+      "labelKey": "fields.ntf.outbound_messages.user_id",
+      "references": "iam.users"
+    },
+    {
+      "column": "event_code",
+      "field": "eventCode",
+      "kind": "Code",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.ntf.outbound_messages.event_code",
+      "maxLength": 40
+    },
+    {
+      "column": "company_id",
+      "field": "companyId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.ntf.outbound_messages.company_id"
     },
     {
       "column": "status",

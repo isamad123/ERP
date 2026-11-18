@@ -129,7 +129,13 @@ public static partial class DesignLoader
             Purpose = YamlNode.OptionalText(map, "purpose", fullName),
             Traits = traits,
             Requirements = YamlNode.Texts(map.GetValueOrDefault("reqs"), fullName),
-            AddedIn = map.GetValueOrDefault("added_in") is string slice ? SliceId(slice, fullName) : null,
+            AddedIn = map.GetValueOrDefault("added_in") switch
+            {
+                string slice => SliceId(slice, fullName),
+                // added_in: {table: S1.05, S1.11b-r1: [column]} (S1.11b2): a table of a later slice that later gains columns.
+                Dictionary<object, object?> later when later.TryGetValue("table", out var first) && first is string slice => SliceId(slice, fullName),
+                _ => null,
+            },
             Entitlement = map.GetValueOrDefault("entitlement") is string key ? EntitlementKey(key, fullName) : fileEntitlement,
         };
         if (table.Database == DatabaseKind.ControlPlane ? table.Entitlement is not null : table.Entitlement is null)
@@ -171,6 +177,11 @@ public static partial class DesignLoader
         {
             foreach (var (slice, names) in YamlNode.Map(columns, table.FullName + ".added_in"))
             {
+                if (slice == "table")
+                {
+                    continue; // the slice that created the table (read with the table)
+                }
+
                 foreach (var name in YamlNode.Texts(names, table.FullName + ".added_in"))
                 {
                     var column = table.Column(name);

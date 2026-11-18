@@ -206,7 +206,8 @@ public static class SqlEmitter
 
         foreach (var table in added)
         {
-            b.Append(CreateTable(table, model.Settings, baseOnly: false));
+            // As the table was first designed: columns, checks and keys of later slices go to those slices' files (S1.11b2).
+            b.Append(CreateTable(table, model.Settings, baseOnly: true));
         }
 
         foreach (var table in tables)
@@ -593,7 +594,7 @@ public static class SqlEmitter
     /// True when <paramref name="item"/> (a slice id, optionally with a revision such as S1.05-r1) comes no later than
     /// <paramref name="slice"/>, so a design file describes the database exactly as of its own slice.
     /// </summary>
-    private static bool UpTo(string item, string slice)
+    internal static bool UpTo(string item, string slice)
     {
         static (int Order, int Revision) Key(string id) =>
             (RuleSliceOrder(id.Split('-')[0]) * 10 + SlicePart(id), id.Contains("-r", StringComparison.Ordinal) ? int.Parse(id[^1..], CultureInfo.InvariantCulture) : 0);

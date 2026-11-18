@@ -474,19 +474,7 @@
       "code": "ntf.outbound_messages.read",
       "module": "ntf",
       "descriptionKey": "permissions.ntf.outbound_messages.read",
-      "sensitive": false
-    },
-    {
-      "code": "ntf.outbound_messages.create",
-      "module": "ntf",
-      "descriptionKey": "permissions.ntf.outbound_messages.create",
-      "sensitive": false
-    },
-    {
-      "code": "ntf.outbound_messages.update",
-      "module": "ntf",
-      "descriptionKey": "permissions.ntf.outbound_messages.update",
-      "sensitive": false
+      "sensitive": true
     },
     {
       "code": "ntf.subscriptions.read",

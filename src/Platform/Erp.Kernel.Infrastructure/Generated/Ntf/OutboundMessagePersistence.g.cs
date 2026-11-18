@@ -26,6 +26,10 @@ internal sealed class OutboundMessageConfiguration : IEntityTypeConfiguration<gl
         builder.Property(e => e.NextAttemptAt).HasColumnName("next_attempt_at").HasColumnType("timestamptz");
         builder.Property(e => e.ProviderRef).HasColumnName("provider_ref").HasColumnType("text");
         builder.Property(e => e.Error).HasColumnName("error").HasColumnType("text");
+        builder.Property(e => e.UserId).HasColumnName("user_id").HasColumnType("uuid");
+        builder.Property(e => e.EventCode).HasColumnName("event_code").HasColumnType("text");
+        builder.Property(e => e.CompanyId).HasColumnName("company_id").HasColumnType("uuid");
+        builder.Property(e => e.Secret).HasColumnName("secret").HasColumnType("bytea");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz").ValueGeneratedNever();
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
@@ -51,6 +55,10 @@ internal sealed class OutboundMessageRepository(
         if (filter.TemplateId is { } templateIdFilter)
         {
             query = query.Where(e => e.TemplateId == templateIdFilter);
+        }
+        if (filter.UserId is { } userIdFilter)
+        {
+            query = query.Where(e => e.UserId == userIdFilter);
         }
         if (filter.Status is { } statusFilter)
         {

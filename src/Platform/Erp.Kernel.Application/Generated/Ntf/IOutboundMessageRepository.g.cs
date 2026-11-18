@@ -10,6 +10,7 @@ namespace Erp.Kernel.Application.Generated.Ntf;
 public sealed record OutboundMessageFilter
 {
     public global::System.Guid? TemplateId { get; init; }
+    public global::System.Guid? UserId { get; init; }
     public string? Status { get; init; }
 }
 
@@ -30,7 +31,10 @@ public static class OutboundMessageAccess
 {
     public static global::Erp.BuildingBlocks.Application.Security.ScopeTarget<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage> Scope { get; } = new(
         "ntf.outbound_messages",
-        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage, global::System.Guid?>>>(),
+        new global::System.Collections.Generic.Dictionary<global::Erp.BuildingBlocks.Application.Security.ScopeDimension, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage, global::System.Guid?>>>
+        {
+            [global::Erp.BuildingBlocks.Application.Security.ScopeDimension.Company] = e => e.CompanyId,
+        },
         new global::System.Collections.Generic.Dictionary<string, global::System.Linq.Expressions.Expression<global::System.Func<global::Erp.Kernel.Domain.Generated.Ntf.OutboundMessage, string?>>>());
 
     public static global::Erp.BuildingBlocks.Application.Security.FieldCatalog Fields { get; } = new("ntf.outbound_messages",
@@ -45,6 +49,9 @@ public static class OutboundMessageAccess
         new("next_attempt_at", "NextAttemptAt", null),
         new("provider_ref", "ProviderRef", null),
         new("error", "Error", null),
+        new("user_id", "UserId", null),
+        new("event_code", "EventCode", null),
+        new("company_id", "CompanyId", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

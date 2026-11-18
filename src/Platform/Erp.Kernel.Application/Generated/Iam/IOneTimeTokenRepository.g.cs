@@ -40,6 +40,7 @@ public static class OneTimeTokenAccess
         new("token_hash", "TokenHash", null),
         new("expires_at", "ExpiresAt", null),
         new("used_at", "UsedAt", null),
+        new("attempts", "Attempts", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
         new("updated_at", "UpdatedAt", null),
