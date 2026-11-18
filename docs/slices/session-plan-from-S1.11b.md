@@ -1,6 +1,6 @@
 # Session plan from S1.11b onward (proposal, 2026-11-18)
-Status: PROPOSED by Claude after S1.11a; it needs the product owner's ruling. It changes no decision. Adopting point 1
-changes the `Model:` line of the S1.11 slice file and is recorded as a change request (D-39, D-45).
+Status: APPROVED by the product owner (2026-11-18, "approve and accept all"), recorded as CR-047. Points 1 to 3 apply from
+S1.11b1; the `Model:` line of the S1.11 slice file follows point 1.
 
 ## Why
 S1.11a used far more tokens than earlier slices, for four reasons:
@@ -47,7 +47,6 @@ The later slices that are larger than this rule are split the same way when thei
 6. Test rigs share one customer per test class where the tests allow it, so the test server does not run out of
    databases.
 
-## 4. What the product owner decides
-- Point 1: switch S1.11b1, S1.11c1 and S1.11c2 to Sonnet, and keep Opus for S1.11b2 item 16.
-- Point 2: build S1.11b and S1.11c as four parts instead of two.
-- Point 3: adopt these working rules for every later slice (add them to `docs/token-strategy.md`).
+## 4. Ruling (2026-11-18)
+All three points accepted: Sonnet for S1.11b1, S1.11c1 and S1.11c2 and for S1.11b2 items 12, 14 and 15, Opus for S1.11b2 item 16;
+four parts; the working rules of section 3 apply to every later slice.

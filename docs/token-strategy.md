@@ -67,3 +67,11 @@ Default to Sonnet. Opus only when the slice file says class A or B.
 ## 11. Keep always-loaded files short
 - `CLAUDE.md` and `docs/architecture-reference.md` are read in every session; keep them under about 1,500 words each
   and remove anything that no longer applies.
+
+## Session rules (CR-047, 2026-11-18)
+- At most about 8 new files and 15 tests per session; split a slice into parts beforehand when it is larger.
+- Start from the previous handoff and the slice section; open only the files the handoff names.
+- Keep the plan to one screen: files, tables, endpoints, tests, open points.
+- While building, run only the new test classes and read only failure names and messages; run the full suite once, in the
+  background, before the pull request.
+- Commit and push at each milestone, so a restart loses nothing.
