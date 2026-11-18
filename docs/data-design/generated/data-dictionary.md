@@ -717,6 +717,11 @@ Metadata of stored files; content in the file store under the tenant prefix. Req
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| legal_hold | boolean | no | false | default false; true stops archive and delete (CR-045) |
+| legal_hold_reason | text | yes |  |  |
+| scanned_at | timestamp with time zone | yes |  |  |
+| archived_at | timestamp with time zone | yes |  |  |
+| key_version | integer | no | 1 | default 1; file key version the content was encrypted with |
 
 Constraints:
 
