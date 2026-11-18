@@ -15,6 +15,7 @@ using Erp.Kernel.Infrastructure.Entitlements;
 using Erp.Kernel.Infrastructure.Generated;
 using Erp.Kernel.Infrastructure.Identity;
 using Erp.Kernel.Infrastructure.Jobs;
+using Erp.Kernel.Infrastructure.Notifications;
 using Erp.Kernel.Infrastructure.Settings;
 using Erp.Kernel.Infrastructure.Workflow;
 using Microsoft.EntityFrameworkCore;
@@ -80,6 +81,9 @@ public static class WorkerHost
 
         // Workflow (S1.10b): modules register their document types and, for HR, the approver directory here as in the API host.
         services.AddKernelWorkflow();
+
+        // Notifications (S1.11b1): the consumer that turns events into in-app items; modules register their catalogue sources here.
+        services.AddKernelNotificationConsumer();
 
         // Jobs and events (S1.11a, rulings Q5, Q7, P6).
         var lease = TimeSpan.FromSeconds(config.GetValue("Jobs:LeaseSeconds", 60));

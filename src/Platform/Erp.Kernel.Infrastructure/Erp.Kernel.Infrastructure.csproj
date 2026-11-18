@@ -17,6 +17,7 @@
     <EmbeddedResource Include="Numbering/country-defaults.json" LogicalName="Erp.Kernel.Infrastructure.Numbering.country-defaults.json" />
     <EmbeddedResource Include="Access/settings.g.json" LogicalName="Erp.Kernel.Infrastructure.Access.settings.g.json" />
     <EmbeddedResource Include="Access/jobs.json" LogicalName="Erp.Kernel.Infrastructure.Access.jobs.json" />
+    <EmbeddedResource Include="Access/notification-events.json" LogicalName="Erp.Kernel.Infrastructure.Access.notification-events.json" />
     <EmbeddedResource Include="Entitlements/entitlement-keys.json" LogicalName="Erp.Kernel.Infrastructure.Entitlements.entitlement-keys.json" />
   </ItemGroup>
 </Project>

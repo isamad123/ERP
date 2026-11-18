@@ -295,5 +295,17 @@ settings:
     description: {en: "Days a finished background run and its log stay in the job centre", ur: "دن جن تک مکمل شدہ پس منظر کا کام اور اس کا ریکارڈ جاب سینٹر میں رہتا ہے"}
     help: {en: "Runs that succeeded, failed or were cancelled are removed from the job centre after this many days by the daily clean-up.", ur: "کامیاب، ناکام یا منسوخ شدہ کام روزانہ کی صفائی کے ذریعے اتنے دن بعد جاب سینٹر سے ہٹا دیے جاتے ہیں۔"}
 
+  # Slice S1.11b1 (HRM-NTF-09, ruling Q11): how long in-app notification items stay in the centre.
+  - key: ntf.in_app.retention_days
+    type: int
+    default: 180
+    validation: {min: 30, max: 3660}
+    layers: [tenant]
+    area: notifications
+    unit: days
+    name: {en: "Keep notification items", ur: "اطلاعات کے اندراجات محفوظ رکھنا"}
+    description: {en: "Days a notification item stays in a person's notification centre", ur: "دن جن تک اطلاع کا اندراج کسی شخص کے اطلاعاتی مرکز میں رہتا ہے"}
+    help: {en: "The daily clean-up removes notification items older than this many days. Approvals and decisions are always kept in the workflow history.", ur: "روزانہ کی صفائی اتنے دن سے پرانے اطلاعی اندراجات ہٹا دیتی ہے۔ منظوریاں اور فیصلے ورک فلو کی تاریخ میں ہمیشہ محفوظ رہتے ہیں۔"}
+
 # Release 1.0 has no requirement that needs a specific flag yet (ruling Q14): the mechanism ships with an empty list.
 flags: []

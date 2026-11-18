@@ -17,6 +17,9 @@ public interface IInAppItemRepository : global::Erp.BuildingBlocks.Application.D
 {
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.InAppItem>> ListAsync(InAppItemFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 
+    /// <summary>Rows matching (user_id, dedup_key); at most PageRequest.MaxLimit rows.</summary>
+    global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.InAppItem>> FindByUserIdAndDedupKeyAsync(global::System.Guid userId, string? dedupKey, global::System.Threading.CancellationToken cancellationToken);
+
     /// <summary>Rows matching (user_id, read_at, created_at); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ntf.InAppItem>> FindByUserIdAndReadAtAndCreatedAtAsync(global::System.Guid userId, global::System.DateTimeOffset? readAt, global::System.DateTimeOffset createdAt, global::System.Threading.CancellationToken cancellationToken);
 }
@@ -41,6 +44,8 @@ public static class InAppItemAccess
         new("body", "Body", null),
         new("link", "Link", null),
         new("read_at", "ReadAt", null),
+        new("dedup_key", "DedupKey", null),
+        new("event_group", "EventGroup", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
         new("updated_at", "UpdatedAt", null),

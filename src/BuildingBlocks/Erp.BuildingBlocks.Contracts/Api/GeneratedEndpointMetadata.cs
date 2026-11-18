@@ -90,3 +90,11 @@ public sealed record WorkflowEndpointMetadata(string Kind, string Resource, stri
 /// customer's id is 404).
 /// </summary>
 public sealed record JobEndpointMetadata(string Kind, string Resource, string Permission);
+
+/// <summary>
+/// Marks an endpoint of the notification API (slice S1.11b1) for the permission and isolation suites. <c>Kind</c> is
+/// <c>own_catalog</c> (the signed-in person's own items or preferences: another customer's person is never visible),
+/// <c>catalog</c> (a list or action of the bound customer) or <c>record_action</c> (a route with the <c>{id}</c> of an item
+/// or rule: another customer's id is 404).
+/// </summary>
+public sealed record NotificationEndpointMetadata(string Kind, string Resource, string Permission);

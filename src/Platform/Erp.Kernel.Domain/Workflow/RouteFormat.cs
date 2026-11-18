@@ -307,6 +307,18 @@ public static partial class RouteFormat
         };
     }
 
+    /// <summary>
+    /// Reads one condition in the route format over <paramref name="fields"/> (slice S1.11b1: audience rules of notifications
+    /// use the same structured conditions as workflow, ruling Q14). The condition is null when there are problems.
+    /// </summary>
+    public static (Condition? Condition, IReadOnlyList<RouteProblem> Problems) ParseCondition(JsonElement json, IReadOnlyDictionary<string, RouteField> fields)
+    {
+        ArgumentNullException.ThrowIfNull(fields);
+        var problems = new List<RouteProblem>();
+        var condition = ReadCondition(json, "condition", fields, 1, problems);
+        return (problems.Count == 0 ? condition : null, problems);
+    }
+
     private static Condition? ReadCondition(JsonElement c, string path, IReadOnlyDictionary<string, RouteField> fields, int depth, List<RouteProblem> problems)
     {
         if (c.ValueKind != JsonValueKind.Object)

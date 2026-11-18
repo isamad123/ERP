@@ -39191,11 +39191,34 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "dedup_key",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "event_group",
+          "kind": "Code",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
-      "uniques": [],
+      "uniques": [
+        "uq_in_app_items_user_id_dedup_key"
+      ],
       "checks": [
-        "ck_in_app_items_event_code_code"
+        "ck_in_app_items_event_code_code",
+        "ck_in_app_items_event_group_code"
       ],
       "exclusions": [],
       "foreign_keys": [
@@ -39836,6 +39859,26 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "name",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "condition",
+          "kind": "Json",
+          "type": "jsonb",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [],
@@ -40002,6 +40045,19 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "source",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "product",
+            "tenant"
+          ]
         }
       ],
       "uniques": [
@@ -40010,6 +40066,7 @@
       "checks": [
         "ck_templates_event_code_code",
         "ck_templates_channel",
+        "ck_templates_source",
         "ck_templates_status"
       ],
       "exclusions": [],

@@ -11,14 +11,6 @@
     {
       "action": "read",
       "permission": "ntf.subscriptions.read"
-    },
-    {
-      "action": "create",
-      "permission": "ntf.subscriptions.create"
-    },
-    {
-      "action": "update",
-      "permission": "ntf.subscriptions.update"
     }
   ],
   "companyScoped": false,
@@ -31,7 +23,8 @@
   "listFields": [
     "eventCode",
     "companyId",
-    "isMandatory"
+    "isMandatory",
+    "name"
   ],
   "fields": [
     {
@@ -94,6 +87,26 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.ntf.subscriptions.is_mandatory"
+    },
+    {
+      "column": "name",
+      "field": "name",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.ntf.subscriptions.name"
+    },
+    {
+      "column": "condition",
+      "field": "condition",
+      "kind": "Json",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.ntf.subscriptions.condition"
     },
     {
       "column": "created_at",

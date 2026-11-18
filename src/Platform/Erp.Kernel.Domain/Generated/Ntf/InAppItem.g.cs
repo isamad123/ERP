@@ -33,6 +33,12 @@ public sealed partial class InAppItem : global::Erp.BuildingBlocks.Domain.Entiti
     /// <summary>read_at</summary>
     public global::System.DateTimeOffset? ReadAt { get; set; }
 
+    /// <summary>dedup_key: event id and recipient: one item per event and person (CR-048, KRN-NTF-05)</summary>
+    public string? DedupKey { get; set; }
+
+    /// <summary>event_group: preference group of the event (CR-048)</summary>
+    public string? EventGroup { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

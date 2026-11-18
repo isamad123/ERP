@@ -117,6 +117,8 @@
         "org.org_unit_types.read",
         "ntf.in_app_items.read",
         "ntf.in_app_items.update",
+        "ntf.preferences.read",
+        "ntf.preferences.update",
         "aud.history.view",
         "wf.workflow_tasks.read",
         "wf.workflow_tasks.update",
@@ -128,6 +130,7 @@
       "scopes": {
         "*": "all",
         "ntf.in_app_items": "own",
+        "ntf.preferences": "own",
         "wf.workflow_tasks": "own",
         "wf.workflow_instances": "own",
         "iam.delegations": "own"
@@ -150,6 +153,8 @@
         "org.org_unit_types.read",
         "ntf.in_app_items.read",
         "ntf.in_app_items.update",
+        "ntf.preferences.read",
+        "ntf.preferences.update",
         "wf.workflow_tasks.read",
         "wf.workflow_tasks.update",
         "aud.history.view",
@@ -161,6 +166,7 @@
       "scopes": {
         "*": "all",
         "ntf.in_app_items": "own",
+        "ntf.preferences": "own",
         "wf.workflow_tasks": "own",
         "wf.workflow_instances": "own",
         "iam.delegations": "own"

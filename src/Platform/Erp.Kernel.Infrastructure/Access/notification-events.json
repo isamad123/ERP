@@ -1,0 +1,1050 @@
+{
+ "module": "kernel",
+ "events": [
+  {
+   "code": "workflow.task_assigned",
+   "source": "kernel.workflow.task_assigned",
+   "group": "approvals",
+   "mandatory": false,
+   "audited": true,
+   "link": "link",
+   "company": "company_id",
+   "fields": [
+    {
+     "name": "document_type",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "company_id",
+     "type": "company",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "recipients"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "A request is waiting for your approval",
+     "body": "Open the request to approve it, reject it or ask for more information."
+    },
+    "ur": {
+     "title": "ایک درخواست آپ کی منظوری کی منتظر ہے",
+     "body": "درخواست کھول کر اسے منظور کریں، مسترد کریں یا مزید معلومات طلب کریں۔"
+    }
+   }
+  },
+  {
+   "code": "workflow.task_escalated",
+   "source": "kernel.workflow.task_escalated",
+   "group": "approvals",
+   "mandatory": false,
+   "audited": true,
+   "link": "link",
+   "company": "company_id",
+   "fields": [
+    {
+     "name": "document_type",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "company_id",
+     "type": "company",
+     "class": "general"
+    },
+    {
+     "name": "escalation_level",
+     "type": "number",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "recipients"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "A request was escalated to you",
+     "body": "A request was not decided in time and now waits for you. Open it to decide."
+    },
+    "ur": {
+     "title": "ایک درخواست آپ کو بھیجی گئی ہے",
+     "body": "ایک درخواست پر وقت پر فیصلہ نہیں ہوا اور اب آپ کی منتظر ہے۔ فیصلے کے لیے اسے کھولیں۔"
+    }
+   }
+  },
+  {
+   "code": "workflow.info_requested",
+   "source": "kernel.workflow.info_requested",
+   "group": "my_requests",
+   "mandatory": false,
+   "audited": true,
+   "link": "link",
+   "company": "company_id",
+   "fields": [
+    {
+     "name": "document_type",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "company_id",
+     "type": "company",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "recipients",
+     "requester_user_id"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "More information is needed on your request",
+     "body": "An approver asked a question. Open your request to answer."
+    },
+    "ur": {
+     "title": "آپ کی درخواست پر مزید معلومات درکار ہیں",
+     "body": "منظور کنندہ نے ایک سوال پوچھا ہے۔ جواب دینے کے لیے اپنی درخواست کھولیں۔"
+    }
+   }
+  },
+  {
+   "code": "workflow.request_returned",
+   "source": "kernel.workflow.instance_returned",
+   "group": "my_requests",
+   "mandatory": false,
+   "audited": true,
+   "link": "link",
+   "company": "company_id",
+   "fields": [
+    {
+     "name": "document_type",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "company_id",
+     "type": "company",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "recipients",
+     "requester_user_id"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "Your request was returned",
+     "body": "Your request was sent back to you. Open it, make the changes and send it again."
+    },
+    "ur": {
+     "title": "آپ کی درخواست واپس کر دی گئی",
+     "body": "آپ کی درخواست آپ کو واپس بھیج دی گئی ہے۔ اسے کھولیں، تبدیلیاں کریں اور دوبارہ بھیجیں۔"
+    }
+   }
+  },
+  {
+   "code": "workflow.request_approved",
+   "source": "kernel.workflow.instance_completed",
+   "group": "my_requests",
+   "mandatory": false,
+   "audited": true,
+   "when": {
+    "outcome": "approved"
+   },
+   "link": "link",
+   "company": "company_id",
+   "fields": [
+    {
+     "name": "document_type",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "company_id",
+     "type": "company",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "recipients",
+     "requester_user_id"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "Your request was approved",
+     "body": "The request was approved."
+    },
+    "ur": {
+     "title": "آپ کی درخواست منظور ہو گئی",
+     "body": "درخواست منظور کر لی گئی ہے۔"
+    }
+   }
+  },
+  {
+   "code": "workflow.request_rejected",
+   "source": "kernel.workflow.instance_completed",
+   "group": "my_requests",
+   "mandatory": false,
+   "audited": true,
+   "when": {
+    "outcome": "rejected"
+   },
+   "link": "link",
+   "company": "company_id",
+   "fields": [
+    {
+     "name": "document_type",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "company_id",
+     "type": "company",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "recipients",
+     "requester_user_id"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "Your request was rejected",
+     "body": "The request was rejected. Open it to see the reason."
+    },
+    "ur": {
+     "title": "آپ کی درخواست مسترد ہو گئی",
+     "body": "درخواست مسترد کر دی گئی ہے۔ وجہ دیکھنے کے لیے اسے کھولیں۔"
+    }
+   }
+  },
+  {
+   "code": "workflow.request_cancelled",
+   "source": "kernel.workflow.instance_completed",
+   "group": "my_requests",
+   "mandatory": false,
+   "audited": false,
+   "when": {
+    "outcome": "cancelled"
+   },
+   "link": "link",
+   "company": "company_id",
+   "fields": [
+    {
+     "name": "document_type",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "company_id",
+     "type": "company",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "recipients"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "A request was cancelled",
+     "body": "A request that was waiting for you was cancelled. Nothing more is needed."
+    },
+    "ur": {
+     "title": "ایک درخواست منسوخ کر دی گئی",
+     "body": "جو درخواست آپ کی منتظر تھی وہ منسوخ کر دی گئی ہے۔ مزید کچھ درکار نہیں۔"
+    }
+   }
+  },
+  {
+   "code": "licence.active",
+   "source": "kernel.licence.state_changed",
+   "group": "system",
+   "mandatory": false,
+   "audited": true,
+   "when": {
+    "to": "active"
+   },
+   "link_template": "/settings/licence",
+   "fields": [
+    {
+     "name": "expires_at",
+     "type": "date",
+     "class": "general"
+    },
+    {
+     "name": "next_change",
+     "type": "date",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "roles": [
+     "tenant_admin"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "Your licence is active",
+     "body": "The licence is in force again. Nothing more is needed."
+    },
+    "ur": {
+     "title": "آپ کا لائسنس فعال ہے",
+     "body": "لائسنس دوبارہ نافذ ہے۔ مزید کچھ درکار نہیں۔"
+    }
+   }
+  },
+  {
+   "code": "licence.warning",
+   "source": "kernel.licence.state_changed",
+   "group": "system",
+   "mandatory": false,
+   "audited": true,
+   "when": {
+    "to": "warning"
+   },
+   "link_template": "/settings/licence",
+   "fields": [
+    {
+     "name": "expires_at",
+     "type": "date",
+     "class": "general"
+    },
+    {
+     "name": "next_change",
+     "type": "date",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "roles": [
+     "tenant_admin"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "Your licence ends soon",
+     "body": "The licence ends on {expires_at}. Renew it in time so nothing stops."
+    },
+    "ur": {
+     "title": "آپ کا لائسنس جلد ختم ہو رہا ہے",
+     "body": "لائسنس {expires_at} کو ختم ہو رہا ہے۔ وقت پر تجدید کریں تاکہ کچھ نہ رکے۔"
+    }
+   }
+  },
+  {
+   "code": "licence.grace",
+   "source": "kernel.licence.state_changed",
+   "group": "system",
+   "mandatory": false,
+   "audited": true,
+   "when": {
+    "to": "grace"
+   },
+   "link_template": "/settings/licence",
+   "fields": [
+    {
+     "name": "expires_at",
+     "type": "date",
+     "class": "general"
+    },
+    {
+     "name": "next_change",
+     "type": "date",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "roles": [
+     "tenant_admin"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "Your licence has ended and is in its grace period",
+     "body": "Everything still works. Renew now; the system becomes read-only on {next_change}."
+    },
+    "ur": {
+     "title": "آپ کا لائسنس ختم ہو چکا ہے اور رعایتی مدت میں ہے",
+     "body": "سب کچھ اب بھی چل رہا ہے۔ ابھی تجدید کریں؛ نظام {next_change} کو صرف پڑھنے کے لیے رہ جائے گا۔"
+    }
+   }
+  },
+  {
+   "code": "licence.read_only",
+   "source": "kernel.licence.state_changed",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "to": "read_only"
+   },
+   "link_template": "/settings/licence",
+   "fields": [
+    {
+     "name": "expires_at",
+     "type": "date",
+     "class": "general"
+    },
+    {
+     "name": "next_change",
+     "type": "date",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "roles": [
+     "tenant_admin"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "Your system is now read-only",
+     "body": "The licence ended, so records can be viewed but not changed. Renew to continue work."
+    },
+    "ur": {
+     "title": "آپ کا نظام اب صرف پڑھنے کے لیے ہے",
+     "body": "لائسنس ختم ہو گیا، اس لیے ریکارڈ دیکھے جا سکتے ہیں مگر بدلے نہیں جا سکتے۔ کام جاری رکھنے کے لیے تجدید کریں۔"
+    }
+   }
+  },
+  {
+   "code": "licence.locked",
+   "source": "kernel.licence.state_changed",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "to": "locked"
+   },
+   "link_template": "/settings/licence",
+   "fields": [
+    {
+     "name": "expires_at",
+     "type": "date",
+     "class": "general"
+    },
+    {
+     "name": "next_change",
+     "type": "date",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "roles": [
+     "tenant_admin"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "Your system is locked",
+     "body": "The licence ended and the grace periods are over. Only the licence page is available. Renew to continue."
+    },
+    "ur": {
+     "title": "آپ کا نظام مقفل ہے",
+     "body": "لائسنس ختم ہو گیا اور رعایتی مدتیں گزر چکی ہیں۔ صرف لائسنس کا صفحہ دستیاب ہے۔ جاری رکھنے کے لیے تجدید کریں۔"
+    }
+   }
+  },
+  {
+   "code": "licence.limit_warning",
+   "source": "kernel.licence.limit_warning",
+   "group": "system",
+   "mandatory": false,
+   "audited": false,
+   "link_template": "/settings/licence",
+   "fields": [
+    {
+     "name": "limit",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "used",
+     "type": "number",
+     "class": "general"
+    },
+    {
+     "name": "max",
+     "type": "number",
+     "class": "general"
+    },
+    {
+     "name": "percent",
+     "type": "number",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "roles": [
+     "tenant_admin"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "A licence limit is almost reached",
+     "body": "{used} of {max} are in use ({percent}%). Ask for a higher limit before it is reached."
+    },
+    "ur": {
+     "title": "لائسنس کی ایک حد قریب ہے",
+     "body": "{max} میں سے {used} استعمال میں ہیں ({percent}%)۔ حد پوری ہونے سے پہلے زیادہ حد کی درخواست کریں۔"
+    }
+   }
+  },
+  {
+   "code": "licence.limit_reached",
+   "source": "kernel.licence.limit_reached",
+   "group": "system",
+   "mandatory": false,
+   "audited": false,
+   "link_template": "/settings/licence",
+   "fields": [
+    {
+     "name": "limit",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "used",
+     "type": "number",
+     "class": "general"
+    },
+    {
+     "name": "max",
+     "type": "number",
+     "class": "general"
+    },
+    {
+     "name": "percent",
+     "type": "number",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "roles": [
+     "tenant_admin"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "A licence limit was reached",
+     "body": "The limit of {max} was reached, so something was refused. Ask for a higher limit."
+    },
+    "ur": {
+     "title": "لائسنس کی حد پوری ہو گئی",
+     "body": "{max} کی حد پوری ہو گئی، اس لیے ایک کام روک دیا گیا۔ زیادہ حد کی درخواست کریں۔"
+    }
+   }
+  },
+  {
+   "code": "alert.job_failed",
+   "source": "kernel.alert.raised",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "kind": "job_failed"
+   },
+   "fields_from": "details",
+   "link_template": "/admin/jobs/runs",
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "error",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "run_id",
+     "type": "text",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "owner_user_id"
+    ],
+    "role_property": "audience"
+   },
+   "texts": {
+    "en": {
+     "title": "A background job failed",
+     "body": "The job {code} failed: {error}"
+    },
+    "ur": {
+     "title": "ایک پس منظر کا کام ناکام ہو گیا",
+     "body": "کام {code} ناکام ہوا: {error}"
+    }
+   }
+  },
+  {
+   "code": "alert.job_stuck",
+   "source": "kernel.alert.raised",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "kind": "job_stuck"
+   },
+   "fields_from": "details",
+   "link_template": "/admin/jobs/runs",
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "error",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "run_id",
+     "type": "text",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "owner_user_id"
+    ],
+    "role_property": "audience"
+   },
+   "texts": {
+    "en": {
+     "title": "A background job is stuck",
+     "body": "The job {code} is running past its time limit."
+    },
+    "ur": {
+     "title": "ایک پس منظر کا کام رکا ہوا ہے",
+     "body": "کام {code} مقررہ وقت سے زیادہ چل رہا ہے۔"
+    }
+   }
+  },
+  {
+   "code": "alert.worker_stopped",
+   "source": "kernel.alert.raised",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "kind": "worker_stopped"
+   },
+   "fields_from": "details",
+   "link_template": "/admin/jobs/health",
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "error",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "run_id",
+     "type": "text",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "owner_user_id"
+    ],
+    "role_property": "audience"
+   },
+   "texts": {
+    "en": {
+     "title": "A server stopped working on jobs",
+     "body": "The server running the job {code} stopped. Another server will take over if one is running."
+    },
+    "ur": {
+     "title": "ایک سرور نے کام روک دیا",
+     "body": "جو سرور کام {code} چلا رہا تھا وہ رک گیا۔ اگر کوئی اور سرور چل رہا ہو تو وہ کام سنبھال لے گا۔"
+    }
+   }
+  },
+  {
+   "code": "alert.job_overdue",
+   "source": "kernel.alert.raised",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "kind": "job_overdue"
+   },
+   "fields_from": "details",
+   "link_template": "/admin/jobs/runs",
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "error",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "run_id",
+     "type": "text",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "owner_user_id"
+    ],
+    "role_property": "audience"
+   },
+   "texts": {
+    "en": {
+     "title": "A scheduled job did not start",
+     "body": "The job {code} did not start on time."
+    },
+    "ur": {
+     "title": "ایک مقررہ کام شروع نہیں ہوا",
+     "body": "کام {code} وقت پر شروع نہیں ہوا۔"
+    }
+   }
+  },
+  {
+   "code": "alert.event_backlog",
+   "source": "kernel.alert.raised",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "kind": "event_backlog"
+   },
+   "fields_from": "details",
+   "link_template": "/admin/jobs/health",
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "error",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "run_id",
+     "type": "text",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "owner_user_id"
+    ],
+    "role_property": "audience"
+   },
+   "texts": {
+    "en": {
+     "title": "Notifications and events are waiting",
+     "body": "Events have been waiting more than 5 minutes to be handled."
+    },
+    "ur": {
+     "title": "اطلاعات اور واقعات منتظر ہیں",
+     "body": "واقعات 5 منٹ سے زیادہ سے پروسیس ہونے کے منتظر ہیں۔"
+    }
+   }
+  },
+  {
+   "code": "alert.event_consumer_failing",
+   "source": "kernel.alert.raised",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "kind": "event_consumer_failing"
+   },
+   "fields_from": "details",
+   "link_template": "/admin/jobs/health",
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "error",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "run_id",
+     "type": "text",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "owner_user_id"
+    ],
+    "role_property": "audience"
+   },
+   "texts": {
+    "en": {
+     "title": "Events keep failing",
+     "body": "A part of the system has failed to handle events for an hour."
+    },
+    "ur": {
+     "title": "واقعات مسلسل ناکام ہو رہے ہیں",
+     "body": "نظام کا ایک حصہ ایک گھنٹے سے واقعات سنبھالنے میں ناکام ہے۔"
+    }
+   }
+  },
+  {
+   "code": "alert.audit_critical",
+   "source": "kernel.alert.raised",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "kind": "audit_critical"
+   },
+   "fields_from": "details",
+   "link_template": "/admin/audit",
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "error",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "run_id",
+     "type": "text",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "owner_user_id"
+    ],
+    "role_property": "audience"
+   },
+   "texts": {
+    "en": {
+     "title": "Critical audit event",
+     "body": "A critical security event was recorded. Check the audit log."
+    },
+    "ur": {
+     "title": "اہم آڈٹ واقعہ",
+     "body": "ایک اہم سیکیورٹی واقعہ درج ہوا ہے۔ آڈٹ لاگ دیکھیں۔"
+    }
+   }
+  },
+  {
+   "code": "alert.audit_verify_failed",
+   "source": "kernel.alert.raised",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "kind": "audit_verify_failed"
+   },
+   "fields_from": "details",
+   "link_template": "/admin/audit",
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "error",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "run_id",
+     "type": "text",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "owner_user_id"
+    ],
+    "role_property": "audience"
+   },
+   "texts": {
+    "en": {
+     "title": "Audit log check failed",
+     "body": "The nightly check of the audit log found a problem. Check the audit log."
+    },
+    "ur": {
+     "title": "آڈٹ لاگ کی جانچ ناکام",
+     "body": "رات کی آڈٹ لاگ جانچ میں مسئلہ ملا۔ آڈٹ لاگ دیکھیں۔"
+    }
+   }
+  },
+  {
+   "code": "alert.clock_ahead",
+   "source": "kernel.alert.raised",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "kind": "clock_ahead"
+   },
+   "fields_from": "details",
+   "link_template": "/admin/jobs/health",
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "error",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "run_id",
+     "type": "text",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "owner_user_id"
+    ],
+    "role_property": "audience"
+   },
+   "texts": {
+    "en": {
+     "title": "A server clock runs ahead",
+     "body": "A server clock is ahead of the correct time. Ask the operator to correct it."
+    },
+    "ur": {
+     "title": "ایک سرور کی گھڑی آگے ہے",
+     "body": "ایک سرور کی گھڑی درست وقت سے آگے ہے۔ آپریٹر سے اسے درست کروائیں۔"
+    }
+   }
+  },
+  {
+   "code": "alert.unusual_access",
+   "source": "kernel.alert.raised",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "kind": "unusual_access"
+   },
+   "fields_from": "details",
+   "link_template": "/admin/audit",
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "error",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "run_id",
+     "type": "text",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "owner_user_id"
+    ],
+    "role_property": "audience"
+   },
+   "texts": {
+    "en": {
+     "title": "Unusual access to sensitive data",
+     "body": "A user opened or exported sensitive data of many people within an hour. Check the access log."
+    },
+    "ur": {
+     "title": "حساس معلومات تک غیر معمولی رسائی",
+     "body": "ایک صارف نے ایک گھنٹے میں بہت سے لوگوں کی حساس معلومات کھولیں یا برآمد کیں۔ رسائی کا لاگ دیکھیں۔"
+    }
+   }
+  },
+  {
+   "code": "alert.partition_problem",
+   "source": "kernel.alert.raised",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "kind": "partition_problem"
+   },
+   "fields_from": "details",
+   "link_template": "/admin/jobs/health",
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "error",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "run_id",
+     "type": "text",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "owner_user_id"
+    ],
+    "role_property": "audience"
+   },
+   "texts": {
+    "en": {
+     "title": "Storage for a new month could not be prepared",
+     "body": "A problem stopped the monthly storage set-up. An operator must look at it."
+    },
+    "ur": {
+     "title": "نئے مہینے کے ذخیرے کی تیاری نہ ہو سکی",
+     "body": "ایک مسئلے نے ماہانہ ذخیرے کی تیاری روک دی۔ آپریٹر کو دیکھنا ہوگا۔"
+    }
+   }
+  }
+ ]
+}

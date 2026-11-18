@@ -13,21 +13,13 @@ export interface InAppItem
     body: string;
     link: string | null;
     readAt: string | null;
+    dedupKey: string | null;
+    eventGroup: string | null;
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface InAppItemWrite
-{
-    userId: string;
-    eventCode: string;
-    title: string;
-    body: string;
-    link?: string | null;
-    readAt?: string | null;
 }
 
 export interface InAppItemListQuery
@@ -41,8 +33,6 @@ export const inAppItems =
 {
     list: (query: InAppItemListQuery = {}) => request<PagedResult<InAppItem>>('GET', '/api/ntf/in-app-items', { query }),
     get: (id: string) => request<InAppItem>('GET', `/api/ntf/in-app-items/${id}`),
-    create: (body: InAppItemWrite) => request<InAppItem>('POST', '/api/ntf/in-app-items', { body }),
-    update: (id: string, body: InAppItemWrite & { rowVersion: number }) => request<InAppItem>('PUT', `/api/ntf/in-app-items/${id}`, { body }),
 };
 
 /** ntf.outbound_messages: OutboundMessage. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -105,20 +95,13 @@ export interface Subscription
     channels: string[];
     companyId: string | null;
     isMandatory: boolean;
+    name: string | null;
+    condition: unknown | null;
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface SubscriptionWrite
-{
-    eventCode: string;
-    audience: unknown;
-    channels?: string[];
-    companyId?: string | null;
-    isMandatory?: boolean;
 }
 
 export interface SubscriptionListQuery
@@ -131,8 +114,6 @@ export const subscriptions =
 {
     list: (query: SubscriptionListQuery = {}) => request<PagedResult<Subscription>>('GET', '/api/ntf/subscriptions', { query }),
     get: (id: string) => request<Subscription>('GET', `/api/ntf/subscriptions/${id}`),
-    create: (body: SubscriptionWrite) => request<Subscription>('POST', '/api/ntf/subscriptions', { body }),
-    update: (id: string, body: SubscriptionWrite & { rowVersion: number }) => request<Subscription>('PUT', `/api/ntf/subscriptions/${id}`, { body }),
 };
 
 /** ntf.templates: Template. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -145,23 +126,13 @@ export interface Template
     subject: string | null;
     body: string;
     version: number;
+    source: 'product' | 'tenant';
     status: 'active' | 'retired';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface TemplateWrite
-{
-    eventCode: string;
-    channel: 'in_app' | 'email';
-    language: string;
-    subject?: string | null;
-    body: string;
-    version: number;
-    status: 'active' | 'retired';
 }
 
 export interface TemplateListQuery
@@ -175,6 +146,4 @@ export const templates =
 {
     list: (query: TemplateListQuery = {}) => request<PagedResult<Template>>('GET', '/api/ntf/templates', { query }),
     get: (id: string) => request<Template>('GET', `/api/ntf/templates/${id}`),
-    create: (body: TemplateWrite) => request<Template>('POST', '/api/ntf/templates', { body }),
-    update: (id: string, body: TemplateWrite & { rowVersion: number }) => request<Template>('PUT', `/api/ntf/templates/${id}`, { body }),
 };

@@ -33,6 +33,9 @@ public sealed partial class Template : global::Erp.BuildingBlocks.Domain.Entitie
     /// <summary>version</summary>
     public int Version { get; set; }
 
+    /// <summary>source: default product; version 1 is the product text, a customer edit is a new tenant version (CR-048, Q15)</summary>
+    public string Source { get; set; } = "product";
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

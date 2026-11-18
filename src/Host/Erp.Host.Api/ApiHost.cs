@@ -18,8 +18,10 @@ using Erp.Kernel.Contracts.Numbering;
 using Erp.Kernel.Infrastructure.Numbering;
 using Erp.Kernel.Api.Settings;
 using Erp.Kernel.Api.Jobs;
+using Erp.Kernel.Api.Notifications;
 using Erp.Kernel.Api.Workflow;
 using Erp.Kernel.Infrastructure.Jobs;
+using Erp.Kernel.Infrastructure.Notifications;
 using Erp.Kernel.Infrastructure.Workflow;
 using Erp.Kernel.Api.Entitlements;
 using Erp.Kernel.Contracts.Entitlements;
@@ -146,6 +148,7 @@ public static class ApiHost
 
         // Job centre (S1.11a): lists and queues runs; the worker host runs them. Modules register their job manifests here too.
         services.AddKernelJobCentre();
+        services.AddKernelNotifications();
 
         var keys = signing.Validation.Concat((config.GetSection("Auth:SigningPublicKeys").Get<string[]>() ?? []).Select(ToKey)).ToList();
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
@@ -189,6 +192,7 @@ public static class ApiHost
         api.MapLicenceEndpoints();
         api.MapWorkflowEndpoints();
         api.MapJobEndpoints();
+        api.MapNotificationEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();
         return app;

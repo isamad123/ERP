@@ -38,6 +38,7 @@ public static class TemplateAccess
         new("subject", "Subject", null),
         new("body", "Body", null),
         new("version", "Version", null),
+        new("source", "Source", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
