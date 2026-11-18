@@ -5,6 +5,7 @@ using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.Jobs;
 using Erp.Kernel.Infrastructure.Notifications.Email;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Erp.IntegrationTests.Notifications;
 
@@ -275,5 +276,93 @@ public sealed class EmailDeliveryTests(TenancyFixture fx) : IAsyncLifetime
         var mail = Assert.Single(_mail.To("ops@operator.test"));
         Assert.Contains("/admin/jobs/health", mail.TextBody, StringComparison.Ordinal);
         Assert.Equal("sent", await _rig.ScalarAsync<string>("select status from ntf.outbound_messages where recipient = 'ops@operator.test'", Ct));
+    }
+    internal static string Dsn(string messageId, string action = "failed", string status = "5.1.1", string diagnostic = "smtp; 550 5.1.1 user unknown") => $"""
+        From: MAILER-DAEMON@relay.test
+        To: bounces@erp.test
+        Subject: Undelivered Mail Returned to Sender
+        Message-ID: <{Guid.NewGuid():N}@relay.test>
+        MIME-Version: 1.0
+        Content-Type: multipart/report; report-type=delivery-status; boundary="b1"
+
+        --b1
+        Content-Type: text/plain
+
+        Your message could not be delivered.
+
+        --b1
+        Content-Type: message/delivery-status
+
+        Reporting-MTA: dns; relay.test
+
+        Final-Recipient: rfc822; someone@mail.test
+        Action: {action}
+        Status: {status}
+        Diagnostic-Code: {diagnostic}
+
+        --b1
+        Content-Type: text/rfc822-headers
+
+        Message-ID: <{messageId}>
+        Subject: Approval
+
+        --b1--
+
+        """;
+
+    [Fact]
+    public async Task S111b2_KRN_NTF_07_HRM_NTF_16_a_bounce_report_in_the_bounce_mailbox_marks_the_sent_email_failed_and_leaves_other_customers_reports_unread()
+    {
+        var (person, _) = await UserAsync();
+        await EventAsync("wf", "kernel.workflow.task_assigned", Assigned([person]));
+        await DispatchAsync();
+        await SendAsync();
+        Assert.Equal("sent", await MessageAsync(person));
+        var id = Guid.Parse(await MessageAsync(person, "id"));
+
+        await using var imap = new TestImapServer();
+        var ours = imap.Add(Dsn(EmailSendJob.MessageId(id, _rig.Code, "no-reply@erp.test")));
+        var delayed = imap.Add(Dsn(EmailSendJob.MessageId(id, _rig.Code, "no-reply@erp.test"), action: "delayed", status: "4.4.7"));
+        var theirs = imap.Add(Dsn(EmailSendJob.MessageId(Guid.CreateVersion7(), "othercustomer", "no-reply@erp.test")));
+        var worker = _rig.Worker(extra: s =>
+        {
+            s.RemoveAll<MailOptions>();
+            s.AddSingleton(MailOptions.None with
+            {
+                SmtpHost = "127.0.0.1", SmtpPort = _mail.Port, SmtpSecurity = "none", FromAddress = "no-reply@erp.test",
+                BounceHost = "127.0.0.1", BouncePort = imap.Port, BounceSecurity = "none", BounceUsername = "bounces",
+            });
+        });
+        await _rig.QueueAsync(EmailBounceJob.JobCode, ct: Ct);
+        await _rig.RunUntilIdleAsync(worker, Ct);
+
+        Assert.Equal("failed", await MessageAsync(person));
+        Assert.Equal("bounced: 5.1.1 smtp; 550 5.1.1 user unknown", await MessageAsync(person, "error"));
+        Assert.True(imap.Messages[ours].Seen);
+        Assert.False(imap.Messages[delayed].Seen);
+        Assert.False(imap.Messages[theirs].Seen);
+        Assert.Equal(1, await _rig.ScalarAsync<long>("""
+            select count(*) from aud.change_log l, jsonb_array_elements(l.changes) c
+            where l.entity_type = 'ntf.outbound_messages' and l.entity_id = $1 and c->>'field' = 'status' and c->>'before' = 'sent' and c->>'after' = 'failed'
+            """, Ct, null, id));
+    }
+
+    [Fact]
+    public async Task S111b2_KRN_NTF_05_the_daily_clean_up_removes_finished_emails_after_30_days_and_keeps_waiting_ones()
+    {
+        var (sent, _) = await UserAsync();
+        var (waiting, waitingAddress) = await UserAsync();
+        _mail.Refuse[waitingAddress] = "451 4.3.0 later";
+        await EventAsync("wf", "kernel.workflow.task_assigned", Assigned([sent, waiting]));
+        await DispatchAsync();
+        await SendAsync();
+        Assert.Equal("sent", await MessageAsync(sent));
+        Assert.Equal("queued", await MessageAsync(waiting));
+
+        _rig.Clock.Advance(TimeSpan.FromDays(31));
+        await _rig.QueueAsync(KernelJobs.Purge, ct: Ct);
+        await _rig.RunUntilIdleAsync(_worker, Ct);
+        Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from ntf.outbound_messages where user_id = $1", Ct, null, sent));
+        Assert.Equal(1, await _rig.ScalarAsync<long>("select count(*) from ntf.outbound_messages where user_id = $1", Ct, null, waiting));
     }
 }
