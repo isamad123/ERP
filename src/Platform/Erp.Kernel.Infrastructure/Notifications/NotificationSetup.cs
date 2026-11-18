@@ -17,7 +17,12 @@ public static class NotificationSetup
     public static Task<int> EnsureAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, IReadOnlyList<string> manifestFolders, DateTimeOffset now, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(manifestFolders);
-        var specs = NotificationCatalog.Parse(NotificationCatalog.KernelJson).Concat(NotificationCatalog.FromFolders(manifestFolders)).ToList();
+        var specs = NotificationCatalog.FromFolders(manifestFolders).ToList();
+        if (!specs.Exists(s => s.Module == "kernel"))
+        {
+            specs = [.. NotificationCatalog.Parse(NotificationCatalog.KernelJson), .. specs];
+        }
+
         return EnsureAsync(connection, transaction, specs, now, cancellationToken);
     }
 

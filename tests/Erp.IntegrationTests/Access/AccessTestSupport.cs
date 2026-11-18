@@ -81,6 +81,8 @@ public sealed class AccessHarness
 
     public Task<Answer> SendDeleteAsync(Guid user, string path) => SendAsync(HttpMethod.Delete, user, path, null, null, CancellationToken.None);
 
+    public Task<Answer> DeleteAsync(Guid user, string path, CancellationToken ct, string? code = null) => SendAsync(HttpMethod.Delete, user, path, null, code, ct);
+
     private async Task<Answer> SendAsync(HttpMethod method, Guid user, string path, object? body, string? code, CancellationToken ct)
     {
         using var client = TenancyFixture.Client(App, TenancyFixture.HostOf(code ?? Code), Token(user, code));

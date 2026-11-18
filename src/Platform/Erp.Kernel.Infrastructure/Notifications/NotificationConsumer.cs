@@ -172,12 +172,12 @@ public sealed class NotificationConsumer(NotificationCatalog catalog, IClock clo
     private static async Task<List<Guid>> RoleHoldersAsync(NpgsqlConnection c, NpgsqlTransaction tx, string[] roleCodes, Guid? company, DateTimeOffset now, CancellationToken ct) =>
         await ReadAsync(c, tx, """
             select ur.user_id from iam.user_roles ur join iam.roles r on r.id = ur.role_id
-            where lower(r.code) = any($1) and not r.is_deleted and ur.valid_from <= $2 and (ur.valid_to is null or ur.valid_to > $2)
+            where lower(r.code) = any($1) and r.is_active and not r.is_deleted and ur.valid_from <= $2 and (ur.valid_to is null or ur.valid_to > $2)
               and ($3::uuid is null or ur.company_id is null or ur.company_id = $3)
             union
             select m.user_id from iam.user_group_members m
             join iam.user_group_roles gr on gr.group_id = m.group_id join iam.roles r on r.id = gr.role_id
-            where lower(r.code) = any($1) and not r.is_deleted and gr.valid_from <= $2 and (gr.valid_to is null or gr.valid_to > $2)
+            where lower(r.code) = any($1) and r.is_active and not r.is_deleted and gr.valid_from <= $2 and (gr.valid_to is null or gr.valid_to > $2)
               and ($3::uuid is null or gr.company_id is null or gr.company_id = $3)
             """, r => r.GetGuid(0), ct, roleCodes.Select(x => x.ToLowerInvariant()).ToArray(), now, company).ConfigureAwait(false);
 
