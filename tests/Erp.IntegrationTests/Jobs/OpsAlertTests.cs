@@ -31,7 +31,8 @@ public sealed class OpsAlertTests(TenancyFixture fx) : IAsyncLifetime
     public async Task S111a_FR_KRN_JOB_06_stuck_runs_stopped_workers_overdue_schedules_waiting_events_and_failing_consumers_raise_one_alert_each()
     {
         var now = _rig.Clock.UtcNow;
-        var (stuck, orphan, late) = (await _rig.QueueAsync("test.count", ct: Ct), await _rig.QueueAsync("test.count", ct: Ct), await _rig.QueueAsync("test.count", ct: Ct));
+        // The orphan belongs to a job no worker here may run (unlicensed), so nobody takes it over: its worker really is gone.
+        var (stuck, orphan, late) = (await _rig.QueueAsync("test.count", ct: Ct), await _rig.QueueAsync("test.unlicensed", ct: Ct), await _rig.QueueAsync("test.count", ct: Ct));
         // Running for 2 minutes past a 60-second limit while its lease is renewed; running with a lease that expired 5 minutes ago.
         await _rig.ExecAsync("update job.runs set status = 'running', attempt = 1, started_at = $2, lease_owner = 'w1', lease_expires_at = $3 where id = $1", Ct, null, stuck, now.AddMinutes(-3), now.AddMinutes(1));
         await _rig.ExecAsync("update job.runs set status = 'running', attempt = 1, started_at = $2, lease_owner = 'w2', lease_expires_at = $3 where id = $1", Ct, null, orphan, now.AddMinutes(-6), now.AddMinutes(-5));
@@ -45,7 +46,7 @@ public sealed class OpsAlertTests(TenancyFixture fx) : IAsyncLifetime
         await _rig.ExecAsync("update wf.outbox_messages set attempts = 5 where event_type = 'test.fail'", Ct);
 
         await CheckAsync();
-        Assert.Equal(1, await _rig.AlertsAsync(AlertKinds.JobStuck, Ct));
+        Assert.True(await _rig.AlertsAsync(AlertKinds.JobStuck, Ct) == 1, await _rig.DumpAsync(Ct));
         Assert.Equal(1, await _rig.AlertsAsync(AlertKinds.WorkerStopped, Ct));
         Assert.Equal(1, await _rig.AlertsAsync(AlertKinds.JobOverdue, Ct));
         Assert.Equal(1, await _rig.AlertsAsync(AlertKinds.EventBacklog, Ct));

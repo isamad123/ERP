@@ -262,7 +262,7 @@ internal sealed class PurgeJob(IClock clock) : IJobHandler
             """, cancellationToken, now.AddDays(-days)).ConfigureAwait(false);
         var events = 0;
         var inbox = 0;
-        foreach (var schema in await OpsAlerts.OutboxSchemasAsync(c, cancellationToken).ConfigureAwait(false))
+        foreach (var schema in await OpsAlerts.OutboxSchemasAsync(c, cancellationToken, "DELETE").ConfigureAwait(false))
         {
 #pragma warning disable CA2100 // the schema name comes from the catalog and is quoted; values are parameters
             events += await IdentityDb.ExecuteAsync(c, null, $"delete from {OpsAlerts.Quote(schema)}.outbox_messages where published_at < $1", cancellationToken, now.AddDays(-KernelJobs.EventRetentionDays)).ConfigureAwait(false);

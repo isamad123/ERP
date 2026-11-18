@@ -1,5 +1,4 @@
 using Erp.IntegrationTests.Tenancy;
-using Erp.IntegrationTests.Workflow;
 using Erp.Kernel.Contracts.Jobs;
 using Erp.Kernel.Infrastructure.Jobs;
 using static Erp.IntegrationTests.Workflow.WorkflowRig;
@@ -27,7 +26,7 @@ public sealed class MaintenanceJobTests(TenancyFixture fx) : IAsyncLifetime
         await _rig.DisposeAsync();
     }
 
-    private async Task<Guid> RunAsync(JobRig rig, string job)
+    private static async Task<Guid> RunAsync(JobRig rig, string job)
     {
         var run = await rig.QueueAsync(job, ct: Ct);
         await rig.RunUntilIdleAsync(rig.Worker(), Ct);
@@ -43,12 +42,12 @@ public sealed class MaintenanceJobTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal("succeeded", await _rig.StatusAsync(run, Ct));
         await using var cp = await fx.OpenControlPlaneAsync(Ct);
         Assert.Equal("read_only", await TenancyFixture.ScalarTextAsync(cp, "select e.status from cp.entitlements e join cp.tenants t on t.id = e.tenant_id where t.code = $1 and e.status <> 'superseded'", Ct, _rig.Code));
-        Assert.Equal(1, await _rig.ScalarAsync<long>("select count(*) from meta.outbox_messages where event_type = 'kernel.licence.state_changed' and payload->>'state' = 'read_only'", Ct));
+        Assert.True(await _rig.ScalarAsync<long>("select count(*) from meta.outbox_messages where event_type = 'kernel.licence.state_changed' and payload->>'to' = 'read_only'", Ct) == 1, await _rig.DumpAsync(Ct));
         Assert.Contains(await _rig.LogsAsync(run, Ct), l => l.Contains("state read_only", StringComparison.Ordinal));
 
         // Run again: nothing is recorded twice.
         await RunAsync(_rig, KernelJobs.LicenceRefresh);
-        Assert.Equal(1, await _rig.ScalarAsync<long>("select count(*) from meta.outbox_messages where event_type = 'kernel.licence.state_changed' and payload->>'state' = 'read_only'", Ct));
+        Assert.Equal(1, await _rig.ScalarAsync<long>("select count(*) from meta.outbox_messages where event_type = 'kernel.licence.state_changed' and payload->>'to' = 'read_only'", Ct));
     }
 
     [Fact]
@@ -104,7 +103,7 @@ public sealed class MaintenanceJobTests(TenancyFixture fx) : IAsyncLifetime
         Assert.True(await _rig.ScalarAsync<bool>("select to_regclass('job.run_logs_p2028_04') is not null", Ct));
         Assert.False(await _rig.ScalarAsync<bool>("select to_regclass('job.run_logs_p2028_03') is not null", Ct));
         Assert.Equal(1, await _rig.AlertsAsync(AlertKinds.PartitionProblem, Ct));
-        Assert.Contains(await _rig.LogsAsync(second, Ct), l => l.Contains("job.run_logs_p2028_03 default_has_rows", StringComparison.Ordinal));
+        Assert.Contains(await _rig.LogsAsync(second, Ct), l => l.Contains("job.run_logs: run_logs_p2028_03 default_has_rows", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -127,6 +126,7 @@ public sealed class MaintenanceJobTests(TenancyFixture fx) : IAsyncLifetime
             alter table aud.change_log enable trigger user;
             """, Ct);
         var broken = await RunAsync(_rig, KernelJobs.AuditVerify);
+        Assert.True(await _rig.StatusAsync(broken, Ct) != "succeeded", await _rig.DumpAsync(Ct));
         Assert.Equal("errors.job.audit_chain_broken", await _rig.ScalarAsync<string>("select error from job.runs where id = $1", Ct, null, broken));
         Assert.Equal(1, await _rig.AlertsAsync(AlertKinds.AuditVerifyFailed, Ct));
     }
@@ -176,7 +176,7 @@ public sealed class MaintenanceJobTests(TenancyFixture fx) : IAsyncLifetime
             """, Ct, null, oldEvent, newEvent, waiting, _rig.Clock.UtcNow.AddDays(-31), _rig.Clock.UtcNow.AddDays(-1));
 
         var run = await RunAsync(_rig, KernelJobs.Purge);
-        Assert.Equal("succeeded", await _rig.StatusAsync(run, Ct));
+        Assert.True(await _rig.StatusAsync(run, Ct) == "succeeded", await _rig.DumpAsync(Ct));
         Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from job.runs where id = $1", Ct, null, oldRun));
         Assert.Equal(1, await _rig.ScalarAsync<long>("select count(*) from job.runs where id = $1", Ct, null, keptRun));
         Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from wf.outbox_messages where id = $1", Ct, null, oldEvent));

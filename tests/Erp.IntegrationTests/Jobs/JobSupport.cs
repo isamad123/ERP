@@ -219,6 +219,13 @@ public sealed class JobRig : IAsyncDisposable
     public async Task<T> ScalarAsync<T>(string sql, CancellationToken ct, string? code = null, params object?[] values)
     {
         await using var c = await OwnerAsync(code, ct);
+        if (typeof(T) == typeof(DateTimeOffset))
+        {
+            // timestamptz arrives as a UTC DateTime from a scalar read.
+            var at = await Access.AccessHarness.ScalarAsync<DateTime>(c, sql, ct, values);
+            return (T)(object)new DateTimeOffset(DateTime.SpecifyKind(at, DateTimeKind.Utc));
+        }
+
         return await Access.AccessHarness.ScalarAsync<T>(c, sql, ct, values);
     }
 
@@ -243,6 +250,32 @@ public sealed class JobRig : IAsyncDisposable
         }
 
         return list;
+    }
+
+    /// <summary>The runs, their logs and the job events of a customer, for failure messages.</summary>
+    public async Task<string> DumpAsync(CancellationToken ct, string? code = null)
+    {
+        await using var c = await OwnerAsync(code, ct);
+        var lines = new List<string>();
+        foreach (var sql in new[]
+        {
+            "select d.code || ' ' || r.status || ' a' || r.attempt || ' ' || coalesce(r.error, '') from job.runs r join job.definitions d on d.id = r.definition_id order by r.created_at",
+            "select l.level || ' ' || l.message from job.run_logs l order by l.created_at, l.id",
+            "select event_type || ' ' || payload::text from job.outbox_messages order by occurred_at",
+            "select event_type || ' ' || payload::text from meta.outbox_messages order by occurred_at",
+        })
+        {
+#pragma warning disable CA2100 // fixed test SQL
+            await using var command = new NpgsqlCommand(sql, c);
+#pragma warning restore CA2100
+            await using var r = await command.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+            {
+                lines.Add(r.GetString(0));
+            }
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     public Task<long> AlertsAsync(string kind, CancellationToken ct, string? code = null) =>

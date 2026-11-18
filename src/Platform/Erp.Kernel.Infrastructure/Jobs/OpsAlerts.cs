@@ -212,11 +212,20 @@ public static class OpsAlerts
         }
     }
 
-    /// <summary>The schemas of the customer database that have an outbox (every module schema, spec 03 section 7.5).</summary>
-    public static async Task<List<string>> OutboxSchemasAsync(NpgsqlConnection c, CancellationToken ct) =>
+    /// <summary>
+    /// The schemas of the customer database that have an outbox (every module schema, spec 03 section 7.5) on which the
+    /// application login holds <paramref name="privilege"/> (SELECT to read, UPDATE to dispatch, DELETE to purge). The audit
+    /// schema's outbox is read-only for the application (spec 03 section 3.7), so nothing is dispatched or purged there.
+    /// </summary>
+    public static async Task<List<string>> OutboxSchemasAsync(NpgsqlConnection c, CancellationToken ct, string privilege = "SELECT") =>
         await ReadAsync(c, """
-            select table_schema from information_schema.tables where table_name = 'outbox_messages' and table_type = 'BASE TABLE' order by table_schema
-            """, r => r.GetString(0), ct).ConfigureAwait(false);
+            select n.nspname from pg_class o join pg_namespace n on n.oid = o.relnamespace
+            join pg_class i on i.relnamespace = n.oid and i.relname = 'inbox_messages' and i.relkind in ('r', 'p')
+            where o.relname = 'outbox_messages' and o.relkind in ('r', 'p') and n.nspname not like 'pg\_%' and n.nspname <> 'information_schema'
+              and has_table_privilege(o.oid, $1)
+              and has_table_privilege(i.oid, case when $1 = 'SELECT' then 'SELECT' else 'INSERT' end)
+            order by n.nspname
+            """, r => r.GetString(0), ct, privilege).ConfigureAwait(false);
 
     internal static string Quote(string identifier) => "\"" + identifier.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
 

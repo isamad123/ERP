@@ -69,7 +69,7 @@ public sealed class EventDispatcher(ControlPlaneOptions controlPlane, ITenantDat
         List<string> schemas;
         await using (var c = (NpgsqlConnection)await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false))
         {
-            schemas = await OpsAlerts.OutboxSchemasAsync(c, ct).ConfigureAwait(false);
+            schemas = await OpsAlerts.OutboxSchemasAsync(c, ct, "UPDATE").ConfigureAwait(false);
         }
 
         int delivered = 0, failed = 0;

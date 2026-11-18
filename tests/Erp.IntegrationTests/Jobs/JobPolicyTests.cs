@@ -109,7 +109,7 @@ public sealed class JobPolicyTests(TenancyFixture fx) : IAsyncLifetime
         await _rig.RunUntilIdleAsync(worker, Ct);
 
         // Declared org.branches.create: the branch is written, as the system user, by source job.
-        Assert.Equal("succeeded", await _rig.StatusAsync(allowed, Ct));
+        Assert.True(await _rig.StatusAsync(allowed, Ct) == "succeeded", await _rig.DumpAsync(Ct));
         Assert.Equal("ok", TestJobs.Writes[allowed]);
         var branch = await _rig.ScalarAsync<Guid>("select id from org.branches where code = 'JOB1'", Ct);
         Assert.Equal(BaselineSeed.SystemUserId, await _rig.ScalarAsync<Guid>("select created_by from org.branches where id = $1", Ct, null, branch));

@@ -13,6 +13,7 @@ using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Erp.Kernel.Infrastructure.Entitlements;
 using Erp.Kernel.Infrastructure.Generated;
+using Erp.Kernel.Infrastructure.Identity;
 using Erp.Kernel.Infrastructure.Jobs;
 using Erp.Kernel.Infrastructure.Settings;
 using Erp.Kernel.Infrastructure.Workflow;
@@ -54,6 +55,9 @@ public static class WorkerHost
         services.AddDbContext<HrmDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp));
         services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
 
+        // Field encryption of the customer (S1.05 P7): generated repositories encrypt enc columns on write.
+        services.AddSingleton<FieldKeyCache>();
+        services.AddScoped<IFieldEncryptorProvider, TenantFieldEncryptorProvider>();
         services.AddKernelAccess();
         services.AddHrmAccess();
         services.AddSingleton(new ResourceCatalog([.. KernelResourceCatalog.All, .. HrmResourceCatalog.All]));
