@@ -14,14 +14,6 @@
     {
       "action": "read",
       "permission": "doc.files.read"
-    },
-    {
-      "action": "create",
-      "permission": "doc.files.create"
-    },
-    {
-      "action": "update",
-      "permission": "doc.files.update"
     }
   ],
   "companyScoped": true,
@@ -194,6 +186,56 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.doc.files.is_sensitive"
+    },
+    {
+      "column": "legal_hold",
+      "field": "legalHold",
+      "kind": "Bool",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.doc.files.legal_hold"
+    },
+    {
+      "column": "legal_hold_reason",
+      "field": "legalHoldReason",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.doc.files.legal_hold_reason"
+    },
+    {
+      "column": "scanned_at",
+      "field": "scannedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.doc.files.scanned_at"
+    },
+    {
+      "column": "archived_at",
+      "field": "archivedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.doc.files.archived_at"
+    },
+    {
+      "column": "key_version",
+      "field": "keyVersion",
+      "kind": "Int4",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.doc.files.key_version"
     },
     {
       "column": "status",

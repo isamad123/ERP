@@ -31,6 +31,11 @@ internal sealed class FileConfiguration : IEntityTypeConfiguration<global::Erp.K
         builder.Property(e => e.ExpiresOn).HasColumnName("expires_on").HasColumnType("date");
         builder.Property(e => e.RetentionUntil).HasColumnName("retention_until").HasColumnType("date");
         builder.Property(e => e.IsSensitive).HasColumnName("is_sensitive").HasColumnType("boolean");
+        builder.Property(e => e.LegalHold).HasColumnName("legal_hold").HasColumnType("boolean");
+        builder.Property(e => e.LegalHoldReason).HasColumnName("legal_hold_reason").HasColumnType("text");
+        builder.Property(e => e.ScannedAt).HasColumnName("scanned_at").HasColumnType("timestamptz");
+        builder.Property(e => e.ArchivedAt).HasColumnName("archived_at").HasColumnType("timestamptz");
+        builder.Property(e => e.KeyVersion).HasColumnName("key_version").HasColumnType("integer");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");

@@ -179,5 +179,6 @@ public static class IdentitySetup
     {
         await Settings.SettingsSetup.EnsureAsync(owner, null, manifestFolders, cancellationToken).ConfigureAwait(false);
         await TenantFieldKeys.EnsureAsync(secrets, tenantCode, cancellationToken).ConfigureAwait(false);
+        await Documents.TenantFileKeys.EnsureAsync(secrets, tenantCode, cancellationToken).ConfigureAwait(false);
     }
 }
