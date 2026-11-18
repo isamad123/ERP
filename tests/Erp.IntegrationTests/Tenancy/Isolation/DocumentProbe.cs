@@ -129,7 +129,7 @@ public sealed class DocumentProbe(IsolationFixture fx, WebApplication app)
     private async Task<Material> MaterialAsync(string code, CancellationToken ct)
     {
         var system = BaselineSeed.SystemUserId;
-        Guid admin = Guid.CreateVersion7(), task = Guid.CreateVersion7(), definition = Guid.CreateVersion7(), version = Guid.CreateVersion7(), instance = Guid.CreateVersion7();
+        Guid admin = Guid.CreateVersion7(), requester = Guid.CreateVersion7(), task = Guid.CreateVersion7(), definition = Guid.CreateVersion7(), version = Guid.CreateVersion7(), instance = Guid.CreateVersion7();
         var type = "docp-" + definition.ToString("N")[..12];
         await using (var c = await fx.OpenAdminAsync(code, ct))
         {
@@ -138,6 +138,10 @@ public sealed class DocumentProbe(IsolationFixture fx, WebApplication app)
                 insert into iam.users (id, username, email, display_name, language, time_zone, is_system, status, created_at, created_by, updated_at, updated_by)
                 values ($1, $2, $2 || '@probe.test', $2, 'en', 'Asia/Karachi', false, 'active', now(), $3, now(), $3)
                 """, ct, admin, name, system);
+            await ExecAsync(c, """
+                insert into iam.users (id, username, email, display_name, language, time_zone, is_system, status, created_at, created_by, updated_at, updated_by)
+                values ($1, $2, $2 || '@probe.test', $2, 'en', 'Asia/Karachi', false, 'active', now(), $3, now(), $3)
+                """, ct, requester, name + "r", system);
             await ExecAsync(c, """
                 insert into iam.user_roles (id, user_id, role_id, company_id, reason, valid_from, created_at, created_by, updated_at, updated_by)
                 select $1, $2, r.id, null, 'probe', current_date - 1, now(), $3, now(), $3 from iam.roles r where r.code = 'tenant_admin'
@@ -154,7 +158,7 @@ public sealed class DocumentProbe(IsolationFixture fx, WebApplication app)
             await ExecAsync(c, """
                 insert into wf.workflow_instances (id, company_id, version_id, document_type, document_id, requester_user_id, started_at, context, status, created_at, created_by, updated_at, updated_by)
                 values ($1, $2, $3, $4, $5, $6, now(), '{"values": {}}', 'running', now(), $6, now(), $6)
-                """, ct, instance, company, version, type, Guid.CreateVersion7(), admin);
+                """, ct, instance, company, version, type, Guid.CreateVersion7(), requester);
             await ExecAsync(c, """
                 insert into wf.workflow_tasks (id, instance_id, step_key, assignee_user_id, status, created_at, created_by, updated_at, updated_by)
                 values ($1, $2, 'probe', $3, 'pending', now(), $3, now(), $3)
