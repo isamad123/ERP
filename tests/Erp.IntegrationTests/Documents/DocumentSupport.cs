@@ -129,7 +129,7 @@ public sealed class DocumentRig : IAsyncDisposable
 
     public IFileStore Store => new LocalFolderFileStore(Root);
 
-    public static async Task<DocumentRig> StartAsync(TenancyFixture fx, CancellationToken ct)
+    public static async Task<DocumentRig> StartAsync(TenancyFixture fx, CancellationToken ct, Action<IServiceCollection>? configure = null)
     {
         var clock = new TestClock();
         var scanner = new FakeScanner();
@@ -147,6 +147,7 @@ public sealed class DocumentRig : IAsyncDisposable
             services.AddSingleton<IVirusScanner>(scanner);
             services.AddSingleton(book);
             services.AddScoped<IAttachmentOwner, TestRecordOwner>();
+            configure?.Invoke(services);
         }, realAccess: true);
         await using var c = await fx.OpenTenantAsync(code, TenantLogins.Owner, ct);
         var company = await ScalarAsync<Guid>(c, "select id from org.companies where not is_deleted order by created_at limit 1", ct);

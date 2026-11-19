@@ -1,4 +1,5 @@
 using Erp.Kernel.Application.Documents;
+using Erp.Kernel.Infrastructure.Documents.Templates;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Erp.Kernel.Infrastructure.Documents;
@@ -34,7 +35,18 @@ public static class DocumentRegistration
     {
         ArgumentNullException.ThrowIfNull(setting);
         var (store, scan, s3) = HostSettings(setting);
-        return services.AddKernelDocuments(store, scan, s3);
+        services.AddKernelDocuments(store, scan, s3);
+        return services.AddKernelDocumentTemplates(PdfRendererOptions.From(setting));
+    }
+
+    /// <summary>Templates and PDF (slice S1.11c2): the template service and the Chromium renderer (<c>Pdf:*</c> settings, runbook <c>docs/runbooks/pdf-rendering.md</c>). Both hosts need Chromium (ruling Q27).</summary>
+    public static IServiceCollection AddKernelDocumentTemplates(this IServiceCollection services, PdfRendererOptions pdf)
+    {
+        ArgumentNullException.ThrowIfNull(pdf);
+        services.AddSingleton(pdf);
+        services.AddSingleton<IDocumentRenderer, ChromiumPdfRenderer>();
+        services.AddScoped<ITemplateService, TemplateService>();
+        return services;
     }
 
     /// <summary>The store, scanner and S3 options as the hosts read them; S3 options are null when no bucket is set.</summary>

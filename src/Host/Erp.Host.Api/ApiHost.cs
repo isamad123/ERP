@@ -200,6 +200,7 @@ public static class ApiHost
         api.MapJobEndpoints();
         api.MapNotificationEndpoints();
         api.MapDocumentEndpoints();
+        api.MapTemplateEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();
         return app;

@@ -71,6 +71,11 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
             return await new JobProbe(fx, app).RunAsync(endpoint, ct);
         }
 
+        if (endpoint.Kind is EndpointKind.NotificationCatalog or EndpointKind.NotificationRecordAction && endpoint.Pattern.StartsWith("/api/doc/templates", StringComparison.Ordinal))
+        {
+            return await new TemplateProbe(fx, app).RunAsync(endpoint, ct);
+        }
+
         if (endpoint.Kind is EndpointKind.NotificationCatalog or EndpointKind.NotificationRecordAction && endpoint.Pattern.StartsWith("/api/doc/attachments", StringComparison.Ordinal))
         {
             return await new DocumentProbe(fx, app).RunAsync(endpoint, ct);
