@@ -82,9 +82,14 @@ public sealed class TenantLifecycle(ControlPlaneOptions options, IClock clock)
             from cp.tenants t
             join cp.tenant_databases d on d.tenant_id = t.id and d.env_type = 'production'
             join cp.db_clusters c on c.id = d.db_cluster_id
-            left join cp.entitlements e on e.tenant_id = t.id and e.status <> 'superseded'
+            left join lateral (
+                -- One row per customer (S1.03 review finding 9): the entitlement in force, as EntitlementSelection.InForce picks it
+                -- (the highest version among the current row and the scheduled rows whose start date has come).
+                select x.edition, x.status from cp.entitlements x
+                where x.tenant_id = t.id and x.status <> 'superseded' and (x.status <> 'scheduled' or x.effective_from <= $1)
+                order by x.version desc limit 1) e on true
             order by t.code
-            """, []);
+            """, [DateOnly.FromDateTime(clock.UtcNow.UtcDateTime)]);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         var rows = new List<TenantSummary>();
         while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
