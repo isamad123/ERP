@@ -262,7 +262,13 @@ public sealed class TenancyFixture : IAsyncLifetime
     }
 
     /// <summary>Remembers the code so the database and logins are dropped afterwards, even if provisioning fails.</summary>
-    public void Track(string code) => _codes.Add(code);
+    public void Track(string code)
+    {
+        lock (_codes) // provisioning race tests (R-031) start runs from parallel tasks
+        {
+            _codes.Add(code);
+        }
+    }
 
     public async Task<ProvisioningResult> ProvisionAsync(string code, CancellationToken cancellationToken, IProvisioningProgress? progress = null, MigrationSet? migrations = null)
     {

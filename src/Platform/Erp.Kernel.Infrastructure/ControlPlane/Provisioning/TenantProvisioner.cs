@@ -35,6 +35,9 @@ public sealed record ProvisioningRequest(
 public interface IProvisioningProgress
 {
     ValueTask StepCompletedAsync(string stepName, CancellationToken cancellationToken);
+
+    /// <summary>Another provisioning run of the same customer is in progress; this run waits for it to end (R-031).</summary>
+    ValueTask WaitingForOtherRunAsync(string code, CancellationToken cancellationToken) => ValueTask.CompletedTask;
 }
 
 public sealed record ProvisioningResult(Guid TenantId, string Code, string DatabaseName, bool AlreadyProvisioned);
@@ -43,7 +46,8 @@ public sealed record ProvisioningResult(Guid TenantId, string Code, string Datab
 /// Creates a customer: control-plane records, its own database and logins, kernel and licensed module migrations,
 /// the signed entitlement, baseline data, the first administrator (invited), a smoke test, then activation
 /// (FR-KRN-TEN-01, 02, 03). Each step checks what is already there, so running it again after a failure resumes
-/// and never creates duplicates. Every step is recorded in cp.platform_audit (FR-ADM-PLT-10).
+/// and never creates duplicates. Runs for the same customer take turns (<see cref="ProvisioningLock"/>, R-031).
+/// Every step is recorded in cp.platform_audit (FR-ADM-PLT-10).
 /// </summary>
 public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore secrets, IClock clock, MigrationSet migrations)
 {
@@ -64,6 +68,11 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
 
         var modules = entitlement.Payload.Modules;
         _ = migrations.TenantScripts(modules); // unknown modules stop the run before anything is written
+
+        // R-031 (slice S1.11f2): a second run for the same customer waits here, then finds it active (and stops) or still
+        // provisioning after a failure (and resumes).
+        await using var customerLock = await ProvisioningLock.AcquireAsync(options.ConnectionString, request.Code,
+            progress is null ? null : () => progress.WaitingForOtherRunAsync(request.Code, cancellationToken), cancellationToken).ConfigureAwait(false);
 
         Registration? registration = null;
         var step = Steps[0];

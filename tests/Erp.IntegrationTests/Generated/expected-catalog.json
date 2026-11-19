@@ -4645,6 +4645,120 @@
     {
       "database": "control_plane",
       "schema": "cp",
+      "name": "schema_history",
+      "module": "controlplane",
+      "traits": [
+        "app"
+      ],
+      "requirements": [
+        "KRN-TEN-02"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "module_id",
+          "kind": "Code",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "version",
+          "kind": "Text",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "script_name",
+          "kind": "Text",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "checksum",
+          "kind": "Text",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "duration_ms",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [
+        "uq_schema_history_module_id_script_name"
+      ],
+      "checks": [
+        "ck_schema_history_module_id_code"
+      ],
+      "exclusions": [],
+      "foreign_keys": [],
+      "indexes": [],
+      "triggers": [
+        "tg_schema_history_append_only",
+        "tg_schema_history_no_truncate"
+      ],
+      "append_only_updatable": [],
+      "has_api": false,
+      "full_name": "cp.schema_history"
+    },
+    {
+      "database": "control_plane",
+      "schema": "cp",
       "name": "signing_keys",
       "module": "controlplane",
       "traits": [
@@ -43732,6 +43846,7 @@
         }
       ],
       "uniques": [
+        "uq_workflow_instances_document_type_document_id",
         "uq_workflow_instances_company_id_id"
       ],
       "checks": [
