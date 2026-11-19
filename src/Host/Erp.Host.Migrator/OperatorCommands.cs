@@ -302,7 +302,16 @@ public static class OperatorCommands
     {
         await using var cp = new NpgsqlConnection(Context.ControlPlane.ConnectionString);
         await cp.OpenAsync(cancellationToken).ConfigureAwait(false);
-        var statement = await UsageMeters.StatementAsync(cp, c.Option("tenant"), c.Option("month"), cancellationToken).ConfigureAwait(false);
+        // The customer's time zone decides where its months end (S1.09b review finding 7).
+        var tenant = await Erp.Kernel.Infrastructure.ControlPlane.Tenancy.TenantDirectory.FindByCodeAsync(cp, c.Option("tenant"), cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Customer {c.Option("tenant")} is not registered.");
+        string timeZone;
+        await using (var owner = await TenantProvisioner.OpenTenantAsync(c.Secrets, tenant, TenantLogins.Owner, cancellationToken).ConfigureAwait(false))
+        {
+            timeZone = await Erp.Kernel.Infrastructure.Entitlements.CustomerLicence.TimeZoneAsync(owner, null, UtcToday(c.Clock), cancellationToken).ConfigureAwait(false);
+        }
+
+        var statement = await UsageMeters.StatementAsync(cp, c.Option("tenant"), c.Option("month"), timeZone, cancellationToken).ConfigureAwait(false);
         await c.Output.WriteLineAsync($"usage statement {c.Option("tenant")} {statement.Period}").ConfigureAwait(false);
         await c.Output.WriteLineAsync("meter\tvalue\tlimit\tpercent").ConfigureAwait(false);
         foreach (var l in statement.Lines)
@@ -314,6 +323,8 @@ public static class OperatorCommands
         await c.Output.WriteLineAsync($"highest percent: {statement.HighestPercent?.ToString(CultureInfo.InvariantCulture) ?? "-"}").ConfigureAwait(false);
         return 0;
     }
+
+    private static DateOnly UtcToday(IClock clock) => DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
 
     private static EntitlementApplier Applier(Context c) => new(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations);
 

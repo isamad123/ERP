@@ -27,6 +27,13 @@ public static class CustomerLicence
         return resolved.TryGetValue(KernelSettingKeys.OrgTimeZone, out var zone) && zone.Value.ValueKind == JsonValueKind.String ? zone.Value.GetString()! : "Asia/Karachi";
     }
 
+    /// <summary>
+    /// Serializes the writers of the customer's licence copy and its announcements (licence job, <c>licence refresh</c>,
+    /// <c>entitlement apply</c>, provisioning) for the rest of the transaction; read the copy after it (S1.09b review finding 3).
+    /// </summary>
+    public static Task LockCopyAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken cancellationToken) =>
+        IdentityDb.ExecuteAsync(connection, transaction, "select pg_advisory_xact_lock(hashtext('licence.copy'))", cancellationToken);
+
     /// <summary>The version held by the customer's copy (0 when there is none).</summary>
     public static async Task<int> CopyVersionAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, CancellationToken cancellationToken) =>
         await IdentityDb.ScalarAsync<int?>(connection, transaction,

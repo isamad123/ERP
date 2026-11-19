@@ -17,9 +17,13 @@ public static class LimitSql
 
     public const string NamedUserHeld = "select exists (select 1 from iam.users where id = $1 and not is_system and not is_deleted and status in ('active', 'locked'))";
 
-    public const string ConcurrentUsers = "select count(distinct user_id) from iam.sessions where revoked_at is null and expires_at > $1";
+    /// <summary>
+    /// Sessions open now: not revoked, before their absolute end ($1 = now) and used within the idle time ($2 = now − idle;
+    /// S1.09b review finding 1, CR-057), the same rule as the session list and the per-user session limit.
+    /// </summary>
+    public const string ConcurrentUsers = "select count(distinct user_id) from iam.sessions where revoked_at is null and expires_at > $1 and last_seen_at > $2";
 
-    public const string ConcurrentHeld = "select exists (select 1 from iam.sessions where user_id = $2 and revoked_at is null and expires_at > $1)";
+    public const string ConcurrentHeld = "select exists (select 1 from iam.sessions where user_id = $3 and revoked_at is null and expires_at > $1 and last_seen_at > $2)";
 
     public const string Companies = "select count(*) from org.companies where status = 'active' and not is_deleted";
 
@@ -59,7 +63,7 @@ public sealed class NamedUserCounter : ILimitCounter
     }
 }
 
-/// <summary>Concurrent users (FR-ADM-USR-08): checked when a sign-in opens a session; a user already signed in may sign in again.</summary>
+/// <summary>Concurrent users (FR-ADM-USR-08): checked when a sign-in opens a session; a user already signed in (a session used within the idle time) may sign in again.</summary>
 public sealed class ConcurrentUserCounter(IClock clock) : ILimitCounter
 {
     public string LimitKey => LimitKeys.ConcurrentUsers;
@@ -69,8 +73,12 @@ public sealed class ConcurrentUserCounter(IClock clock) : ILimitCounter
         ArgumentNullException.ThrowIfNull(transaction);
         var c = transaction.Connection!;
         var now = clock.UtcNow;
-        var used = await LimitSql.CountAsync(c, transaction, LimitSql.ConcurrentUsers, cancellationToken, now).ConfigureAwait(false);
-        return new LimitCount(used, holder is { } h && await LimitSql.HeldAsync(c, transaction, LimitSql.ConcurrentHeld, cancellationToken, now, h).ConfigureAwait(false));
+        // A session not used within the customer's idle time (iam.session.idle_minutes, customer layer only) is ended at its
+        // next refresh, so it holds no seat (ruling B2; S1.09b review finding 1).
+        var policy = await Identity.IdentitySettings.ReadAsync((NpgsqlConnection)c, (NpgsqlTransaction)transaction, null, now, cancellationToken).ConfigureAwait(false);
+        var usedSince = now - TimeSpan.FromMinutes(policy.Session.IdleMinutes);
+        var used = await LimitSql.CountAsync(c, transaction, LimitSql.ConcurrentUsers, cancellationToken, now, usedSince).ConfigureAwait(false);
+        return new LimitCount(used, holder is { } h && await LimitSql.HeldAsync(c, transaction, LimitSql.ConcurrentHeld, cancellationToken, now, usedSince, h).ConfigureAwait(false));
     }
 }
 

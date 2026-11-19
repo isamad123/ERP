@@ -53,16 +53,19 @@ public static class UsageMeters
         }
     }
 
-    /// <summary>The usage statement of one month for a customer code (operator command).</summary>
-    public static async Task<UsageStatement> StatementAsync(NpgsqlConnection cp, string tenantCode, string period, CancellationToken cancellationToken)
+    /// <summary>The usage statement of one month for a customer code (operator command); <paramref name="timeZone"/> is the customer's.</summary>
+    public static async Task<UsageStatement> StatementAsync(NpgsqlConnection cp, string tenantCode, string period, string timeZone, CancellationToken cancellationToken)
     {
         var tenantId = await Sql.ScalarAsync<Guid?>(cp, null, "select id from cp.tenants where code = $1", cancellationToken, tenantCode).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Customer {tenantCode} is not registered.");
-        return (await StatementsAsync(cp, tenantId, period, period, cancellationToken).ConfigureAwait(false)).Single();
+        return (await StatementsAsync(cp, tenantId, period, period, timeZone, cancellationToken).ConfigureAwait(false)).Single();
     }
 
-    /// <summary>One statement per month from <paramref name="fromPeriod"/> to <paramref name="toPeriod"/> (both <c>yyyymm</c>, at most 36 months).</summary>
-    public static async Task<IReadOnlyList<UsageStatement>> StatementsAsync(NpgsqlConnection cp, Guid tenantId, string fromPeriod, string toPeriod, CancellationToken cancellationToken)
+    /// <summary>
+    /// One statement per month from <paramref name="fromPeriod"/> to <paramref name="toPeriod"/> (both <c>yyyymm</c>, at most 36
+    /// months); a month ends at midnight in the customer's <paramref name="timeZone"/> (<c>org.time_zone</c>, ruling Q4).
+    /// </summary>
+    public static async Task<IReadOnlyList<UsageStatement>> StatementsAsync(NpgsqlConnection cp, Guid tenantId, string fromPeriod, string toPeriod, string timeZone, CancellationToken cancellationToken)
     {
         var from = ParsePeriod(fromPeriod);
         var to = ParsePeriod(toPeriod);
@@ -85,7 +88,7 @@ public static class UsageMeters
         for (var month = from; month <= to; month = month.AddMonths(1))
         {
             var period = Period(month);
-            var limits = await LimitsAtAsync(cp, tenantId, month.AddMonths(1).AddDays(-1), cancellationToken).ConfigureAwait(false);
+            var limits = await LimitsAtAsync(cp, tenantId, month.AddMonths(1).AddDays(-1), timeZone, cancellationToken).ConfigureAwait(false);
             var lines = new List<UsageLine>();
             foreach (var (meter, limitKey) in Meters)
             {
@@ -113,18 +116,20 @@ public static class UsageMeters
 
     /// <summary>
     /// The limits of the entitlement in force on <paramref name="day"/>: the highest version applied and started by then, else the
-    /// first one (in force from provisioning, ruling B1).
+    /// first one (in force from provisioning, ruling B1). "By then" is before midnight after the day in the customer's time zone,
+    /// worked out here, not in the database server's time zone (S1.09b review finding 7).
     /// </summary>
-    private static async Task<Dictionary<string, long>> LimitsAtAsync(NpgsqlConnection cp, Guid tenantId, DateOnly day, CancellationToken cancellationToken)
+    private static async Task<Dictionary<string, long>> LimitsAtAsync(NpgsqlConnection cp, Guid tenantId, DateOnly day, string timeZone, CancellationToken cancellationToken)
     {
+        var endsBefore = DayEndUtc(day, timeZone);
         var limits = new Dictionary<string, long>(StringComparer.Ordinal);
         await using var command = Sql.Command(cp, null, """
             select l.key, l.value::bigint from (
-                select claims from cp.entitlements, lateral (select effective_from <= $2 and created_at < ($2 + 1)::timestamptz as started) s
+                select claims from cp.entitlements, lateral (select effective_from <= $2 and created_at < $3 as started) s
                 where tenant_id = $1
                 order by s.started desc, case when s.started then -version else version end limit 1) e,
             lateral jsonb_each_text(coalesce(e.claims -> 'limits', '{}'::jsonb)) l
-            """, [tenantId, day]);
+            """, [tenantId, day, endsBefore]);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {
@@ -132,5 +137,18 @@ public static class UsageMeters
         }
 
         return limits;
+    }
+
+    /// <summary>The instant the customer's <paramref name="day"/> ends (the next midnight in <paramref name="timeZone"/>), in UTC.</summary>
+    public static DateTimeOffset DayEndUtc(DateOnly day, string timeZone)
+    {
+        var zone = Erp.Kernel.Domain.Entitlements.LicenceStates.Zone(timeZone);
+        var midnight = day.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+        while (zone.IsInvalidTime(midnight))
+        {
+            midnight = midnight.AddMinutes(30); // a clock change at midnight: the day ends when the new day's clock starts
+        }
+
+        return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(midnight, zone), TimeSpan.Zero);
     }
 }

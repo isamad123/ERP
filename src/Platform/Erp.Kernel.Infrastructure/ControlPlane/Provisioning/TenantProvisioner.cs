@@ -284,6 +284,7 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
 
         await using var tenant = await OpenTenantAsync(registration.Tenant, TenantLogins.Owner, cancellationToken).ConfigureAwait(false);
         await using var tx = await tenant.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await CustomerLicence.LockCopyAsync(tenant, tx, cancellationToken).ConfigureAwait(false);
         if (await CustomerLicence.CopyVersionAsync(tenant, tx, cancellationToken).ConfigureAwait(false) == 0)
         {
             await CustomerLicence.ReplaceCopyAsync(tenant, tx, payload, entitlement.KeyId, entitlement.Signature, state, now, cancellationToken).ConfigureAwait(false);
