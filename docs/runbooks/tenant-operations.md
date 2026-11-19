@@ -51,7 +51,11 @@ activate. If a step fails the customer stays `provisioning` and the error is in 
 same command again: it resumes and never duplicates anything. On an active customer it changes nothing.
 Two runs for the same customer never work at once (S1.11f2, R-031): the second prints "another provisioning run of
 <code> is in progress; waiting" and waits. When the first ends, the second stops (customer active) or resumes (first
-run failed). Ctrl+C stops the wait without changing anything. Different customers never wait for each other.
+run failed). Ctrl+C stops the wait without changing anything. Different customers never wait for each other. The lock is held by
+one control-plane session for the whole run, so the migrator's `ERP_CONTROL_PLANE` connection must reach PostgreSQL
+directly or through session pooling, never through transaction pooling (PgBouncer `pool_mode = transaction`). If that
+session is ended during a run (server restart, a killed session), the run stops before its next step with "lost its
+lock"; run the same command again to resume.
 
 When provisioning finishes, the command prints the first administrator's **activation link** (valid 72 hours by default,
 setting `iam.activation.token_hours`; works once). It is a secret: hand it to the customer privately. E-mail delivery comes

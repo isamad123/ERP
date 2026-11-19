@@ -84,11 +84,11 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
                 return new ProvisioningResult(registration.TenantId, request.Code, registration.Tenant.DatabaseName, AlreadyProvisioned: true);
             }
 
-            await CompletedAsync(actor, registration, step, progress, cancellationToken).ConfigureAwait(false);
+            await CompletedAsync(actor, registration, step, progress, customerLock, cancellationToken).ConfigureAwait(false);
 
             step = "database";
             await _clusters.CreateDatabaseAsync(registration.Cluster, request.Code, registration.Tenant.AppSecretRef, cancellationToken).ConfigureAwait(false);
-            await CompletedAsync(actor, registration, step, progress, cancellationToken).ConfigureAwait(false);
+            await CompletedAsync(actor, registration, step, progress, customerLock, cancellationToken).ConfigureAwait(false);
 
             step = "migrate";
             await using (var owner = await OpenTenantAsync(registration.Tenant, TenantLogins.Owner, cancellationToken).ConfigureAwait(false))
@@ -98,23 +98,23 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
                 await RecordVersionsAsync(actor, registration.Tenant, result, cancellationToken).ConfigureAwait(false);
             }
 
-            await CompletedAsync(actor, registration, step, progress, cancellationToken).ConfigureAwait(false);
+            await CompletedAsync(actor, registration, step, progress, customerLock, cancellationToken).ConfigureAwait(false);
 
             step = "entitlement";
             await StoreEntitlementAsync(actor, registration, entitlement, cancellationToken).ConfigureAwait(false);
-            await CompletedAsync(actor, registration, step, progress, cancellationToken).ConfigureAwait(false);
+            await CompletedAsync(actor, registration, step, progress, customerLock, cancellationToken).ConfigureAwait(false);
 
             step = "seed";
             await SeedAsync(registration, request, modules, cancellationToken).ConfigureAwait(false);
-            await CompletedAsync(actor, registration, step, progress, cancellationToken).ConfigureAwait(false);
+            await CompletedAsync(actor, registration, step, progress, customerLock, cancellationToken).ConfigureAwait(false);
 
             step = "smoke_test";
             await SmokeTestAsync(registration.Tenant, cancellationToken).ConfigureAwait(false);
-            await CompletedAsync(actor, registration, step, progress, cancellationToken).ConfigureAwait(false);
+            await CompletedAsync(actor, registration, step, progress, customerLock, cancellationToken).ConfigureAwait(false);
 
             step = "activate";
             await ActivateAsync(actor, registration, cancellationToken).ConfigureAwait(false);
-            await CompletedAsync(actor, registration, step, progress, cancellationToken).ConfigureAwait(false);
+            await CompletedAsync(actor, registration, step, progress, customerLock, cancellationToken).ConfigureAwait(false);
             return new ProvisioningResult(registration.TenantId, request.Code, registration.Tenant.DatabaseName, AlreadyProvisioned: false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -128,7 +128,7 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
 
     private sealed record Registration(Guid TenantId, ResolvedTenant Tenant, ClusterInfo Cluster, bool AlreadyActive);
 
-    private async Task CompletedAsync(PlatformActor actor, Registration registration, string step, IProvisioningProgress? progress, CancellationToken cancellationToken)
+    private async Task CompletedAsync(PlatformActor actor, Registration registration, string step, IProvisioningProgress? progress, ProvisioningLock customerLock, CancellationToken cancellationToken)
     {
         await using (var connection = await OpenControlPlaneAsync(cancellationToken).ConfigureAwait(false))
         {
@@ -138,6 +138,12 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
         if (progress is not null)
         {
             await progress.StepCompletedAsync(step, cancellationToken).ConfigureAwait(false);
+        }
+
+        // R-031 (S1.11f2 review finding 2): the next step runs only while this run still holds the customer.
+        if (step != Steps[^1])
+        {
+            await customerLock.EnsureHeldAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 

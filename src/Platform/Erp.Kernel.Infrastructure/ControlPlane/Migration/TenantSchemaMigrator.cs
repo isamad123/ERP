@@ -31,7 +31,8 @@ public static class TenantSchemaMigrator
 /// </summary>
 public static class ControlPlaneSchemaMigrator
 {
-    private const long MigrationLockKey = 0x45_52_50_43_50_4D; // "ERPCPM"
+    /// <summary>The session advisory-lock key that serializes control-plane migrators.</summary>
+    public const long MigrationLockKey = 0x45_52_50_43_50_4D; // "ERPCPM"
 
     public static Task<SchemaMigrationResult> ApplyAsync(NpgsqlConnection connection, IReadOnlyList<MigrationScript> scripts, IClock clock, Guid actor, CancellationToken cancellationToken) =>
         RecordedSchemaMigrator.ApplyAsync(connection, scripts, "cp.schema_history", MigrationLockKey, clock, actor, cancellationToken);

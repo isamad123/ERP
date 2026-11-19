@@ -159,22 +159,45 @@ public sealed class ControlPlaneMigrationTests(PostgresFixture fx)
         }
     }
 
-    /// <summary>Two migrators started at the same moment take turns: every script is applied and recorded once.</summary>
+    /// <summary>
+    /// Two migrators take turns (S1.11f2 review finding 4: the collision is forced, not hoped for). The test holds the
+    /// migrators' lock, so the first migrator must wait for it; a second migrator then waits behind the first. Every script
+    /// is applied and recorded once.
+    /// </summary>
     [Fact]
     public async Task FR_KRN_TEN_02_CR006_two_control_plane_migrators_at_once_apply_and_record_each_script_once()
     {
         await using var cp = await NewControlPlaneAsync();
         var scripts = Migrations.ControlPlaneScripts;
-        using var start = new SemaphoreSlim(0, 2);
+        await using var holder = await cp.OpenAsync();
+        await using (var take = new NpgsqlCommand("select pg_advisory_lock($1)", holder))
+        {
+            take.Parameters.Add(new NpgsqlParameter { Value = ControlPlaneSchemaMigrator.MigrationLockKey });
+            await take.ExecuteNonQueryAsync(Ct);
+        }
+
         var runs = Enumerable.Range(0, 2).Select(async _ =>
         {
             await using var c = await cp.OpenAsync();
-            await start.WaitAsync(Ct);
             return await ControlPlaneSchemaMigrator.ApplyAsync(c, scripts, new SystemClock(), BaselineSeed.SystemUserId, Ct);
         }).ToList();
-        start.Release(2);
-        var results = await Task.WhenAll(runs);
 
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(60);
+        while (await cp.CountAsync("select count(*) from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock' and wait_event = 'advisory'") < 2)
+        {
+            Assert.True(DateTimeOffset.UtcNow < deadline, "The migrators never waited on the migration lock.");
+            await Task.Delay(20, Ct);
+        }
+
+        Assert.All(runs, r => Assert.False(r.IsCompleted));
+        Assert.Equal(0, await cp.CountAsync("select count(*) from pg_class where oid = to_regclass('cp.schema_history')"));
+        await using (var release = new NpgsqlCommand("select pg_advisory_unlock($1)", holder))
+        {
+            release.Parameters.Add(new NpgsqlParameter { Value = ControlPlaneSchemaMigrator.MigrationLockKey });
+            await release.ExecuteNonQueryAsync(Ct);
+        }
+
+        var results = await Task.WhenAll(runs).WaitAsync(TimeSpan.FromMinutes(2), Ct);
         Assert.Equal(scripts.Count, results.Sum(r => r.Applied));
         Assert.All(results, r => Assert.Equal(scripts.Count, r.Applied + r.AlreadyApplied));
         Assert.Equal(scripts.Count, await cp.CountAsync("select count(*) from cp.schema_history"));

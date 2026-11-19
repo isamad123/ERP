@@ -222,4 +222,36 @@ public sealed class ProvisioningRaceTests(TenancyFixture fx)
         Assert.Equal(0, await AuditCountAsync(code, "tenant.provision.failed"));
         await AssertLockSessionsSettleAtAsync(0);
     }
+
+    /// <summary>
+    /// S1.11f2 review finding 2: a run whose lock session is ended (server restart, idle limit, a killed session) stops
+    /// before its next step instead of carrying on unprotected, and a later run resumes the customer.
+    /// </summary>
+    [Fact]
+    public async Task FR_KRN_TEN_02_R031_a_run_that_lost_its_lock_stops_before_the_next_step_and_a_later_run_resumes()
+    {
+        var code = "rl" + fx.Suffix;
+        var first = new PauseAfter("database");
+        var runA = fx.ProvisionAsync(code, Ct, first);
+        await first.Reached.WaitAsync(Patience, Ct);
+        await using (var cp = await fx.OpenControlPlaneAsync(Ct))
+        {
+            Assert.Equal(1, await TenancyFixture.CountAsync(cp, """
+                select count(*) from (select pg_terminate_backend(pid) from pg_stat_activity
+                where datname = current_database() and application_name = 'erp-provision-lock') t
+                """, Ct));
+        }
+
+        first.Resume();
+        var lost = await Assert.ThrowsAsync<ProvisioningLockLostException>(() => runA.WaitAsync(Patience, Ct));
+        Assert.Contains(code, lost.Message, StringComparison.Ordinal);
+        Assert.Equal("provisioning", (await fx.TenantAsync(code, Ct)).Status);
+        Assert.Equal(0, await AuditCountAsync(code, "tenant.provision.migrate")); // the next step never started
+        Assert.Equal(1, await AuditCountAsync(code, "tenant.provision.failed"));
+
+        Assert.False((await fx.ProvisionAsync(code, Ct).WaitAsync(Patience, Ct)).AlreadyProvisioned);
+        Assert.Equal("active", (await fx.TenantAsync(code, Ct)).Status);
+        await AssertEveryLoginWorksAsync(code);
+        await AssertLockSessionsSettleAtAsync(0);
+    }
 }
