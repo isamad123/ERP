@@ -1,3 +1,4 @@
+using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -24,21 +25,28 @@ public sealed class PostgresFixture : IAsyncLifetime
         if (!string.IsNullOrWhiteSpace(configured))
         {
             ConnectionString = configured;
-            return;
+        }
+        else
+        {
+            try
+            {
+                _container = new PostgreSqlBuilder(Image).Build();
+                await _container.StartAsync().ConfigureAwait(false);
+                ConnectionString = _container.GetConnectionString();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                throw new InvalidOperationException(
+                    $"No PostgreSQL available for integration tests. Set {ConnectionStringVariable} to a PostgreSQL 16 " +
+                    "connection string, or start Docker so Testcontainers can run postgres:16. See CLAUDE.md 'Commands'.", ex);
+            }
         }
 
-        try
-        {
-            _container = new PostgreSqlBuilder(Image).Build();
-            await _container.StartAsync().ConfigureAwait(false);
-            ConnectionString = _container.GetConnectionString();
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            throw new InvalidOperationException(
-                $"No PostgreSQL available for integration tests. Set {ConnectionStringVariable} to a PostgreSQL 16 " +
-                "connection string, or start Docker so Testcontainers can run postgres:16. See CLAUDE.md 'Commands'.", ex);
-        }
+        // R-028: the server-wide group roles (CR-004) are created here, race-safely, before any fixture applies the
+        // frozen grants migrations. Those migrations create a missing role with a check-then-create that fails when
+        // two fixtures run them at once on a new server; in production provisioning always creates the roles first.
+        await using var connection = await OpenConnectionAsync(CancellationToken.None).ConfigureAwait(false);
+        await ClusterAdministrator.EnsureGroupRolesAsync(connection, CancellationToken.None).ConfigureAwait(false);
     }
 
     public async ValueTask DisposeAsync()
