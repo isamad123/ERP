@@ -13,6 +13,8 @@
   <ItemGroup>
     <!-- Slice S1.06: the unit tests check the engine's merge and scope rules directly. -->
     <InternalsVisibleTo Include="Erp.UnitTests" />
+    <!-- R-028: the role-race test calls ClusterAdministrator.EnsureNoLoginRolesAsync with roles of its own. -->
+    <InternalsVisibleTo Include="Erp.IntegrationTests" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="ControlPlane/Provisioning/baseline-seed.json" LogicalName="Erp.Kernel.Infrastructure.ControlPlane.Provisioning.baseline-seed.json" />
