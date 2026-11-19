@@ -26,6 +26,28 @@ public static class DocumentRegistration
         return services;
     }
 
+    /// <summary>
+    /// Both hosts' file settings from configuration (runbook <c>docs/runbooks/file-store.md</c>): <c>Files:Store</c>, <c>Files:Root</c>,
+    /// <c>Files:S3:*</c> and <c>Files:Scan:*</c>. One reader for both hosts, so the API and the worker always agree (S1.11c1 review finding 1).
+    /// </summary>
+    public static IServiceCollection AddKernelDocuments(this IServiceCollection services, Func<string, string?> setting)
+    {
+        ArgumentNullException.ThrowIfNull(setting);
+        var (store, scan, s3) = HostSettings(setting);
+        return services.AddKernelDocuments(store, scan, s3);
+    }
+
+    /// <summary>The store, scanner and S3 options as the hosts read them; S3 options are null when no bucket is set.</summary>
+    public static (FileStoreOptions Store, VirusScanOptions Scan, S3StoreOptions? S3) HostSettings(Func<string, string?> setting)
+    {
+        ArgumentNullException.ThrowIfNull(setting);
+        static string? Value(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+        var port = int.TryParse(setting("Files:Scan:Port"), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var p) ? p : 3310;
+        var bucket = Value(setting("Files:S3:Bucket"));
+        var s3 = bucket is null ? null : new S3StoreOptions(bucket, Value(setting("Files:S3:ServiceUrl")), Value(setting("Files:S3:Region")), Value(setting("Files:S3:AccessKeyId")), Value(setting("Files:S3:SecretKeyRef")));
+        return (new FileStoreOptions(Value(setting("Files:Store")) ?? "local", Value(setting("Files:Root"))), new VirusScanOptions(Value(setting("Files:Scan:Host")), port), s3);
+    }
+
     private static S3FileStore CreateS3(S3StoreOptions o, BuildingBlocks.Application.Tenancy.ISecretStore secrets)
     {
         var config = new Amazon.S3.AmazonS3Config { ForcePathStyle = o.ServiceUrl is not null };

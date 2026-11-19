@@ -72,6 +72,9 @@ public sealed partial class File : global::Erp.BuildingBlocks.Domain.Entities.IE
     /// <summary>key_version: default 1; file key version the content was encrypted with</summary>
     public int KeyVersion { get; set; } = 1;
 
+    /// <summary>expiry_reminded_days: smallest expiry reminder threshold already sent for this expiry date (CR-051)</summary>
+    public int? ExpiryRemindedDays { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

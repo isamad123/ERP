@@ -31,7 +31,8 @@ public sealed record FileRow(
     DateTimeOffset? ScannedAt,
     DateTimeOffset? ArchivedAt,
     DateTimeOffset CreatedAt,
-    Guid CreatedBy)
+    Guid CreatedBy,
+    int? ExpiryRemindedDays = null)
 {
     public AttachmentInfo ToInfo() => new(Id, OwnerType, OwnerId, FileName, ContentType, SizeBytes, Checksum, VersionNo, PreviousFileId, Status, DocumentType, ExpiresOn, IsSensitive,
         LegalHold, LegalHoldReason, ScannedAt is not null, CreatedAt, CreatedBy);
@@ -42,7 +43,8 @@ public static class FileRows
 {
     public const string Columns = """
         f.id, f.company_id, f.owner_type, f.owner_id, f.file_name, f.content_type, f.size_bytes, f.checksum, f.storage_key, f.version_no, f.previous_file_id,
-        f.document_type, f.expires_on, f.retention_until, f.is_sensitive, f.status, f.legal_hold, f.legal_hold_reason, f.scanned_at, f.archived_at, f.created_at, f.created_by
+        f.document_type, f.expires_on, f.retention_until, f.is_sensitive, f.status, f.legal_hold, f.legal_hold_reason, f.scanned_at, f.archived_at, f.created_at, f.created_by,
+        f.expiry_reminded_days
         """;
 
     /// <summary>A file with no newer, not deleted version.</summary>
@@ -52,7 +54,7 @@ public static class FileRows
         r.GetGuid(0), r.GetGuid(1), r.GetString(2), r.GetGuid(3), r.GetString(4), r.GetString(5), r.GetInt64(6), r.GetString(7), r.GetString(8), r.GetInt32(9),
         r.IsDBNull(10) ? null : r.GetGuid(10), r.IsDBNull(11) ? null : r.GetString(11), r.IsDBNull(12) ? null : r.GetFieldValue<DateOnly>(12), r.IsDBNull(13) ? null : r.GetFieldValue<DateOnly>(13),
         r.GetBoolean(14), r.GetString(15), r.GetBoolean(16), r.IsDBNull(17) ? null : r.GetString(17), r.IsDBNull(18) ? null : r.GetFieldValue<DateTimeOffset>(18),
-        r.IsDBNull(19) ? null : r.GetFieldValue<DateTimeOffset>(19), r.GetFieldValue<DateTimeOffset>(20), r.GetGuid(21));
+        r.IsDBNull(19) ? null : r.GetFieldValue<DateTimeOffset>(19), r.GetFieldValue<DateTimeOffset>(20), r.GetGuid(21), r.IsDBNull(22) ? null : r.GetInt32(22));
 
     public static async Task<FileRow?> FindAsync(NpgsqlConnection c, NpgsqlTransaction? tx, Guid id, CancellationToken ct) =>
         (await Notifications.NotificationConsumer.ReadAsync(c, tx, $"select {Columns} from doc.files f where f.id = $1", Read, ct, id).ConfigureAwait(false)).SingleOrDefault();
@@ -68,6 +70,31 @@ public static class FileRows
                 union all select n.id from doc.files n join newer w on n.previous_file_id = w.id)
             select id from older union select id from newer
             """, r => r.GetGuid(0), ct, id);
+
+    /// <summary>
+    /// The legal hold of the attachment <paramref name="id"/> belongs to: held when any of its versions is held, with that
+    /// version's reason. A new version takes it over, so a hold covers the whole attachment (S1.11c1 review finding 2, CR-051).
+    /// </summary>
+    public static async Task<(bool Held, string? Reason)> ChainHoldAsync(NpgsqlConnection c, NpgsqlTransaction? tx, Guid id, CancellationToken ct)
+    {
+        var chain = (await ChainAsync(c, tx, id, ct).ConfigureAwait(false)).ToArray();
+        var held = await Notifications.NotificationConsumer.ReadAsync(c, tx, "select legal_hold_reason from doc.files where id = any($1) and legal_hold order by updated_at desc, id limit 1",
+            r => r.IsDBNull(0) ? null : r.GetString(0), ct, chain).ConfigureAwait(false);
+        return held.Count == 0 ? (false, null) : (true, held[0]);
+    }
+
+    /// <summary>
+    /// Common table expressions <c>held_up</c> and <c>held_down</c>: every version of every attachment with a version under
+    /// legal hold (the held rows with their older and their newer versions).
+    /// </summary>
+    public const string HeldChains = """
+        with recursive held_up(id, prev) as (
+            select id, previous_file_id from doc.files where legal_hold
+            union select p.id, p.previous_file_id from doc.files p join held_up u on p.id = u.prev),
+        held_down(id) as (
+            select id from doc.files where legal_hold
+            union select n.id from doc.files n join held_down d on n.previous_file_id = d.id)
+        """;
 
     /// <summary>Writes one change-log entry of a file (every change is audited).</summary>
     public static Task LogAsync(NpgsqlConnection c, NpgsqlTransaction tx, FileRow file, string action, IReadOnlyList<(string Field, object? Before, object? After)> changes,

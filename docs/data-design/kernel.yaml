@@ -928,9 +928,13 @@
     - [scanned_at, ts, opt]
     - [archived_at, ts, opt]
     - [key_version, int, req, "default 1; file key version the content was encrypted with"]
+    - [expiry_reminded_days, int, opt, "smallest expiry reminder threshold already sent for this expiry date (CR-051)"]
   indexes: [[owner_type, owner_id], [expires_on, partial where expires_on is not null]]
-  # S1.11c1 (CR-045, CR-050): hold, scan and archive columns; files are written only by the attachment service (api read only).
-  added_in: {S1.11c-r1: [legal_hold, legal_hold_reason, scanned_at, archived_at, key_version]}
+  # S1.11c1 (CR-045, CR-050): hold, scan and archive columns; files are written only by the attachment service.
+  # S1.11c1 review (CR-051): one live newer version per file; reminder progress kept on the row; no generated API
+  # (codegen-settings api_excluded, ruling Q23: files are read through /api/doc/attachments only).
+  added_in: {S1.11c-r1: [legal_hold, legal_hold_reason, scanned_at, archived_at, key_version], S1.11c-r2: [expiry_reminded_days]}
+  uniques_added_in: {S1.11c-r2: [[previous_file_id, "where previous_file_id is not null and status <> 'deleted'"]]}
   api_actions: [read]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}

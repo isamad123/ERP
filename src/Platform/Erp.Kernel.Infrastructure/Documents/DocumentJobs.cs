@@ -47,41 +47,71 @@ public sealed class DocumentRetentionJob(IClock clock) : IJobHandler
     {
         ArgumentNullException.ThrowIfNull(job);
         await using var c = await KernelJobs.OpenAsync(job, cancellationToken).ConfigureAwait(false);
-        var (archived, deleted) = await ApplyAsync(c, job.Services.GetRequiredService<IFileStore>(), clock.UtcNow, job.RunId, cancellationToken).ConfigureAwait(false);
+        var (archived, deleted) = await ApplyAsync(c, job.Services.GetRequiredService<IFileStore>(), clock.UtcNow, job.RunId, cancellationToken,
+            text => job.LogAsync("warning", text, cancellationToken)).ConfigureAwait(false);
         if (archived + deleted > 0)
         {
             await job.LogAsync("info", string.Create(CultureInfo.InvariantCulture, $"{archived} files archived, {deleted} files destroyed"), cancellationToken).ConfigureAwait(false);
         }
     }
 
-    /// <summary>Applies every rule as of <paramref name="now"/>; returns the files archived and the files whose content was destroyed.</summary>
-    public static async Task<(int Archived, int Deleted)> ApplyAsync(NpgsqlConnection c, IFileStore store, DateTimeOffset now, Guid? runId, CancellationToken ct)
+    /// <summary>
+    /// Applies every rule as of <paramref name="now"/>; returns the files archived and the files whose content was destroyed.
+    /// A file counts, and its change-log entry is written, only when its row really changed (a hold set meanwhile stops it).
+    /// Content is removed only after the row recording it is committed (S1.11c1 review findings 8 and 10, CR-051): a content
+    /// that could not be removed is left as an unreadable, encrypted leftover and reported through <paramref name="warn"/>.
+    /// </summary>
+    public static async Task<(int Archived, int Deleted)> ApplyAsync(NpgsqlConnection c, IFileStore store, DateTimeOffset now, Guid? runId, CancellationToken ct, Func<string, Task>? warn = null)
     {
+        ArgumentNullException.ThrowIfNull(store);
         var actor = BaselineSeed.SystemUserId;
         var archived = 0;
         var deleted = 0;
         foreach (var due in await Retention.DueAsync(c, "archive", now, ct).ConfigureAwait(false))
         {
             await using var tx = await c.BeginTransactionAsync(ct).ConfigureAwait(false);
-            await IdentityDb.ExecuteAsync(c, tx, "update doc.files set archived_at = $2, updated_at = $2, updated_by = $3, row_version = row_version + 1 where id = $1 and archived_at is null and not legal_hold", ct, due.File.Id, now, actor).ConfigureAwait(false);
-            await FileRows.LogAsync(c, tx, due.File, "update", [("archived_at", null, now)], actor, ActorKinds.Job, AuditSources.Job, runId, null, now, ct).ConfigureAwait(false);
+            var changed = await IdentityDb.ExecuteAsync(c, tx, "update doc.files set archived_at = $2, updated_at = $2, updated_by = $3, row_version = row_version + 1 where id = $1 and archived_at is null and not legal_hold", ct, due.File.Id, now, actor).ConfigureAwait(false);
+            if (changed == 1)
+            {
+                await FileRows.LogAsync(c, tx, due.File, "update", [("archived_at", null, now)], actor, ActorKinds.Job, AuditSources.Job, runId, null, now, ct).ConfigureAwait(false);
+                archived++;
+            }
+
             await tx.CommitAsync(ct).ConfigureAwait(false);
-            archived++;
         }
 
         foreach (var due in await Retention.DueAsync(c, "delete", now, ct).ConfigureAwait(false))
         {
-            await using var tx = await c.BeginTransactionAsync(ct).ConfigureAwait(false);
-            var changed = await IdentityDb.ExecuteAsync(c, tx, "update doc.files set status = 'deleted', storage_key = $2, updated_at = $3, updated_by = $4, row_version = row_version + 1 where id = $1 and not legal_hold and storage_key <> $2",
-                ct, due.File.Id, FileStatuses.PurgedKey, now, actor).ConfigureAwait(false);
-            if (changed == 1)
+            int changed;
+            await using (var tx = await c.BeginTransactionAsync(ct).ConfigureAwait(false))
             {
-                await FileRows.LogAsync(c, tx, due.File, "delete", [("status", due.File.Status, FileStatuses.Deleted), ("content", "stored", "destroyed")], actor, ActorKinds.Job, AuditSources.Job, runId, null, now, ct).ConfigureAwait(false);
-                await store.DeleteAsync(due.File.StorageKey, ct).ConfigureAwait(false);
-                deleted++;
+                changed = await IdentityDb.ExecuteAsync(c, tx, "update doc.files set status = 'deleted', storage_key = $2, updated_at = $3, updated_by = $4, row_version = row_version + 1 where id = $1 and not legal_hold and storage_key <> $2",
+                    ct, due.File.Id, FileStatuses.PurgedKey, now, actor).ConfigureAwait(false);
+                if (changed == 1)
+                {
+                    await FileRows.LogAsync(c, tx, due.File, "delete", [("status", due.File.Status, FileStatuses.Deleted), ("content", "stored", "destroyed")], actor, ActorKinds.Job, AuditSources.Job, runId, null, now, ct).ConfigureAwait(false);
+                }
+
+                await tx.CommitAsync(ct).ConfigureAwait(false);
             }
 
-            await tx.CommitAsync(ct).ConfigureAwait(false);
+            if (changed != 1)
+            {
+                continue;
+            }
+
+            deleted++;
+            try
+            {
+                await store.DeleteAsync(due.File.StorageKey, ct).ConfigureAwait(false);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                if (warn is not null)
+                {
+                    await warn(string.Create(CultureInfo.InvariantCulture, $"content of file {due.File.Id} could not be removed from the store ({e.GetType().Name}); it stays encrypted and unreferenced")).ConfigureAwait(false);
+                }
+            }
         }
 
         return (archived, deleted);
@@ -128,22 +158,33 @@ public sealed class DocumentExpiryJob(IClock clock) : IJobHandler
         {
             var left = file.ExpiresOn!.Value.DayNumber - today.DayNumber;
             var threshold = thresholds.First(t => t >= left);
-            if (await IdentityDb.ScalarAsync<bool>(c, null, "select exists (select 1 from job.outbox_messages where event_type = $1 and aggregate_id = $2 and payload ->> 'threshold' = $3)",
-                ct, DocumentEvents.Expiring, file.Id, threshold.ToString(CultureInfo.InvariantCulture)).ConfigureAwait(false))
+
+            // What was sent is kept on the file itself (doc.files.expiry_reminded_days, CR-051), not looked up in the outbox,
+            // which the clean-up empties after 30 days (S1.11c1 review finding 7). A new version with the same expiry date keeps it.
+            if (file.ExpiryRemindedDays is { } sent && sent <= threshold)
             {
                 continue;
             }
 
-            await JobStore.RaiseAsync(c, null, DocumentEvents.Expiring, "doc.file", file.Id, now, new
+            await using var tx = await c.BeginTransactionAsync(ct).ConfigureAwait(false);
+            var marked = await IdentityDb.ExecuteAsync(c, tx, """
+                update doc.files set expiry_reminded_days = $2 where id = $1 and (expiry_reminded_days is null or expiry_reminded_days > $2)
+                """, ct, file.Id, threshold).ConfigureAwait(false);
+            if (marked == 1)
             {
-                recipients = new[] { file.CreatedBy },
-                link = $"/documents/{file.Id}",
-                company_id = file.CompanyId,
-                file_name = file.FileName,
-                days = left,
-                threshold,
-            }, ct).ConfigureAwait(false);
-            raised++;
+                await JobStore.RaiseAsync(c, tx, DocumentEvents.Expiring, "doc.file", file.Id, now, new
+                {
+                    recipients = new[] { file.CreatedBy },
+                    link = $"/documents/{file.Id}",
+                    company_id = file.CompanyId,
+                    file_name = file.FileName,
+                    days = left,
+                    threshold,
+                }, ct).ConfigureAwait(false);
+                raised++;
+            }
+
+            await tx.CommitAsync(ct).ConfigureAwait(false);
         }
 
         return raised;

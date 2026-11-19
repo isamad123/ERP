@@ -95,7 +95,7 @@ public static class WorkerHost
             config["Alerts:OperatorEmail"]));
 
         // Files (S1.11c1): the same store and scanner settings as the API host; the scan, retention and expiry jobs run here.
-        services.AddKernelDocuments(new FileStoreOptions(config["Files:Store"] ?? "local", config["Files:Root"]), new VirusScanOptions(config["Files:Scan:Host"], config.GetValue("Files:Scan:Port", 3310)));
+        services.AddKernelDocuments(key => config[key]);
 
         // Jobs and events (S1.11a, rulings Q5, Q7, P6).
         var lease = TimeSpan.FromSeconds(config.GetValue("Jobs:LeaseSeconds", 60));

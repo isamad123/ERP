@@ -35,3 +35,5 @@ api_excluded:
   - meta.schema_history
   - meta.local_entitlement
   - cfg.numbering_counters
+  # S1.11c1 review finding 3 (CR-051, ruling Q23): files are read only through /api/doc/attachments, which asks the owning record.
+  - doc.files

@@ -212,6 +212,129 @@ public sealed class AttachmentTests(TenancyFixture fx) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task S111c1_KRN_DOC_04_review_finding_2_a_new_or_restored_version_of_a_held_file_is_held_too()
+    {
+        var (user, record) = await OwnerOfRecordAsync();
+        var admin = await _rig.UserAsync(Ct, "tenant_admin");
+        var v1 = IdOf(await _rig.UploadAsync(user, record, "claim.pdf", DocumentRig.PdfBytes("1"), Ct));
+        Assert.Equal(HttpStatusCode.NoContent, (await _rig.PutJsonAsync(admin, $"/api/doc/attachments/{v1}/legal-hold", """{"hold":true,"reason":"Court case 12"}""", Ct)).Status);
+
+        var v2 = await _rig.UploadAsync(user, record, "claim.pdf", DocumentRig.PdfBytes("2"), Ct, replaces: v1);
+        Assert.True(v2.Status == HttpStatusCode.Created, v2.Text);
+        Assert.True(v2.Json.GetProperty("legalHold").GetBoolean());
+        Assert.Equal("Court case 12", v2.Json.GetProperty("legalHoldReason").GetString());
+
+        var v3 = await _rig.PostAsync(user, $"/api/doc/attachments/{v1}/restore", Ct);
+        Assert.True(v3.Status == HttpStatusCode.Created, v3.Text);
+        Assert.True(v3.Json.GetProperty("legalHold").GetBoolean());
+        Assert.Equal(HttpStatusCode.Conflict, (await _rig.DeleteAsync(user, $"/api/doc/attachments/{IdOf(v3)}", Ct)).Status);
+
+        // Releasing the hold releases every version.
+        Assert.Equal(HttpStatusCode.NoContent, (await _rig.PutJsonAsync(admin, $"/api/doc/attachments/{v1}/legal-hold", """{"hold":false}""", Ct)).Status);
+        Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from doc.files where owner_id = $1 and legal_hold", Ct, record));
+    }
+
+    [Fact]
+    public async Task S111c1_KRN_DOC_03_review_finding_5_two_replacements_of_the_same_version_never_both_succeed()
+    {
+        var (user, record) = await OwnerOfRecordAsync();
+        var v1 = IdOf(await _rig.UploadAsync(user, record, "rota.pdf", DocumentRig.PdfBytes("1"), Ct));
+
+        var answers = await Task.WhenAll(Enumerable.Range(0, 4).Select(i => _rig.UploadAsync(user, record, "rota.pdf", DocumentRig.PdfBytes("race" + i), Ct, replaces: v1)));
+        Assert.Single(answers, a => a.Status == HttpStatusCode.Created);
+        Assert.All(answers.Where(a => a.Status != HttpStatusCode.Created), a => Assert.Contains(a.Status, new[] { HttpStatusCode.BadRequest, HttpStatusCode.Conflict }));
+        Assert.Equal(1, await _rig.ScalarAsync<long>("select count(*) from doc.files where previous_file_id = $1 and status <> 'deleted'", Ct, v1));
+        Assert.Equal(1, (await _rig.GetAsync(user, $"/api/doc/attachments?ownerType={TestRecordBook.OwnerType}&ownerId={record}", Ct)).Json.GetArrayLength());
+        Assert.Equal(2, Directory.GetFiles(Path.Combine(_rig.Root, "tenants", _rig.Code, "files")).Length); // the losers' content was removed
+
+        // The database itself refuses a second live newer version (uq_files_previous_file_id, CR-051).
+        var error = await Assert.ThrowsAsync<Npgsql.PostgresException>(() => _rig.ExecAsync("""
+            insert into doc.files (id, company_id, owner_type, owner_id, file_name, content_type, size_bytes, checksum, storage_key, version_no, previous_file_id, is_sensitive, status, legal_hold, key_version, created_at, created_by, updated_at, updated_by, row_version)
+            select $2, company_id, owner_type, owner_id, file_name, content_type, size_bytes, checksum, 'tenants/x/files/y', 2, id, false, 'clean', false, 1, now(), created_by, now(), created_by, 1 from doc.files where id = $1
+            """, Ct, v1, Guid.CreateVersion7()));
+        Assert.Equal("uq_files_previous_file_id", error.ConstraintName);
+    }
+
+    [Fact]
+    public async Task S111c1_KRN_DOC_01_review_finding_9_versions_and_restore_need_the_sensitive_right_for_a_sensitive_version()
+    {
+        var hr = await _rig.UserAsync(Ct, "business_user");
+        var colleague = await _rig.UserAsync(Ct, "business_user");
+        var record = _rig.Records.Add(_rig.Company, [hr, colleague], [hr, colleague], [hr]);
+        var v1 = IdOf(await _rig.UploadAsync(hr, record, "offer.pdf", DocumentRig.PdfBytes("plain"), Ct));
+        var v2 = IdOf(await _rig.UploadAsync(hr, record, "offer.pdf", DocumentRig.PdfBytes("with salary"), Ct, sensitive: true, replaces: v1));
+
+        var seen = await _rig.GetAsync(colleague, $"/api/doc/attachments/{v1}/versions", Ct);
+        Assert.Equal(HttpStatusCode.OK, seen.Status);
+        Assert.Equal([1], seen.Json.EnumerateArray().Select(v => v.GetProperty("versionNo").GetInt32()).ToArray()); // the sensitive version 2 is not shown
+        Assert.Equal(HttpStatusCode.NotFound, (await _rig.PostAsync(colleague, $"/api/doc/attachments/{v2}/restore", Ct)).Status);
+        var all = await _rig.GetAsync(hr, $"/api/doc/attachments/{v1}/versions", Ct);
+        Assert.Equal([2, 1], all.Json.EnumerateArray().Select(v => v.GetProperty("versionNo").GetInt32()).ToArray());
+    }
+
+    [Fact]
+    public async Task S111c1_KRN_DOC_08_review_finding_7_a_sent_reminder_is_remembered_after_the_event_clean_up_and_by_a_new_version_with_the_same_expiry()
+    {
+        var (user, record) = await OwnerOfRecordAsync();
+        var expires = DateOnly.FromDateTime(_rig.Clock.UtcNow.UtcDateTime).AddDays(30);
+        var v1 = IdOf(await _rig.UploadAsync(user, record, "visa.pdf", DocumentRig.PdfBytes("1"), Ct, expiresOn: expires));
+        Assert.Equal(1, await RaiseRemindersAsync());
+
+        // The daily clean-up deletes published events after 30 days; the reminder must not come again.
+        await _rig.ExecAsync("delete from job.outbox_messages where event_type = 'kernel.document.expiring' and aggregate_id = $1", Ct, v1);
+        Assert.Equal(0, await RaiseRemindersAsync());
+
+        // A replacement with the same expiry date keeps the progress; one with a new date starts again.
+        var v2 = IdOf(await _rig.UploadAsync(user, record, "visa.pdf", DocumentRig.PdfBytes("2"), Ct, replaces: v1));
+        Assert.Equal(30, await _rig.ScalarAsync<int>("select expiry_reminded_days from doc.files where id = $1", Ct, v2));
+        Assert.Equal(0, await RaiseRemindersAsync());
+        _ = IdOf(await _rig.UploadAsync(user, record, "visa.pdf", DocumentRig.PdfBytes("3"), Ct, expiresOn: expires.AddDays(-5), replaces: v2));
+        Assert.Equal(1, await RaiseRemindersAsync());
+    }
+
+    private async Task<int> RaiseRemindersAsync()
+    {
+        await using var c = await _rig.OwnerAsync(Ct);
+        return await Erp.Kernel.Infrastructure.Documents.DocumentExpiryJob.RaiseAsync(c, _rig.Clock.UtcNow, Ct);
+    }
+
+    [Fact]
+    public async Task S111c1_KRN_DOC_04_review_finding_10_changing_only_the_reason_of_a_hold_logs_only_the_reason_with_its_earlier_value()
+    {
+        var (user, record) = await OwnerOfRecordAsync();
+        var admin = await _rig.UserAsync(Ct, "tenant_admin");
+        var id = IdOf(await _rig.UploadAsync(user, record, "evidence.pdf", DocumentRig.PdfBytes(), Ct));
+        Assert.Equal(HttpStatusCode.NoContent, (await _rig.PutJsonAsync(admin, $"/api/doc/attachments/{id}/legal-hold", """{"hold":true,"reason":"First"}""", Ct)).Status);
+        Assert.Equal(HttpStatusCode.NoContent, (await _rig.PutJsonAsync(admin, $"/api/doc/attachments/{id}/legal-hold", """{"hold":true,"reason":"Second"}""", Ct)).Status);
+        var last = await _rig.ScalarAsync<string>("select changes::text from aud.change_log where entity_type = 'doc.files' and entity_id = $1 and action = 'update' order by occurred_at desc, id desc limit 1", Ct, id);
+        Assert.DoesNotContain("legal_hold\"", last.Replace("legal_hold_reason\"", string.Empty, StringComparison.Ordinal), StringComparison.Ordinal);
+        Assert.Contains("\"before\":\"First\"", last.Replace(" ", string.Empty, StringComparison.Ordinal), StringComparison.Ordinal);
+        Assert.Contains("\"after\":\"Second\"", last.Replace(" ", string.Empty, StringComparison.Ordinal), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void S111c1_KRN_DOC_02_review_finding_4_the_upload_endpoint_accepts_requests_up_to_the_ceiling_of_the_size_setting()
+    {
+        var upload = ((Microsoft.AspNetCore.Routing.IEndpointRouteBuilder)_rig.App).DataSources.SelectMany(d => d.Endpoints).OfType<Microsoft.AspNetCore.Routing.RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.TrimEnd('/') == "/api/doc/attachments" && e.Metadata.GetMetadata<Microsoft.AspNetCore.Routing.IHttpMethodMetadata>()!.HttpMethods.Contains("POST"));
+        var limit = upload.Metadata.GetMetadata<Microsoft.AspNetCore.Http.Metadata.IRequestSizeLimitMetadata>();
+        var form = upload.Metadata.GetMetadata<Microsoft.AspNetCore.Http.Metadata.IFormOptionsMetadata>();
+        Assert.NotNull(limit);
+        Assert.NotNull(form);
+        Assert.True(limit.MaxRequestBodySize > Erp.Kernel.Api.Documents.DocumentEndpoints.MaxUploadBytes);
+        Assert.True(form.MultipartBodyLengthLimit > Erp.Kernel.Api.Documents.DocumentEndpoints.MaxUploadBytes);
+        Assert.Equal(200L * 1024 * 1024, Erp.Kernel.Api.Documents.DocumentEndpoints.MaxUploadBytes); // the doc.upload.max_mb ceiling (settings.yaml max 200)
+    }
+
+    [Fact]
+    public async Task S111c1_KRN_DOC_01_review_finding_3_the_generated_file_list_is_gone_files_are_read_only_through_their_record()
+    {
+        var admin = await _rig.UserAsync(Ct, "tenant_admin");
+        Assert.Equal(HttpStatusCode.NotFound, (await _rig.GetAsync(admin, "/api/doc/files", Ct)).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await _rig.GetAsync(admin, $"/api/doc/files/{Guid.CreateVersion7()}", Ct)).Status);
+    }
+
+    [Fact]
     public async Task S111c1_KRN_WFL_07_the_people_of_a_request_attach_and_read_evidence_on_a_decision_and_nobody_else_can()
     {
         var approver = await _rig.UserAsync(Ct, "business_user");

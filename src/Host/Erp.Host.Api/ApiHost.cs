@@ -154,7 +154,7 @@ public static class ApiHost
         services.AddKernelNotifications();
 
         // Files (S1.11c1; docs/runbooks/file-store.md): the operator's store folder and virus scanner.
-        services.AddKernelDocuments(new FileStoreOptions(config["Files:Store"] ?? "local", config["Files:Root"]), new VirusScanOptions(config["Files:Scan:Host"], config.GetValue("Files:Scan:Port", 3310)));
+        services.AddKernelDocuments(key => config[key]);
 
         var keys = signing.Validation.Concat((config.GetSection("Auth:SigningPublicKeys").Get<string[]>() ?? []).Select(ToKey)).ToList();
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
