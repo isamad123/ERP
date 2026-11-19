@@ -158,10 +158,36 @@ public sealed class GroupRoleRaceTests(PostgresFixture fx)
         }
     }
 
+    /// <summary>The normal case is accepted: an existing group role that other roles (customer logins) are members of.</summary>
+    [Fact]
+    public async Task FR_KRN_TEN_02_R028_an_existing_group_role_with_members_is_accepted()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var roles = NewRoleNames();
+        try
+        {
+            await using var c = await fx.OpenConnectionAsync(ct);
+#pragma warning disable CA2100 // the names come from NewRoleNames (letters, digits and underscores only)
+            await using (var cmd = new NpgsqlCommand($"create role \"{roles[0]}\" nologin; create role \"{roles[1]}\" nologin in role \"{roles[0]}\"", c))
+#pragma warning restore CA2100
+            {
+                await cmd.ExecuteNonQueryAsync(ct);
+            }
+
+            await ClusterAdministrator.EnsureNoLoginRolesAsync(c, [roles[0]], ct);
+            Assert.Equal(2, await CountRolesAsync([roles[0], roles[1]], ct));
+        }
+        finally
+        {
+            await DropRolesAsync(roles, ct);
+        }
+    }
+
     [Theory]
     [InlineData("App_RW")]
     [InlineData("x$do$ begin perform 1; end $do$")]
     [InlineData("a\"b")]
+    [InlineData("app_rw\n")]
     [InlineData("")]
     public async Task FR_KRN_TEN_02_R028_a_role_name_that_is_not_a_plain_lower_case_identifier_is_refused(string name)
     {

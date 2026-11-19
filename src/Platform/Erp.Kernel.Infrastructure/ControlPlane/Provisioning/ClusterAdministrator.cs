@@ -119,7 +119,7 @@ public sealed partial class ClusterAdministrator(ISecretStore secrets)
         }
     }
 
-    [GeneratedRegex("^[a-z_][a-z0-9_]{0,62}$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"\A[a-z_][a-z0-9_]{0,62}\z", RegexOptions.CultureInvariant)]
     private static partial Regex RoleNamePattern();
 
     private async Task<DatabaseCredential> EnsureCredentialAsync(string secretRef, string login, CancellationToken cancellationToken)

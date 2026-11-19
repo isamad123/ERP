@@ -114,3 +114,10 @@ not reliably prove the fix. Real customer databases are not affected by the rema
 | 4 | LOW: name inside `$do$` | Fixed: names must match `^[a-z_][a-z0-9_]{0,62}$`; four tests |
 | 5 | LOW: same customer provisioned twice at once | Recorded as risk R-031 (outside R-028) |
 | 6 | LOW: housekeeping | R-028 closed in the register; tests moved to the `PostgresTestGroup` collection; second test renamed; the code comment on advisory locks reworded |
+
+## Re-review of the fixes (2026-11-19, same reviewer)
+
+No high or medium findings remain. The finding 3 check flags only a group role that is itself a member of another role,
+never one that customer logins are members of (including the membership a non-superuser administrator gets on managed
+servers). Two low points, both fixed: the name pattern now ends with `\z` (`$` let a trailing newline through; test case
+added), and a positive test shows an existing group role with members is accepted.
