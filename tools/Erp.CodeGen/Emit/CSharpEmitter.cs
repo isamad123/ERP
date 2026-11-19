@@ -653,6 +653,13 @@ public static class CSharpEmitter
             w.Line("            return GeneratedEndpointSupport.NotEditable(denied);");
             w.Line("        }");
             w.Line();
+            if (t.Numbering.Count > 0)
+            {
+                // S1.08 review finding 2: the caller's data scope before the number, so a refused row takes no number of
+                // another company's series and creates no default scheme there.
+                w.Line("        await repository.EnsureCanCreateAsync(row, cancellationToken).ConfigureAwait(false);");
+            }
+
             foreach (var n in t.Numbering)
             {
                 // FR-KRN-NUM-03 (S1.08): the number is given by the kernel numbering service, never by the caller.
