@@ -67,7 +67,11 @@ public sealed class DelegationTests(TenancyFixture fx) : IAsyncLifetime
     {
         // test.guarded needs org.companies.update to decide. The delegate holds it; the delegator does not.
         var (sara, ali, requester) = (await _w.UserAsync(Ct, "approver"), await _w.UserAsync(Ct, "tenant_admin"), await _w.UserAsync(Ct, "business_user"));
+        // Sara may decide when the task reaches her (a route names only people who can decide, review S1.10a finding 2)
+        // and has lost the right when her delegate acts.
+        var saraGrant = await _w.MayDecideGuardedAsync(sara, Ct);
         var (_, task) = await TaskForAsync(sara, requester, Guarded);
+        await _w.EndAssignmentAsync(saraGrant, Ct);
         await _w.DelegateAsync(sara, ali, Ct);
         var refused = await _w.PostAsync(ali, $"/api/wf/tasks/{task}/approve", new { }, Ct);
         Assert.Equal(HttpStatusCode.Forbidden, refused.Status);

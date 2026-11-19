@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Contracts.Api;
 using Erp.Kernel.Application.Workflow;
@@ -22,16 +23,22 @@ public static class WorkflowEndpoints
     private const string Tasks = "wf.workflow_tasks";
     private const string Instances = "wf.workflow_instances";
 
+    /// <summary>
+    /// Two transactions waited on each other (PostgreSQL deadlock 40P01 or serialization failure 40001) and the database
+    /// cancelled this one: nothing was written, the caller may try again (409; review S1.10a finding 7, R-050).
+    /// </summary>
+    public const string Busy = "errors.workflow.busy";
+
     /// <summary>Refusals that mean "the record moved on": 409.</summary>
     private static readonly HashSet<string> Conflicts = new(StringComparer.Ordinal)
     {
         "errors.workflow.task_not_pending", "errors.workflow.request_not_running", "errors.workflow.request_not_open", "errors.workflow.version_changed",
         "errors.workflow.version_not_draft", "errors.workflow.info_pending", "errors.workflow.no_question", "errors.workflow.definition_not_active",
-        "errors.workflow.task_claimed", "errors.delegation.not_in_force", "errors.delegation.overlap",
+        "errors.workflow.task_claimed", "errors.delegation.not_in_force", "errors.delegation.overlap", Busy,
     };
 
     /// <summary>Refusals about the caller's rights: 403.</summary>
-    private static readonly HashSet<string> Forbidden = new(StringComparer.Ordinal) { "errors.workflow.no_decide_permission", "errors.workflow.own_request" };
+    private static readonly HashSet<string> Forbidden = new(StringComparer.Ordinal) { "errors.workflow.no_decide_permission", "errors.workflow.own_request", "errors.workflow.all_companies_required", "errors.workflow.not_requester" };
 
     public static IEndpointRouteBuilder MapWorkflowEndpoints(this IEndpointRouteBuilder app)
     {
@@ -178,6 +185,10 @@ public static class WorkflowEndpoints
         catch (AccessDeniedException ex)
         {
             return Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: ex.ErrorCode);
+        }
+        catch (DbException ex) when (ex.SqlState is "40P01" or "40001")
+        {
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: Busy);
         }
     }
 
