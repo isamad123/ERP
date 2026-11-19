@@ -210,6 +210,17 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
             throw new InvalidOperationException($"Customer {request.Code} exists with status {existing.Status}; provisioning does not change it.");
         }
 
+        if (existing is not null)
+        {
+            // Resuming: the database stays on the cluster it was registered on (S1.03 review finding 12).
+            var registered = await Sql.ScalarAsync<string>(connection, transaction,
+                "select c.name from cp.db_clusters c join cp.tenant_databases d on d.db_cluster_id = c.id where d.id = $1", cancellationToken, existing.TenantDatabaseId).ConfigureAwait(false);
+            if (!string.Equals(registered, cluster.Name, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"Customer {request.Code} is being provisioned on cluster {registered}; resume it with --cluster {registered}, not {cluster.Name}.");
+            }
+        }
+
         var tenantId = existing?.TenantId ?? Guid.CreateVersion7(now);
         if (existing is null)
         {

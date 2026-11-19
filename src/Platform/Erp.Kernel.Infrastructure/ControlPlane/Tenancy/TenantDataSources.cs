@@ -13,7 +13,7 @@ namespace Erp.Kernel.Infrastructure.ControlPlane.Tenancy;
 /// </summary>
 public sealed class TenantDataSources(ControlPlaneOptions options, ISecretStore secrets) : ITenantDataSourceFactory, IAsyncDisposable
 {
-    private readonly ConcurrentDictionary<string, (string Secret, NpgsqlDataSource Source)> _sources = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, (string Address, NpgsqlDataSource Source)> _sources = new(StringComparer.Ordinal);
     private readonly List<NpgsqlDataSource> _retired = [];
 
     public async ValueTask<NpgsqlDataSource> GetAsync(ResolvedTenant tenant, string loginKind, CancellationToken cancellationToken)
@@ -22,7 +22,9 @@ public sealed class TenantDataSources(ControlPlaneOptions options, ISecretStore 
         var secret = await secrets.GetAsync(TenantLogins.SecretRef(tenant.AppSecretRef, loginKind), cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"No {loginKind} credential is stored for customer {tenant.Code}.");
         var key = tenant.Code + "/" + loginKind;
-        if (_sources.TryGetValue(key, out var existing) && existing.Secret == secret)
+        // A pool is reused only for the same server, database and credential (S1.03 review finding 6).
+        var address = string.Join('\n', tenant.ClusterHost, tenant.ClusterPort.ToString(System.Globalization.CultureInfo.InvariantCulture), tenant.DatabaseName, secret);
+        if (_sources.TryGetValue(key, out var existing) && existing.Address == address)
         {
             return existing.Source;
         }
@@ -32,10 +34,10 @@ public sealed class TenantDataSources(ControlPlaneOptions options, ISecretStore 
         {
             if (_sources.TryGetValue(key, out existing))
             {
-                _retired.Add(existing.Source); // rotated credential: keep the old pool alive for requests in flight
+                _retired.Add(existing.Source); // rotated credential or moved database: keep the old pool alive for requests in flight
             }
 
-            _sources[key] = (secret, source);
+            _sources[key] = (address, source);
         }
 
         return source;

@@ -43,7 +43,9 @@ public sealed class ProvisioningAndMigrationTests(TenancyFixture fx)
 
     [Theory]
     [InlineData("register")]
+    [InlineData("database")] // S1.03 review test gap T1
     [InlineData("migrate")]
+    [InlineData("entitlement")] // S1.03 review test gap T1
     [InlineData("seed")]
     [InlineData("smoke_test")]
     public async Task FR_KRN_TEN_02_rerunning_provisioning_after_a_forced_failure_completes_without_duplicates(string failingStep)

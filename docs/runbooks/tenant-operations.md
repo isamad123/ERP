@@ -18,6 +18,17 @@ Every command is recorded in `cp.platform_audit` against the platform user named
 
 The API host reads `ConnectionStrings__ControlPlane`, `ERP_SECRETS_FILE`, `ERP_SECRETS_KEY`, `Auth__Issuer`, `Auth__Audience`
 and optionally `Tenancy__StatementTimeoutSeconds` (30), `Tenancy__HostCacheSeconds` (30) and `Tenancy__MaxPoolSizePerTenant` (20).
+Every `Tenancy__HostCacheSeconds` the API reloads the list of registered host names; a request for any other host is answered
+404 without a database query (S1.03 review finding 3). A host added by provisioning is served within that time.
+
+**Control-plane login of the API (S1.03 review finding 11).** Do not give the API the migrator's login. `M migrate` creates
+the group role `cp_api` (no login). It may connect to the control-plane database and read `cp.tenants`,
+`cp.tenant_domains`, `cp.tenant_databases`, `cp.db_clusters`, `cp.entitlements`, `cp.tenant_module_versions` and
+`cp.usage_meters`, and nothing else. Create the API's login once, as a server administrator, and use it in
+`ConnectionStrings__ControlPlane`:
+`create role erp_cp_api login password '<from the vault>' in role cp_api;`
+If the migrator's login cannot create roles, `migrate` skips the role. Then create it as an administrator:
+`create role cp_api nologin;` and run `M migrate` again, which grants the rights.
 Since S1.05 the API signs and checks access tokens with the ES256 keys in the secret store (created by `M migrate`); it
 refuses to start when no key exists. `Auth__SigningPublicKeys__0` may add a further trusted public key (tests only).
 
@@ -30,6 +41,9 @@ refuses to start when no key exists. `Auth__SigningPublicKeys__0` may add a furt
    control plane set up before S1.11f2 records all its scripts on its next `M migrate` (no action needed).
 2. Register each PostgreSQL server: `ERP_CLUSTER_ADMIN_PASSWORD=... M cluster add --name pk-main --region pk-1 --host db1 --port 5432 --max-databases 200 --admin-user postgres`.
    The administrator login must be able to create roles and databases (a superuser in Release 1.0).
+   Running `cluster add` again with the same name updates the credential or capacity. It refuses to change the host or port
+   of a cluster that holds customer databases, because that moves all of them. After they have really been moved, repeat
+   with `--change-address yes`, then restart the API hosts (S1.03 review finding 6).
 3. Register the public key that signs entitlements: `M signing-key add --key-id ent-2026-1 --public-key ent-public.pem`.
    The private key stays with the issuer, never on the platform.
 4. `M migrate` also creates the first access-token signing key in the secret store (S1.05). Rotate it with
@@ -57,6 +71,9 @@ directly or through session pooling, never through transaction pooling (PgBounce
 session is ended during a run (server restart, a killed session), the run stops before its next step with "lost its
 lock"; a step that was already running when the session ended still finishes first, so wait until that run has
 stopped, then run the same command again to resume.
+Resume with the same `--cluster`; another cluster is refused. A database of the customer's name that provisioning did
+not create (another owner) stops the run (S1.03 review finding 12). Database passwords are sent to the server only as
+SCRAM verifiers, so they never appear in a server log (finding 7). Host names must be DNS names; IP addresses are refused.
 
 When provisioning finishes, the command prints the first administrator's **activation link** (valid 72 hours by default,
 setting `iam.activation.token_hours`; works once). It is a secret: hand it to the customer privately. E-mail delivery comes

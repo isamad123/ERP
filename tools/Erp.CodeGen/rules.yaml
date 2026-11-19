@@ -878,3 +878,33 @@ functions:
       $fn$;
       revoke all on function meta.ensure_partitions(date, integer) from public;
       grant execute on function meta.ensure_partitions(date, integer) to app_rw;
+
+  - slice: S1.03-r1
+    name: org.tg_branches_keep_one_per_company
+    purpose: "Rule SC-2 under concurrency (S1.03 review finding 4): before checking that another branch remains, the trigger locks the company row (for no key update, which does not block inserts that reference the company), so two transactions removing a company's last two branches take turns and the second one is refused. Otherwise unchanged from S1.03."
+    sql: |
+      create or replace function org.tg_branches_keep_one_per_company() returns trigger
+      language plpgsql as $fn$
+      begin
+          if old.is_deleted then
+              return coalesce(new, old);
+          end if;
+          if tg_op = 'UPDATE' and not new.is_deleted and new.company_id = old.company_id then
+              return new;
+          end if;
+          perform 1 from org.companies c where c.id = old.company_id for no key update;
+          if exists (select 1 from org.companies c where c.id = old.company_id and not c.is_deleted)
+             and not exists (select 1 from org.branches b
+                             where b.company_id = old.company_id and b.id <> old.id and not b.is_deleted) then
+              raise exception 'company % must keep at least one branch (rule SC-2)', old.company_id
+                  using errcode = '23514', constraint = 'ck_branches_one_per_company';
+          end if;
+          return coalesce(new, old);
+      end
+      $fn$;
+
+  - slice: S1.03-r1
+    name: meta.schema_history rights (R-038)
+    purpose: "S1.03 review finding 8: only the migrator (the owner login) records applied migrations; the application login keeps read access but can no longer insert, so it cannot mark a migration as applied (spec 03 section 3.7; risk R-038, closed by this change)."
+    sql: |
+      revoke insert on meta.schema_history from app_rw;
