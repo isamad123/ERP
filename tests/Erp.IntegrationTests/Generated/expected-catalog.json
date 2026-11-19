@@ -11183,6 +11183,7 @@
         }
       ],
       "uniques": [
+        "uq_contracts_company_id_contract_no",
         "uq_contracts_company_id_id"
       ],
       "checks": [

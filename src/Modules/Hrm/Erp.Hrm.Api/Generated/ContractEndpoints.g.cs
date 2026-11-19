@@ -113,6 +113,7 @@ internal static class ContractEndpoints
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.EnsureCanCreateAsync(row, cancellationToken).ConfigureAwait(false);
             row.ContractNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.contract_no", row.CompanyId, null, row.StartDate), cancellationToken).ConfigureAwait(false);
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created("/api/hrm/contracts/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ContractAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
