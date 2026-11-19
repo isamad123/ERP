@@ -1599,6 +1599,7 @@ Constraints:
 - `fk_contracts_file_id` FOREIGN KEY (company_id, file_id) REFERENCES doc.files(company_id, id)
 - `fk_contracts_renews_contract_id` FOREIGN KEY (company_id, renews_contract_id) REFERENCES hrm.contracts(company_id, id)
 - `pk_contracts` PRIMARY KEY (id)
+- `uq_contracts_company_id_contract_no` UNIQUE (company_id, contract_no)
 - `uq_contracts_company_id_id` UNIQUE (company_id, id)
 
 Indexes:

@@ -117,6 +117,10 @@ public static class NumberingDb
         return await Sql.ScalarAsync<long>(c, tx, "select cfg.numbering_next($1, $2, $3, $4)", ct, scheme.Id, scheme.RowVersion, scopeKey, now).ConfigureAwait(false);
     }
 
+    /// <summary>Whether the transaction runs at READ COMMITTED (gap-free numbers need it, S1.08 review finding 5).</summary>
+    public static async Task<bool> IsReadCommittedAsync(NpgsqlConnection c, NpgsqlTransaction tx, CancellationToken ct) =>
+        await Sql.ScalarAsync<string>(c, tx, "select current_setting('transaction_isolation')", ct).ConfigureAwait(false) == "read committed";
+
     /// <summary>What the scheme's series has issued, per period (function <c>cfg.numbering_series_state</c>).</summary>
     public static async Task<IReadOnlyList<SeriesPeriod>> SeriesAsync(NpgsqlConnection c, NpgsqlTransaction? tx, Guid schemeId, CancellationToken ct)
     {

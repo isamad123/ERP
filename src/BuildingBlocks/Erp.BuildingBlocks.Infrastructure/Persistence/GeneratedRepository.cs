@@ -99,6 +99,13 @@ public abstract class GeneratedRepository<TEntity> : IRepository<TEntity>
 
     public async Task AddAsync(TEntity entity, CancellationToken cancellationToken)
     {
+        await EnsureCanCreateAsync(entity, cancellationToken).ConfigureAwait(false);
+        Context.Set<TEntity>().Add(entity);
+        await SaveAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task EnsureCanCreateAsync(TEntity entity, CancellationToken cancellationToken)
+    {
         ArgumentNullException.ThrowIfNull(entity);
         var now = Clock.UtcNow;
         if (entity.Id == Guid.Empty)
@@ -120,8 +127,6 @@ public abstract class GeneratedRepository<TEntity> : IRepository<TEntity>
         }
 
         await EnsureInScopeAsync(entity, "create", cancellationToken).ConfigureAwait(false);
-        Context.Set<TEntity>().Add(entity);
-        await SaveAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Saves with <c>where row_version = expected</c> and increments the version.</summary>
