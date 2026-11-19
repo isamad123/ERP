@@ -39,9 +39,13 @@
   "errors.numbering.override_not_allowed": "Numbers of this document type cannot be typed in.",
   "errors.numbering.override_gap_free": "A gap-free series does not accept typed-in numbers.",
   "errors.numbering.number_empty": "Enter the number.",
-  "errors.numbering.manual_in_series": "The series could still produce this number. Raise the starting number first.",
+  "errors.numbering.manual_in_series": "The series could still produce this number. Use a number outside the series.",
   "errors.numbering.already_voided": "This number is already void.",
   "errors.numbering.void_reason_required": "Give a reason (up to 500 characters).",
   "errors.numbering.scheme_required": "Choose the numbering scheme.",
-  "errors.numbering.range_invalid": "The start date must be on or before the end date."
+  "errors.numbering.range_invalid": "The start date must be on or before the end date.",
+  "errors.numbering.pattern_branch_company_scheme": "A company-wide scheme cannot use {branch}. Create a scheme for the branch instead.",
+  "errors.numbering.pattern_code_separator": "Put a separator such as - or / right after {company} and {branch}.",
+  "errors.numbering.pattern_too_close": "This pattern can print the same numbers as an earlier scheme of this document type. Change its text, not only its digits.",
+  "errors.numbering.scheme_changed": "The numbering scheme changed while the number was being taken. Please try again."
 }

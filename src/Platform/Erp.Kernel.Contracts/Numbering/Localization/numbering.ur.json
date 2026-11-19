@@ -39,9 +39,13 @@
   "errors.numbering.override_not_allowed": "اس دستاویز کے نمبر خود درج نہیں کیے جا سکتے۔",
   "errors.numbering.override_gap_free": "بلا وقفہ سلسلے میں خود درج کردہ نمبر قبول نہیں ہوتے۔",
   "errors.numbering.number_empty": "نمبر درج کریں۔",
-  "errors.numbering.manual_in_series": "سلسلہ یہ نمبر آگے چل کر خود بنا سکتا ہے۔ پہلے ابتدائی نمبر بڑھائیں۔",
+  "errors.numbering.manual_in_series": "سلسلہ یہ نمبر آگے چل کر خود بنا سکتا ہے۔ سلسلے سے باہر کا نمبر استعمال کریں۔",
   "errors.numbering.already_voided": "یہ نمبر پہلے ہی منسوخ ہے۔",
   "errors.numbering.void_reason_required": "وجہ لکھیں (500 حروف تک)۔",
   "errors.numbering.scheme_required": "نمبرنگ اسکیم منتخب کریں۔",
-  "errors.numbering.range_invalid": "آغاز کی تاریخ اختتام کی تاریخ سے پہلے یا اسی دن ہونی چاہیے۔"
+  "errors.numbering.range_invalid": "آغاز کی تاریخ اختتام کی تاریخ سے پہلے یا اسی دن ہونی چاہیے۔",
+  "errors.numbering.pattern_branch_company_scheme": "پوری کمپنی کی اسکیم میں {branch} استعمال نہیں ہو سکتا۔ اس کے بجائے برانچ کی اسکیم بنائیں۔",
+  "errors.numbering.pattern_code_separator": "{company} اور {branch} کے فوراً بعد - یا / جیسا کوئی علامتی نشان لگائیں۔",
+  "errors.numbering.pattern_too_close": "یہ پیٹرن اس دستاویز کی پچھلی اسکیم والے نمبر دوبارہ بنا سکتا ہے۔ صرف ہندسے نہیں، اس کا متن بدلیں۔",
+  "errors.numbering.scheme_changed": "نمبر لیتے وقت نمبرنگ اسکیم بدل گئی۔ دوبارہ کوشش کریں۔"
 }
