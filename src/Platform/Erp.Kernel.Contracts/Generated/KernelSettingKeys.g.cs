@@ -130,6 +130,12 @@ public static class KernelSettingKeys
 
     /// <summary>How many days before a document expires reminders are sent.</summary>
     public const string DocExpiryReminderDays = "doc.expiry.reminder_days";
+
+    /// <summary>Most kilobytes the text of one document template may have.</summary>
+    public const string DocTemplateMaxKb = "doc.template.max_kb";
+
+    /// <summary>A generated PDF with more pages than this is refused.</summary>
+    public const string DocPdfMaxPages = "doc.pdf.max_pages";
 }
 
 /// <summary>Keys of the feature flags declared in the kernel settings manifest (FR-KRN-SET-05).</summary>

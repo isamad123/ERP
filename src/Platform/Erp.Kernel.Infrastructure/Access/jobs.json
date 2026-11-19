@@ -179,6 +179,22 @@
       "schedule_editable": false
     },
     {
+      "code": "kernel.doc_generate_batch",
+      "name": {"en": "Produce documents in a batch", "ur": "دستاویزات کی کھیپ تیار کرنا"},
+      "description": {"en": "Produces the PDF of one document template for many records, with the rights of the person who asked. A record that cannot be done is listed in the run log.", "ur": "ایک دستاویزی سانچے کا PDF بہت سے ریکارڈز کے لیے تیار کرتا ہے، درخواست کرنے والے کے اختیارات کے ساتھ۔ جو ریکارڈ تیار نہ ہو سکے وہ رن لاگ میں درج ہوتا ہے۔"},
+      "permissions": [],
+      "retry": {"max_attempts": 1, "backoff_seconds": [60]},
+      "timeout_seconds": 3600,
+      "priority": 30,
+      "concurrency": 2,
+      "runs_in": ["full"],
+      "entitlement": "platform.base",
+      "manual": true,
+      "request_permission": "doc.generated_documents.create",
+      "runs_as": "requester",
+      "schedule_editable": false
+    },
+    {
       "code": "kernel.doc_retention",
       "name": {"en": "File retention", "ur": "فائلوں کی مدتِ برقراری"},
       "description": {"en": "Applies the retention rules: archives or destroys files whose keeping time has ended. Files under legal hold are never touched.", "ur": "برقراری کے اصول لاگو کرتا ہے: جن فائلوں کی مدت ختم ہو گئی انہیں محفوظ شدہ یا ختم کرتا ہے۔ قانونی روک والی فائلوں کو کبھی نہیں چھوتا۔"},

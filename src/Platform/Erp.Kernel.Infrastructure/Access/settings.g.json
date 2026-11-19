@@ -1334,6 +1334,70 @@
         "en": "For example 30, 7 and 0 (the day of expiry). Each reminder goes to the person who uploaded the file.",
         "ur": "مثلاً 30، 7 اور 0 (میعاد ختم ہونے کا دن)۔ ہر یاد دہانی فائل اپ لوڈ کرنے والے کو جاتی ہے۔"
       }
+    },
+    {
+      "key": "doc.template.max_kb",
+      "module": "doc",
+      "type": "int",
+      "default": 200,
+      "validation": {
+        "min": 10,
+        "max": 2000
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "documents",
+      "unit": "KB",
+      "name": {
+        "en": "Largest template",
+        "ur": "سب سے بڑا سانچہ"
+      },
+      "description": {
+        "en": "Most kilobytes the text of one document template may have",
+        "ur": "ایک دستاویزی سانچے کے متن کے زیادہ سے زیادہ کلو بائٹس"
+      },
+      "help": {
+        "en": "A longer template is refused when it is saved.",
+        "ur": "اس سے لمبا سانچہ محفوظ کرتے وقت مسترد کر دیا جاتا ہے۔"
+      }
+    },
+    {
+      "key": "doc.pdf.max_pages",
+      "module": "doc",
+      "type": "int",
+      "default": 50,
+      "validation": {
+        "min": 1,
+        "max": 500
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "documents",
+      "unit": null,
+      "name": {
+        "en": "Most pages in a printed document",
+        "ur": "چھپے ہوئے دستاویز میں زیادہ سے زیادہ صفحات"
+      },
+      "description": {
+        "en": "A generated PDF with more pages than this is refused",
+        "ur": "اس سے زیادہ صفحات والا تیار شدہ PDF مسترد کر دیا جاتا ہے"
+      },
+      "help": {
+        "en": "Protects the server from a template that never ends.",
+        "ur": "ایسے سانچے سے سرور کی حفاظت کرتا ہے جو کبھی ختم نہیں ہوتا۔"
+      }
     }
   ],
   "flags": []
