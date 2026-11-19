@@ -1,6 +1,7 @@
 {
   "permissions.cfg.setting_values.update": "Change settings (the company level of one's own companies only, unless the role covers all companies)",
   "permissions.cfg.feature_flag_overrides.update": "Switch feature flags on or off for the organisation, a company or a user group",
+  "errors.settings.time_zone_unknown": "The time zone is not known. Use an IANA name, for example Asia/Karachi.",
   "errors.settings.reason_required": "Enter a reason for the change.",
   "errors.settings.scope_not_found": "The company, role or user of this level was not found.",
   "errors.settings.pack_layer": "Values at the pack level come only from installed packs.",
