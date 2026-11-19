@@ -83,6 +83,7 @@ public static class SettingsErrors
     public const string Unknown = "errors.settings.unknown_key";
     public const string LayerInvalid = "errors.settings.layer_invalid";
     public const string ValueInvalid = "errors.settings.value_invalid";
+    public const string TimeZoneUnknown = "errors.settings.time_zone_unknown";
     public const string ReasonRequired = "errors.settings.reason_required";
     public const string ScopeNotFound = "errors.settings.scope_not_found";
     public const string PackLayer = "errors.settings.pack_layer";

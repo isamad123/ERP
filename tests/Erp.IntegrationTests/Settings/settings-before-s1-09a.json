@@ -361,7 +361,7 @@
       "module_id": "org",
       "data_type": "text",
       "default_value": "Asia/Karachi",
-      "validation": {},
+      "validation": {"format": "time_zone"},
       "allowed_layers": [
         "tenant",
         "company"
