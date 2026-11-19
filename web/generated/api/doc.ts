@@ -17,16 +17,6 @@ export interface GeneratedDocument
     createdBy: string;
 }
 
-export interface GeneratedDocumentWrite
-{
-    companyId: string;
-    templateVersionId: string;
-    ownerType: string;
-    ownerId: string;
-    fileId: string;
-    isPasswordProtected?: boolean;
-}
-
 export interface GeneratedDocumentListQuery
 {
     after?: string;
@@ -40,7 +30,6 @@ export const generatedDocuments =
 {
     list: (query: GeneratedDocumentListQuery = {}) => request<PagedResult<GeneratedDocument>>('GET', '/api/doc/generated-documents', { query }),
     get: (id: string) => request<GeneratedDocument>('GET', `/api/doc/generated-documents/${id}`),
-    create: (body: GeneratedDocumentWrite) => request<GeneratedDocument>('POST', '/api/doc/generated-documents', { body }),
 };
 
 /** doc.retention_rules: RetentionRule. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -96,15 +85,6 @@ export interface TemplateVersion
     rowVersion: number;
 }
 
-export interface TemplateVersionWrite
-{
-    templateId: string;
-    version: number;
-    body: string;
-    outputFormat: 'pdf' | 'html' | 'text' | 'csv' | 'fixed_width' | 'xlsx';
-    status: 'draft' | 'active' | 'retired';
-}
-
 export interface TemplateVersionListQuery
 {
     after?: string;
@@ -117,8 +97,6 @@ export const templateVersions =
 {
     list: (query: TemplateVersionListQuery = {}) => request<PagedResult<TemplateVersion>>('GET', '/api/doc/template-versions', { query }),
     get: (id: string) => request<TemplateVersion>('GET', `/api/doc/template-versions/${id}`),
-    create: (body: TemplateVersionWrite) => request<TemplateVersion>('POST', '/api/doc/template-versions', { body }),
-    update: (id: string, body: TemplateVersionWrite & { rowVersion: number }) => request<TemplateVersion>('PUT', `/api/doc/template-versions/${id}`, { body }),
 };
 
 /** doc.templates: Letters, payslips, certificates, bank files, statutory forms. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -127,7 +105,7 @@ export interface Template
     id: string;
     code: string;
     nameI18n: Record<string, string>;
-    kind: 'letter' | 'payslip' | 'certificate' | 'form' | 'email' | 'bank_file' | 'report';
+    kind: 'letter' | 'payslip' | 'certificate' | 'form' | 'email' | 'bank_file' | 'report' | 'part';
     entityType: string;
     companyId: string | null;
     language: string;
@@ -139,19 +117,6 @@ export interface Template
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface TemplateWrite
-{
-    code: string;
-    nameI18n: Record<string, string>;
-    kind: 'letter' | 'payslip' | 'certificate' | 'form' | 'email' | 'bank_file' | 'report';
-    entityType: string;
-    companyId?: string | null;
-    language: string;
-    source: 'pack' | 'tenant';
-    activeVersionId?: string | null;
-    isActive?: boolean;
 }
 
 export interface TemplateListQuery
@@ -167,6 +132,4 @@ export const templates =
 {
     list: (query: TemplateListQuery = {}) => request<PagedResult<Template>>('GET', '/api/doc/templates', { query }),
     get: (id: string) => request<Template>('GET', `/api/doc/templates/${id}`),
-    create: (body: TemplateWrite) => request<Template>('POST', '/api/doc/templates', { body }),
-    update: (id: string, body: TemplateWrite & { rowVersion: number }) => request<Template>('PUT', `/api/doc/templates/${id}`, { body }),
 };
