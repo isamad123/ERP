@@ -24,17 +24,6 @@ public sealed class GeneratedDocumentResponse
     public global::System.Guid CreatedBy { get; init; }
 }
 
-/// <summary>Body of create and update calls for doc.generated_documents. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class GeneratedDocumentWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public global::System.Guid? TemplateVersionId { get; init; }
-    public string? OwnerType { get; init; }
-    public global::System.Guid? OwnerId { get; init; }
-    public global::System.Guid? FileId { get; init; }
-    public bool? IsPasswordProtected { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for doc.generated_documents.</summary>
 public sealed class GeneratedDocumentListQuery
 {
@@ -49,7 +38,7 @@ public sealed class GeneratedDocumentListQuery
     public global::System.Guid? FileId { get; init; }
 }
 
-/// <summary>Generated endpoints of doc.generated_documents: read, create. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of doc.generated_documents: read. Answers pass through field security (S1.06).</summary>
 internal static class GeneratedDocumentEndpoints
 {
     private const string Resource = "doc.generated_documents";
@@ -59,7 +48,6 @@ internal static class GeneratedDocumentEndpoints
         var group = app.MapGroup("/api/doc/generated-documents").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("doc.generated_documents.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "doc.generated_documents.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("doc.generated_documents.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "doc.generated_documents.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("doc.generated_documents.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "doc.generated_documents.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] GeneratedDocumentListQuery query, global::Erp.Kernel.Application.Generated.Doc.IGeneratedDocumentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -78,27 +66,6 @@ internal static class GeneratedDocumentEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(GeneratedDocumentWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.IGeneratedDocumentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "doc.generated_documents.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/doc/generated-documents/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static GeneratedDocumentResponse ToResponse(global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument row) => new()
     {
         Id = row.Id,
@@ -111,92 +78,4 @@ internal static class GeneratedDocumentEndpoints
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(GeneratedDocumentWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.TemplateVersionId is null && (!update || access.CanEdit("template_version_id")))
-        {
-            errors.Add("templateVersionId");
-        }
-        if (request.OwnerType is null && (!update || access.CanEdit("owner_type")))
-        {
-            errors.Add("ownerType");
-        }
-        if (request.OwnerId is null && (!update || access.CanEdit("owner_id")))
-        {
-            errors.Add("ownerId");
-        }
-        if (request.FileId is null && (!update || access.CanEdit("file_id")))
-        {
-            errors.Add("fileId");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(GeneratedDocumentWriteRequest request, global::Erp.Kernel.Domain.Generated.Doc.GeneratedDocument row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("template_version_id"))
-        {
-            row.TemplateVersionId = request.TemplateVersionId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TemplateVersionId, row.TemplateVersionId, update))
-        {
-            denied.Add("templateVersionId");
-        }
-        if (access.CanEdit("owner_type"))
-        {
-            row.OwnerType = request.OwnerType!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OwnerType, row.OwnerType, update))
-        {
-            denied.Add("ownerType");
-        }
-        if (access.CanEdit("owner_id"))
-        {
-            row.OwnerId = request.OwnerId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OwnerId, row.OwnerId, update))
-        {
-            denied.Add("ownerId");
-        }
-        if (access.CanEdit("file_id"))
-        {
-            row.FileId = request.FileId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileId, row.FileId, update))
-        {
-            denied.Add("fileId");
-        }
-        if (access.CanEdit("is_password_protected"))
-        {
-            if (request.IsPasswordProtected is not null)
-            {
-                row.IsPasswordProtected = request.IsPasswordProtected!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsPasswordProtected, row.IsPasswordProtected, update))
-        {
-            denied.Add("isPasswordProtected");
-        }
-        return denied;
-    }
 }

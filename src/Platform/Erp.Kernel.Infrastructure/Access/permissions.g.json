@@ -165,12 +165,6 @@
       "sensitive": false
     },
     {
-      "code": "doc.generated_documents.create",
-      "module": "doc",
-      "descriptionKey": "permissions.doc.generated_documents.create",
-      "sensitive": false
-    },
-    {
       "code": "doc.retention_rules.read",
       "module": "doc",
       "descriptionKey": "permissions.doc.retention_rules.read",
@@ -195,33 +189,9 @@
       "sensitive": false
     },
     {
-      "code": "doc.template_versions.create",
-      "module": "doc",
-      "descriptionKey": "permissions.doc.template_versions.create",
-      "sensitive": false
-    },
-    {
-      "code": "doc.template_versions.update",
-      "module": "doc",
-      "descriptionKey": "permissions.doc.template_versions.update",
-      "sensitive": false
-    },
-    {
       "code": "doc.templates.read",
       "module": "doc",
       "descriptionKey": "permissions.doc.templates.read",
-      "sensitive": false
-    },
-    {
-      "code": "doc.templates.create",
-      "module": "doc",
-      "descriptionKey": "permissions.doc.templates.create",
-      "sensitive": false
-    },
-    {
-      "code": "doc.templates.update",
-      "module": "doc",
-      "descriptionKey": "permissions.doc.templates.update",
       "sensitive": false
     },
     {

@@ -13,14 +13,6 @@
     {
       "action": "read",
       "permission": "doc.templates.read"
-    },
-    {
-      "action": "create",
-      "permission": "doc.templates.create"
-    },
-    {
-      "action": "update",
-      "permission": "doc.templates.update"
     }
   ],
   "companyScoped": false,
@@ -110,6 +102,10 @@
         {
           "value": "report",
           "labelKey": "options.doc.templates.kind.report"
+        },
+        {
+          "value": "part",
+          "labelKey": "options.doc.templates.kind.part"
         }
       ]
     },

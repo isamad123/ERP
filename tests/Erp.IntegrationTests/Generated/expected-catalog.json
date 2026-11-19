@@ -6727,7 +6727,8 @@
             "form",
             "email",
             "bank_file",
-            "report"
+            "report",
+            "part"
           ]
         },
         {

@@ -9,6 +9,13 @@
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
     <PackageReference Include="MailKit" />
     <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="Scriban" />
+    <PackageReference Include="PuppeteerSharp" />
+    <PackageReference Include="QRCoder" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Slice S1.11c2: Noto Sans and Noto Nastaliq Urdu (SIL Open Font Licence 1.1, fonts only, ruling Q18) travel with the product. -->
+    <EmbeddedResource Include="Documents/Templates/Fonts/*.ttf" LogicalName="Erp.Kernel.Fonts.%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <!-- Slice S1.06: the unit tests check the engine's merge and scope rules directly. -->
