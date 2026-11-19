@@ -1,3 +1,4 @@
+using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Erp.Kernel.Contracts.Entitlements;
@@ -12,7 +13,7 @@ namespace Erp.Kernel.Infrastructure.Entitlements;
 
 /// <summary>
 /// The licence endpoints' service (slice S1.09b items 9, 11 and 12): capabilities from the request's licence and the
-/// caller's flags; the licence page with each limit's current use (counted now, without taking a seat); usage statements
+/// caller's flags (limit warnings only for licence readers); the licence page with each limit's current use (counted now, without taking a seat); usage statements
 /// from cp.usage_meters of the bound customer.
 /// </summary>
 public sealed class LicenceService(
@@ -21,7 +22,8 @@ public sealed class LicenceService(
     IEnumerable<ILimitCounter> counters,
     SettingsService settings,
     ISettings values,
-    ControlPlaneOptions controlPlane) : ILicenceService
+    ControlPlaneOptions controlPlane,
+    IPermissionChecker permissions) : ILicenceService
 {
     public async Task<CapabilitiesView> CapabilitiesAsync(CancellationToken cancellationToken)
     {
@@ -36,8 +38,15 @@ public sealed class LicenceService(
             }
         }
 
-        var (limits, warningPercent) = await LimitsAsync(licence, cancellationToken).ConfigureAwait(false);
-        var warnings = limits.Where(l => l.Percent is { } p && p >= warningPercent).ToList();
+        // Limit warnings show seat and company figures, which the licence page keeps to holders of cfg.licence.read (ruling
+        // Q16); everyone else gets none (S1.09b review finding 4, CR-057).
+        var warnings = new List<LimitUse>();
+        if (await permissions.HasPermissionAsync(LicencePermissions.Read, cancellationToken).ConfigureAwait(false))
+        {
+            var (limits, warningPercent) = await LimitsAsync(licence, cancellationToken).ConfigureAwait(false);
+            warnings.AddRange(limits.Where(l => l.Percent is { } p && p >= warningPercent));
+        }
+
         return new CapabilitiesView(
             licence.Claims is null ? [] : ["kernel", .. licence.Claims.Modules.Where(tenant.InstalledModules.Contains)],
             licence.Claims?.Features ?? [],
@@ -77,7 +86,7 @@ public sealed class LicenceService(
         var current = UsageMeters.Period(tenant.Licence.Today);
         await using var cp = new NpgsqlConnection(controlPlane.ConnectionString);
         await cp.OpenAsync(cancellationToken).ConfigureAwait(false);
-        return await UsageMeters.StatementsAsync(cp, tenant.Tenant.TenantId, fromPeriod ?? toPeriod ?? current, toPeriod ?? fromPeriod ?? current, cancellationToken).ConfigureAwait(false);
+        return await UsageMeters.StatementsAsync(cp, tenant.Tenant.TenantId, fromPeriod ?? toPeriod ?? current, toPeriod ?? fromPeriod ?? current, tenant.Licence.TimeZone, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Each limit of the licence with what is used now (no seat is taken; null when no counter exists yet).</summary>

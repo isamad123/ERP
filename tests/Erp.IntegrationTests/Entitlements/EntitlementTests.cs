@@ -328,7 +328,7 @@ public sealed class EntitlementTests(TenancyFixture fx)
             var refused = await h.GetAsync(code, "/api/org/companies", token, Ct);
             Assert.Equal(HttpStatusCode.Forbidden, refused.Status);
             Assert.Contains(refusal, refused.Body, StringComparison.Ordinal);
-            Assert.Equal(HttpStatusCode.Forbidden, (await h.GetAsync(code, "/api/cfg/licence/usage", token, Ct)).Status);
+            Assert.Equal(HttpStatusCode.OK, (await h.GetAsync(code, "/api/cfg/licence/usage", token, Ct)).Status); // part of the licence page (review finding 6, CR-057)
             Assert.Equal(HttpStatusCode.Forbidden, (await h.PostAsync(code, "/api/iam/me/password", new { currentPassword = IdentityHarness.Password, newPassword = "Locked-Pass-12" }, token, Ct)).Status);
         }
 
@@ -469,7 +469,7 @@ public sealed class EntitlementTests(TenancyFixture fx)
         Assert.Equal(Math.Max(users * 10, companies * 25), statement.GetProperty("highestPercent").GetInt32());
 
         await using var cp = await fx.OpenControlPlaneAsync(Ct);
-        var operatorView = await UsageMeters.StatementAsync(cp, code, period, Ct);
+        var operatorView = await UsageMeters.StatementAsync(cp, code, period, "Asia/Karachi", Ct);
         Assert.Equal(users, operatorView.Lines.Single(l => l.Meter == "active_users").Value);
         Assert.Equal(HttpStatusCode.BadRequest, (await SendAsync(client, HttpMethod.Get, "/api/cfg/licence/usage?from=202613&to=202601")).Status);
     }

@@ -19,13 +19,22 @@ public sealed record TenantMigrationOutcome(string Code, bool Succeeded, int App
 /// The migrator command (S1.03 build item 5): applies pending migrations to every customer database one at a time.
 /// A failure puts that customer's database in <c>maintenance</c> (no requests are served for it), is recorded in
 /// cp.platform_audit, and the migrator continues with the next customer. A database in maintenance is retried on
-/// the next run. Canary batches are Release 1.1 (FR-KRN-TEN-11).
+/// the next run. Canary batches are Release 1.1 (FR-KRN-TEN-11). Before anything is changed, every stored entitlement must
+/// still pass this release's key catalogue (S1.09b review finding 2); otherwise the run stops and names the customers.
 /// </summary>
 public sealed class FleetMigrator(ControlPlaneOptions options, ISecretStore secrets, IClock clock, MigrationSet migrations)
 {
     public async Task<IReadOnlyList<TenantMigrationOutcome>> MigrateAsync(PlatformActor actor, string? onlyTenantCode, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(actor);
+
+        // The release must still read every stored entitlement, or its customers would be locked (S1.09b review finding 2).
+        await using (var controlPlane = new NpgsqlConnection(options.ConnectionString))
+        {
+            await controlPlane.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await Entitlements.StoredEntitlementCheck.EnsureReadableAsync(controlPlane, onlyTenantCode, cancellationToken).ConfigureAwait(false);
+        }
+
         var provisioner = new TenantProvisioner(options, secrets, clock, migrations);
         var outcomes = new List<TenantMigrationOutcome>();
         foreach (var tenant in await TenantsAsync(onlyTenantCode, cancellationToken).ConfigureAwait(false))
