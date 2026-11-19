@@ -29,6 +29,7 @@ S1.11b2 is reviewed alongside S1.12 (CR-052 Q8 b); S1.11c1 was reviewed on 2026-
    raise change requests for baseline items (reserved numbers only), add an "Outcome" table to the review, and open
    the pull request. The fixes of a review are themselves class B: they merge only when CI is green and the review's
    high and medium findings are fixed or ruled on.
-5. Update R-027 in the register (which reviews are done) and write a handoff of at most 15 lines.
+5. Write a handoff of at most 15 lines. Do **not** edit the R-027 row (seven sessions run at once; the coordinating
+   session updates it). New register rows go at the end; if `main` moved, merge it and keep every row.
 
 Out of scope: rewriting working code for style; any slice not named above.
