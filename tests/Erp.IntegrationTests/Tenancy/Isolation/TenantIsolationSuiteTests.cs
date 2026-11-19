@@ -134,4 +134,110 @@ public sealed class TenantIsolationSuiteTests(IsolationFixture fx)
         // The same probe passes the correct endpoint for the same table.
         Assert.Empty(await new CrossTenantProbe(fx, fx.Tenancy.App).RunAsync(EndpointInventory.Find("GET /api/org/companies/{id:guid}"), ct));
     }
+
+    [Fact]
+    public async Task FR_KRN_TEN_03_S104_the_suite_catches_an_endpoint_that_keeps_the_customer_in_shared_state()
+    {
+        // S1.04 review finding 1. A deliberately broken endpoint: each request puts its customer's data source in state
+        // shared by all requests, waits, then reads through that state. One request at a time it behaves; two customers at
+        // once read through whichever came last.
+        var ct = TestContext.Current.CancellationToken;
+        System.Data.Common.DbDataSource? shared = null;
+        const string Route = "/api/test/shared-state-companies/{id:guid}";
+        await using var broken = await fx.Tenancy.StartAppAsync(app => app.MapGet(Route, async (Guid id, HttpContext http) =>
+            {
+                shared = http.RequestServices.GetRequiredService<ITenantConnectionProvider>().DataSource;
+                await Task.Delay(100, http.RequestAborted);
+                return await ReadCompanyAsync(shared, id, created: false, http.RequestAborted);
+            })
+            .RequireAuthorization()
+            .WithMetadata(new GeneratedEndpointMetadata("org.companies", "read", "org.companies.read")), ct);
+
+        var failures = await new CrossTenantProbe(fx, broken).RunAsync(EndpointInventory.Read(broken).Single(e => e.Pattern == Route), ct);
+
+        Assert.Contains(failures, f => f.Contains("[A and B at the same time]", StringComparison.Ordinal));
+        Assert.DoesNotContain(failures, f => f.Contains("[B host + B token]", StringComparison.Ordinal)); // one at a time it passes
+        TestContext.Current.SendDiagnosticMessage("Shared-state self-test, probe output:" + Environment.NewLine + string.Join(Environment.NewLine, failures));
+    }
+
+    [Fact]
+    public async Task FR_KRN_TEN_03_S104_the_suite_catches_a_create_that_answers_with_the_other_customers_data()
+    {
+        // S1.04 review finding 2. A deliberately broken create: it writes nothing and answers 201 with the record last read by
+        // id, through the first customer's data source it saw.
+        var ct = TestContext.Current.CancellationToken;
+        System.Data.Common.DbDataSource? first = null;
+        Guid? lastRead = null;
+        const string Base = "/api/test/echo-companies";
+        await using var broken = await fx.Tenancy.StartAppAsync(app =>
+            {
+                app.MapGet(Base + "/{id:guid}", async (Guid id, HttpContext http) =>
+                    {
+                        var source = http.RequestServices.GetRequiredService<ITenantConnectionProvider>().DataSource;
+                        first ??= source;
+                        lastRead = id;
+                        return await ReadCompanyAsync(source, id, created: false, http.RequestAborted);
+                    })
+                    .RequireAuthorization()
+                    .WithMetadata(new GeneratedEndpointMetadata("org.companies", "read", "org.companies.read"));
+                // Two parameters, so this maps as a handler whose IResult is written (an HttpContext-only lambda is a RequestDelegate and answers an empty 200).
+                app.MapPost(Base, async (HttpContext http, CancellationToken aborted) => await ReadCompanyAsync(first!, lastRead!.Value, created: true, aborted))
+                    .RequireAuthorization()
+                    .WithMetadata(new GeneratedEndpointMetadata("org.companies", "create", "org.companies.create"));
+            }, ct);
+
+        var failures = await new CrossTenantProbe(fx, broken).RunAsync(EndpointInventory.Read(broken).Single(e => e.Pattern == Base && e.Method == "POST"), ct);
+
+        Assert.Contains(failures, f => f.Contains("[B host + B token]: LEAK", StringComparison.Ordinal));
+        TestContext.Current.SendDiagnosticMessage("Create-echo self-test, probe output:" + Environment.NewLine + string.Join(Environment.NewLine, failures));
+    }
+
+    [Fact]
+    public async Task FR_KRN_TEN_03_S104_the_suite_catches_an_endpoint_that_writes_into_the_other_customers_database()
+    {
+        // S1.04 review finding 3. A deliberately broken update: it answers 404 as it should, but first writes through the
+        // first customer's data source it saw. Only the fingerprint of A's database can catch it.
+        var ct = TestContext.Current.CancellationToken;
+        System.Data.Common.DbDataSource? first = null;
+        const string Base = "/api/test/scribbling-companies";
+        await using var broken = await fx.Tenancy.StartAppAsync(app =>
+            {
+                app.MapGet(Base + "/{id:guid}", async (Guid id, HttpContext http) =>
+                    {
+                        var source = http.RequestServices.GetRequiredService<ITenantConnectionProvider>().DataSource;
+                        first ??= source;
+                        return await ReadCompanyAsync(source, id, created: false, http.RequestAborted);
+                    })
+                    .RequireAuthorization()
+                    .WithMetadata(new GeneratedEndpointMetadata("org.companies", "read", "org.companies.read"));
+                app.MapPut(Base + "/{id:guid}", async (Guid id, HttpContext http) =>
+                    {
+                        await using var command = first!.CreateCommand("update org.companies set updated_at = updated_at + interval '1 millisecond' where id = $1");
+                        command.Parameters.Add(new NpgsqlParameter { Value = id });
+                        await command.ExecuteNonQueryAsync(http.RequestAborted);
+                        return Results.NotFound();
+                    })
+                    .RequireAuthorization()
+                    .WithMetadata(new GeneratedEndpointMetadata("org.companies", "update", "org.companies.update"));
+            }, ct);
+
+        var failures = await new CrossTenantProbe(fx, broken).RunAsync(EndpointInventory.Read(broken).Single(e => e.Pattern == Base + "/{id:guid}" && e.Method == "PUT"), ct);
+
+        Assert.Contains(failures, f => f.Contains("customer A's database changed", StringComparison.Ordinal) && f.Contains("org.companies", StringComparison.Ordinal));
+        TestContext.Current.SendDiagnosticMessage("Write self-test, probe output:" + Environment.NewLine + string.Join(Environment.NewLine, failures));
+    }
+
+    private static async Task<IResult> ReadCompanyAsync(System.Data.Common.DbDataSource source, Guid id, bool created, CancellationToken ct)
+    {
+        await using var command = source.CreateCommand("select id, code, row_version from org.companies where id = $1");
+        command.Parameters.Add(new NpgsqlParameter { Value = id });
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        if (!await reader.ReadAsync(ct))
+        {
+            return Results.NotFound();
+        }
+
+        var row = new { id = reader.GetGuid(0), code = reader.GetString(1), rowVersion = reader.GetInt64(2) };
+        return created ? Results.Created("/api/test/echo-companies/" + row.id, row) : Results.Ok(row);
+    }
 }

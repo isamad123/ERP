@@ -547,7 +547,7 @@ public static partial class DesignLoader
     private static string SliceId(string slice, string where) =>
         SlicePattern().IsMatch(slice) ? slice : throw new DesignException(where, $"'{slice}' is not a slice id such as S1.05 (S1.09a for a part of a slice built in parts, S1.05-r1 for a follow-up after that slice's design file was merged)");
 
-    [GeneratedRegex(@"^S\d\.\d{2}[a-d]?(-r[1-3])?$")]
+    [GeneratedRegex(@"^S\d\.\d{2}[a-z]?(-r[1-3])?$")]
     private static partial Regex SlicePattern();
 
     // ---------------------------------------------------------------- columns
