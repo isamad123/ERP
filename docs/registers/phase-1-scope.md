@@ -12,7 +12,7 @@ The `release` column in `requirements.csv` is authoritative. Status: **approved 
 | Cross-module rules | 8 | 0 | 24 | 0 |
 | **Total** | **369** | **485** | **255** | **9** |
 
-Admin console counts corrected by CR-051: FR-ADM-ORG-05 and FR-ADM-SEC-09 moved from 1.0 to 1.1 during the data
+Admin console counts corrected by CR-052: FR-ADM-ORG-05 and FR-ADM-SEC-09 moved from 1.0 to 1.1 during the data
 design check (15 November 2026, "for consistency with TEN-12 / ORG-05"); the csv was changed but this table was not.
 
 ## Totals

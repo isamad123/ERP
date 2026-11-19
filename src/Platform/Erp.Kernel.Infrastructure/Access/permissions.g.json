@@ -159,12 +159,6 @@
       "sensitive": false
     },
     {
-      "code": "doc.files.read",
-      "module": "doc",
-      "descriptionKey": "permissions.doc.files.read",
-      "sensitive": false
-    },
-    {
       "code": "doc.generated_documents.read",
       "module": "doc",
       "descriptionKey": "permissions.doc.generated_documents.read",

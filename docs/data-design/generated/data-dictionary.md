@@ -722,6 +722,7 @@ Metadata of stored files; content in the file store under the tenant prefix. Req
 | scanned_at | timestamp with time zone | yes |  |  |
 | archived_at | timestamp with time zone | yes |  |  |
 | key_version | integer | no | 1 | default 1; file key version the content was encrypted with |
+| expiry_reminded_days | integer | yes |  | smallest expiry reminder threshold already sent for this expiry date (CR-051) |
 
 Constraints:
 
@@ -737,6 +738,7 @@ Indexes:
 - `ix_files_company_id_previous_file_id` CREATE INDEX ix_files_company_id_previous_file_id ON doc.files USING btree (company_id, previous_file_id)
 - `ix_files_expires_on` CREATE INDEX ix_files_expires_on ON doc.files USING btree (expires_on) WHERE (expires_on IS NOT NULL)
 - `ix_files_owner_type_owner_id` CREATE INDEX ix_files_owner_type_owner_id ON doc.files USING btree (owner_type, owner_id)
+- `uq_files_previous_file_id` CREATE UNIQUE INDEX uq_files_previous_file_id ON doc.files USING btree (previous_file_id) NULLS NOT DISTINCT WHERE ((previous_file_id IS NOT NULL) AND (status <> 'deleted'::text))
 
 ### doc.generated_documents
 

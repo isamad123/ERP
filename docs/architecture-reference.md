@@ -76,7 +76,7 @@ collaboration, AI gateway, layout designer, custom objects (later).
 - Growing tables (attendance events, audit, job logs) are partitioned by month from the first migration.
 - Migrations: SQL-first, per module, expand and contract, tested on a fresh database and on previous-release data.
 
-## 7. HRMIS Phase 1 scope (spec 06a v0.3.1, D-42 as split by D-48 and D-49; corrected by CR-051)
+## 7. HRMIS Phase 1 scope (spec 06a v0.3.1, D-42 as split by D-48 and D-49; corrected by CR-052)
 
 Release 1.0 is web only. Every item below that concerns the mobile app, offline sync, push notifications or geo-fences is Release 1.1. The `release` column of `docs/registers/requirements.csv` is authoritative.
 

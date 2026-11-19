@@ -3,52 +3,6 @@
 // </auto-generated>
 import { request, type PagedResult } from './http';
 
-/** doc.files: Metadata of stored files; content in the file store under the tenant prefix. Field rules (S1.06) may leave a field out or mask it as text. */
-export interface File
-{
-    id: string;
-    companyId: string;
-    ownerType: string;
-    ownerId: string;
-    fileName: string;
-    contentType: string;
-    sizeBytes: number;
-    checksum: string;
-    storageKey: string;
-    versionNo: number;
-    previousFileId: string | null;
-    documentType: string | null;
-    expiresOn: string | null;
-    retentionUntil: string | null;
-    isSensitive: boolean;
-    legalHold: boolean;
-    legalHoldReason: string | null;
-    scannedAt: string | null;
-    archivedAt: string | null;
-    keyVersion: number;
-    status: 'uploading' | 'clean' | 'infected' | 'quarantined' | 'deleted';
-    createdAt: string;
-    createdBy: string;
-    updatedAt: string;
-    updatedBy: string;
-    rowVersion: number;
-}
-
-export interface FileListQuery
-{
-    after?: string;
-    limit?: number;
-    companyId?: string;
-    previousFileId?: string;
-    status?: 'uploading' | 'clean' | 'infected' | 'quarantined' | 'deleted';
-}
-
-export const files =
-{
-    list: (query: FileListQuery = {}) => request<PagedResult<File>>('GET', '/api/doc/files', { query }),
-    get: (id: string) => request<File>('GET', `/api/doc/files/${id}`),
-};
-
 /** doc.generated_documents: GeneratedDocument. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface GeneratedDocument
 {
