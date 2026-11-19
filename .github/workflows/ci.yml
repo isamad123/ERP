@@ -66,7 +66,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      # S1.11f1 (R-030, CLAUDE.md done criteria): secret scan of the whole history and the working tree. gitleaks (MIT) is
+      # S1.11f1 (R-030, CLAUDE.md done criteria): secret scan of the history reachable from the checked-out commit (not other
+      # branches: one session's branch must not fail another's pull request) and of the working tree. gitleaks (MIT) is
       # pinned to one release and verified against its sha256 before it runs. Any finding fails the build; the only
       # allowances are exact public test values in .gitleaks.toml. The self-test proves the scan fails on a planted secret.
       - name: Secret scan (gitleaks)
@@ -82,7 +83,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/planted"
           printf 'github_token = "%s%s"\n' ghp_ 1a2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P7q8R > "$RUNNER_TEMP/planted/planted.txt"
           if "$GL" dir --no-banner --redact -c .gitleaks.toml "$RUNNER_TEMP/planted" >/dev/null 2>&1; then echo "Self-test failed: the scan did not flag a planted secret."; exit 1; fi
-          "$GL" detect --no-banner --redact -c .gitleaks.toml --source .
+          "$GL" detect --no-banner --redact -c .gitleaks.toml --source . --log-opts="HEAD"
           "$GL" dir --no-banner --redact -c .gitleaks.toml .
 
       - uses: actions/setup-dotnet@v4
