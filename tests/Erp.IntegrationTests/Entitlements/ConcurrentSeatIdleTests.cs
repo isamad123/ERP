@@ -1,7 +1,7 @@
 using System.Net;
 using Erp.IntegrationTests.Identity;
 using Erp.IntegrationTests.Tenancy;
-using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
+using Erp.Kernel.Infrastructure.ControlPlane;
 
 namespace Erp.IntegrationTests.Entitlements;
 
@@ -29,7 +29,7 @@ public sealed class ConcurrentSeatIdleTests(TenancyFixture fx)
         await using (var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct))
         {
             // Two hours without a refresh: four times the default idle time (30 minutes), well inside the absolute time (720).
-            await TenancyFixture.ExecAsync(owner, "update iam.sessions set issued_at = issued_at - interval '2 hours', last_seen_at = last_seen_at - interval '2 hours' where user_id = $1", Ct, walkedAway);
+            await TenancyFixture.ExecAsync(owner, "update iam.sessions set last_seen_at = last_seen_at - interval '2 hours' where user_id = $1", Ct, walkedAway);
             var live = await TenancyFixture.CountAsync(owner,
                 "select count(distinct user_id) from iam.sessions where revoked_at is null and expires_at > now() and last_seen_at > now() - interval '30 minutes'", Ct);
 
