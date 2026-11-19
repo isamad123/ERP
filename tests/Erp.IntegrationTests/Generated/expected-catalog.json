@@ -5907,6 +5907,56 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "legal_hold",
+          "kind": "Bool",
+          "type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "legal_hold_reason",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "scanned_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "archived_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "key_version",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [

@@ -62,6 +62,11 @@ public static class KernelJobs
         // E-mail (slice S1.11b2): the sender and the bounce reader; their mail settings come with the notification consumer.
         services.AddSingleton<IJobHandler, Notifications.Email.EmailSendJob>();
         services.AddSingleton<IJobHandler, Notifications.Email.EmailBounceJob>();
+
+        // Files (slice S1.11c1): scanning, retention and expiry reminders; the hosts that run jobs also call AddKernelDocuments.
+        services.AddSingleton<IJobHandler, Documents.DocumentScanJob>();
+        services.AddSingleton<IJobHandler, Documents.DocumentRetentionJob>();
+        services.AddSingleton<IJobHandler, Documents.DocumentExpiryJob>();
         return services;
     }
 

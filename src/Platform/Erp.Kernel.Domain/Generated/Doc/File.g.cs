@@ -57,6 +57,21 @@ public sealed partial class File : global::Erp.BuildingBlocks.Domain.Entities.IE
     /// <summary>is_sensitive</summary>
     public bool IsSensitive { get; set; }
 
+    /// <summary>legal_hold: default false; true stops archive and delete (CR-045)</summary>
+    public bool LegalHold { get; set; }
+
+    /// <summary>legal_hold_reason</summary>
+    public string? LegalHoldReason { get; set; }
+
+    /// <summary>scanned_at</summary>
+    public global::System.DateTimeOffset? ScannedAt { get; set; }
+
+    /// <summary>archived_at</summary>
+    public global::System.DateTimeOffset? ArchivedAt { get; set; }
+
+    /// <summary>key_version: default 1; file key version the content was encrypted with</summary>
+    public int KeyVersion { get; set; } = 1;
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

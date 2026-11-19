@@ -118,6 +118,18 @@ public static class KernelSettingKeys
 
     /// <summary>Days a notification item stays in a person's notification centre.</summary>
     public const string NtfInAppRetentionDays = "ntf.in_app.retention_days";
+
+    /// <summary>Whether uploaded files must be scanned before they can be downloaded.</summary>
+    public const string DocScanMode = "doc.scan.mode";
+
+    /// <summary>Most megabytes one uploaded file may have.</summary>
+    public const string DocUploadMaxMb = "doc.upload.max_mb";
+
+    /// <summary>The kinds of file that may be attached.</summary>
+    public const string DocUploadAllowedTypes = "doc.upload.allowed_types";
+
+    /// <summary>How many days before a document expires reminders are sent.</summary>
+    public const string DocExpiryReminderDays = "doc.expiry.reminder_days";
 }
 
 /// <summary>Keys of the feature flags declared in the kernel settings manifest (FR-KRN-SET-05).</summary>

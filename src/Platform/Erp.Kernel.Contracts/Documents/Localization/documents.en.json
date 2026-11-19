@@ -1,0 +1,13 @@
+{
+  "errors.document.invalid": "The request is not valid.",
+  "errors.document.not_found": "Not found.",
+  "errors.document.owner_unknown": "Files cannot be attached to this kind of record.",
+  "errors.document.too_large": "The file is larger than the allowed size.",
+  "errors.document.type_not_allowed": "This kind of file is not allowed. Use PDF, JPEG, PNG, Word, Excel, text or CSV.",
+  "errors.document.empty": "The file is empty.",
+  "errors.document.not_ready": "The file is not available yet. It is waiting to be checked for viruses, or it was blocked.",
+  "errors.document.storage_full": "The storage limit of the licence is reached.",
+  "errors.document.legal_hold": "The file is under legal hold.",
+  "permissions.doc.files.legal_hold": "Put files under legal hold or release them",
+  "permissions.doc.files.retention_review": "See files that wait for a retention review"
+}

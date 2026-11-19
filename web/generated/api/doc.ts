@@ -21,31 +21,17 @@ export interface File
     expiresOn: string | null;
     retentionUntil: string | null;
     isSensitive: boolean;
+    legalHold: boolean;
+    legalHoldReason: string | null;
+    scannedAt: string | null;
+    archivedAt: string | null;
+    keyVersion: number;
     status: 'uploading' | 'clean' | 'infected' | 'quarantined' | 'deleted';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface FileWrite
-{
-    companyId: string;
-    ownerType: string;
-    ownerId: string;
-    fileName: string;
-    contentType: string;
-    sizeBytes: number;
-    checksum: string;
-    storageKey: string;
-    versionNo: number;
-    previousFileId?: string | null;
-    documentType?: string | null;
-    expiresOn?: string | null;
-    retentionUntil?: string | null;
-    isSensitive?: boolean;
-    status: 'uploading' | 'clean' | 'infected' | 'quarantined' | 'deleted';
 }
 
 export interface FileListQuery
@@ -61,8 +47,6 @@ export const files =
 {
     list: (query: FileListQuery = {}) => request<PagedResult<File>>('GET', '/api/doc/files', { query }),
     get: (id: string) => request<File>('GET', `/api/doc/files/${id}`),
-    create: (body: FileWrite) => request<File>('POST', '/api/doc/files', { body }),
-    update: (id: string, body: FileWrite & { rowVersion: number }) => request<File>('PUT', `/api/doc/files/${id}`, { body }),
 };
 
 /** doc.generated_documents: GeneratedDocument. Field rules (S1.06) may leave a field out or mask it as text. */

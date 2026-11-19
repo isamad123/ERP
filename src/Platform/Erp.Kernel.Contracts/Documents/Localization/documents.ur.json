@@ -1,0 +1,13 @@
+{
+  "errors.document.invalid": "درخواست درست نہیں ہے۔",
+  "errors.document.not_found": "نہیں ملا۔",
+  "errors.document.owner_unknown": "اس قسم کے ریکارڈ کے ساتھ فائلیں منسلک نہیں کی جا سکتیں۔",
+  "errors.document.too_large": "فائل اجازت شدہ سائز سے بڑی ہے۔",
+  "errors.document.type_not_allowed": "اس قسم کی فائل کی اجازت نہیں۔ پی ڈی ایف، جے پی ای جی، پی این جی، ورڈ، ایکسل، ٹیکسٹ یا سی ایس وی استعمال کریں۔",
+  "errors.document.empty": "فائل خالی ہے۔",
+  "errors.document.not_ready": "فائل ابھی دستیاب نہیں۔ وہ وائرس کی جانچ کی منتظر ہے یا روک دی گئی ہے۔",
+  "errors.document.storage_full": "لائسنس کی اسٹوریج کی حد پوری ہو گئی ہے۔",
+  "errors.document.legal_hold": "فائل قانونی روک کے تحت ہے۔",
+  "permissions.doc.files.legal_hold": "فائلوں کو قانونی روک میں رکھیں یا چھوڑیں",
+  "permissions.doc.files.retention_review": "جائزے کی منتظر فائلیں دیکھیں"
+}

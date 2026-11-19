@@ -18,7 +18,9 @@ using Erp.Kernel.Contracts.Numbering;
 using Erp.Kernel.Infrastructure.Numbering;
 using Erp.Kernel.Api.Settings;
 using Erp.Kernel.Api.Jobs;
+using Erp.Kernel.Api.Documents;
 using Erp.Kernel.Api.Notifications;
+using Erp.Kernel.Infrastructure.Documents;
 using Erp.Kernel.Api.Workflow;
 using Erp.Kernel.Infrastructure.Jobs;
 using Erp.Kernel.Infrastructure.Notifications;
@@ -151,6 +153,9 @@ public static class ApiHost
         services.AddKernelJobCentre();
         services.AddKernelNotifications();
 
+        // Files (S1.11c1; docs/runbooks/file-store.md): the operator's store folder and virus scanner.
+        services.AddKernelDocuments(new FileStoreOptions(config["Files:Store"] ?? "local", config["Files:Root"]), new VirusScanOptions(config["Files:Scan:Host"], config.GetValue("Files:Scan:Port", 3310)));
+
         var keys = signing.Validation.Concat((config.GetSection("Auth:SigningPublicKeys").Get<string[]>() ?? []).Select(ToKey)).ToList();
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
         {
@@ -194,6 +199,7 @@ public static class ApiHost
         api.MapWorkflowEndpoints();
         api.MapJobEndpoints();
         api.MapNotificationEndpoints();
+        api.MapDocumentEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();
         return app;
