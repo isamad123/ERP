@@ -37,7 +37,6 @@ public static class KernelPermissions
         new("cfg.setup_tasks.read", "cfg", "permissions.cfg.setup_tasks.read", false),
         new("cfg.setup_tasks.create", "cfg", "permissions.cfg.setup_tasks.create", false),
         new("cfg.setup_tasks.update", "cfg", "permissions.cfg.setup_tasks.update", false),
-        new("doc.files.read", "doc", "permissions.doc.files.read", false),
         new("doc.generated_documents.read", "doc", "permissions.doc.generated_documents.read", false),
         new("doc.generated_documents.create", "doc", "permissions.doc.generated_documents.create", false),
         new("doc.retention_rules.read", "doc", "permissions.doc.retention_rules.read", false),

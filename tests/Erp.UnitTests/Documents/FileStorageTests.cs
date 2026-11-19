@@ -67,6 +67,58 @@ public sealed class FileStorageTests
         }
     }
 
+    [Fact]
+    public async Task S111c1_KRN_DOC_02_review_finding_6_a_root_set_with_a_trailing_separator_still_accepts_its_own_keys()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "erp-files-" + Guid.NewGuid().ToString("N")) + Path.DirectorySeparatorChar;
+        try
+        {
+            var store = new LocalFolderFileStore(root);
+            await store.PutAsync("tenants/acme/files/1", [7], TestContext.Current.CancellationToken);
+            Assert.Equal(new byte[] { 7 }, await store.GetAsync("tenants/acme/files/1", TestContext.Current.CancellationToken));
+            await Assert.ThrowsAsync<ArgumentException>(() => store.GetAsync("../outside", TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, true);
+            }
+        }
+    }
+
+    [Fact]
+    public void S111c1_KRN_DOC_02_review_finding_1_the_hosts_read_the_S3_settings_and_the_s3_choice_gives_the_S3_store()
+    {
+        var config = new Dictionary<string, string?>
+        {
+            ["Files:Store"] = "s3",
+            ["Files:S3:Bucket"] = "erp-files",
+            ["Files:S3:ServiceUrl"] = "http://127.0.0.1:9000",
+            ["Files:S3:Region"] = "eu-central-1",
+            ["Files:S3:AccessKeyId"] = "minio",
+            ["Files:S3:SecretKeyRef"] = "files/s3-secret",
+            ["Files:Scan:Host"] = "clamd",
+            ["Files:Scan:Port"] = "3311",
+        };
+        var (store, scan, s3) = DocumentRegistration.HostSettings(key => config.GetValueOrDefault(key));
+        Assert.Equal(new FileStoreOptions("s3", null), store);
+        Assert.Equal(new VirusScanOptions("clamd", 3311), scan);
+        Assert.Equal(new S3StoreOptions("erp-files", "http://127.0.0.1:9000", "eu-central-1", "minio", "files/s3-secret"), s3);
+
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<ISecretStore>(services, new MemorySecrets());
+        services.AddKernelDocuments(key => config.GetValueOrDefault(key));
+        using var provider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(services);
+        Assert.IsType<S3FileStore>(Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<IFileStore>(provider));
+
+        // Without settings the default stays the folder store, the scanner port 3310 and no S3 options.
+        var (local, defaultScan, none) = DocumentRegistration.HostSettings(_ => null);
+        Assert.Equal(new FileStoreOptions("local", null), local);
+        Assert.Equal(new VirusScanOptions(null, 3310), defaultScan);
+        Assert.Null(none);
+    }
+
     private sealed class Tenant(string code) : ITenantContext
     {
         public bool IsResolved => true;

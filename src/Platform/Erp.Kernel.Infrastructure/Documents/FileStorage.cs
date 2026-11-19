@@ -28,7 +28,8 @@ public sealed record FileStoreOptions(string Store, string? Root);
 /// <summary>Contents as files below a root folder. A key may not leave the root (no <c>..</c>, no absolute path).</summary>
 public sealed class LocalFolderFileStore(string root) : IFileStore
 {
-    private readonly string _root = Path.GetFullPath(root);
+    // Without its trailing separator, so a root set as "/data/files/" still accepts its own keys (S1.11c1 review finding 6).
+    private readonly string _root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
 
     public async Task PutAsync(string key, byte[] content, CancellationToken cancellationToken)
     {

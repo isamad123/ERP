@@ -5957,9 +5957,20 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "expiry_reminded_days",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
+        "uq_files_previous_file_id",
         "uq_files_company_id_id"
       ],
       "checks": [
@@ -5998,7 +6009,7 @@
       ],
       "triggers": [],
       "append_only_updatable": [],
-      "has_api": true,
+      "has_api": false,
       "full_name": "doc.files"
     },
     {

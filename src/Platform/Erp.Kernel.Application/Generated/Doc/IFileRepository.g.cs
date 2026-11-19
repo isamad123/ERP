@@ -21,6 +21,9 @@ public interface IFileRepository : global::Erp.BuildingBlocks.Application.Data.I
 
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.File>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 
+    /// <summary>Rows matching (previous_file_id); at most PageRequest.MaxLimit rows.</summary>
+    global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.File>> FindByPreviousFileIdAsync(global::System.Guid? previousFileId, global::System.Threading.CancellationToken cancellationToken);
+
     /// <summary>Rows matching (owner_type, owner_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.File>> FindByOwnerTypeAndOwnerIdAsync(string ownerType, global::System.Guid ownerId, global::System.Threading.CancellationToken cancellationToken);
 
@@ -61,6 +64,7 @@ public static class FileAccess
         new("scanned_at", "ScannedAt", null),
         new("archived_at", "ArchivedAt", null),
         new("key_version", "KeyVersion", null),
+        new("expiry_reminded_days", "ExpiryRemindedDays", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

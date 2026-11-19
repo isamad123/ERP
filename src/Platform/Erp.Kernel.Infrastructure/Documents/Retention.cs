@@ -12,11 +12,15 @@ public static class Retention
 {
     public sealed record DueFile(FileRow File, DateOnly DueOn, string Action);
 
-    /// <summary>The files whose retention ended and whose rule's action is <paramref name="action"/>.</summary>
+    /// <summary>
+    /// The files whose retention ended and whose rule's action is <paramref name="action"/>. A file is never due while any
+    /// version of its attachment is under legal hold (S1.11c1 review finding 2, CR-051).
+    /// </summary>
     public static async Task<IReadOnlyList<DueFile>> DueAsync(NpgsqlConnection c, string action, DateTimeOffset now, CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(now.UtcDateTime);
         var rows = await Notifications.NotificationConsumer.ReadAsync(c, null, $"""
+            {FileRows.HeldChains}
             select {FileRows.Columns},
                 greatest(coalesce(f.retention_until, (f.created_at at time zone 'UTC')::date + (r.keep_months * interval '1 month')::interval)::date,
                          (f.created_at at time zone 'UTC')::date + (coalesce(r.legal_minimum_months, 0) * interval '1 month')::interval)::date as due_on
@@ -24,7 +28,8 @@ public static class Retention
             where r.action_after = $1 and not f.legal_hold and f.storage_key <> $2
               and (f.status <> 'deleted' or $1 = 'delete')
               and ($1 <> 'archive' or f.archived_at is null)
-            """, r => (File: FileRows.Read(r), DueOn: DateOnly.FromDateTime(r.GetDateTime(22))), ct, action, FileStatuses.PurgedKey).ConfigureAwait(false);
+              and f.id not in (select id from held_up union select id from held_down)
+            """, r => (File: FileRows.Read(r), DueOn: DateOnly.FromDateTime(r.GetDateTime(23))), ct, action, FileStatuses.PurgedKey).ConfigureAwait(false);
         return [.. rows.Where(r => r.DueOn <= today).Select(r => new DueFile(r.File, r.DueOn, action))];
     }
 }

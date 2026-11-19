@@ -86,19 +86,29 @@ public sealed class AttachmentService(
         var key = $"{TenantFileKeys.Prefix(tenantContext.TenantCode)}/{id:N}";
         await store.PutAsync(key, await encryption.EncryptAsync(id, upload.Content, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         var status = settings.ScanRequired ? FileStatuses.Uploading : FileStatuses.Clean;
+        var expiresOn = upload.ExpiresOn ?? previous?.ExpiresOn;
         try
         {
             await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+            // A new version keeps the attachment's legal hold and, for the same expiry date, its reminder progress (CR-051).
+            var hold = previous is null ? (Held: false, Reason: null) : await FileRows.ChainHoldAsync(c, tx, previous.Id, cancellationToken).ConfigureAwait(false);
+            var reminded = previous is not null && previous.ExpiresOn == expiresOn ? previous.ExpiryRemindedDays : null;
             await IdentityDb.ExecuteAsync(c, tx, """
                 insert into doc.files (id, company_id, owner_type, owner_id, file_name, content_type, size_bytes, checksum, storage_key, version_no, previous_file_id, document_type, expires_on,
-                    is_sensitive, status, legal_hold, key_version, created_at, created_by, updated_at, updated_by, row_version)
-                values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, false, $16, $17, $18, $17, $18, 1)
+                    is_sensitive, status, legal_hold, legal_hold_reason, expiry_reminded_days, key_version, created_at, created_by, updated_at, updated_by, row_version)
+                values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $20, $21, 1)
                 """, cancellationToken, id, access.CompanyId, upload.OwnerType, upload.OwnerId, upload.FileName.Trim(), FileValidation.ContentTypeOf(type, upload.FileName), (long)upload.Content.Length,
-                FileValidation.Checksum(upload.Content), key, (previous?.VersionNo ?? 0) + 1, previous?.Id, upload.DocumentType ?? previous?.DocumentType, upload.ExpiresOn ?? previous?.ExpiresOn,
-                upload.IsSensitive || previous?.IsSensitive == true, status, TenantFileKeys.KeyVersion, now, actor.UserId).ConfigureAwait(false);
+                FileValidation.Checksum(upload.Content), key, (previous?.VersionNo ?? 0) + 1, previous?.Id, upload.DocumentType ?? previous?.DocumentType, expiresOn,
+                upload.IsSensitive || previous?.IsSensitive == true, status, hold.Held, hold.Reason, reminded, TenantFileKeys.KeyVersion, now, actor.UserId).ConfigureAwait(false);
             var row = (await FileRows.FindAsync(c, tx, id, cancellationToken).ConfigureAwait(false))!;
-            await Log(c, tx, row, "create", [("file_name", null, row.FileName), ("version_no", null, row.VersionNo), ("owner_type", null, row.OwnerType), ("owner_id", null, row.OwnerId), ("size_bytes", null, row.SizeBytes), ("status", null, row.Status)], now, cancellationToken).ConfigureAwait(false);
+            await Log(c, tx, row, "create", [("file_name", null, row.FileName), ("version_no", null, row.VersionNo), ("owner_type", null, row.OwnerType), ("owner_id", null, row.OwnerId), ("size_bytes", null, row.SizeBytes), ("status", null, row.Status), ("legal_hold", null, row.LegalHold)], now, cancellationToken).ConfigureAwait(false);
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (PostgresException e) when (IsNewerVersionRace(e))
+        {
+            await store.DeleteAsync(key, CancellationToken.None).ConfigureAwait(false);
+            throw new DocumentException(DocumentErrors.Invalid, 409); // someone else replaced the same version first
         }
         catch
         {
@@ -137,7 +147,11 @@ public sealed class AttachmentService(
     public async Task<IReadOnlyList<AttachmentInfo>> VersionsAsync(Guid fileId, CancellationToken cancellationToken)
     {
         await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
-        _ = await ReadableAsync(c, fileId, cancellationToken).ConfigureAwait(false) ?? throw new DocumentException(DocumentErrors.NotFound, 404);
+        var file = await ReadableAsync(c, fileId, cancellationToken).ConfigureAwait(false) ?? throw new DocumentException(DocumentErrors.NotFound, 404);
+        var access = await OwnerAccessAsync(file.OwnerType, file.OwnerId, cancellationToken).ConfigureAwait(false);
+
+        // Each version answers for itself: a sensitive version needs the sensitive right, an archived one is hidden as in
+        // the list (S1.11c1 review finding 9, CR-051). The version asked for is always shown (it was readable above).
         var rows = await Notifications.NotificationConsumer.ReadAsync(c, null, $"""
             with recursive older as (
                 select id, previous_file_id from doc.files where id = $1
@@ -145,8 +159,10 @@ public sealed class AttachmentService(
             newer as (
                 select id from doc.files where id = $1
                 union all select n.id from doc.files n join newer w on n.previous_file_id = w.id)
-            select {FileRows.Columns} from doc.files f where f.id in (select id from older union select id from newer) and f.status <> 'deleted' order by f.version_no desc
-            """, FileRows.Read, cancellationToken, fileId).ConfigureAwait(false);
+            select {FileRows.Columns} from doc.files f where f.id in (select id from older union select id from newer) and f.status <> 'deleted'
+              and (f.id = $1 or (($2 or not f.is_sensitive) and f.archived_at is null))
+            order by f.version_no desc
+            """, FileRows.Read, cancellationToken, fileId, access.CanReadSensitive).ConfigureAwait(false);
         return [.. rows.Select(r => r.ToInfo())];
     }
 
@@ -177,22 +193,24 @@ public sealed class AttachmentService(
     public async Task<AttachmentInfo> RestoreAsync(Guid fileId, CancellationToken cancellationToken)
     {
         await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
-        var source = await FileRows.FindAsync(c, null, fileId, cancellationToken).ConfigureAwait(false);
-        var access = source is null ? null : await OwnerAccessAsync(source.OwnerType, source.OwnerId, cancellationToken, throwUnknown: false).ConfigureAwait(false);
-        if (source is null || access is null || !access.CanRead || source.Status == FileStatuses.Deleted)
-        {
-            throw new DocumentException(DocumentErrors.NotFound, 404);
-        }
-
+        // The source must be readable by the caller, sensitive versions included (S1.11c1 review finding 9, CR-051).
+        var source = await ReadableAsync(c, fileId, cancellationToken).ConfigureAwait(false) ?? throw new DocumentException(DocumentErrors.NotFound, 404);
+        var access = await OwnerAccessAsync(source.OwnerType, source.OwnerId, cancellationToken).ConfigureAwait(false);
         Require(access.CanWrite, DocumentErrors.Forbidden, 403);
         if (source.Status != FileStatuses.Clean || source.StorageKey == FileStatuses.PurgedKey)
         {
             throw new DocumentException(DocumentErrors.NotReady, 409);
         }
 
-        var head = (await Notifications.NotificationConsumer.ReadAsync(c, null, $"""
+        var heads = await Notifications.NotificationConsumer.ReadAsync(c, null, $"""
             select {FileRows.Columns} from doc.files f where f.id in (select unnest($1::uuid[])) and f.status <> 'deleted' and {FileRows.IsHead}
-            """, FileRows.Read, cancellationToken, (await FileRows.ChainAsync(c, null, fileId, cancellationToken).ConfigureAwait(false)).ToArray()).ConfigureAwait(false)).Single();
+            """, FileRows.Read, cancellationToken, (await FileRows.ChainAsync(c, null, fileId, cancellationToken).ConfigureAwait(false)).ToArray()).ConfigureAwait(false);
+        if (heads.Count != 1)
+        {
+            throw new DocumentException(DocumentErrors.Invalid, 409); // the versions are changing at this moment (finding 5)
+        }
+
+        var head = heads[0];
         if (head.Id == source.Id)
         {
             throw new DocumentException(DocumentErrors.Invalid); // already the current version
@@ -207,15 +225,24 @@ public sealed class AttachmentService(
         try
         {
             await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+            // Like a new upload: the attachment's legal hold carries over, and reminder progress when the expiry date stays (CR-051).
+            var hold = await FileRows.ChainHoldAsync(c, tx, head.Id, cancellationToken).ConfigureAwait(false);
+            var reminded = head.ExpiresOn == source.ExpiresOn ? head.ExpiryRemindedDays : null;
             await IdentityDb.ExecuteAsync(c, tx, """
                 insert into doc.files (id, company_id, owner_type, owner_id, file_name, content_type, size_bytes, checksum, storage_key, version_no, previous_file_id, document_type, expires_on,
-                    is_sensitive, status, legal_hold, key_version, scanned_at, created_at, created_by, updated_at, updated_by, row_version)
-                values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'clean', false, $15, $16, $17, $18, $17, $18, 1)
+                    is_sensitive, status, legal_hold, legal_hold_reason, expiry_reminded_days, key_version, scanned_at, created_at, created_by, updated_at, updated_by, row_version)
+                values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'clean', $15, $16, $17, $18, $19, $20, $21, $20, $21, 1)
                 """, cancellationToken, id, source.CompanyId, source.OwnerType, source.OwnerId, source.FileName, source.ContentType, source.SizeBytes, source.Checksum, key, head.VersionNo + 1, head.Id,
-                source.DocumentType, source.ExpiresOn, source.IsSensitive || head.IsSensitive, TenantFileKeys.KeyVersion, source.ScannedAt, now, actor.UserId).ConfigureAwait(false);
+                source.DocumentType, source.ExpiresOn, source.IsSensitive || head.IsSensitive, hold.Held, hold.Reason, reminded, TenantFileKeys.KeyVersion, source.ScannedAt, now, actor.UserId).ConfigureAwait(false);
             var row = (await FileRows.FindAsync(c, tx, id, cancellationToken).ConfigureAwait(false))!;
-            await Log(c, tx, row, "create", [("file_name", null, row.FileName), ("version_no", null, row.VersionNo), ("restored_from", null, source.Id), ("status", null, row.Status)], now, cancellationToken).ConfigureAwait(false);
+            await Log(c, tx, row, "create", [("file_name", null, row.FileName), ("version_no", null, row.VersionNo), ("restored_from", null, source.Id), ("status", null, row.Status), ("legal_hold", null, row.LegalHold)], now, cancellationToken).ConfigureAwait(false);
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (PostgresException e) when (IsNewerVersionRace(e))
+        {
+            await store.DeleteAsync(key, CancellationToken.None).ConfigureAwait(false);
+            throw new DocumentException(DocumentErrors.Invalid, 409);
         }
         catch
         {
@@ -240,13 +267,16 @@ public sealed class AttachmentService(
 
         var now = clock.UtcNow;
         await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var ids = await Notifications.NotificationConsumer.ReadAsync(c, tx, """
-            update doc.files set status = 'deleted', updated_at = $2, updated_by = $3, row_version = row_version + 1 where id = any($1) and status <> 'deleted' returning id
-            """, r => r.GetGuid(0), cancellationToken, chain, now, actor.UserId).ConfigureAwait(false);
-        foreach (var id in ids)
+        // Each version's change-log entry carries its own earlier status (S1.11c1 review finding 10, CR-051).
+        var before = await Notifications.NotificationConsumer.ReadAsync(c, tx, "select id, status from doc.files where id = any($1) and status <> 'deleted' order by id for update",
+            r => (Id: r.GetGuid(0), Status: r.GetString(1)), cancellationToken, chain).ConfigureAwait(false);
+        await IdentityDb.ExecuteAsync(c, tx, """
+            update doc.files set status = 'deleted', updated_at = $2, updated_by = $3, row_version = row_version + 1 where id = any($1) and status <> 'deleted'
+            """, cancellationToken, before.Select(b => b.Id).ToArray(), now, actor.UserId).ConfigureAwait(false);
+        foreach (var (id, status) in before)
         {
             var row = (await FileRows.FindAsync(c, tx, id, cancellationToken).ConfigureAwait(false))!;
-            await Log(c, tx, row, "delete", [("status", file.Status, FileStatuses.Deleted)], now, cancellationToken).ConfigureAwait(false);
+            await Log(c, tx, row, "delete", [("status", status, FileStatuses.Deleted)], now, cancellationToken).ConfigureAwait(false);
         }
 
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -270,14 +300,31 @@ public sealed class AttachmentService(
         _ = await FileRows.FindAsync(c, null, fileId, cancellationToken).ConfigureAwait(false) ?? throw new DocumentException(DocumentErrors.NotFound, 404);
         var now = clock.UtcNow;
         await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var ids = await Notifications.NotificationConsumer.ReadAsync(c, tx, """
-            update doc.files set legal_hold = $2, legal_hold_reason = $3, updated_at = $4, updated_by = $5, row_version = row_version + 1
-            where id = any($1) and (legal_hold <> $2 or legal_hold_reason is distinct from $3) returning id
-            """, r => r.GetGuid(0), cancellationToken, (await FileRows.ChainAsync(c, tx, fileId, cancellationToken).ConfigureAwait(false)).ToArray(), hold, hold ? reason!.Trim() : null, now, actor.UserId).ConfigureAwait(false);
-        foreach (var id in ids)
+        var newReason = hold ? reason!.Trim() : null;
+
+        // Each version's change-log entry carries its own earlier hold and reason, and only what changed (S1.11c1 review finding 10, CR-051).
+        var before = await Notifications.NotificationConsumer.ReadAsync(c, tx, """
+            select id, legal_hold, legal_hold_reason from doc.files where id = any($1) and (legal_hold <> $2 or legal_hold_reason is distinct from $3) order by id for update
+            """, r => (Id: r.GetGuid(0), Held: r.GetBoolean(1), Reason: r.IsDBNull(2) ? null : r.GetString(2)), cancellationToken,
+            (await FileRows.ChainAsync(c, tx, fileId, cancellationToken).ConfigureAwait(false)).ToArray(), hold, newReason).ConfigureAwait(false);
+        await IdentityDb.ExecuteAsync(c, tx, """
+            update doc.files set legal_hold = $2, legal_hold_reason = $3, updated_at = $4, updated_by = $5, row_version = row_version + 1 where id = any($1)
+            """, cancellationToken, before.Select(b => b.Id).ToArray(), hold, newReason, now, actor.UserId).ConfigureAwait(false);
+        foreach (var (id, held, oldReason) in before)
         {
             var row = (await FileRows.FindAsync(c, tx, id, cancellationToken).ConfigureAwait(false))!;
-            await Log(c, tx, row, "update", [("legal_hold", !hold, hold), ("legal_hold_reason", null, row.LegalHoldReason)], now, cancellationToken).ConfigureAwait(false);
+            var changes = new List<(string, object?, object?)>();
+            if (held != hold)
+            {
+                changes.Add(("legal_hold", held, hold));
+            }
+
+            if (!string.Equals(oldReason, newReason, StringComparison.Ordinal))
+            {
+                changes.Add(("legal_hold_reason", oldReason, newReason));
+            }
+
+            await Log(c, tx, row, "update", changes, now, cancellationToken).ConfigureAwait(false);
             await AuditDb.AppendSecurityEventAsync(c, tx, new SecurityEventRecord(now, hold ? DocumentEvents.LegalHoldSet : DocumentEvents.LegalHoldReleased, actor.UserId.ToString(), id.ToString(), Severities.Info,
                 new System.Text.Json.Nodes.JsonObject { ["file_id"] = id.ToString(), ["reason"] = row.LegalHoldReason }, actor.UserId), cancellationToken).ConfigureAwait(false);
         }
@@ -339,6 +386,13 @@ public sealed class AttachmentService(
 
     private Task Log(NpgsqlConnection c, NpgsqlTransaction tx, FileRow file, string action, IReadOnlyList<(string Field, object? Before, object? After)> changes, DateTimeOffset now, CancellationToken ct) =>
         FileRows.LogAsync(c, tx, file, action, changes, actor.UserId, audit.ActorKind, audit.Source, audit.CorrelationId, audit.IpAddress, now, ct);
+
+    /// <summary>
+    /// True when the insert lost the race for the newest version: the unique key <c>uq_files_previous_file_id</c> allows one
+    /// live newer version per file (S1.11c1 review finding 5, CR-051).
+    /// </summary>
+    private static bool IsNewerVersionRace(PostgresException e) =>
+        e.SqlState == PostgresErrorCodes.UniqueViolation && string.Equals(e.ConstraintName, "uq_files_previous_file_id", StringComparison.Ordinal);
 
     private static void Require(bool allowed, string error, int status)
     {

@@ -36,6 +36,7 @@ internal sealed class FileConfiguration : IEntityTypeConfiguration<global::Erp.K
         builder.Property(e => e.ScannedAt).HasColumnName("scanned_at").HasColumnType("timestamptz");
         builder.Property(e => e.ArchivedAt).HasColumnName("archived_at").HasColumnType("timestamptz");
         builder.Property(e => e.KeyVersion).HasColumnName("key_version").HasColumnType("integer");
+        builder.Property(e => e.ExpiryRemindedDays).HasColumnName("expiry_reminded_days").HasColumnType("integer");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
@@ -75,6 +76,12 @@ internal sealed class FileRepository(
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.File>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
         await PageAsync((await QueryAsync(cancellationToken).ConfigureAwait(false)).Where(e => e.CompanyId == companyId), page, cancellationToken).ConfigureAwait(false);
+
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.File>> FindByPreviousFileIdAsync(global::System.Guid? previousFileId, global::System.Threading.CancellationToken cancellationToken)
+    {
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.PreviousFileId == previousFileId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Doc.File>> FindByOwnerTypeAndOwnerIdAsync(string ownerType, global::System.Guid ownerId, global::System.Threading.CancellationToken cancellationToken)
     {

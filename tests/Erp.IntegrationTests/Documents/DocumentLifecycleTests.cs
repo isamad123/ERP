@@ -1,5 +1,6 @@
 using Erp.IntegrationTests.Jobs;
 using Erp.IntegrationTests.Tenancy;
+using Erp.Kernel.Contracts.Documents;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.Documents;
 using Erp.Kernel.Infrastructure.Jobs;
@@ -104,6 +105,75 @@ public sealed class DocumentLifecycleTests(TenancyFixture fx) : IAsyncLifetime
         await _rig.ExecAsync("update doc.files set legal_hold = false where id = $1", Ct, null, held);
         Assert.Equal((0, 1), await ApplyAsync());
         Assert.Equal("deleted|true|false", await StateAsync(held));
+    }
+
+    [Fact]
+    public async Task S111c1_KRN_DOC_04_review_finding_2_no_version_of_an_attachment_with_a_held_version_is_archived_or_destroyed()
+    {
+        var user = await UserAsync();
+        await RuleAsync("contract", 12, "delete");
+        await RuleAsync("memo", 12, "archive");
+        var heldOld = await FileAsync(user, "contract", monthsAgo: 30, hold: true);
+        var newer = await FileAsync(user, "contract", monthsAgo: 20, previous: heldOld, version: 2); // added before the hold rule copied holds
+        var memo = await FileAsync(user, "memo", monthsAgo: 30);
+        var heldMemo = await FileAsync(user, "memo", monthsAgo: 20, previous: memo, version: 2, hold: true);
+
+        Assert.Equal((0, 0), await ApplyAsync());
+        foreach (var kept in new[] { heldOld, newer, memo, heldMemo })
+        {
+            Assert.Equal("clean|false|false", await StateAsync(kept));
+        }
+    }
+
+    [Fact]
+    public async Task S111c1_KRN_DOC_04_review_finding_8_content_is_removed_only_after_the_destroyed_state_is_committed_and_a_failed_removal_is_reported()
+    {
+        var user = await UserAsync();
+        await RuleAsync("cv", 12, "delete");
+        var first = await FileAsync(user, "cv", monthsAgo: 13);
+        var second = await FileAsync(user, "cv", monthsAgo: 14);
+        var seen = new List<string>();
+        var store = new WatchingStore(_store, async key =>
+        {
+            // Read from another connection: only committed data is visible there.
+            var id = Guid.ParseExact(key[(key.LastIndexOf('/') + 1)..], "N");
+            seen.Add(await _rig.ScalarAsync<string>("select storage_key from doc.files where id = $1", Ct, null, id));
+            if (id == second)
+            {
+                throw new IOException("share not reachable");
+            }
+        });
+        var warnings = new List<string>();
+        await using (var c = await _rig.OwnerAsync(ct: Ct))
+        {
+            Assert.Equal((0, 2), await DocumentRetentionJob.ApplyAsync(c, store, _rig.Clock.UtcNow, null, Ct, w =>
+            {
+                warnings.Add(w);
+                return Task.CompletedTask;
+            }));
+        }
+
+        Assert.Equal(2, seen.Count);
+        Assert.All(seen, k => Assert.Equal(FileStatuses.PurgedKey, k));
+        Assert.Equal("deleted|true|false", await StateAsync(first));
+        Assert.Equal("deleted|true|false", await StateAsync(second));
+        Assert.Contains(second.ToString(), Assert.Single(warnings), StringComparison.Ordinal);
+    }
+
+    /// <summary>A folder store that calls <c>onDelete</c> before it removes a content.</summary>
+    private sealed class WatchingStore(IFileStore inner, Func<string, Task> onDelete) : IFileStore
+    {
+        public Task PutAsync(string key, byte[] content, CancellationToken cancellationToken) => inner.PutAsync(key, content, cancellationToken);
+
+        public Task<byte[]?> GetAsync(string key, CancellationToken cancellationToken) => inner.GetAsync(key, cancellationToken);
+
+        public async Task DeleteAsync(string key, CancellationToken cancellationToken)
+        {
+            await onDelete(key);
+            await inner.DeleteAsync(key, cancellationToken);
+        }
+
+        public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken) => inner.ExistsAsync(key, cancellationToken);
     }
 
     [Fact]
