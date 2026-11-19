@@ -23,6 +23,9 @@ public interface IContractRepository : global::Erp.BuildingBlocks.Application.Da
 
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Contract>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 
+    /// <summary>Rows matching (company_id, contract_no); at most PageRequest.MaxLimit rows.</summary>
+    global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Contract>> FindByCompanyIdAndContractNoAsync(global::System.Guid companyId, string contractNo, global::System.Threading.CancellationToken cancellationToken);
+
     /// <summary>Rows matching (employment_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Contract>> FindByEmploymentIdAsync(global::System.Guid employmentId, global::System.Threading.CancellationToken cancellationToken);
 

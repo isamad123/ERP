@@ -6727,7 +6727,8 @@
             "form",
             "email",
             "bank_file",
-            "report"
+            "report",
+            "part"
           ]
         },
         {
@@ -11068,6 +11069,7 @@
         }
       ],
       "uniques": [
+        "uq_contracts_company_id_contract_no",
         "uq_contracts_company_id_id"
       ],
       "checks": [

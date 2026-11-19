@@ -891,7 +891,7 @@ Letters, payslips, certificates, bank files, statutory forms. Requirements: KRN-
 Constraints:
 
 - `ck_templates_code_code` CHECK ((((length(code) >= 1) AND (length(code) <= 40)) AND (code = btrim(code))))
-- `ck_templates_kind` CHECK ((kind = ANY (ARRAY['letter'::text, 'payslip'::text, 'certificate'::text, 'form'::text, 'email'::text, 'bank_file'::text, 'report'::text])))
+- `ck_templates_kind` CHECK ((kind = ANY (ARRAY['letter'::text, 'payslip'::text, 'certificate'::text, 'form'::text, 'email'::text, 'bank_file'::text, 'report'::text, 'part'::text])))
 - `ck_templates_name_i18n_object` CHECK ((jsonb_typeof(name_i18n) = 'object'::text))
 - `ck_templates_source` CHECK ((source = ANY (ARRAY['pack'::text, 'tenant'::text])))
 - `fk_templates_active_version_id` FOREIGN KEY (id, active_version_id) REFERENCES doc.template_versions(template_id, id)
@@ -1599,6 +1599,7 @@ Constraints:
 - `fk_contracts_file_id` FOREIGN KEY (company_id, file_id) REFERENCES doc.files(company_id, id)
 - `fk_contracts_renews_contract_id` FOREIGN KEY (company_id, renews_contract_id) REFERENCES hrm.contracts(company_id, id)
 - `pk_contracts` PRIMARY KEY (id)
+- `uq_contracts_company_id_contract_no` UNIQUE (company_id, contract_no)
 - `uq_contracts_company_id_id` UNIQUE (company_id, id)
 
 Indexes:
