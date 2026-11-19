@@ -93,6 +93,7 @@ public sealed class InboxAndAdministrationTests(TenancyFixture fx) : IAsyncLifet
         var b = InstanceOf(await _w.StartAsync(requester, Expense, await CompanyAsync(), new { amount = "2" }, ct: Ct));
         await _w.ActivateRouteAsync(admin, Expense, Route(BulkStep("one", UserApprover(approver), bulk: false)), Ct);
         var c = InstanceOf(await _w.StartAsync(requester, Expense, await CompanyAsync(), new { amount = "3" }, ct: Ct));
+        await _w.MayDecideGuardedAsync(approver, Ct); // a route names only people who can decide (review S1.10a finding 2)
         await _w.ActivateRouteAsync(admin, Guarded, Route(Step("one", UserApprover(approver))), Ct); // type without bulk approval
         var d = InstanceOf(await _w.StartAsync(requester, Guarded, await CompanyAsync(), new { }, ct: Ct));
         var tasks = new List<Guid>();
@@ -142,6 +143,7 @@ public sealed class InboxAndAdministrationTests(TenancyFixture fx) : IAsyncLifet
         var admin = await _w.AdminAsync(Ct);
         var (alice, bob, approver) = (await _w.UserAsync(Ct, "business_user"), await _w.UserAsync(Ct, "business_user"), await _w.UserAsync(Ct, "approver"));
         await _w.ActivateRouteAsync(admin, Expense, Route(Step("check", UserApprover(approver))), Ct);
+        await _w.MayDecideGuardedAsync(approver, Ct); // a route names only people who can decide (review S1.10a finding 2)
         await _w.ActivateRouteAsync(admin, Guarded, Route(Step("look", UserApprover(approver))), Ct);
         var early = InstanceOf(await _w.StartAsync(alice, Expense, await CompanyAsync(), new { amount = "1" }, ct: Ct));
         var earlyTask = Assert.Single(await _w.OpenTasksAsync(early, Ct));
