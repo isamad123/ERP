@@ -1,8 +1,29 @@
 name: ci
 
+# Minutes are limited (GitHub free plan), so: no run per branch push (the pull request run covers it), nothing for
+# documents no test reads, and the tenant-isolation job only on pull requests. Run it by hand with "Run workflow".
 on:
   push:
+    branches: [main]
+    paths-ignore:
+      - "docs/specs/**"
+      - "docs/decisions/**"
+      - "docs/slices/**"
+      - "docs/handoff/**"
+      - "docs/adr/**"
+      - "docs/runbooks/**"
+      - "docs/setup/**"
   pull_request:
+    branches: [main]
+    paths-ignore:
+      - "docs/specs/**"
+      - "docs/decisions/**"
+      - "docs/slices/**"
+      - "docs/handoff/**"
+      - "docs/adr/**"
+      - "docs/runbooks/**"
+      - "docs/setup/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -121,6 +142,7 @@ jobs:
   # is called as one customer with another customer's ids, hosts and tokens; any success fails this job. It is its own
   # job so it shows by name on every pull request and can be made a required check in the branch protection of main.
   tenant-isolation:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
