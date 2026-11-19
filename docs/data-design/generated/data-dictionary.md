@@ -891,7 +891,7 @@ Letters, payslips, certificates, bank files, statutory forms. Requirements: KRN-
 Constraints:
 
 - `ck_templates_code_code` CHECK ((((length(code) >= 1) AND (length(code) <= 40)) AND (code = btrim(code))))
-- `ck_templates_kind` CHECK ((kind = ANY (ARRAY['letter'::text, 'payslip'::text, 'certificate'::text, 'form'::text, 'email'::text, 'bank_file'::text, 'report'::text])))
+- `ck_templates_kind` CHECK ((kind = ANY (ARRAY['letter'::text, 'payslip'::text, 'certificate'::text, 'form'::text, 'email'::text, 'bank_file'::text, 'report'::text, 'part'::text])))
 - `ck_templates_name_i18n_object` CHECK ((jsonb_typeof(name_i18n) = 'object'::text))
 - `ck_templates_source` CHECK ((source = ANY (ARRAY['pack'::text, 'tenant'::text])))
 - `fk_templates_active_version_id` FOREIGN KEY (id, active_version_id) REFERENCES doc.template_versions(template_id, id)
