@@ -1,6 +1,7 @@
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.Kernel.Infrastructure.ControlPlane.Platform;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
+using System.Text.RegularExpressions;
 using Npgsql;
 
 namespace Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
@@ -12,7 +13,7 @@ public sealed record ClusterInfo(Guid Id, string Name, string Host, int Port, st
 /// Server-level work done with the cluster administrator login: the spec 03 section 3.7 group roles, one set of logins
 /// per customer (CR-004) and the customer database itself. Every step is safe to repeat.
 /// </summary>
-public sealed class ClusterAdministrator(ISecretStore secrets)
+public sealed partial class ClusterAdministrator(ISecretStore secrets)
 {
     public async Task<NpgsqlConnection> OpenAdminAsync(ClusterInfo cluster, string database, CancellationToken cancellationToken)
     {
@@ -70,15 +71,56 @@ public sealed class ClusterAdministrator(ISecretStore secrets)
     }
 
     /// <summary>The spec 03 section 3.7 roles (no login); customer logins are members (CR-004).</summary>
-    public static async Task EnsureGroupRolesAsync(NpgsqlConnection connection, CancellationToken cancellationToken)
+    public static Task EnsureGroupRolesAsync(NpgsqlConnection connection, CancellationToken cancellationToken) =>
+        EnsureNoLoginRolesAsync(connection, TenantLogins.GroupRoles, cancellationToken);
+
+    /// <summary>
+    /// Creates each role (no login) unless it exists. Roles are server-wide, so two provisionings on a new server can
+    /// create the same role at the same moment; the loser's duplicate error is ignored instead of failing (R-028).
+    /// A check before <c>create role</c> cannot prevent that race. An advisory lock could only help if every session
+    /// that creates these roles took it in the same database; they do not (the frozen grants migrations run in each
+    /// customer database), so the database's own duplicate error is relied on instead.
+    /// </summary>
+    internal static async Task EnsureNoLoginRolesAsync(NpgsqlConnection connection, IEnumerable<string> roles, CancellationToken cancellationToken)
     {
-        foreach (var role in TenantLogins.GroupRoles)
+        ArgumentNullException.ThrowIfNull(roles);
+        var names = roles.ToArray();
+        foreach (var role in names)
         {
+            // CREATE ROLE cannot take parameters, and the statement sits inside a $do$ block: only plain lower-case
+            // names are accepted, then quoted as an identifier (R-028 review finding 4).
+            if (!RoleNamePattern().IsMatch(role))
+            {
+                throw new ArgumentException($"'{role}' is not a valid role name.", nameof(roles));
+            }
+
             await Sql.ExecuteAsync(connection, null,
-                $"do $do$ begin if not exists (select 1 from pg_roles where rolname = '{role}') then create role {role} nologin; end if; end $do$",
+                $"do $do$ begin create role {Sql.Identifier(role)} nologin; exception when duplicate_object or unique_violation then null; end $do$",
                 cancellationToken).ConfigureAwait(false);
         }
+
+        // A role of the same name that already existed is accepted only if it is a plain group role, as CR-004 creates
+        // them: no login, no special powers and no membership of other roles. Otherwise every customer login made a
+        // member of it would silently gain those powers (R-028 review finding 3).
+        var unsafeRoles = await Sql.ScalarAsync<string>(connection, null,
+            """
+            select string_agg(r.rolname, ', ' order by r.rolname)
+            from pg_roles r
+            where r.rolname = any($1)
+              and (r.rolcanlogin or r.rolsuper or r.rolcreaterole or r.rolcreatedb or r.rolreplication or r.rolbypassrls
+                   or exists (select 1 from pg_auth_members m where m.member = r.oid))
+            """,
+            cancellationToken, [names]).ConfigureAwait(false);
+        if (unsafeRoles is not null)
+        {
+            throw new InvalidOperationException(
+                $"The server already has role(s) {unsafeRoles} with login, special powers or memberships; customer logins would inherit them. " +
+                "Remove those rights (or the roles) on the server and run provisioning again.");
+        }
     }
+
+    [GeneratedRegex(@"\A[a-z_][a-z0-9_]{0,62}\z", RegexOptions.CultureInvariant)]
+    private static partial Regex RoleNamePattern();
 
     private async Task<DatabaseCredential> EnsureCredentialAsync(string secretRef, string login, CancellationToken cancellationToken)
     {
