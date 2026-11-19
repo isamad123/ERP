@@ -215,6 +215,8 @@
   scope: {company: company_id, employment: employment_id}
   # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
   numbering: {column: contract_no, type: hrm.contract_no, assign: create, default: "CON-{yyyy}-{seq:5}", reset: yearly, date: start_date}
+  # S1.08 review finding 1 (CR-058, closes R-016): one contract number per company, like the other numbered tables.
+  uniques_added_in: {S1.08-r1: [[company_id, contract_no]]}
   reqs: [EMP-09]
 
 - table: hrm.probation_records

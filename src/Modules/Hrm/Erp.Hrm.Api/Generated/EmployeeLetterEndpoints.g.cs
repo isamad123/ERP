@@ -125,6 +125,7 @@ internal static class EmployeeLetterEndpoints
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.EnsureCanCreateAsync(row, cancellationToken).ConfigureAwait(false);
             row.LetterNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.letter_no", row.CompanyId, null, null), cancellationToken).ConfigureAwait(false);
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created("/api/hrm/employee-letters/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmployeeLetterAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
