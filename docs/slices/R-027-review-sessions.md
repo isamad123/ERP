@@ -5,7 +5,7 @@ Class: B (review)        Model: **Opus 5.5 (high effort)**, one fresh session pe
 
 | Order | Slice | Merged as | Handoff | Reserved numbers |
 | --- | --- | --- | --- | --- |
-| 1 | S1.03 tenancy, provisioning, migrator | 4f0ce51 (#3) | `docs/handoff/2026-11-15-S1.03.md` | CR-055, R-037 to R-039 |
+| 1 | S1.03 tenancy, provisioning, migrator | 4f0ce51 (#3) | `docs/handoff/2026-11-15-S1.03.md` | CR-055 (taken by S1.11c2; none needed), R-037 to R-039 |
 | 2 | S1.04 tenant-isolation suite | 99425ff (#4) | `docs/handoff/2026-11-15-S1.04.md` | CR-056, R-040 to R-042 |
 | 3 | S1.09b entitlements and licensing | 1c7a3f6 (#24) | `docs/handoff/2026-11-17-S1.09b.md` | CR-057, R-043 to R-045 |
 | 4 | S1.08 numbering | e7d4a6b (#21) | `docs/handoff/2026-11-17-S1.08.md` | CR-058, R-046 to R-048 |
