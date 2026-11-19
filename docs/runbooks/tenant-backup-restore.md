@@ -24,17 +24,24 @@ enrolled authenticator app is unreadable (each user then needs an MFA reset) and
 
 Runs `pg_dump` as the customer's own backup login (read-only), encrypts the stream into the file, and records
 `last_backup_at` on `cp.tenant_databases` and a `tenant.backup` entry in `cp.platform_audit`. A failed backup leaves no file.
+The output file must not exist: the command refuses an existing file and never changes or deletes it (S1.03 review finding 1).
+
+In front of the dump the file holds a **manifest** (S1.03 review finding 2): the customer code and, for every table, its row
+count and content checksum, taken in the same database snapshot that `pg_dump` dumps. The manifest is encrypted and
+authenticated like the dump. The customer may keep working during the backup.
 
 ## Restore drill (do this regularly; the result is shown as "last restore test")
 `scripts/tenant-restore.sh acme /backups/acme-2026-11-15.dump.enc erp_r_acme`
 
 1. Creates the new database `erp_r_acme` (a restore never overwrites an existing database), owned by the customer's owner login.
-2. Decrypts and restores the file into it (a damaged, truncated or wrongly keyed file is refused and the new database removed).
-3. Compares every table with the live customer database (row count and a content checksum) and prints the result.
+   The name must not start with `erp_t_`, which is reserved for customer databases.
+2. Decrypts and restores the file into it. A damaged, truncated or wrongly keyed file, a file of another customer, or a file
+   without a manifest (made before 2026-11-19) is refused, and the new database is removed.
+3. Compares every table of the copy with the backup's manifest (row count and content checksum) and prints the result.
 4. If all tables match, records `last_restore_test_at` and a `tenant.restore_test` audit entry. Exit code 4 means a difference.
 
-The drill compares with the live database, so run it soon after the backup or on a quiet customer; changes made between
-backup and comparison show up as differences. Drop the drill database when done: `drop database erp_r_acme with (force)`.
+The drill compares with the backup as it was taken, not with the live database, so it can run at any time on a busy
+customer. Drop the drill database when done: `drop database erp_r_acme with (force)`.
 
 ## Evidence from the S1.03 drill (2026-11-15, local PostgreSQL 16)
 ```

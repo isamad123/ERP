@@ -104,7 +104,8 @@ public sealed class TenancyFixture : IAsyncLifetime
     /// The caller disposes the returned host, except <see cref="App"/>, which the fixture disposes.
     /// </summary>
     /// <remarks><paramref name="realAccess"/>: keep the real access engine (slice S1.06) instead of the allow-all doubles.</remarks>
-    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken, Action<IServiceCollection>? extra = null, bool realAccess = false)
+    /// <remarks><paramref name="controlPlaneConnectionString"/>: another control-plane login (S1.03 review finding 11, the cp_api role).</remarks>
+    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken, Action<IServiceCollection>? extra = null, bool realAccess = false, string? controlPlaneConnectionString = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
@@ -113,7 +114,7 @@ public sealed class TenancyFixture : IAsyncLifetime
         // The isolation suite makes the database refuse thousands of cross-customer writes on purpose (answered 409);
         // EF Core logs each refusal as an error, which floods the CI log and hides real test failures.
         builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.None);
-        builder.Configuration["ConnectionStrings:ControlPlane"] = Options.ConnectionString;
+        builder.Configuration["ConnectionStrings:ControlPlane"] = controlPlaneConnectionString ?? Options.ConnectionString;
         builder.Configuration["Tenancy:HostCacheSeconds"] = "0";
         builder.Configuration["Settings:RefreshMilliseconds"] = "0"; // tests write settings with SQL and read them at once (S1.09a)
         builder.Configuration["Auth:Issuer"] = Issuer;

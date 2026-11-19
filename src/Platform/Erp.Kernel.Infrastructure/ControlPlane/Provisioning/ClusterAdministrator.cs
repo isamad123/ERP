@@ -1,6 +1,9 @@
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.Kernel.Infrastructure.ControlPlane.Platform;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using Npgsql;
 
@@ -50,8 +53,16 @@ public sealed partial class ClusterAdministrator(ISecretStore secrets)
                 await EnsureLoginAsync(connection, credential, groupRole, cancellationToken).ConfigureAwait(false);
             }
 
-            var exists = await Sql.ScalarAsync<bool>(connection, null, "select exists (select 1 from pg_database where datname = $1)", cancellationToken, database).ConfigureAwait(false);
-            if (!exists)
+            // A database of this name is taken over only if it is the customer's own, from an earlier run of this step (S1.03
+            // review finding 12); anything else on the server with that name stops provisioning.
+            var owner = await Sql.ScalarAsync<string>(connection, null, "select pg_get_userbyid(datdba) from pg_database where datname = $1", cancellationToken, database).ConfigureAwait(false);
+            var expectedOwner = TenantLogins.LoginName(tenantCode, TenantLogins.Owner);
+            if (owner is not null && owner != expectedOwner)
+            {
+                throw new InvalidOperationException($"Database {database} already exists on cluster {cluster.Name} and is owned by {owner}, not {expectedOwner}; provisioning does not take it over.");
+            }
+
+            if (owner is null)
             {
                 // CREATE DATABASE cannot take parameters; both names were validated by TenantCodes.Validate.
                 await Sql.ExecuteAsync(connection, null,
@@ -119,6 +130,28 @@ public sealed partial class ClusterAdministrator(ISecretStore secrets)
         }
     }
 
+    /// <summary>
+    /// The SCRAM-SHA-256 verifier PostgreSQL stores for <paramref name="password"/> (RFC 5802, RFC 7677; the format of
+    /// pg_authid.rolpassword): <c>SCRAM-SHA-256$iterations:salt$StoredKey:ServerKey</c>. Generated passwords are ASCII, so
+    /// SASLprep leaves them unchanged.
+    /// </summary>
+    internal static string ScramVerifier(string password, byte[] salt, int iterations = 4096)
+    {
+        ArgumentNullException.ThrowIfNull(password);
+        ArgumentNullException.ThrowIfNull(salt);
+        if (!password.All(char.IsAscii))
+        {
+            throw new ArgumentException("Only ASCII database passwords are supported.", nameof(password));
+        }
+
+        var salted = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(password), salt, iterations, HashAlgorithmName.SHA256, 32);
+        var storedKey = SHA256.HashData(HMACSHA256.HashData(salted, "Client Key"u8));
+        var serverKey = HMACSHA256.HashData(salted, "Server Key"u8);
+        CryptographicOperations.ZeroMemory(salted);
+        return string.Create(CultureInfo.InvariantCulture,
+            $"SCRAM-SHA-256${iterations}:{Convert.ToBase64String(salt)}${Convert.ToBase64String(storedKey)}:{Convert.ToBase64String(serverKey)}");
+    }
+
     [GeneratedRegex(@"\A[a-z_][a-z0-9_]{0,62}\z", RegexOptions.CultureInvariant)]
     private static partial Regex RoleNamePattern();
 
@@ -137,11 +170,13 @@ public sealed partial class ClusterAdministrator(ISecretStore secrets)
 
     private static async Task EnsureLoginAsync(NpgsqlConnection connection, DatabaseCredential credential, string? groupRole, CancellationToken cancellationToken)
     {
-        // format() quotes the name (%I) and the password (%L) on the server; nothing is concatenated in C#.
+        // format() quotes the name (%I) and the verifier (%L) on the server; nothing is concatenated in C#. The server is
+        // given a SCRAM-SHA-256 verifier, never the password, so the password cannot appear in a server log (S1.03 review
+        // finding 7); PostgreSQL stores a verifier as given.
         var exists = await Sql.ScalarAsync<bool>(connection, null, "select exists (select 1 from pg_roles where rolname = $1)", cancellationToken, credential.Username).ConfigureAwait(false);
         var statement = await Sql.ScalarAsync<string>(connection, null,
             exists ? "select format('alter role %I with login inherit password %L', $1, $2)" : "select format('create role %I with login inherit password %L', $1, $2)",
-            cancellationToken, credential.Username, credential.Password).ConfigureAwait(false);
+            cancellationToken, credential.Username, ScramVerifier(credential.Password, RandomNumberGenerator.GetBytes(16))).ConfigureAwait(false);
         await Sql.ExecuteAsync(connection, null, statement!, cancellationToken).ConfigureAwait(false);
         if (groupRole is not null)
         {

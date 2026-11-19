@@ -34,6 +34,7 @@ public static class OperatorCommands
         Usage: Erp.Host.Migrator <command> [options]
           migrate [--tenant <code>]                      control-plane set-up, then pending migrations for every customer
           cluster add --name <n> --region <r> --host <h> --port <p> --max-databases <n> --admin-user <u>
+                                                         [--change-address yes] (only to re-point a cluster that holds databases)
                                                          (password from ERP_CLUSTER_ADMIN_PASSWORD)
           signing-key add --key-id <id> --public-key <file.pem> [--purpose entitlement]
           entitlement sign --payload <file.json> --key-id <id> --private-key <file.pem> --out <file.json>
@@ -196,7 +197,8 @@ public static class OperatorCommands
     {
         var actor = await c.ActorAsync(cancellationToken).ConfigureAwait(false);
         var credential = new DatabaseCredential(c.Option("admin-user"), Required(Env("ERP_CLUSTER_ADMIN_PASSWORD"), "ERP_CLUSTER_ADMIN_PASSWORD"));
-        await c.Admin.AddClusterAsync(actor, c.Option("name"), c.Option("region"), c.Option("host"), Int(c.Option("port")), Int(c.Option("max-databases")), credential, cancellationToken).ConfigureAwait(false);
+        await c.Admin.AddClusterAsync(actor, c.Option("name"), c.Option("region"), c.Option("host"), Int(c.Option("port")), Int(c.Option("max-databases")), credential, cancellationToken,
+            allowAddressChange: c.OptionalOption("change-address") == "yes").ConfigureAwait(false);
         await c.Output.WriteLineAsync($"cluster {c.Option("name")}: registered").ConfigureAwait(false);
         return 0;
     }

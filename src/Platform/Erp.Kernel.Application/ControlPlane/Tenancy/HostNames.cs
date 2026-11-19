@@ -37,7 +37,8 @@ public static class HostNames
             return null;
         }
 
-        foreach (var label in value.Split('.'))
+        var labels = value.Split('.');
+        foreach (var label in labels)
         {
             if (label.Length is 0 or > 63 || label.StartsWith('-') || label.EndsWith('-') || !label.All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-'))
             {
@@ -45,6 +46,7 @@ public static class HostNames
             }
         }
 
-        return value;
+        // An all-digit last label is an IPv4 address (or not a DNS name): customers are reached by name only (S1.03 review finding 12).
+        return labels[^1].All(char.IsAsciiDigit) ? null : value;
     }
 }

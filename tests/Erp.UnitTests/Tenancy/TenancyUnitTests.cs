@@ -46,6 +46,9 @@ public sealed class TenancyUnitTests
     [InlineData("-acme.example.com", null)]
     [InlineData("acme.example.com:abc", null)]
     [InlineData("acme.example.com/../b", null)]
+    [InlineData("127.0.0.1", null)] // S1.03 review finding 12: customers are reached by name only
+    [InlineData("10.0.0.5:8080", null)]
+    [InlineData("2024.erp.example.com", "2024.erp.example.com")]
     public void FR_KRN_TEN_04_host_names_are_normalized_or_refused(string host, string? expected) =>
         Assert.Equal(expected, HostNames.Normalize(host));
 

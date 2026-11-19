@@ -7,12 +7,14 @@ using Npgsql;
 namespace Erp.Kernel.Infrastructure.ControlPlane.Tenancy;
 
 /// <summary>
-/// Host name → customer, read from the control plane (cp.tenant_domains, FR-KRN-TEN-04) with a short cache. Unknown
-/// hosts are cached as well, so repeated probes do not reach the control-plane database. The cache is timed by machine time
+/// Host name → customer, read from the control plane (cp.tenant_domains, FR-KRN-TEN-04) with a short cache. The set of
+/// registered host names is held in memory and reloaded every <c>HostCacheSeconds</c>; a host not in it is answered
+/// "unknown" without a query and without a cache entry, so made-up host names cost neither control-plane queries nor memory
+/// (S1.03 review finding 3). Only registered hosts are cached, so the cache is bounded by cp.tenant_domains. Timing is machine time
 /// (<see cref="TimeProvider"/>), not business time: a business clock set back must never keep a stale entry (slice S1.09b,
 /// where the entry carries the entitlements the licence state is worked out from).
 /// </summary>
-public sealed class TenantDirectory(ControlPlaneOptions options, TimeProvider? time = null) : ITenantDirectory
+public sealed class TenantDirectory(ControlPlaneOptions options, TimeProvider? time = null) : ITenantDirectory, IDisposable
 {
     internal const string SelectTenant = """
         select t.id, t.code, t.status, d.id, d.database_name, d.status, c.host, c.port, d.app_secret_ref,
@@ -26,6 +28,17 @@ public sealed class TenantDirectory(ControlPlaneOptions options, TimeProvider? t
         """;
 
     private readonly ConcurrentDictionary<string, (ResolvedTenant? Tenant, DateTimeOffset Expires)> _cache = new(StringComparer.Ordinal);
+    private readonly SemaphoreSlim _hostsGate = new(1, 1);
+    private volatile HostSet? _hosts;
+    private long _queries;
+
+    private sealed record HostSet(HashSet<string> Hosts, DateTimeOffset Expires);
+
+    /// <summary>Control-plane queries made so far (tests: unknown hosts make none beyond the host-set reload).</summary>
+    internal long Queries => Interlocked.Read(ref _queries);
+
+    /// <summary>Cached entries (tests: bounded by the registered host names).</summary>
+    internal int CachedEntries => _cache.Count;
 
     public async ValueTask<ResolvedTenant?> FindByHostAsync(string normalizedHost, CancellationToken cancellationToken)
     {
@@ -36,11 +49,57 @@ public sealed class TenantDirectory(ControlPlaneOptions options, TimeProvider? t
             return hit.Tenant;
         }
 
+        var hosts = await HostsAsync(now, cancellationToken).ConfigureAwait(false);
+        if (!hosts.Contains(normalizedHost))
+        {
+            _cache.TryRemove(normalizedHost, out _); // a host that was removed from the registry
+            return null;
+        }
+
         await using var connection = new NpgsqlConnection(options.ConnectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        Interlocked.Increment(ref _queries);
         var tenant = await ReadAsync(connection, SelectTenant + " join cp.tenant_domains h on h.tenant_id = t.id where h.host = $1", normalizedHost, cancellationToken).ConfigureAwait(false);
         _cache[normalizedHost] = (tenant, now.AddSeconds(options.HostCacheSeconds));
         return tenant;
+    }
+
+    /// <summary>The registered host names, reloaded by one caller at a time once they are older than HostCacheSeconds.</summary>
+    private async ValueTask<HashSet<string>> HostsAsync(DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        if (_hosts is { } current && current.Expires > now)
+        {
+            return current.Hosts;
+        }
+
+        await _hostsGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_hosts is { } fresh && fresh.Expires > now)
+            {
+                return fresh.Hosts;
+            }
+
+            var hosts = new HashSet<string>(StringComparer.Ordinal);
+            await using (var connection = new NpgsqlConnection(options.ConnectionString))
+            {
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                Interlocked.Increment(ref _queries);
+                await using var command = new NpgsqlCommand("select host from cp.tenant_domains", connection);
+                await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    hosts.Add(reader.GetString(0));
+                }
+            }
+
+            _hosts = new HostSet(hosts, now.AddSeconds(options.HostCacheSeconds));
+            return hosts;
+        }
+        finally
+        {
+            _hostsGate.Release();
+        }
     }
 
     /// <summary>The customer with this code (control-plane operations: migrator, provisioning, backups).</summary>
@@ -71,7 +130,13 @@ public sealed class TenantDirectory(ControlPlaneOptions options, TimeProvider? t
     }
 
     /// <summary>Forgets cached lookups (after a lifecycle change made by this process).</summary>
-    public void Invalidate() => _cache.Clear();
+    public void Dispose() => _hostsGate.Dispose();
+
+    public void Invalidate()
+    {
+        _cache.Clear();
+        _hosts = null;
+    }
 
     internal static async Task<ResolvedTenant?> ReadAsync(NpgsqlConnection connection, string sql, string key, CancellationToken cancellationToken)
     {
