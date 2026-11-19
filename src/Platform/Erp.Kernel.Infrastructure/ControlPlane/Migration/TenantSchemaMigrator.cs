@@ -55,7 +55,14 @@ internal static class RecordedSchemaMigrator
             throw new ArgumentOutOfRangeException(nameof(historyTable), historyTable, "Unknown migration history table.");
         }
 
-        await ExecuteAsync(connection, null, "select pg_advisory_lock($1)", cancellationToken, lockKey).ConfigureAwait(false);
+        // A second migrator waits for the first without a time limit (Npgsql's default command timeout would stop it after
+        // 30 seconds; S1.11f2 re-review); it can still be cancelled.
+        await using (var wait = new NpgsqlCommand("select pg_advisory_lock($1)", connection) { CommandTimeout = 0 })
+        {
+            wait.Parameters.Add(new NpgsqlParameter { Value = lockKey });
+            await wait.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         try
         {
             var history = await ReadHistoryAsync(connection, historyTable, cancellationToken).ConfigureAwait(false);

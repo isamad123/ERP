@@ -55,7 +55,8 @@ run failed). Ctrl+C stops the wait without changing anything. Different customer
 one control-plane session for the whole run, so the migrator's `ERP_CONTROL_PLANE` connection must reach PostgreSQL
 directly or through session pooling, never through transaction pooling (PgBouncer `pool_mode = transaction`). If that
 session is ended during a run (server restart, a killed session), the run stops before its next step with "lost its
-lock"; run the same command again to resume.
+lock"; a step that was already running when the session ended still finishes first, so wait until that run has
+stopped, then run the same command again to resume.
 
 When provisioning finishes, the command prints the first administrator's **activation link** (valid 72 hours by default,
 setting `iam.activation.token_hours`; works once). It is a secret: hand it to the customer privately. E-mail delivery comes
