@@ -95,18 +95,14 @@ public sealed class ReviewS110aProbeTests(TenancyFixture fx) : IAsyncLifetime
         await using (var c = await _w.H.OwnerAsync(null, Ct))
         {
             // A request of a module whose licence has since ended (written as the engine would have written it).
-            await using var insert = new Npgsql.NpgsqlCommand("""
+            await Erp.IntegrationTests.Access.AccessHarness.ExecAsync(c, """
                 insert into wf.workflow_instances (id, company_id, version_id, document_type, document_id, requester_user_id, started_at, context, status, created_at, created_by, updated_at, updated_by)
-                values ($1, $2, $3, $4, $5, $6, now(), '{"values": {"secret": "x"}}', 'running', now(), $6, now(), $6);
+                values ($1, $2, $3, $4, $5, $6, now(), '{"values": {"secret": "x"}}', 'running', now(), $6, now(), $6)
+                """, Ct, instance, await _w.H.DefaultCompanyAsync(Ct), version, Unlicensed, Guid.CreateVersion7(), requester);
+            await Erp.IntegrationTests.Access.AccessHarness.ExecAsync(c, """
                 insert into wf.workflow_tasks (id, instance_id, step_key, assignee_user_id, status, created_at, created_by, updated_at, updated_by)
-                values ($7, $1, 'admin', $8, 'pending', now(), $6, now(), $6)
-                """, c);
-            foreach (var v in new object[] { instance, await _w.H.DefaultCompanyAsync(Ct), version, Unlicensed, Guid.CreateVersion7(), requester, task, approver })
-            {
-                insert.Parameters.Add(new Npgsql.NpgsqlParameter { Value = v });
-            }
-
-            await insert.ExecuteNonQueryAsync(Ct);
+                values ($1, $2, 'admin', $3, 'pending', now(), $4, now(), $4)
+                """, Ct, task, instance, approver, requester);
         }
 
         Assert.DoesNotContain(task, await _w.InboxAsync(approver, Ct)); // the engine hides it (ruling Q11) ...
