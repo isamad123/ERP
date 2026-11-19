@@ -85,9 +85,13 @@ public sealed record SettingValidation(
     int? MaxLength,
     string? ItemType,
     int? MinItems,
-    int? MaxItems)
+    int? MaxItems,
+    string? Format = null)
 {
-    public static readonly IReadOnlyList<string> Keys = ["min", "max", "choices", "pattern", "max_length", "item_type", "min_items", "max_items"];
+    public static readonly IReadOnlyList<string> Keys = ["min", "max", "choices", "pattern", "max_length", "item_type", "min_items", "max_items", "format"];
+
+    /// <summary>The only named text format today: an IANA time-zone name known to the host (R-019).</summary>
+    public const string TimeZoneFormat = "time_zone";
 
     public static SettingValidation None { get; } = new(null, null, null, null, null, null, null, null);
 
@@ -105,7 +109,7 @@ public sealed record SettingValidation(
         IReadOnlyList<string>? Texts(string name) => rules.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Array
             ? v.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String).Select(e => e.GetString()!).ToList()
             : null;
-        return new SettingValidation(Number("min"), Number("max"), Texts("choices"), Text("pattern"), Whole("max_length"), Text("item_type"), Whole("min_items"), Whole("max_items"));
+        return new SettingValidation(Number("min"), Number("max"), Texts("choices"), Text("pattern"), Whole("max_length"), Text("item_type"), Whole("min_items"), Whole("max_items"), Text("format"));
     }
 
     /// <summary>Null when <paramref name="value"/> is a valid value of the type under these rules, else what is wrong.</summary>
@@ -136,6 +140,11 @@ public sealed record SettingValidation(
         if (Choices is not null && !Choices.Contains(text, StringComparer.Ordinal))
         {
             return "not_a_choice";
+        }
+
+        if (Format == TimeZoneFormat && !TimeZoneInfo.TryFindSystemTimeZoneById(text, out _))
+        {
+            return "time_zone";
         }
 
         return Pattern is not null && !Regex.IsMatch(text, "^(?:" + Pattern + ")$", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100)) ? "pattern" : null;
@@ -201,6 +210,11 @@ public sealed record SettingValidation(
         if ((Pattern is not null || MaxLength is not null) && dataType is not (SettingTypes.Text or SettingTypes.List))
         {
             yield return "pattern and max_length apply to text and list settings only";
+        }
+
+        if (Format is not null && (Format != TimeZoneFormat || dataType is not (SettingTypes.Text or SettingTypes.List)))
+        {
+            yield return "format is time_zone, on text and list settings only";
         }
 
         if ((ItemType is not null || MinItems is not null || MaxItems is not null) && dataType != SettingTypes.List)
@@ -275,6 +289,11 @@ public sealed record SettingValidation(
         if (MaxItems is { } most)
         {
             Add("max_items", most.ToString(CultureInfo.InvariantCulture));
+        }
+
+        if (Format is not null)
+        {
+            Add("format", JsonSerializer.Serialize(Format));
         }
 
         return "{" + string.Join(",", parts) + "}";

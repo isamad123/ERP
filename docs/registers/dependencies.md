@@ -23,6 +23,7 @@ Only permissive licences (MIT, Apache-2.0, BSD, ISC, PostgreSQL, Zlib). Anything
 | Noto Sans, Noto Nastaliq Urdu (font files) | 2017-2022 releases | SIL OFL 1.1 | Embedded in Erp.Kernel.Infrastructure for PDF output (S1.11c2, ruling Q18, CR-045: OFL allowed for fonts only); licence text beside the files | S1.11c2 |
 | Chromium (server tool, not a package) | any current stable | BSD-3-Clause with bundled open licences | Installed on API and worker servers like pg_dump; not built into the product (S1.11c2, ruling Q17; `docs/runbooks/pdf-rendering.md`) | S1.11c2 |
 | TypeScript (npm `typescript`) | 6.0.2 | Apache-2.0 | CI only: type-checks web/generated (`npx --yes typescript@6.0.2 tsc`); not shipped | S1.02 |
+| gitleaks | 8.28.0 | MIT | CI only: secret scan (`.github/workflows/ci.yml`, config `.gitleaks.toml`); downloaded as a release binary and verified by sha256; not shipped | S1.11f1 |
 
 Transitive packages (S1.01, all test-only; full list printed by `build/licence-gate.py`): xunit.v3.* and xunit.analyzers
 (Apache-2.0); Microsoft.Testing.Platform, .MSBuild, .Extensions.Telemetry, .Extensions.TrxReport.Abstractions, Microsoft.ApplicationInsights,

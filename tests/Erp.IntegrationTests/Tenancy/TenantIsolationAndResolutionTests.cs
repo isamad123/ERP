@@ -240,6 +240,7 @@ public sealed class TenantIsolationAndResolutionTests(TenancyFixture fx)
     }
 
     [Fact]
+    [Trait("Invariant", "3")]
     public async Task Spec03_3_6_app_rw_cannot_update_or_delete_append_only_rows_or_change_the_schema()
     {
         var ct = TestContext.Current.CancellationToken;
