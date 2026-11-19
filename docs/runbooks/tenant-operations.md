@@ -120,7 +120,11 @@ the database by its owner is not seen by the application: it shows in the Postgr
 chain check and the anchor copies above.
 
 ## Migrate all customers (S1.03 build item 5)
-`M migrate` (or `M migrate --tenant acme`). Customers are migrated one at a time. A customer whose migration fails is put in
+`M migrate` (or `M migrate --tenant acme`). First it checks that this release can still read every stored current and
+scheduled entitlement (S1.09b review, CR-057): if one fails the new key catalogue, it stops before changing any customer
+and names each customer, version and reason (exit code 2). Do not deploy the API hosts of that release; fix the catalogue
+or issue new entitlements first, because a host that cannot read an entitlement serves that customer as Locked.
+Customers are migrated one at a time. A customer whose migration fails is put in
 `maintenance` (its API answers 503 `errors.tenant.unavailable`) and the others continue; exit code 3 means at least one
 failed. Fix and run again: customers in maintenance are retried. Every applied file is recorded with its checksum in the
 customer's `meta.schema_history`; a file changed after it was applied is refused.
