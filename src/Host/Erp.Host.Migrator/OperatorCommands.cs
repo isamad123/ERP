@@ -171,10 +171,11 @@ public static class OperatorCommands
 
     private static async Task<int> MigrateAsync(Context c, CancellationToken cancellationToken)
     {
+        SchemaMigrationResult? controlPlane = null;
         var admin = await c.Admin.BootstrapAsync(Context.Migrations, Required(Env("ERP_PLATFORM_ADMIN_EMAIL"), "ERP_PLATFORM_ADMIN_EMAIL"),
-            Required(Env("ERP_PLATFORM_ADMIN_NAME"), "ERP_PLATFORM_ADMIN_NAME"), cancellationToken).ConfigureAwait(false);
+            Required(Env("ERP_PLATFORM_ADMIN_NAME"), "ERP_PLATFORM_ADMIN_NAME"), cancellationToken, r => controlPlane = r).ConfigureAwait(false);
         await TokenSigningKeys.EnsureAsync(c.Secrets, NewTokenKeyId(c.Clock), cancellationToken).ConfigureAwait(false);
-        await c.Output.WriteLineAsync("control plane: up to date (token signing key present)").ConfigureAwait(false);
+        await c.Output.WriteLineAsync($"control plane: up to date, {controlPlane?.Applied} applied, {controlPlane?.AlreadyApplied} already applied (token signing key present)").ConfigureAwait(false);
         var actor = Env("ERP_PLATFORM_ACTOR") is { } email ? await c.Admin.ActorAsync(email, cancellationToken).ConfigureAwait(false) : admin;
         var outcomes = await new FleetMigrator(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations).MigrateAsync(actor, c.OptionalOption("tenant"), cancellationToken).ConfigureAwait(false);
         foreach (var o in outcomes)
@@ -507,6 +508,9 @@ public static class OperatorCommands
     {
         public async ValueTask StepCompletedAsync(string stepName, CancellationToken cancellationToken) =>
             await output.WriteLineAsync($"  step {stepName}: done").ConfigureAwait(false);
+
+        public async ValueTask WaitingForOtherRunAsync(string code, CancellationToken cancellationToken) =>
+            await output.WriteLineAsync($"  another provisioning run of {code} is in progress; waiting for it to end (Ctrl+C stops waiting)").ConfigureAwait(false);
     }
 
     private static Dictionary<string, string> Options(string[] args)
