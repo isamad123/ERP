@@ -117,6 +117,7 @@ internal static class ServiceRequestEndpoints
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.EnsureCanCreateAsync(row, cancellationToken).ConfigureAwait(false);
             row.RequestNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.service_request_no", row.CompanyId, row.BranchId, null), cancellationToken).ConfigureAwait(false);
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created("/api/hrm/service-requests/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ServiceRequestAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));

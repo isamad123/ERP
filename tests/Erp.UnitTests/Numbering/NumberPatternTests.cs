@@ -74,8 +74,46 @@ public sealed class NumberPatternTests
             Assert.Throws<NumberPatternException>(() => NumberPattern.Validate("{branch}-{seq:3}", "never", new PatternContext(true, false))).ErrorKey);
         Assert.Equal("errors.numbering.pattern_too_long",
             Assert.Throws<NumberPatternException>(() => NumberPattern.Validate("{company}-{seq:5}", "never", new PatternContext(true, false, CompanyCodeLength: 35))).ErrorKey);
-        Assert.True(NumberPattern.Validate("{company}-{branch}-{yyyy}-{seq:5}", "yearly", Company).UsesBranch);
+        Assert.True(NumberPattern.Validate("{company}-{branch}-{yyyy}-{seq:5}", "yearly", Company with { BranchScheme = true }).UsesBranch);
     }
+
+    // ------------------------------------------------------------------ S1.08 review finding 1 (CR-058): no two series print the same number
+
+    [Fact]
+    public void FR_XM_06_FR_KRN_NUM_01_only_a_branch_scheme_may_print_the_branch_code()
+    {
+        Assert.Equal("errors.numbering.pattern_branch_company_scheme",
+            Assert.Throws<NumberPatternException>(() => NumberPattern.Validate("SR-{branch}-{seq:5}", "never", Company)).ErrorKey);
+        Assert.True(NumberPattern.Validate("SR-{branch}-{seq:5}", "never", Company with { BranchScheme = true }).UsesBranch);
+    }
+
+    [Theory]
+    [InlineData("SR{branch}{seq:3}")]
+    [InlineData("SR-{branch}X{seq:3}")]
+    [InlineData("SR-{branch}{yyyy}-{seq:3}")]
+    [InlineData("{company}{branch}-{seq:3}")]
+    [InlineData("SR-{company}{seq:3}")]
+    public void FR_XM_06_FR_KRN_NUM_01_a_code_token_needs_a_separator_after_it(string pattern) =>
+        Assert.Equal("errors.numbering.pattern_code_separator",
+            Assert.Throws<NumberPatternException>(() => NumberPattern.Validate(pattern, "never", Company with { BranchScheme = true })).ErrorKey);
+
+    [Theory]
+    [InlineData("SR-{branch}-{yyyy}-{seq:3}")]
+    [InlineData("SR/{company}X-{branch}/{yyyy}{seq:3}")]
+    [InlineData("{yyyy}-{company}-{branch}")]
+    public void FR_XM_06_FR_KRN_NUM_01_code_tokens_followed_by_a_separator_or_at_the_end_are_accepted(string pattern) =>
+        Assert.NotNull(NumberPattern.Validate(pattern.Contains("{seq", StringComparison.Ordinal) ? pattern : pattern + "/{seq:2}", "yearly", Company with { BranchScheme = true }));
+
+    [Theory]
+    [InlineData("EMP-{seq:5}", "EMP-0{seq:4}", true)]
+    [InlineData("EMP-{seq:5}", "EMP-{seq:3}", true)]
+    [InlineData("A{seq:2}", "A1{seq:1}", true)]
+    [InlineData("{seq:3}-X", "{seq:2}1-X", true)]
+    [InlineData("LV-{yyyy}-{seq:6}", "LV-{yyyy}-0{seq:5}", true)]
+    [InlineData("EMP-{seq:5}", "E-{seq:5}", false)]
+    [InlineData("LV-{yyyy}-{seq:6}", "LV-{yyyy}{mm}-{seq:6}", false)]
+    public void FR_XM_06_patterns_that_differ_only_in_padding_have_the_same_shape(string first, string second, bool same) =>
+        Assert.Equal(same, NumberPattern.Parse(first).Shape == NumberPattern.Parse(second).Shape);
 
     [Fact]
     public void FR_KRN_NUM_01_a_number_over_40_characters_is_refused_when_rendered()

@@ -12,9 +12,10 @@ namespace Erp.Kernel.Infrastructure.Numbering;
 
 /// <summary>
 /// Records voided numbers (FR-KRN-NUM-05, FR-XM-06; slice S1.08 Q10). A cancelled document keeps its number; the module
-/// calls this in the cancel's transaction. The void belongs to the scheme whose pattern produced the number (the active
-/// one first, then the newest); a number no scheme produced (a manual one) is recorded against the active scheme. Rows
-/// are append-only (trigger) and one per number (unique key), so the same number cannot be voided twice.
+/// calls this in the cancel's transaction. The void belongs to the series of the scheme whose pattern produced the number
+/// (the active one first, then the newest) and is recorded against the scheme that owns that series; a number no scheme
+/// produced (a manual one) is recorded against the active scheme's series. Rows are append-only (trigger) and one per
+/// number and series (unique key), so the same number cannot be voided twice.
 /// </summary>
 public sealed class NumberVoids(ITenantConnectionProvider tenant, IClock clock, ICurrentActor actor, DocumentTypeRegistry registry) : INumberVoids
 {
@@ -69,11 +70,15 @@ public sealed class NumberVoids(ITenantConnectionProvider tenant, IClock clock, 
             }
 
             owner ??= schemes.FirstOrDefault(s => s.Status == "active") ?? throw new NumberingException("errors.numbering.no_active_scheme");
+
+            // Recorded against the scheme that owns the series (cfg.numbering_series_root), so the unique key (scheme,
+            // number) refuses a second void of a number also when the series continued under a newer scheme (S1.08 review finding 3).
+            var seriesOwner = await Sql.ScalarAsync<Guid>(connection, tx, "select cfg.numbering_series_root($1)", cancellationToken, owner.Id).ConfigureAwait(false);
             var id = Guid.CreateVersion7(now);
             await using var command = Sql.Command(connection, tx, """
                 insert into cfg.numbering_voids (id, scheme_id, number, reason, document_id, created_at, created_by)
                 values ($1, $2, $3, $4, $5::uuid, $6, $7)
-                """, [id, owner.Id, number, reason, request.DocumentId, now, actor.UserId]);
+                """, [id, seriesOwner, number, reason, request.DocumentId, now, actor.UserId]);
             command.Parameters[4].NpgsqlDbType = NpgsqlDbType.Uuid;
             if (tx is not null)
             {
