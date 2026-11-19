@@ -14,7 +14,8 @@ namespace Erp.IntegrationTests.Tenancy.Isolation;
 /// </summary>
 public sealed class IsolationFixture : IAsyncLifetime
 {
-    public TenancyFixture Tenancy { get; } = new();
+    /// <summary>Production host-cache default (30 s, <c>ApiHost</c>): the suite probes the cached look-up path (S1.04 review finding 4).</summary>
+    public TenancyFixture Tenancy { get; } = new() { HostCacheSeconds = 30 };
 
     public string CodeA => Tenancy.CodeA;
 

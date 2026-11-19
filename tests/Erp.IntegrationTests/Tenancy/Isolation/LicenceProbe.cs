@@ -94,6 +94,7 @@ public sealed class LicenceProbe(IsolationFixture fx, WebApplication app)
             select $1, t.id, 'api_calls', $2, $3, now(), now(), $4, now(), $4 from cp.tenants t where t.code = $5
             on conflict (tenant_id, meter_key, period) do update set value = excluded.value
             """, ct, Guid.CreateVersion7(), period, UsageMarker, BaselineSeed.SystemUserId, fx.CodeA);
+        TenancyFixture.ForgetCachedHosts(app); // the host look-up carries the entitlements; the claim was changed with SQL
     }
 
     private async Task<Reply> SendAsync(string host, string? token, string path, bool hints, CancellationToken ct)

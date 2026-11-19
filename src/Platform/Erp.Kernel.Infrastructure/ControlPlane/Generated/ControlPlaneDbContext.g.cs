@@ -23,6 +23,7 @@ public sealed partial class ControlPlaneDbContext(DbContextOptions<ControlPlaneD
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.ControlPlane.Generated.PackCatalogConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.ControlPlane.Generated.PlatformAuditConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.ControlPlane.Generated.PlatformUserConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.ControlPlane.Generated.SchemaHistoryConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.ControlPlane.Generated.SigningKeyConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.ControlPlane.Generated.TenantDatabaseConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.ControlPlane.Generated.TenantDomainConfiguration());
@@ -45,6 +46,7 @@ public static class ControlPlaneGeneratedServices
         services.AddScoped<global::Erp.Kernel.Application.ControlPlane.Generated.IPackCatalogRepository, global::Erp.Kernel.Infrastructure.ControlPlane.Generated.PackCatalogRepository>();
         services.AddScoped<global::Erp.Kernel.Application.ControlPlane.Generated.IPlatformAuditRepository, global::Erp.Kernel.Infrastructure.ControlPlane.Generated.PlatformAuditRepository>();
         services.AddScoped<global::Erp.Kernel.Application.ControlPlane.Generated.IPlatformUserRepository, global::Erp.Kernel.Infrastructure.ControlPlane.Generated.PlatformUserRepository>();
+        services.AddScoped<global::Erp.Kernel.Application.ControlPlane.Generated.ISchemaHistoryRepository, global::Erp.Kernel.Infrastructure.ControlPlane.Generated.SchemaHistoryRepository>();
         services.AddScoped<global::Erp.Kernel.Application.ControlPlane.Generated.ISigningKeyRepository, global::Erp.Kernel.Infrastructure.ControlPlane.Generated.SigningKeyRepository>();
         services.AddScoped<global::Erp.Kernel.Application.ControlPlane.Generated.ITenantDatabaseRepository, global::Erp.Kernel.Infrastructure.ControlPlane.Generated.TenantDatabaseRepository>();
         services.AddScoped<global::Erp.Kernel.Application.ControlPlane.Generated.ITenantDomainRepository, global::Erp.Kernel.Infrastructure.ControlPlane.Generated.TenantDomainRepository>();
