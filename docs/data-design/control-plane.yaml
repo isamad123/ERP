@@ -195,3 +195,18 @@
   # S1.07 (CR-027): added after the release's first control-plane migration; created by the slice's design migration.
   added_in: S1.07
   reqs: [KRN-AUD-03]
+
+- table: cp.schema_history
+  purpose: Control-plane migration files applied to this database, with their checksums (same shape as meta.schema_history, CR-006)
+  traits: [app]
+  columns:
+    - [module_id, code, req]
+    - [version, text, req]
+    - [script_name, text, req]
+    - [checksum, text, req]
+    - [duration_ms, int, req]
+  unique: [[module_id, script_name]]
+  # S1.11f2 (CR-006, CR-054): the control-plane migrator records each file it applies and refuses a recorded file that
+  # changed. An existing control plane re-runs its idempotent files once and records them all.
+  added_in: S1.11f-r2
+  reqs: [KRN-TEN-02]
