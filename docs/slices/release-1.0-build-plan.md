@@ -1,4 +1,4 @@
-# Release 1.0 build plan (proposed)
+# Release 1.0 build plan
 
 Status: approved 15 November 2026 (D-50). Slice files (`S1.n-*.md`) are written one batch ahead.
 
@@ -18,7 +18,7 @@ Each slice is one fresh session. **Model** is what to select with `/model` befor
 | S1.08 | Numbering (gap-free and gap-allowed) | B | Opus |
 | S1.09 | Settings, feature flags, entitlements and licence states (built as S1.09a settings and flags, then S1.09b entitlements; ruling Q0) | B | Opus |
 | S1.10 | Workflow engine: linear and conditional approvals, delegation, escalation, inbox (built as S1.10a engine and decisions, then S1.10b delegation, escalation, inbox and administration; ruling Q0) | B | Opus |
-| S1.11 | Jobs (chunked, resumable, run-once), notifications (in-app, email), documents and templates (PDF) (built as S1.11a jobs and events, then S1.11b notifications and identity e-mails, then S1.11c files and templates; ruling Q0) | C | Opus |
+| S1.11 | Jobs (chunked, resumable, run-once), notifications (in-app, email), documents and templates (PDF) (built as S1.11a jobs and events, then S1.11b notifications and identity e-mails, then S1.11c files and templates; ruling Q0) | C | Opus (S1.11a); later parts per CR-047 (see the S1.11 slice file) |
 | S1.12 | Web shell and design system: login, navigation, first list screen, first form screen, first approval screen (the patterns Sonnet copies) | C | Opus |
 
 ## Batch 2 — Foundation screens (Sonnet)
@@ -87,5 +87,5 @@ Each slice is one fresh session. **Model** is what to select with `/model` befor
 | S1.53 | Security review checklist, backup and restore drill, release packaging | B | Opus |
 
 ## Count
-53 slices: 25 on Opus (mostly foundation, engines and payroll), 28 on Sonnet (screens, set-up, reports, routine modules).
+53 slices: 26 on Opus (mostly foundation, engines and payroll), 27 on Sonnet (screens, set-up, reports, routine modules).
 Once the code generator (S1.02) exists, many Sonnet slices are short, because the generator writes the repetitive part.

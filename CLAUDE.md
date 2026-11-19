@@ -3,7 +3,8 @@
 ## What this repository is
 A modular-monolith ERP product (.NET 10, PostgreSQL, React, React Native). It is sold as SaaS and
 on-premises, with or without source code, module by module. The first release (1.0) is **HRMIS web only**
-(HR, attendance, leave, Pakistan payroll, self-service web). The Android app and the remaining HR features are Release 1.1 (D-48).
+(HR, attendance, leave, Pakistan payroll, self-service web). The Android app and the remaining HR features are Release 1.1 (D-48), except
+performance management and learning, which are in 1.0 (D-49).
 
 The product owner is not a programmer. Explain outcomes in plain language and always give evidence
 (test output, query results, screenshots) instead of assurances.
@@ -39,8 +40,11 @@ higher one is a defect in the lower one: stop and report it.
 - **No Finance yet (D-43):** documents with financial effect raise accounting events through the kernel posting stub
   and produce journal export files. Never create ledger tables or call a Finance module in Phase 1.
 - **Cross-module rules:** FR-XM-01 to FR-XM-32 (`docs/specs/16-erp-baseline.md` section 6) override module
-  specifications. Phase 1 must honour FR-XM-26 (attendance locks at payroll calculation), FR-XM-28, FR-XM-29 and
-  FR-XM-30. If a rule seems wrong, stop and escalate; never work around it.
+  specifications. Release 1.0 must honour the eight rules tagged 1.0 in `requirements.csv` (CR-052 Q10): FR-XM-05 and
+  FR-XM-06 (finalized documents immutable, correction by reversal, numbers never reused), FR-XM-26 (attendance locks
+  at payroll calculation), FR-XM-27 (one summarized payroll journal per legal entity, export form until Finance),
+  FR-XM-28, FR-XM-29, FR-XM-30 and FR-XM-32 (approvals escalate, never auto-approve, nobody approves their own request).
+  If a rule seems wrong, stop and escalate; never work around it.
 - **Statutory content:** no tax rates, slabs, thresholds or statutory rules in code. They are country-pack data.
 - **Time:** use the injected clock. Never call `DateTime.Now` or `UtcNow` in business code.
 - **Configurability:** behaviour that differs by customer, edition or size profile is settings, entitlements or pack
@@ -67,7 +71,8 @@ higher one is a defect in the lower one: stop and report it.
 - **Model check first:** read the `Model:` line of the slice file. If you are not running that model, stop at once
   and tell the product owner which model to select. Do no other work.
 - Default to **Sonnet 5.5**. Use **Opus 5.5, high effort** only for slices marked class A or B (design, tenancy,
-  permissions, payroll and tax, attendance locking, final settlement, audit, licensing).
+  permissions, payroll and tax, attendance locking, final settlement, audit, licensing), or where the approved build
+  plan names Opus (CR-052 Q6).
 - Generated code first: extend the code generator rather than hand-writing repeated code.
 - One slice per fresh session. Load only CLAUDE.md, the architecture reference, the slice file and touched files.
 - Quiet builds and tests; read only failures. Two failed attempts: stop and escalate.
@@ -83,6 +88,8 @@ higher one is a defect in the lower one: stop and report it.
   and the slice report is done. Do not leave finished work on side branches.
 - Standing instruction (product owner, 2026-11-18): commit, push, open the pull request and merge it yourself when CI is green and the slice report is done. Do not ask for permission each time.
 - Never merge with failing CI. If `main` moved on, update the branch from `main` and rerun CI before merging.
+- Never merge a class B slice (or a part named in `docs/token-strategy.md` section 7) before its fresh Opus review is
+  in `docs/reviews/` and its high and medium findings are fixed or ruled on (CR-052 Q8).
 
 ## Slice report (always end with this)
 1. What was built, in plain language. 2. Requirement IDs covered. 3. Evidence: commands run and results.
@@ -141,7 +148,10 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
 - E-mail (S1.11b2): consumer `ntf.notifications` also queues `ntf.outbound_messages`; jobs `kernel.email_send` (every minute) and `kernel.email_bounces` (IMAP, 15 minutes) in the worker;
   worker settings `Mail:*` and `Alerts:OperatorEmail`, operator commands `mail sender|server|clear|show` (`docs/runbooks/mail-setup.md`). Tests send to `TestMailServer` / `TestImapServer`
   (`tests/Erp.IntegrationTests/Notifications`) through `TestMailServer.Use`; identity links and codes are read with `IdentityHarness.EmailedAsync` (decrypts the queued secret).
-- Not yet automated: secret scan; invariant tests other than invariant 6.
+- Invariants (spec 03 section 10): 3, 5, 6, 8, 9 and 10 have tests (5 is `R06_effective_dated_table_refuses_overlapping_periods`,
+  10 is the tenant-isolation suite); only 6 and 10 can be run by trait today (tagging 3, 5, 8, 9 is a CR-052 follow-up). 1, 2, 4, 7 and
+  12 to 14 concern ledgers, stock and posting and arrive with those features (D-43). Until they are tested, a slice report lists them as not applicable.
+- Not yet automated: secret scan (CR-052 Q9 follow-up; until it is in CI, each slice report states it as not run).
 
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.
