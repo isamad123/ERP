@@ -101,16 +101,18 @@ public sealed partial class WorkflowEngine
             return false;
         }
 
-        // The next level: the assignee's line manager, else the step's escalation user or role (ruling Q9).
+        // The next level: the assignee's line manager, else the step's escalation user or role (ruling Q9). Only people who
+        // may decide the request count (as for a reassignment), so the task never waits with someone who cannot act on it
+        // (S1.10b review finding 4).
         Guid? roleId = null;
         var via = "manager";
         var people = task.AssigneeUserId is { } assignee
-            ? (await _people.ManagersOfAsync(work, [assignee], ct).ConfigureAwait(false)).Where(p => !request.Instance.Excludes(p) && p != assignee).ToList()
+            ? await DecidersAsync(work, request, (await _people.ManagersOfAsync(work, [assignee], ct).ConfigureAwait(false)).Where(p => !request.Instance.Excludes(p) && p != assignee), ct).ConfigureAwait(false)
             : [];
         if (people.Count == 0 && step.Escalation is { } spec)
         {
             var target = await _people.ResolveAsync(work, spec, request.Instance, request.Values, ct).ConfigureAwait(false);
-            people = [.. target.People.Where(p => !request.Instance.Excludes(p) && p != task.AssigneeUserId)];
+            people = await DecidersAsync(work, request, target.People.Where(p => !request.Instance.Excludes(p) && p != task.AssigneeUserId), ct).ConfigureAwait(false);
             roleId = target.RoleId;
             via = "escalation";
         }
@@ -161,6 +163,21 @@ public sealed partial class WorkflowEngine
             link = Link(request),
         }, ct).ConfigureAwait(false);
         return true;
+    }
+
+    /// <summary>The people who hold the right to decide the request (wf.workflow_tasks.update and the type's own permission).</summary>
+    private static async Task<List<Guid>> DecidersAsync(WorkflowWork work, Request request, IEnumerable<Guid> people, CancellationToken ct)
+    {
+        var result = new List<Guid>();
+        foreach (var person in people)
+        {
+            if (await CanDecideAsync(work, request, person, ct).ConfigureAwait(false))
+            {
+                result.Add(person);
+            }
+        }
+
+        return result;
     }
 
     /// <summary>Nobody above, or the last level reached: the task stays open and overdue, handled once (never auto-approved).</summary>

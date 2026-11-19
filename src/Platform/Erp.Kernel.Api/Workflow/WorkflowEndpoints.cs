@@ -34,7 +34,7 @@ public static class WorkflowEndpoints
     {
         "errors.workflow.task_not_pending", "errors.workflow.request_not_running", "errors.workflow.request_not_open", "errors.workflow.version_changed",
         "errors.workflow.version_not_draft", "errors.workflow.info_pending", "errors.workflow.no_question", "errors.workflow.definition_not_active",
-        "errors.workflow.task_claimed", "errors.delegation.not_in_force", "errors.delegation.overlap", Busy,
+        "errors.workflow.task_claimed", "errors.delegation.not_in_force", "errors.delegation.overlap", Busy, "errors.workflow.reassign_target_has_task",
     };
 
     /// <summary>Refusals about the caller's rights: 403.</summary>

@@ -416,6 +416,13 @@ public sealed partial class WorkflowEngine(
             throw new WorkflowException("errors.workflow.assignee_cannot_decide");
         }
 
+        // Several people may hold tasks of one step (ruling R1): never a second open task of the step for the same person
+        // (S1.10b review finding 5; escalation already avoids it).
+        if ((await work.TasksOfAsync(req.Instance.Id, ct).ConfigureAwait(false)).Any(t => t.Status == "pending" && t.StepKey == task.StepKey && t.Id != task.Id && t.AssigneeUserId == to))
+        {
+            throw new WorkflowException("errors.workflow.reassign_target_has_task");
+        }
+
         await ActOnTaskAsync(work, req, task, "reassigned", reason, actingFor, ct, claim: false).ConfigureAwait(false);
         await work.HistoryAsync(req.Instance.Id, task.Id, "reassigned", work.Actor, actingFor, new { step = task.StepKey, to_user_id = to, reason }, ct).ConfigureAwait(false);
         var opened = await InsertTaskAsync(work, req, task.StepKey, to, null, [to], "reassigned", ct, task.EscalationLevel, task).ConfigureAwait(false);
@@ -431,14 +438,17 @@ public sealed partial class WorkflowEngine(
                 throw new WorkflowException("errors.workflow.info_pending");
             }
 
-            await work.ExecuteAsync("""
+            var asked = await work.ScalarAsync<DateTime>("""
                 update wf.workflow_tasks set assignee_user_id = coalesce(assignee_user_id, $2), claimed_at = case when assignee_user_id is null then $3 else claimed_at end,
                     info_requested_at = $3, info_requested_by = $2, updated_at = $3, updated_by = $2, row_version = row_version + 1
                 where id = $1
+                returning info_requested_at
                 """, ct, task.Id, work.Actor, work.Now).ConfigureAwait(false);
+            var askedAt = new DateTimeOffset(DateTime.SpecifyKind(asked, DateTimeKind.Utc));
             work.Change("wf.workflow_tasks", task.Id, req.Instance.CompanyId, "update", ("info_requested_at", null, work.Now), ("info_requested_by", null, work.Actor),
                 ("assignee_user_id", task.AssigneeUserId, task.AssigneeUserId ?? work.Actor));
-            await work.HistoryAsync(req.Instance.Id, task.Id, "info_requested", work.Actor, actingFor, new { step = task.StepKey, question }, ct).ConfigureAwait(false);
+            // asked_at is the task's stored info_requested_at, so the question is found again for a task that inherited it (P6; review finding 8).
+            await work.HistoryAsync(req.Instance.Id, task.Id, "info_requested", work.Actor, actingFor, new { step = task.StepKey, question, asked_at = askedAt }, ct).ConfigureAwait(false);
             await work.RaiseAsync(WorkflowEvents.InfoRequested, "wf.workflow_instance", req.Instance.Id, Payload(req, task.Id, [req.Instance.RequesterUserId], null), ct).ConfigureAwait(false);
             return new DecisionResult(req.Instance.Id, "running", await OpenTasksAsync(work, req.Instance.Id, ct).ConfigureAwait(false));
         }, cancellationToken);
@@ -494,7 +504,7 @@ public sealed partial class WorkflowEngine(
         OnTaskAsync(taskId, async (work, req, task, ct) =>
         {
             if (task.AssigneeRoleId is null || req.Instance.Excludes(work.Actor)
-                || !(await ApproverResolution.RoleHoldersAsync(work, task.AssigneeRoleId.Value, req.Instance.CompanyId, ApproverResolution.Today(work), ct).ConfigureAwait(false)).Contains(work.Actor))
+                || !await MayTakeFromQueueAsync(work, req, task, task.AssigneeRoleId.Value, work.Actor, ct).ConfigureAwait(false))
             {
                 throw new KeyNotFoundException(TaskNotFound);
             }
@@ -631,7 +641,7 @@ public sealed partial class WorkflowEngine(
             {
                 // A holder of the queue who lost the race to another holder is told it was taken (409), not "not found".
                 if (task.AssigneeRoleId is not null && task.ClaimedAt is not null && !request.Instance.Excludes(work.Actor)
-                    && (await ApproverResolution.RoleHoldersAsync(work, task.AssigneeRoleId.Value, request.Instance.CompanyId, ApproverResolution.Today(work), c).ConfigureAwait(false)).Contains(work.Actor))
+                    && await MayTakeFromQueueAsync(work, request, task, task.AssigneeRoleId.Value, work.Actor, c).ConfigureAwait(false))
                 {
                     throw new WorkflowException(task.Status == "pending" ? "errors.workflow.task_claimed" : "errors.workflow.task_not_pending");
                 }
@@ -684,7 +694,28 @@ public sealed partial class WorkflowEngine(
     }
 
     /// <summary>An action of the requester on their own request (answer a question, withdraw).</summary>
-    private async Task<DecisionResult> RequesterActionAsync(Guid instanceId, Func<WorkflowWork, Request, CancellationToken, Task<DecisionResult>> action, CancellationToken ct)
+    private Task<DecisionResult> RequesterActionAsync(Guid instanceId, Func<WorkflowWork, Request, CancellationToken, Task<DecisionResult>> action, CancellationToken ct) =>
+        OnceMoreOnDeadlockAsync(() => RequesterActionOnceAsync(instanceId, action, ct));
+
+    /// <summary>
+    /// Runs an engine-owned unit of work, and once more when PostgreSQL ended it as a deadlock victim (SQLSTATE 40P01). Withdraw
+    /// and cancel lock the request and then (in the module's outcome handler) the document, while a module's resubmit locks
+    /// its document and then the request; the engine's side retries so the person does not see a server error (S1.10b review
+    /// finding 6). The first attempt rolled back completely, so the second starts from the committed state.
+    /// </summary>
+    internal static async Task<T> OnceMoreOnDeadlockAsync<T>(Func<Task<T>> action)
+    {
+        try
+        {
+            return await action().ConfigureAwait(false);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.DeadlockDetected)
+        {
+            return await action().ConfigureAwait(false);
+        }
+    }
+
+    private async Task<DecisionResult> RequesterActionOnceAsync(Guid instanceId, Func<WorkflowWork, Request, CancellationToken, Task<DecisionResult>> action, CancellationToken ct)
     {
         await using var c = await IdentityDb.OpenAsync(tenant.DataSource, ct).ConfigureAwait(false);
         await using var tx = await c.BeginTransactionAsync(ct).ConfigureAwait(false);
@@ -726,19 +757,38 @@ public sealed partial class WorkflowEngine(
             return await DelegatedAsync(work, assignee, userId, request.Instance.DocumentType, request.Instance.CompanyId, ct).ConfigureAwait(false) ? new Capacity(assignee) : null;
         }
 
-        return task.AssigneeRoleId is { } role
-            && (await ApproverResolution.RoleHoldersAsync(work, role, request.Instance.CompanyId, ApproverResolution.Today(work), ct).ConfigureAwait(false)).Contains(userId)
+        return task.AssigneeRoleId is { } role && await MayTakeFromQueueAsync(work, request, task, role, userId, ct).ConfigureAwait(false)
             ? new Capacity(null)
             : null;
     }
 
     /// <summary>
+    /// Whether the user may take a role-queue task: an eligible holder of its role, and not a person whose own task on this
+    /// step of the request was escalated (S1.10b review finding 3: "the original assignee can no longer decide it").
+    /// </summary>
+    private static async Task<bool> MayTakeFromQueueAsync(WorkflowWork work, Request request, TaskRow task, Guid role, Guid userId, CancellationToken ct) =>
+        (await ApproverResolution.RoleHoldersAsync(work, role, request.Instance.CompanyId, ApproverResolution.Today(work), ct).ConfigureAwait(false)).Contains(userId)
+        && await work.ScalarAsync<bool>("select " + NotEscalatedFrom("$1", "$2", "$3"), ct, userId, task.InstanceId, task.StepKey).ConfigureAwait(false);
+
+    /// <summary>
+    /// The SQL test "the user's own task on this step of this request was not escalated" (S1.10b review finding 3), for
+    /// role-queue tasks. A person an administrator reassigns the task to by name is not affected.
+    /// </summary>
+    internal static string NotEscalatedFrom(string user, string instance, string step) => $"""
+        not exists (select 1 from wf.workflow_tasks et
+                    where et.instance_id = {instance} and et.step_key = {step} and et.status = 'escalated' and et.assignee_user_id = {user})
+        """;
+
+    /// <summary>
     /// The SQL test "an active delegation from <c>{from}</c> to <c>{to}</c> covers the request now" (ruling Q8): status active,
     /// now within its time, the request's document type and company inside its lists (an empty list: all). Only the
-    /// delegator's own tasks are matched, so a delegation is never passed on.
+    /// delegator's own tasks are matched, so a delegation is never passed on. It applies only while the delegator is an
+    /// active user: a disabled or archived user's rights are not used by anyone (S1.10b review finding 1); their open tasks
+    /// are reassigned by an administrator (FR-ADM-USR-03) or move up when late.
     /// </summary>
     internal static string DelegationCovers(string from, string to, string now, string documentType, string company) => $"""
         exists (select 1 from iam.delegations dl
+                join iam.users du on du.id = dl.from_user_id and du.status = 'active' and not du.is_deleted
                 where dl.from_user_id = {from} and dl.to_user_id = {to} and dl.status = 'active'
                   and dl.valid_from <= {now} and dl.valid_to > {now}
                   and (jsonb_array_length(coalesce(dl.scope -> 'document_types', '[]'::jsonb)) = 0 or (dl.scope -> 'document_types') ? {documentType})
