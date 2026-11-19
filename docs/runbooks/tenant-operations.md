@@ -25,7 +25,9 @@ refuses to start when no key exists. `Auth__SigningPublicKeys__0` may add a furt
 
 ## One-time set-up
 1. Create an empty control-plane database, then `M migrate` (applies the control-plane scripts, closes the database to
-   other logins, creates the platform admin and the module catalogue).
+   other logins, creates the platform admin and the module catalogue). Since S1.11f2 each applied script is recorded with
+   its checksum in `cp.schema_history`; a later run applies only new scripts and stops if a recorded one was changed. A
+   control plane set up before S1.11f2 records all its scripts on its next `M migrate` (no action needed).
 2. Register each PostgreSQL server: `ERP_CLUSTER_ADMIN_PASSWORD=... M cluster add --name pk-main --region pk-1 --host db1 --port 5432 --max-databases 200 --admin-user postgres`.
    The administrator login must be able to create roles and databases (a superuser in Release 1.0).
 3. Register the public key that signs entitlements: `M signing-key add --key-id ent-2026-1 --public-key ent-public.pem`.
@@ -47,6 +49,9 @@ Steps: register → database (own logins, own database) → migrate (kernel + li
 → seed (country, currency, default company and branch, permission registry and baseline roles from the access manifests (S1.06), system user, invited first admin) → smoke_test →
 activate. If a step fails the customer stays `provisioning` and the error is in `cp.platform_audit`; fix the cause and run the
 same command again: it resumes and never duplicates anything. On an active customer it changes nothing.
+Two runs for the same customer never work at once (S1.11f2, R-031): the second prints "another provisioning run of
+<code> is in progress; waiting" and waits. When the first ends, the second stops (customer active) or resumes (first
+run failed). Ctrl+C stops the wait without changing anything. Different customers never wait for each other.
 
 When provisioning finishes, the command prints the first administrator's **activation link** (valid 72 hours by default,
 setting `iam.activation.token_hours`; works once). It is a secret: hand it to the customer privately. E-mail delivery comes
