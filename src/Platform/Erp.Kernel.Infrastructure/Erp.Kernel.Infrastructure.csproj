@@ -8,6 +8,7 @@
     <PackageReference Include="NSec.Cryptography" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
     <PackageReference Include="MailKit" />
+    <PackageReference Include="AWSSDK.S3" />
   </ItemGroup>
   <ItemGroup>
     <!-- Slice S1.06: the unit tests check the engine's merge and scope rules directly. -->

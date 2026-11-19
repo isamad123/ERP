@@ -150,7 +150,7 @@ public sealed record AccessSetupResult(int PermissionsAdded, int PermissionsReti
 /// </summary>
 public static class AccessSetup
 {
-    public static IReadOnlyList<PermissionDefinition> HandWritten { get; } = [.. IdentityPermissions.All, .. AccessControlPermissions.All, .. Contracts.Audit.AuditPermissions.All, .. Contracts.Numbering.NumberingPermissions.All, .. Contracts.Settings.SettingsPermissions.All, .. Contracts.Entitlements.LicencePermissions.All, .. Contracts.Workflow.WorkflowPermissions.All, .. Contracts.Jobs.JobPermissions.All, .. Contracts.Notifications.NotificationPermissions.All];
+    public static IReadOnlyList<PermissionDefinition> HandWritten { get; } = [.. IdentityPermissions.All, .. AccessControlPermissions.All, .. Contracts.Audit.AuditPermissions.All, .. Contracts.Numbering.NumberingPermissions.All, .. Contracts.Settings.SettingsPermissions.All, .. Contracts.Entitlements.LicencePermissions.All, .. Contracts.Workflow.WorkflowPermissions.All, .. Contracts.Jobs.JobPermissions.All, .. Contracts.Notifications.NotificationPermissions.All, .. Contracts.Documents.DocumentPermissions.All];
 
     public static async Task<AccessSetupResult> EnsureAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, IReadOnlyList<string> manifestFolders, DateTimeOffset now, CancellationToken cancellationToken)
     {

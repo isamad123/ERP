@@ -28,35 +28,17 @@ public sealed class FileResponse
     public global::System.DateOnly? ExpiresOn { get; init; }
     public global::System.DateOnly? RetentionUntil { get; init; }
     public bool IsSensitive { get; init; }
+    public bool LegalHold { get; init; }
+    public string? LegalHoldReason { get; init; }
+    public global::System.DateTimeOffset? ScannedAt { get; init; }
+    public global::System.DateTimeOffset? ArchivedAt { get; init; }
+    public int KeyVersion { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for doc.files. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class FileWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public string? OwnerType { get; init; }
-    public global::System.Guid? OwnerId { get; init; }
-    public string? FileName { get; init; }
-    public string? ContentType { get; init; }
-    public long? SizeBytes { get; init; }
-    public string? Checksum { get; init; }
-    public string? StorageKey { get; init; }
-    public int? VersionNo { get; init; }
-    public global::System.Guid? PreviousFileId { get; init; }
-    public string? DocumentType { get; init; }
-    public global::System.DateOnly? ExpiresOn { get; init; }
-    public global::System.DateOnly? RetentionUntil { get; init; }
-    public bool? IsSensitive { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for doc.files.</summary>
@@ -73,7 +55,7 @@ public sealed class FileListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of doc.files: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of doc.files: read. Answers pass through field security (S1.06).</summary>
 internal static class FileEndpoints
 {
     private const string Resource = "doc.files";
@@ -83,8 +65,6 @@ internal static class FileEndpoints
         var group = app.MapGroup("/api/doc/files").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("doc.files.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "doc.files.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("doc.files.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "doc.files.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("doc.files.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "doc.files.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("doc.files.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "doc.files.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] FileListQuery query, global::Erp.Kernel.Application.Generated.Doc.IFileRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -101,53 +81,6 @@ internal static class FileEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Doc.FileAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(FileWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.IFileRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "doc.files.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Doc.FileAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Doc.File();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/doc/files/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Doc.FileAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, FileWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.IFileRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "doc.files.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Doc.FileAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Doc.FileAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static FileResponse ToResponse(global::Erp.Kernel.Domain.Generated.Doc.File row) => new()
@@ -167,6 +100,11 @@ internal static class FileEndpoints
         ExpiresOn = row.ExpiresOn,
         RetentionUntil = row.RetentionUntil,
         IsSensitive = row.IsSensitive,
+        LegalHold = row.LegalHold,
+        LegalHoldReason = row.LegalHoldReason,
+        ScannedAt = row.ScannedAt,
+        ArchivedAt = row.ArchivedAt,
+        KeyVersion = row.KeyVersion,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -174,188 +112,4 @@ internal static class FileEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(FileWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.OwnerType is null && (!update || access.CanEdit("owner_type")))
-        {
-            errors.Add("ownerType");
-        }
-        if (request.OwnerId is null && (!update || access.CanEdit("owner_id")))
-        {
-            errors.Add("ownerId");
-        }
-        if (request.FileName is null && (!update || access.CanEdit("file_name")))
-        {
-            errors.Add("fileName");
-        }
-        if (request.ContentType is null && (!update || access.CanEdit("content_type")))
-        {
-            errors.Add("contentType");
-        }
-        if (request.SizeBytes is null && (!update || access.CanEdit("size_bytes")))
-        {
-            errors.Add("sizeBytes");
-        }
-        if (request.Checksum is null && (!update || access.CanEdit("checksum")))
-        {
-            errors.Add("checksum");
-        }
-        if (request.StorageKey is null && (!update || access.CanEdit("storage_key")))
-        {
-            errors.Add("storageKey");
-        }
-        if (request.VersionNo is null && (!update || access.CanEdit("version_no")))
-        {
-            errors.Add("versionNo");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(FileWriteRequest request, global::Erp.Kernel.Domain.Generated.Doc.File row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("owner_type"))
-        {
-            row.OwnerType = request.OwnerType!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OwnerType, row.OwnerType, update))
-        {
-            denied.Add("ownerType");
-        }
-        if (access.CanEdit("owner_id"))
-        {
-            row.OwnerId = request.OwnerId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OwnerId, row.OwnerId, update))
-        {
-            denied.Add("ownerId");
-        }
-        if (access.CanEdit("file_name"))
-        {
-            row.FileName = request.FileName!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileName, row.FileName, update))
-        {
-            denied.Add("fileName");
-        }
-        if (access.CanEdit("content_type"))
-        {
-            row.ContentType = request.ContentType!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ContentType, row.ContentType, update))
-        {
-            denied.Add("contentType");
-        }
-        if (access.CanEdit("size_bytes"))
-        {
-            row.SizeBytes = request.SizeBytes!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SizeBytes, row.SizeBytes, update))
-        {
-            denied.Add("sizeBytes");
-        }
-        if (access.CanEdit("checksum"))
-        {
-            row.Checksum = request.Checksum!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Checksum, row.Checksum, update))
-        {
-            denied.Add("checksum");
-        }
-        if (access.CanEdit("storage_key"))
-        {
-            row.StorageKey = request.StorageKey!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StorageKey, row.StorageKey, update))
-        {
-            denied.Add("storageKey");
-        }
-        if (access.CanEdit("version_no"))
-        {
-            row.VersionNo = request.VersionNo!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.VersionNo, row.VersionNo, update))
-        {
-            denied.Add("versionNo");
-        }
-        if (access.CanEdit("previous_file_id"))
-        {
-            row.PreviousFileId = request.PreviousFileId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PreviousFileId, row.PreviousFileId, update))
-        {
-            denied.Add("previousFileId");
-        }
-        if (access.CanEdit("document_type"))
-        {
-            row.DocumentType = request.DocumentType;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DocumentType, row.DocumentType, update))
-        {
-            denied.Add("documentType");
-        }
-        if (access.CanEdit("expires_on"))
-        {
-            row.ExpiresOn = request.ExpiresOn;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ExpiresOn, row.ExpiresOn, update))
-        {
-            denied.Add("expiresOn");
-        }
-        if (access.CanEdit("retention_until"))
-        {
-            row.RetentionUntil = request.RetentionUntil;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RetentionUntil, row.RetentionUntil, update))
-        {
-            denied.Add("retentionUntil");
-        }
-        if (access.CanEdit("is_sensitive"))
-        {
-            if (request.IsSensitive is not null)
-            {
-                row.IsSensitive = request.IsSensitive!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsSensitive, row.IsSensitive, update))
-        {
-            denied.Add("isSensitive");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
 }

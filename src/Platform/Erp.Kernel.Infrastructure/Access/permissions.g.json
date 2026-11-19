@@ -165,18 +165,6 @@
       "sensitive": false
     },
     {
-      "code": "doc.files.create",
-      "module": "doc",
-      "descriptionKey": "permissions.doc.files.create",
-      "sensitive": false
-    },
-    {
-      "code": "doc.files.update",
-      "module": "doc",
-      "descriptionKey": "permissions.doc.files.update",
-      "sensitive": false
-    },
-    {
       "code": "doc.generated_documents.read",
       "module": "doc",
       "descriptionKey": "permissions.doc.generated_documents.read",

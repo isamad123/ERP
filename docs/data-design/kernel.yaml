@@ -923,7 +923,15 @@
     - [expires_on, date, opt]
     - [retention_until, date, opt]
     - [is_sensitive, bool, req]
+    - [legal_hold, bool, req, "default false; true stops archive and delete (CR-045)"]
+    - [legal_hold_reason, text, opt]
+    - [scanned_at, ts, opt]
+    - [archived_at, ts, opt]
+    - [key_version, int, req, "default 1; file key version the content was encrypted with"]
   indexes: [[owner_type, owner_id], [expires_on, partial where expires_on is not null]]
+  # S1.11c1 (CR-045, CR-050): hold, scan and archive columns; files are written only by the attachment service (api read only).
+  added_in: {S1.11c-r1: [legal_hold, legal_hold_reason, scanned_at, archived_at, key_version]}
+  api_actions: [read]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
   reqs: [KRN-DOC-01, KRN-DOC-02, KRN-DOC-03, KRN-DOC-08]

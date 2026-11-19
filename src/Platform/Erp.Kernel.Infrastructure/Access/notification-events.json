@@ -1155,6 +1155,87 @@
      "body": "کسی نے آپ کے پاس ورڈ سے سائن ان کیا ہے اور آپ کے اکاؤنٹ میں تصدیقی ایپ شامل کر رہا ہے۔ اگر یہ آپ ہیں تو {minutes} منٹ کے اندر کوڈ {code} درج کریں۔ اگر یہ آپ نہیں ہیں تو کوڈ استعمال نہ کریں اور فوراً اپنا پاس ورڈ تبدیل کریں۔"
     }
    }
+  },
+  {
+   "code": "document.expiring",
+   "source": "kernel.document.expiring",
+   "group": "documents",
+   "mandatory": false,
+   "audited": true,
+   "link": "link",
+   "company": "company_id",
+   "fields": [
+    {
+     "name": "file_name",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "days",
+     "type": "number",
+     "class": "general"
+    },
+    {
+     "name": "company_id",
+     "type": "company",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "recipients"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "A document is about to expire",
+     "body": "{file_name} expires in {days} days. Upload a renewed copy before it does."
+    },
+    "ur": {
+     "title": "ایک دستاویز کی میعاد ختم ہونے والی ہے",
+     "body": "{file_name} کی میعاد {days} دن میں ختم ہو جائے گی۔ اس سے پہلے نئی کاپی اپ لوڈ کریں۔"
+    }
+   }
+  },
+  {
+   "code": "alert.document_infected",
+   "source": "kernel.alert.raised",
+   "group": "system",
+   "mandatory": true,
+   "audited": true,
+   "when": {
+    "kind": "document_infected"
+   },
+   "fields_from": "details",
+   "link_template": "/admin/documents/quarantine",
+   "fields": [
+    {
+     "name": "file_name",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "virus",
+     "type": "text",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "owner_user_id"
+    ],
+    "role_property": "audience"
+   },
+   "texts": {
+    "en": {
+     "title": "A file was blocked: virus found",
+     "body": "The file {file_name} contains {virus} and was put in quarantine. Nobody can open it."
+    },
+    "ur": {
+     "title": "ایک فائل روک دی گئی: وائرس ملا",
+     "body": "فائل {file_name} میں {virus} پایا گیا اور اسے الگ کر دیا گیا۔ اسے کوئی نہیں کھول سکتا۔"
+    }
+   }
   }
  ]
 }
