@@ -954,13 +954,16 @@
   purpose: "Letters, payslips, certificates, bank files, statutory forms"
   traits: [std, name]
   columns:
-    - [kind, "enum(letter,payslip,certificate,form,email,bank_file,report)", req]
+    - [kind, "enum(letter,payslip,certificate,form,email,bank_file,report,part)", req]
     - [entity_type, text, req]
     - [company_id, uuid, opt, fk org.companies; null means all]
     - [language, char(2), req]
     - [source, "enum(pack,tenant)", req]
     - [active_version_id, uuid, opt, fk doc.template_versions]
   unique: [[lower(code), company_id, language]]
+  # S1.11c2 (CR-045): kind gains the value part; templates change only through the template service.
+  enum_added_in: {S1.11c-r3: {kind: [part]}}
+  api_actions: [read]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
   reqs: [KRN-DOC-05, HRM-DOC-04, HRM-PAY-28]
@@ -975,6 +978,8 @@
     - [body, text, req, Scriban template]
     - [output_format, "enum(pdf,html,text,csv,fixed_width,xlsx)", req]
   unique: [[template_id, version]]
+  # S1.11c2: versions change only through the template service (draft, active, retired).
+  api_actions: [read]
   reqs: [KRN-DOC-05]
 
 - table: doc.generated_documents
@@ -991,6 +996,8 @@
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
   audit: false
   audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
+  # S1.11c2: a generated document is made only by the template service, which also stores the file.
+  api_actions: [read]
   reqs: [KRN-DOC-05, HRM-PAY-28]
 
 - table: ntf.templates
