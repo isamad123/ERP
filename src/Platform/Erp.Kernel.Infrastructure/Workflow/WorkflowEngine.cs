@@ -47,6 +47,7 @@ public sealed partial class WorkflowEngine(
 {
     public const string TaskNotFound = "errors.workflow.task_not_found";
     public const string RequestNotFound = "errors.workflow.request_not_found";
+    public const string NotRequester = "errors.workflow.not_requester";
 
     private readonly ApproverResolution _people = new(directory);
     private readonly Dictionary<string, bool> _licensed = new(StringComparer.Ordinal);
@@ -133,6 +134,13 @@ public sealed partial class WorkflowEngine(
             throw new WorkflowException("errors.workflow.not_returned");
         }
 
+        // Ruling Q7: the requester corrects and resubmits. Anyone else could write the values and then approve them
+        // (FR-XM-32; review S1.10a finding 3, CR-059).
+        if (instance.RequesterUserId != work.Actor)
+        {
+            throw new WorkflowException(NotRequester);
+        }
+
         var fields = catalog.Fields(type.Code);
         var prepared = PrepareValues(type, fields, values, instance.CompanyId, [.. instance.SubjectUserIds], fixedSubjects: true);
         var json = await work.VersionJsonAsync(instance.VersionId, cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("request without version");
@@ -194,8 +202,8 @@ public sealed partial class WorkflowEngine(
                 continue;
             }
 
-            var up = (await _people.ManagersOfAsync(work, target.People.Where(request.Instance.Excludes), ct).ConfigureAwait(false))
-                .Where(p => !request.Instance.Excludes(p)).ToList();
+            var up = (await DecidersAsync(work, request, new ApproverTarget(await _people.ManagersOfAsync(work, target.People.Where(request.Instance.Excludes), ct).ConfigureAwait(false), null), ct)
+                .ConfigureAwait(false)).People.Where(p => !request.Instance.Excludes(p)).ToList();
             if (up.Count > 0)
             {
                 return await AssignAsync(work, request, step, null, up, "moved_up", ct).ConfigureAwait(false);
@@ -203,7 +211,7 @@ public sealed partial class WorkflowEngine(
 
             if (via != "fallback" && step.Fallback is not null)
             {
-                var fallback = await _people.ResolveAsync(work, step.Fallback, request.Instance, request.Values, ct).ConfigureAwait(false);
+                var fallback = await DecidersAsync(work, request, await _people.ResolveAsync(work, step.Fallback, request.Instance, request.Values, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
                 var others = fallback.People.Where(p => !request.Instance.Excludes(p)).ToList();
                 if (others.Count > 0)
                 {
@@ -220,15 +228,35 @@ public sealed partial class WorkflowEngine(
     private static bool Applies(RouteStep step, Request request) =>
         step.Condition is null || ConditionEvaluator.Evaluate(step.Condition, request.Values, request.Fields);
 
+    /// <summary>
+    /// The people a step names who may decide the request (its approver, else its fallback). Someone without the right to
+    /// decide the request's company counts as not found, so the fallback, moving up and "cannot assign" apply instead of a
+    /// task nobody can decide (review S1.10a finding 2, CR-059).
+    /// </summary>
     private async Task<(ApproverTarget Target, string Via)> TargetAsync(WorkflowWork work, Request request, RouteStep step, CancellationToken ct)
     {
-        var target = await _people.ResolveAsync(work, step.Approver, request.Instance, request.Values, ct).ConfigureAwait(false);
+        var target = await DecidersAsync(work, request, await _people.ResolveAsync(work, step.Approver, request.Instance, request.Values, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
         if (target.IsEmpty && step.Fallback is not null)
         {
-            return (await _people.ResolveAsync(work, step.Fallback, request.Instance, request.Values, ct).ConfigureAwait(false), "fallback");
+            return (await DecidersAsync(work, request, await _people.ResolveAsync(work, step.Fallback, request.Instance, request.Values, ct).ConfigureAwait(false), ct).ConfigureAwait(false), "fallback");
         }
 
         return (target, "approver");
+    }
+
+    /// <summary>The people of a target who hold the right to decide the request (<see cref="CanDecideAsync"/>); none: nobody.</summary>
+    private static async Task<ApproverTarget> DecidersAsync(WorkflowWork work, Request request, ApproverTarget target, CancellationToken ct)
+    {
+        var people = new List<Guid>();
+        foreach (var person in target.People)
+        {
+            if (await CanDecideAsync(work, request, person, ct).ConfigureAwait(false))
+            {
+                people.Add(person);
+            }
+        }
+
+        return people.Count == 0 ? ApproverTarget.Nobody : new ApproverTarget(people, target.RoleId);
     }
 
     /// <summary>Whether a later step applies and has someone other than the excluded people to decide it.</summary>

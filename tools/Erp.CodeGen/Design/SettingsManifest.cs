@@ -218,7 +218,8 @@ public static partial class SettingsManifestLoader
             Whole("max_length"),
             YamlNode.OptionalText(map, "item_type", where),
             Whole("min_items"),
-            Whole("max_items"));
+            Whole("max_items"),
+            YamlNode.OptionalText(map, "format", where));
     }
 
     /// <summary>A YAML value as JSON of the setting's type (YAML scalars arrive as text; <c>json</c> settings give JSON text).</summary>
