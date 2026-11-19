@@ -18,6 +18,7 @@ Only permissive licences (MIT, Apache-2.0, BSD, ISC, PostgreSQL, Zlib). Anything
 | MailKit | 4.18.2 | MIT | Erp.Kernel.Infrastructure (SMTP adapter of e-mail notifications and IMAP reading of the bounce mailbox, S1.11b2, ruling Q10); brings MimeKit 4.18.2 (MIT), BouncyCastle.Cryptography 2.7.0 (MIT) and System.Security.Cryptography.Pkcs 10.0.13 (MIT) | S1.11b2 |
 | AWSSDK.S3 | 4.1.0 | Apache-2.0 | Erp.Kernel.Infrastructure (S3-compatible file store, S1.11c1, ruling Q20); brings AWSSDK.Core (Apache-2.0) | S1.11c1 |
 | TypeScript (npm `typescript`) | 6.0.2 | Apache-2.0 | CI only: type-checks web/generated (`npx --yes typescript@6.0.2 tsc`); not shipped | S1.02 |
+| gitleaks | 8.28.0 | MIT | CI only: secret scan (`.github/workflows/ci.yml`, config `.gitleaks.toml`); downloaded as a release binary and verified by sha256; not shipped | S1.11f1 |
 
 Transitive packages (S1.01, all test-only; full list printed by `build/licence-gate.py`): xunit.v3.* and xunit.analyzers
 (Apache-2.0); Microsoft.Testing.Platform, .MSBuild, .Extensions.Telemetry, .Extensions.TrxReport.Abstractions, Microsoft.ApplicationInsights,
