@@ -1,16 +1,17 @@
 # R-027 review sessions (CR-052 Q8)
 Status: APPROVED by the product owner (2026-11-19, CR-052 Q8; started 2026-11-19).
-Class: B (review)        Model: **Opus 5.5 (high effort)**, one fresh session per slice, in this order:
+Class: B (review)        Model: **Opus 5.5 (high effort)**, one fresh session per slice. All seven run in parallel
+(product owner, 2026-11-19: "run all six remaining reviews in parallel"); the order is the priority for rulings:
 
 | Order | Slice | Merged as | Handoff | Reserved numbers |
 | --- | --- | --- | --- | --- |
 | 1 | S1.03 tenancy, provisioning, migrator | 4f0ce51 (#3) | `docs/handoff/2026-11-15-S1.03.md` | CR-055, R-037 to R-039 |
-| 2 | S1.04 tenant-isolation suite | 99425ff (#4) | `docs/handoff/2026-11-15-S1.04.md` | assigned at start |
-| 3 | S1.09b entitlements and licensing | 1c7a3f6 (#24) | `docs/handoff/2026-11-17-S1.09b.md` | assigned at start |
-| 4 | S1.08 numbering | e7d4a6b (#21) | `docs/handoff/2026-11-17-S1.08.md` | assigned at start |
-| 5 | S1.10a workflow engine part 1 | ecd1df9 (#26) | `docs/handoff/2026-11-17-S1.10a.md` | assigned at start |
-| 6 | S1.10b workflow engine part 2 | 8cdb88b (#27) | `docs/handoff/2026-11-17-S1.10b.md` | assigned at start |
-| 7 | S1.09a settings and flags | fa8dd7b (#23) | `docs/handoff/2026-11-17-S1.09a.md` | assigned at start |
+| 2 | S1.04 tenant-isolation suite | 99425ff (#4) | `docs/handoff/2026-11-15-S1.04.md` | CR-056, R-040 to R-042 |
+| 3 | S1.09b entitlements and licensing | 1c7a3f6 (#24) | `docs/handoff/2026-11-17-S1.09b.md` | CR-057, R-043 to R-045 |
+| 4 | S1.08 numbering | e7d4a6b (#21) | `docs/handoff/2026-11-17-S1.08.md` | CR-058, R-046 to R-048 |
+| 5 | S1.10a workflow engine part 1 | ecd1df9 (#26) | `docs/handoff/2026-11-17-S1.10a.md` | CR-059, R-049 to R-051 |
+| 6 | S1.10b workflow engine part 2 | 8cdb88b (#27) | `docs/handoff/2026-11-17-S1.10b.md` | CR-060, R-052 to R-054 |
+| 7 | S1.09a settings and flags | fa8dd7b (#23) | `docs/handoff/2026-11-17-S1.09a.md` | CR-061, R-055 to R-057 |
 
 S1.11b2 is reviewed alongside S1.12 (CR-052 Q8 b); S1.11c1 was reviewed on 2026-11-19.
 
