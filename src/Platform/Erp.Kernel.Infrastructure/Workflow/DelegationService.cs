@@ -82,6 +82,13 @@ public sealed class DelegationService(ITenantConnectionProvider tenant, IClock c
             throw new WorkflowException("errors.delegation.to_self");
         }
 
+        // An administrator acts for others, never for themselves: naming oneself as delegate would hand the administrator
+        // another person's right to decide without anyone agreeing (S1.10b review finding 2, product owner's ruling 2(a)).
+        if (!self && to == work.Actor)
+        {
+            throw new WorkflowException("errors.delegation.to_self_admin");
+        }
+
         if (!self && !await work.ScalarAsync<bool>("select exists (select 1 from iam.users where id = $1 and not is_deleted and not is_system)", ct, from).ConfigureAwait(false))
         {
             throw new WorkflowException("errors.delegation.from_unknown");

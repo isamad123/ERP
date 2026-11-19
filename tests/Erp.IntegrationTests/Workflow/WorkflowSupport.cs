@@ -365,6 +365,9 @@ public sealed class TestOutcomes
     /// <summary>When set, the next handler call fails (the module refuses), so the decision must roll back.</summary>
     public bool FailNext { get; set; }
 
+    /// <summary>When set, the handler first takes this transaction-level advisory lock, as a module locks its document (review finding 6).</summary>
+    public long? LockKey { get; set; }
+
     public IReadOnlyList<(WorkflowOutcome Outcome, string StatusInTransaction)> For(Guid instance) => [.. Seen.Where(s => s.Outcome.InstanceId == instance)];
 }
 
@@ -375,6 +378,13 @@ internal sealed class TestHandler(string documentType, TestOutcomes outcomes) : 
     public async Task OnOutcomeAsync(WorkflowOutcome outcome, DbTransaction transaction, CancellationToken cancellationToken)
     {
         var tx = (NpgsqlTransaction)transaction;
+        if (outcomes.LockKey is { } key)
+        {
+            await using var lockCommand = new NpgsqlCommand("select pg_advisory_xact_lock($1)", tx.Connection, tx);
+            lockCommand.Parameters.Add(new NpgsqlParameter { Value = key });
+            await lockCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+
         await using var command = new NpgsqlCommand("select status from wf.workflow_instances where id = $1", tx.Connection, tx);
         command.Parameters.Add(new NpgsqlParameter { Value = outcome.InstanceId });
         var status = (string)(await command.ExecuteScalarAsync(cancellationToken))!;

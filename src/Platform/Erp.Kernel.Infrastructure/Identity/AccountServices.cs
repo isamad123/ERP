@@ -323,14 +323,12 @@ public sealed class UserAdministrationService(ITenantConnectionProvider database
                 : 0;
             await IdentityDb.RaiseAsync(c, tx, IdentityEvents.UserStatusChanged, userId, by, now, new { from = account.Status, to = status, reason, sessions_revoked = revoked }, cancellationToken).ConfigureAwait(false);
 
-            // FR-ADM-USR-03 (slice S1.10b ruling P7): a user who can no longer approve may still hold approval tasks.
+            // FR-ADM-USR-03 (slice S1.10b ruling P7): a user who can no longer approve may still hold approval tasks. The
+            // number is filled in by the endpoint from the caller's own list of that user's tasks (IWorkflowMonitor), so it
+            // never counts tasks the caller cannot see or reassign (S1.10b review finding 7).
             if (status is UserStatuses.Disabled or UserStatuses.Archived)
             {
-                var open = await IdentityDb.ScalarAsync<int>(c, tx, """
-                    select count(*)::int from wf.workflow_tasks t join wf.workflow_instances i on i.id = t.instance_id and i.status = 'running'
-                    where t.status = 'pending' and t.assignee_user_id = $1
-                    """, cancellationToken, userId).ConfigureAwait(false);
-                return new AdminResult(AdminOutcome.Done, null, open);
+                return new AdminResult(AdminOutcome.Done, null, 0);
             }
 
             return AdminResult.Done;
