@@ -39,9 +39,10 @@ public sealed class NumberAllocator(ITenantConnectionProvider tenant, IClock clo
             {
                 return await TakeAsync(connection, null, scheme, request, cancellationToken).ConfigureAwait(false);
             }
-            catch (PostgresException ex) when (ex.SqlState == NumberingDb.SchemeChangedState && attempt == 0)
+            catch (PostgresException ex) when (ex.SqlState == NumberingDb.SchemeChangedState)
             {
                 // The scheme was retired or edited between reading and taking: read it again once.
+                SchemeChangedAgain(attempt);
             }
         }
     }
@@ -71,15 +72,23 @@ public sealed class NumberAllocator(ITenantConnectionProvider tenant, IClock clo
                     {
                         return await TakeAsync(connection, null, scheme, request, cancellationToken).ConfigureAwait(false);
                     }
-                    catch (PostgresException ex) when (ex.SqlState == NumberingDb.SchemeChangedState && attempt == 0)
+                    catch (PostgresException ex) when (ex.SqlState == NumberingDb.SchemeChangedState)
                     {
+                        SchemeChangedAgain(attempt);
                         continue;
                     }
                 }
             }
 
-            // Gap-free: in the caller's transaction, its last step. A savepoint keeps the transaction usable if the scheme
-            // changed under us; a lock wait beyond 5 seconds fails the post (the caller rolls back, nothing is saved).
+            // Gap-free: in the caller's transaction, its last step. The transaction must be READ COMMITTED: at a stricter
+            // level concurrent posts fail with a serialization error instead of taking turns (S1.08 review finding 5).
+            if (!await NumberingDb.IsReadCommittedAsync(callerConnection, tx, cancellationToken).ConfigureAwait(false))
+            {
+                throw new ArgumentException("A gap-free number needs a READ COMMITTED transaction.", nameof(transaction));
+            }
+
+            // A savepoint gives the counter back on any failure (the scheme changed, the 5-second lock limit, a number that
+            // cannot be printed), so a caller that goes on and commits still leaves no gap (S1.08 review finding 5).
             await tx.SaveAsync("erp_numbering", cancellationToken).ConfigureAwait(false);
             try
             {
@@ -87,14 +96,29 @@ public sealed class NumberAllocator(ITenantConnectionProvider tenant, IClock clo
                 await tx.ReleaseAsync("erp_numbering", cancellationToken).ConfigureAwait(false);
                 return number;
             }
-            catch (PostgresException ex) when (ex.SqlState == NumberingDb.SchemeChangedState && attempt == 0)
+            catch (Exception ex)
             {
-                await tx.RollbackAsync("erp_numbering", cancellationToken).ConfigureAwait(false);
+                await tx.RollbackAsync("erp_numbering", CancellationToken.None).ConfigureAwait(false);
+                switch (ex)
+                {
+                    case PostgresException { SqlState: NumberingDb.SchemeChangedState }:
+                        SchemeChangedAgain(attempt);
+                        break;
+                    case PostgresException { SqlState: LockNotAvailable }:
+                        throw new NumberingException("errors.numbering.busy");
+                    default:
+                        throw;
+                }
             }
-            catch (PostgresException ex) when (ex.SqlState == LockNotAvailable)
-            {
-                throw new NumberingException("errors.numbering.busy");
-            }
+        }
+    }
+
+    /// <summary>The scheme changed between reading and taking: one more try, then a clear refusal (not a server error).</summary>
+    private static void SchemeChangedAgain(int attempt)
+    {
+        if (attempt > 0)
+        {
+            throw new NumberingException("errors.numbering.scheme_changed");
         }
     }
 
