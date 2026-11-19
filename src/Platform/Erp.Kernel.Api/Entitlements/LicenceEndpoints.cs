@@ -12,7 +12,8 @@ namespace Erp.Kernel.Api.Entitlements;
 /// <summary>
 /// Licence endpoints (slice S1.09b, ruling Q16): <c>GET /api/kernel/capabilities</c> for any signed-in user (the web shell's
 /// menus, S1.12), <c>GET /api/cfg/licence</c> (the licence page, S1.16) and <c>GET /api/cfg/licence/usage</c> (monthly
-/// statements). Capabilities and the licence page still answer when the licence is locked (ruling Q5). Error titles are
+/// statements). Capabilities, the licence page and its usage statements still answer when the licence is locked (ruling Q5;
+/// S1.09b review finding 6). Error titles are
 /// localization keys (<c>Entitlements/Localization/licence.*.json</c>).
 /// </summary>
 public static class LicenceEndpoints
@@ -31,7 +32,7 @@ public static class LicenceEndpoints
             .WithTags("cfg.licence").WithMetadata(new LicenceEndpointMetadata("licence", LicencePermissions.Read), new AllowedWhenLockedMetadata());
         app.MapGet("/api/cfg/licence/usage", ([FromQuery] string? from, [FromQuery] string? to, ILicenceService s, IPermissionChecker p, CancellationToken ct) =>
                 RunAsync(p, LicencePermissions.Read, async () => Results.Ok(await s.UsageAsync(from, to, ct).ConfigureAwait(false)), ct))
-            .WithTags("cfg.licence").WithMetadata(new LicenceEndpointMetadata("usage", LicencePermissions.Read));
+            .WithTags("cfg.licence").WithMetadata(new LicenceEndpointMetadata("usage", LicencePermissions.Read), new AllowedWhenLockedMetadata()); // part of the licence page (S1.09b review finding 6, CR-057)
         return app;
     }
 
