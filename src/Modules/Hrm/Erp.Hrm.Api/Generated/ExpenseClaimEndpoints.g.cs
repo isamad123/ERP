@@ -115,6 +115,7 @@ internal static class ExpenseClaimEndpoints
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.EnsureCanCreateAsync(row, cancellationToken).ConfigureAwait(false);
             row.ClaimNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.expense_claim_no", row.CompanyId, row.BranchId, null), cancellationToken).ConfigureAwait(false);
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created("/api/hrm/expense-claims/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ExpenseClaimAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));

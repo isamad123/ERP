@@ -38,9 +38,14 @@ public sealed class NumberingAdministrationService(KernelDbContext context, INum
         var row = new NumberingScheme
         {
             CompanyId = request.CompanyId,
+            BranchId = request.BranchId,
             DocumentType = type.Code,
             Status = "active",
         };
+
+        // The caller's data scope first, so nothing about another company's branches or schemes is read or answered
+        // (S1.08 review finding 6). AddAsync checks again with the final values.
+        await schemes.EnsureCanCreateAsync(row, cancellationToken).ConfigureAwait(false);
         await ApplyAsync(connection, npgsqlTx, type, row, request.BranchId, request.Pattern, request.ResetRule, request.GapFree, request.StartValue, cancellationToken).ConfigureAwait(false);
         if (await NumberingDb.ActiveAsync(connection, npgsqlTx, type.Code, row.CompanyId, row.BranchId, cancellationToken).ConfigureAwait(false) is { } active && active.BranchId == row.BranchId)
         {
@@ -148,7 +153,7 @@ public sealed class NumberingAdministrationService(KernelDbContext context, INum
                 }
 
                 var ctx = new NumberContext(start ?? NumberingSettings.Today(clock.UtcNow, settings.TimeZone), settings.FiscalYearStartMonth, settings.CompanyCode, branchCode);
-                issued.Add(new IssuedRange(period.ScopeKey, pattern.Render(row.StartValue, ctx), pattern.Render(period.LastValue, ctx),
+                issued.Add(new IssuedRange(period.ScopeKey, Print(pattern, row.StartValue, ctx), Print(pattern, period.LastValue, ctx),
                     period.GapFree ? period.LastValue - row.StartValue + 1 : null, period.GapFree));
             }
 
@@ -208,7 +213,7 @@ public sealed class NumberingAdministrationService(KernelDbContext context, INum
         NumberPattern parsed;
         try
         {
-            parsed = NumberPattern.Validate(pattern?.Trim(), resetRule, new PatternContext(!type.TenantWide, type.HasBranch, settings.CompanyCode?.Length ?? 0, branchCode?.Length ?? 0));
+            parsed = NumberPattern.Validate(pattern?.Trim(), resetRule, new PatternContext(!type.TenantWide, type.HasBranch, settings.CompanyCode?.Length ?? 0, branchCode?.Length ?? 0, BranchScheme: branchId is not null));
         }
         catch (NumberPatternException ex)
         {
@@ -232,11 +237,19 @@ public sealed class NumberingAdministrationService(KernelDbContext context, INum
             throw Invalid("errors.numbering.start_value_invalid");
         }
 
-        var earlier = (await NumberingDb.AllAsync(c, tx, type.Code, row.CompanyId, ct).ConfigureAwait(false))
-            .Where(s => s.Id != row.Id && s.BranchId == branchId && s.Pattern == parsed.Text).ToList();
+        var others = (await NumberingDb.AllAsync(c, tx, type.Code, row.CompanyId, ct).ConfigureAwait(false))
+            .Where(s => s.Id != row.Id && s.BranchId == branchId).ToList();
+        var earlier = others.Where(s => s.Pattern == parsed.Text).ToList();
         if (earlier.Exists(s => s.ResetRule != resetRule || s.GapFree != free || s.StartValue != start))
         {
             throw Invalid("errors.numbering.continuation_mismatch");
+        }
+
+        // CR-058 (S1.08 review finding 1): a new series of the same company, branch and type must differ from every
+        // earlier one in its text, not only in padding, or it would print their numbers again (EMP-0{seq:4} after EMP-{seq:5}).
+        if (others.Exists(s => s.Pattern != parsed.Text && SameShape(s.Pattern, parsed)))
+        {
+            throw Invalid("errors.numbering.pattern_too_close");
         }
 
         row.BranchId = branchId;
@@ -246,9 +259,29 @@ public sealed class NumberingAdministrationService(KernelDbContext context, INum
         row.StartValue = start;
     }
 
-    /// <summary>Locks the row (so no allocation runs meanwhile), then reads it through the caller's data scope.</summary>
+    private static bool SameShape(string earlier, NumberPattern pattern)
+    {
+        try
+        {
+            return string.Equals(NumberPattern.Parse(earlier).Shape, pattern.Shape, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (NumberPatternException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Checks the caller's data scope, then locks the row (so no allocation runs meanwhile) and reads it again through the
+    /// scope. A scheme outside the scope is never locked (S1.08 review finding 6).
+    /// </summary>
     private async Task<NumberingScheme> LockAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid id, CancellationToken ct)
     {
+        if (await schemes.GetByIdAsync(id, ct).ConfigureAwait(false) is null)
+        {
+            throw new KeyNotFoundException("errors.numbering.not_found");
+        }
+
         var locked = await NumberingDb.ByIdAsync(c, tx, id, true, ct).ConfigureAwait(false);
         var row = locked is null ? null : await schemes.GetForUpdateAsync(id, ct).ConfigureAwait(false);
         if (row is null)
@@ -279,6 +312,22 @@ public sealed class NumberingAdministrationService(KernelDbContext context, INum
             {
                 await connection.CloseAsync().ConfigureAwait(false);
             }
+        }
+    }
+
+    /// <summary>
+    /// A number of the report as the scheme prints it; the running value alone when it cannot be printed (a company-wide
+    /// scheme with <c>{branch}</c> made before CR-058, or a code that changed since; S1.08 review finding 4).
+    /// </summary>
+    private static string Print(NumberPattern pattern, long value, NumberContext context)
+    {
+        try
+        {
+            return pattern.Render(value, context);
+        }
+        catch (NumberPatternException)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
         }
     }
 
