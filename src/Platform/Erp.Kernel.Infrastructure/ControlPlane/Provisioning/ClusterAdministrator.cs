@@ -88,9 +88,10 @@ public sealed partial class ClusterAdministrator(ISecretStore secrets)
     /// <summary>
     /// Creates each role (no login) unless it exists. Roles are server-wide, so two provisionings on a new server can
     /// create the same role at the same moment; the loser's duplicate error is ignored instead of failing (R-028).
-    /// A check before <c>create role</c> cannot prevent that race. An advisory lock could only help if every session
-    /// that creates these roles took it in the same database; they do not (the frozen grants migrations run in each
-    /// customer database), so the database's own duplicate error is relied on instead.
+    /// A check before <c>create role</c> cannot prevent that race. Provisioning holds an advisory lock in the
+    /// control-plane database (<see cref="ProvisioningLock"/>, R-031), but it is per customer, so two customers still
+    /// run side by side, and it does not cover the frozen grants migrations or tools connected to other databases; the
+    /// database's own duplicate error is relied on instead.
     /// </summary>
     internal static async Task EnsureNoLoginRolesAsync(NpgsqlConnection connection, IEnumerable<string> roles, CancellationToken cancellationToken)
     {

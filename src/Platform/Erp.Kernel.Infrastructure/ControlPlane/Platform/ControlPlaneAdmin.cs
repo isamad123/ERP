@@ -1,7 +1,7 @@
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
-using Erp.BuildingBlocks.Infrastructure.Migrations;
 using Erp.Kernel.Infrastructure.ControlPlane.Migration;
+using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Npgsql;
 
@@ -32,17 +32,19 @@ public sealed class ControlPlaneAdmin(ControlPlaneOptions options, ISecretStore 
     }
 
     /// <summary>
-    /// Applies the control-plane scripts (idempotent; the control-plane design has no history table, so they are
-    /// re-applied each time), closes the database to logins that were not granted access, and seeds the first platform
-    /// admin and the module catalogue.
+    /// Applies the pending control-plane scripts and records each with its checksum in cp.schema_history (CR-006, slice
+    /// S1.11f2; a recorded script that changed stops the run), closes the database to logins that were not granted
+    /// access, and seeds the first platform admin and the module catalogue. <paramref name="migrated"/> receives the
+    /// migration counts.
     /// </summary>
-    public async Task<PlatformActor> BootstrapAsync(MigrationSet migrations, string adminEmail, string adminName, CancellationToken cancellationToken)
+    public async Task<PlatformActor> BootstrapAsync(MigrationSet migrations, string adminEmail, string adminName, CancellationToken cancellationToken, Action<SchemaMigrationResult>? migrated = null)
     {
         ArgumentNullException.ThrowIfNull(migrations);
         ArgumentException.ThrowIfNullOrWhiteSpace(adminEmail);
         ArgumentException.ThrowIfNullOrWhiteSpace(adminName);
-        await SqlScriptRunner.ApplyAsync(options.ConnectionString, migrations.ControlPlaneScripts, cancellationToken).ConfigureAwait(false);
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var result = await ControlPlaneSchemaMigrator.ApplyAsync(connection, migrations.ControlPlaneScripts, clock, BaselineSeed.SystemUserId, cancellationToken).ConfigureAwait(false);
+        migrated?.Invoke(result);
         await Sql.ExecuteAsync(connection, null,
             "do $do$ begin execute format('revoke connect on database %I from public', current_database()); end $do$", cancellationToken).ConfigureAwait(false);
         await EnsureApiRoleAsync(connection, cancellationToken).ConfigureAwait(false);

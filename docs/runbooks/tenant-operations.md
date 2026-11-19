@@ -36,7 +36,9 @@ refuses to start when no key exists. `Auth__SigningPublicKeys__0` may add a furt
 
 ## One-time set-up
 1. Create an empty control-plane database, then `M migrate` (applies the control-plane scripts, closes the database to
-   other logins, creates the platform admin and the module catalogue).
+   other logins, creates the platform admin and the module catalogue). Since S1.11f2 each applied script is recorded with
+   its checksum in `cp.schema_history`; a later run applies only new scripts and stops if a recorded one was changed. A
+   control plane set up before S1.11f2 records all its scripts on its next `M migrate` (no action needed).
 2. Register each PostgreSQL server: `ERP_CLUSTER_ADMIN_PASSWORD=... M cluster add --name pk-main --region pk-1 --host db1 --port 5432 --max-databases 200 --admin-user postgres`.
    The administrator login must be able to create roles and databases (a superuser in Release 1.0).
    Running `cluster add` again with the same name updates the credential or capacity. It refuses to change the host or port
@@ -60,10 +62,18 @@ refuses to start when no key exists. `Auth__SigningPublicKeys__0` may add a furt
 Steps: register → database (own logins, own database) → migrate (kernel + licensed modules) → entitlement (signature checked)
 → seed (country, currency, default company and branch, permission registry and baseline roles from the access manifests (S1.06), system user, invited first admin) → smoke_test →
 activate. If a step fails the customer stays `provisioning` and the error is in `cp.platform_audit`; fix the cause and run the
-same command again: it resumes and never duplicates anything. On an active customer it changes nothing. Resume with the
-same `--cluster`; another cluster is refused. A database of the customer's name that provisioning did not create (another
-owner) stops the run (S1.03 review finding 12). Database passwords are sent to the server only as SCRAM verifiers, so they
-never appear in a server log (finding 7). Host names must be DNS names; IP addresses are refused.
+same command again: it resumes and never duplicates anything. On an active customer it changes nothing.
+Two runs for the same customer never work at once (S1.11f2, R-031): the second prints "another provisioning run of
+<code> is in progress; waiting" and waits. When the first ends, the second stops (customer active) or resumes (first
+run failed). Ctrl+C stops the wait without changing anything. Different customers never wait for each other. The lock is held by
+one control-plane session for the whole run, so the migrator's `ERP_CONTROL_PLANE` connection must reach PostgreSQL
+directly or through session pooling, never through transaction pooling (PgBouncer `pool_mode = transaction`). If that
+session is ended during a run (server restart, a killed session), the run stops before its next step with "lost its
+lock"; a step that was already running when the session ended still finishes first, so wait until that run has
+stopped, then run the same command again to resume.
+Resume with the same `--cluster`; another cluster is refused. A database of the customer's name that provisioning did
+not create (another owner) stops the run (S1.03 review finding 12). Database passwords are sent to the server only as
+SCRAM verifiers, so they never appear in a server log (finding 7). Host names must be DNS names; IP addresses are refused.
 
 When provisioning finishes, the command prints the first administrator's **activation link** (valid 72 hours by default,
 setting `iam.activation.token_hours`; works once). It is a secret: hand it to the customer privately. E-mail delivery comes
