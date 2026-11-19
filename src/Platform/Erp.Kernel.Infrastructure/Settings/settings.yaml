@@ -215,6 +215,7 @@ settings:
   - key: org.time_zone
     type: text
     default: "Asia/Karachi"
+    validation: {format: time_zone}
     layers: [tenant, company]
     area: organization
     name: {en: "Time zone", ur: "ٹائم زون"}

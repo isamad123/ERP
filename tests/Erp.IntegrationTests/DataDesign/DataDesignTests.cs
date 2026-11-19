@@ -117,6 +117,7 @@ public sealed partial class DataDesignTests(MigratedDatabases db)
 
     [Theory]
     [MemberData(nameof(AppendOnlyTables))]
+    [Trait("Invariant", "3")]
     public async Task README_rule7_append_only_table_refuses_update_and_delete(string key)
     {
         var table = Find(key);
@@ -141,6 +142,7 @@ public sealed partial class DataDesignTests(MigratedDatabases db)
 
     [Theory]
     [MemberData(nameof(EffectiveDatedTables))]
+    [Trait("Invariant", "5")]
     public async Task R06_effective_dated_table_refuses_overlapping_periods(string key)
     {
         var table = Find(key);
@@ -208,6 +210,7 @@ public sealed partial class DataDesignTests(MigratedDatabases db)
     }
 
     [Fact]
+    [Trait("Invariant", "9")]
     public async Task Invariant9_every_table_has_a_primary_key_and_every_foreign_key_an_index()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -234,6 +237,7 @@ public sealed partial class DataDesignTests(MigratedDatabases db)
     }
 
     [Fact]
+    [Trait("Invariant", "8")]
     public async Task Invariant8_no_foreign_key_from_the_kernel_into_a_business_module()
     {
         var ct = TestContext.Current.CancellationToken;

@@ -669,7 +669,9 @@
       "module": "org",
       "type": "text",
       "default": "Asia/Karachi",
-      "validation": {},
+      "validation": {
+        "format": "time_zone"
+      },
       "layers": [
         "tenant",
         "company"
