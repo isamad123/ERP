@@ -12,10 +12,6 @@
     {
       "action": "read",
       "permission": "doc.generated_documents.read"
-    },
-    {
-      "action": "create",
-      "permission": "doc.generated_documents.create"
     }
   ],
   "companyScoped": true,
