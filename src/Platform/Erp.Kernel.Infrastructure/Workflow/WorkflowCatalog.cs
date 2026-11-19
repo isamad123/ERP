@@ -145,6 +145,25 @@ public sealed partial class WorkflowCatalog
 
     public WorkflowDocumentType? Find(string code) => _types.GetValueOrDefault(code);
 
+    /// <summary>Document types without exactly one outcome handler (review S1.10a finding 4); empty when every type has one.</summary>
+    public static List<string> HandlerProblems(IEnumerable<string> documentTypes, IEnumerable<string> handlerTypes)
+    {
+        ArgumentNullException.ThrowIfNull(documentTypes);
+        ArgumentNullException.ThrowIfNull(handlerTypes);
+        var counts = handlerTypes.GroupBy(t => t, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+        var problems = new List<string>();
+        foreach (var code in documentTypes.Order(StringComparer.Ordinal))
+        {
+            var n = counts.GetValueOrDefault(code);
+            if (n != 1)
+            {
+                problems.Add(n == 0 ? $"{code}: no outcome handler is registered" : $"{code}: {n} outcome handlers are registered (one is allowed)");
+            }
+        }
+
+        return problems;
+    }
+
     /// <summary>The route fields of a registered document type.</summary>
     public IReadOnlyDictionary<string, RouteField> Fields(string code) => _fields[code];
 

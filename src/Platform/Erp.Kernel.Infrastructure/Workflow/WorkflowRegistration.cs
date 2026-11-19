@@ -28,6 +28,23 @@ public static class WorkflowRegistration
         services.AddScoped<IWorkflowAdministration>(sp => sp.GetRequiredService<WorkflowAdministrationService>());
         return services;
     }
+
+    /// <summary>
+    /// Checks the workflow set-up when a host starts (review S1.10a finding 4): the document-type manifests are read and
+    /// checked now (a wrong manifest stops the host), and every registered document type has exactly one outcome handler,
+    /// so a module that forgot its handler cannot run requests that fail only at their final decision.
+    /// </summary>
+    public static void VerifyWorkflow(this IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        using var scope = services.CreateScope();
+        var catalog = scope.ServiceProvider.GetRequiredService<WorkflowCatalog>();
+        var handlers = scope.ServiceProvider.GetServices<IWorkflowOutcomeHandler>().Select(h => h.DocumentType);
+        if (WorkflowCatalog.HandlerProblems(catalog.All.Select(t => t.Code), handlers) is { Count: > 0 } problems)
+        {
+            throw new InvalidDataException("Workflow set-up problems: " + string.Join("; ", problems));
+        }
+    }
 }
 
 /// <summary>The kernel without HR: the directory answers nothing (S1.20 and S1.22 provide the HR implementation).</summary>

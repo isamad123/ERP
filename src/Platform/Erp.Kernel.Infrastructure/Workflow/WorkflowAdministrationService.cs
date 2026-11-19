@@ -25,12 +25,16 @@ public sealed class WorkflowAdministrationService(
     ICurrentActor actor,
     ILicensedFeatures licence,
     WorkflowCatalog catalog,
-    IApproverDirectory directory)
+    IApproverDirectory directory,
+    ICallerAccess caller)
     : IWorkflowAdministration
 {
     public const string DefinitionNotFound = "errors.workflow.definition_not_found";
     public const string VersionNotFound = "errors.workflow.version_not_found";
     public const string VersionChanged = "errors.workflow.version_changed";
+
+    /// <summary>Refusal of a route change by someone whose right to edit routes is limited to some companies (review S1.10a finding 1).</summary>
+    public const string AllCompaniesRequired = "errors.workflow.all_companies_required";
 
     private sealed record DefinitionRow(Guid Id, string Code, string NameJson, string DocumentType, Guid? ActiveVersionId, string Status, bool RequiresApproval, long RowVersion);
 
@@ -83,6 +87,7 @@ public sealed class WorkflowAdministrationService(
         WriteAsync(async work =>
         {
             ArgumentNullException.ThrowIfNull(request);
+            await RequireAllCompaniesAsync(cancellationToken).ConfigureAwait(false);
             var definition = await DefinitionAsync(work, definitionId, lockRow: true, cancellationToken).ConfigureAwait(false) ?? throw new KeyNotFoundException(DefinitionNotFound);
             var type = await VisibleTypeAsync(definition.DocumentType, cancellationToken).ConfigureAwait(false) ?? throw new KeyNotFoundException(DefinitionNotFound);
             string json;
@@ -116,6 +121,7 @@ public sealed class WorkflowAdministrationService(
         WriteAsync(async work =>
         {
             ArgumentNullException.ThrowIfNull(request);
+            await RequireAllCompaniesAsync(cancellationToken).ConfigureAwait(false);
             var rowVersion = request.RowVersion ?? throw new WorkflowException("errors.workflow.row_version_required");
             if (request.Route is not { ValueKind: not JsonValueKind.Null } route)
             {
@@ -160,12 +166,15 @@ public sealed class WorkflowAdministrationService(
         WriteAsync(async work =>
         {
             ArgumentNullException.ThrowIfNull(request);
+            await RequireAllCompaniesAsync(cancellationToken).ConfigureAwait(false);
             var rowVersion = request.RowVersion ?? throw new WorkflowException("errors.workflow.row_version_required");
             var (definition, version, type) = await LockVersionAsync(work, versionId, cancellationToken).ConfigureAwait(false);
             await EnsureActivatableAsync(work, definition, version, type, rowVersion, cancellationToken).ConfigureAwait(false);
-            if (definition.RequiresApproval)
+            if (definition.RequiresApproval || type.RequiresApproval)
             {
-                // Ruling Q10: a sensitive document type's route needs a second administrator (S1.06 maker-checker).
+                // Ruling Q10: a sensitive document type's route needs a second administrator (S1.06 maker-checker). The
+                // document type counts too, so a type marked sensitive after its route was seeded is protected (review
+                // S1.10a finding 5, CR-059).
                 var change = new AccessChange
                 {
                     Kind = AccessChange.ActivateWorkflowVersion,
@@ -185,6 +194,7 @@ public sealed class WorkflowAdministrationService(
         WriteAsync(async work =>
         {
             ArgumentNullException.ThrowIfNull(request);
+            await RequireAllCompaniesAsync(cancellationToken).ConfigureAwait(false);
             var reason = string.IsNullOrWhiteSpace(request.Reason) ? throw new WorkflowException("errors.workflow.reason_required") : request.Reason.Trim();
             var rowVersion = request.RowVersion ?? throw new WorkflowException("errors.workflow.row_version_required");
             var definition = await DefinitionAsync(work, definitionId, lockRow: true, cancellationToken).ConfigureAwait(false) ?? throw new KeyNotFoundException(DefinitionNotFound);
@@ -244,6 +254,19 @@ public sealed class WorkflowAdministrationService(
     }
 
     // ================================================================== rules
+
+    /// <summary>
+    /// A route applies to every company of the customer (ruling Q10), so changing one (new draft, edit, activate,
+    /// deactivate) needs <c>wf.workflow_definitions.update</c> granted for all companies, as the second person of a held
+    /// activation already must (review S1.10a finding 1, CR-059). Reading routes stays "any company" (ruling Q14).
+    /// </summary>
+    private async Task RequireAllCompaniesAsync(CancellationToken ct)
+    {
+        if (!await caller.CoversCompanyAsync(WorkflowPermissions.RoutesUpdate, null, ct).ConfigureAwait(false))
+        {
+            throw new WorkflowException(AllCompaniesRequired);
+        }
+    }
 
     private async Task EnsureActivatableAsync(WorkflowWork work, DefinitionRow definition, VersionRow version, WorkflowDocumentType type, long rowVersion, CancellationToken ct)
     {
@@ -308,7 +331,7 @@ public sealed class WorkflowAdministrationService(
             var step = route.Steps[i];
             foreach (var (spec, part) in new[] { (step.Approver, "approver"), (step.Fallback, "fallback"), (step.Escalation, "escalation") })
             {
-                if (spec is not null && await SpecProblemAsync(work, spec, ct).ConfigureAwait(false) is { } problem)
+                if (spec is not null && await SpecProblemAsync(work, spec, type, ct).ConfigureAwait(false) is { } problem)
                 {
                     list.Add(new RouteProblem($"steps[{i}].{part}", problem));
                 }
@@ -318,25 +341,45 @@ public sealed class WorkflowAdministrationService(
         return list;
     }
 
-    private async Task<string?> SpecProblemAsync(WorkflowWork work, ApproverSpec spec, CancellationToken ct)
+    /// <summary>
+    /// What stops an approver specification from deciding requests of the type for this customer, or null. Named users
+    /// must be active and hold the right to decide (<c>wf.workflow_tasks.update</c> and the type's own decide permission)
+    /// for at least one company; a role must exist, have a holder and grant both permissions (review S1.10a finding 2,
+    /// CR-059); directory kinds must be answered by an installed module. Document-user and directory approvers are
+    /// people known only per request: the engine checks them when it assigns.
+    /// </summary>
+    private async Task<string?> SpecProblemAsync(WorkflowWork work, ApproverSpec spec, WorkflowDocumentType type, CancellationToken ct)
     {
         switch (spec.Kind)
         {
             case ApproverKinds.User:
-                return await ApproverResolution.ActiveUserAsync(work, spec.UserId!.Value, ct).ConfigureAwait(false) ? null : "errors.workflow.user_not_active";
+                if (!await ApproverResolution.ActiveUserAsync(work, spec.UserId!.Value, ct).ConfigureAwait(false))
+                {
+                    return "errors.workflow.user_not_active";
+                }
+
+                return await ApproverResolution.CanDecideSomewhereAsync(work, spec.UserId.Value, type.DecidePermission, ct).ConfigureAwait(false) ? null : ApproverCannotDecide;
             case ApproverKinds.Role:
                 if (await ApproverResolution.RoleIdAsync(work, spec.Role!, ct).ConfigureAwait(false) is not { } role)
                 {
                     return "errors.workflow.role_unknown";
                 }
 
-                return (await ApproverResolution.RoleHoldersAsync(work, role, null, ApproverResolution.Today(work), ct).ConfigureAwait(false)).Count > 0 ? null : "errors.workflow.role_no_holder";
+                if ((await ApproverResolution.RoleHoldersAsync(work, role, null, ApproverResolution.Today(work), ct).ConfigureAwait(false)).Count == 0)
+                {
+                    return "errors.workflow.role_no_holder";
+                }
+
+                return await ApproverResolution.RoleGrantsAsync(work, role, [WorkflowPermissions.TasksDecide, .. type.DecidePermission is { } own ? [own] : Array.Empty<string>()], ct).ConfigureAwait(false)
+                    ? null : ApproverCannotDecide;
             case ApproverKinds.Manager or ApproverKinds.DepartmentHead or ApproverKinds.Position:
                 return directory.Supports(spec.Kind) ? null : "errors.workflow.kind_unavailable";
             default:
                 return null;
         }
     }
+
+    public const string ApproverCannotDecide = "errors.workflow.approver_cannot_decide";
 
     /// <summary>Checks and stores a route in its canonical shape; refused with every problem listed.</summary>
     private string Stored(string json, WorkflowDocumentType type)

@@ -31,8 +31,16 @@ public interface IWorkflowService
 
     /// <summary>
     /// Sends a returned request back after the requester corrected the document (ruling Q7): the route starts again from
-    /// the first step on the same version, with the new values; the history is kept. Requester and subjects stay.
+    /// the first step on the same version, with the new values; the history is kept. Requester and subjects stay. Only the
+    /// requester (the signed-in user) may resubmit; anyone else is refused with <c>errors.workflow.not_requester</c>
+    /// (review S1.10a finding 3, CR-059).
     /// </summary>
+    /// <remarks>
+    /// Lock order: a decision locks the request and then, through the outcome handler, the document. A module that locks
+    /// its document before calling <see cref="StartAsync"/> or this method can meet a decision in the opposite order; the
+    /// database then cancels one of the two (deadlock), the workflow endpoints answer 409 <c>errors.workflow.busy</c> and
+    /// the module should answer the same (R-050). Money values are sent in the company's base currency (R-051).
+    /// </remarks>
     Task<WorkflowStarted> ResubmitAsync(string documentType, Guid documentId, IReadOnlyDictionary<string, JsonElement> values, DbTransaction transaction, CancellationToken cancellationToken);
 }
 

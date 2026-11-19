@@ -200,6 +200,7 @@ public sealed class WorkflowAdministrationTests(TenancyFixture fx) : IAsyncLifet
             select count(*) from wf.workflow_versions v join wf.workflow_definitions d on d.id = v.definition_id
             where d.code = $1 and v.version = 1 and v.activated_by = $2
             """, Ct, Guarded, Kernel.Infrastructure.ControlPlane.Provisioning.BaselineSeed.SystemUserId));
+        await _w.MayDecideGuardedAsync(approver, Ct); // a route may name only people who can decide the type (review S1.10a finding 2)
         var edited = await _w.ActivateRouteAsync(admin, Guarded, Route(Step("named", UserApprover(approver))), Ct);
 
         await using (var c = await _w.H.OwnerAsync(null, Ct))
@@ -239,8 +240,12 @@ public sealed class WorkflowAdministrationTests(TenancyFixture fx) : IAsyncLifet
         var (requester, plain, entitled) = (await _w.UserAsync(Ct, "business_user"), await _w.UserAsync(Ct, "approver"), await _w.UserAsync(Ct, "approver"));
         var extra = await _w.H.RoleAsync(Ct, ["org.companies.update"], [("org.companies", "all")]);
         await _w.H.AssignAsync(entitled, extra, null, _w.H.Today.AddDays(-1), null, Ct);
+        // "plain" may decide when the route is activated and the task reaches them, and has lost the right when they act
+        // (a route may name only people who can decide, review S1.10a finding 2): the right is checked at decision time.
+        var plainGrant = await _w.MayDecideGuardedAsync(plain, Ct);
         await _w.ActivateRouteAsync(admin, Guarded, Route(Step("a", UserApprover(plain)), Step("b", UserApprover(entitled))), Ct);
         var instance = InstanceOf(await _w.StartAsync(requester, Guarded, await _w.H.DefaultCompanyAsync(Ct), new { }, ct: Ct));
+        await _w.EndAssignmentAsync(plainGrant, Ct);
 
         var first = Assert.Single(await _w.OpenTasksAsync(instance, Ct));
         var refused = await _w.PostAsync(plain, $"/api/wf/tasks/{first}/approve", new { }, Ct);

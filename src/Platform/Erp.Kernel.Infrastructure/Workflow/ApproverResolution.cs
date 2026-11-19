@@ -116,6 +116,32 @@ internal sealed class ApproverResolution(IApproverDirectory directory)
         return await AccessDb.IdsAsync(command, ct).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Whether the user may decide requests of a document type in at least one company today: they hold
+    /// <c>wf.workflow_tasks.update</c> and, when the type has one, its own decide permission, for a common company (an
+    /// all-companies grant covers every company). The activation check of review S1.10a finding 2 (CR-059).
+    /// </summary>
+    public static async Task<bool> CanDecideSomewhereAsync(WorkflowWork work, Guid userId, string? decidePermission, CancellationToken ct)
+    {
+        var snapshot = await AccessSnapshot.LoadAsync(work.Connection, work.Transaction, userId, Today(work), ct).ConfigureAwait(false);
+        var decide = snapshot.Granting(Contracts.Workflow.WorkflowPermissions.TasksDecide).Select(g => g.Assignment.CompanyId).ToHashSet();
+        if (decide.Count == 0 || decidePermission is null)
+        {
+            return decide.Count > 0;
+        }
+
+        var own = snapshot.Granting(decidePermission).Select(g => g.Assignment.CompanyId).ToHashSet();
+        return own.Count > 0 && (decide.Contains(null) || own.Contains(null) || decide.Overlaps(own));
+    }
+
+    /// <summary>Whether the role's own rules grant every one of the permissions (not retired).</summary>
+    public static async Task<bool> RoleGrantsAsync(WorkflowWork work, Guid roleId, string[] permissions, CancellationToken ct) =>
+        await work.ScalarAsync<long>("""
+            select count(distinct p.code) from iam.role_permissions rp
+            join iam.permissions p on p.id = rp.permission_id and p.retired_at is null
+            where rp.role_id = $1 and p.code = any($2)
+            """, ct, roleId, permissions.Distinct(StringComparer.Ordinal).ToArray()).ConfigureAwait(false) == permissions.Distinct(StringComparer.Ordinal).Count();
+
     /// <summary>Whether a user holds a permission today for any company.</summary>
     public static async Task<bool> HoldsAnyAsync(WorkflowWork work, Guid userId, string permission, CancellationToken ct) =>
         (await AccessSnapshot.LoadAsync(work.Connection, work.Transaction, userId, Today(work), ct).ConfigureAwait(false)).Holds(permission);

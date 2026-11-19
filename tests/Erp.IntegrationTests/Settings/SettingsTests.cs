@@ -165,6 +165,19 @@ public sealed class SettingsTests(TenancyFixture fx) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task FR_KRN_SET_01_R019_an_unknown_time_zone_is_refused_when_written_and_a_known_one_is_accepted()
+    {
+        var admin = await _h.UserAsync(Ct, null, "tenant_admin");
+        var url = $"{Api}/org.time_zone";
+
+        Assert.Equal(SettingsErrors.TimeZoneUnknown, (await _h.PutAsync(admin, url, Set("tenant", null, "Mars/Base"), Ct)).Text("title"));
+        Assert.Equal(SettingsErrors.TimeZoneUnknown, (await _h.PutAsync(admin, url, Set("tenant", null, ""), Ct)).Text("title"));
+        Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(admin, url, Set("tenant", null, "Europe/London"), Ct)).Status);
+        Assert.Equal("Europe/London", (await _h.GetAsync(admin, url, Ct)).Json.GetProperty("setting").GetProperty("value").GetString());
+        Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(admin, url, Set("tenant", null, "Asia/Karachi"), Ct)).Status);
+    }
+
+    [Fact]
     public async Task FR_KRN_SET_01_a_layer_the_setting_does_not_allow_a_bad_value_or_a_missing_reason_is_refused_when_written()
     {
         var admin = await _h.UserAsync(Ct, null, "tenant_admin");
