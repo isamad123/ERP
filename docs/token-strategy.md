@@ -18,7 +18,8 @@ Binding for every build session. Goal: lowest token use without lowering quality
 | C | Business logic in modules once a pattern exists | Sonnet 5.5 first; escalate to Opus after two failed attempts |
 | D | Screens from generated code, validations, reports, seed data, translations, routine tests, docs | Sonnet 5.5, low or medium effort |
 
-Default to Sonnet. Opus only when the slice file says class A or B.
+Default to Sonnet. Opus only when the slice file says class A or B, or when the approved build plan
+(`docs/slices/release-1.0-build-plan.md`, D-50) names Opus for the slice (CR-051 Q6; for example S1.12 and S1.27).
 
 ## 3. Batch work by model
 - Do not switch models slice by slice. Plan **Opus batches** (foundation, engines, patterns) and **Sonnet batches**
@@ -45,8 +46,12 @@ Default to Sonnet. Opus only when the slice file says class A or B.
 - Do not paste large files or logs into the conversation.
 
 ## 7. Review only where it matters
-- Class B slices: one fresh Opus review of the **diff and the slice brief**, not the whole repository.
-- Class C and D: automated checks only; Opus samples one slice in five at milestones.
+- Class B slices: one fresh Opus review of the **diff and the slice brief**, not the whole repository. The review is
+  a merge condition: a class B pull request is not merged until its review is in `docs/reviews/` and its
+  high and medium findings are fixed or ruled on (CR-051 Q8).
+- Class C and D: automated checks only; Opus samples one slice in five at milestones. Exception: a class C part
+  that handles sign-in, identity e-mails or uploaded files gets a fresh review like class B (CR-051 Q7; S1.11b2
+  and S1.11c1).
 - Automated gates (build, tests, architecture tests, isolation tests, licence scan) run in GitHub Actions on every
   push, so checking does not consume model tokens.
 
