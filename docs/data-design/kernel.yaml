@@ -763,6 +763,8 @@
   # S1.10a (CR-041 items 1 and 4, Q6, Q7, Q14): status returned (waiting for the requester), subjects; engine writes only.
   enum_added_in: {S1.10a: {status: [returned]}}
   added_in: {S1.10a: [subject_user_ids]}
+  # S1.11f2 (R-023, CR-054): one open request per document in the database too, besides the engine's lock.
+  uniques_added_in: {S1.11f-r2: [[document_type, document_id, "where status in ('running', 'returned')"]]}
   api_actions: [read]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   # S1.10b (CR-043, ruling P1): the company locator, so a role limited to companies reads only their requests.
