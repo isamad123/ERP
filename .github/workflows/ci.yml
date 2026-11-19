@@ -80,7 +80,7 @@ jobs:
           tar -xzf "$RUNNER_TEMP/gitleaks/gitleaks.tar.gz" -C "$RUNNER_TEMP/gitleaks" gitleaks
           GL="$RUNNER_TEMP/gitleaks/gitleaks"
           mkdir -p "$RUNNER_TEMP/planted"
-          printf 'aws_access_key_id = AKIAIOSFODNN7EXAMPLQ\n' > "$RUNNER_TEMP/planted/planted.txt"
+          printf 'github_token = "%s%s"\n' ghp_ 1a2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P7q8R > "$RUNNER_TEMP/planted/planted.txt"
           if "$GL" dir --no-banner --redact -c .gitleaks.toml "$RUNNER_TEMP/planted" >/dev/null 2>&1; then echo "Self-test failed: the scan did not flag a planted secret."; exit 1; fi
           "$GL" detect --no-banner --redact -c .gitleaks.toml --source .
           "$GL" dir --no-banner --redact -c .gitleaks.toml .

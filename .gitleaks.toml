@@ -1,6 +1,7 @@
 # Secret scan configuration (S1.11f1, R-030). Default gitleaks rules plus exact-value allowances only:
 # the CI-only PostgreSQL password of the throwaway service container (.github/workflows/ci.yml) and the public RFC 6238
-# test secret (base32 of "12345678901234567890") used by tests/Erp.UnitTests/Identity/IdentityDomainTests.cs.
+# test secret (base32 of "12345678901234567890") used by tests/Erp.UnitTests/Identity/IdentityDomainTests.cs,
+# and the fake AWS-style key that once sat in the CI self-test (git history of this slice; the self-test now builds it at run time).
 title = "ERP secret scan"
 
 [extend]
@@ -12,4 +13,5 @@ regexTarget = "match"
 regexes = [
   '''erp-ci-only''',
   '''GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ''',
+  '''AKIAIOSFODNN7EXAMPLQ''',
 ]
