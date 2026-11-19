@@ -3,7 +3,8 @@
 ## What this repository is
 A modular-monolith ERP product (.NET 10, PostgreSQL, React, React Native). It is sold as SaaS and
 on-premises, with or without source code, module by module. The first release (1.0) is **HRMIS web only**
-(HR, attendance, leave, Pakistan payroll, self-service web). The Android app and the remaining HR features are Release 1.1 (D-48).
+(HR, attendance, leave, Pakistan payroll, self-service web). The Android app and the remaining HR features are Release 1.1 (D-48), except
+performance management and learning, which are in 1.0 (D-49).
 
 The product owner is not a programmer. Explain outcomes in plain language and always give evidence
 (test output, query results, screenshots) instead of assurances.

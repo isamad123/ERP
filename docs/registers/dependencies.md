@@ -7,7 +7,7 @@ Only permissive licences (MIT, Apache-2.0, BSD, ISC, PostgreSQL, Zlib). Anything
 | xunit.v3 | 4.0.3 | Apache-2.0 | all test projects (test framework) | S1.01 |
 | NetArchTest.Rules | 1.3.2 | MIT (no licence in package metadata; verified from repository LICENSE, recorded as gate override) | Erp.ArchitectureTests | S1.01 |
 | Mono.Cecil | 0.11.6 | MIT | Erp.ArchitectureTests (IL scan for clock calls and tenant_id members) | S1.01 |
-| Npgsql | 10.0.3 | PostgreSQL | Erp.IntegrationTests | S1.01 |
+| Npgsql | 10.0.3 | PostgreSQL | Erp.IntegrationTests; tools/Erp.CodeGen (`dictionary` command reads the live database; S1.02, recorded by CR-051) | S1.01 |
 | Testcontainers.PostgreSql | 4.16.0 | MIT | Erp.IntegrationTests (used only when ERP_TEST_PG is unset) | S1.01 |
 | Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | PostgreSQL | Erp.BuildingBlocks.Infrastructure (EF Core mapping of generated entities); brings Microsoft.EntityFrameworkCore, .Relational, .Abstractions, .Analyzers 10.0.4 (MIT) and Microsoft.Extensions.* 10.0.4 (MIT) | S1.02 |
 | YamlDotNet | 16.3.0 | MIT | tools/Erp.CodeGen (reads docs/data-design/*.yaml) | S1.02 |
@@ -25,5 +25,5 @@ Testcontainers, Docker.DotNet.Enhanced.*, BouncyCastle.Cryptography, SSH.NET, Sh
 telemetry is switched off in CI with `TESTINGPLATFORM_TELEMETRY_OPTOUT=1`.
 
 Product projects use only Npgsql.EntityFrameworkCore.PostgreSQL and its dependencies (S1.02), Microsoft.AspNetCore.Authentication.JwtBearer
-and its dependencies (S1.03), plus the shared .NET and ASP.NET Core frameworks (MIT). Encryption and signatures (AES-GCM, ECDSA P-256) use
+and its dependencies (S1.03), NSec.Cryptography and Microsoft.IdentityModel.JsonWebTokens (S1.05), MailKit (S1.11b2), plus the shared .NET and ASP.NET Core frameworks (MIT). Encryption and signatures (AES-GCM, ECDSA P-256) use
 the .NET base library only. Backups call the PostgreSQL client tools pg_dump and pg_restore (PostgreSQL licence) installed on the server. The Api projects reference the ASP.NET Core shared framework for minimal APIs.

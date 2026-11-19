@@ -41,7 +41,7 @@ file must be corrected.
 ## 5. Kernel services in Phase 1 (D-33, D-42)
 | Service | Phase 1 scope |
 | --- | --- |
-| Tenancy and provisioning | Control plane, provisioning, fleet migration with canaries, backup and restore per tenant |
+| Tenancy and provisioning | Control plane, provisioning, fleet migration one customer at a time with maintenance isolation (canaries and batches, FR-KRN-TEN-11, are Release 1.1; CR-007), backup and restore per tenant |
 | Organization | Companies, branches, locations, org units, hierarchies, fiscal and holiday calendars |
 | Identity and access | Users, roles, permissions, data scopes (own, team, subtree, company), field security, MFA, sessions, delegation, maker-checker, mobile device-bound sessions (KER-07) |
 | Settings and feature flags | Layered settings (tenant, company, role, user) |
@@ -76,18 +76,20 @@ collaboration, AI gateway, layout designer, custom objects (later).
 - Growing tables (attendance events, audit, job logs) are partitioned by month from the first migration.
 - Migrations: SQL-first, per module, expand and contract, tested on a fresh database and on previous-release data.
 
-## 7. HRMIS Phase 1 scope (spec 06a v0.3.1, D-42 as split by D-48)
+## 7. HRMIS Phase 1 scope (spec 06a v0.3.1, D-42 as split by D-48 and D-49; corrected by CR-051)
 
 Release 1.0 is web only. Every item below that concerns the mobile app, offline sync, push notifications or geo-fences is Release 1.1. The `release` column of `docs/registers/requirements.csv` is authoritative.
 
-- **In:** POL policy framework; EMP employee records; POS organization and positions; DOC documents and letters;
-  ATT-01 to ATT-22 (biometric import, web and mobile check-in with one circular office fence, exceptions,
-  regularization); LVE leave; ONB basic onboarding and offboarding; SSP self-service web; RPT basic reports;
-  PAY payroll engine; LON loans and advances; EXP basic expenses; CPL Pakistan statutory; Android M1 (profile,
-  leave, payslip, attendance).
-- **Later:** full geo-attendance (ATT-23 onward), field tasks (TFA), workspaces (WSP), recruitment, performance,
-  learning, employee relations, asset custody, Saudi pack, US readiness, iOS.
-- Exact scope is the R-tagged list in `docs/registers/requirements.csv`, approved by the product owner.
+- **Release 1.0:** POL policy framework; EMP employee records; POS organization and positions; DOC documents and letters;
+  ATT-01 to ATT-22 as tagged 1.0 in the csv (biometric import, check-in, exceptions, regularization; ATT-04, -05,
+  -08 and -22 are 1.1); LVE leave; ONB basic onboarding and offboarding; SSP self-service web; RPT basic reports;
+  PAY payroll engine; LON loans and advances; EXP basic expenses; CPL Pakistan statutory; PRF performance
+  management and LND learning and development (D-49).
+- **Release 1.1 (D-48):** Android self-service app (profile, leave, payslip, attendance), offline sync, full
+  geo-attendance (ATT-23 onward), field tasks (TFA), workspaces (WSP), recruitment, employee relations, asset custody,
+  Should-have items.
+- **Later:** Saudi pack, US readiness, AI and analytics, iOS.
+- Exact scope is the `release` column of `docs/registers/requirements.csv`, approved by the product owner.
 
 ## 8. Rules that bind Phase 1 (spec 16 section 6)
 - **FR-XM-26** Attendance and leave lock when payroll is calculated; later changes are retroactive adjustments in the next open payroll.
