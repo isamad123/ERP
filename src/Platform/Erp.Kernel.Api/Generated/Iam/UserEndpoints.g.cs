@@ -172,7 +172,7 @@ internal static class UserEndpoints
         {
             errors.Add("username");
         }
-        if (request.Email is null && (!update || access.CanEdit("email")))
+        if (!update && request.Email is null)
         {
             errors.Add("email");
         }
@@ -207,9 +207,16 @@ internal static class UserEndpoints
         {
             denied.Add("username");
         }
-        if (access.CanEdit("email"))
+        if (!update)
         {
-            row.Email = request.Email!;
+            if (access.CanEdit("email"))
+            {
+                row.Email = request.Email!;
+            }
+            else if (request.Email is not null)
+            {
+                denied.Add("email");
+            }
         }
         else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Email, row.Email, update))
         {

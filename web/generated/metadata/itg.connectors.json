@@ -119,7 +119,7 @@
       "field": "credentialsRef",
       "kind": "Text",
       "required": false,
-      "readOnly": false,
+      "readOnly": true,
       "system": false,
       "filter": false,
       "labelKey": "fields.itg.connectors.credentials_ref"

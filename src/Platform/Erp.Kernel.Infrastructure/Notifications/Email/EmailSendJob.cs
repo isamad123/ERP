@@ -40,6 +40,11 @@ public sealed class EmailSendJob(MailServerResolver servers, IEmailTransport tra
         ArgumentNullException.ThrowIfNull(job);
         var tenantCode = job.Services.GetRequiredService<ITenantContext>().TenantCode;
         var outcome = await SendDueAsync(job.Services, tenantCode, job.RunId, cancellationToken).ConfigureAwait(false);
+        if (outcome.ReplyToRefused)
+        {
+            await job.LogAsync("warning", "the reply-to address (ntf.email.reply_to) is not a valid single address; e-mails are sent without it", cancellationToken).ConfigureAwait(false);
+        }
+
         if (outcome.NoServer)
         {
             await job.LogAsync("warning", "no mail server is set up for this customer (docs/runbooks/mail-setup.md); e-mails wait in the queue", cancellationToken).ConfigureAwait(false);
@@ -50,7 +55,10 @@ public sealed class EmailSendJob(MailServerResolver servers, IEmailTransport tra
         }
     }
 
-    public sealed record Outcome(int Sent, int Retried, int Failed, int Dead, bool NoServer);
+    public sealed record Outcome(int Sent, int Retried, int Failed, int Dead, bool NoServer, bool ReplyToRefused = false);
+
+    /// <summary>Identity e-mails sent in one run at most, outside the per-minute budget.</summary>
+    public const int IdentityBatch = 100;
 
     private sealed record Row(Guid Id, DateTimeOffset CreatedAt, Guid? UserId, string Recipient, string? EventCode, Guid? CompanyId, string Payload, int Attempts, byte[]? Secret);
 
@@ -65,30 +73,39 @@ public sealed class EmailSendJob(MailServerResolver servers, IEmailTransport tra
         var senderName = settings.TryGetValue(KernelSettingKeys.NtfEmailSenderName, out var sn) && sn.Value.ValueKind == JsonValueKind.String ? sn.Value.GetString()! : string.Empty;
         var replyTo = settings.TryGetValue(KernelSettingKeys.NtfEmailReplyTo, out var rt) && rt.Value.ValueKind == JsonValueKind.String && rt.Value.GetString() is { Length: > 0 } reply ? reply : null;
 
+        // A reply-to the mail library cannot use is left out rather than stopping every e-mail (S1.11b2 review finding 6).
+        var replyToRefused = replyTo is not null && !(MailboxAddress.TryParse(replyTo, out var parsedReply) && string.Equals(parsedReply.Address, replyTo, StringComparison.Ordinal));
+        if (replyToRefused)
+        {
+            replyTo = null;
+        }
+
         // Rate limit (KRN-NTF-05, ruling Q10): what was sent in the last minute counts against this minute.
         var recent = await IdentityDb.ScalarAsync<long>(c, null, """
             select count(*) from ntf.outbound_messages where channel = 'email' and status = 'sent' and updated_at > $1 and created_at > $2
             """, ct, now.AddMinutes(-1), now.AddDays(-31)).ConfigureAwait(false);
-        var budget = perMinute - (int)recent;
-        if (budget <= 0)
-        {
-            return new Outcome(0, 0, 0, 0, false);
-        }
+        var budget = Math.Max(0, perMinute - (int)recent);
 
+        // Identity e-mails (sign-in codes, reset and activation links, the e-mail change notice) go first and outside the
+        // budget: a code lives 10 minutes and must not wait behind a burst of notifications (S1.11b2 review finding 4).
         var due = await NotificationConsumer.ReadAsync(c, null, """
-            select id, created_at from ntf.outbound_messages
-            where status = 'queued' and channel = 'email' and (next_attempt_at is null or next_attempt_at <= $1)
-            order by coalesce(next_attempt_at, created_at), id limit $2
-            """, r => (Id: r.GetGuid(0), CreatedAt: r.GetFieldValue<DateTimeOffset>(1)), ct, now, budget).ConfigureAwait(false);
+            (select id, created_at from ntf.outbound_messages
+             where status = 'queued' and channel = 'email' and (next_attempt_at is null or next_attempt_at <= $1) and event_code like 'identity.%'
+             order by coalesce(next_attempt_at, created_at), id limit $3)
+            union all
+            (select id, created_at from ntf.outbound_messages
+             where status = 'queued' and channel = 'email' and (next_attempt_at is null or next_attempt_at <= $1) and (event_code is null or event_code not like 'identity.%')
+             order by coalesce(next_attempt_at, created_at), id limit $2)
+            """, r => (Id: r.GetGuid(0), CreatedAt: r.GetFieldValue<DateTimeOffset>(1)), ct, now, budget, IdentityBatch).ConfigureAwait(false);
         if (due.Count == 0)
         {
-            return new Outcome(0, 0, 0, 0, false);
+            return new Outcome(0, 0, 0, 0, false, replyToRefused);
         }
 
-        var server = await servers.ResolveAsync(c, ct).ConfigureAwait(false);
+        var server = await servers.ResolveAsync(c, tenantCode, ct).ConfigureAwait(false);
         if (server is null)
         {
-            return new Outcome(0, 0, 0, 0, true);
+            return new Outcome(0, 0, 0, 0, true, replyToRefused);
         }
 
         var host = await TenantHosts.PrimaryAsync(controlPlane, tenantCode, ct).ConfigureAwait(false) ?? throw new InvalidOperationException($"Customer {tenantCode} has no host name.");
@@ -157,7 +174,7 @@ public sealed class EmailSendJob(MailServerResolver servers, IEmailTransport tra
             await tx.CommitAsync(ct).ConfigureAwait(false);
         }
 
-        return new Outcome(sent, retried, failed, dead, false);
+        return new Outcome(sent, retried, failed, dead, false, replyToRefused);
     }
 
     /// <summary>
@@ -179,9 +196,16 @@ public sealed class EmailSendJob(MailServerResolver servers, IEmailTransport tra
             return string.IsNullOrWhiteSpace(row.Recipient) ? null : row.Recipient;
         }
 
-        // An invitation goes to an invited person; everything else to an active one.
+        // An invitation goes to an invited person; a reset link also to an account under an automatic lock (it has an end
+        // time: the rule of IdentityEmailService.MayReset, CR-049 (a); S1.11b2 review finding 3); the notice of an e-mail
+        // change to an active or locked person; everything else to an active one.
         var ok = await IdentityDb.ScalarAsync<bool>(c, tx, """
-            select exists (select 1 from iam.users where id = $1 and not is_deleted and not is_system and (status = 'active' or (status = 'invited' and $2 = 'identity.invitation')))
+            select exists (select 1 from iam.users u left join iam.user_credentials cr on cr.user_id = u.id
+                           where u.id = $1 and not u.is_deleted and not u.is_system
+                             and (u.status = 'active'
+                                  or (u.status = 'invited' and $2 = 'identity.invitation')
+                                  or (u.status = 'locked' and $2 = 'identity.password_reset' and cr.locked_until is not null)
+                                  or (u.status = 'locked' and $2 = 'identity.email_changed')))
             """, ct, user, row.EventCode ?? string.Empty).ConfigureAwait(false);
         return ok && !string.IsNullOrWhiteSpace(row.Recipient) ? row.Recipient : null;
     }

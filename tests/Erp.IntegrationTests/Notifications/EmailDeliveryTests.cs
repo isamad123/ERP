@@ -339,7 +339,7 @@ public sealed class EmailDeliveryTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal("failed", await MessageAsync(person));
         Assert.Equal("bounced: 5.1.1 smtp; 550 5.1.1 user unknown", await MessageAsync(person, "error"));
         Assert.True(imap.Messages[ours].Seen);
-        Assert.False(imap.Messages[delayed].Seen);
+        Assert.True(imap.Messages[delayed].Seen); // ours but only a delay: read once, never fetched again (S1.11b2 review finding 11)
         Assert.False(imap.Messages[theirs].Seen);
         Assert.Equal(1, await _rig.ScalarAsync<long>("""
             select count(*) from aud.change_log l, jsonb_array_elements(l.changes) c

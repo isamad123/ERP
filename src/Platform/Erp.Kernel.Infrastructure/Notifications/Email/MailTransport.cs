@@ -50,6 +50,10 @@ public sealed record MailOptions(
 /// stored one in <c>itg.connectors</c> (kind <c>email</c>, provider <c>smtp</c>; on-premises), otherwise the operator's
 /// relay; a relay connector (provider <c>relay</c>) only gives the sender address the operator checked for the customer's
 /// domain. Null when neither exists: the e-mails then wait in the queue.
+/// <para>S1.11b2 review finding 1 (CR-062): the connector row is honoured only as the operator's <c>mail</c> command last
+/// wrote it (<c>updated_by</c> the system user; a change through the API makes it ignored until the operator sets it again),
+/// and its password is only ever read from this customer's own reference (<see cref="MailSetup.PasswordReference"/>),
+/// never from a reference stored in the row, so no row can make the worker read another secret.</para>
 /// </summary>
 public sealed class MailServerResolver(MailOptions options, ISecretStore secrets)
 {
@@ -57,11 +61,14 @@ public sealed class MailServerResolver(MailOptions options, ISecretStore secrets
 
     public MailOptions Options => options;
 
-    public async Task<MailServer?> ResolveAsync(NpgsqlConnection c, CancellationToken ct)
+    public async Task<MailServer?> ResolveAsync(NpgsqlConnection c, string tenantCode, CancellationToken ct)
     {
+        ArgumentException.ThrowIfNullOrEmpty(tenantCode);
         var connector = (await NotificationConsumer.ReadAsync(c, null, """
-            select provider, config::text, credentials_ref from itg.connectors where kind = 'email' and status = 'active' and lower(code) = $1 limit 1
-            """, r => (Provider: r.GetString(0), Config: r.GetString(1), Ref: r.IsDBNull(2) ? null : r.GetString(2)), ct, ConnectorCode).ConfigureAwait(false)).FirstOrDefault();
+            select provider, config::text, credentials_ref is not null from itg.connectors
+            where kind = 'email' and status = 'active' and lower(code) = $1 and updated_by = $2 limit 1
+            """, r => (Provider: r.GetString(0), Config: r.GetString(1), HasPassword: r.GetBoolean(2)), ct, ConnectorCode,
+            Erp.Kernel.Infrastructure.ControlPlane.Provisioning.BaselineSeed.SystemUserId).ConfigureAwait(false)).FirstOrDefault();
         string? from = null;
         if (connector.Provider is not null)
         {
@@ -70,7 +77,7 @@ public sealed class MailServerResolver(MailOptions options, ISecretStore secrets
             from = Text(config, "from_address");
             if (connector.Provider == "smtp" && Text(config, "host") is { } host && from is not null)
             {
-                var password = connector.Ref is null ? null : await secrets.GetAsync(connector.Ref, ct).ConfigureAwait(false);
+                var password = connector.HasPassword ? await secrets.GetAsync(MailSetup.PasswordReference(tenantCode), ct).ConfigureAwait(false) : null;
                 var port = config.TryGetProperty("port", out var p) && p.TryGetInt32(out var n) ? n : 587;
                 return new MailServer(host, port, Text(config, "security") ?? "starttls", Text(config, "username"), password, from);
             }
@@ -150,7 +157,18 @@ public sealed class SmtpEmailTransport : IEmailTransport
                     }
                 }
 
-                using var message = Build(email);
+                MimeMessage message;
+                try
+                {
+                    message = Build(email);
+                }
+                catch (Exception e) when (e is ParseException or FormatException or ArgumentException)
+                {
+                    // A message that cannot be built never will be: it fails alone instead of stopping the queue (review finding 6).
+                    return new EmailSendResult(false, true, Limit("the message could not be built: " + e.Message), null);
+                }
+
+                using var _ = message;
                 var reply = await _client.SendAsync(message, cancellationToken).ConfigureAwait(false);
                 return new EmailSendResult(true, false, null, Limit(reply));
             }

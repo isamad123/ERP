@@ -255,6 +255,23 @@ public sealed class GeneratorTests
     }
 
     [Fact]
+    public void S111b2_review_CR062_api_create_only_columns_are_set_on_create_and_an_update_that_changes_them_is_refused()
+    {
+        var files = Generator.Generate(Root).Files;
+        var users = files["src/Platform/Erp.Kernel.Api/Generated/Iam/UserEndpoints.g.cs"];
+        Assert.Contains("if (!update && request.Email is null)", users, StringComparison.Ordinal);
+        var apply = users[users.IndexOf("private static global::System.Collections.Generic.List<string> Apply(", StringComparison.Ordinal)..];
+        Assert.Contains("else if (request.Email is not null)", apply, StringComparison.Ordinal);
+        Assert.Contains("else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Email, row.Email, update))", apply, StringComparison.Ordinal);
+        Assert.Contains("\"createOnly\": true", files["web/generated/metadata/iam.users.json"], StringComparison.Ordinal);
+
+        // The mail connector's secret reference is never accepted through the API (finding 1).
+        var connectors = files["src/Platform/Erp.Kernel.Api/Generated/Itg/ConnectorEndpoints.g.cs"];
+        var request = connectors[connectors.IndexOf("public sealed class ConnectorWriteRequest", StringComparison.Ordinal)..];
+        Assert.DoesNotContain("CredentialsRef", request[..request.IndexOf('}')], StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void S107_CR026_CR029_later_columns_index_and_control_plane_table_go_to_new_files_and_frozen_files_stay()
     {
         var files = Generator.Generate(Root).Files;

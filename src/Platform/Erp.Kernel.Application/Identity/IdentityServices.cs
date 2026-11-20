@@ -261,7 +261,17 @@ public interface IIdentityEmailService
 
     /// <summary>An administrator sends a person a password reset link.</summary>
     Task<AdminResult> SendPasswordResetLinkAsync(Guid userId, string? reason, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// An administrator changes a person's e-mail address (S1.11b2 review finding 2, CR-062): open reset links, codes and
+    /// activation links end, the e-mail factor is removed (the person enrols it again) and the old address gets a notice.
+    /// The change of a privileged user's address waits for a second person (<see cref="EmailChangeResult.PendingRequestId"/>).
+    /// </summary>
+    Task<EmailChangeResult> ChangeEmailAsync(Guid userId, string? email, string? reason, CancellationToken cancellationToken);
 }
+
+/// <summary>The result of an e-mail change: done, waiting for a second person (the request id), or refused.</summary>
+public sealed record EmailChangeResult(AdminOutcome Outcome, string? Error = null, Guid? PendingRequestId = null);
 
 /// <summary>
 /// A second-factor request that cannot be served (slice S1.11b2): the method is not allowed for the customer, or too many

@@ -149,6 +149,10 @@ public static class IdentitySettings
             reader.IsDBNull(1) ? null : reader.GetFieldValue<DateTimeOffset>(1));
     }
 
+    /// <summary>Whether the user holds a privileged role (one with a sensitive permission) on the date, own or through a group.</summary>
+    public static async Task<bool> IsPrivilegedAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, Guid userId, DateOnly today, CancellationToken cancellationToken) =>
+        (await RoleFactsAsync(connection, transaction, userId, today, cancellationToken).ConfigureAwait(false)).PrivilegedSince is not null;
+
     private sealed record RoleFacts(DateTimeOffset? PrivilegedSince, DateTimeOffset? MfaSince)
     {
         public static RoleFacts None { get; } = new(null, null);

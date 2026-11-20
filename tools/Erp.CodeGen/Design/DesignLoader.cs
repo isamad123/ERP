@@ -13,7 +13,7 @@ public static partial class DesignLoader
 
     private static readonly string[] KnownKeys =
         ["table", "purpose", "traits", "status", "columns", "unique", "indexes", "eff_key", "key", "checks", "notes", "partition", "reqs",
-         "added_in", "updatable_added_in", "api_read_only", "scope", "field_class", "api_actions", "audit", "audit_reason", "indexes_added_in",
+         "added_in", "updatable_added_in", "api_read_only", "api_create_only", "scope", "field_class", "api_actions", "audit", "audit_reason", "indexes_added_in",
          "numbering", "optional_added_in", "enum_added_in", "checks_added_in", "uniques_added_in", "uniques_replaced_in", "entitlement"];
 
     /// <summary>Keys of a design file's <c>defaults</c> entry (slice S1.09b): values every table of the file takes unless it overrides them.</summary>
@@ -169,7 +169,8 @@ public static partial class DesignLoader
     /// these items out of them and writes them to the owning slice's design migration instead:
     /// <c>added_in: S1.05</c> (whole table) or <c>added_in: {S1.05: [column, ...]}</c> (new nullable columns);
     /// <c>updatable_added_in: {S1.05: {columns: [...], note: "..."}}</c> (more columns an append-only table may update);
-    /// <c>api_read_only: [column, ...]</c> (generated API returns the column but never accepts it, CR-012).
+    /// <c>api_read_only: [column, ...]</c> (generated API returns the column but never accepts it, CR-012);
+    /// <c>api_create_only: [column, ...]</c> (accepted on create only; an update that changes it is refused; CR-062).
     /// </summary>
     private static void ReadLaterChanges(Table table, IReadOnlyDictionary<string, object?> map)
     {
@@ -231,6 +232,11 @@ public static partial class DesignLoader
         foreach (var name in YamlNode.Texts(map.GetValueOrDefault("api_read_only"), table.FullName + ".api_read_only"))
         {
             table.Column(name).ApiReadOnly = true;
+        }
+
+        foreach (var name in YamlNode.Texts(map.GetValueOrDefault("api_create_only"), table.FullName + ".api_create_only"))
+        {
+            table.Column(name).ApiCreateOnly = true;
         }
 
         // optional_added_in: {S1.08: [column, ...]} (S1.08, CR-033): required columns made optional; the frozen file keeps NOT NULL.

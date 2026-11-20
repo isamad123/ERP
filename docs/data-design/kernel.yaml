@@ -23,6 +23,9 @@
   unique: [[lower(username)], [lower(email)]]
   # CR-012 (S1.05): status changes only through the user status service (transitions, user limit, session revocation).
   api_read_only: [status, is_system, last_login_at]
+  # S1.11b2 review finding 2 (CR-062): the address receives reset links and e-mail codes, so after create it changes only
+  # through the guarded e-mail change (POST /api/iam/users/{id}/email, permission iam.users.change_email).
+  api_create_only: [email]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {user: id}
   api_actions: [read, create, update]
@@ -1164,6 +1167,9 @@
     - [credentials_ref, text, opt]
     - [last_health_at, ts, opt]
   unique: [[lower(code)]]
+  # S1.11b2 review finding 1 (CR-062): a secret-store reference is set only by operator commands (`mail server`), never
+  # through the API; the worker derives the reference from the customer code and ignores e-mail rows changed by the API.
+  api_read_only: [credentials_ref]
   reqs: [KRN-INT-05, HRM-ATT-03]
 
 - table: itg.account_mappings

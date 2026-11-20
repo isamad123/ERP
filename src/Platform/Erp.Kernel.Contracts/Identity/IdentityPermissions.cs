@@ -22,6 +22,12 @@ public static class IdentityPermissions
     /// <summary>Send a person a password reset link (slice S1.11b2, ruling Q16).</summary>
     public const string SendPasswordReset = "iam.users.send_password_reset";
 
+    /// <summary>
+    /// Change a person's e-mail address (S1.11b2 review finding 2, CR-062): reset links and e-mail codes follow it, so it is
+    /// sensitive, and the change of a privileged user's address waits for a second person.
+    /// </summary>
+    public const string ChangeEmail = "iam.users.change_email";
+
     public static IReadOnlyList<PermissionDefinition> All { get; } =
     [
         new(SelfManage, "iam", "permissions.iam.self.manage", false),
@@ -33,5 +39,6 @@ public static class IdentityPermissions
         new(ReadSessions, "iam", "permissions.iam.users.read_sessions", true),
         new(SendInvitation, "iam", "permissions.iam.users.send_invitation", true),
         new(SendPasswordReset, "iam", "permissions.iam.users.send_password_reset", true),
+        new(ChangeEmail, "iam", "permissions.iam.users.change_email", true),
     ];
 }

@@ -70,6 +70,27 @@ public sealed class EmailRulesTests
         Assert.Equal("bounced: Returned mail", plain?.Reason);
     }
 
+    [Fact]
+    public void S111b2_review_KRN_NTF_07_out_of_office_and_replies_are_not_bounces_but_reports_of_the_mail_system_are()
+    {
+        var id = Guid.CreateVersion7();
+        var messageId = EmailSendJob.MessageId(id, "acme", "no-reply@erp.test");
+        var ooo = Load("From: manager@acme.test\r\nSubject: Automatic reply: Task assigned\r\nAuto-Submitted: auto-replied\r\n" +
+            $"In-Reply-To: <{messageId}>\r\nReferences: <{messageId}>\r\n\r\nI am out of the office until Monday.\r\n");
+        Assert.Null(BounceParser.Parse(ooo, "acme"));
+        Assert.True(BounceParser.IsOurs(ooo, "acme")); // ours, so the job marks it read
+        Assert.False(BounceParser.IsOurs(ooo, "other"));
+
+        // A person's reply that quotes the e-mail, our Message-ID in the body included: still not a bounce.
+        var reply = Load($"From: person@acme.test\r\nSubject: Re: Task assigned\r\nIn-Reply-To: <{messageId}>\r\n\r\n> Message-ID: <{messageId}>\r\nThanks.\r\n");
+        Assert.Null(BounceParser.Parse(reply, "acme"));
+
+        // A real report carries Auto-Submitted too (Postfix): it still counts.
+        var report = Load("Auto-Submitted: auto-replied\r\n" + Report(messageId, "failed", "5.1.1", "smtp; 550 5.1.1 user unknown"));
+        Assert.Equal(id, BounceParser.Parse(report, "acme")?.MessageId);
+        Assert.Equal(".acme@", BounceParser.SearchText("acme"));
+    }
+
     private static MimeMessage Load(string raw) => MimeMessage.Load(new MemoryStream(Encoding.ASCII.GetBytes(raw)));
 
     private static string Report(string messageId, string action, string status, string diagnostic) =>

@@ -27,6 +27,12 @@ public sealed record EnrolmentConfirmRequest(string? ChallengeToken, Guid Device
 /// <summary>Forgot password (slice S1.11b2): the username or e-mail address.</summary>
 public sealed record ForgotPasswordRequest(string? Login);
 
+/// <summary>An administrator's change of a person's e-mail address, with the reason (S1.11b2 review finding 2, CR-062).</summary>
+public sealed record ChangeEmailRequest(string? Email, string? Reason);
+
+/// <summary>An e-mail change waiting for a second person: the maker-checker request to approve.</summary>
+public sealed record PendingChangeResponse(string Outcome, Guid RequestId);
+
 /// <summary>A new password with the token of an e-mailed reset link (slice S1.11b2).</summary>
 public sealed record ResetPasswordRequest(string? Token, string? NewPassword);
 
@@ -180,6 +186,22 @@ public static class IdentityEndpoints
             AdminAsync(p, IdentityPermissions.SendInvitation, () => s.SendInvitationAsync(id, ct), ct)), IdentityPermissions.SendInvitation);
         UserAction(users.MapPost("/{id:guid}/password-reset-link", (Guid id, ReasonRequest body, IIdentityEmailService s, IPermissionChecker p, CancellationToken ct) =>
             AdminAsync(p, IdentityPermissions.SendPasswordReset, () => s.SendPasswordResetLinkAsync(id, body.Reason, ct), ct)), IdentityPermissions.SendPasswordReset);
+        UserAction(users.MapPost("/{id:guid}/email", async (Guid id, ChangeEmailRequest body, IIdentityEmailService s, IPermissionChecker p, CancellationToken ct) =>
+        {
+            if (!await p.HasPermissionAsync(IdentityPermissions.ChangeEmail, ct).ConfigureAwait(false))
+            {
+                return ForbiddenResult();
+            }
+
+            var result = await s.ChangeEmailAsync(id, body.Email, body.Reason, ct).ConfigureAwait(false);
+            return result switch
+            {
+                { Outcome: AdminOutcome.NotFound } => NotFoundResult(),
+                { Outcome: AdminOutcome.Invalid } => Problem(StatusCodes.Status400BadRequest, result.Error ?? InvalidRequest, null),
+                { PendingRequestId: { } request } => Results.Accepted(value: new PendingChangeResponse("pending", request)),
+                _ => Results.NoContent(),
+            };
+        }), IdentityPermissions.ChangeEmail);
         UserAction(users.MapGet("/{id:guid}/sessions", async (Guid id, IUserAdministrationService s, IPermissionChecker p, CancellationToken ct) =>
         {
             if (!await p.HasPermissionAsync(IdentityPermissions.ReadSessions, ct).ConfigureAwait(false))

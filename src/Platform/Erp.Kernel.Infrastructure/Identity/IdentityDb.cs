@@ -196,6 +196,12 @@ internal static class IdentityDb
         return token;
     }
 
+    /// <summary>The user of a valid token of the purpose, read without a lock (to lock the user first); null otherwise.</summary>
+    public static Task<Guid?> TokenOwnerAsync(NpgsqlConnection c, NpgsqlTransaction tx, string? token, string purpose, DateTimeOffset now, CancellationToken ct) =>
+        string.IsNullOrEmpty(token) || token.Length > 200
+            ? Task.FromResult<Guid?>(null)
+            : ScalarAsync<Guid?>(c, tx, "select user_id from iam.one_time_tokens where token_hash = $1 and purpose = $2 and used_at is null and expires_at > $3", ct, OpaqueTokens.Hash(token), purpose, now);
+
     /// <summary>A valid (unused, unexpired) token of the purpose, locked; null otherwise.</summary>
     public static async Task<OneTimeToken?> FindTokenAsync(NpgsqlConnection c, NpgsqlTransaction tx, string? token, string purpose, DateTimeOffset now, CancellationToken ct)
     {
@@ -431,4 +437,7 @@ public static class IdentityEvents
 
     /// <summary>A sign-in or enrolment code was e-mailed (slice S1.11b2, CR-009, R-003). The code itself is never in the event.</summary>
     public const string EmailCodeSent = "iam.email_code_sent";
+
+    /// <summary>An administrator changed a person's e-mail address (S1.11b2 review finding 2, CR-062); addresses are masked.</summary>
+    public const string EmailChanged = "iam.email_changed";
 }

@@ -1157,6 +1157,31 @@
    }
   },
   {
+   "code": "identity.email_changed",
+   "direct": true,
+   "group": "system",
+   "mandatory": true,
+   "audited": false,
+   "fields": [
+    {
+     "name": "masked",
+     "type": "text",
+     "class": "general"
+    }
+   ],
+   "audience": {},
+   "texts": {
+    "en": {
+     "title": "Your e-mail address was changed",
+     "body": "An administrator changed the e-mail address of your account to {masked}. Sign-in codes and password reset links now go to the new address. If you did not ask for this, contact your administrator at once."
+    },
+    "ur": {
+     "title": "آپ کا ای میل پتا تبدیل کر دیا گیا",
+     "body": "ایک ایڈمنسٹریٹر نے آپ کے اکاؤنٹ کا ای میل پتا بدل کر {masked} کر دیا ہے۔ سائن ان کوڈ اور پاس ورڈ ری سیٹ لنک اب نئے پتے پر جائیں گے۔ اگر آپ نے یہ نہیں کہا تھا تو فوراً اپنے ایڈمنسٹریٹر سے رابطہ کریں۔"
+    }
+   }
+  },
+  {
    "code": "document.expiring",
    "source": "kernel.document.expiring",
    "group": "documents",

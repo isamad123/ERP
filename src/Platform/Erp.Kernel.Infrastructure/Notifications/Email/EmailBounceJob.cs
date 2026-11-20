@@ -22,32 +22,32 @@ public sealed record Bounce(Guid MessageId, string Reason);
 /// Message-ID the sender gave it (<c>&lt;message id.customer code@domain&gt;</c>), so in a mailbox shared by several
 /// customers each customer's run takes only its own reports. A delivery-status report (RFC 3464) gives the status and the
 /// server's words; a report that only delays the message is ignored.
+/// <para>S1.11b2 review finding 5: only a delivery-status report, or a returned message from the mail system itself
+/// (mailer-daemon, postmaster), counts, and our Message-ID is looked for in its body (the returned headers), never in its
+/// own headers. An out-of-office or a person's reply names our Message-ID in <c>In-Reply-To</c>, but it is not a bounce.</para>
 /// </summary>
 public static partial class BounceParser
 {
+    private static readonly string[] MailSystemSenders = ["mailer-daemon", "mailerdaemon", "postmaster", "mail-daemon"];
+
     public static Bounce? Parse(MimeMessage message, string tenantCode)
     {
         ArgumentNullException.ThrowIfNull(message);
         ArgumentException.ThrowIfNullOrEmpty(tenantCode);
-        Guid? id = null;
-        foreach (Match m in OurMessageId().Matches(message.ToString()))
-        {
-            if (string.Equals(m.Groups[2].Value, tenantCode, StringComparison.OrdinalIgnoreCase) && Guid.TryParseExact(m.Groups[1].Value, "N", out var found))
-            {
-                id = found;
-                break;
-            }
-        }
-
-        if (id is null)
+        var report = message.BodyParts.OfType<MessageDeliveryStatus>().FirstOrDefault();
+        if (report is null && !FromMailSystem(message))
         {
             return null;
         }
 
-        var report = message.BodyParts.OfType<MessageDeliveryStatus>().FirstOrDefault();
+        if (OurId(message.Body?.ToString() ?? string.Empty, tenantCode) is not { } found)
+        {
+            return null;
+        }
+
         if (report is null)
         {
-            return new Bounce(id.Value, "bounced: " + Limit(message.Subject ?? "returned by the receiving mail server"));
+            return new Bounce(found, "bounced: " + Limit(message.Subject ?? "returned by the receiving mail server"));
         }
 
         foreach (var group in report.StatusGroups.Skip(1))
@@ -61,11 +61,38 @@ public static partial class BounceParser
 
             var status = group["Status"]?.Trim();
             var diagnostic = group["Diagnostic-Code"]?.Trim();
-            return new Bounce(id.Value, Limit(string.Create(CultureInfo.InvariantCulture, $"bounced: {status} {diagnostic}").Trim()));
+            return new Bounce(found, Limit(string.Create(CultureInfo.InvariantCulture, $"bounced: {status} {diagnostic}").Trim()));
         }
 
         return null;
     }
+
+    /// <summary>Whether the message names a Message-ID of this customer anywhere (a report of ours, bounce or not).</summary>
+    public static bool IsOurs(MimeMessage message, string tenantCode)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        return OurId(message.ToString(), tenantCode) is not null;
+    }
+
+    /// <summary>The text the bounce mailbox is searched for on the server: what every Message-ID of this customer contains.</summary>
+    public static string SearchText(string tenantCode) => "." + tenantCode + "@";
+
+    private static Guid? OurId(string text, string tenantCode)
+    {
+        foreach (Match m in OurMessageId().Matches(text))
+        {
+            if (string.Equals(m.Groups[2].Value, tenantCode, StringComparison.OrdinalIgnoreCase) && Guid.TryParseExact(m.Groups[1].Value, "N", out var found))
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool FromMailSystem(MimeMessage message) =>
+        message.From.Mailboxes.Any(m => m.Address.IndexOf('@', StringComparison.Ordinal) is > 0 and var at
+            && MailSystemSenders.Contains(m.Address[..at], StringComparer.OrdinalIgnoreCase));
 
     private static string Limit(string text) => text.Length <= 1000 ? text : text[..1000];
 
@@ -81,7 +108,8 @@ public interface IBounceMailboxReader
 
 public interface IBounceSession : IAsyncDisposable
 {
-    Task<IReadOnlyList<(string Key, MimeMessage Message)>> UnreadAsync(CancellationToken cancellationToken);
+    /// <summary>Unread messages that contain <paramref name="text"/> (searched on the server), newest first, at most 500.</summary>
+    Task<IReadOnlyList<(string Key, MimeMessage Message)>> UnreadAsync(string text, CancellationToken cancellationToken);
 
     Task MarkReadAsync(string key, CancellationToken cancellationToken);
 }
@@ -112,10 +140,13 @@ public sealed class ImapBounceMailboxReader : IBounceMailboxReader
 
     private sealed class Session(ImapClient client, IMailFolder folder) : IBounceSession
     {
-        public async Task<IReadOnlyList<(string Key, MimeMessage Message)>> UnreadAsync(CancellationToken cancellationToken)
+        public async Task<IReadOnlyList<(string Key, MimeMessage Message)>> UnreadAsync(string text, CancellationToken cancellationToken)
         {
+            // Only this customer's reports are fetched (S1.11b2 review finding 11): other customers' reports and junk in a
+            // shared mailbox can no longer fill the first 500 and hide new reports; the newest come first.
             var list = new List<(string, MimeMessage)>();
-            foreach (var uid in (await folder.SearchAsync(SearchQuery.NotSeen, cancellationToken).ConfigureAwait(false)).Take(500))
+            var found = await folder.SearchAsync(SearchQuery.NotSeen.And(SearchQuery.MessageContains(text)), cancellationToken).ConfigureAwait(false);
+            foreach (var uid in found.OrderByDescending(u => u.Id).Take(500))
             {
                 list.Add((uid.Id.ToString(CultureInfo.InvariantCulture), await folder.GetMessageAsync(uid, cancellationToken).ConfigureAwait(false)));
             }
@@ -168,10 +199,16 @@ public sealed class EmailBounceJob(MailServerResolver servers, IBounceMailboxRea
         await using var c = (NpgsqlConnection)await job.Services.GetRequiredService<ITenantConnectionProvider>().DataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var session = await reader.OpenAsync(mailbox, cancellationToken).ConfigureAwait(false);
         var marked = 0;
-        foreach (var (key, message) in await session.UnreadAsync(cancellationToken).ConfigureAwait(false))
+        foreach (var (key, message) in await session.UnreadAsync(BounceParser.SearchText(tenantCode), cancellationToken).ConfigureAwait(false))
         {
             if (BounceParser.Parse(message, tenantCode) is not { } bounce)
             {
+                // Ours but not a bounce (a delay notice, an out-of-office, a reply): marked read so it is not read again.
+                if (BounceParser.IsOurs(message, tenantCode))
+                {
+                    await session.MarkReadAsync(key, cancellationToken).ConfigureAwait(false);
+                }
+
                 continue;
             }
 
