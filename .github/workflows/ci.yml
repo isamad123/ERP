@@ -2,6 +2,10 @@ name: ci
 
 # Minutes are limited (GitHub free plan), so: no run per branch push (the pull request run covers it), nothing for
 # documents no test reads, and the tenant-isolation job only on pull requests. Run it by hand with "Run workflow".
+# R-040: `build-and-test` and `tenant-isolation` are required checks of main, so every pull request must report them.
+# A pull request therefore always starts this workflow; the `changes` job skips both jobs when every changed file is a
+# document no test reads (the list in DOC_ONLY below, the same as the push filter). GitHub counts a skipped job as passed.
+# If `changes` itself fails or is unsure, both jobs run (fail closed).
 on:
   push:
     branches: [main]
@@ -15,14 +19,6 @@ on:
       - "docs/setup/**"
   pull_request:
     branches: [main]
-    paths-ignore:
-      - "docs/specs/**"
-      - "docs/decisions/**"
-      - "docs/slices/**"
-      - "docs/handoff/**"
-      - "docs/adr/**"
-      - "docs/runbooks/**"
-      - "docs/setup/**"
   workflow_dispatch:
 
 permissions:
@@ -41,7 +37,43 @@ env:
   ERP_TEST_PG: "Host=localhost;Port=5432;Username=erp;Password=erp-ci-only;Database=erp_test"
 
 jobs:
+  # R-040: decides whether the two checks below run. Only a pull request that changes nothing but the documents listed in
+  # DOC_ONLY (the push filter above) skips them; anything else, an empty or unreadable diff included, runs both.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Does the pull request change anything but documents no test reads?
+        id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "pull_request" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; echo "not a pull request: run everything"; exit 0; fi
+          changed="$(git diff --name-only "$BASE...$HEAD")"
+          echo "$changed"
+          code=false
+          if [ -z "$changed" ]; then code=true; fi
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              docs/specs/*|docs/decisions/*|docs/slices/*|docs/handoff/*|docs/adr/*|docs/runbooks/*|docs/setup/*) ;; # DOC_ONLY
+              *) code=true ;;
+            esac
+          done <<< "$changed"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "run the checks: $code"
+
   build-and-test:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -164,7 +196,8 @@ jobs:
   # is called as one customer with another customer's ids, hosts and tokens; any success fails this job. It is its own
   # job so it shows by name on every pull request and can be made a required check in the branch protection of main.
   tenant-isolation:
-    if: github.event_name != 'push'
+    needs: changes
+    if: ${{ !cancelled() && github.event_name != 'push' && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
