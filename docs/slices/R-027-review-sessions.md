@@ -15,6 +15,16 @@ Class: B (review)        Model: **Opus 5.5 (high effort)**, one fresh session pe
 
 S1.11b2 is reviewed alongside S1.12 (CR-052 Q8 b); S1.11c1 was reviewed on 2026-11-19.
 
+### Part (b): started 2026-11-20 (product owner: "start the S1.11b2 review alongside S1.12")
+Rows 1 to 7 above are done (R-027). The S1.11b2 review runs in its own fresh session while a separate fresh session drafts
+the S1.12 slice file (`docs/slices/release-1.0-build-plan.md`, class C, Opus) for the product owner's approval.
+
+| Order | Slice | Merged as | Handoff | Reserved numbers |
+| --- | --- | --- | --- | --- |
+| 8 | S1.11b2 e-mail, delivery log, senders, identity e-mails (item 16, password reset and e-mail codes, is security-critical) | a7335a1 (#32), approval CR-049 (#34) | `docs/handoff/2026-11-18-S1.11b2.md` | CR-062, R-058 to R-060 |
+
+The review follows "How each review runs" below. The S1.12 session uses CR-063 and R-061 to R-065.
+
 ## How each review runs (the S1.05, S1.06, S1.07 and R-028 reviews are the model)
 1. Read CLAUDE.md, `docs/architecture-reference.md`, the slice file, its handoff and `git show --stat <commit>`. Review
    **the slice's diff and brief**, not the whole repository (token-strategy section 7), then the current state of
