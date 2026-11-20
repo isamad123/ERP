@@ -3,7 +3,7 @@
 // code. Each has a visible label, help text, required marker and an error message tied to the control for screen readers.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  Button as AriaButton, Checkbox as AriaCheckbox, ComboBox as AriaComboBox, DateField as AriaDateField, DateInput, DateSegment, FieldError,
+  Button as AriaButton, Checkbox as AriaCheckbox, Radio, RadioGroup, ComboBox as AriaComboBox, DateField as AriaDateField, DateInput, DateSegment, FieldError,
   Input, Label, ListBox, ListBoxItem, NumberField as AriaNumberField, Popover, Select as AriaSelect, SelectValue, Switch as AriaSwitch, Text,
   TextArea, TextField as AriaTextField, type DateValue, type Key,
 } from 'react-aria-components';
@@ -248,5 +248,24 @@ export function OneTimeCodeField({ label, help, error, value, onChange, length =
       <Input className="erp-input erp-otp" inputMode="numeric" pattern="[0-9]*" maxLength={length + 4} />
       <Messages help={help} error={error} />
     </AriaTextField>
+  );
+}
+
+/** A choice of one among a few (shown all at once); each option may carry a help line. */
+export function RadioGroupField({ label, options, value, onChange, error, isRequired }: { label: string; options: Option[]; value: string; onChange: (id: string) => void; error?: string | null; isRequired?: boolean }) {
+  return (
+    <RadioGroup className="erp-field erp-radio-group" value={value} onChange={onChange} isInvalid={!!error} isRequired={isRequired} validationBehavior="aria">
+      <FieldLabel label={label} isRequired={isRequired} />
+      {options.map((option) => (
+        <Radio key={option.id} value={option.id} className="erp-radio" isDisabled={option.isDisabled}>
+          <span className="erp-radio-dot" aria-hidden="true" />
+          <span className="erp-stack">
+            <span>{option.label}</span>
+            {option.detail && <span className="erp-help">{option.detail}</span>}
+          </span>
+        </Radio>
+      ))}
+      <Messages error={error} />
+    </RadioGroup>
   );
 }

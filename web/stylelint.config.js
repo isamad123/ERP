@@ -7,7 +7,7 @@ export default {
     'color-no-hex': true,
     'color-named': 'never',
     'function-disallowed-list': ['rgb', 'rgba', 'hsl', 'hsla', 'hwb', 'lab', 'lch', 'oklab', 'oklch'],
-    'unit-disallowed-list': [['px', 'pt', 'cm', 'mm', 'in'], { ignoreProperties: { px: ['/^--/'] } }],
+    'unit-disallowed-list': [['px', 'pt', 'cm', 'mm', 'in'], { ignoreProperties: { px: ['/^--/'] }, ignoreMediaFeatureNames: { px: ['width', 'min-width', 'max-width'] } }],
     'property-disallowed-list': [
       'left', 'right', 'margin-left', 'margin-right', 'padding-left', 'padding-right', 'border-left', 'border-right',
       'border-left-width', 'border-right-width', 'border-left-color', 'border-right-color', 'border-top-left-radius',

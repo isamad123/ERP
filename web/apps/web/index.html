@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>ERP</title>
+    <!-- Theme, density, language and direction before the first paint (spec 13 FR-UX-TOK-22); no inline script (CSP). -->
+    <script src="/boot.js"></script>
+    <!-- React Aria's pressable rule as a file, so it is not injected inline (CSP); see public/pressable.css. -->
+    <link id="react-aria-pressable-style" rel="stylesheet" href="/pressable.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

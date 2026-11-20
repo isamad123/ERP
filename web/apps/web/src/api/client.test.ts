@@ -1,7 +1,7 @@
 // API layer (slice S1.12a, Build item 5): problem answers become typed errors with key, field errors and reference;
 // the web header is always sent; 401 leads to exactly one refresh; 503 errors.auth.busy is retried once.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiProblem, requestJson, useTokenSource } from './client';
+import { ApiProblem, requestJson, setTokenSource } from './client';
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/problem+json', ...headers } });
@@ -29,7 +29,7 @@ describe('FR-KRN-IAM-01 API client', () => {
     let token = 'old';
     const refresh = vi.fn(async () => { token = 'new'; return true; });
     const ended = vi.fn();
-    useTokenSource({ accessToken: () => token, refreshAfterUnauthorized: refresh, sessionEnded: ended });
+    setTokenSource({ accessToken: () => token, refreshAfterUnauthorized: refresh, sessionEnded: ended });
     const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
       const headers = init.headers as Record<string, string>;
       expect(headers['X-Erp-Client']).toBe('web');
@@ -44,7 +44,7 @@ describe('FR-KRN-IAM-01 API client', () => {
 
   it('after a failed refresh the session ends (sign-in with return address)', async () => {
     const ended = vi.fn();
-    useTokenSource({ accessToken: () => 'x', refreshAfterUnauthorized: async () => false, sessionEnded: ended });
+    setTokenSource({ accessToken: () => 'x', refreshAfterUnauthorized: async () => false, sessionEnded: ended });
     vi.stubGlobal('fetch', vi.fn(async () => json(401, { title: 'x' })));
     await expect(requestJson('GET', '/api/me')).rejects.toBeInstanceOf(ApiProblem);
     expect(ended).toHaveBeenCalledTimes(1);

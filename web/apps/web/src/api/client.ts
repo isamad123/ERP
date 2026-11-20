@@ -37,7 +37,7 @@ export interface TokenSource {
 
 let tokens: TokenSource | null = null;
 
-export function useTokenSource(source: TokenSource): void {
+export function setTokenSource(source: TokenSource): void {
   tokens = source;
 }
 

@@ -36,12 +36,13 @@ class FakeWorld {
     return { outcome: 'tokens', accessToken: `at-${this.refreshes}`, accessTokenExpiresAt: new Date(this.now + 5 * MINUTE).toISOString(), idleTimeoutMinutes: this.idleMinutes };
   }
 
-  tab(): { manager: SessionManager; activity: () => void } {
+  /** A tab; `skewMs` makes its clock read ahead (or behind) of the others. */
+  tab(skewMs = 0): { manager: SessionManager; activity: () => void } {
     const listeners: ((m: SessionMessage) => void)[] = [];
     this.tabs.push(listeners);
     const activityHandlers: (() => void)[] = [];
     const env: SessionEnvironment = {
-      clock: { now: () => this.now },
+      clock: { now: () => this.now + skewMs },
       // Every tab reads the browser's one cookie jar at the moment of the request.
       refresh: async () => this.serverRefresh(this.cookie),
       signOut: async () => { this.ended = true; },
@@ -81,8 +82,8 @@ class FakeWorld {
 
 const flush = async () => { for (let i = 0; i < 20; i += 1) await Promise.resolve(); };
 
-async function signedInTabs(world: FakeWorld, count: number) {
-  const tabs = Array.from({ length: count }, () => world.tab());
+async function signedInTabs(world: FakeWorld, count: number, skews: number[] = []) {
+  const tabs = Array.from({ length: count }, (_, i) => world.tab(skews[i] ?? 0));
   const first = tabs[0]!;
   const resumes = tabs.map((t) => t.manager.resume(0));
   await world.advance(1000);
@@ -104,6 +105,24 @@ describe('FR-KRN-IAM-04 session in the browser (S1.12a)', () => {
     expect(b!.manager.getSnapshot().status).toBe('signedIn');
     expect(a!.manager.accessToken()).toBe(b!.manager.accessToken());
     expect(world.refreshes).toBeGreaterThan(7); // about every 4 minutes, one tab at a time
+  });
+
+  it('tabs whose clocks disagree still share the newest token and the idle time', async () => {
+    const world = new FakeWorld();
+    const [a, b] = await signedInTabs(world, 2, [20_000, -15_000]);
+    await world.advance(30 * MINUTE + 5 * MINUTE, (elapsed) => {
+      if (elapsed % 20_000 === 0) (elapsed % 40_000 === 0 ? a! : b!).activity();
+    });
+    expect(world.ended).toBe(false);
+    expect(a!.manager.accessToken()).toBe(b!.manager.accessToken());
+    const before = world.refreshes;
+    await world.advance(26 * MINUTE); // 30 minutes after the last refresh have not passed yet
+    expect(a!.manager.getSnapshot().status).toBe('signedIn');
+    expect(b!.manager.getSnapshot().status).toBe('signedIn');
+    await world.advance(10 * MINUTE); // the last activity's refresh can come up to one token life into the quiet time
+    expect(a!.manager.getSnapshot().status).toBe('expired');
+    expect(b!.manager.getSnapshot().status).toBe('expired');
+    expect(world.refreshes - before).toBeLessThanOrEqual(1); // at most the one refresh earned by the last activity
   });
 
   it('two tabs refreshing at the same moment do not end the session', async () => {

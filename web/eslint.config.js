@@ -27,6 +27,7 @@ export default tseslint.config(
         ],
       }],
       'no-restricted-syntax': ['error',
+        { selector: "MemberExpression[property.name='localStorage']", message: 'Browser storage may not hold personal data or tokens (S1.12 Q3, Q13); use the preferences helper.' },
         { selector: "MemberExpression[object.name='localStorage']", message: 'Browser storage may not hold personal data or tokens (S1.12 Q3, Q13); use the preferences helper.' },
         { selector: "MemberExpression[object.name='sessionStorage']", message: 'Browser storage may not hold personal data or tokens (S1.12 Q3, Q13).' },
         { selector: "MemberExpression[property.name='innerHTML']", message: 'Never write HTML strings into the page.' },
@@ -43,5 +44,9 @@ export default tseslint.config(
   {
     files: ['**/*.{js,mjs}'],
     languageOptions: { globals: { ...globals.node } },
+  },
+  {
+    files: ['apps/*/public/**/*.js'],
+    languageOptions: { globals: { ...globals.browser } },
   },
 );

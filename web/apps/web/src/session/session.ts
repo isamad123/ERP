@@ -31,7 +31,9 @@ export interface SessionEnvironment {
 }
 
 export type SessionMessage =
-  | { type: 'token'; accessToken: string; expiresAt: number; idleMinutes: number; refreshedAt: number }
+  // Times between tabs are ages (milliseconds ago or left), never one tab's clock reading; tokens are ordered by the
+  // server's own expiry time, so a newer token always wins whatever each tab's clock says.
+  | { type: 'token'; accessToken: string; serverExpiresAt: number; lifeLeftMs: number; idleMinutes: number; refreshedAgoMs: number }
   | { type: 'activity'; at: number }
   | { type: 'hello' }
   | { type: 'ended'; reason: 'signedOut' | 'expired' };
@@ -49,6 +51,7 @@ const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'touchstart', 'wheel'] as con
 export class SessionManager {
   private access: string | null = null;
   private expiresAt = 0;
+  private serverExpiresAt = 0;
   private idleMinutes = 30;
   private refreshedAt = 0;
   private lastActivity = 0;
@@ -143,19 +146,22 @@ export class SessionManager {
   private onMessage(message: SessionMessage): void {
     switch (message.type) {
       case 'token':
-        if (message.refreshedAt >= this.refreshedAt) {
+        if (message.serverExpiresAt >= this.serverExpiresAt) {
+          const now = this.env.clock.now();
           this.access = message.accessToken;
-          this.expiresAt = message.expiresAt;
+          this.serverExpiresAt = message.serverExpiresAt;
+          this.expiresAt = now + message.lifeLeftMs;
           this.idleMinutes = message.idleMinutes;
-          this.refreshedAt = message.refreshedAt;
-          this.lastActivity = Math.max(this.lastActivity, message.refreshedAt);
+          this.refreshedAt = Math.max(this.refreshedAt, now - message.refreshedAgoMs);
+          this.lastActivity = Math.max(this.lastActivity, this.refreshedAt);
           this.warningRemainingMs = null;
           this.setStatus('signedIn');
           this.schedule();
         }
         break;
       case 'activity':
-        if (this.warningRemainingMs === null) this.lastActivity = Math.max(this.lastActivity, message.at);
+        // Activity in another tab just now (this tab's own clock; the sender's time is not used).
+        if (this.warningRemainingMs === null) this.lastActivity = Math.max(this.lastActivity, this.env.clock.now());
         break;
       case 'hello':
         if (this.access !== null && this.status === 'signedIn') this.share();
@@ -172,7 +178,8 @@ export class SessionManager {
     this.access = answer.accessToken;
     // The server's clock may differ from this computer's: the life left is taken from its answer but kept between 2 and
     // 5 minutes (the token's lifetime), so a skewed clock can neither cause a refresh loop nor a late refresh.
-    const left = Date.parse(answer.accessTokenExpiresAt) - now;
+    this.serverExpiresAt = Date.parse(answer.accessTokenExpiresAt);
+    const left = this.serverExpiresAt - now;
     this.expiresAt = now + Math.min(Math.max(Number.isFinite(left) ? left : ACCESS_LIFETIME_MS, 2 * 60 * 1000), ACCESS_LIFETIME_MS);
     this.idleMinutes = answer.idleTimeoutMinutes ?? this.idleMinutes;
     this.refreshedAt = now;
@@ -183,15 +190,19 @@ export class SessionManager {
   }
 
   private share(): void {
-    if (this.access) this.env.channel?.post({ type: 'token', accessToken: this.access, expiresAt: this.expiresAt, idleMinutes: this.idleMinutes, refreshedAt: this.refreshedAt });
+    const now = this.env.clock.now();
+    if (this.access) {
+      this.env.channel?.post({ type: 'token', accessToken: this.access, serverExpiresAt: this.serverExpiresAt, lifeLeftMs: Math.max(0, this.expiresAt - now),
+        idleMinutes: this.idleMinutes, refreshedAgoMs: Math.max(0, now - this.refreshedAt) });
+    }
   }
 
   /** One refresh at a time across tabs; a tab that waited for the lock uses the token another tab just shared. */
   private refreshNow(): Promise<boolean> {
     if (this.refreshing) return this.refreshing;
-    const startedFrom = this.refreshedAt;
+    const tokenBefore = this.access;
     this.refreshing = this.env.lock(LOCK_NAME, async () => {
-      if (this.refreshedAt > startedFrom && this.access !== null) return true; // another tab refreshed while we waited
+      if (this.access !== null && this.access !== tokenBefore) return true; // another tab refreshed while we waited
       try {
         this.accept(await this.env.refresh());
         this.share();
@@ -239,6 +250,7 @@ export class SessionManager {
   private end(reason: 'signedOut' | 'expired', tellOthers: boolean): void {
     this.access = null;
     this.expiresAt = 0;
+    this.serverExpiresAt = 0;
     this.warningRemainingMs = null;
     if (this.timer !== null) this.env.clearTimer(this.timer);
     this.timer = null;

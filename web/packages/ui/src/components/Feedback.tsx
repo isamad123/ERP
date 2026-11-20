@@ -96,12 +96,14 @@ export function Spinner({ size = 'medium', immediate = false, label }: { size?: 
   );
 }
 
-export function EmptyState({ title, children, action }: { title?: string; children?: ReactNode; action?: ReactNode }) {
+/** An empty state; `level` 1 when it is the whole page (every page has one main heading). */
+export function EmptyState({ title, children, action, level = 2 }: { title?: string; children?: ReactNode; action?: ReactNode; level?: 1 | 2 }) {
   const { t } = useText();
+  const Heading = level === 1 ? 'h1' : 'h2';
   return (
     <section className="erp-panel">
       <Inbox className="erp-panel-icon" size={32} aria-hidden="true" />
-      <h2>{title ?? t('ui.empty.title')}</h2>
+      <Heading>{title ?? t('ui.empty.title')}</Heading>
       {children && <div className="erp-muted">{children}</div>}
       {action}
     </section>
