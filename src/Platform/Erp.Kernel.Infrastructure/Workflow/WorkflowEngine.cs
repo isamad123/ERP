@@ -47,6 +47,7 @@ public sealed partial class WorkflowEngine(
 {
     public const string TaskNotFound = "errors.workflow.task_not_found";
     public const string RequestNotFound = "errors.workflow.request_not_found";
+    public const string NotRequester = "errors.workflow.not_requester";
 
     private readonly ApproverResolution _people = new(directory);
     private readonly Dictionary<string, bool> _licensed = new(StringComparer.Ordinal);
@@ -133,6 +134,13 @@ public sealed partial class WorkflowEngine(
             throw new WorkflowException("errors.workflow.not_returned");
         }
 
+        // Ruling Q7: the requester corrects and resubmits. Anyone else could write the values and then approve them
+        // (FR-XM-32; review S1.10a finding 3, CR-059).
+        if (instance.RequesterUserId != work.Actor)
+        {
+            throw new WorkflowException(NotRequester);
+        }
+
         var fields = catalog.Fields(type.Code);
         var prepared = PrepareValues(type, fields, values, instance.CompanyId, [.. instance.SubjectUserIds], fixedSubjects: true);
         var json = await work.VersionJsonAsync(instance.VersionId, cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("request without version");
@@ -194,8 +202,8 @@ public sealed partial class WorkflowEngine(
                 continue;
             }
 
-            var up = (await _people.ManagersOfAsync(work, target.People.Where(request.Instance.Excludes), ct).ConfigureAwait(false))
-                .Where(p => !request.Instance.Excludes(p)).ToList();
+            var up = (await DecidersAsync(work, request, new ApproverTarget(await _people.ManagersOfAsync(work, target.People.Where(request.Instance.Excludes), ct).ConfigureAwait(false), null), ct)
+                .ConfigureAwait(false)).People.Where(p => !request.Instance.Excludes(p)).ToList();
             if (up.Count > 0)
             {
                 return await AssignAsync(work, request, step, null, up, "moved_up", ct).ConfigureAwait(false);
@@ -203,7 +211,7 @@ public sealed partial class WorkflowEngine(
 
             if (via != "fallback" && step.Fallback is not null)
             {
-                var fallback = await _people.ResolveAsync(work, step.Fallback, request.Instance, request.Values, ct).ConfigureAwait(false);
+                var fallback = await DecidersAsync(work, request, await _people.ResolveAsync(work, step.Fallback, request.Instance, request.Values, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
                 var others = fallback.People.Where(p => !request.Instance.Excludes(p)).ToList();
                 if (others.Count > 0)
                 {
@@ -220,15 +228,35 @@ public sealed partial class WorkflowEngine(
     private static bool Applies(RouteStep step, Request request) =>
         step.Condition is null || ConditionEvaluator.Evaluate(step.Condition, request.Values, request.Fields);
 
+    /// <summary>
+    /// The people a step names who may decide the request (its approver, else its fallback). Someone without the right to
+    /// decide the request's company counts as not found, so the fallback, moving up and "cannot assign" apply instead of a
+    /// task nobody can decide (review S1.10a finding 2, CR-059).
+    /// </summary>
     private async Task<(ApproverTarget Target, string Via)> TargetAsync(WorkflowWork work, Request request, RouteStep step, CancellationToken ct)
     {
-        var target = await _people.ResolveAsync(work, step.Approver, request.Instance, request.Values, ct).ConfigureAwait(false);
+        var target = await DecidersAsync(work, request, await _people.ResolveAsync(work, step.Approver, request.Instance, request.Values, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
         if (target.IsEmpty && step.Fallback is not null)
         {
-            return (await _people.ResolveAsync(work, step.Fallback, request.Instance, request.Values, ct).ConfigureAwait(false), "fallback");
+            return (await DecidersAsync(work, request, await _people.ResolveAsync(work, step.Fallback, request.Instance, request.Values, ct).ConfigureAwait(false), ct).ConfigureAwait(false), "fallback");
         }
 
         return (target, "approver");
+    }
+
+    /// <summary>The people of a target who hold the right to decide the request (<see cref="CanDecideAsync"/>); none: nobody.</summary>
+    private static async Task<ApproverTarget> DecidersAsync(WorkflowWork work, Request request, ApproverTarget target, CancellationToken ct)
+    {
+        var people = new List<Guid>();
+        foreach (var person in target.People)
+        {
+            if (await CanDecideAsync(work, request, person, ct).ConfigureAwait(false))
+            {
+                people.Add(person);
+            }
+        }
+
+        return people.Count == 0 ? ApproverTarget.Nobody : new ApproverTarget(people, target.RoleId);
     }
 
     /// <summary>Whether a later step applies and has someone other than the excluded people to decide it.</summary>
@@ -388,6 +416,13 @@ public sealed partial class WorkflowEngine(
             throw new WorkflowException("errors.workflow.assignee_cannot_decide");
         }
 
+        // Several people may hold tasks of one step (ruling R1): never a second open task of the step for the same person
+        // (S1.10b review finding 5; escalation already avoids it).
+        if ((await work.TasksOfAsync(req.Instance.Id, ct).ConfigureAwait(false)).Any(t => t.Status == "pending" && t.StepKey == task.StepKey && t.Id != task.Id && t.AssigneeUserId == to))
+        {
+            throw new WorkflowException("errors.workflow.reassign_target_has_task");
+        }
+
         await ActOnTaskAsync(work, req, task, "reassigned", reason, actingFor, ct, claim: false).ConfigureAwait(false);
         await work.HistoryAsync(req.Instance.Id, task.Id, "reassigned", work.Actor, actingFor, new { step = task.StepKey, to_user_id = to, reason }, ct).ConfigureAwait(false);
         var opened = await InsertTaskAsync(work, req, task.StepKey, to, null, [to], "reassigned", ct, task.EscalationLevel, task).ConfigureAwait(false);
@@ -403,14 +438,17 @@ public sealed partial class WorkflowEngine(
                 throw new WorkflowException("errors.workflow.info_pending");
             }
 
-            await work.ExecuteAsync("""
+            var asked = await work.ScalarAsync<DateTime>("""
                 update wf.workflow_tasks set assignee_user_id = coalesce(assignee_user_id, $2), claimed_at = case when assignee_user_id is null then $3 else claimed_at end,
                     info_requested_at = $3, info_requested_by = $2, updated_at = $3, updated_by = $2, row_version = row_version + 1
                 where id = $1
+                returning info_requested_at
                 """, ct, task.Id, work.Actor, work.Now).ConfigureAwait(false);
+            var askedAt = new DateTimeOffset(DateTime.SpecifyKind(asked, DateTimeKind.Utc));
             work.Change("wf.workflow_tasks", task.Id, req.Instance.CompanyId, "update", ("info_requested_at", null, work.Now), ("info_requested_by", null, work.Actor),
                 ("assignee_user_id", task.AssigneeUserId, task.AssigneeUserId ?? work.Actor));
-            await work.HistoryAsync(req.Instance.Id, task.Id, "info_requested", work.Actor, actingFor, new { step = task.StepKey, question }, ct).ConfigureAwait(false);
+            // asked_at is the task's stored info_requested_at, so the question is found again for a task that inherited it (P6; review finding 8).
+            await work.HistoryAsync(req.Instance.Id, task.Id, "info_requested", work.Actor, actingFor, new { step = task.StepKey, question, asked_at = askedAt }, ct).ConfigureAwait(false);
             await work.RaiseAsync(WorkflowEvents.InfoRequested, "wf.workflow_instance", req.Instance.Id, Payload(req, task.Id, [req.Instance.RequesterUserId], null), ct).ConfigureAwait(false);
             return new DecisionResult(req.Instance.Id, "running", await OpenTasksAsync(work, req.Instance.Id, ct).ConfigureAwait(false));
         }, cancellationToken);
@@ -466,7 +504,7 @@ public sealed partial class WorkflowEngine(
         OnTaskAsync(taskId, async (work, req, task, ct) =>
         {
             if (task.AssigneeRoleId is null || req.Instance.Excludes(work.Actor)
-                || !(await ApproverResolution.RoleHoldersAsync(work, task.AssigneeRoleId.Value, req.Instance.CompanyId, ApproverResolution.Today(work), ct).ConfigureAwait(false)).Contains(work.Actor))
+                || !await MayTakeFromQueueAsync(work, req, task, task.AssigneeRoleId.Value, work.Actor, ct).ConfigureAwait(false))
             {
                 throw new KeyNotFoundException(TaskNotFound);
             }
@@ -603,7 +641,7 @@ public sealed partial class WorkflowEngine(
             {
                 // A holder of the queue who lost the race to another holder is told it was taken (409), not "not found".
                 if (task.AssigneeRoleId is not null && task.ClaimedAt is not null && !request.Instance.Excludes(work.Actor)
-                    && (await ApproverResolution.RoleHoldersAsync(work, task.AssigneeRoleId.Value, request.Instance.CompanyId, ApproverResolution.Today(work), c).ConfigureAwait(false)).Contains(work.Actor))
+                    && await MayTakeFromQueueAsync(work, request, task, task.AssigneeRoleId.Value, work.Actor, c).ConfigureAwait(false))
                 {
                     throw new WorkflowException(task.Status == "pending" ? "errors.workflow.task_claimed" : "errors.workflow.task_not_pending");
                 }
@@ -656,7 +694,28 @@ public sealed partial class WorkflowEngine(
     }
 
     /// <summary>An action of the requester on their own request (answer a question, withdraw).</summary>
-    private async Task<DecisionResult> RequesterActionAsync(Guid instanceId, Func<WorkflowWork, Request, CancellationToken, Task<DecisionResult>> action, CancellationToken ct)
+    private Task<DecisionResult> RequesterActionAsync(Guid instanceId, Func<WorkflowWork, Request, CancellationToken, Task<DecisionResult>> action, CancellationToken ct) =>
+        OnceMoreOnDeadlockAsync(() => RequesterActionOnceAsync(instanceId, action, ct));
+
+    /// <summary>
+    /// Runs an engine-owned unit of work, and once more when PostgreSQL ended it as a deadlock victim (SQLSTATE 40P01). Withdraw
+    /// and cancel lock the request and then (in the module's outcome handler) the document, while a module's resubmit locks
+    /// its document and then the request; the engine's side retries so the person does not see a server error (S1.10b review
+    /// finding 6). The first attempt rolled back completely, so the second starts from the committed state.
+    /// </summary>
+    internal static async Task<T> OnceMoreOnDeadlockAsync<T>(Func<Task<T>> action)
+    {
+        try
+        {
+            return await action().ConfigureAwait(false);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.DeadlockDetected)
+        {
+            return await action().ConfigureAwait(false);
+        }
+    }
+
+    private async Task<DecisionResult> RequesterActionOnceAsync(Guid instanceId, Func<WorkflowWork, Request, CancellationToken, Task<DecisionResult>> action, CancellationToken ct)
     {
         await using var c = await IdentityDb.OpenAsync(tenant.DataSource, ct).ConfigureAwait(false);
         await using var tx = await c.BeginTransactionAsync(ct).ConfigureAwait(false);
@@ -698,19 +757,38 @@ public sealed partial class WorkflowEngine(
             return await DelegatedAsync(work, assignee, userId, request.Instance.DocumentType, request.Instance.CompanyId, ct).ConfigureAwait(false) ? new Capacity(assignee) : null;
         }
 
-        return task.AssigneeRoleId is { } role
-            && (await ApproverResolution.RoleHoldersAsync(work, role, request.Instance.CompanyId, ApproverResolution.Today(work), ct).ConfigureAwait(false)).Contains(userId)
+        return task.AssigneeRoleId is { } role && await MayTakeFromQueueAsync(work, request, task, role, userId, ct).ConfigureAwait(false)
             ? new Capacity(null)
             : null;
     }
 
     /// <summary>
+    /// Whether the user may take a role-queue task: an eligible holder of its role, and not a person whose own task on this
+    /// step of the request was escalated (S1.10b review finding 3: "the original assignee can no longer decide it").
+    /// </summary>
+    private static async Task<bool> MayTakeFromQueueAsync(WorkflowWork work, Request request, TaskRow task, Guid role, Guid userId, CancellationToken ct) =>
+        (await ApproverResolution.RoleHoldersAsync(work, role, request.Instance.CompanyId, ApproverResolution.Today(work), ct).ConfigureAwait(false)).Contains(userId)
+        && await work.ScalarAsync<bool>("select " + NotEscalatedFrom("$1", "$2", "$3"), ct, userId, task.InstanceId, task.StepKey).ConfigureAwait(false);
+
+    /// <summary>
+    /// The SQL test "the user's own task on this step of this request was not escalated" (S1.10b review finding 3), for
+    /// role-queue tasks. A person an administrator reassigns the task to by name is not affected.
+    /// </summary>
+    internal static string NotEscalatedFrom(string user, string instance, string step) => $"""
+        not exists (select 1 from wf.workflow_tasks et
+                    where et.instance_id = {instance} and et.step_key = {step} and et.status = 'escalated' and et.assignee_user_id = {user})
+        """;
+
+    /// <summary>
     /// The SQL test "an active delegation from <c>{from}</c> to <c>{to}</c> covers the request now" (ruling Q8): status active,
     /// now within its time, the request's document type and company inside its lists (an empty list: all). Only the
-    /// delegator's own tasks are matched, so a delegation is never passed on.
+    /// delegator's own tasks are matched, so a delegation is never passed on. It applies only while the delegator is an
+    /// active user: a disabled or archived user's rights are not used by anyone (S1.10b review finding 1); their open tasks
+    /// are reassigned by an administrator (FR-ADM-USR-03) or move up when late.
     /// </summary>
     internal static string DelegationCovers(string from, string to, string now, string documentType, string company) => $"""
         exists (select 1 from iam.delegations dl
+                join iam.users du on du.id = dl.from_user_id and du.status = 'active' and not du.is_deleted
                 where dl.from_user_id = {from} and dl.to_user_id = {to} and dl.status = 'active'
                   and dl.valid_from <= {now} and dl.valid_to > {now}
                   and (jsonb_array_length(coalesce(dl.scope -> 'document_types', '[]'::jsonb)) = 0 or (dl.scope -> 'document_types') ? {documentType})

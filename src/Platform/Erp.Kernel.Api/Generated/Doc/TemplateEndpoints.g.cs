@@ -30,23 +30,6 @@ public sealed class TemplateResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for doc.templates. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class TemplateWriteRequest
-{
-    public string? Code { get; init; }
-    public global::System.Text.Json.JsonElement? NameI18n { get; init; }
-    public string? Kind { get; init; }
-    public string? EntityType { get; init; }
-    public global::System.Guid? CompanyId { get; init; }
-    public string? Language { get; init; }
-    public string? Source { get; init; }
-    public global::System.Guid? ActiveVersionId { get; init; }
-    public bool? IsActive { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for doc.templates.</summary>
 public sealed class TemplateListQuery
 {
@@ -61,7 +44,7 @@ public sealed class TemplateListQuery
     public global::System.Guid? ActiveVersionId { get; init; }
 }
 
-/// <summary>Generated endpoints of doc.templates: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of doc.templates: read. Answers pass through field security (S1.06).</summary>
 internal static class TemplateEndpoints
 {
     private const string Resource = "doc.templates";
@@ -71,8 +54,6 @@ internal static class TemplateEndpoints
         var group = app.MapGroup("/api/doc/templates").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("doc.templates.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "doc.templates.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("doc.templates.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "doc.templates.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("doc.templates.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "doc.templates.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("doc.templates.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "doc.templates.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] TemplateListQuery query, global::Erp.Kernel.Application.Generated.Doc.ITemplateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -89,53 +70,6 @@ internal static class TemplateEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Doc.TemplateAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(TemplateWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.ITemplateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "doc.templates.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Doc.TemplateAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Doc.Template();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/doc/templates/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Doc.TemplateAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, TemplateWriteRequest request, global::Erp.Kernel.Application.Generated.Doc.ITemplateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "doc.templates.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Doc.TemplateAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Doc.TemplateAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static TemplateResponse ToResponse(global::Erp.Kernel.Domain.Generated.Doc.Template row) => new()
@@ -156,124 +90,4 @@ internal static class TemplateEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(TemplateWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.Code is null && (!update || access.CanEdit("code")))
-        {
-            errors.Add("code");
-        }
-        if (request.NameI18n is null && (!update || access.CanEdit("name_i18n")))
-        {
-            errors.Add("nameI18n");
-        }
-        if (request.Kind is null && (!update || access.CanEdit("kind")))
-        {
-            errors.Add("kind");
-        }
-        if (request.EntityType is null && (!update || access.CanEdit("entity_type")))
-        {
-            errors.Add("entityType");
-        }
-        if (request.Language is null && (!update || access.CanEdit("language")))
-        {
-            errors.Add("language");
-        }
-        if (request.Source is null && (!update || access.CanEdit("source")))
-        {
-            errors.Add("source");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(TemplateWriteRequest request, global::Erp.Kernel.Domain.Generated.Doc.Template row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("code"))
-        {
-            row.Code = request.Code!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Code, row.Code, update))
-        {
-            denied.Add("code");
-        }
-        if (access.CanEdit("name_i18n"))
-        {
-            row.NameI18n = GeneratedEndpointSupport.ToDocument(request.NameI18n)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.NameI18n, row.NameI18n, update))
-        {
-            denied.Add("nameI18n");
-        }
-        if (access.CanEdit("kind"))
-        {
-            row.Kind = request.Kind!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Kind, row.Kind, update))
-        {
-            denied.Add("kind");
-        }
-        if (access.CanEdit("entity_type"))
-        {
-            row.EntityType = request.EntityType!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EntityType, row.EntityType, update))
-        {
-            denied.Add("entityType");
-        }
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("language"))
-        {
-            row.Language = request.Language!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Language, row.Language, update))
-        {
-            denied.Add("language");
-        }
-        if (access.CanEdit("source"))
-        {
-            row.Source = request.Source!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Source, row.Source, update))
-        {
-            denied.Add("source");
-        }
-        if (access.CanEdit("active_version_id"))
-        {
-            row.ActiveVersionId = request.ActiveVersionId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ActiveVersionId, row.ActiveVersionId, update))
-        {
-            denied.Add("activeVersionId");
-        }
-        if (access.CanEdit("is_active"))
-        {
-            if (request.IsActive is not null)
-            {
-                row.IsActive = request.IsActive!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsActive, row.IsActive, update))
-        {
-            denied.Add("isActive");
-        }
-        return denied;
-    }
 }

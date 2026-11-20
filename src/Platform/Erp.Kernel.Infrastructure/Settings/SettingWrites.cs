@@ -165,7 +165,9 @@ public static class SettingWrites
             return SettingsErrors.ScopeNotFound;
         }
 
-        return value is { } v && definition.Definition.Validation.Problem(definition.DataType, v) is not null ? SettingsErrors.ValueInvalid : null;
+        return value is { } v && definition.Definition.Validation.Problem(definition.DataType, v) is { } problem
+            ? problem == "time_zone" ? SettingsErrors.TimeZoneUnknown : SettingsErrors.ValueInvalid
+            : null;
     }
 
     private static async Task RaiseAsync(NpgsqlConnection c, NpgsqlTransaction tx, string schema, string eventType, string aggregateType, Guid aggregateId, Guid actor, DateTimeOffset now, object payload, CancellationToken ct)

@@ -62,6 +62,20 @@ public sealed class TenancyFixture : IAsyncLifetime
 
     public WebApplication App { get; private set; } = null!;
 
+    /// <summary>
+    /// The host look-up cache of the API hosts this fixture starts (<c>Tenancy:HostCacheSeconds</c>). 0 (fresh look-ups)
+    /// for tests that change the control plane with SQL; the isolation suite uses the production default so the cached
+    /// path is probed too (S1.04 review finding 4).
+    /// </summary>
+    public int HostCacheSeconds { get; init; }
+
+    /// <summary>Forgets the host look-ups cached by <paramref name="app"/>, after a test changed the control plane with SQL.</summary>
+    public static void ForgetCachedHosts(WebApplication app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+        ((TenantDirectory)app.Services.GetRequiredService<Erp.Kernel.Application.ControlPlane.Tenancy.ITenantDirectory>()).Invalidate();
+    }
+
     public string CodeA => "a" + Suffix;
 
     public string CodeB => "b" + Suffix;
@@ -104,7 +118,8 @@ public sealed class TenancyFixture : IAsyncLifetime
     /// The caller disposes the returned host, except <see cref="App"/>, which the fixture disposes.
     /// </summary>
     /// <remarks><paramref name="realAccess"/>: keep the real access engine (slice S1.06) instead of the allow-all doubles.</remarks>
-    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken, Action<IServiceCollection>? extra = null, bool realAccess = false)
+    /// <remarks><paramref name="controlPlaneConnectionString"/>: another control-plane login (S1.03 review finding 11, the cp_api role).</remarks>
+    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken, Action<IServiceCollection>? extra = null, bool realAccess = false, string? controlPlaneConnectionString = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
@@ -113,8 +128,8 @@ public sealed class TenancyFixture : IAsyncLifetime
         // The isolation suite makes the database refuse thousands of cross-customer writes on purpose (answered 409);
         // EF Core logs each refusal as an error, which floods the CI log and hides real test failures.
         builder.Logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.None);
-        builder.Configuration["ConnectionStrings:ControlPlane"] = Options.ConnectionString;
-        builder.Configuration["Tenancy:HostCacheSeconds"] = "0";
+        builder.Configuration["ConnectionStrings:ControlPlane"] = controlPlaneConnectionString ?? Options.ConnectionString;
+        builder.Configuration["Tenancy:HostCacheSeconds"] = HostCacheSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
         builder.Configuration["Settings:RefreshMilliseconds"] = "0"; // tests write settings with SQL and read them at once (S1.09a)
         builder.Configuration["Auth:Issuer"] = Issuer;
         builder.Configuration["Auth:Audience"] = Audience;
@@ -262,7 +277,13 @@ public sealed class TenancyFixture : IAsyncLifetime
     }
 
     /// <summary>Remembers the code so the database and logins are dropped afterwards, even if provisioning fails.</summary>
-    public void Track(string code) => _codes.Add(code);
+    public void Track(string code)
+    {
+        lock (_codes) // provisioning race tests (R-031) start runs from parallel tasks
+        {
+            _codes.Add(code);
+        }
+    }
 
     public async Task<ProvisioningResult> ProvisionAsync(string code, CancellationToken cancellationToken, IProvisioningProgress? progress = null, MigrationSet? migrations = null)
     {

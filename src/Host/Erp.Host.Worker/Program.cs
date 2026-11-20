@@ -1,4 +1,5 @@
 using Erp.Host.Worker;
+using Erp.Kernel.Infrastructure.Workflow;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -11,4 +12,5 @@ WorkerHost.Configure(builder.Services, builder.Configuration);
 builder.Services.AddHostedService<JobWorkerService>();
 builder.Services.AddHostedService<EventDispatcherService>();
 using var host = builder.Build();
+host.Services.VerifyWorkflow(); // manifests and outcome handlers checked at start (review S1.10a finding 4)
 await host.RunAsync().ConfigureAwait(false);

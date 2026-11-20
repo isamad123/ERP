@@ -21,11 +21,22 @@ namespace Erp.IntegrationTests.Tenancy.Isolation;
 /// <item>An unknown host with A's token: 404.</item>
 /// <item>A's database is byte-for-byte unchanged by all of the above.</item>
 /// <item>Positive controls, so a pass is never vacuous: A reads, lists, updates and deletes its own row; B lists its own row.</item>
+/// <item>Reads by id and lists are also sent by A and B at the same moment, so state shared between requests (a customer
+/// kept in a singleton or a static, a cache not keyed by customer) is caught too (S1.04 review finding 1).</item>
 /// </list>
 /// </summary>
 public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
 {
     private const int MaxPages = 50;
+
+    /// <summary>A and B requests sent together in the concurrent phase (each customer sends this many).</summary>
+    private const int ConcurrentPairs = 8;
+
+    /// <summary>
+    /// Record fields a create body never carries: a create request is given A's references, never A's own row id, so A's
+    /// row id stays a leak marker for the create's answer (S1.04 review finding 2).
+    /// </summary>
+    private static readonly string[] RecordFields = ["id", "rowVersion", "createdAt", "createdBy", "updatedAt", "updatedBy"];
 
     public async Task<IReadOnlyList<string>> RunAsync(ApiEndpoint endpoint, CancellationToken ct)
     {
@@ -58,6 +69,11 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
         if (endpoint.Kind is EndpointKind.JobCatalog or EndpointKind.JobRecordAction)
         {
             return await new JobProbe(fx, app).RunAsync(endpoint, ct);
+        }
+
+        if (endpoint.Kind is EndpointKind.NotificationCatalog or EndpointKind.NotificationRecordAction && endpoint.Pattern.StartsWith("/api/doc/templates", StringComparison.Ordinal))
+        {
+            return await new TemplateProbe(fx, app).RunAsync(endpoint, ct);
         }
 
         if (endpoint.Kind is EndpointKind.NotificationCatalog or EndpointKind.NotificationRecordAction && endpoint.Pattern.StartsWith("/api/doc/attachments", StringComparison.Ordinal))
@@ -108,6 +124,7 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
         }
 
         var body = own.Body;
+        var sentBody = endpoint.Kind == EndpointKind.Create ? WithoutRecordFields(body) : body;
         using var template = JsonDocument.Parse(body);
         var rowVersion = template.RootElement.TryGetProperty("rowVersion", out var rv) ? rv.GetInt64().ToString(System.Globalization.CultureInfo.InvariantCulture) : "0";
         var path = endpoint.Kind switch
@@ -126,7 +143,7 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
         foreach (var hints in new[] { false, true })
         {
             var label = hints ? "B host + B token + headers/query naming A" : "B host + B token";
-            var response = await SendAsync(fx.HostB, tokenB, method, path, sendsBody ? body : null, hints, ct);
+            var response = await SendAsync(fx.HostB, tokenB, method, path, sendsBody ? sentBody : null, hints, ct);
             if ((int)response.Status >= 500)
             {
                 failures.Add($"{endpoint} [{label}]: server error {(int)response.Status}. {Short(response.Body)}");
@@ -140,7 +157,7 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
                 case EndpointKind.List:
                     Expect(failures, endpoint, label, response, HttpStatusCode.OK);
                     var pages = await PageAsync(fx.HostB, tokenB, endpoint.BasePath, hints, ct);
-                    await LeaksAsync(failures, endpoint, label + ", unfiltered list", fx.CodeB, string.Concat(pages.Bodies), markers, null, ct);
+                    await LeaksAsync(failures, endpoint, label + ", unfiltered list", fx.CodeB, string.Concat(pages.Bodies), markers, null, idA, ct);
                     break;
                 case EndpointKind.Create when response.Status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden:
                     failures.Add($"{endpoint} [{label}]: B was refused on its own host ({(int)response.Status}); the create path was not exercised.");
@@ -148,7 +165,7 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
             }
 
             // An echo of what the caller itself sent is not a leak; anything else of A's is.
-            await LeaksAsync(failures, endpoint, label, fx.CodeB, response.Body, markers, sendsBody ? body + path : null, ct);
+            await LeaksAsync(failures, endpoint, label, fx.CodeB, response.Body, markers, sendsBody ? sentBody + path : null, idA, ct);
         }
 
         // 3 and 4: crossed host and token, wrong or missing tokens, unknown host.
@@ -163,16 +180,24 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
         };
         foreach (var (label, host, token, expected) in crossed)
         {
-            var response = await SendAsync(host, token, method, path, sendsBody ? body : null, hints: false, ct);
+            var response = await SendAsync(host, token, method, path, sendsBody ? sentBody : null, hints: false, ct);
             Expect(failures, endpoint, label, response, expected);
-            await LeaksAsync(failures, endpoint, label, null, response.Body, markers, null, ct);
+            await LeaksAsync(failures, endpoint, label, null, response.Body, markers, null, idA, ct);
         }
+
 
         // 5: nothing of A's changed.
         var changed = IsolationFixture.Changed(before, await fx.FingerprintAsync(fx.CodeA, ct));
         if (changed.Count > 0)
         {
             failures.Add($"{endpoint}: customer A's database changed during the cross-customer calls: {string.Join(", ", changed)}");
+        }
+
+        // 7 (run before 6, which changes A): the same read from both customers at the same moment. After the fingerprint, because A's own reads may change A
+        // (the access log of sensitive fields); B's requests here are the ones the fingerprint already covered one at a time.
+        if (endpoint.Kind is EndpointKind.Get or EndpointKind.List)
+        {
+            await ConcurrentAsync(failures, endpoint, path, idA, markers, tokenA, tokenB, ct);
         }
 
         // 6: positive controls (after the fingerprint, because they change A).
@@ -206,6 +231,55 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
         return failures;
     }
 
+    /// <summary>
+    /// Sends <see cref="ConcurrentPairs"/> reads as A (A's host and token) and as many as B (B's host and token), all aimed at
+    /// A's row and started together, interleaved. Every B answer must be what B gets alone (404 by id, a list without A's
+    /// data); every A answer must still show A's row when A's own sequential read does.
+    /// </summary>
+    private async Task ConcurrentAsync(List<string> failures, ApiEndpoint endpoint, string path, Guid idA, IReadOnlySet<string> markers, string tokenA, string tokenB, CancellationToken ct)
+    {
+        var alone = await SendAsync(fx.HostA, tokenA, HttpMethod.Get, path, null, hints: false, ct);
+        var expectRow = alone.Status == HttpStatusCode.OK && alone.Body.Contains(idA.ToString(), StringComparison.Ordinal);
+        var calls = new List<Task<(bool IsA, Reply Reply)>>();
+        for (var i = 0; i < ConcurrentPairs; i++)
+        {
+            calls.Add(CallAsync(true));
+            calls.Add(CallAsync(false));
+        }
+
+        var replies = await Task.WhenAll(calls);
+        const string Label = "A and B at the same time";
+        var wrongA = replies.Where(r => r.IsA && (r.Reply.Status != HttpStatusCode.OK || (expectRow && !r.Reply.Body.Contains(idA.ToString(), StringComparison.Ordinal)))).ToList();
+        if (wrongA.Count > 0)
+        {
+            failures.Add($"{endpoint} [{Label}]: {wrongA.Count} of {ConcurrentPairs} of A's own reads did not show A's row {idA} (got {(int)wrongA[0].Reply.Status}). {Short(wrongA[0].Reply.Body)}");
+        }
+
+        var expectedB = endpoint.Kind == EndpointKind.Get ? HttpStatusCode.NotFound : HttpStatusCode.OK;
+        var wrongB = replies.Where(r => !r.IsA && r.Reply.Status != expectedB).ToList();
+        if (wrongB.Count > 0)
+        {
+            failures.Add($"{endpoint} [{Label}]: {wrongB.Count} of {ConcurrentPairs} of B's reads answered {(int)wrongB[0].Reply.Status}, expected {(int)expectedB}. {Short(wrongB[0].Reply.Body)}");
+        }
+
+        await LeaksAsync(failures, endpoint, Label, fx.CodeB, string.Concat(replies.Where(r => !r.IsA).Select(r => r.Reply.Body)), markers, null, idA, ct);
+
+        async Task<(bool IsA, Reply Reply)> CallAsync(bool isA) =>
+            (isA, await SendAsync(isA ? fx.HostA : fx.HostB, isA ? tokenA : tokenB, HttpMethod.Get, path, null, hints: false, ct));
+    }
+
+    /// <summary>The JSON object without <see cref="RecordFields"/>.</summary>
+    private static string WithoutRecordFields(string json)
+    {
+        var node = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
+        foreach (var field in RecordFields)
+        {
+            node.Remove(field);
+        }
+
+        return node.ToJsonString();
+    }
+
     /// <summary>A query string that filters by every reference A's row holds (unknown names are ignored by the endpoint).</summary>
     private static string FilterQuery(ExpectedTable table, IReadOnlyDictionary<string, object?> row) =>
         string.Join("&", table.Columns
@@ -229,16 +303,17 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
     /// <summary>
     /// A's ids in a response are a leak unless the caller sent them itself (an echo) or the caller's own database
     /// stores them: the probe's own cross-customer creates can store a copied reference in B (a plain id without a
-    /// foreign key), and B listing that row later shows B's data, not A's. A's seeded row ids are never written to B,
-    /// because no write request accepts an id, so reading A's rows through any path is still reported.
+    /// foreign key), and B listing that row later shows B's data, not A's. The probed row's own id
+    /// (<paramref name="rowId"/>) is never exempted: no write request carries it (create bodies have it removed), so B
+    /// storing it could only mean B recorded what it asked for, and showing it is still A's row (S1.04 review finding 5).
     /// </summary>
-    private async Task LeaksAsync(List<string> failures, ApiEndpoint endpoint, string label, string? caller, string body, IReadOnlySet<string> markers, string? sent, CancellationToken ct)
+    private async Task LeaksAsync(List<string> failures, ApiEndpoint endpoint, string label, string? caller, string body, IReadOnlySet<string> markers, string? sent, Guid rowId, CancellationToken ct)
     {
         var suspects = markers.Where(m => body.Contains(m, StringComparison.OrdinalIgnoreCase) && (sent is null || !sent.Contains(m, StringComparison.OrdinalIgnoreCase))).ToList();
         if (suspects.Count > 0 && caller is not null)
         {
             var own = await fx.StoredInAsync(caller, [.. suspects.Select(Guid.Parse)], ct);
-            suspects = [.. suspects.Where(m => !own.Contains(Guid.Parse(m)))];
+            suspects = [.. suspects.Where(m => Guid.Parse(m) == rowId || !own.Contains(Guid.Parse(m)))];
         }
 
         if (suspects.Count > 0)

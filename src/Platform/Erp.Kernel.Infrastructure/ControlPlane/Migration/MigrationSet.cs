@@ -49,7 +49,9 @@ public sealed class MigrationSet(
 
     public IReadOnlyCollection<string> Modules => tenantModuleFolders.Keys.ToList();
 
-    public IReadOnlyList<string> ControlPlaneScripts => SqlScriptRunner.Scripts([.. controlPlaneFolders]);
+    /// <summary>The control-plane scripts in file-name order (module <c>controlplane</c>; recorded in cp.schema_history, CR-006).</summary>
+    public IReadOnlyList<MigrationScript> ControlPlaneScripts =>
+        SqlScriptRunner.Scripts([.. controlPlaneFolders]).Select(MigrationScript.FromPath).ToList();
 
     /// <summary>The scripts of the given modules (kernel always included), in file-name order across modules.</summary>
     public IReadOnlyList<MigrationScript> TenantScripts(IEnumerable<string> modules)

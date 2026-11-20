@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Contracts.Api;
 using Erp.Kernel.Application.Identity;
+using Erp.Kernel.Application.Workflow;
 using Erp.Kernel.Contracts.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -172,8 +173,9 @@ public static class IdentityEndpoints
             AdminAsync(p, IdentityPermissions.ResetMfa, () => s.ResetMfaAsync(id, body.Reason, ct), ct)), IdentityPermissions.ResetMfa);
         UserAction(users.MapPost("/{id:guid}/revoke-sessions", (Guid id, ReasonRequest body, IUserAdministrationService s, IPermissionChecker p, CancellationToken ct) =>
             AdminAsync(p, IdentityPermissions.RevokeSessions, () => s.RevokeSessionsAsync(id, body.Reason, ct), ct)), IdentityPermissions.RevokeSessions);
-        UserAction(users.MapPost("/{id:guid}/status", (Guid id, StatusRequest body, IUserAdministrationService s, IPermissionChecker p, CancellationToken ct) =>
-            AdminAsync(p, IdentityPermissions.ChangeStatus, () => s.ChangeStatusAsync(id, body.Status, body.Reason, ct), ct)), IdentityPermissions.ChangeStatus);
+        UserAction(users.MapPost("/{id:guid}/status", (Guid id, StatusRequest body, IUserAdministrationService s, IWorkflowMonitor w, IPermissionChecker p, CancellationToken ct) =>
+            AdminAsync(p, IdentityPermissions.ChangeStatus, async () => await WithOpenTasksAsync(await s.ChangeStatusAsync(id, body.Status, body.Reason, ct).ConfigureAwait(false), id, w, ct).ConfigureAwait(false), ct)),
+            IdentityPermissions.ChangeStatus);
         UserAction(users.MapPost("/{id:guid}/invitation", (Guid id, IIdentityEmailService s, IPermissionChecker p, CancellationToken ct) =>
             AdminAsync(p, IdentityPermissions.SendInvitation, () => s.SendInvitationAsync(id, ct), ct)), IdentityPermissions.SendInvitation);
         UserAction(users.MapPost("/{id:guid}/password-reset-link", (Guid id, ReasonRequest body, IIdentityEmailService s, IPermissionChecker p, CancellationToken ct) =>
@@ -233,6 +235,28 @@ public static class IdentityEndpoints
         catch (PasswordHasherBusyException)
         {
             return BusyResult();
+        }
+    }
+
+    /// <summary>
+    /// The open approval tasks of a user just disabled or archived (slice S1.10b ruling P7): the caller's own list of them
+    /// (<c>GET /api/wf/users/{id}/open-tasks</c>: their companies, licensed document types), 0 when the caller reassigns no
+    /// tasks (S1.10b review finding 7).
+    /// </summary>
+    private static async Task<AdminResult> WithOpenTasksAsync(AdminResult result, Guid userId, IWorkflowMonitor monitor, CancellationToken ct)
+    {
+        if (result.OpenWorkflowTasks is null)
+        {
+            return result;
+        }
+
+        try
+        {
+            return result with { OpenWorkflowTasks = (await monitor.OpenTasksOfAsync(userId, ct).ConfigureAwait(false)).Count };
+        }
+        catch (KeyNotFoundException)
+        {
+            return result with { OpenWorkflowTasks = 0 };
         }
     }
 

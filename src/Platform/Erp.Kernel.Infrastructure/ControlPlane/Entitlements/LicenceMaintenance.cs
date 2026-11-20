@@ -118,6 +118,7 @@ public sealed class LicenceMaintenance(ControlPlaneOptions options, ISecretStore
         if (licence.Entitlement is { } current)
         {
             await using var tx = await customer.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+            await CustomerLicence.LockCopyAsync(customer, tx, cancellationToken).ConfigureAwait(false); // read after the lock (review finding 3)
             var copyVersion = await CustomerLicence.CopyVersionAsync(customer, tx, cancellationToken).ConfigureAwait(false);
             var copyState = await Erp.Kernel.Infrastructure.Identity.IdentityDb.ScalarAsync<string>(customer, tx, "select state from meta.local_entitlement order by created_at desc limit 1", cancellationToken).ConfigureAwait(false);
             if (copyVersion != current.Version)

@@ -194,6 +194,23 @@ public sealed class WorkflowRig
 
     public async Task<Guid> AdminAsync(CancellationToken ct) => await UserAsync(ct, "tenant_admin");
 
+    /// <summary>
+    /// Lets the user decide <see cref="Guarded"/> requests (its own decide permission <c>org.companies.update</c>, for all
+    /// companies); returns the assignment. A route naming someone without it is refused (review S1.10a finding 2).
+    /// </summary>
+    public async Task<Guid> MayDecideGuardedAsync(Guid user, CancellationToken ct)
+    {
+        var role = await H.RoleAsync(ct, ["org.companies.update"], [("org.companies", "all")]);
+        return await H.AssignAsync(user, role, null, H.Today.AddDays(-1), null, ct);
+    }
+
+    /// <summary>Ends a role assignment today (the user loses its rights from now on).</summary>
+    public async Task EndAssignmentAsync(Guid assignment, CancellationToken ct)
+    {
+        await using var c = await H.OwnerAsync(null, ct);
+        await AccessHarness.ExecAsync(c, "update iam.user_roles set valid_to = $2 where id = $1", ct, assignment, H.Today);
+    }
+
     public Task<Guid> DefinitionIdAsync(string documentType, CancellationToken ct) =>
         H.ScalarAsync<Guid>("select id from wf.workflow_definitions where document_type = $1", ct, documentType);
 
@@ -365,6 +382,12 @@ public sealed class TestOutcomes
     /// <summary>When set, the next handler call fails (the module refuses), so the decision must roll back.</summary>
     public bool FailNext { get; set; }
 
+    /// <summary>When set, the next handler call makes the database raise this SQLSTATE in the deciding transaction (for example 40P01, a deadlock).</summary>
+    public string? RaiseSqlStateNext { get; set; }
+
+    /// <summary>When set, the handler first takes this transaction-level advisory lock, as a module locks its document (review finding 6).</summary>
+    public long? LockKey { get; set; }
+
     public IReadOnlyList<(WorkflowOutcome Outcome, string StatusInTransaction)> For(Guid instance) => [.. Seen.Where(s => s.Outcome.InstanceId == instance)];
 }
 
@@ -375,9 +398,25 @@ internal sealed class TestHandler(string documentType, TestOutcomes outcomes) : 
     public async Task OnOutcomeAsync(WorkflowOutcome outcome, DbTransaction transaction, CancellationToken cancellationToken)
     {
         var tx = (NpgsqlTransaction)transaction;
+        if (outcomes.LockKey is { } key)
+        {
+            await using var lockCommand = new NpgsqlCommand("select pg_advisory_xact_lock($1)", tx.Connection, tx);
+            lockCommand.Parameters.Add(new NpgsqlParameter { Value = key });
+            await lockCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+
         await using var command = new NpgsqlCommand("select status from wf.workflow_instances where id = $1", tx.Connection, tx);
         command.Parameters.Add(new NpgsqlParameter { Value = outcome.InstanceId });
         var status = (string)(await command.ExecuteScalarAsync(cancellationToken))!;
+        if (outcomes.RaiseSqlStateNext is { } state)
+        {
+            outcomes.RaiseSqlStateNext = null;
+#pragma warning disable CA2100 // a five-character SQLSTATE set by the test itself
+            await using var raise = new NpgsqlCommand($"do $$ begin raise exception 'test: database cancelled the transaction' using errcode = '{state}'; end $$", tx.Connection, tx);
+#pragma warning restore CA2100
+            await raise.ExecuteNonQueryAsync(cancellationToken);
+        }
+
         if (outcomes.FailNext)
         {
             outcomes.FailNext = false;

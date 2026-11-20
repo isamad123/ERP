@@ -24,12 +24,14 @@ public static class ResetRules
 /// <param name="HasBranch">False when the document has no branch: <c>{branch}</c> is refused.</param>
 /// <param name="CompanyCodeLength">Length of the company code the number will carry (for the 40-character limit).</param>
 /// <param name="BranchCodeLength">Length of the branch code the number will carry.</param>
+/// <param name="BranchScheme">True for a scheme of one branch. Only those may use <c>{branch}</c>: a company-wide scheme
+/// printing branch codes would share its numbers with a later scheme of that branch (S1.08 review finding 1, CR-058).</param>
 #if ERP_CODEGEN
 internal sealed record PatternContext
 #else
 public sealed record PatternContext
 #endif
-    (bool HasCompany, bool HasBranch, int CompanyCodeLength = 0, int BranchCodeLength = 0);
+    (bool HasCompany, bool HasBranch, int CompanyCodeLength = 0, int BranchCodeLength = 0, bool BranchScheme = false);
 
 /// <summary>Values one number is rendered with.</summary>
 /// <param name="Date">The document's business date (Q5); it decides the period.</param>
@@ -104,6 +106,43 @@ public sealed partial class NumberPattern
     public bool UsesCompany => _parts.Any(p => p.Kind == Kind.Company);
 
     public bool UsesBranch => _parts.Any(p => p.Kind == Kind.Branch);
+
+    /// <summary>
+    /// The pattern with its padding taken out: <c>{seq:N}</c> becomes <c>{seq}</c> and the digits of the literal text
+    /// right before and after it are dropped, because they print like digits of the running number
+    /// (<c>EMP-0{seq:4}</c> and <c>EMP-{seq:5}</c> both print <c>EMP-00001</c>). Two patterns of the same shape can print
+    /// the same numbers (CR-058, S1.08 review finding 1).
+    /// </summary>
+    public string Shape
+    {
+        get
+        {
+            var b = new StringBuilder();
+            for (var i = 0; i < _parts.Count; i++)
+            {
+                var part = _parts[i];
+                var text = part.Kind switch
+                {
+                    Kind.Literal => part.Text,
+                    Kind.Seq => "{seq}",
+                    _ => "{" + part.Text + "}",
+                };
+                if (part.Kind == Kind.Literal && i + 1 < _parts.Count && _parts[i + 1].Kind == Kind.Seq)
+                {
+                    text = text.TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
+                }
+
+                if (part.Kind == Kind.Literal && i > 0 && _parts[i - 1].Kind == Kind.Seq)
+                {
+                    text = text.TrimStart('0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
+                }
+
+                b.Append(text);
+            }
+
+            return b.ToString();
+        }
+    }
 
     /// <summary>Reads a pattern; refuses unknown tokens, unbalanced braces, control characters and a missing or repeated <c>{seq:N}</c>.</summary>
     public static NumberPattern Parse(string? pattern)
@@ -234,6 +273,22 @@ public sealed partial class NumberPattern
         if (parsed.UsesBranch && !context.HasBranch)
         {
             throw new NumberPatternException("errors.numbering.pattern_branch_not_allowed");
+        }
+
+        // CR-058 (S1.08 review finding 1): branch codes only in a branch's own scheme, and every code followed by a
+        // separator, so that one code (K) can never run into another code's characters (K1) or into the digits.
+        if (parsed.UsesBranch && !context.BranchScheme)
+        {
+            throw new NumberPatternException("errors.numbering.pattern_branch_company_scheme");
+        }
+
+        for (var i = 0; i < parsed._parts.Count; i++)
+        {
+            if (parsed._parts[i].Kind is Kind.Company or Kind.Branch && i + 1 < parsed._parts.Count
+                && (parsed._parts[i + 1] is not { Kind: Kind.Literal } next || char.IsLetterOrDigit(next.Text[^1])))
+            {
+                throw new NumberPatternException("errors.numbering.pattern_code_separator");
+            }
         }
 
         var length = parsed._parts.Sum(p => p.Kind switch

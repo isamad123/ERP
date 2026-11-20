@@ -66,7 +66,7 @@ public sealed class LimitGuard(
         if (count.Used >= max.Value)
         {
             var refused = new LimitDecision(limitKey, max, count.Used, Allowed: false, Warning: true, Crossed: false, percent);
-            await RecordRefusalAsync(refused, now, cancellationToken).ConfigureAwait(false);
+            await RecordRefusalAsync(refused, holder, now, cancellationToken).ConfigureAwait(false);
             throw new LimitReachedException(refused);
         }
 
@@ -75,7 +75,7 @@ public sealed class LimitGuard(
         if (decision.Crossed)
         {
             await CustomerLicence.RecordAsync((NpgsqlConnection)transaction.Connection!, (NpgsqlTransaction)transaction, LicenceEvents.LimitWarning,
-                Audit.Severities.Warning, Details(decision), ActorId(holder), now, cancellationToken).ConfigureAwait(false);
+                Audit.Severities.Warning, Details(decision), ActorId(limitKey, holder), now, cancellationToken).ConfigureAwait(false);
         }
 
         return Remember(decision);
@@ -99,11 +99,14 @@ public sealed class LimitGuard(
         return value.Value.TryGetInt32(out var p) ? p : 90;
     }
 
-    private async Task RecordRefusalAsync(LimitDecision refused, DateTimeOffset now, CancellationToken cancellationToken)
+    private async Task RecordRefusalAsync(LimitDecision refused, Guid? holder, DateTimeOffset now, CancellationToken cancellationToken)
     {
         await using var c = await IdentityDb.OpenAsync(connections.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        await CustomerLicence.RecordAsync(c, tx, LicenceEvents.LimitReached, Audit.Severities.Warning, Details(refused), ActorId(null), now, cancellationToken).ConfigureAwait(false);
+        // The refused seat's holder is named, and is the actor of an anonymous step (activation, sign-in): S1.09b review finding 5.
+        var details = Details(refused);
+        details["holder"] = holder?.ToString();
+        await CustomerLicence.RecordAsync(c, tx, LicenceEvents.LimitReached, Audit.Severities.Warning, details, ActorId(refused.LimitKey, holder), now, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -117,7 +120,7 @@ public sealed class LimitGuard(
     };
 
     /// <summary>The signed-in caller; for a sign-in step (no caller yet) the user taking the seat, else the system user.</summary>
-    private Guid ActorId(Guid? holder)
+    private Guid ActorId(string limitKey, Guid? holder)
     {
         try
         {
@@ -125,7 +128,8 @@ public sealed class LimitGuard(
         }
         catch (InvalidOperationException)
         {
-            return holder ?? BaselineSeed.SystemUserId;
+            // Only a user limit's holder is a person; a company's id is never an actor.
+            return holder is { } h && limitKey is LimitKeys.NamedUsers or LimitKeys.ConcurrentUsers ? h : BaselineSeed.SystemUserId;
         }
     }
 }

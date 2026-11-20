@@ -93,6 +93,7 @@ public sealed class InboxAndAdministrationTests(TenancyFixture fx) : IAsyncLifet
         var b = InstanceOf(await _w.StartAsync(requester, Expense, await CompanyAsync(), new { amount = "2" }, ct: Ct));
         await _w.ActivateRouteAsync(admin, Expense, Route(BulkStep("one", UserApprover(approver), bulk: false)), Ct);
         var c = InstanceOf(await _w.StartAsync(requester, Expense, await CompanyAsync(), new { amount = "3" }, ct: Ct));
+        await _w.MayDecideGuardedAsync(approver, Ct); // a route names only people who can decide (review S1.10a finding 2)
         await _w.ActivateRouteAsync(admin, Guarded, Route(Step("one", UserApprover(approver))), Ct); // type without bulk approval
         var d = InstanceOf(await _w.StartAsync(requester, Guarded, await CompanyAsync(), new { }, ct: Ct));
         var tasks = new List<Guid>();
@@ -142,6 +143,7 @@ public sealed class InboxAndAdministrationTests(TenancyFixture fx) : IAsyncLifet
         var admin = await _w.AdminAsync(Ct);
         var (alice, bob, approver) = (await _w.UserAsync(Ct, "business_user"), await _w.UserAsync(Ct, "business_user"), await _w.UserAsync(Ct, "approver"));
         await _w.ActivateRouteAsync(admin, Expense, Route(Step("check", UserApprover(approver))), Ct);
+        await _w.MayDecideGuardedAsync(approver, Ct); // a route names only people who can decide (review S1.10a finding 2)
         await _w.ActivateRouteAsync(admin, Guarded, Route(Step("look", UserApprover(approver))), Ct);
         var early = InstanceOf(await _w.StartAsync(alice, Expense, await CompanyAsync(), new { amount = "1" }, ct: Ct));
         var earlyTask = Assert.Single(await _w.OpenTasksAsync(early, Ct));
@@ -229,24 +231,31 @@ public sealed class InboxAndAdministrationTests(TenancyFixture fx) : IAsyncLifet
         await _w.ActivateRouteAsync(admin, Expense, Route(Step("one", UserApprover(leaving))), Ct);
         var first = InstanceOf(await _w.StartAsync(requester, Expense, await CompanyAsync(), new { amount = "1" }, ct: Ct));
         var second = InstanceOf(await _w.StartAsync(requester, Expense, await CompanyAsync(), new { amount = "2" }, ct: Ct));
+        var successorsOwn = InstanceOf(await _w.StartAsync(successor, Expense, await CompanyAsync(), new { amount = "3" }, ct: Ct));
 
         var disabled = await _w.PostAsync(admin, $"/api/iam/users/{leaving}/status", new { status = "disabled", reason = "left the company" }, Ct);
         Assert.True(disabled.Status == HttpStatusCode.OK, disabled.Body);
-        Assert.Equal(2, disabled.Json.GetProperty("openWorkflowTasks").GetInt32());
+        Assert.Equal(3, disabled.Json.GetProperty("openWorkflowTasks").GetInt32());
         var locked = await _w.PostAsync(admin, $"/api/iam/users/{successor}/status", new { status = "locked", reason = "test" }, Ct);
         Assert.Equal(HttpStatusCode.NoContent, locked.Status); // other changes answer as before
         Assert.Equal(HttpStatusCode.NoContent, (await _w.PostAsync(admin, $"/api/iam/users/{successor}/status", new { status = "active", reason = "test" }, Ct)).Status);
 
         var open = await _w.GetAsync(admin, $"/api/wf/users/{leaving}/open-tasks", Ct);
         Assert.True(open.Status == HttpStatusCode.OK, open.Body);
-        Assert.Equal(2, open.Json.GetArrayLength());
+        Assert.Equal(3, open.Json.GetArrayLength());
 
-        // The requester cannot receive their own request's task: refused for that task, the others go on.
+        // The requester cannot receive their own request's task: refused for that task, the others go on (review finding 9).
         Assert.Equal("errors.workflow.reason_required", (await _w.PostAsync(admin, $"/api/wf/users/{leaving}/reassign-open-tasks", new { toUserId = successor }, Ct)).Text("title"));
         var moved = await _w.PostAsync(admin, $"/api/wf/users/{leaving}/reassign-open-tasks", new { toUserId = successor, reason = "left the company" }, Ct);
         Assert.True(moved.Status == HttpStatusCode.OK, moved.Body);
         Assert.Equal(2, moved.Json.GetProperty("done").GetInt32());
-        Assert.Empty((await _w.GetAsync(admin, $"/api/wf/users/{leaving}/open-tasks", Ct)).Json.EnumerateArray());
+        Assert.Equal(1, moved.Json.GetProperty("refused").GetInt32());
+        var ownTask = Assert.Single(await _w.OpenTasksAsync(successorsOwn, Ct));
+        var refusal = Assert.Single(moved.Json.GetProperty("results").EnumerateArray(), r => r.GetProperty("outcome").GetString() == "refused");
+        Assert.Equal(ownTask, refusal.GetProperty("taskId").GetGuid());
+        Assert.Equal("errors.workflow.assignee_excluded", refusal.GetProperty("error").GetString());
+        Assert.Equal(leaving, await _w.TaskValueAsync<Guid>(ownTask, "assignee_user_id", Ct));
+        Assert.Equal(ownTask, Assert.Single((await _w.GetAsync(admin, $"/api/wf/users/{leaving}/open-tasks", Ct)).Json.EnumerateArray()).GetProperty("taskId").GetGuid());
         foreach (var instance in new[] { first, second })
         {
             var task = Assert.Single(await _w.OpenTasksAsync(instance, Ct));

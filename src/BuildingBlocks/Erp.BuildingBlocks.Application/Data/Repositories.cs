@@ -26,6 +26,13 @@ public interface IRepository<TEntity>
     Task AddAsync(TEntity entity, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Stamps the row as <see cref="AddAsync"/> would and refuses it (<c>AccessDeniedException</c>) when it is outside the
+    /// caller's data scope for create, without saving. For side effects that must not happen for a refused row, such as
+    /// taking a document number (S1.08 review finding 2); <see cref="AddAsync"/> checks again.
+    /// </summary>
+    Task EnsureCanCreateAsync(TEntity entity, CancellationToken cancellationToken);
+
+    /// <summary>
     /// The caller's field access to each stored row for the action (slice S1.06, review finding 3): only the roles whose
     /// data scope covers a row decide its fields.
     /// </summary>

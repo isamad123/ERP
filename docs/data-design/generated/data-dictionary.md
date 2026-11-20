@@ -2,7 +2,7 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 219 tables. Control-plane database: 14 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 219 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
@@ -18,7 +18,7 @@ Release 1.0. Customer database: 219 tables. Control-plane database: 14 tables. E
 | customer | org | 11 |
 | customer | ref | 7 |
 | customer | wf | 7 |
-| control plane | cp | 14 |
+| control plane | cp | 15 |
 
 ## Customer database
 
@@ -891,7 +891,7 @@ Letters, payslips, certificates, bank files, statutory forms. Requirements: KRN-
 Constraints:
 
 - `ck_templates_code_code` CHECK ((((length(code) >= 1) AND (length(code) <= 40)) AND (code = btrim(code))))
-- `ck_templates_kind` CHECK ((kind = ANY (ARRAY['letter'::text, 'payslip'::text, 'certificate'::text, 'form'::text, 'email'::text, 'bank_file'::text, 'report'::text])))
+- `ck_templates_kind` CHECK ((kind = ANY (ARRAY['letter'::text, 'payslip'::text, 'certificate'::text, 'form'::text, 'email'::text, 'bank_file'::text, 'report'::text, 'part'::text])))
 - `ck_templates_name_i18n_object` CHECK ((jsonb_typeof(name_i18n) = 'object'::text))
 - `ck_templates_source` CHECK ((source = ANY (ARRAY['pack'::text, 'tenant'::text])))
 - `fk_templates_active_version_id` FOREIGN KEY (id, active_version_id) REFERENCES doc.template_versions(template_id, id)
@@ -1599,6 +1599,7 @@ Constraints:
 - `fk_contracts_file_id` FOREIGN KEY (company_id, file_id) REFERENCES doc.files(company_id, id)
 - `fk_contracts_renews_contract_id` FOREIGN KEY (company_id, renews_contract_id) REFERENCES hrm.contracts(company_id, id)
 - `pk_contracts` PRIMARY KEY (id)
+- `uq_contracts_company_id_contract_no` UNIQUE (company_id, contract_no)
 - `uq_contracts_company_id_id` UNIQUE (company_id, id)
 
 Indexes:
@@ -7274,6 +7275,7 @@ Indexes:
 - `ix_workflow_instances_requester_user_id` CREATE INDEX ix_workflow_instances_requester_user_id ON wf.workflow_instances USING btree (requester_user_id)
 - `ix_workflow_instances_status` CREATE INDEX ix_workflow_instances_status ON wf.workflow_instances USING btree (status) WHERE (status = 'running'::text)
 - `ix_workflow_instances_version_id` CREATE INDEX ix_workflow_instances_version_id ON wf.workflow_instances USING btree (version_id)
+- `uq_workflow_instances_document_type_document_id` CREATE UNIQUE INDEX uq_workflow_instances_document_type_document_id ON wf.workflow_instances USING btree (document_type, document_id) WHERE (status = ANY (ARRAY['running'::text, 'returned'::text]))
 
 Triggers:
 
@@ -7650,6 +7652,32 @@ Constraints:
 Indexes:
 
 - `uq_platform_users_email` CREATE UNIQUE INDEX uq_platform_users_email ON cp.platform_users USING btree (email) WHERE (NOT is_deleted)
+
+### cp.schema_history
+
+Control-plane migration files applied to this database, with their checksums (same shape as meta.schema_history, CR-006). Requirements: KRN-TEN-02. Source: control-plane.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| module_id | text | no |  |  |
+| version | text | no |  |  |
+| script_name | text | no |  |  |
+| checksum | text | no |  |  |
+| duration_ms | integer | no |  |  |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+
+Constraints:
+
+- `ck_schema_history_module_id_code` CHECK ((((length(module_id) >= 1) AND (length(module_id) <= 40)) AND (module_id = btrim(module_id))))
+- `pk_schema_history` PRIMARY KEY (id)
+- `uq_schema_history_module_id_script_name` UNIQUE (module_id, script_name)
+
+Triggers:
+
+- `tg_schema_history_append_only` CREATE TRIGGER tg_schema_history_append_only BEFORE DELETE OR UPDATE ON cp.schema_history FOR EACH ROW EXECUTE FUNCTION cp.tg_refuse_change()
+- `tg_schema_history_no_truncate` CREATE TRIGGER tg_schema_history_no_truncate BEFORE TRUNCATE ON cp.schema_history FOR EACH STATEMENT EXECUTE FUNCTION cp.tg_refuse_change()
 
 ### cp.signing_keys
 

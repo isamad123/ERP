@@ -117,6 +117,8 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
 - Migrator and operator commands (S1.03, S1.05): `dotnet run --project src/Host/Erp.Host.Migrator -- help` (migrate, cluster add, signing-key add,
   entitlement sign, tenant provision/list/suspend/resume/backup/restore/admin-activation-link, auth-key rotate; Super Admin recovery: tenant admin-role-repair/admin-grant/admin-revoke, S1.06-r1; audit anchors-publish and audit verify, S1.07). Settings are environment variables: `docs/runbooks/tenant-operations.md`.
   Backup and restore drill: `docs/runbooks/tenant-backup-restore.md` (needs pg_dump/pg_restore of the server's major version, 16).
+  `migrate` records control-plane scripts with checksums in `cp.schema_history` like customer scripts in `meta.schema_history` (S1.11f2, CR-006);
+  provisioning holds a per-customer advisory lock in the control-plane database, so a second run for the same customer waits (`ProvisioningLock`, R-031).
 - CI: `.github/workflows/ci.yml` runs restore, build, generator drift, TypeScript type-check, unit, architecture, integration
   (PostgreSQL 16 service), data-dictionary drift and the licence gate.
 - Tenant-isolation suite (S1.04): `dotnet test --project tests/Erp.IntegrationTests --no-build --filter-trait "Suite=TenantIsolation"`; CI job `tenant-isolation`.
@@ -149,9 +151,10 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
   worker settings `Mail:*` and `Alerts:OperatorEmail`, operator commands `mail sender|server|clear|show` (`docs/runbooks/mail-setup.md`). Tests send to `TestMailServer` / `TestImapServer`
   (`tests/Erp.IntegrationTests/Notifications`) through `TestMailServer.Use`; identity links and codes are read with `IdentityHarness.EmailedAsync` (decrypts the queued secret).
 - Invariants (spec 03 section 10): 3, 5, 6, 8, 9 and 10 have tests (5 is `R06_effective_dated_table_refuses_overlapping_periods`,
-  10 is the tenant-isolation suite); only 6 and 10 can be run by trait today (tagging 3, 5, 8, 9 is a CR-052 follow-up). 1, 2, 4, 7 and
+  10 is the tenant-isolation suite), each tagged `[Trait("Invariant", "n")]` and run with `--filter-trait "Invariant=n"` (S1.11f1, CR-053). 1, 2, 4, 7 and
   12 to 14 concern ledgers, stock and posting and arrive with those features (D-43). Until they are tested, a slice report lists them as not applicable.
-- Not yet automated: secret scan (CR-052 Q9 follow-up; until it is in CI, each slice report states it as not run).
+- Secret scan (S1.11f1, CR-053): gitleaks 8.28.0 runs first in the CI job `build-and-test` over the history reachable from the checked-out commit and the working tree and fails on any
+  finding; configuration `.gitleaks.toml` (default rules, exact-value allowances only). Run locally with the same binary: `gitleaks detect -c .gitleaks.toml --redact`.
 
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.

@@ -131,6 +131,7 @@ internal static class LeaveRequestEndpoints
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await repository.EnsureCanCreateAsync(row, cancellationToken).ConfigureAwait(false);
             row.RequestNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.leave_request_no", row.CompanyId, row.BranchId, row.StartDate), cancellationToken).ConfigureAwait(false);
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created("/api/hrm/leave-requests/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.LeaveRequestAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));

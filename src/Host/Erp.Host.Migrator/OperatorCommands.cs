@@ -34,6 +34,7 @@ public static class OperatorCommands
         Usage: Erp.Host.Migrator <command> [options]
           migrate [--tenant <code>]                      control-plane set-up, then pending migrations for every customer
           cluster add --name <n> --region <r> --host <h> --port <p> --max-databases <n> --admin-user <u>
+                                                         [--change-address yes] (only to re-point a cluster that holds databases)
                                                          (password from ERP_CLUSTER_ADMIN_PASSWORD)
           signing-key add --key-id <id> --public-key <file.pem> [--purpose entitlement]
           entitlement sign --payload <file.json> --key-id <id> --private-key <file.pem> --out <file.json>
@@ -171,10 +172,11 @@ public static class OperatorCommands
 
     private static async Task<int> MigrateAsync(Context c, CancellationToken cancellationToken)
     {
+        SchemaMigrationResult? controlPlane = null;
         var admin = await c.Admin.BootstrapAsync(Context.Migrations, Required(Env("ERP_PLATFORM_ADMIN_EMAIL"), "ERP_PLATFORM_ADMIN_EMAIL"),
-            Required(Env("ERP_PLATFORM_ADMIN_NAME"), "ERP_PLATFORM_ADMIN_NAME"), cancellationToken).ConfigureAwait(false);
+            Required(Env("ERP_PLATFORM_ADMIN_NAME"), "ERP_PLATFORM_ADMIN_NAME"), cancellationToken, r => controlPlane = r).ConfigureAwait(false);
         await TokenSigningKeys.EnsureAsync(c.Secrets, NewTokenKeyId(c.Clock), cancellationToken).ConfigureAwait(false);
-        await c.Output.WriteLineAsync("control plane: up to date (token signing key present)").ConfigureAwait(false);
+        await c.Output.WriteLineAsync($"control plane: up to date, {controlPlane?.Applied} applied, {controlPlane?.AlreadyApplied} already applied (token signing key present)").ConfigureAwait(false);
         var actor = Env("ERP_PLATFORM_ACTOR") is { } email ? await c.Admin.ActorAsync(email, cancellationToken).ConfigureAwait(false) : admin;
         var outcomes = await new FleetMigrator(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations).MigrateAsync(actor, c.OptionalOption("tenant"), cancellationToken).ConfigureAwait(false);
         foreach (var o in outcomes)
@@ -196,7 +198,8 @@ public static class OperatorCommands
     {
         var actor = await c.ActorAsync(cancellationToken).ConfigureAwait(false);
         var credential = new DatabaseCredential(c.Option("admin-user"), Required(Env("ERP_CLUSTER_ADMIN_PASSWORD"), "ERP_CLUSTER_ADMIN_PASSWORD"));
-        await c.Admin.AddClusterAsync(actor, c.Option("name"), c.Option("region"), c.Option("host"), Int(c.Option("port")), Int(c.Option("max-databases")), credential, cancellationToken).ConfigureAwait(false);
+        await c.Admin.AddClusterAsync(actor, c.Option("name"), c.Option("region"), c.Option("host"), Int(c.Option("port")), Int(c.Option("max-databases")), credential, cancellationToken,
+            allowAddressChange: c.OptionalOption("change-address") == "yes").ConfigureAwait(false);
         await c.Output.WriteLineAsync($"cluster {c.Option("name")}: registered").ConfigureAwait(false);
         return 0;
     }
@@ -302,7 +305,16 @@ public static class OperatorCommands
     {
         await using var cp = new NpgsqlConnection(Context.ControlPlane.ConnectionString);
         await cp.OpenAsync(cancellationToken).ConfigureAwait(false);
-        var statement = await UsageMeters.StatementAsync(cp, c.Option("tenant"), c.Option("month"), cancellationToken).ConfigureAwait(false);
+        // The customer's time zone decides where its months end (S1.09b review finding 7).
+        var tenant = await Erp.Kernel.Infrastructure.ControlPlane.Tenancy.TenantDirectory.FindByCodeAsync(cp, c.Option("tenant"), cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Customer {c.Option("tenant")} is not registered.");
+        string timeZone;
+        await using (var owner = await TenantProvisioner.OpenTenantAsync(c.Secrets, tenant, TenantLogins.Owner, cancellationToken).ConfigureAwait(false))
+        {
+            timeZone = await Erp.Kernel.Infrastructure.Entitlements.CustomerLicence.TimeZoneAsync(owner, null, UtcToday(c.Clock), cancellationToken).ConfigureAwait(false);
+        }
+
+        var statement = await UsageMeters.StatementAsync(cp, c.Option("tenant"), c.Option("month"), timeZone, cancellationToken).ConfigureAwait(false);
         await c.Output.WriteLineAsync($"usage statement {c.Option("tenant")} {statement.Period}").ConfigureAwait(false);
         await c.Output.WriteLineAsync("meter\tvalue\tlimit\tpercent").ConfigureAwait(false);
         foreach (var l in statement.Lines)
@@ -314,6 +326,8 @@ public static class OperatorCommands
         await c.Output.WriteLineAsync($"highest percent: {statement.HighestPercent?.ToString(CultureInfo.InvariantCulture) ?? "-"}").ConfigureAwait(false);
         return 0;
     }
+
+    private static DateOnly UtcToday(IClock clock) => DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
 
     private static EntitlementApplier Applier(Context c) => new(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations);
 
@@ -496,6 +510,9 @@ public static class OperatorCommands
     {
         public async ValueTask StepCompletedAsync(string stepName, CancellationToken cancellationToken) =>
             await output.WriteLineAsync($"  step {stepName}: done").ConfigureAwait(false);
+
+        public async ValueTask WaitingForOtherRunAsync(string code, CancellationToken cancellationToken) =>
+            await output.WriteLineAsync($"  another provisioning run of {code} is in progress; waiting for it to end (Ctrl+C stops waiting)").ConfigureAwait(false);
     }
 
     private static Dictionary<string, string> Options(string[] args)

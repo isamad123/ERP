@@ -126,6 +126,11 @@ public sealed partial class WorkflowEngine
     public async Task<DecisionResult> CancelAsync(Guid instanceId, CancelRequest request, CancellationToken cancellationToken)
     {
         var reason = Trim(request?.Reason) ?? throw new WorkflowException("errors.workflow.reason_required");
+        return await OnceMoreOnDeadlockAsync(() => CancelOnceAsync(instanceId, reason, cancellationToken)).ConfigureAwait(false);
+    }
+
+    private async Task<DecisionResult> CancelOnceAsync(Guid instanceId, string reason, CancellationToken cancellationToken)
+    {
         await using var c = await IdentityDb.OpenAsync(tenant.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var work = new WorkflowWork(c, tx, clock.UtcNow, actor.UserId);

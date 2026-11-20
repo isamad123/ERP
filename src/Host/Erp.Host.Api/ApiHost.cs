@@ -180,6 +180,7 @@ public static class ApiHost
         overrides?.Invoke(services);
 
         var app = builder.Build();
+        app.Services.VerifyWorkflow(); // manifests and outcome handlers checked at start (review S1.10a finding 4)
         app.UseErpAuditCorrelation();
         app.UseRouting();
         app.UseErpLimitResponses();
@@ -200,6 +201,7 @@ public static class ApiHost
         api.MapJobEndpoints();
         api.MapNotificationEndpoints();
         api.MapDocumentEndpoints();
+        api.MapTemplateEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();
         return app;

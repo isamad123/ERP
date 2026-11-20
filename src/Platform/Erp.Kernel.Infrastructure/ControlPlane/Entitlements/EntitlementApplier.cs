@@ -135,21 +135,29 @@ public sealed class EntitlementApplier(ControlPlaneOptions options, ISecretStore
         await using (var owner = await _provisioner.OpenTenantAsync(tenant, TenantLogins.Owner, cancellationToken).ConfigureAwait(false))
         await using (var tx = await owner.BeginTransactionAsync(cancellationToken).ConfigureAwait(false))
         {
-            if (!scheduled)
+            // One writer of the customer's licence copy at a time (S1.09b review finding 3): if the licence job already put this
+            // version in the copy (it read the control plane after the commit above), it has recorded it; nothing is recorded twice.
+            await CustomerLicence.LockCopyAsync(owner, tx, cancellationToken).ConfigureAwait(false);
+            var recordedByJob = !scheduled && await CustomerLicence.CopyVersionAsync(owner, tx, cancellationToken).ConfigureAwait(false) >= payload.Version;
+            if (!scheduled && !recordedByJob)
             {
                 await CustomerLicence.ReplaceCopyAsync(owner, tx, payload, entitlement.KeyId, entitlement.Signature, state, now, cancellationToken).ConfigureAwait(false);
             }
 
-            await CustomerLicence.RecordAsync(owner, tx, scheduled ? LicenceEvents.Scheduled : LicenceEvents.Applied, Erp.Kernel.Infrastructure.Audit.Severities.Info, new JsonObject
+            if (!recordedByJob)
             {
-                ["version"] = payload.Version,
-                ["edition"] = payload.Edition,
-                ["effective_from"] = Day(payload.EffectiveFrom),
-                ["expires_at"] = payload.ExpiresAt is { } e ? Day(e) : null,
-                ["state"] = scheduled ? null : state,
-                ["modules"] = new JsonArray([.. claims.Modules.Select(m => (JsonNode)m)]),
-                ["applied_by"] = actor.Email,
-            }, BaselineSeed.SystemUserId, now, cancellationToken).ConfigureAwait(false);
+                await CustomerLicence.RecordAsync(owner, tx, scheduled ? LicenceEvents.Scheduled : LicenceEvents.Applied, Erp.Kernel.Infrastructure.Audit.Severities.Info, new JsonObject
+                {
+                    ["version"] = payload.Version,
+                    ["edition"] = payload.Edition,
+                    ["effective_from"] = Day(payload.EffectiveFrom),
+                    ["expires_at"] = payload.ExpiresAt is { } e ? Day(e) : null,
+                    ["state"] = scheduled ? null : state,
+                    ["modules"] = new JsonArray([.. claims.Modules.Select(m => (JsonNode)m)]),
+                    ["applied_by"] = actor.Email,
+                }, BaselineSeed.SystemUserId, now, cancellationToken).ConfigureAwait(false);
+            }
+
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         }
 

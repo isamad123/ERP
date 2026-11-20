@@ -28,14 +28,16 @@ public sealed partial class DataDesignTests(MigratedDatabases db)
     {
         var design = MigratedDatabases.Catalog.Tables.Where(t => t.Traits.Count > 0 || t.Name is not ("outbox_messages" or "inbox_messages")).ToList();
         // 204 tables approved by D-50 plus the two of CR-010 (slice S1.05), the one of CR-019 (slice S1.06), the
-        // control-plane table of CR-027 (slice S1.07) and the change counters of CR-036 (slice S1.09a).
-        Assert.Equal(209, design.Count);
+        // control-plane table of CR-027 (slice S1.07), the change counters of CR-036 (slice S1.09a) and the control-plane
+        // migration history of CR-054 (slice S1.11f2, CR-006).
+        Assert.Equal(210, design.Count);
+        Assert.Contains(design, t => t.Schema == "cp" && t.Name == "schema_history");
         Assert.Contains(design, t => t.Schema == "cfg" && t.Name == "config_versions");
         Assert.Contains(design, t => t.Schema == "cp" && t.Name == "audit_anchors");
         Assert.Contains(design, t => t.Schema == "iam" && t.Name == "one_time_tokens");
         Assert.Contains(design, t => t.Schema == "iam" && t.Name == "mfa_recovery_codes");
         Assert.Contains(design, t => t.Schema == "iam" && t.Name == "user_group_roles");
-        Assert.Equal(14, design.Count(t => t.Database == "control_plane"));
+        Assert.Equal(15, design.Count(t => t.Database == "control_plane"));
         Assert.Equal(24, MigratedDatabases.Catalog.Tables.Count(t => t.Name is "outbox_messages" or "inbox_messages"));
     }
 
@@ -117,6 +119,7 @@ public sealed partial class DataDesignTests(MigratedDatabases db)
 
     [Theory]
     [MemberData(nameof(AppendOnlyTables))]
+    [Trait("Invariant", "3")]
     public async Task README_rule7_append_only_table_refuses_update_and_delete(string key)
     {
         var table = Find(key);
@@ -141,6 +144,7 @@ public sealed partial class DataDesignTests(MigratedDatabases db)
 
     [Theory]
     [MemberData(nameof(EffectiveDatedTables))]
+    [Trait("Invariant", "5")]
     public async Task R06_effective_dated_table_refuses_overlapping_periods(string key)
     {
         var table = Find(key);
@@ -208,6 +212,7 @@ public sealed partial class DataDesignTests(MigratedDatabases db)
     }
 
     [Fact]
+    [Trait("Invariant", "9")]
     public async Task Invariant9_every_table_has_a_primary_key_and_every_foreign_key_an_index()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -234,6 +239,7 @@ public sealed partial class DataDesignTests(MigratedDatabases db)
     }
 
     [Fact]
+    [Trait("Invariant", "8")]
     public async Task Invariant8_no_foreign_key_from_the_kernel_into_a_business_module()
     {
         var ct = TestContext.Current.CancellationToken;

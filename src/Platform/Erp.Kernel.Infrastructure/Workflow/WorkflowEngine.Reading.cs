@@ -27,9 +27,15 @@ public sealed partial class WorkflowEngine
           and i.requester_user_id <> $1 and not ($1 = any(i.subject_user_ids))
           and (t.assignee_user_id = $1
                or (t.assignee_user_id is null and t.assignee_role_id is not null
-                   and exists (select 1 from valid v where v.role_id = t.assignee_role_id and (v.company_id is null or v.company_id = i.company_id)))
+                   and exists (select 1 from valid v where v.role_id = t.assignee_role_id and (v.company_id is null or v.company_id = i.company_id))
+                   and @not_escalated_from)
                or (t.assignee_user_id is not null and @delegated))
         """;
+
+    /// <summary>The inbox rows with the delegation test (ruling Q8) and the escalation exclusion of queue tasks (review finding 3).</summary>
+    private static string InboxSql => InboxRows
+        .Replace("@delegated", DelegationCovers("t.assignee_user_id", "$1", "$4", "i.document_type", "i.company_id"), StringComparison.Ordinal)
+        .Replace("@not_escalated_from", NotEscalatedFrom("$1", "t.instance_id", "t.step_key"), StringComparison.Ordinal);
 
     public async Task<IReadOnlyList<InboxItem>> InboxAsync(InboxQuery query, CancellationToken cancellationToken)
     {
@@ -47,7 +53,7 @@ public sealed partial class WorkflowEngine
             .Where(t => (query.Module is null || t.Module == query.Module) && (query.DocumentType is null || t.Code == query.DocumentType))
             .Select(t => t.Code).ToArray();
 
-        var sql = new StringBuilder(Access.AccessSnapshot.AssignmentsCte).Append(InboxRows.Replace("@delegated", DelegationCovers("t.assignee_user_id", "$1", "$4", "i.document_type", "i.company_id"), StringComparison.Ordinal));
+        var sql = new StringBuilder(Access.AccessSnapshot.AssignmentsCte).Append(InboxSql);
         var values = new List<object?> { work.Actor, ApproverResolution.Today(work), types, work.Now };
         void Filter(string clause, object? value)
         {
@@ -142,7 +148,7 @@ public sealed partial class WorkflowEngine
         var licensed = await LicensedTypesAsync(cancellationToken).ConfigureAwait(false);
         var counts = new Dictionary<string, (int Count, int Overdue)>(StringComparer.Ordinal);
         await using (var command = work.Command(Access.AccessSnapshot.AssignmentsCte + "select q.document_type, count(*)::int, count(*) filter (where q.due_at <= $4)::int from ("
-            + InboxRows.Replace("@delegated", DelegationCovers("t.assignee_user_id", "$1", "$4", "i.document_type", "i.company_id"), StringComparison.Ordinal)
+            + InboxSql
             + ") q(id, step_key, assignee_user_id, assignee_role_id, created_at, due_at, waiting, instance_id, escalation_level, document_type) group by q.document_type",
             work.Actor, ApproverResolution.Today(work), licensed.Select(t => t.Code).ToArray(), work.Now))
         await using (var r = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
@@ -201,7 +207,7 @@ public sealed partial class WorkflowEngine
             var questions = new List<WaitingQuestion>();
             foreach (var task in open.Where(t => t.InfoRequestedAt is not null))
             {
-                questions.Add(new WaitingQuestion(task.Id, task.InfoRequestedBy, task.InfoRequestedAt!.Value, await LastQuestionAsync(work, instance.Id, cancellationToken).ConfigureAwait(false)));
+                questions.Add(new WaitingQuestion(task.Id, task.InfoRequestedBy, task.InfoRequestedAt!.Value, await QuestionOfAsync(work, task, cancellationToken).ConfigureAwait(false)));
             }
 
             result.Add(new MyRequestView(instance.Id, instance.DocumentType, instance.DocumentId, instance.CompanyId, Titles(request), Link(request), instance.Status,
@@ -213,11 +219,18 @@ public sealed partial class WorkflowEngine
         return result;
     }
 
-    /// <summary>The text of the last question asked on a request (a question moves with the request, ruling P6).</summary>
-    private static async Task<string?> LastQuestionAsync(WorkflowWork work, Guid instanceId, CancellationToken ct) =>
+    /// <summary>
+    /// The text of the question a task is waiting on (S1.10b review finding 8): the question asked at the task's
+    /// <c>info_requested_at</c> (also when the task inherited it on escalation or reassignment, ruling P6), else the task's
+    /// own last question, else the request's last question (history written before the review fix has no <c>asked_at</c>).
+    /// </summary>
+    private static async Task<string?> QuestionOfAsync(WorkflowWork work, TaskRow task, CancellationToken ct) =>
         await work.ScalarAsync<string>("""
-            select details ->> 'question' from wf.workflow_history where instance_id = $1 and event = 'info_requested' order by created_at desc, id desc limit 1
-            """, ct, instanceId).ConfigureAwait(false);
+            select details ->> 'question' from wf.workflow_history
+            where instance_id = $1 and event = 'info_requested'
+            order by ((details ->> 'asked_at')::timestamptz = $3) desc nulls last, (task_id = $2) desc nulls last, created_at desc, id desc
+            limit 1
+            """, ct, task.InstanceId, task.Id, task.InfoRequestedAt!.Value).ConfigureAwait(false);
 
     public async Task<WorkflowTaskDetail?> TaskAsync(Guid taskId, CancellationToken cancellationToken)
     {

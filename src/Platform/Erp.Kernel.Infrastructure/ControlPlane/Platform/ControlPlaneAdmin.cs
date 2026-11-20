@@ -1,7 +1,7 @@
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
-using Erp.BuildingBlocks.Infrastructure.Migrations;
 using Erp.Kernel.Infrastructure.ControlPlane.Migration;
+using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Npgsql;
 
@@ -32,19 +32,22 @@ public sealed class ControlPlaneAdmin(ControlPlaneOptions options, ISecretStore 
     }
 
     /// <summary>
-    /// Applies the control-plane scripts (idempotent; the control-plane design has no history table, so they are
-    /// re-applied each time), closes the database to logins that were not granted access, and seeds the first platform
-    /// admin and the module catalogue.
+    /// Applies the pending control-plane scripts and records each with its checksum in cp.schema_history (CR-006, slice
+    /// S1.11f2; a recorded script that changed stops the run), closes the database to logins that were not granted
+    /// access, and seeds the first platform admin and the module catalogue. <paramref name="migrated"/> receives the
+    /// migration counts.
     /// </summary>
-    public async Task<PlatformActor> BootstrapAsync(MigrationSet migrations, string adminEmail, string adminName, CancellationToken cancellationToken)
+    public async Task<PlatformActor> BootstrapAsync(MigrationSet migrations, string adminEmail, string adminName, CancellationToken cancellationToken, Action<SchemaMigrationResult>? migrated = null)
     {
         ArgumentNullException.ThrowIfNull(migrations);
         ArgumentException.ThrowIfNullOrWhiteSpace(adminEmail);
         ArgumentException.ThrowIfNullOrWhiteSpace(adminName);
-        await SqlScriptRunner.ApplyAsync(options.ConnectionString, migrations.ControlPlaneScripts, cancellationToken).ConfigureAwait(false);
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var result = await ControlPlaneSchemaMigrator.ApplyAsync(connection, migrations.ControlPlaneScripts, clock, BaselineSeed.SystemUserId, cancellationToken).ConfigureAwait(false);
+        migrated?.Invoke(result);
         await Sql.ExecuteAsync(connection, null,
             "do $do$ begin execute format('revoke connect on database %I from public', current_database()); end $do$", cancellationToken).ConfigureAwait(false);
+        await EnsureApiRoleAsync(connection, cancellationToken).ConfigureAwait(false);
 
         var email = adminEmail.Trim().ToLowerInvariant();
         var now = clock.UtcNow;
@@ -80,6 +83,37 @@ public sealed class ControlPlaneAdmin(ControlPlaneOptions options, ISecretStore 
         return actor;
     }
 
+    /// <summary>Group role (no login) of the API hosts' control-plane login: read access to what the API reads, nothing else.</summary>
+    public const string ApiRole = "cp_api";
+
+    /// <summary>The control-plane tables the API host reads (tenant resolution, licence and usage pages); it writes none.</summary>
+    public static readonly IReadOnlyList<string> ApiTables =
+        ["cp.tenants", "cp.tenant_domains", "cp.tenant_databases", "cp.db_clusters", "cp.entitlements", "cp.tenant_module_versions", "cp.usage_meters"];
+
+    /// <summary>
+    /// S1.03 review finding 11: the API host need not use the migrator's login. <see cref="ApiRole"/> may connect and read
+    /// <see cref="ApiTables"/> only; the operator gives the API a login that is a member of it (docs/runbooks/tenant-operations.md).
+    /// The role is created only when the migrating login may create roles; otherwise the runbook's statements are run once.
+    /// </summary>
+    private static async Task EnsureApiRoleAsync(NpgsqlConnection connection, CancellationToken cancellationToken)
+    {
+        if (await Sql.ScalarAsync<bool>(connection, null, "select rolsuper or rolcreaterole from pg_roles where rolname = current_user", cancellationToken).ConfigureAwait(false))
+        {
+            await Provisioning.ClusterAdministrator.EnsureNoLoginRolesAsync(connection, [ApiRole], cancellationToken).ConfigureAwait(false);
+        }
+
+        if (!await Sql.ScalarAsync<bool>(connection, null, "select exists (select 1 from pg_roles where rolname = $1)", cancellationToken, ApiRole).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        // Constant names only (ApiRole, ApiTables); nothing from input.
+        await Sql.ExecuteAsync(connection, null,
+            $"do $do$ begin execute format('grant connect on database %I to {ApiRole}', current_database()); end $do$", cancellationToken).ConfigureAwait(false);
+        await Sql.ExecuteAsync(connection, null, $"grant usage on schema cp to {ApiRole}", cancellationToken).ConfigureAwait(false);
+        await Sql.ExecuteAsync(connection, null, $"grant select on {string.Join(", ", ApiTables)} to {ApiRole}", cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>The active platform user an operator command runs as.</summary>
     public async Task<PlatformActor> ActorAsync(string email, CancellationToken cancellationToken)
     {
@@ -99,17 +133,34 @@ public sealed class ControlPlaneAdmin(ControlPlaneOptions options, ISecretStore 
     }
 
     /// <summary>
-    /// Registers (or updates the address of) a PostgreSQL server for customer databases. The administrator credential
-    /// goes to the secret store; the table keeps only its reference (KRN-TEN-02).
+    /// Registers (or updates) a PostgreSQL server for customer databases. The administrator credential goes to the secret
+    /// store; the table keeps only its reference (KRN-TEN-02). The address of a server that already holds customer
+    /// databases changes only with <paramref name="allowAddressChange"/>: it moves every customer on it (S1.03 review finding 6).
     /// </summary>
-    public async Task<Guid> AddClusterAsync(PlatformActor actor, string name, string regionCode, string host, int port, int maxDatabases, DatabaseCredential admin, CancellationToken cancellationToken)
+    public async Task<Guid> AddClusterAsync(PlatformActor actor, string name, string regionCode, string host, int port, int maxDatabases, DatabaseCredential admin, CancellationToken cancellationToken, bool allowAddressChange = false)
     {
         ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(admin);
-        var secretRef = "cluster/" + name + "/admin";
-        await secrets.PutAsync(secretRef, admin.ToSecret(), cancellationToken).ConfigureAwait(false);
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await using (var check = Sql.Command(connection, transaction, """
+            select c.host, c.port, (select count(*) from cp.tenant_databases d where d.db_cluster_id = c.id and d.status <> 'retired')
+            from cp.db_clusters c where c.name = $1 for update
+            """, [name]))
+        await using (var reader = await check.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+        {
+            if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false)
+                && (reader.GetString(0) != host || reader.GetInt32(1) != port) && reader.GetInt64(2) > 0 && !allowAddressChange)
+            {
+                throw new InvalidOperationException(
+                    $"Cluster {name} holds {reader.GetInt64(2)} customer database(s) at {reader.GetString(0)}:{reader.GetInt32(1)}. Changing its address to {host}:{port} " +
+                    "moves all of them; do it only after they have been moved, and repeat with --change-address yes. API hosts must then be restarted.");
+            }
+        }
+
+        // The secret is written only once the change is known to be allowed; the reference never points at nothing.
+        var secretRef = "cluster/" + name + "/admin";
+        await secrets.PutAsync(secretRef, admin.ToSecret(), cancellationToken).ConfigureAwait(false);
         var now = clock.UtcNow;
         var id = await Sql.ScalarAsync<Guid>(connection, transaction, """
             insert into cp.db_clusters (id, name, region_code, host, port, max_databases, admin_secret_ref, status, created_at, created_by, updated_at, updated_by)
