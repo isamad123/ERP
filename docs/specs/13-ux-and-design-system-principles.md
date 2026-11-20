@@ -477,9 +477,9 @@ Every UI slice attaches this checklist with evidence (document 12, section 5).
 | --- | --- |
 | 1 | Built only from design-system components and tokens |
 | 2 | Fully operable by keyboard; visible focus; logical tab order |
-| 3 | Labels, help text and errors present, specific and translated (English, Urdu, Arabic) |
+| 3 | Labels, help text and errors present, specific and translated (English, Urdu, Arabic; Release 1.0: English and Urdu, D-42, CR-063) |
 | 4 | Renders correctly in left-to-right and right-to-left, with mirrored icons as tagged |
-| 5 | Digits, grouping (including lakh and crore), currency, Gregorian and Hijri dates correct |
+| 5 | Digits, grouping (including lakh and crore), currency, Gregorian and Hijri dates correct (Release 1.0: Gregorian only, D-42, CR-063) |
 | 6 | Works at 360, 768 and 1280 pixel widths and in compact and comfortable density |
 | 7 | Loading, empty, error, conflict and permission-denied states implemented |
 | 8 | Permissions respected: hidden versus disabled rules, data scopes, field security and masking |
@@ -488,7 +488,7 @@ Every UI slice attaches this checklist with evidence (document 12, section 5).
 | 11 | Large data handled by server-side paging and virtualization |
 | 12 | Performance budgets met (measured) |
 | 13 | Automated accessibility checks pass; screen reader smoke test done |
-| 14 | Visual baselines captured for en, ur and ar in both directions and both themes |
+| 14 | Visual baselines captured for en, ur and ar in both directions and both themes (Release 1.0: en and ur, D-42, CR-063) |
 | 15 | Content reviewed against the glossary and microcopy rules |
 | 16 | Help text and, where needed, help center entries added |
 | 17 | Tests reference the requirement IDs they cover |
