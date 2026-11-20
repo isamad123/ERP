@@ -16,3 +16,8 @@ TestResults/
 artifacts/
 logs/
 *.trx
+# Web build outputs generated from committed sources (slice S1.12a)
+web/packages/ui/src/tokens/tokens.css
+web/packages/i18n/src/generated/
+web/apps/web/test-results/
+web/apps/web/playwright-report/
