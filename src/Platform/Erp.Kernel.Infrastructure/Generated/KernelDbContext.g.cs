@@ -64,6 +64,7 @@ public sealed partial class KernelDbContext(DbContextOptions<KernelDbContext> op
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.RolePermissionConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.RoleConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.SessionConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.TrustedDeviceConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.UserCredentialConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.UserGroupMemberConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.UserGroupRoleConfiguration());
@@ -163,6 +164,7 @@ public static class KernelGeneratedServices
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IPermissionRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.PermissionRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IRoleRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.RoleRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.ISessionRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.SessionRepository>();
+        services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.ITrustedDeviceRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.TrustedDeviceRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IUserGroupRoleRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.UserGroupRoleRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IUserGroupRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.UserGroupRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IUserRoleRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.UserRoleRepository>();

@@ -30,7 +30,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
 
     private sealed record Material(
         Guid UserId, string Username, Guid SessionId, string Refresh, string MfaChallenge, string PasswordChange, string MfaEnrolment,
-        string Activation, string RecoveryCode, Guid PendingDeviceId, string PasswordReset);
+        string Activation, string RecoveryCode, Guid PendingDeviceId, string PasswordReset, Guid TrustedDeviceId, string TrustedDeviceToken);
 
     public async Task<IReadOnlyList<string>> RunAsync(ApiEndpoint endpoint, CancellationToken ct)
     {
@@ -50,7 +50,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             return failures;
         }
 
-        var markers = new[] { a.UserId.ToString(), a.SessionId.ToString(), a.PendingDeviceId.ToString(), sessionA.Value.SessionId.ToString(), a.Refresh, a.MfaChallenge, a.Activation, a.PasswordReset };
+        var markers = new[] { a.UserId.ToString(), a.SessionId.ToString(), a.PendingDeviceId.ToString(), sessionA.Value.SessionId.ToString(), a.Refresh, a.MfaChallenge, a.Activation, a.PasswordReset, a.TrustedDeviceId.ToString(), a.TrustedDeviceToken };
         var method = new HttpMethod(endpoint.Method);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
 
@@ -81,6 +81,20 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             }
 
             Leaks(failures, endpoint, label, response.Body, markers);
+        }
+
+        // Identity API version 3 (S1.12a): A's refresh and device cookies, sent as a browser to B's host, are refused too.
+        if (endpoint.Pattern is "/api/iam/auth/refresh" or "/api/iam/auth/sign-in")
+        {
+            var cookieBody = endpoint.Pattern.EndsWith("/sign-in", StringComparison.Ordinal) ? Json(new { login = a.Username, password = Password }) : "{}";
+            var response = await SendAsync(fx.HostB, null, method, path, cookieBody, hints: false, ct,
+                cookies: $"__Secure-erp_rt={a.Refresh}; __Secure-erp_td={a.TrustedDeviceToken}");
+            if (response.Status != HttpStatusCode.Unauthorized)
+            {
+                failures.Add($"{endpoint} [B host + A's browser cookies]: expected 401, got {(int)response.Status}. {Short(response.Body)}");
+            }
+
+            Leaks(failures, endpoint, "B host + A's browser cookies", response.Body, markers);
         }
 
         // Crossed hosts and tokens (endpoints that need a login).
@@ -155,6 +169,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
         "/api/iam/me/mfa-devices/{id:guid}/remove" => (pattern.Replace("{id:guid}", a.PendingDeviceId.ToString(), StringComparison.Ordinal), Json(new { currentPassword = Password }), HttpStatusCode.NotFound, tokenB),
         "/api/iam/me/mfa-devices/{id:guid}/confirm" => (pattern.Replace("{id:guid}", a.PendingDeviceId.ToString(), StringComparison.Ordinal), Json(new { code = "123456" }), HttpStatusCode.BadRequest, tokenB),
         "/api/iam/me/password" => (pattern, Json(new { currentPassword = Password, newPassword = "Probe-New-Pass-22" }), null, tokenB),
+        "/api/iam/me/trusted-devices/{id:guid}" => (pattern.Replace("{id:guid}", a.TrustedDeviceId.ToString(), StringComparison.Ordinal), null, HttpStatusCode.NotFound, tokenB),
         _ when !pattern.Contains('{', StringComparison.Ordinal) => (pattern, Json(new { currentPassword = Password, label = "probe" }), null, tokenB),
         _ => throw new InvalidOperationException($"No probe target for self-service endpoint {pattern}; extend IdentityProbe."),
     };
@@ -197,6 +212,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             case EndpointKind.IdentitySelf:
                 var path = endpoint.Pattern
                     .Replace("/sessions/{id:guid}", "/sessions/" + a.SessionId, StringComparison.Ordinal)
+                    .Replace("/trusted-devices/{id:guid}", "/trusted-devices/" + a.TrustedDeviceId, StringComparison.Ordinal)
                     .Replace("{id:guid}", a.PendingDeviceId.ToString(), StringComparison.Ordinal);
                 string? body = endpoint.Pattern switch
                 {
@@ -242,6 +258,8 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             ["password_reset"] = OpaqueTokens.New(),
         };
         var recovery = OpaqueTokens.NewRecoveryCode();
+        var trusted = Guid.CreateVersion7();
+        var trustedToken = OpaqueTokens.New();
 
         await using var c = await fx.OpenAdminAsync(code, ct);
         await ExecAsync(c, """
@@ -269,7 +287,12 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             insert into iam.mfa_devices (id, user_id, kind, secret, label, status, created_at, created_by, updated_at, updated_by)
             values ($1, $2, 'totp', $3, 'probe', 'pending', now(), $2, now(), $2)
             """, ct, device, user, await EncryptedSecretAsync(code, ct));
-        return new Material(user, username, session, refresh, tokens["mfa_challenge"], tokens["password_change"], tokens["mfa_enrolment"], tokens["activation"], recovery, device, tokens["password_reset"]);
+        // A remembered browser (slice S1.12a, iam.trusted_devices).
+        await ExecAsync(c, """
+            insert into iam.trusted_devices (id, user_id, token_hash, label, expires_at, created_at, created_by, updated_at, updated_by)
+            values ($1, $2, $3, 'Chrome', now() + interval '30 days', now(), $2, now(), $2)
+            """, ct, trusted, user, OpaqueTokens.Hash(trustedToken));
+        return new Material(user, username, session, refresh, tokens["mfa_challenge"], tokens["password_change"], tokens["mfa_enrolment"], tokens["activation"], recovery, device, tokens["password_reset"], trusted, trustedToken);
     }
 
     /// <summary>The code of the latest identity e-mail of the event, decrypted with the customer's field key as the sender does (S1.11b2).</summary>
@@ -313,7 +336,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
         }
     }
 
-    private async Task<Reply> SendAsync(string host, string? token, HttpMethod method, string pathAndQuery, string? body, bool hints, CancellationToken ct)
+    private async Task<Reply> SendAsync(string host, string? token, HttpMethod method, string pathAndQuery, string? body, bool hints, CancellationToken ct, string? cookies = null)
     {
         using var client = TenancyFixture.Client(app, host, token);
         var target = hints ? pathAndQuery + "?tenant=" + fx.CodeA + "&tenantCode=" + fx.CodeA : pathAndQuery;
@@ -321,6 +344,12 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
         if (body is not null)
         {
             request.Content = new StringContent(body, Encoding.UTF8, new MediaTypeHeaderValue("application/json"));
+        }
+
+        if (cookies is not null)
+        {
+            request.Headers.Add("X-Erp-Client", "web"); // a browser request (Identity API version 3)
+            request.Headers.Add("Cookie", cookies);
         }
 
         if (hints)

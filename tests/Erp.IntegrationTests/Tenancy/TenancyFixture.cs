@@ -119,7 +119,7 @@ public sealed class TenancyFixture : IAsyncLifetime
     /// </summary>
     /// <remarks><paramref name="realAccess"/>: keep the real access engine (slice S1.06) instead of the allow-all doubles.</remarks>
     /// <remarks><paramref name="controlPlaneConnectionString"/>: another control-plane login (S1.03 review finding 11, the cp_api role).</remarks>
-    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken, Action<IServiceCollection>? extra = null, bool realAccess = false, string? controlPlaneConnectionString = null)
+    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken, Action<IServiceCollection>? extra = null, bool realAccess = false, string? controlPlaneConnectionString = null, IReadOnlyDictionary<string, string?>? settings = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
@@ -134,6 +134,11 @@ public sealed class TenancyFixture : IAsyncLifetime
         builder.Configuration["Auth:Issuer"] = Issuer;
         builder.Configuration["Auth:Audience"] = Audience;
         builder.Configuration["Auth:SigningPublicKeys:0"] = _tokenKey.ExportSubjectPublicKeyInfoPem();
+        foreach (var (key, value) in settings ?? new Dictionary<string, string?>())
+        {
+            builder.Configuration[key] = value; // further host settings, such as Web:Root (slice S1.12a)
+        }
+
         var app = ApiHost.Build(builder, Secrets, services =>
         {
             if (!realAccess)

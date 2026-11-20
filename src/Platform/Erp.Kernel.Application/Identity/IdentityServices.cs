@@ -1,7 +1,11 @@
 namespace Erp.Kernel.Application.Identity;
 
 /// <summary>Where a request came from (stored on sessions and sign-in attempts). Never used to choose the customer.</summary>
-public sealed record ClientInfo(string? IpAddress, string? UserAgent);
+public sealed record ClientInfo(string? IpAddress, string? UserAgent)
+{
+    /// <summary>The device token from the browser's trust cookie, when it sent one (slice S1.12a, ruling Q4).</summary>
+    public string? TrustedDeviceToken { get; init; }
+}
 
 /// <summary>What a sign-in step produced.</summary>
 public enum AuthOutcome
@@ -40,6 +44,18 @@ public sealed record AuthResult(
     IReadOnlyList<string>? RecoveryCodes = null,
     IReadOnlyList<string>? MfaMethods = null)
 {
+    /// <summary><c>mfa_required</c>: days "Remember this device" would last; 0 when it is not offered (slice S1.12a, Q4).</summary>
+    public int RememberDeviceDays { get; init; }
+
+    /// <summary><c>tokens</c>: the customer's idle timeout, so the browser warns before it ends (slice S1.12a, Q3).</summary>
+    public int? IdleTimeoutMinutes { get; init; }
+
+    /// <summary><c>tokens</c> after a second factor with "remember this device": the new device token for the trust cookie.</summary>
+    public string? TrustedDeviceToken { get; init; }
+
+    /// <summary>When the new trust ends (the cookie's lifetime).</summary>
+    public DateTimeOffset? TrustedDeviceExpiresAt { get; init; }
+
     public static AuthResult Failed { get; } = new(AuthOutcome.Failed);
 
     public static AuthResult Invalid(params string[] errors) => new(AuthOutcome.Invalid, Errors: errors);
@@ -62,6 +78,9 @@ public static class MfaKinds
 
 public sealed record SessionView(Guid Id, DateTimeOffset IssuedAt, DateTimeOffset LastSeenAt, DateTimeOffset ExpiresAt, string? IpAddress, string? UserAgent, bool IsCurrent);
 
+/// <summary>A browser the person chose to remember (slice S1.12a, ruling Q4); <see cref="ExpiresAt"/> under the current setting.</summary>
+public sealed record TrustedDeviceView(Guid Id, string? Label, DateTimeOffset CreatedAt, DateTimeOffset ExpiresAt, DateTimeOffset? LastUsedAt);
+
 public sealed record MfaDeviceView(Guid Id, string Kind, string? Label, string Status, DateTimeOffset CreatedAt, DateTimeOffset? LastUsedAt);
 
 /// <summary>
@@ -73,7 +92,7 @@ public interface IAuthenticationService
     Task<AuthResult> SignInAsync(string? login, string? password, ClientInfo client, CancellationToken cancellationToken);
 
     /// <summary>Second step with an authenticator code or a recovery code.</summary>
-    Task<AuthResult> CompleteMfaAsync(string? challengeToken, string? code, string? recoveryCode, ClientInfo client, CancellationToken cancellationToken);
+    Task<AuthResult> CompleteMfaAsync(string? challengeToken, string? code, string? recoveryCode, bool rememberDevice, ClientInfo client, CancellationToken cancellationToken);
 
     Task<AuthResult> ChangeRequiredPasswordAsync(string? challengeToken, string? newPassword, ClientInfo client, CancellationToken cancellationToken);
 
@@ -128,6 +147,12 @@ public interface IAccountService
 
     /// <summary>New recovery codes replacing the old ones; null when the user has no active device.</summary>
     Task<IReadOnlyList<string>?> RegenerateRecoveryCodesAsync(Guid userId, Reauthentication proof, CancellationToken cancellationToken);
+
+    /// <summary>The person's remembered browsers (slice S1.12a, ruling Q4; screen with S1.26).</summary>
+    Task<IReadOnlyList<TrustedDeviceView>> ListTrustedDevicesAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Ends one of the person's own trusts; false when it is not theirs or already ended.</summary>
+    Task<bool> RemoveTrustedDeviceAsync(Guid userId, Guid deviceId, CancellationToken cancellationToken);
 }
 
 public enum AdminOutcome

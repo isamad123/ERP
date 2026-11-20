@@ -46,6 +46,7 @@ public sealed class AccountService(
 
         await IdentityDb.SetPasswordAsync(connection, tx, userId, hasher.Hash(newPassword!), hasher.Algorithm, userId, now, cancellationToken).ConfigureAwait(false);
         var ended = await IdentityDb.RevokeOtherSessionsAsync(connection, tx, userId, currentSessionId, "password_changed", now, cancellationToken).ConfigureAwait(false);
+        await TrustedDevices.RevokeAllAsync(connection, tx, userId, TrustedDevices.PasswordChanged, userId, now, cancellationToken).ConfigureAwait(false);
         await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.PasswordChanged, userId, userId, now, new { reason = "self", sessions_revoked = ended }, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return [];
@@ -71,6 +72,23 @@ public sealed class AccountService(
 
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return revoked;
+    }
+
+    public async Task<IReadOnlyList<TrustedDeviceView>> ListTrustedDevicesAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
+        var policy = await IdentitySettings.ReadAsync(connection, null, userId, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+        return await TrustedDevices.ListAsync(connection, userId, policy.RememberDeviceDays, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<bool> RemoveTrustedDeviceAsync(Guid userId, Guid deviceId, CancellationToken cancellationToken)
+    {
+        var now = clock.UtcNow;
+        await using var connection = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
+        await using var tx = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        var removed = await TrustedDevices.RemoveAsync(connection, tx, userId, deviceId, now, cancellationToken).ConfigureAwait(false);
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return removed;
     }
 
     public async Task<IReadOnlyList<MfaDeviceView>> ListMfaDevicesAsync(Guid userId, CancellationToken cancellationToken)
@@ -273,6 +291,7 @@ public sealed class UserAdministrationService(ITenantConnectionProvider database
                 where user_id = $1 and status <> 'revoked'
                 """, cancellationToken, userId, now, by).ConfigureAwait(false);
             await IdentityDb.ExecuteAsync(c, tx, "delete from iam.mfa_recovery_codes where user_id = $1", cancellationToken, userId).ConfigureAwait(false);
+            await TrustedDevices.RevokeAllAsync(c, tx, userId, TrustedDevices.MfaReset, by, now, cancellationToken).ConfigureAwait(false);
             await IdentityDb.RaiseAsync(c, tx, IdentityEvents.MfaReset, userId, by, now, new { devices, reason }, cancellationToken).ConfigureAwait(false);
             return AdminResult.Done;
         }, cancellationToken);
@@ -281,6 +300,7 @@ public sealed class UserAdministrationService(ITenantConnectionProvider database
         RunAsync(userId, async (c, tx, account, by, now) =>
         {
             var count = await IdentityDb.RevokeAllSessionsAsync(c, tx, userId, "admin", now, cancellationToken).ConfigureAwait(false);
+            await TrustedDevices.RevokeAllAsync(c, tx, userId, TrustedDevices.SessionsRevoked, by, now, cancellationToken).ConfigureAwait(false);
             await IdentityDb.RaiseAsync(c, tx, IdentityEvents.SessionsRevoked, userId, by, now, new { reason = reason ?? "admin", count }, cancellationToken).ConfigureAwait(false);
             return AdminResult.Done;
         }, cancellationToken);
@@ -321,6 +341,12 @@ public sealed class UserAdministrationService(ITenantConnectionProvider database
             var revoked = UserStatuses.RevokesSessions(status)
                 ? await IdentityDb.RevokeAllSessionsAsync(c, tx, userId, "status_" + status, now, cancellationToken).ConfigureAwait(false)
                 : 0;
+            if (UserStatuses.RevokesSessions(status))
+            {
+                // A status that ends the sessions also ends remembered browsers (slice S1.12a, ruling Q4: revoked sessions).
+                await TrustedDevices.RevokeAllAsync(c, tx, userId, TrustedDevices.SessionsRevoked, by, now, cancellationToken).ConfigureAwait(false);
+            }
+
             await IdentityDb.RaiseAsync(c, tx, IdentityEvents.UserStatusChanged, userId, by, now, new { from = account.Status, to = status, reason, sessions_revoked = revoked }, cancellationToken).ConfigureAwait(false);
 
             // FR-ADM-USR-03 (slice S1.10b ruling P7): a user who can no longer approve may still hold approval tasks. The

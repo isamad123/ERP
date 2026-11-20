@@ -105,7 +105,8 @@ public static class IdentitySettings
             new MfaPolicy(mfaRequired, mfaSince, Int(MfaGraceDays), Int(MfaRecoveryCodes), methods),
             TimeSpan.FromHours(Int(ActivationTokenHours)),
             TimeSpan.FromMinutes(Int(ChallengeMinutes)),
-            new EmailLinkPolicy(TimeSpan.FromMinutes(Int(PasswordResetMinutes)), Int(PasswordResetPerHour), TimeSpan.FromMinutes(Int(EmailCodeMinutes)), Int(EmailCodeMaxAttempts)));
+            new EmailLinkPolicy(TimeSpan.FromMinutes(Int(PasswordResetMinutes)), Int(PasswordResetPerHour), TimeSpan.FromMinutes(Int(EmailCodeMinutes)), Int(EmailCodeMaxAttempts)),
+            PrivilegedMfa: roles.PrivilegedSince is not null && Bool(MfaRequiredForPrivileged));
     }
 
     /// <summary>
@@ -159,8 +160,15 @@ public static class IdentitySettings
     }
 }
 
-/// <summary>All identity policies that apply to one user at one moment.</summary>
-public sealed record IdentityPolicy(PasswordPolicy Password, SessionPolicy Session, MfaPolicy Mfa, TimeSpan ActivationTokenLifetime, TimeSpan ChallengeLifetime, EmailLinkPolicy Email);
+/// <summary>
+/// All identity policies that apply to one user at one moment. <see cref="PrivilegedMfa"/>: the user holds a privileged role
+/// and <c>iam.mfa.required_for_privileged</c> is on, so the browser is never remembered (slice S1.12a, ruling Q4).
+/// </summary>
+public sealed record IdentityPolicy(PasswordPolicy Password, SessionPolicy Session, MfaPolicy Mfa, TimeSpan ActivationTokenLifetime, TimeSpan ChallengeLifetime, EmailLinkPolicy Email, bool PrivilegedMfa = false)
+{
+    /// <summary>Days a browser may be remembered for this user now (0 = not offered).</summary>
+    public int RememberDeviceDays => PrivilegedMfa ? 0 : Math.Max(0, Session.RememberDeviceDays);
+}
 
 /// <summary>
 /// Reset links and e-mail codes (slice S1.11b2, ruling Q16): how long a reset link and a code stay valid, how many reset

@@ -26,6 +26,8 @@ api_excluded:
   - iam.login_attempts
   - iam.one_time_tokens
   - iam.mfa_recovery_codes
+  # S1.12a (ruling Q4): device trust is read and removed only through /api/iam/me/trusted-devices (the caller's own).
+  - iam.trusted_devices
   - iam.api_clients
   - aud.change_log
   - aud.access_log

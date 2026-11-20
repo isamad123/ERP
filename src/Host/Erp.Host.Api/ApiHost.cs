@@ -57,7 +57,8 @@ public static class ApiHost
     /// Settings read: <c>ConnectionStrings:ControlPlane</c>; <c>ERP_SECRETS_FILE</c>, <c>ERP_SECRETS_KEY</c>;
     /// <c>Auth:Issuer</c>, <c>Auth:Audience</c>, <c>Auth:SigningPublicKeys</c> (PEM, ECDSA P-256);
     /// <c>Tenancy:StatementTimeoutSeconds</c>, <c>Tenancy:HostCacheSeconds</c>, <c>Tenancy:MaxPoolSizePerTenant</c>;
-    /// <c>Settings:RefreshMilliseconds</c> (how often a host checks for settings changes, slice S1.09a).
+    /// <c>Settings:RefreshMilliseconds</c> (how often a host checks for settings changes, slice S1.09a);
+    /// <c>Web:Root</c> (the web application's build folder, slice S1.12a).
     /// <paramref name="overrides"/> runs last (tests replace the permission checker and data scopes there).
     /// </summary>
     public static WebApplication Build(WebApplicationBuilder builder, ISecretStore? secrets = null, Action<IServiceCollection>? overrides = null)
@@ -181,10 +182,17 @@ public static class ApiHost
 
         var app = builder.Build();
         app.Services.VerifyWorkflow(); // manifests and outcome handlers checked at start (review S1.10a finding 4)
+        var webRoot = WebHosting.Root(config); // the web application (slice S1.12a, ruling Q2); null = API only
+        app.UseErpSecurityHeaders();
         app.UseErpAuditCorrelation();
         app.UseRouting();
         app.UseErpLimitResponses();
-        app.UseErpTenantResolution();
+        app.UseErpTenantResolution(new TenantResolutionOptions { IsWebApplicationRequest = webRoot is null ? null : WebHosting.IsWebRequest });
+        if (webRoot is not null)
+        {
+            app.UseErpWebApplication(webRoot);
+        }
+
         app.UseAuthentication();
         app.UseErpTokenTenantCheck();
         app.UseAuthorization();
