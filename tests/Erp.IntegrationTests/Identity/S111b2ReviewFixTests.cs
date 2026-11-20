@@ -256,7 +256,7 @@ public sealed class S111b2ReviewFixTests(TenancyFixture fx) : IAsyncLifetime
     [Fact]
     public async Task S111b2_review_7_R_003_wrong_enrolment_codes_count_towards_the_lockout()
     {
-        var code = "k" + fx.Suffix;
+        var code = "sbz" + fx.Suffix; // a customer of its own (prefix used by no other test)
         await fx.ProvisionAsync(code, Ct);
         var (user, username, _) = await h.ActiveUserAsync(code, Ct);
         var undo = await h.SetSettingAsync(code, IdentitySettings.MfaRequired, "true", user, Ct);
