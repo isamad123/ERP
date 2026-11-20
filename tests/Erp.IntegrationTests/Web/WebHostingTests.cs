@@ -21,25 +21,24 @@ public sealed class WebHostingTests(TenancyFixture fx) : IAsyncLifetime
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private static readonly SemaphoreSlim Gate = new(1, 1);
-    private static string? provisionedFor;
-
-    private string A => "w" + fx.Suffix;
+    // The identity tests' customer (tests of this collection run one at a time; the locked licence is put back).
+    private string A => "i" + fx.Suffix;
 
     public async ValueTask InitializeAsync()
     {
-        await Gate.WaitAsync(Ct);
+        await Identity.IdentityTests.ProvisionGate.WaitAsync(Ct);
         try
         {
-            if (provisionedFor != fx.Suffix)
+            if (Identity.IdentityTests.provisionedFor != fx.Suffix)
             {
                 await fx.ProvisionAsync(A, Ct);
-                provisionedFor = fx.Suffix;
+                await fx.ProvisionAsync("j" + fx.Suffix, Ct);
+                Identity.IdentityTests.provisionedFor = fx.Suffix;
             }
         }
         finally
         {
-            Gate.Release();
+            Identity.IdentityTests.ProvisionGate.Release();
         }
 
         root = Directory.CreateTempSubdirectory("erp-web-").FullName;

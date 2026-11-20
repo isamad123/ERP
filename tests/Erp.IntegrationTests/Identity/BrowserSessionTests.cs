@@ -226,26 +226,24 @@ public sealed class TrustedDeviceTests(TenancyFixture fx) : IAsyncLifetime
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    // A customer of its own, so the remember-device setting does not reach other identity tests running at the same time.
-    private string A => "t" + fx.Suffix;
-
-    private static readonly SemaphoreSlim Gate = new(1, 1);
-    private static string? provisionedFor;
+    // The identity tests' customer: tests of this collection run one at a time and each test undoes its setting change.
+    private string A => "i" + fx.Suffix;
 
     public async ValueTask InitializeAsync()
     {
-        await Gate.WaitAsync(Ct);
+        await IdentityTests.ProvisionGate.WaitAsync(Ct);
         try
         {
-            if (provisionedFor != fx.Suffix)
+            if (IdentityTests.provisionedFor != fx.Suffix)
             {
                 await fx.ProvisionAsync(A, Ct);
-                provisionedFor = fx.Suffix;
+                await fx.ProvisionAsync("j" + fx.Suffix, Ct);
+                IdentityTests.provisionedFor = fx.Suffix;
             }
         }
         finally
         {
-            Gate.Release();
+            IdentityTests.ProvisionGate.Release();
         }
 
         h = await IdentityHarness.StartAsync(fx, Ct);
