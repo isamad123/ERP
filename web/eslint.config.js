@@ -8,7 +8,7 @@ import globals from 'globals';
 import local from './tools/eslint-rules/index.js';
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/node_modules/**', 'generated/**', '**/src/generated/**', '**/test-results/**', '**/playwright-report/**'] },
+  { ignores: ['**/dist/**', '**/dist-e2e/**', '**/node_modules/**', 'generated/**', '**/src/generated/**', '**/test-results/**', '**/playwright-report/**'] },
   js.configs.recommended,
   ...tseslint.configs.strict,
   {

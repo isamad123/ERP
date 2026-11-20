@@ -15,8 +15,9 @@
     "typecheck": "pnpm run prepare-sources && tsc -p tsconfig.json && tsc -p generated/tsconfig.json",
     "test": "pnpm run prepare-sources && vitest run",
     "contrast": "node packages/ui/scripts/tokens.mjs --check && node packages/ui/scripts/tokens.mjs --self-test",
-    "build": "pnpm run prepare-sources && pnpm --filter @erp/web build && node apps/web/scripts/budget.mjs",
-    "e2e": "pnpm --filter @erp/web exec playwright test"
+    "build": "pnpm run prepare-sources && pnpm --filter @erp/web build && node apps/web/scripts/budget.mjs apps/web/dist",
+    "e2e": "pnpm --filter @erp/web exec playwright test",
+    "build:e2e": "pnpm run prepare-sources && pnpm --filter @erp/web build:e2e"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
