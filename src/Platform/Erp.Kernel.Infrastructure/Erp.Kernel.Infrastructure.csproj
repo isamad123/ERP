@@ -25,7 +25,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="ControlPlane/Provisioning/baseline-seed.json" LogicalName="Erp.Kernel.Infrastructure.ControlPlane.Provisioning.baseline-seed.json" />
-    <EmbeddedResource Include="Numbering/country-defaults.json" LogicalName="Erp.Kernel.Infrastructure.Numbering.country-defaults.json" />
+    <EmbeddedResource Include="Settings/country-defaults.json" LogicalName="Erp.Kernel.Infrastructure.Settings.country-defaults.json" />
     <EmbeddedResource Include="Access/settings.g.json" LogicalName="Erp.Kernel.Infrastructure.Access.settings.g.json" />
     <EmbeddedResource Include="Access/jobs.json" LogicalName="Erp.Kernel.Infrastructure.Access.jobs.json" />
     <EmbeddedResource Include="Access/notification-events.json" LogicalName="Erp.Kernel.Infrastructure.Access.notification-events.json" />

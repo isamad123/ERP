@@ -1,4 +1,5 @@
 {
+  "permissions.cfg.setting_values.read": "ترتیبات، ان کے ماخذ اور تاریخ دیکھیں (ان کمپنیوں کے لیے جو آپ کا کردار شامل کرتا ہے)",
   "permissions.cfg.setting_values.update": "ترتیبات تبدیل کرنا (صرف اپنی کمپنیوں کی کمپنی سطح، الا یہ کہ کردار تمام کمپنیوں پر محیط ہو)",
   "permissions.cfg.feature_flag_overrides.update": "ادارے، کسی کمپنی یا صارفین کے گروپ کے لیے فیچر فلیگ فعال یا غیر فعال کرنا",
   "errors.settings.time_zone_unknown": "ٹائم زون معلوم نہیں ہے۔ IANA نام استعمال کریں، مثلاً Asia/Karachi۔",
@@ -6,6 +7,7 @@
   "errors.settings.scope_not_found": "اس سطح کی کمپنی، کردار یا صارف نہیں ملا۔",
   "errors.settings.pack_layer": "پیک کی سطح کی قدریں صرف انسٹال شدہ پیکس سے آتی ہیں۔",
   "errors.settings.not_self_service": "آپ یہ ترتیب اپنے لیے تبدیل نہیں کر سکتے۔",
+  "errors.settings.approval_not_supported": "یہ سیکیورٹی ترتیب منظوری کی ضرورت کے ساتھ متعین ہے، جو سیکیورٹی ترتیبات میں ممکن نہیں۔ اس کی تعریف درست کرانے کے لیے اپنے فراہم کنندہ سے رابطہ کریں۔",
   "errors.settings.nothing_to_reset": "اس سطح پر ری سیٹ کرنے کے لیے کوئی قدر نہیں ہے۔",
   "errors.settings.history_not_found": "تاریخ کا یہ اندراج نہیں ملا۔",
   "errors.settings.company_not_covered": "آپ یہ ترتیب صرف ان کمپنیوں کے لیے تبدیل کر سکتے ہیں جن پر آپ کا کردار محیط ہے۔",

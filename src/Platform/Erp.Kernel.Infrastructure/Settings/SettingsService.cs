@@ -23,6 +23,8 @@ public sealed class SettingsService(
     SettingsCache cache,
     ILicensedFeatures licensed) : ISettings, IFeatureFlags
 {
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, string?> _countries = new();
+
     public Task<EffectiveSetting> GetAsync(string key, Guid? companyId, CancellationToken cancellationToken) =>
         GetAsync(key, new SettingContext(companyId, actor.UserId), cancellationToken);
 
@@ -72,7 +74,11 @@ public sealed class SettingsService(
             values.AddRange((await SettingsCache.UserValuesAsync(snapshot, connections.DataSource, user, cancellationToken).ConfigureAwait(false))[key]);
         }
 
-        return (row, SettingResolution.Resolve(row.Definition, values.Select(v => v.Value)));
+        // The company's country-pack default is the pack layer (S1.09a review finding 1, CR-061), as numbering reads it.
+        var country = companyId is { } company && CountryPackDefaults.Keys.Contains(key)
+            ? await CountryAsync(company, cancellationToken).ConfigureAwait(false)
+            : null;
+        return (row, SettingResolution.Resolve(row.Definition, CountryPackDefaults.With(values.Select(v => v.Value), country, key)));
     }
 
     /// <summary>A flag's state for a context (ruling Q14); null when the key is unknown.</summary>
@@ -96,6 +102,18 @@ public sealed class SettingsService(
             _ => true,
         });
         return (row, FlagResolution.Resolve(row.DefaultEnabled, isLicensed, applying), isLicensed);
+    }
+
+    /// <summary>The company's country, read once per request (this service is scoped) so a changed country is seen at once.</summary>
+    private async Task<string?> CountryAsync(Guid companyId, CancellationToken ct)
+    {
+        if (_countries.TryGetValue(companyId, out var known))
+        {
+            return known;
+        }
+
+        await using var c = await IdentityDb.OpenAsync(connections.DataSource, ct).ConfigureAwait(false);
+        return _countries.GetOrAdd(companyId, await CountryPackDefaults.CountryAsync(c, null, companyId, ct).ConfigureAwait(false));
     }
 
     private async Task<Guid[]> RolesAsync(Guid userId, Guid? companyId, CancellationToken ct)

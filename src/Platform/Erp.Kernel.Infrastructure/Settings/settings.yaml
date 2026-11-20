@@ -206,7 +206,7 @@ settings:
     type: int
     default: 1
     validation: {min: 1, max: 12}
-    layers: [tenant, company]
+    layers: [pack, tenant, company]  # pack: the country default, CR-061
     area: numbering
     unit: month
     name: {en: "Fiscal year start month", ur: "مالی سال کا پہلا مہینہ"}
@@ -216,7 +216,7 @@ settings:
     type: text
     default: "Asia/Karachi"
     validation: {format: time_zone}
-    layers: [tenant, company]
+    layers: [pack, tenant, company]  # pack: the country default, CR-061
     area: organization
     name: {en: "Time zone", ur: "ٹائم زون"}
     description: {en: "Time zone of the company (IANA name, for example Asia/Karachi)", ur: "کمپنی کا ٹائم زون (IANA نام، مثلاً Asia/Karachi)"}

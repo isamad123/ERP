@@ -60,9 +60,13 @@ public static class SettingsPermissions
     /// <summary>Self-service settings use the permission every baseline role holds for its own account (S1.05, S1.06).</summary>
     public const string SelfService = "iam.self.manage";
 
-    /// <summary>Update keeps its code although the generated endpoints are closed (CR-036); read stays generated.</summary>
+    /// <summary>
+    /// Read and update keep their codes although the generated endpoints of <c>cfg.setting_values</c> are gone (writes closed
+    /// by CR-036; reads removed by CR-061, S1.09a review finding 2, because they ignored company scope).
+    /// </summary>
     public static IReadOnlyList<PermissionDefinition> All { get; } =
     [
+        new(Read, "cfg", "permissions.cfg.setting_values.read", false),
         new(Update, "cfg", "permissions.cfg.setting_values.update", false),
         new(FlagsUpdate, "cfg", "permissions.cfg.feature_flag_overrides.update", false),
     ];
@@ -88,6 +92,9 @@ public static class SettingsErrors
     public const string ScopeNotFound = "errors.settings.scope_not_found";
     public const string PackLayer = "errors.settings.pack_layer";
     public const string NotSelfService = "errors.settings.not_self_service";
+
+    /// <summary>An <c>iam.*</c> setting defined as needing approval (not supported: those keys keep the S1.06 rules; S1.09a review finding 3).</summary>
+    public const string ApprovalNotSupported = "errors.settings.approval_not_supported";
     public const string NothingToReset = "errors.settings.nothing_to_reset";
     public const string HistoryNotFound = "errors.settings.history_not_found";
     public const string CompanyNotCovered = "errors.settings.company_not_covered";

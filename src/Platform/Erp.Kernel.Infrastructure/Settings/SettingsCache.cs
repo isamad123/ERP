@@ -57,6 +57,8 @@ public sealed class SettingsCache(SettingsCacheOptions options, TimeProvider tim
         await entry.Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            // A change on this host after this point (Invalidate) must not be undone by what this load reads.
+            var generation = Interlocked.Read(ref entry.Generation);
             await using var c = await IdentityDb.OpenAsync(dataSource, cancellationToken).ConfigureAwait(false);
             if (entry.Current is { } current)
             {
@@ -69,8 +71,14 @@ public sealed class SettingsCache(SettingsCacheOptions options, TimeProvider tim
             }
 
             var loaded = await LoadAsync(c, cancellationToken).ConfigureAwait(false);
-            entry.Current = loaded;
-            Interlocked.Exchange(ref entry.CheckedAt, now);
+            if (Interlocked.Read(ref entry.Generation) == generation)
+            {
+                entry.Current = loaded;
+                Interlocked.Exchange(ref entry.CheckedAt, now);
+            }
+
+            // Otherwise this host changed a value while the load ran: the load may predate the change, so it serves only this
+            // read and the next read loads again (S1.09a review finding 5).
             return loaded;
         }
         finally
@@ -84,6 +92,7 @@ public sealed class SettingsCache(SettingsCacheOptions options, TimeProvider tim
     {
         if (_entries.TryGetValue(tenantCode, out var entry))
         {
+            Interlocked.Increment(ref entry.Generation);
             entry.Current = null;
         }
     }
@@ -126,5 +135,8 @@ public sealed class SettingsCache(SettingsCacheOptions options, TimeProvider tim
         public volatile SettingsSnapshot? Current;
 
         public long CheckedAt;
+
+        /// <summary>Raised by every <see cref="Invalidate"/>; a load stores its snapshot only if it did not move meanwhile.</summary>
+        public long Generation;
     }
 }

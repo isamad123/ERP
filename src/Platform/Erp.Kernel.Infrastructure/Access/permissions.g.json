@@ -135,12 +135,6 @@
       "sensitive": false
     },
     {
-      "code": "cfg.setting_values.read",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.setting_values.read",
-      "sensitive": false
-    },
-    {
       "code": "cfg.setup_tasks.read",
       "module": "cfg",
       "descriptionKey": "permissions.cfg.setup_tasks.read",

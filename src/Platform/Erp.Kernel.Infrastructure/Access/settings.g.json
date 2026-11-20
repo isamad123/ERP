@@ -641,6 +641,7 @@
         "max": 12
       },
       "layers": [
+        "pack",
         "tenant",
         "company"
       ],
@@ -673,6 +674,7 @@
         "format": "time_zone"
       },
       "layers": [
+        "pack",
         "tenant",
         "company"
       ],

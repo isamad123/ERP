@@ -24,7 +24,6 @@ public static class KernelGeneratedEndpoints
         global::Erp.Kernel.Api.Generated.Cfg.OptionListEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.PackItemEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.SettingValueHistoryEndpoints.Map(app);
-        global::Erp.Kernel.Api.Generated.Cfg.SettingValueEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.SetupTaskEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Doc.GeneratedDocumentEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Doc.RetentionRuleEndpoints.Map(app);

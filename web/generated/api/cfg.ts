@@ -371,34 +371,6 @@ export const settingValueHistory =
     get: (id: string) => request<SettingValueHistory>('GET', `/api/cfg/setting-value-history/${id}`),
 };
 
-/** cfg.setting_values: SettingValue. Field rules (S1.06) may leave a field out or mask it as text. */
-export interface SettingValue
-{
-    id: string;
-    settingKey: string;
-    layer: 'pack' | 'tenant' | 'company' | 'role' | 'user';
-    scopeId: string | null;
-    value: unknown;
-    createdAt: string;
-    createdBy: string;
-    updatedAt: string;
-    updatedBy: string;
-    rowVersion: number;
-}
-
-export interface SettingValueListQuery
-{
-    after?: string;
-    limit?: number;
-    settingKey?: string;
-}
-
-export const settingValues =
-{
-    list: (query: SettingValueListQuery = {}) => request<PagedResult<SettingValue>>('GET', '/api/cfg/setting-values', { query }),
-    get: (id: string) => request<SettingValue>('GET', `/api/cfg/setting-values/${id}`),
-};
-
 /** cfg.setup_tasks: First-run wizard progress and readiness checklist per module (ADM-ONB-01 to 03). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface SetupTask
 {

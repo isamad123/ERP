@@ -33,7 +33,6 @@ public static class KernelPermissions
         new("cfg.pack_items.create", "cfg", "permissions.cfg.pack_items.create", false),
         new("cfg.pack_items.update", "cfg", "permissions.cfg.pack_items.update", false),
         new("cfg.setting_value_history.read", "cfg", "permissions.cfg.setting_value_history.read", false),
-        new("cfg.setting_values.read", "cfg", "permissions.cfg.setting_values.read", false),
         new("cfg.setup_tasks.read", "cfg", "permissions.cfg.setup_tasks.read", false),
         new("cfg.setup_tasks.create", "cfg", "permissions.cfg.setup_tasks.create", false),
         new("cfg.setup_tasks.update", "cfg", "permissions.cfg.setup_tasks.update", false),
