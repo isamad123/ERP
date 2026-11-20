@@ -35,7 +35,7 @@ Product projects use only Npgsql.EntityFrameworkCore.PostgreSQL and its dependen
 and its dependencies (S1.03), NSec.Cryptography and Microsoft.IdentityModel.JsonWebTokens (S1.05), MailKit (S1.11b2), AWSSDK.S3 (S1.11c1), Scriban, PuppeteerSharp and QRCoder (S1.11c2), plus the shared .NET and ASP.NET Core frameworks (MIT). Encryption and signatures (AES-GCM, ECDSA P-256) use
 the .NET base library only. Backups call the PostgreSQL client tools pg_dump and pg_restore (PostgreSQL licence) installed on the server. The Api projects reference the ASP.NET Core shared framework for minimal APIs.
 
-## Proposed for slice S1.12 (not added yet; awaiting the product owner's ruling on S1.12 Q1 and Q20)
+## Approved for slice S1.12 (product owner 2026-11-20, S1.12 rulings Q1 and Q20; added by the build parts)
 Licences checked on the npm registry on 2026-11-20. Versions are fixed at build time (newest release at least two weeks
 old) and this section then moves into the table above.
 
