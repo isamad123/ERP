@@ -34,3 +34,24 @@ telemetry is switched off in CI with `TESTINGPLATFORM_TELEMETRY_OPTOUT=1`.
 Product projects use only Npgsql.EntityFrameworkCore.PostgreSQL and its dependencies (S1.02), Microsoft.AspNetCore.Authentication.JwtBearer
 and its dependencies (S1.03), NSec.Cryptography and Microsoft.IdentityModel.JsonWebTokens (S1.05), MailKit (S1.11b2), AWSSDK.S3 (S1.11c1), Scriban, PuppeteerSharp and QRCoder (S1.11c2), plus the shared .NET and ASP.NET Core frameworks (MIT). Encryption and signatures (AES-GCM, ECDSA P-256) use
 the .NET base library only. Backups call the PostgreSQL client tools pg_dump and pg_restore (PostgreSQL licence) installed on the server. The Api projects reference the ASP.NET Core shared framework for minimal APIs.
+
+## Proposed for slice S1.12 (not added yet; awaiting the product owner's ruling on S1.12 Q1 and Q20)
+Licences checked on the npm registry on 2026-11-20. Versions are fixed at build time (newest release at least two weeks
+old) and this section then moves into the table above.
+
+| Package | Licence | Use | Shipped to browsers |
+| --- | --- | --- | --- |
+| react, react-dom | MIT | Web framework | Yes |
+| react-router | MIT | Screens and addresses | Yes |
+| @tanstack/react-query | MIT | Server data and caching | Yes |
+| react-aria-components, @internationalized/date | Apache-2.0 | Accessible primitives, date fields | Yes |
+| @tanstack/react-table, @tanstack/react-virtual | MIT | Grid and long lists | Yes |
+| react-hook-form, zod, @hookform/resolvers | MIT | Forms and validation | Yes |
+| react-intl | BSD-3-Clause | ICU message catalogues | Yes |
+| lucide-react | ISC | Icons | Yes |
+| Noto Sans, Noto Naskh Arabic (font files) | SIL OFL 1.1 (fonts only, CR-045) | Screen fonts | Yes |
+| vite, @vitejs/plugin-react, typescript, pnpm | MIT; TypeScript Apache-2.0 | Build | No |
+| vitest, @testing-library/react, @testing-library/user-event, jsdom | MIT | Unit and component tests | No |
+| @playwright/test (Playwright already on the build machine) | Apache-2.0 | End-to-end tests and screenshots | No |
+| eslint, typescript-eslint, eslint-plugin-jsx-a11y, eslint-plugin-react-hooks, stylelint | MIT | Lint | No |
+| axe-core, @axe-core/playwright | MPL-2.0 (development only, S1.12 Q20) | Accessibility checks in tests | No |
