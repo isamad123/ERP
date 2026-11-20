@@ -2978,7 +2978,7 @@
         "tg_setting_values_config_version"
       ],
       "append_only_updatable": [],
-      "has_api": true,
+      "has_api": false,
       "full_name": "cfg.setting_values"
     },
     {

@@ -1,4 +1,5 @@
 {
+  "permissions.cfg.setting_values.read": "See settings, their sources and history (for the companies one's role covers)",
   "permissions.cfg.setting_values.update": "Change settings (the company level of one's own companies only, unless the role covers all companies)",
   "permissions.cfg.feature_flag_overrides.update": "Switch feature flags on or off for the organisation, a company or a user group",
   "errors.settings.time_zone_unknown": "The time zone is not known. Use an IANA name, for example Asia/Karachi.",
@@ -6,6 +7,7 @@
   "errors.settings.scope_not_found": "The company, role or user of this level was not found.",
   "errors.settings.pack_layer": "Values at the pack level come only from installed packs.",
   "errors.settings.not_self_service": "You cannot change this setting for yourself.",
+  "errors.settings.approval_not_supported": "This security setting is defined as needing approval, which security settings do not support. Ask your provider to correct its definition.",
   "errors.settings.nothing_to_reset": "There is no value at this level to reset.",
   "errors.settings.history_not_found": "This history entry was not found.",
   "errors.settings.company_not_covered": "You may change this setting only for the companies your role covers.",

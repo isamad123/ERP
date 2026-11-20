@@ -20,6 +20,7 @@ public static class SettingWrites
     public static async Task<Guid?> ApplyAsync(NpgsqlConnection c, NpgsqlTransaction tx, string key, string layer, Guid? scopeId, string? valueJson, string? reason,
         Guid? revertedFrom, Guid? rowId, DateTimeOffset now, Guid by, CancellationToken ct)
     {
+        await LockAsync(c, tx, "cfg.setting_values", key, layer, scopeId, ct).ConfigureAwait(false);
         string? old = null;
         Guid? existing = null;
         await using (var command = IdentityDb.Command(c, tx, """
@@ -89,6 +90,7 @@ public static class SettingWrites
     /// <summary>Sets (<paramref name="enabled"/> given) or removes (null) a flag override; returns the row id, or null when there was nothing to remove.</summary>
     public static async Task<Guid?> ApplyFlagAsync(NpgsqlConnection c, NpgsqlTransaction tx, string key, string layer, Guid? scopeId, bool? enabled, string reason, DateTimeOffset now, Guid by, CancellationToken ct)
     {
+        await LockAsync(c, tx, "cfg.feature_flag_overrides", key, layer, scopeId, ct).ConfigureAwait(false);
         bool? old = null;
         Guid? existing = null;
         await using (var command = IdentityDb.Command(c, tx, """
@@ -169,6 +171,14 @@ public static class SettingWrites
             ? problem == "time_zone" ? SettingsErrors.TimeZoneUnknown : SettingsErrors.ValueInvalid
             : null;
     }
+
+    /// <summary>
+    /// Serializes the writers of one layer of one setting or flag for the rest of the transaction. <c>for update</c> alone
+    /// locks nothing while the row does not exist yet, so two first writes would both record "no old value" (S1.09a review
+    /// finding 4); with this lock the second one reads the first one's committed value.
+    /// </summary>
+    private static Task<int> LockAsync(NpgsqlConnection c, NpgsqlTransaction tx, string table, string key, string layer, Guid? scopeId, CancellationToken ct) =>
+        IdentityDb.ExecuteAsync(c, tx, "select pg_advisory_xact_lock(hashtextextended($1, 0))", ct, $"{table}|{key}|{layer}|{scopeId?.ToString() ?? "-"}");
 
     private static async Task RaiseAsync(NpgsqlConnection c, NpgsqlTransaction tx, string schema, string eventType, string aggregateType, Guid aggregateId, Guid actor, DateTimeOffset now, object payload, CancellationToken ct)
     {

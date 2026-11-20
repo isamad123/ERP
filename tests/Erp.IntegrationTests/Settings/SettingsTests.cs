@@ -423,6 +423,8 @@ public sealed class SettingsTests(TenancyFixture fx) : IAsyncLifetime
 
         Assert.Equal("20", await _h.ScalarAsync<string>("select value::text from cfg.setting_values where id = $1", Ct, row));
         Assert.Equal(before, await _h.ScalarAsync<long>("select count(*) from cfg.setting_value_history where setting_key = $1", Ct, key));
-        Assert.Equal(HttpStatusCode.OK, (await _h.GetAsync(admin, $"/api/cfg/setting-values/{row}", Ct)).Status);
+        // CR-061 (S1.09a review finding 2): the generated read of values is gone too; values are read through /api/cfg/settings.
+        Assert.Equal(HttpStatusCode.NotFound, (await _h.GetAsync(admin, $"/api/cfg/setting-values/{row}", Ct)).Status);
+        Assert.Equal(HttpStatusCode.OK, (await _h.GetAsync(admin, $"{Api}/{key}", Ct)).Status);
     }
 }

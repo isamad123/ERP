@@ -1,0 +1,6 @@
+{
+  "_comment": "Country-pack defaults of settings (slice S1.08 ruling P4; S1.09a review finding 1, CR-061). Until country packs exist (S1.23) they are the pack layer of a setting for a company of that country: computed, never stored, shown as layer 'pack' by the settings resolver. The pack loader then writes them as stored pack values and this file is removed. Keys are setting keys; each setting listed must allow the pack layer in its manifest.",
+  "countries": {
+    "PK": { "cfg.numbering.fiscal_year_start_month": 7, "org.time_zone": "Asia/Karachi" }
+  }
+}

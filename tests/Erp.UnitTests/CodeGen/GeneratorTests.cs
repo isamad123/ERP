@@ -544,6 +544,7 @@ public sealed class GeneratorTests
         Assert.True(mfa.GetProperty("tightenOnly").GetBoolean());
         var month = settings.Single(s => s.GetProperty("key").GetString() == "cfg.numbering.fiscal_year_start_month");
         Assert.Equal("""{"min":1,"max":12}""", string.Concat(month.GetProperty("validation").GetRawText().Where(ch => !char.IsWhiteSpace(ch))));
+        Assert.Contains("pack", month.GetProperty("layers").EnumerateArray().Select(l => l.GetString())); // the country default (CR-061)
         Assert.All(settings, s => Assert.False(string.IsNullOrWhiteSpace(s.GetProperty("help").GetProperty("ur").GetString())));
         Assert.Contains("public const string IamPasswordMinLength = \"iam.password.min_length\";", files["src/Platform/Erp.Kernel.Contracts/Generated/KernelSettingKeys.g.cs"], StringComparison.Ordinal);
     }
@@ -556,6 +557,9 @@ public sealed class GeneratorTests
     [InlineData("    validation: {min: 6}\n", "    validation: {min: 6, smallest: 2}\n", "unknown keys: smallest")]
     [InlineData("    name: {en: \"Minimum password length\", ur: \"پاس ورڈ کی کم از کم لمبائی\"}\n", "    name: {en: \"Minimum password length\"}\n", "needs English and Urdu text")]
     [InlineData("    layers: [tenant]\n    area: security.passwords\n    unit: characters\n", "    layers: [tenant]\n    self_service: true\n    area: security.passwords\n    unit: characters\n", "self_service needs the user layer")]
+    // S1.09a review findings 3 and 8 (CR-061): approval is not available for iam.* keys nor for self-service settings.
+    [InlineData("    layers: [tenant]\n    area: security.passwords\n    unit: characters\n", "    layers: [tenant]\n    requires_approval: true\n    area: security.passwords\n    unit: characters\n", "requires_approval is not available for iam.* settings")]
+    [InlineData("    layers: [pack, tenant, company]  # pack: the country default, CR-061\n    area: organization\n", "    layers: [pack, tenant, company, user]\n    self_service: true\n    requires_approval: true\n    area: organization\n", "cannot be self_service")]
     public void S109a_FR_KRN_SET_01_an_invalid_manifest_stops_the_generator(string from, string to, string message)
     {
         var text = File.ReadAllText(Path.Combine(Root, "src/Platform/Erp.Kernel.Infrastructure", SettingsManifestLoader.ManifestPath));

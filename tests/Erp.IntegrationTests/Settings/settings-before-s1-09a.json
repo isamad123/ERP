@@ -1,5 +1,5 @@
 {
-  "_comment": "Settings registered by the hand-written seeds of S1.05 (IdentitySettings.All), S1.06 and S1.08 (NumberingSettings.SeedAsync), captured from commit 999970f before slice S1.09a moved them into manifests. FR-KRN-SET-01 acceptance: the manifests change no key, module, type, default, validation, layers, approval flag or description.",
+  "_comment": "Settings registered by the hand-written seeds of S1.05 (IdentitySettings.All), S1.06 and S1.08 (NumberingSettings.SeedAsync), captured from commit 999970f before slice S1.09a moved them into manifests. FR-KRN-SET-01 acceptance: the manifests change no key, module, type, default, validation, layers, approval flag or description. Approved changes since: org.time_zone validation format time_zone (CR-053, R-019); the pack layer on cfg.numbering.fiscal_year_start_month and org.time_zone, where the country default now shows (CR-061, S1.09a review finding 1).",
   "settings": [
     {
       "key": "iam.password.min_length",
@@ -347,6 +347,7 @@
         "max": 12
       },
       "allowed_layers": [
+        "pack",
         "tenant",
         "company"
       ],
@@ -363,6 +364,7 @@
       "default_value": "Asia/Karachi",
       "validation": {"format": "time_zone"},
       "allowed_layers": [
+        "pack",
         "tenant",
         "company"
       ],

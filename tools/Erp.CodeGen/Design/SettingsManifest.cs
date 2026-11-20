@@ -155,6 +155,19 @@ public static partial class SettingsManifestLoader
             throw new DesignException(where, "self_service needs the user layer");
         }
 
+        // S1.09a review findings 3 and 8 (CR-061): approval is a maker-checker request by an administrator, so it cannot
+        // apply to iam.* keys (they keep the S1.06 rules) or to a value users set for themselves.
+        var requiresApproval = Flag(map, "requires_approval", false, where);
+        if (requiresApproval && key.StartsWith("iam.", StringComparison.Ordinal))
+        {
+            throw new DesignException(where, "requires_approval is not available for iam.* settings (they keep the S1.06 rules: second tenant admin)");
+        }
+
+        if (requiresApproval && selfService)
+        {
+            throw new DesignException(where, "a setting that requires_approval cannot be self_service");
+        }
+
         var area = YamlNode.Text(map.GetValueOrDefault("area"), where + " area");
         if (area.Length > 40 || !AreaPattern().IsMatch(area))
         {
@@ -162,7 +175,7 @@ public static partial class SettingsManifestLoader
         }
 
         return new ManifestSetting(key, moduleId, type, defaultValue, validation.ToJson(), layers, roleRule, tightenOnly, selfService,
-            Flag(map, "visible", true, where), Flag(map, "requires_approval", false, where), area, YamlNode.OptionalText(map, "unit", where),
+            Flag(map, "visible", true, where), requiresApproval, area, YamlNode.OptionalText(map, "unit", where),
             Texts(map, "name", where), Texts(map, "description", where), Texts(map, "help", where));
     }
 

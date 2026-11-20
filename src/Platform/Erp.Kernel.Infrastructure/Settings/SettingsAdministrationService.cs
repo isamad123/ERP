@@ -64,6 +64,12 @@ public sealed class SettingsAdministrationService(
     public async Task<SettingDetail?> DetailAsync(string key, Guid? companyId, Guid? roleId, Guid? userId, CancellationToken cancellationToken)
     {
         await RequireReadAsync(SettingsPermissions.Read, companyId, false, cancellationToken).ConfigureAwait(false);
+        if ((roleId is not null || userId is not null) && !await caller.CoversCompanyAsync(SettingsPermissions.Read, null, cancellationToken).ConfigureAwait(false))
+        {
+            // A role's or a user's values may belong to other companies: reading them needs all companies (S1.09a review finding 6).
+            throw new AccessDeniedException(SettingsErrors.CompanyNotCovered);
+        }
+
         return await LayeredAsync(key, companyId, roleId, userId, visibleOnly: true, cancellationToken).ConfigureAwait(false);
     }
 
@@ -76,14 +82,17 @@ public sealed class SettingsAdministrationService(
             return null;
         }
 
+        // A caller holding the permission for some companies only sees those companies' rows (ruling Q16). Their rows are read
+        // without the limit and filtered first, so other companies' changes never push them out (S1.09a review finding 7).
+        const int Limit = 500;
         var all = await caller.CoversCompanyAsync(SettingsPermissions.Read, null, cancellationToken).ConfigureAwait(false);
         var items = new List<SettingHistoryItem>();
         await using var c = await IdentityDb.OpenAsync(tenant.DataSource, cancellationToken).ConfigureAwait(false);
         await using (var command = IdentityDb.Command(c, null, """
             select id, setting_key, layer, scope_id, old_value::text, new_value::text, reason, created_at, created_by from cfg.setting_value_history
-            where setting_key = $1 and ($2::text is null or layer = $2) and ($3::uuid is null or scope_id = $3)
-            order by created_at desc, id desc limit 500
-            """, key, (object?)layer ?? DBNull.Value, (object?)scopeId ?? DBNull.Value))
+            where setting_key = $1 and ($2::text is null or layer = $2) and ($3::uuid is null or scope_id = $3) and ($4 or layer = 'company')
+            order by created_at desc, id desc limit (case when $4 then 500 end)
+            """, key, (object?)layer ?? DBNull.Value, (object?)scopeId ?? DBNull.Value, all))
         {
             command.Parameters[1].NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Text;
             command.Parameters[2].NpgsqlDbType = NpgsqlTypes.NpgsqlDbType.Uuid;
@@ -101,13 +110,23 @@ public sealed class SettingsAdministrationService(
             return items;
         }
 
-        // A caller holding the permission for some companies only sees those companies' rows (ruling Q16).
         var visible = new List<SettingHistoryItem>();
-        foreach (var item in items.Where(i => i.Layer == SettingLayers.Company))
+        var covered = new Dictionary<Guid, bool>();
+        foreach (var item in items.Where(i => i.Layer == SettingLayers.Company && i.ScopeId is not null))
         {
-            if (await caller.CoversCompanyAsync(SettingsPermissions.Read, item.ScopeId, cancellationToken).ConfigureAwait(false))
+            var company = item.ScopeId!.Value;
+            if (!covered.TryGetValue(company, out var yes))
+            {
+                covered[company] = yes = await caller.CoversCompanyAsync(SettingsPermissions.Read, company, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (yes)
             {
                 visible.Add(item);
+                if (visible.Count == Limit)
+                {
+                    break;
+                }
             }
         }
 
@@ -219,6 +238,13 @@ public sealed class SettingsAdministrationService(
     {
         if (key.StartsWith("iam.", StringComparison.Ordinal) && !selfService)
         {
+            // An iam.* setting cannot be held for approval (its own S1.06 rules apply); one defined so is refused rather than
+            // applied without the approval it asks for (S1.09a review finding 3; the generator refuses it too).
+            if ((await settings.SnapshotAsync(ct).ConfigureAwait(false)).Definitions.TryGetValue(key, out var identity) && identity.RequiresApproval)
+            {
+                return AccessResult.Invalid(SettingsErrors.ApprovalNotSupported);
+            }
+
             // The S1.06 rules (history, events, second tenant admin) live in the access settings service (CR-025).
             return value is { } v
                 ? await access.SetAsync(key, layer, scopeId, v, reason, revertedFrom, ct).ConfigureAwait(false)
@@ -234,7 +260,8 @@ public sealed class SettingsAdministrationService(
             }
 
             var definition = (await SettingsStore.DefinitionsAsync(c, tx, [key], ct).ConfigureAwait(false)).GetValueOrDefault(key);
-            if (selfService && definition is not { SelfService: true } || selfService && key.StartsWith("iam.", StringComparison.Ordinal))
+            // A setting that needs approval is never self-service (S1.09a review finding 8; the generator refuses the pair).
+            if (selfService && definition is not { SelfService: true, RequiresApproval: false } || selfService && key.StartsWith("iam.", StringComparison.Ordinal))
             {
                 return AccessResult.Invalid(definition is null ? SettingsErrors.Unknown : SettingsErrors.NotSelfService);
             }

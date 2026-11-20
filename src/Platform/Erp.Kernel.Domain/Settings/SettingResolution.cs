@@ -15,8 +15,12 @@ public sealed record SettingDefinition(
     public bool Allows(string layer) => layer == SettingLayers.Product || Layers.Contains(layer, StringComparer.Ordinal);
 }
 
-/// <summary>One stored value: its layer, the company, role or user it belongs to (null for pack and tenant), and who set it when.</summary>
-public sealed record StoredSettingValue(string Layer, Guid? ScopeId, JsonElement Value, DateTimeOffset UpdatedAt, Guid UpdatedBy);
+/// <summary>
+/// One stored value: its layer, the company, role or user it belongs to (null for pack and tenant), and who set it when.
+/// <c>UpdatedAt</c> and <c>UpdatedBy</c> are null for a pack value computed from the country defaults (S1.09a review
+/// finding 1, CR-061), which nobody set.
+/// </summary>
+public sealed record StoredSettingValue(string Layer, Guid? ScopeId, JsonElement Value, DateTimeOffset? UpdatedAt, Guid? UpdatedBy);
 
 /// <summary>A layer of the layered view (FR-ADM-SET-03): its value, and whether the resolver used or ignored it and why.</summary>
 public sealed record SettingLayerView(string Layer, Guid? ScopeId, JsonElement Value, DateTimeOffset? UpdatedAt, Guid? UpdatedBy, string? Ignored);

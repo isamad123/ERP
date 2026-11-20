@@ -126,7 +126,10 @@ public static class SettingsStore
         return [.. ids];
     }
 
-    /// <summary>The effective values of the keys for a context, read now in the caller's transaction (no cache).</summary>
+    /// <summary>
+    /// The effective values of the keys for a context, read now in the caller's transaction (no cache). With a company in
+    /// context, the country-pack defaults of its country are the pack layer (<see cref="CountryPackDefaults"/>, CR-061).
+    /// </summary>
     public static async Task<Dictionary<string, ResolvedSetting>> ResolveAsync(NpgsqlConnection c, NpgsqlTransaction? tx, IReadOnlyCollection<string> keys, Guid? companyId, Guid? userId, DateOnly today, CancellationToken ct)
     {
         var definitions = await DefinitionsAsync(c, tx, keys, ct).ConfigureAwait(false);
@@ -134,7 +137,10 @@ public static class SettingsStore
             ? await RoleIdsAsync(c, tx, user, companyId, today, ct).ConfigureAwait(false)
             : [];
         var values = (await ValuesAsync(c, tx, keys, companyId, roles, userId, ct).ConfigureAwait(false)).ToLookup(v => v.Key, StringComparer.Ordinal);
-        return definitions.ToDictionary(d => d.Key, d => SettingResolution.Resolve(d.Value.Definition, values[d.Key].Select(v => v.Value)), StringComparer.Ordinal);
+        var country = companyId is { } company && definitions.Keys.Any(CountryPackDefaults.Keys.Contains)
+            ? await CountryPackDefaults.CountryAsync(c, tx, company, ct).ConfigureAwait(false)
+            : null;
+        return definitions.ToDictionary(d => d.Key, d => SettingResolution.Resolve(d.Value.Definition, CountryPackDefaults.With(values[d.Key].Select(v => v.Value), country, d.Key)), StringComparer.Ordinal);
     }
 
     public static async Task<Dictionary<string, FlagRow>> FlagsAsync(NpgsqlConnection c, NpgsqlTransaction? tx, CancellationToken ct)
