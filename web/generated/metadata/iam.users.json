@@ -70,7 +70,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.iam.users.email"
+      "labelKey": "fields.iam.users.email",
+      "createOnly": true
     },
     {
       "column": "display_name",

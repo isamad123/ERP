@@ -81,6 +81,13 @@ public sealed class Column
     public bool ApiReadOnly { get; set; }
 
     /// <summary>
+    /// Column the generated API accepts on create but never changes afterwards (design key <c>api_create_only</c>, S1.11b2
+    /// review finding 2, CR-062): an update that sends another value is refused like a field the caller may not edit; only
+    /// a purpose-built service changes it (for <c>iam.users.email</c>: the guarded e-mail change).
+    /// </summary>
+    public bool ApiCreateOnly { get; set; }
+
+    /// <summary>
     /// Field class (design key <c>field_class</c>, CR-018): <c>salary</c>, <c>personal</c> or <c>restricted</c>. Salary
     /// fields are hidden from every role unless a field rule opens them (GHR-06).
     /// </summary>

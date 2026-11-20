@@ -309,7 +309,8 @@ settings:
   - key: ntf.email.reply_to
     type: text
     default: ""
-    validation: {max_length: 254, pattern: "^$|^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"}
+    # S1.11b2 review finding 6: one plain address (letters, digits and . _ % + - before @); the sender also checks it.
+    validation: {max_length: 254, pattern: "^$|^[A-Za-z0-9._%+-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+$"}
     layers: [tenant]
     area: notifications
     name: {en: "Reply-to address", ur: "جواب کا پتا"}

@@ -29,6 +29,9 @@ internal sealed record AccessChange
     /// <summary>Activation of a route version of a sensitive document type (slice S1.10 ruling Q10).</summary>
     public const string ActivateWorkflowVersion = "wf.version.activate";
 
+    /// <summary>The change of a privileged user's e-mail address (S1.11b2 review finding 2, CR-062).</summary>
+    public const string ChangeUserEmail = "iam.user.change_email";
+
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
     public required string Kind { get; init; }
@@ -84,6 +87,11 @@ internal sealed record AccessChange
     /// <summary>The draft's row version when activation was requested: an edit afterwards makes the request void.</summary>
     public long? WorkflowVersionRowVersion { get; init; }
 
+    /// <summary>The new e-mail address of an e-mail change, and the address it replaces (the change is void if it moved on).</summary>
+    public string? Email { get; init; }
+
+    public string? PreviousEmail { get; init; }
+
     public IReadOnlyList<RoleScopeChange>? Scopes { get; init; }
 
     public IReadOnlyList<RoleFieldChange>? Fields { get; init; }
@@ -106,7 +114,7 @@ internal sealed record AccessChange
         EndAssignment => ("iam.user_roles", AssignmentId!.Value),
         EndGroupRole => ("iam.user_group_roles", AssignmentId!.Value),
         AddMember or RemoveMember or AssignGroup => ("iam.user_groups", GroupId!.Value),
-        Assign => ("iam.users", UserId!.Value),
+        Assign or ChangeUserEmail => ("iam.users", UserId!.Value),
         SetSetting or ChangeSetting => ("cfg.setting_values", SettingRowId!.Value),
         ActivateWorkflowVersion => ("wf.workflow_versions", WorkflowVersionId!.Value),
         _ => ("iam.roles", RoleId!.Value),

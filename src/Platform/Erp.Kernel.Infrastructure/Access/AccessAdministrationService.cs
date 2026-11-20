@@ -38,6 +38,9 @@ public sealed partial class AccessAdministrationService(
     : IRoleService, IAssignmentService, IMakerCheckerService, IAccessPreviewService
 {
     public const string Forbidden = "errors.access.forbidden";
+
+    /// <summary>A held request whose payload these services did not write (shared with the identity e-mail change, CR-062).</summary>
+    public const string InvalidRequest = "errors.data.invalid_request";
     public const string CannotGrantUnheld = "errors.access.cannot_grant_unheld";
     public const string CompanyNotCovered = "errors.access.company_not_covered";
     public const string ReasonRequired = "errors.access.reason_required";
@@ -454,6 +457,12 @@ public sealed partial class AccessAdministrationService(
 
             case AccessChange.ChangeSetting:
                 return await ValidateHeldSettingAsync(c, tx, change, ct).ConfigureAwait(false);
+
+            case AccessChange.ChangeUserEmail:
+                // S1.11b2 review finding 2 (CR-062): the address is still the one the request replaced, and the new one is free.
+                return await IdentityEmailService.CheckHeldEmailChangeAsync(c, tx, change.UserId, change.Email, change.PreviousEmail, ct).ConfigureAwait(false) is { } problem
+                    ? AccessResult.Invalid(problem)
+                    : null;
 
             case AccessChange.SetDataScopes:
                 foreach (var scope in change.Scopes!)

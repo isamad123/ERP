@@ -121,7 +121,6 @@ export interface ConnectorWrite
     kind: 'biometric' | 'email' | 'sms';
     provider: string;
     config: unknown;
-    credentialsRef?: string | null;
     lastHealthAt?: string | null;
     status: 'active' | 'disabled' | 'error';
     isActive?: boolean;

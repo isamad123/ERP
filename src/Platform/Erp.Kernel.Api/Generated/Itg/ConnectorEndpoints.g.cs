@@ -38,7 +38,6 @@ public sealed class ConnectorWriteRequest
     public string? Kind { get; init; }
     public string? Provider { get; init; }
     public global::System.Text.Json.JsonElement? Config { get; init; }
-    public string? CredentialsRef { get; init; }
     public global::System.DateTimeOffset? LastHealthAt { get; init; }
     public string? Status { get; init; }
     public bool? IsActive { get; init; }
@@ -231,14 +230,6 @@ internal static class ConnectorEndpoints
         else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Config, row.Config, update))
         {
             denied.Add("config");
-        }
-        if (access.CanEdit("credentials_ref"))
-        {
-            row.CredentialsRef = request.CredentialsRef;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CredentialsRef, row.CredentialsRef, update))
-        {
-            denied.Add("credentialsRef");
         }
         if (access.CanEdit("last_health_at"))
         {

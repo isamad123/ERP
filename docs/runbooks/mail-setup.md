@@ -53,6 +53,9 @@ dotnet run --project src/Host/Erp.Host.Migrator -- mail show --tenant acme
 dotnet run --project src/Host/Erp.Host.Migrator -- mail clear --tenant acme
 ```
 
+Only these commands set the mail connector. If the connector row is changed through the API, the worker ignores it and uses the operator relay until the
+operator runs `mail server` or `mail sender` again, and the password is always read from `tenants/<code>/mail-smtp-password` (S1.11b2 review, CR-062).
+
 `mail clear` switches the connector off; the operator relay and `Mail:From` are used again.
 
 ## 4. Bounces

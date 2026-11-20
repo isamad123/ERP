@@ -134,7 +134,8 @@ public sealed class AuthenticationService(
         if (!ok && string.IsNullOrWhiteSpace(recoveryCode) && !string.IsNullOrWhiteSpace(code) && policy.Mfa.AllowedMethods.Contains(MfaKinds.Email, StringComparer.Ordinal)
             && await IdentityDb.HasActiveEmailFactorAsync(connection, tx, account.Id, cancellationToken).ConfigureAwait(false))
         {
-            ok = await EmailCodes.VerifyAsync(connection, tx, account.Id, EmailCodes.SignIn, token.Id, code, policy.Email.CodeAttempts, account.Id, now, cancellationToken).ConfigureAwait(false);
+            var codeKey = await encryptors.GetAsync(cancellationToken).ConfigureAwait(false);
+            ok = await EmailCodes.VerifyAsync(connection, tx, codeKey, account.Id, EmailCodes.SignIn, token.Id, code, policy.Email.CodeAttempts, account.Id, now, cancellationToken).ConfigureAwait(false);
             if (ok)
             {
                 await IdentityDb.ExecuteAsync(connection, tx, "update iam.mfa_devices set last_used_at = $2 where user_id = $1 and kind = 'email' and status = 'active'", cancellationToken, account.Id, now).ConfigureAwait(false);
@@ -241,8 +242,10 @@ public sealed class AuthenticationService(
         var encryptor = await encryptors.GetAsync(cancellationToken).ConfigureAwait(false);
         var kind = await IdentityDb.ScalarAsync<string?>(connection, tx, "select kind from iam.mfa_devices where id = $1 and user_id = $2 and status = 'pending'", cancellationToken, deviceId, account.Id).ConfigureAwait(false);
         if (kind == MfaKinds.Totp
-            && !await EmailCodes.VerifyAsync(connection, tx, account.Id, EmailCodes.EnrolmentConfirm, deviceId, emailCode, policy.Email.CodeAttempts, account.Id, now, cancellationToken).ConfigureAwait(false))
+            && !await EmailCodes.VerifyAsync(connection, tx, encryptor, account.Id, EmailCodes.EnrolmentConfirm, deviceId, emailCode, policy.Email.CodeAttempts, account.Id, now, cancellationToken).ConfigureAwait(false))
         {
+            // A wrong e-mailed code counts towards the lockout, like a wrong sign-in code (CR-049 (c); S1.11b2 review finding 7).
+            await CountFailureAsync(connection, tx, account, policy, now, cancellationToken).ConfigureAwait(false);
             // R-003: without the code from the person's mailbox the authenticator is not added; the wrong try is kept.
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
             return AuthResult.Invalid(MfaEnrolments.EmailCodeInvalid);
@@ -394,15 +397,17 @@ public sealed class AuthenticationService(
     /// <summary>The next step after a proven password or factor: another challenge, or a new session.</summary>
     private async Task<AuthResult> ContinueAsync(NpgsqlConnection connection, NpgsqlTransaction tx, UserAccount account, IdentityPolicy policy, bool mfaDone, ClientInfo client, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        var hasDevice = await IdentityDb.HasActiveMfaAsync(connection, tx, account.Id, cancellationToken).ConfigureAwait(false);
+        // Which factors the person can use now (slice S1.11b2): the sign-in screen offers "send me a code" for the e-mail
+        // factor. An e-mail factor the customer no longer allows does not count, so its owner is asked to enrol a factor
+        // instead of being left at a second-factor step nobody can pass (S1.11b2 review finding 9).
+        var kinds = await Notifications.NotificationConsumer.ReadAsync(connection, tx, "select distinct kind from iam.mfa_devices where user_id = $1 and status = 'active' order by kind",
+            r => r.GetString(0), cancellationToken, account.Id).ConfigureAwait(false);
+        List<string> usable = [.. kinds.Where(k => k != MfaKinds.Email || policy.Mfa.AllowedMethods.Contains(MfaKinds.Email, StringComparer.Ordinal))];
+        var hasDevice = usable.Count > 0;
         if (hasDevice && !mfaDone)
         {
             var challenge = await IdentityDb.IssueTokenAsync(connection, tx, account.Id, IdentityDb.MfaChallenge, policy.ChallengeLifetime, account.Id, now, cancellationToken).ConfigureAwait(false);
-            // Which factors the person can use now (slice S1.11b2): the sign-in screen offers "send me a code" for the e-mail factor.
-            var kinds = await Notifications.NotificationConsumer.ReadAsync(connection, tx, "select distinct kind from iam.mfa_devices where user_id = $1 and status = 'active' order by kind",
-                r => r.GetString(0), cancellationToken, account.Id).ConfigureAwait(false);
-            return new AuthResult(AuthOutcome.MfaRequired, ChallengeToken: challenge,
-                MfaMethods: [.. kinds.Where(k => k != MfaKinds.Email || policy.Mfa.AllowedMethods.Contains(MfaKinds.Email, StringComparer.Ordinal))]);
+            return new AuthResult(AuthOutcome.MfaRequired, ChallengeToken: challenge, MfaMethods: usable);
         }
 
         if (account.MustChange || (account.PasswordChangedAt is { } changed && PasswordRules.IsExpired(changed, now, policy.Password)))
@@ -573,7 +578,7 @@ internal static class MfaEnrolments
         {
             var firstFactor = !await IdentityDb.HasActiveMfaAsync(connection, tx, userId, cancellationToken).ConfigureAwait(false);
             if (!policy.Mfa.AllowedMethods.Contains(MfaKinds.Email, StringComparer.Ordinal)
-                || !await EmailCodes.VerifyAsync(connection, tx, userId, EmailCodes.SignIn, deviceId, code, policy.Email.CodeAttempts, userId, now, cancellationToken).ConfigureAwait(false))
+                || !await EmailCodes.VerifyAsync(connection, tx, encryptor, userId, EmailCodes.SignIn, deviceId, code, policy.Email.CodeAttempts, userId, now, cancellationToken).ConfigureAwait(false))
             {
                 return null;
             }

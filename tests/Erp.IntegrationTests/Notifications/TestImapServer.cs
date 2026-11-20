@@ -100,7 +100,11 @@ public sealed class TestImapServer : IAsyncDisposable
                                 $"* {Messages.Count} EXISTS\r\n* 0 RECENT\r\n* FLAGS (\\Seen)\r\n* OK [PERMANENTFLAGS (\\Seen)] ok\r\n* OK [UIDVALIDITY 1] ok\r\n* OK [UIDNEXT {_nextUid + 1}] ok\r\n{tag} OK [READ-WRITE] SELECT completed\r\n"));
                             break;
                         case "UID SEARCH":
-                            var unseen = Messages.Where(m => !m.Value.Seen).Select(m => m.Key).Order().Select(u => u.ToString(CultureInfo.InvariantCulture));
+                            // UNSEEN, optionally with TEXT <value> (the bounce job searches its customer's Message-ID text, review S1.11b2 finding 11).
+                            var textAt = rest.IndexOf("TEXT ", StringComparison.OrdinalIgnoreCase);
+                            var text = textAt < 0 ? null : rest[(textAt + 5)..].Trim().Trim('"');
+                            var unseen = Messages.Where(m => !m.Value.Seen && (text is null || Encoding.ASCII.GetString(m.Value.Raw).Contains(text, StringComparison.OrdinalIgnoreCase)))
+                                .Select(m => m.Key).Order().Select(u => u.ToString(CultureInfo.InvariantCulture));
                             await Write($"* SEARCH {string.Join(' ', unseen)}\r\n{tag} OK SEARCH completed\r\n".Replace("SEARCH \r\n", "SEARCH\r\n", StringComparison.Ordinal));
                             break;
                         case "UID FETCH":

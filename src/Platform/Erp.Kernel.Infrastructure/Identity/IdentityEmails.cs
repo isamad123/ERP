@@ -25,9 +25,14 @@ internal static class EmailCodes
     public const string SignIn = "email_code";
     public const string EnrolmentConfirm = "enrolment_confirm";
 
-    private static string Hash(Guid binding, string code) => OpaqueTokens.Hash(binding.ToString("N") + ":" + code);
+    /// <summary>Key purpose of the code hash: a keyed hash (HMAC with the customer's field key), so a copy of the database alone cannot find a live code (S1.11b2 review finding 10).</summary>
+    public const string HashPurpose = "iam.one_time_tokens.email_code";
 
-    public static async Task<string> IssueAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, string purpose, Guid binding, TimeSpan lifetime, Guid actor, DateTimeOffset now, CancellationToken ct)
+    private static string Hash(IFieldEncryptor key, Guid binding, string code) =>
+        Convert.ToHexStringLower(key.BlindIndex(Encoding.UTF8.GetBytes(binding.ToString("N") + ":" + code), HashPurpose));
+
+    public static async Task<string> IssueAsync(NpgsqlConnection c, NpgsqlTransaction tx, IFieldEncryptor key, Guid userId, string purpose, Guid binding, TimeSpan lifetime, Guid actor, DateTimeOffset now,
+        CancellationToken ct)
     {
         await IdentityDb.ExpireTokensAsync(c, tx, userId, purpose, actor, now, ct).ConfigureAwait(false);
         var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6", CultureInfo.InvariantCulture);
@@ -37,12 +42,12 @@ internal static class EmailCodes
             values ($1, $2, $3, $4, $5, null, 0, $6, $7, $6, $7)
             on conflict (token_hash) do update set expires_at = excluded.expires_at, used_at = null, attempts = 0, created_at = excluded.created_at,
                 updated_at = excluded.updated_at, updated_by = excluded.updated_by, row_version = t.row_version + 1
-            """, ct, Guid.CreateVersion7(now), userId, purpose, Hash(binding, code), now + lifetime, now, actor).ConfigureAwait(false);
+            """, ct, Guid.CreateVersion7(now), userId, purpose, Hash(key, binding, code), now + lifetime, now, actor).ConfigureAwait(false);
         return code;
     }
 
     /// <summary>True when the code is the person's live code of the purpose for this binding; a wrong code counts one try.</summary>
-    public static async Task<bool> VerifyAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, string purpose, Guid binding, string? code, int maxAttempts, Guid actor,
+    public static async Task<bool> VerifyAsync(NpgsqlConnection c, NpgsqlTransaction tx, IFieldEncryptor key, Guid userId, string purpose, Guid binding, string? code, int maxAttempts, Guid actor,
         DateTimeOffset now, CancellationToken ct)
     {
         var live = (await NotificationConsumer.ReadAsync(c, tx, """
@@ -57,7 +62,7 @@ internal static class EmailCodes
 
         var candidate = code?.Trim();
         if (candidate is { Length: 6 } && candidate.All(char.IsAsciiDigit)
-            && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(live.Hash), Encoding.ASCII.GetBytes(Hash(binding, candidate))))
+            && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(live.Hash), Encoding.ASCII.GetBytes(Hash(key, binding, candidate))))
         {
             await IdentityDb.UseTokenAsync(c, tx, live.Id, actor, now, ct).ConfigureAwait(false);
             return true;
@@ -87,15 +92,17 @@ internal static class IdentityMail
     public const string PasswordReset = "identity.password_reset";
     public const string SignInCode = "identity.email_code";
     public const string EnrolmentCode = "identity.enrolment_code";
+    public const string EmailChanged = "identity.email_changed";
 
-    public static async Task QueueAsync(NpgsqlConnection c, NpgsqlTransaction tx, NotificationCatalog catalog, IFieldEncryptor encryptor, Guid userId, string eventCode,
-        object values, IReadOnlyDictionary<string, string> secret, DateTimeOffset now, CancellationToken ct)
+    /// <summary>Queues the e-mail to the person's address, or to <paramref name="recipient"/> (the old address of an e-mail change).</summary>
+    public static async Task QueueAsync(NpgsqlConnection c, NpgsqlTransaction tx, NotificationCatalog catalog, IFieldEncryptor? encryptor, Guid userId, string eventCode,
+        object values, IReadOnlyDictionary<string, string> secret, DateTimeOffset now, CancellationToken ct, string? recipient = null)
     {
         var spec = catalog.Find(eventCode) ?? throw new InvalidOperationException($"The notification catalogue has no {eventCode}.");
         var person = (await NotificationConsumer.ReadAsync(c, tx, "select email, language from iam.users where id = $1", r => (Email: r.GetString(0), Language: r.GetString(1)), ct, userId)
             .ConfigureAwait(false)).Single();
         var map = JsonSerializer.SerializeToElement(values).EnumerateObject().ToDictionary(p => p.Name, p => p.Value.Clone(), StringComparer.Ordinal);
-        await EmailOutbox.QueueAsync(c, tx, spec, new QueuedEmail(userId, person.Email, spec.Code, null, person.Language, map, null, null, now, null, secret), encryptor,
+        await EmailOutbox.QueueAsync(c, tx, spec, new QueuedEmail(userId, recipient ?? person.Email, spec.Code, null, person.Language, map, null, null, now, null, secret), encryptor,
             BaselineSeed.SystemUserId, now, ct).ConfigureAwait(false);
         await EmailOutbox.RequestSendSoonAsync(c, tx, now, ct).ConfigureAwait(false);
     }
@@ -179,9 +186,13 @@ public sealed class IdentityEmailService(
         var now = clock.UtcNow;
         await using var c = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var link = await IdentityDb.FindTokenAsync(c, tx, token, IdentityDb.PasswordReset, now, cancellationToken).ConfigureAwait(false);
-        var account = link is null ? null : await IdentityDb.GetAccountAsync(c, tx, link.UserId, cancellationToken).ConfigureAwait(false);
-        if (link is null || account is null || !MayReset(account))
+
+        // Lock order user, then token, like forgot password and the administrator's link (S1.11b2 review finding 8): the
+        // person is found without a lock, locked, and only then is the link locked and checked again.
+        var owner = await IdentityDb.TokenOwnerAsync(c, tx, token, IdentityDb.PasswordReset, now, cancellationToken).ConfigureAwait(false);
+        var account = owner is { } id ? await IdentityDb.GetAccountAsync(c, tx, id, cancellationToken).ConfigureAwait(false) : null;
+        var link = account is null ? null : await IdentityDb.FindTokenAsync(c, tx, token, IdentityDb.PasswordReset, now, cancellationToken).ConfigureAwait(false);
+        if (link is null || account is null || link.UserId != account.Id || !MayReset(account))
         {
             return null;
         }
@@ -286,6 +297,143 @@ public sealed class IdentityEmailService(
         return AdminResult.Done;
     }
 
+    public const string EmailInvalid = "errors.user.email_invalid";
+    public const string EmailTaken = "errors.user.email_taken";
+    public const string EmailUnchanged = "errors.user.email_unchanged";
+    public const string EmailChangedMeanwhile = "errors.user.email_changed_meanwhile";
+    public const string ReasonRequired = "errors.user.reason_required";
+    private const int MaxEmailLength = 254;
+
+    public async Task<EmailChangeResult> ChangeEmailAsync(Guid userId, string? email, string? reason, CancellationToken cancellationToken)
+    {
+        var now = clock.UtcNow;
+        await using var c = await IdentityDb.OpenAsync(database.DataSource, cancellationToken).ConfigureAwait(false);
+        await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        var account = await IdentityDb.GetAccountAsync(c, tx, userId, cancellationToken).ConfigureAwait(false);
+        if (account is null)
+        {
+            return new EmailChangeResult(AdminOutcome.NotFound);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return new EmailChangeResult(AdminOutcome.Invalid, ReasonRequired);
+        }
+
+        var wanted = email?.Trim() ?? string.Empty;
+        if (await CheckNewEmailAsync(c, tx, account.Id, account.Email, wanted, cancellationToken).ConfigureAwait(false) is { } problem)
+        {
+            return new EmailChangeResult(AdminOutcome.Invalid, problem);
+        }
+
+        // A privileged user's address waits for a second person while the customer keeps maker-checker on (S1.06 Q10).
+        if (await Access.AccessDb.SettingOnAsync(c, tx, IdentitySettings.MakerCheckerSensitiveRoles, cancellationToken).ConfigureAwait(false)
+            && await IdentitySettings.IsPrivilegedAsync(c, tx, account.Id, DateOnly.FromDateTime(now.UtcDateTime), cancellationToken).ConfigureAwait(false))
+        {
+            var change = new Access.AccessChange
+            {
+                Kind = Access.AccessChange.ChangeUserEmail,
+                UserId = account.Id,
+                Email = wanted,
+                PreviousEmail = account.Email,
+                Reason = reason.Trim(),
+            };
+            var pending = await Access.AccessAdministrationService.SubmitChangeAsync(c, tx, change, now, actor.UserId, cancellationToken).ConfigureAwait(false);
+            await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+            return new EmailChangeResult(AdminOutcome.Done, null, pending.RequestId);
+        }
+
+        await ApplyEmailChangeAsync(c, tx, catalog, account, wanted, reason.Trim(), now, actor.UserId, cancellationToken).ConfigureAwait(false);
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return new EmailChangeResult(AdminOutcome.Done);
+    }
+
+    /// <summary>The checks of a held e-mail change when it is approved: null when it can still be applied, else the error key.</summary>
+    internal static async Task<string?> CheckHeldEmailChangeAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid? userId, string? email, string? previous, CancellationToken ct)
+    {
+        if (userId is null || email is null || previous is null)
+        {
+            return Access.AccessAdministrationService.InvalidRequest;
+        }
+
+        var current = await IdentityDb.ScalarAsync<string?>(c, tx, "select email from iam.users where id = $1 and not is_deleted and not is_system", ct, userId).ConfigureAwait(false);
+        if (current is null)
+        {
+            return Access.AccessAdministrationService.UserNotFound;
+        }
+
+        return !string.Equals(current, previous, StringComparison.OrdinalIgnoreCase)
+            ? EmailChangedMeanwhile
+            : await CheckNewEmailAsync(c, tx, userId.Value, current, email, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Applies an approved e-mail change in the approval's transaction (maker-checker, CR-062).</summary>
+    internal static async Task<Application.Access.AccessResult> ApplyHeldEmailChangeAsync(NpgsqlConnection c, NpgsqlTransaction tx, NotificationCatalog catalog, Guid userId, string email,
+        string previous, string? reason, DateTimeOffset now, Guid by, CancellationToken ct)
+    {
+        var account = await IdentityDb.GetAccountAsync(c, tx, userId, ct).ConfigureAwait(false);
+        if (account is null)
+        {
+            return Application.Access.AccessResult.Invalid(Access.AccessAdministrationService.UserNotFound);
+        }
+
+        if (!string.Equals(account.Email, previous, StringComparison.OrdinalIgnoreCase))
+        {
+            return Application.Access.AccessResult.Invalid(EmailChangedMeanwhile);
+        }
+
+        await ApplyEmailChangeAsync(c, tx, catalog, account, email, reason, now, by, ct).ConfigureAwait(false);
+        return Application.Access.AccessResult.Done(userId);
+    }
+
+    /// <summary>
+    /// A new address must be a single valid mailbox, not the current one, and used by nobody else as address or username
+    /// (so sign-in by e-mail cannot be shadowed either).
+    /// </summary>
+    private static async Task<string?> CheckNewEmailAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid userId, string current, string email, CancellationToken ct)
+    {
+        if (email.Length is 0 or > MaxEmailLength || !MimeKit.MailboxAddress.TryParse(email, out var parsed) || !string.Equals(parsed.Address, email, StringComparison.Ordinal)
+            || parsed.Address.IndexOf('@', StringComparison.Ordinal) <= 0)
+        {
+            return EmailInvalid;
+        }
+
+        if (string.Equals(email, current, StringComparison.OrdinalIgnoreCase))
+        {
+            return EmailUnchanged;
+        }
+
+        return await IdentityDb.ScalarAsync<bool>(c, tx, "select exists (select 1 from iam.users where id <> $1 and (lower(email) = lower($2) or lower(username) = lower($2)))", ct, userId, email)
+            .ConfigureAwait(false)
+            ? EmailTaken
+            : null;
+    }
+
+    /// <summary>
+    /// The change itself: the new address; every open reset link, e-mail code and activation link of the person ends (they
+    /// went to the old address); the e-mail factor is removed, so codes never follow an address the person has not proved;
+    /// the old address is told.
+    /// </summary>
+    private static async Task ApplyEmailChangeAsync(NpgsqlConnection c, NpgsqlTransaction tx, NotificationCatalog catalog, UserAccount account, string email, string? reason,
+        DateTimeOffset now, Guid by, CancellationToken ct)
+    {
+        await IdentityDb.ExecuteAsync(c, tx, "update iam.users set email = $2, updated_at = $3, updated_by = $4, row_version = row_version + 1 where id = $1", ct, account.Id, email, now, by)
+            .ConfigureAwait(false);
+        foreach (var purpose in new[] { IdentityDb.PasswordReset, EmailCodes.SignIn, EmailCodes.EnrolmentConfirm, IdentityDb.Activation })
+        {
+            await IdentityDb.ExpireTokensAsync(c, tx, account.Id, purpose, by, now, ct).ConfigureAwait(false);
+        }
+
+        var removed = await IdentityDb.ExecuteAsync(c, tx, """
+            update iam.mfa_devices set status = 'revoked', updated_at = $2, updated_by = $3, row_version = row_version + 1
+            where user_id = $1 and kind = 'email' and status <> 'revoked'
+            """, ct, account.Id, now, by).ConfigureAwait(false);
+        await IdentityDb.RaiseAsync(c, tx, IdentityEvents.EmailChanged, account.Id, by, now,
+            new { from = IdentityMail.Masked(account.Email), to = IdentityMail.Masked(email), reason, email_factor_removed = removed > 0 }, ct).ConfigureAwait(false);
+        await IdentityMail.QueueAsync(c, tx, catalog, null, account.Id, IdentityMail.EmailChanged, new { masked = IdentityMail.Masked(email) }, new Dictionary<string, string>(), now, ct,
+            recipient: account.Email).ConfigureAwait(false);
+    }
+
     /// <summary>
     /// Who may reset a password by e-mail (plan point P9): an active account with a password, or one under an automatic
     /// lock (it has an end time). An administrator's lock, a disabled, archived or invited account: never.
@@ -315,7 +463,7 @@ public sealed class IdentityEmailService(
             return false;
         }
 
-        var code = await EmailCodes.IssueAsync(c, tx, userId, purpose, binding, policy.Email.CodeLifetime, userId, now, ct).ConfigureAwait(false);
+        var code = await EmailCodes.IssueAsync(c, tx, encryptor, userId, purpose, binding, policy.Email.CodeLifetime, userId, now, ct).ConfigureAwait(false);
         await IdentityDb.RaiseAsync(c, tx, IdentityEvents.EmailCodeSent, userId, userId, now, new { purpose, expires_at = now + policy.Email.CodeLifetime }, ct).ConfigureAwait(false);
         await IdentityMail.QueueAsync(c, tx, catalog, encryptor, userId, eventCode, new { minutes = (int)policy.Email.CodeLifetime.TotalMinutes },
             new Dictionary<string, string> { ["code"] = code }, now, ct).ConfigureAwait(false);

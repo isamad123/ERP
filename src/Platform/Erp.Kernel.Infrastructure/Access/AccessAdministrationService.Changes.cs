@@ -1,6 +1,7 @@
 using Erp.Kernel.Application.Access;
 using Erp.Kernel.Contracts.Access;
 using Erp.Kernel.Infrastructure.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
 namespace Erp.Kernel.Infrastructure.Access;
@@ -73,7 +74,10 @@ public sealed partial class AccessAdministrationService
                 return problem;
             }
 
-            var applied = await ApplyAsync(c, tx, change, now, by, cancellationToken).ConfigureAwait(false);
+            var applied = change.Kind == AccessChange.ChangeUserEmail
+                ? await IdentityEmailService.ApplyHeldEmailChangeAsync(c, tx, services.GetRequiredService<Notifications.NotificationCatalog>(), change.UserId!.Value, change.Email!,
+                    change.PreviousEmail!, change.Reason, now, by, cancellationToken).ConfigureAwait(false)
+                : await ApplyAsync(c, tx, change, now, by, cancellationToken).ConfigureAwait(false);
             if (applied.Outcome != AccessOutcome.Done)
             {
                 return applied;
@@ -152,9 +156,15 @@ public sealed partial class AccessAdministrationService
             return AccessResult.Forbidden(Forbidden);
         }
 
+        // A held e-mail change (S1.11b2 review finding 2, CR-062): the approver may change addresses themselves.
+        if (change.Kind is AccessChange.ChangeUserEmail && !await permissions.HasPermissionAsync(Contracts.Identity.IdentityPermissions.ChangeEmail, ct).ConfigureAwait(false))
+        {
+            return AccessResult.Forbidden(Forbidden);
+        }
+
         var ownGain = change.Kind switch
         {
-            AccessChange.Assign or AccessChange.AddMember => change.UserId == approver,
+            AccessChange.Assign or AccessChange.AddMember or AccessChange.ChangeUserEmail => change.UserId == approver,
             AccessChange.AssignGroup => await IdentityDb.ScalarAsync<bool>(c, tx, "select exists (select 1 from iam.user_group_members where group_id = $1 and user_id = $2)", ct, change.GroupId, approver).ConfigureAwait(false),
             _ => false,
         };

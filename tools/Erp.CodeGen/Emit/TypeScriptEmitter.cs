@@ -191,6 +191,11 @@ public static class TypeScriptEmitter
             {
                 field["fieldClass"] = c.FieldClass;
             }
+
+            if (c.ApiCreateOnly)
+            {
+                field["createOnly"] = true; // set on create only (CR-062): the screen shows it read-only when editing
+            }
             if (c.EnumValues.Count > 0)
             {
                 field["options"] = new JsonArray(c.EnumValues.Select(v => (JsonNode)new JsonObject { ["value"] = v, ["labelKey"] = $"options.{t.FullName}.{c.Name}.{v}" }).ToArray());

@@ -751,7 +751,7 @@ public static class CSharpEmitter
 
             foreach (var c in required)
             {
-                var condition = c.Name == "company_id"
+                var condition = c.Name == "company_id" || c.ApiCreateOnly
                     ? $"!update && request.{N.Property(t, c)} is null"
                     : $"request.{N.Property(t, c)} is null && (!update || access.CanEdit({CodeWriter.CSharpString(c.Name)}))";
                 w.Open($"if ({condition})");
@@ -801,6 +801,23 @@ public static class CSharpEmitter
                     w.Open($"else if (request.{p} is not null)");
                     w.Line($"denied.Add({camel});");
                     w.Close();
+                    w.Close();
+                    continue;
+                }
+
+                if (c.ApiCreateOnly)
+                {
+                    // api_create_only (CR-062): set on create; on update another value is refused, the stored one stays.
+                    w.Open("if (!update)");
+                    w.Open($"if (access.CanEdit({key}))");
+                    w.Line(assign);
+                    w.Close();
+                    w.Open($"else if (request.{p} is not null)");
+                    w.Line($"denied.Add({camel});");
+                    w.Close();
+                    w.Close();
+                    w.Open($"else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.{p}, row.{p}, update))");
+                    w.Line($"denied.Add({camel});");
                     w.Close();
                     continue;
                 }
