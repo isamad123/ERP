@@ -54,13 +54,20 @@ public static partial class SettingsManifestLoader
 
     private static readonly string[] Languages = ["en", "ur"];
 
+    /// <summary>
+    /// Kernel setting prefixes that are not schemas: <c>loc</c> for the localisation service (spec 02 LOC), whose settings
+    /// <c>loc.number.digits</c> and <c>loc.number.grouping</c> were named by slice S1.12 ruling Q6 (deviation k of CR-063,
+    /// product owner 2026-11-21). Business modules cannot use them.
+    /// </summary>
+    public static readonly string[] KernelSettingPrefixes = ["loc"];
+
     /// <summary>The manifests of the kernel and of each business module, where the file exists.</summary>
     public static IReadOnlyList<ModuleSettingsManifest> Load(string root, Settings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
         var modules = new (string Module, string Folder, IReadOnlyList<string> Ids)[]
         {
-            ("kernel", "src/Platform/Erp.Kernel.Infrastructure", settings.KernelSchemas),
+            ("kernel", "src/Platform/Erp.Kernel.Infrastructure", [.. settings.KernelSchemas, .. KernelSettingPrefixes]),
             ("hrm", "src/Modules/Hrm/Erp.Hrm.Infrastructure", settings.HrmSchemas),
         };
         var result = new List<ModuleSettingsManifest>();

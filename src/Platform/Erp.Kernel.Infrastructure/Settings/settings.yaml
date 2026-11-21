@@ -221,6 +221,28 @@ settings:
     name: {en: "Time zone", ur: "ٹائم زون"}
     description: {en: "Time zone of the company (IANA name, for example Asia/Karachi)", ur: "کمپنی کا ٹائم زون (IANA نام، مثلاً Asia/Karachi)"}
     help: {en: "IANA time zone name, for example Asia/Karachi. It decides which day \"today\" is. Without a value, the default of the company's country applies.", ur: "IANA ٹائم زون کا نام، مثلاً Asia/Karachi۔ اسی سے طے ہوتا ہے کہ \"آج\" کون سا دن ہے۔ قدر نہ ہونے پر کمپنی کے ملک کا طے شدہ ٹائم زون لاگو ہوتا ہے۔"}
+  # Slice S1.12b (S1.12 ruling Q6, FR-KRN-LOC-02 "number format ... companies set defaults"): how numbers are shown on
+  # screens. Stored and exported values never change. The user's own choice screen comes with S1.26 (FR-ADM-USR-10).
+  - key: loc.number.digits
+    type: choice
+    default: "western"
+    validation: {choices: [western, eastern_arabic_indic]}
+    layers: [tenant, company, user]
+    self_service: true
+    area: localisation
+    name: {en: "Digits", ur: "ہندسے"}
+    description: {en: "Digits used to show numbers on screens: Western (123) or Eastern Arabic-Indic (۱۲۳)", ur: "اسکرین پر اعداد دکھانے کے ہندسے: مغربی (123) یا مشرقی عربی ہندی (۱۲۳)"}
+    help: {en: "Western (123) or Eastern Arabic-Indic (۱۲۳) digits on screens, in both languages. Stored and exported values do not change.", ur: "اسکرین پر دونوں زبانوں میں مغربی (123) یا مشرقی عربی ہندی (۱۲۳) ہندسے۔ محفوظ اور برآمد شدہ قدریں نہیں بدلتیں۔"}
+  - key: loc.number.grouping
+    type: choice
+    default: "international"
+    validation: {choices: [international, lakh_crore]}
+    layers: [tenant, company, user]
+    self_service: true
+    area: localisation
+    name: {en: "Digit grouping", ur: "ہندسوں کی گروہ بندی"}
+    description: {en: "How large numbers are grouped on screens: international (1,234,567) or lakh and crore (12,34,567)", ur: "اسکرین پر بڑے اعداد کی گروہ بندی: بین الاقوامی (1,234,567) یا لاکھ اور کروڑ (12,34,567)"}
+    help: {en: "International grouping (1,234,567) or lakh and crore grouping (12,34,567) on screens. Stored and exported values do not change.", ur: "اسکرین پر بین الاقوامی (1,234,567) یا لاکھ اور کروڑ (12,34,567) گروہ بندی۔ محفوظ اور برآمد شدہ قدریں نہیں بدلتیں۔"}
   # Slice S1.09b (ruling Q7, FR-ADM-USR-08 "configurable thresholds"): when a licence limit warns before its hard stop.
   - key: cfg.limits.warning_percent
     type: int

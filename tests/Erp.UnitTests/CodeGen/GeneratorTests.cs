@@ -545,7 +545,7 @@ public sealed class GeneratorTests
         var files = Generator.Generate(Root).Files;
         var manifest = System.Text.Json.JsonDocument.Parse(files["src/Platform/Erp.Kernel.Infrastructure/Access/settings.g.json"]).RootElement;
         var settings = manifest.GetProperty("settings").EnumerateArray().ToList();
-        Assert.Equal(43, settings.Count); // two of S1.11c2 (doc.template.max_kb, doc.pdf.max_pages), four of S1.11c1 (doc.scan.mode, doc.upload.max_mb, doc.upload.allowed_types, doc.expiry.reminder_days), 22 of S1.09a, cfg.limits.warning_percent (S1.09b, ruling Q7), four of S1.10b (CR-041), two of S1.11a (Q9, P3), ntf.in_app.retention_days (S1.11b1), seven of S1.11b2 (P3, P9, P11)
+        Assert.Equal(45, settings.Count); // loc.number.digits and loc.number.grouping (S1.12b, ruling Q6), two of S1.11c2 (doc.template.max_kb, doc.pdf.max_pages), four of S1.11c1 (doc.scan.mode, doc.upload.max_mb, doc.upload.allowed_types, doc.expiry.reminder_days), 22 of S1.09a, cfg.limits.warning_percent (S1.09b, ruling Q7), four of S1.10b (CR-041), two of S1.11a (Q9, P3), ntf.in_app.retention_days (S1.11b1), seven of S1.11b2 (P3, P9, P11)
         Assert.Equal(50, settings.Single(s => s.GetProperty("key").GetString() == "aud.alerts.sensitive_people_per_hour").GetProperty("default").GetInt32()); // S1.11 ruling Q9
         Assert.Equal(30, settings.Single(s => s.GetProperty("key").GetString() == "job.retention.run_days").GetProperty("default").GetInt32()); // S1.11a P3
         var off = settings.Single(s => s.GetProperty("key").GetString() == "org.weekly_off_days");
@@ -564,6 +564,35 @@ public sealed class GeneratorTests
         Assert.Contains("pack", month.GetProperty("layers").EnumerateArray().Select(l => l.GetString())); // the country default (CR-061)
         Assert.All(settings, s => Assert.False(string.IsNullOrWhiteSpace(s.GetProperty("help").GetProperty("ur").GetString())));
         Assert.Contains("public const string IamPasswordMinLength = \"iam.password.min_length\";", files["src/Platform/Erp.Kernel.Contracts/Generated/KernelSettingKeys.g.cs"], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void S112b_FR_KRN_LOC_02_number_settings_use_the_reserved_loc_prefix_of_the_kernel_only()
+    {
+        // S1.12 ruling Q6 names loc.number.digits and loc.number.grouping; the kernel reserves the prefix (deviation k of CR-063).
+        var files = Generator.Generate(Root).Files;
+        var manifest = System.Text.Json.JsonDocument.Parse(files["src/Platform/Erp.Kernel.Infrastructure/Access/settings.g.json"]).RootElement;
+        Assert.Contains("loc", manifest.GetProperty("moduleIds").EnumerateArray().Select(i => i.GetString()));
+        var settings = manifest.GetProperty("settings").EnumerateArray().ToList();
+        var digits = settings.Single(s => s.GetProperty("key").GetString() == "loc.number.digits");
+        Assert.Equal("western", digits.GetProperty("default").GetString());
+        Assert.Equal(["tenant", "company", "user"], digits.GetProperty("layers").EnumerateArray().Select(l => l.GetString()!).ToArray());
+        Assert.True(digits.GetProperty("selfService").GetBoolean());
+        Assert.Equal("international", settings.Single(s => s.GetProperty("key").GetString() == "loc.number.grouping").GetProperty("default").GetString());
+
+        // A business module cannot take the prefix: its ids are its schemas only.
+        var text = File.ReadAllText(Path.Combine(Root, "src/Platform/Erp.Kernel.Infrastructure", SettingsManifestLoader.ManifestPath));
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, text);
+            var error = Assert.Throws<DesignException>(() => SettingsManifestLoader.Read("hrm", "src/Modules/Hrm/Erp.Hrm.Infrastructure", Model.Value.Settings.HrmSchemas, YamlNode.Load(path), "settings.yaml"));
+            Assert.Contains("must start with one of this module's ids", error.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Theory]

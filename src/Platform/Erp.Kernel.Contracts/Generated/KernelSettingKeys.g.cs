@@ -74,6 +74,12 @@ public static class KernelSettingKeys
     /// <summary>Time zone of the company (IANA name, for example Asia/Karachi).</summary>
     public const string OrgTimeZone = "org.time_zone";
 
+    /// <summary>Digits used to show numbers on screens: Western (123) or Eastern Arabic-Indic (۱۲۳).</summary>
+    public const string LocNumberDigits = "loc.number.digits";
+
+    /// <summary>How large numbers are grouped on screens: international (1,234,567) or lakh and crore (12,34,567).</summary>
+    public const string LocNumberGrouping = "loc.number.grouping";
+
     /// <summary>Percentage of a licence limit at which administrators are warned.</summary>
     public const string CfgLimitsWarningPercent = "cfg.limits.warning_percent";
 

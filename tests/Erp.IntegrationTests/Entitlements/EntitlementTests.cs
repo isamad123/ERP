@@ -324,6 +324,7 @@ public sealed class EntitlementTests(TenancyFixture fx)
             var token = signIn.Text("accessToken");
             Assert.Equal(HttpStatusCode.OK, (await h.GetAsync(code, "/api/cfg/licence", token, Ct)).Status);
             Assert.Equal(HttpStatusCode.OK, (await h.GetAsync(code, "/api/kernel/capabilities", token, Ct)).Status);
+            Assert.Equal(HttpStatusCode.OK, (await h.GetAsync(code, "/api/kernel/me", token, Ct)).Status); // the shell's locked page needs it (S1.12b, ruling Q9)
             Assert.Equal(HttpStatusCode.OK, (await h.GetAsync(code, "/api/aud/export", token, Ct)).Status);
             var refused = await h.GetAsync(code, "/api/org/companies", token, Ct);
             Assert.Equal(HttpStatusCode.Forbidden, refused.Status);

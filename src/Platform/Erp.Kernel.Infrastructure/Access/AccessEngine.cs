@@ -4,6 +4,7 @@ using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.Kernel.Contracts.Access;
+using Erp.Kernel.Contracts.Identity;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -71,6 +72,42 @@ public sealed class AccessEngine(ITenantConnectionProvider tenant, IClock clock,
     {
         var snapshot = await SnapshotAsync(cancellationToken).ConfigureAwait(false);
         return snapshot.Assignments.SelectMany(a => snapshot.Roles[a.RoleId].Permissions).ToHashSet(StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Every permission the user holds today with the companies it covers: null when a role granting it is assigned for all
+    /// companies, else the companies of its assignments (slice S1.12b, S1.12 ruling Q9: the web shell shows or hides menus
+    /// and buttons with it; every request is still checked here).
+    /// </summary>
+    public async Task<IReadOnlyList<PermissionGrantView>> GrantsAsync(CancellationToken cancellationToken)
+    {
+        var snapshot = await SnapshotAsync(cancellationToken).ConfigureAwait(false);
+        var grants = new SortedDictionary<string, HashSet<Guid>?>(StringComparer.Ordinal);
+        foreach (var assignment in snapshot.Assignments)
+        {
+            if (!snapshot.Roles.TryGetValue(assignment.RoleId, out var role))
+            {
+                continue;
+            }
+
+            foreach (var code in role.Permissions)
+            {
+                if (assignment.CompanyId is not { } company)
+                {
+                    grants[code] = null;
+                }
+                else if (!grants.TryGetValue(code, out var companies))
+                {
+                    grants[code] = [company];
+                }
+                else
+                {
+                    companies?.Add(company);
+                }
+            }
+        }
+
+        return grants.Select(g => new PermissionGrantView(g.Key, g.Value?.Order().ToList())).ToList();
     }
 
     // ------------------------------------------------------------------ data scopes
