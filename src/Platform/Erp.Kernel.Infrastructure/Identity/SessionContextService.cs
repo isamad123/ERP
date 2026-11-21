@@ -41,13 +41,17 @@ public sealed class SessionContextService(ITenantConnectionProvider tenant, ICur
         // Companies where the person holds any permission today; a role for all companies opens every active company.
         var all = grants.Any(g => g.Companies is null);
         var named = grants.Where(g => g.Companies is not null).SelectMany(g => g.Companies!).Distinct().ToArray();
-        var companies = await NotificationConsumer.ReadAsync(connection, tx, """
-            select id, code, name_i18n::text from org.companies
+        var rows = await NotificationConsumer.ReadAsync(connection, tx, """
+            select id, code, name_i18n::text, created_at from org.companies
             where not is_deleted and is_active and status = 'active' and ($1 or id = any($2))
             order by code
-            """, r => new SessionCompanyView(r.GetGuid(0), r.GetString(1), Names(r.GetString(2))), cancellationToken, all, named).ConfigureAwait(false);
+            """, r => (Company: new SessionCompanyView(r.GetGuid(0), r.GetString(1), Names(r.GetString(2))), Created: r.GetFieldValue<DateTimeOffset>(3)),
+            cancellationToken, all, named).ConfigureAwait(false);
+        var companies = rows.Select(r => r.Company).ToList();
 
-        var defaultCompany = companies.FirstOrDefault(c => c.Id == user.DefaultCompany)?.Id ?? companies.FirstOrDefault()?.Id;
+        // The stored default company when it is still one of them, else the customer's oldest company among them.
+        var defaultCompany = companies.FirstOrDefault(c => c.Id == user.DefaultCompany)?.Id
+            ?? rows.OrderBy(r => r.Created).ThenBy(r => r.Company.Id).Select(r => (Guid?)r.Company.Id).FirstOrDefault();
         var mfa = await MfaAsync(connection, tx, userId, now, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
 

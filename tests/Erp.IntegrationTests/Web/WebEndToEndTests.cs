@@ -22,8 +22,9 @@ using Npgsql;
 namespace Erp.IntegrationTests.Web;
 
 /// <summary>
-/// Browser end-to-end tests of slice S1.12a (ruling Q19; FR-KRN-IAM-01, FR-KRN-IAM-02, FR-KRN-IAM-04, FR-ADM-USR-02,
-/// FR-ADM-USR-24, FR-KRN-LOC-01): the real API host on Kestrel over HTTPS (the refresh cookie is Secure) serving the built
+/// Browser end-to-end tests of slices S1.12a (ruling Q19; FR-KRN-IAM-01, FR-KRN-IAM-02, FR-KRN-IAM-04, FR-ADM-USR-02,
+/// FR-ADM-USR-24, FR-KRN-LOC-01) and S1.12b (shell: FR-KRN-ENT-03, FR-KRN-ENT-04, FR-KRN-TEN-09, FR-ADM-ORG-06, FR-HRM-NTF-07,
+/// FR-HRM-NTF-09, NFR-11, NFR-12): the real API host on Kestrel over HTTPS (the refresh cookie is Secure) serving the built
 /// application, a freshly provisioned customer on real PostgreSQL, and Playwright with the preinstalled Chromium. Time is a
 /// test clock: the browser tests move it together with the browser's clock through the control server, so 30 minutes of
 /// activity take seconds. The control server is test machinery only (clock, e-mailed links and codes, settings); the
@@ -37,7 +38,7 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     [Fact]
-    public async Task S112a_FR_KRN_IAM_01_02_04_sign_in_screens_work_end_to_end_in_a_real_browser()
+    public async Task S112a_S112b_FR_KRN_IAM_01_02_04_FR_KRN_ENT_03_04_FR_HRM_NTF_09_sign_in_and_shell_work_end_to_end_in_a_real_browser()
     {
         var repo = RepositoryRoot();
         var webRoot = Path.Combine(repo, "web", "apps", "web", "dist-e2e");
@@ -110,17 +111,24 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
             return Results.Ok(new { now = clock.UtcNow.ToUnixTimeMilliseconds() });
         });
 
-        // A new invited person, with the invitation e-mailed by the real endpoint (as a tenant administrator would).
-        app.MapPost("/users", async () =>
+        // A new invited person, with the invitation e-mailed by the real endpoint (as a tenant administrator would). S1.12b:
+        // the person holds the baseline business user role for all companies (the shell reads their own permissions); the
+        // language and display name can be chosen.
+        app.MapPost("/users", async (HttpRequest request) =>
         {
+            var body = request.ContentLength > 0 ? await request.ReadFromJsonAsync<UserBody>(Ct) : null;
             var username = "e2e" + Guid.NewGuid().ToString("N")[..8];
             var id = Guid.CreateVersion7(clock.UtcNow);
             await using (var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct))
             {
                 await IdentityHarness.ExecAsync(owner, """
                     insert into iam.users (id, username, email, display_name, language, time_zone, is_system, status, created_at, created_by, updated_at, updated_by)
-                    values ($1, $2, $2 || '@example.test', $2, 'en', 'Asia/Karachi', false, 'invited', $3, $4, $3, $4)
-                    """, Ct, id, username, clock.UtcNow, BaselineSeed.SystemUserId);
+                    values ($1, $2, $2 || '@example.test', $5, $6, 'Asia/Karachi', false, 'invited', $3, $4, $3, $4)
+                    """, Ct, id, username, clock.UtcNow, BaselineSeed.SystemUserId, body?.DisplayName ?? username, body?.Language ?? "en");
+                await IdentityHarness.ExecAsync(owner, """
+                    insert into iam.user_roles (id, user_id, role_id, company_id, reason, valid_from, created_at, created_by, updated_at, updated_by)
+                    select $1, $2, r.id, null, 'browser test', $3, now(), $4, now(), $4 from iam.roles r where r.code = 'business_user' and not r.is_deleted
+                    """, Ct, Guid.CreateVersion7(), id, DateOnly.FromDateTime(clock.UtcNow.UtcDateTime).AddDays(-1), BaselineSeed.SystemUserId);
             }
 
             using var client = ApiClient(apiUrl, host, fx.Token(code));
@@ -161,6 +169,99 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
                 values ($1, $2, 'tenant', null, $3::jsonb, $4, $5, $4, $5)
                 on conflict (setting_key, layer, scope_id) do update set value = excluded.value, updated_at = excluded.updated_at, row_version = cfg.setting_values.row_version + 1
                 """, Ct, Guid.CreateVersion7(), body.Key, body.Json, clock.UtcNow, BaselineSeed.SystemUserId);
+            return Results.NoContent();
+        });
+
+        // S1.12b: a customer role with exactly these permissions (scope "all"), given to the person for all companies or for
+        // the companies named by code (as the admin console will, S1.13).
+        app.MapPost("/roles", async (RoleBody body) =>
+        {
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            var role = Guid.CreateVersion7();
+            await IdentityHarness.ExecAsync(owner, """
+                insert into iam.roles (id, code, name_i18n, source, created_at, created_by, updated_at, updated_by)
+                values ($1, $2, '{"en":"Browser test role"}', 'tenant', now(), $3, now(), $3)
+                """, Ct, role, "e2e" + Guid.NewGuid().ToString("N")[..10], BaselineSeed.SystemUserId);
+            await IdentityHarness.ExecAsync(owner, "insert into iam.role_permissions (role_id, permission_id) select $1, id from iam.permissions where code = any($2)", Ct, role, body.Permissions);
+            await IdentityHarness.ExecAsync(owner, "insert into iam.role_data_scopes (role_id, resource_type, data_scope_id) select $1, '*', id from iam.data_scopes where code = 'all'", Ct, role);
+            await IdentityHarness.ExecAsync(owner, """
+                insert into iam.user_roles (id, user_id, role_id, company_id, reason, valid_from, created_at, created_by, updated_at, updated_by)
+                select gen_random_uuid(), u.id, $2, c.id, 'browser test', $3, now(), $4, now(), $4
+                from iam.users u left join org.companies c on $5::text[] is not null and c.code = any($5)
+                where lower(u.username) = lower($1) and ($5::text[] is null or c.id is not null)
+                """, Ct, body.Username, role, DateOnly.FromDateTime(clock.UtcNow.UtcDateTime).AddDays(-1), BaselineSeed.SystemUserId, (object?)body.Companies ?? DBNull.Value);
+            if (body.RemoveBaseline)
+            {
+                await IdentityHarness.ExecAsync(owner, """
+                    delete from iam.user_roles ur using iam.users u, iam.roles r
+                    where ur.user_id = u.id and lower(u.username) = lower($1) and ur.role_id = r.id and r.code = 'business_user'
+                    """, Ct, body.Username);
+            }
+
+            return Results.NoContent();
+        });
+
+        // S1.12b: another company of the customer (as the organization screens will add one, S1.14); the database adds its branch.
+        app.MapPost("/companies", async (CompanyBody body) =>
+        {
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            var id = Guid.CreateVersion7();
+            await IdentityHarness.ExecAsync(owner, """
+                insert into org.companies (id, code, name_i18n, legal_name, country_code, base_currency_code, default_language, cost_center_model, status, created_at, created_by, updated_at, updated_by)
+                values ($1, $2, jsonb_build_object('en', $3::text, 'ur', $4::text), $3, 'PK', 'PKR', 'en', 'none', 'active', now(), $5, now(), $5)
+                """, Ct, id, body.Code, body.En, body.Ur, BaselineSeed.SystemUserId);
+            return Results.Ok(new { id });
+        });
+
+        // S1.12b: the licence in force: days after its end on the test clock's day (null: no end), licensed features, the
+        // company limit (as the licence loop and `entitlement apply` change them, S1.09b).
+        app.MapPost("/licence", async (LicenceBody body) =>
+        {
+            await using var cp = await fx.OpenControlPlaneAsync(Ct);
+            var before = await TenancyFixture.ScalarTextAsync(cp, "select e.claims::text from cp.entitlements e join cp.tenants t on t.id = e.tenant_id where t.code = $1 and e.status not in ('superseded', 'scheduled')", Ct, code);
+            if (body.SetEnd)
+            {
+                var today = Erp.Kernel.Domain.Entitlements.LicenceStates.Today(clock.UtcNow, Erp.Kernel.Domain.Entitlements.LicenceStates.Zone("Asia/Karachi"));
+                await TenancyFixture.ExecAsync(cp, """
+                    update cp.entitlements e set expires_at = $2, effective_from = least(e.effective_from, coalesce($2, e.effective_from))
+                    from cp.tenants t where t.id = e.tenant_id and t.code = $1 and e.status not in ('superseded', 'scheduled')
+                    """, Ct, code, body.DaysAfterEnd is { } d ? today.AddDays(-d) : DBNull.Value);
+            }
+
+            if (body.Features is { } features)
+            {
+                await fx.SetClaimAsync(code, "features", new System.Text.Json.Nodes.JsonArray([.. features.Select(f => (System.Text.Json.Nodes.JsonNode?)f)]), Ct);
+            }
+
+            if (body.CompaniesLimit is { } limit)
+            {
+                await fx.SetClaimAsync(code, "limits,companies", limit, Ct);
+            }
+
+            return Results.Ok(new { claims = before });
+        });
+
+        // S1.12b: puts back the claims a test changed (the answer of /licence).
+        app.MapPost("/licence/claims", async (ClaimsBody body) =>
+        {
+            await fx.RestoreClaimsAsync(code, body.Claims, Ct);
+            return Results.NoContent();
+        });
+
+        // S1.12b: in-app notifications of a person, as the notification consumer writes them (S1.11b1).
+        app.MapPost("/notifications", async (NotificationsBody body) =>
+        {
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            var at = clock.UtcNow;
+            foreach (var item in body.Items)
+            {
+                at = at.AddSeconds(1);
+                await IdentityHarness.ExecAsync(owner, """
+                    insert into ntf.in_app_items (id, user_id, event_code, title, body, link, event_group, dedup_key, created_at, created_by, updated_at, updated_by)
+                    select $1, u.id, $3, $4, $5, $6, $7, $1::text, $8, $9, $8, $9 from iam.users u where lower(u.username) = lower($2)
+                    """, Ct, Guid.CreateVersion7(at), body.Username, item.EventCode, item.Title, item.Body, (object?)item.Link ?? DBNull.Value, item.Group, at, BaselineSeed.SystemUserId);
+            }
+
             return Results.NoContent();
         });
 
@@ -262,4 +363,18 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
     private sealed record Advance(long Milliseconds);
 
     private sealed record SettingBody(string Key, string Json);
+
+    private sealed record UserBody(string? DisplayName, string? Language);
+
+    private sealed record RoleBody(string Username, string[] Permissions, string[]? Companies, bool RemoveBaseline);
+
+    private sealed record CompanyBody(string Code, string En, string Ur);
+
+    private sealed record ClaimsBody(string Claims);
+
+    private sealed record LicenceBody(bool SetEnd, int? DaysAfterEnd, string[]? Features, int? CompaniesLimit);
+
+    private sealed record NotificationsBody(string Username, NotificationBody[] Items);
+
+    private sealed record NotificationBody(string EventCode, string Title, string Body, string? Link, string Group);
 }

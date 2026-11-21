@@ -9,7 +9,7 @@ namespace Erp.Kernel.Contracts.Identity;
 /// <param name="DisplayName">The person's display name.</param>
 /// <param name="Language">The person's language (<c>iam.users.language</c>, always set); the web starts every sign-in in it (ruling 2026-11-21).</param>
 /// <param name="TimeZone">The person's time zone (<c>iam.users.time_zone</c>, always set).</param>
-/// <param name="DefaultCompanyId">The person's default company when it is one of <paramref name="Companies"/>, else the first of them.</param>
+/// <param name="DefaultCompanyId">The person's default company when it is one of <paramref name="Companies"/>, else the oldest of them.</param>
 /// <param name="Companies">Active companies where the person holds any role today (a role for all companies: every active company).</param>
 /// <param name="Permissions">Permission codes held today, each with the companies it covers (null: all companies).</param>
 /// <param name="Mfa">Second-factor state, worked out as sign-in does.</param>

@@ -227,5 +227,7 @@
   "ntf.paging": "Pages",
   "ntf.showing": "{from}–{to} of {total}",
   "ntf.previous": "Previous",
-  "ntf.next": "Next"
+  "ntf.next": "Next",
+  "shell.noAccess.title": "Your account has no access yet",
+  "shell.noAccess.body": "You are signed in, but no role gives you access to anything yet. Ask your administrator to give you a role."
 }

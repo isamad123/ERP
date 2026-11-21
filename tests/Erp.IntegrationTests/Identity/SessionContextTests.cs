@@ -67,7 +67,8 @@ public sealed class SessionContextTests(TenancyFixture fx) : IAsyncLifetime
         Assert.DoesNotContain(inactive, all);
         Assert.Contains(await _h.DefaultCompanyAsync(Ct), all);
         Assert.All(wide.GetProperty("permissions").EnumerateArray(), p => Assert.Equal(JsonValueKind.Null, p.GetProperty("companies").ValueKind));
-        Assert.Equal(all[0], wide.GetProperty("defaultCompanyId").GetGuid()); // no default company stored: the first by code
+        var oldest = await _h.ScalarAsync<Guid>("select id from org.companies where not is_deleted and is_active and status = 'active' order by created_at, id limit 1", Ct);
+        Assert.Equal(oldest, wide.GetProperty("defaultCompanyId").GetGuid()); // none stored: the customer's oldest company
         Assert.False(wide.GetProperty("mfa").GetProperty("required").GetBoolean());
         Assert.Empty(wide.GetProperty("mfa").GetProperty("methods").EnumerateArray());
     }

@@ -299,6 +299,12 @@
   flex: 1;
 }
 
+.erp-ntf-list .erp-button {
+  justify-content: flex-start;
+  block-size: auto;
+  padding-block: var(--space-2);
+}
+
 .erp-ntf-row {
   display: flex;
   flex-direction: column;
@@ -354,12 +360,18 @@
     padding: var(--space-3);
   }
 
-  .erp-topbar-user-name {
+  .erp-topbar-user-name,
+  .erp-topbar-product {
     display: none;
+  }
+
+  .erp-topbar {
+    gap: var(--space-1);
+    padding-inline: var(--space-2);
   }
 
   .erp-topbar-company span,
   .erp-topbar-company-name {
-    max-inline-size: calc(var(--space-8) * 1.5);
+    max-inline-size: calc(var(--space-8) * 1.75);
   }
 }

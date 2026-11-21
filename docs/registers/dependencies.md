@@ -45,6 +45,7 @@ the D-09 list, each with only the exceptions named below.
 | --- | --- | --- | --- | --- |
 | react, react-dom | 19.3.1 | MIT | Web framework | Yes |
 | react-router | 8.5.1 | MIT | Screens and addresses | Yes |
+| @tanstack/react-query (with @tanstack/query-core) | 5.107.1 (newest at least two weeks old on 2026-11-21; approved in S1.12 Q1) | MIT | Server data and caching of the web shell (S1.12b): session context, capabilities, bell, notification centre | Yes |
 | react-aria-components | 1.22.1 | Apache-2.0 | Accessible primitives (brings react-aria, react-stately, @internationalized/* , Apache-2.0) | Yes |
 | @internationalized/date | 3.12.4 | Apache-2.0 | Date fields | Yes |
 | react-intl | 12.1.6 | BSD-3-Clause | ICU message catalogues (brings @formatjs/*, MIT, and intl-messageformat, BSD-3-Clause) | Yes |
@@ -72,5 +73,5 @@ the D-09 list, each with only the exceptions named below.
 | caniuse-lite (transitive) | lockfile | CC-BY-4.0 (data, development only, Q20; named in the gate) | Browser support data of build tools | No |
 | language-subtag-registry (transitive) | lockfile | CC0-1.0 (data, development only, Q20; named in the gate) | Data of the accessibility lint | No |
 
-Approved but not used yet (added with their part): @tanstack/react-query (S1.12b), @tanstack/react-table,
+Approved but not used yet (added with their part): @tanstack/react-table,
 @tanstack/react-virtual, react-hook-form, zod, @hookform/resolvers (S1.12c); all MIT.

@@ -1,14 +1,15 @@
 // The shell's knowledge of the signed-in person and the licence (slice S1.12b Build items 9 to 13): /api/kernel/me (S1.12
 // ruling Q9) and /api/kernel/capabilities, the active company (ruling Q10), and the helpers screens use to show or hide
 // things. Showing is not deciding: the server checks every request again (FR-XM-32 for approvals, FR-KRN-IAM-10).
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, ErrorPanel, Skeleton } from '@erp/ui';
+import { Button, EmptyState, ErrorPanel, Skeleton } from '@erp/ui';
 import { useText } from '@erp/i18n';
 import { ApiProblem } from '../api/client';
 import { kernel, type Capabilities, type Me, type SessionCompany } from '../api/kernel';
 import { DEFAULT_FORMATS, useDisplay } from '../app/display-context';
-import { useSessionState } from '../app/session-context';
+import { takeFreshSignIn, useSession, useSessionState } from '../app/session-context';
 import { accessFacts, holds, type AccessFacts } from '../navigation/screens';
 import { isWritable } from './licence';
 import { activeCompanyOf, rememberCompany } from './memory';
@@ -41,20 +42,12 @@ export function useWritable(): boolean {
 export const meKey = ['kernel', 'me'] as const;
 export const capabilitiesKey = ['kernel', 'capabilities'] as const;
 
-// A sign-in in this page (not a reload or another tab's session): the person's stored language applies once (product owner
-// ruling 2026-11-21: each sign-in starts in the stored language; the user menu's choice lasts until the next sign-in).
-let freshSignIn = false;
-
-/** Watches the session: notes a fresh sign-in, and forgets everything the shell loaded when the session ends. */
+/** Watches the session: forgets everything the shell loaded when the session ends (another person may sign in next). */
 export function SessionWatch() {
   const { status } = useSessionState();
-  const previous = useRef(status);
   const client = useQueryClient();
   const { setFormats } = useDisplay();
   useEffect(() => {
-    const before = previous.current;
-    previous.current = status;
-    if (status === 'signedIn' && (before === 'signedOut' || before === 'expired')) freshSignIn = true;
     if (status === 'signedOut' || status === 'expired') {
       client.clear();
       setFormats(DEFAULT_FORMATS);
@@ -84,9 +77,10 @@ export function ShellDataProvider({ children }: { children: ReactNode }) {
     setFormats({ timeZone: person.timeZone, numbers: (forCompany.data ?? person).numbers });
   }, [person, forCompany.data, setFormats]);
 
+  // Each sign-in starts in the person's stored language; the user menu's choice lasts until the next sign-in (product owner
+  // ruling 2026-11-21).
   useEffect(() => {
-    if (!person || !freshSignIn) return;
-    freshSignIn = false;
+    if (!person || !takeFreshSignIn()) return;
     const language = person.language === 'ur' ? 'ur' : 'en';
     if (language !== display.language) setDisplay({ ...display, language });
   }, [person, display, setDisplay]);
@@ -105,7 +99,13 @@ export function ShellDataProvider({ children }: { children: ReactNode }) {
     };
   }, [person, capabilities.data, activeId]);
 
-  if (me.isError || capabilities.isError) {
+  if (!me.data && me.error instanceof ApiProblem && me.error.status === 403) {
+    // Signed in, but no role gives the person anything yet (not even their own account): say so and offer sign-out.
+    return <NoAccess />;
+  }
+  // Only a first load that failed stops the shell; a background refresh that fails (an idle tab whose access token ran
+  // out, S1.12a review finding 2) keeps the data already shown.
+  if ((me.isError && !me.data) || (capabilities.isError && !capabilities.data)) {
     const problem = me.error ?? capabilities.error;
     return (
       <main className="erp-auth-main" id="main">
@@ -124,4 +124,20 @@ export function ShellDataProvider({ children }: { children: ReactNode }) {
 export function companyName(company: SessionCompany | null, language: string): string {
   if (!company) return '';
   return company.name[language] ?? company.name.en ?? company.code;
+}
+
+/** A signed-in person whom no role gives anything yet (FR-UX-STA-08: say what is missing and what to do). */
+function NoAccess() {
+  const { t } = useText();
+  const session = useSession();
+  const navigate = useNavigate();
+  useEffect(() => { document.title = `${t('shell.noAccess.title')} – ${t('product.name')}`; }, [t]);
+  return (
+    <main className="erp-auth-main" id="main">
+      <EmptyState level={1} title={t('shell.noAccess.title')}
+        action={<Button variant="secondary" onPress={() => { void session.signOut().then(() => navigate('/sign-in?reason=signedOut', { replace: true })); }}>{t('home.signOut')}</Button>}>
+        {t('shell.noAccess.body')}
+      </EmptyState>
+    </main>
+  );
 }
