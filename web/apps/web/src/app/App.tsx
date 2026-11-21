@@ -1,17 +1,33 @@
-// Routes of S1.12a (sign-in screens, the account links, the landing page). S1.12b adds the shell and the module routes.
+// Routes: the sign-in screens and account links (S1.12a), and every module screen inside the shell (S1.12b), each behind
+// its gate (licence, locked state, permission). Server data is cached per tab by React Query and forgotten at sign-out.
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useHref, useNavigate } from 'react-router';
 import { RouterProvider } from 'react-aria-components';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Spinner, ToastProvider } from '@erp/ui';
 import { DisplayProvider } from './display-context';
 import { RequireSession, SessionProvider, useSessionState } from './session-context';
 import { SignInFlowProvider } from '../pages/auth-layout';
 import { NewPasswordPage, RecoveryCodesPage, ReminderPage, SetUpPage, SignInPage, VerifyPage } from '../pages/sign-in';
 import { ActivatePage, ForgotPasswordPage, ResetPasswordPage } from '../pages/account-links';
-import { HomePage, NotFoundPage } from '../pages/home';
+import { NotFoundPage } from '../pages/errors';
+import { kernelScreens } from '../modules/kernel';
+import { hrmScreens } from '../modules/hrm';
+import { Screen } from '../navigation/Screen';
+import { SessionWatch } from '../shell/context';
+import { ShellLayout } from '../shell/Shell';
 
-// The component catalogue exists only in development and test builds (ruling Q19); production builds drop it.
-const Catalogue = import.meta.env.DEV || import.meta.env.VITE_ERP_CATALOGUE === 'true' ? lazy(() => import('../catalogue/CataloguePage')) : null;
+// The component catalogue exists only in development and test builds (ruling Q19; `vite build --mode e2e`); production
+// builds drop it. S1.12b: the test build turns it on by its mode, not by a variable kept in an untracked local file.
+const Catalogue = import.meta.env.DEV || import.meta.env.MODE === 'e2e' || import.meta.env.VITE_ERP_CATALOGUE === 'true' ? lazy(() => import('../catalogue/CataloguePage')) : null;
+
+/** Every module's screens, in menu order within each group (ruling Q8). */
+const screens = [...kernelScreens, ...hrmScreens];
+
+const queryClient = new QueryClient({
+  // The API client already refreshes the session once and retries a busy server once (S1.12a); no second retry layer.
+  defaultOptions: { queries: { retry: false, staleTime: 30_000, refetchOnWindowFocus: false } },
+});
 
 function AriaRouter({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
@@ -30,7 +46,9 @@ export function App() {
       <BrowserRouter>
         <AriaRouter>
           <ToastProvider>
+            <QueryClientProvider client={queryClient}>
             <SessionProvider>
+              <SessionWatch />
               <SignInFlowProvider>
                 <Routes>
                   <Route path="/sign-in" element={<SignInEntry />} />
@@ -43,12 +61,15 @@ export function App() {
                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
                   <Route path="/activate" element={<ActivatePage />} />
-                  <Route path="/" element={<RequireSession><HomePage /></RequireSession>} />
                   {Catalogue && <Route path="/catalogue" element={<Suspense fallback={<Spinner />}><Catalogue /></Suspense>} />}
-                  <Route path="*" element={<NotFoundPage />} />
+                  <Route element={<RequireSession><ShellLayout screens={screens} /></RequireSession>}>
+                    {screens.map((screen) => <Route key={screen.id} path={screen.path} element={<Screen screen={screen} />} />)}
+                    <Route path="*" element={<NotFoundPage />} />
+                  </Route>
                 </Routes>
               </SignInFlowProvider>
             </SessionProvider>
+            </QueryClientProvider>
           </ToastProvider>
         </AriaRouter>
       </BrowserRouter>

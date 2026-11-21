@@ -32,10 +32,16 @@ export function StatusChip({ status, label }: { status: Status; label?: string }
   );
 }
 
-/** A count on an icon (unread notifications); the label says what is counted. */
-export function Badge({ count, label }: { count: number; label: string }) {
+/**
+ * A count on an icon (unread notifications); the label says what is counted. `decorative` when the control it sits on
+ * already names the count (the bell's own label, S1.12b), so it is not announced twice.
+ */
+export function Badge({ count, label, decorative = false }: { count: number; label: string; decorative?: boolean }) {
   if (count <= 0) return null;
-  return <span className="erp-badge" role="status" aria-label={label}>{count > 99 ? '99+' : count}</span>;
+  const text = count > 99 ? '99+' : count;
+  return decorative
+    ? <span className="erp-badge" aria-hidden="true">{text}</span>
+    : <span className="erp-badge" role="status" aria-label={label}>{text}</span>;
 }
 
 const TONE_ICON = { neutral: Info, info: Info, success: CheckCircle2, warning: AlertTriangle, danger: AlertCircle } as const;
@@ -110,13 +116,14 @@ export function EmptyState({ title, children, action, level = 2 }: { title?: str
   );
 }
 
-/** What happened, what to do, and the reference for support (spec 13 FR-ADM-UXA-04, S1.12 Q18). Nothing technical. */
-export function ErrorPanel({ title, message, reference, action }: { title?: string; message: string; reference?: string | null; action?: ReactNode }) {
+/** What happened, what to do, and the reference for support (spec 13 FR-ADM-UXA-04, S1.12 Q18). Nothing technical; `level` 1 when it is the whole page. */
+export function ErrorPanel({ title, message, reference, action, level = 2 }: { title?: string; message: string; reference?: string | null; action?: ReactNode; level?: 1 | 2 }) {
   const { t } = useText();
+  const Heading = level === 1 ? 'h1' : 'h2';
   return (
     <section className="erp-panel" data-tone="danger" role="alert">
       <AlertCircle className="erp-panel-icon" size={32} aria-hidden="true" />
-      <h2>{title ?? t('ui.error.title')}</h2>
+      <Heading>{title ?? t('ui.error.title')}</Heading>
       <p>{message}</p>
       {reference && <p className="erp-small erp-muted">{t('common.reference', { reference: isolate(reference) })}</p>}
       {action}

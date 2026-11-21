@@ -96,3 +96,270 @@
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
   gap: var(--space-4);
 }
+
+/* Application shell (slice S1.12b, spec 13 section 5 SHL and FR-UX-SHL-02): top bar, side menu, content. Phones (under
+   600 pixels) get the menu as a drawer; tablets and laptops keep it beside the content, collapsible to icons. */
+.erp-shell {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100vh;
+  background: var(--color-bg);
+}
+
+.erp-skip-link {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-start: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-raised);
+  color: var(--color-link);
+  box-shadow: var(--shadow-overlay);
+  transform: translateY(-200%);
+  z-index: var(--layer-skip-link);
+}
+
+.erp-skip-link:focus {
+  transform: none;
+}
+
+.erp-topbar {
+  position: sticky;
+  inset-block-start: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--top-bar-height);
+  padding-inline: var(--space-3);
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+  background: var(--color-surface-raised);
+  z-index: var(--layer-header);
+}
+
+.erp-topbar-menu {
+  display: none;
+}
+
+.erp-topbar-product {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-strong);
+  white-space: nowrap;
+}
+
+.erp-topbar-company {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  color: var(--color-text-muted);
+}
+
+.erp-topbar-company span,
+.erp-topbar-company-name,
+.erp-topbar-user-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-inline-size: calc(var(--space-8) * 3);
+}
+
+.erp-topbar-spacer {
+  flex: 1;
+}
+
+.erp-bell {
+  position: relative;
+  display: inline-flex;
+}
+
+.erp-bell .erp-badge {
+  position: absolute;
+  inset-block-start: calc(var(--space-1) * -1);
+  inset-inline-end: calc(var(--space-1) * -1);
+  pointer-events: none;
+}
+
+.erp-bell-head {
+  justify-content: space-between;
+}
+
+.erp-shell-body {
+  display: flex;
+  flex: 1;
+  min-block-size: 0;
+}
+
+.erp-shell-side {
+  position: sticky;
+  inset-block-start: var(--top-bar-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  inline-size: var(--nav-width);
+  flex-shrink: 0;
+  block-size: calc(100vh - var(--top-bar-height));
+  overflow-y: auto;
+  border-inline-end: var(--border-width) solid var(--color-border-subtle);
+  background: var(--color-surface);
+}
+
+.erp-shell[data-collapsed] .erp-shell-side {
+  inline-size: calc(var(--space-8) + var(--space-2));
+}
+
+.erp-shell-collapse {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2);
+}
+
+.erp-shell[data-collapsed] .erp-shell-collapse {
+  justify-content: center;
+}
+
+.erp-shell-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: var(--space-4);
+  min-inline-size: 0;
+  padding: var(--space-5);
+  outline: none;
+}
+
+.erp-shell-banners {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.erp-shell-loading {
+  inline-size: min(100%, var(--content-max-width));
+  padding: var(--space-5);
+}
+
+.erp-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  inline-size: 100%;
+  max-inline-size: var(--content-max-width);
+}
+
+.erp-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-raised);
+}
+
+.erp-tile svg {
+  color: var(--color-primary);
+}
+
+.erp-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.erp-ntf-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-ntf-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding-block-end: var(--space-1);
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+}
+
+.erp-ntf-entry > :first-child {
+  flex: 1;
+}
+
+.erp-ntf-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  text-align: start;
+  white-space: normal;
+}
+
+.erp-ntf-title {
+  font-weight: var(--font-weight-regular);
+}
+
+.erp-ntf-row[data-unread] .erp-ntf-title {
+  font-weight: var(--font-weight-strong);
+}
+
+.erp-ntf-body {
+  color: var(--color-text-muted);
+}
+
+.erp-ntf-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.erp-ntf-unread {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-strong);
+}
+
+.erp-pager {
+  justify-content: flex-end;
+}
+
+.erp-user-name {
+  font-size: var(--font-size-lg);
+}
+
+@media (width < 600px) {
+  .erp-topbar-menu {
+    display: inline-flex;
+  }
+
+  .erp-shell-side {
+    display: none;
+  }
+
+  .erp-shell-main {
+    padding: var(--space-3);
+  }
+
+  .erp-topbar-user-name {
+    display: none;
+  }
+
+  .erp-topbar-company span,
+  .erp-topbar-company-name {
+    max-inline-size: calc(var(--space-8) * 1.5);
+  }
+}

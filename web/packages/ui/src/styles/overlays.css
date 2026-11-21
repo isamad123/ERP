@@ -73,6 +73,10 @@
   padding: 0;
 }
 
+.erp-drawer-start {
+  justify-content: flex-start;
+}
+
 .erp-drawer {
   inline-size: min(100%, var(--panel-width));
   max-block-size: none;
