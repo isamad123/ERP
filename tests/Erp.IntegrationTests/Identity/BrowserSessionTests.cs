@@ -399,6 +399,27 @@ public sealed class TrustedDeviceTests(TenancyFixture fx) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task S112a_ADM_USR_24_a_status_change_that_ends_the_sessions_also_ends_the_trust()
+    {
+        // CR-063 S1.12a detail, deviation (a), confirmed 2026-11-20: disabling (or archiving) a person counts as revoked
+        // sessions; enabling the person again does not bring the trust back (review S1.12a, test gap). Disabling answers
+        // 200 with the person's open approval tasks (S1.10b ruling P7), enabling 204.
+        undo = await h.SetSettingAsync(A, Days, "30", null, Ct);
+        var admin = h.AdminToken(A);
+        var (id, username, secret) = await UserWithAuthenticatorAsync();
+        var browser = new TestBrowser(h, A);
+        await SignInRememberingAsync(browser, username, secret);
+        Assert.Equal(1, await TrustsAsync(id));
+
+        Assert.Equal(HttpStatusCode.OK, (await h.PostAsync(A, $"/api/iam/users/{id}/status", new { status = "disabled", reason = "left for a month" }, admin, Ct)).Status);
+        Assert.Equal(0, await TrustsAsync(id));
+        Assert.Equal("sessions_revoked", await ScalarTextAsync("select revoked_reason from iam.trusted_devices where user_id = $1", id));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await h.PostAsync(A, $"/api/iam/users/{id}/status", new { status = "active", reason = "back" }, admin, Ct)).Status);
+        Assert.Equal("mfa_required", (await browser.SignInAsync(username, Ct)).Text("outcome"));
+    }
+
+    [Fact]
     public async Task S112a_ADM_USR_24_the_person_lists_and_removes_their_remembered_browsers()
     {
         undo = await h.SetSettingAsync(A, Days, "30", null, Ct);

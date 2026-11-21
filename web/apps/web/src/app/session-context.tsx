@@ -36,10 +36,23 @@ export function useSessionState(): SessionSnapshot {
   return useSyncExternalStore(manager.subscribe, manager.getSnapshot);
 }
 
-/** A safe address to come back to: a path on this site only (never another host). */
-export function safeReturn(value: string | null | undefined): string {
-  if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) return '/';
-  return value.startsWith('/sign-in') ? '/' : value;
+/**
+ * A safe address to come back to: a path on this site only (never another host). The value is read the way the browser
+ * reads an address (it drops tabs and line breaks, treats "\" as "/" and resolves dot segments), so "/\t/evil.example"
+ * or "/.//evil.example" cannot become "//evil.example" after the check (review S1.12a finding 1).
+ */
+export function safeReturn(value: string | null | undefined, origin: string = window.location.origin): string {
+  // eslint-disable-next-line no-control-regex -- control characters are exactly what is refused here
+  if (!value || !value.startsWith('/') || /[\u0000-\u001f\u007f\\]/.test(value)) return '/';
+  let url: URL;
+  try {
+    url = new URL(value, origin);
+  } catch {
+    return '/';
+  }
+  const path = url.pathname + url.search + url.hash;
+  if (url.origin !== origin || !path.startsWith('/') || path.startsWith('//')) return '/';
+  return path.startsWith('/sign-in') ? '/' : path;
 }
 
 /** Screens that need a session: wait while it is resumed, else go to sign-in and come back here afterwards. */

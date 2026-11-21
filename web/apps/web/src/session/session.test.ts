@@ -183,6 +183,51 @@ describe('FR-KRN-IAM-04 session in the browser (S1.12a)', () => {
     expect(b!.manager.accessToken()).toBeNull();
   });
 
+  it('a background request that meets a 401 does not keep an idle session alive (review S1.12a finding 2)', async () => {
+    // A poll (S1.12b: the notification bell every 60 seconds while the tab is visible) runs without the person; when its
+    // access token has expired the API client asks for one refresh. Without activity that refresh must not happen,
+    // or the server's idle rule (counted from the last refresh) would never end a forgotten session.
+    const world = new FakeWorld();
+    const [a] = await signedInTabs(world, 1);
+    const before = world.refreshes;
+    const answers: boolean[] = [];
+    await world.advance(31 * MINUTE, (elapsed) => {
+      if (elapsed % MINUTE === 0 && elapsed > 5 * MINUTE) {
+        void a!.manager.refreshAfterUnauthorized().then((ok) => {
+          answers.push(ok);
+          if (!ok) a!.manager.sessionEnded(); // what the client does when the refresh did not help
+        });
+      }
+    });
+    expect(world.refreshes).toBe(before);
+    expect(answers.length).toBeGreaterThan(20);
+    expect(answers.every((ok) => !ok)).toBe(true);
+    expect(a!.manager.getSnapshot().status).toBe('expired'); // at the idle time, not at the first background 401
+  });
+
+  it('a request after the person\'s activity still gets its one refresh after a 401', async () => {
+    const world = new FakeWorld();
+    const [a] = await signedInTabs(world, 1);
+    await world.advance(6 * MINUTE);
+    const before = world.refreshes;
+    a!.activity();
+    expect(await a!.manager.refreshAfterUnauthorized()).toBe(true);
+    expect(world.refreshes).toBe(before + 1);
+    expect(a!.manager.getSnapshot().status).toBe('signedIn');
+  });
+
+  it('an idle tab is not signed out early by a background 401', async () => {
+    const world = new FakeWorld();
+    const [a] = await signedInTabs(world, 1);
+    await world.advance(10 * MINUTE);
+    expect(await a!.manager.refreshAfterUnauthorized()).toBe(false);
+    a!.manager.sessionEnded();
+    expect(a!.manager.getSnapshot().status).toBe('signedIn'); // the warning and the idle end still come at their time
+    await world.advance(18 * MINUTE + 1000);
+    expect(a!.manager.getSnapshot().warningRemainingMs).not.toBeNull();
+    expect(await a!.manager.staySignedIn()).toBe(true); // the server session is still alive
+  });
+
   it('a tab without a live session ends signed out', async () => {
     const world = new FakeWorld();
     world.ended = true;

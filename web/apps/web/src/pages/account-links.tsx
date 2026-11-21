@@ -1,8 +1,10 @@
 // Screens opened from e-mailed links and the forgot-password request (slice S1.12a, Build item 7; FR-KRN-IAM-01,
 // FR-ADM-USR-02): forgot password (always the same answer, whatever was entered), /reset-password?token= and
-// /activate?token=. The link's token is read from the address and sent once; it is never stored.
-import { useState, type FormEvent } from 'react';
-import { useSearchParams } from 'react-router';
+// /activate?token=. The link's token is read from the address and sent once; it is never stored. Once read, it is
+// taken out of the address bar and the history entry (R-060, review S1.12a finding 12); a reload then asks for the link
+// again from the e-mail, which stays valid until it is used.
+import { useEffect, useState, type FormEvent } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { Banner, Button, Link, TextField } from '@erp/ui';
 import { useText } from '@erp/i18n';
 import { ApiProblem } from '../api/client';
@@ -56,7 +58,12 @@ export function ForgotPasswordPage() {
 function LinkPasswordPage({ kind }: { kind: 'reset' | 'activate' }) {
   const { t } = useText();
   const [params] = useSearchParams();
-  const token = params.get('token');
+  const [token] = useState(() => params.get('token'));
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  useEffect(() => {
+    if (params.has('token')) void navigate(pathname, { replace: true });
+  }, [params, pathname, navigate]);
   const next = useNextStep();
   const form = useNewPassword();
   const passwordErrors = usePasswordErrors();

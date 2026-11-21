@@ -49,6 +49,7 @@ test('FR-ADM-USR-02 FR-KRN-IAM-02 a new person activates from the e-mailed link,
 
   await page.goto(link!);
   await expect(page.getByRole('heading', { name: 'Activate your account' })).toBeVisible();
+  await expect(page).toHaveURL(/\/activate$/); // the token leaves the address bar once read (R-060, review finding 12)
   await accessible(page, 'activate');
   await shot(page, 'activate-en-light-1280');
   await field(page, 'New password').fill(PASSWORD);
@@ -185,6 +186,7 @@ test('FR-KRN-IAM-01 forgot password gives the same answer and timing for a known
   expect(link).toMatch(/^\/reset-password\?token=/);
   await page.goto(link!);
   await expect(page.getByRole('heading', { name: 'Set a new password' })).toBeVisible();
+  await expect(page).toHaveURL(/\/reset-password$/); // R-060, review S1.12a finding 12
   await accessible(page, 'reset');
   await shot(page, 'reset-en-light-1280');
   await field(page, 'New password').fill(NEW_PASSWORD);
@@ -267,6 +269,31 @@ test('FR-KRN-IAM-04 two tabs stay signed in for 30 minutes of activity; idle war
   await expect(one).toHaveURL(/\/\?tab=one$/);
   noProblems(one);
   noProblems(two);
+  await context.close();
+});
+
+test('FR-KRN-IAM-01 the return address after sign-in never leaves this site (review S1.12a finding 1)', async ({ browser }) => {
+  const context = await freshContext(browser);
+  const page = await openPage(context);
+  // The "other site" answers inside the test browser, so a redirect to it is seen (the build machine has no internet).
+  await context.route(/^https?:\/\/example\.com\//, (route) => route.fulfill({ contentType: 'text/html', body: '<h1>Another site</h1>' }));
+  await page.goto('/sign-in');
+  const origin = new URL(page.url()).origin;
+  // A tab, or a dot segment, that the browser's address parser turns into "//example.com" (a phishing link).
+  for (const attack of ['%2F%09%2Fexample.com%2F', '%2F.%2F%2Fexample.com%2F']) {
+    await page.goto(`/sign-in?return=${attack}`);
+    await field(page, 'Username or e-mail address').fill(alice.username);
+    await field(page, 'Password').fill(alice.password);
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await verifyWithAuthenticator([page], page, alice.secret);
+    // Before the fix the router refused the address and the person was left on a "session ended" screen; a push
+    // navigation would have opened the other site.
+    await home(page);
+    expect(new URL(page.url()).origin).toBe(origin);
+    expect(new URL(page.url()).pathname).toBe('/');
+    await signOut(page);
+  }
+  noProblems(page);
   await context.close();
 });
 

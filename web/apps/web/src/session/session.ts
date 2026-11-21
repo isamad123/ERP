@@ -123,14 +123,26 @@ export class SessionManager {
     }
   }
 
-  /** For the API client after a 401: one refresh (shared with any refresh already running). */
+  /**
+   * For the API client after a 401: one refresh (shared with any refresh already running), but only after activity
+   * since the last refresh. A request made without the person (a background poll) must not keep an idle session alive:
+   * the server counts the idle time from the last refresh (review S1.12a finding 2).
+   */
   async refreshAfterUnauthorized(): Promise<boolean> {
+    if (!this.activeSinceRefresh()) return false;
     return this.refreshNow();
   }
 
-  /** For the API client when a refresh did not help. */
+  /**
+   * For the API client when a refresh did not help. Without activity no refresh was tried, so the session may still be
+   * alive at the server: the idle warning and the idle end come at their time instead.
+   */
   sessionEnded(): void {
-    if (this.status === 'signedIn') this.end('expired', true);
+    if (this.status === 'signedIn' && this.activeSinceRefresh()) this.end('expired', true);
+  }
+
+  private activeSinceRefresh(): boolean {
+    return this.lastActivity > this.refreshedAt;
   }
 
   private onActivity = (): void => {
@@ -228,7 +240,7 @@ export class SessionManager {
     this.timer = null;
     if (this.status !== 'signedIn') return;
     const now = this.env.clock.now();
-    const active = this.lastActivity > this.refreshedAt;
+    const active = this.activeSinceRefresh();
     const idleEnd = this.idleEnd();
     if (now >= idleEnd) {
       this.end('expired', true);
