@@ -12,6 +12,7 @@ using Erp.Kernel.Api.Access;
 using Erp.Kernel.Api.Audit;
 using Erp.Kernel.Infrastructure.Audit;
 using Erp.Kernel.Api.Identity;
+using Erp.Kernel.Contracts.Identity;
 using Erp.Kernel.Api.Numbering;
 using Erp.Kernel.Application.Numbering;
 using Erp.Kernel.Contracts.Numbering;
@@ -133,6 +134,8 @@ public static class ApiHost
         services.AddSingleton<ILicenceResolver, LicenceResolver>();
         services.AddScoped<ILicensedFeatures, EntitlementFeatures>();
         services.AddScoped<ILicenceService, LicenceService>();
+        // Session context of the web shell (S1.12b, S1.12 ruling Q9).
+        services.AddScoped<ISessionContextService, SessionContextService>();
         // Limits (S1.09b, ruling Q7): one guard; the kernel counts named users, concurrent users and companies.
         services.AddSingleton<ILimitCounter, NamedUserCounter>();
         services.AddSingleton<ILimitCounter, ConcurrentUserCounter>();
@@ -205,6 +208,7 @@ public static class ApiHost
         api.MapNumberingEndpoints();
         api.MapSettingsEndpoints();
         api.MapLicenceEndpoints();
+        api.MapSessionContextEndpoints();
         api.MapWorkflowEndpoints();
         api.MapJobEndpoints();
         api.MapNotificationEndpoints();

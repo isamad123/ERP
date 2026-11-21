@@ -19,6 +19,8 @@ class FakeWorld {
   ended = false;
   refreshes = 0;
   idleMinutes = 30;
+  /** While set, a refresh waits on its way to the server (it carries the cookie of the moment it left). */
+  gate: Promise<void> | null = null;
 
   serverRefresh(cookie: string): AuthAnswer {
     if (this.ended || this.now - this.lastSeen >= this.idleMinutes * MINUTE) {
@@ -44,7 +46,11 @@ class FakeWorld {
     const env: SessionEnvironment = {
       clock: { now: () => this.now + skewMs },
       // Every tab reads the browser's one cookie jar at the moment of the request.
-      refresh: async () => this.serverRefresh(this.cookie),
+      refresh: async () => {
+        const sent = this.cookie;
+        if (this.gate) await this.gate;
+        return this.serverRefresh(sent);
+      },
       signOut: async () => { this.ended = true; },
       channel: {
         post: (m) => this.tabs.filter((t) => t !== listeners).forEach((t) => t.forEach((h) => queueMicrotask(() => h(structuredClone(m))))),
@@ -226,6 +232,24 @@ describe('FR-KRN-IAM-04 session in the browser (S1.12a)', () => {
     await world.advance(18 * MINUTE + 1000);
     expect(a!.manager.getSnapshot().warningRemainingMs).not.toBeNull();
     expect(await a!.manager.staySignedIn()).toBe(true); // the server session is still alive
+  });
+
+  it('a sign-in that finishes while the page\'s first check is still on its way stays signed in (S1.12b finding)', async () => {
+    const world = new FakeWorld();
+    world.cookie = 'none'; // no session yet: the first check will be refused
+    let open: () => void = () => undefined;
+    world.gate = new Promise((resolve) => { open = resolve; });
+    const tab = world.tab();
+    const resumed = tab.manager.resume(0);
+    await world.advance(1000); // the check is on its way
+    world.cookie = 'rt-1'; // the activation (or sign-in) answers with a new session
+    world.gate = null;
+    tab.manager.signedIn(world.serverRefresh(world.cookie));
+    open();
+    await world.advance(1000);
+    await resumed;
+    expect(tab.manager.getSnapshot().status).toBe('signedIn');
+    expect(world.ended).toBe(false);
   });
 
   it('a tab without a live session ends signed out', async () => {

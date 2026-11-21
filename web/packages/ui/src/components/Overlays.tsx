@@ -62,13 +62,15 @@ export interface DialogProps {
   children: ReactNode | ((close: () => void) => ReactNode);
   actions?: (close: () => void) => ReactNode;
   drawer?: boolean;
+  /** The edge a drawer slides from: the inline end (side panels, default) or the inline start (the menu on phones). */
+  side?: 'start' | 'end';
 }
 
 /** Dialog or drawer: focus is trapped inside, Escape closes (not for alert dialogs), focus returns to the trigger. */
-export function Dialog({ title, trigger, isOpen, onOpenChange, role = 'dialog', children, actions, drawer }: DialogProps) {
+export function Dialog({ title, trigger, isOpen, onOpenChange, role = 'dialog', children, actions, drawer, side = 'end' }: DialogProps) {
   const { t } = useText();
   const content = (
-    <ModalOverlay className={drawer ? 'erp-modal-overlay erp-drawer-overlay' : 'erp-modal-overlay'} isDismissable={role === 'dialog'}
+    <ModalOverlay className={drawer ? `erp-modal-overlay erp-drawer-overlay${side === 'start' ? ' erp-drawer-start' : ''}` : 'erp-modal-overlay'} isDismissable={role === 'dialog'}
       isKeyboardDismissDisabled={role === 'alertdialog'} {...(isOpen === undefined ? {} : { isOpen, onOpenChange })}>
       <Modal className={drawer ? 'erp-modal erp-drawer' : 'erp-modal'}>
         <AriaDialog className="erp-dialog" role={role}>

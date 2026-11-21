@@ -5,9 +5,11 @@ import './styles/base.css';
 import './styles/controls.css';
 import './styles/fields.css';
 import './styles/overlays.css';
+import './styles/navigation.css';
 
 export * from './components/Button';
 export * from './components/Feedback';
 export * from './components/Overlays';
+export * from './components/Navigation';
 export * from './components/Fields';
 export * from './components/QrCode';

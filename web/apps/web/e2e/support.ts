@@ -1,4 +1,5 @@
-// Helpers of the browser tests (slice S1.12a): the control server (test clock, e-mailed links and codes, settings), the
+// Helpers of the browser tests (slices S1.12a, S1.12b): the control server (test clock, e-mailed links and codes, settings;
+// S1.12b: roles, companies, licence, notifications), the
 // shared clock of server and browsers, accessibility checks (axe: no serious or critical violation), screenshots, and
 // a guard that fails a test on any content-security-policy violation or script error.
 import AxeBuilder from '@axe-core/playwright';
@@ -12,9 +13,28 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   return (response.status === 204 ? undefined : await response.json()) as T;
 }
 
+export interface NotificationSeed {
+  eventCode: string;
+  title: string;
+  body: string;
+  link?: string | null;
+  group: string;
+}
+
 export const server = {
   now: async () => (await call<{ now: number }>('GET', '/clock')).now,
-  newUser: () => call<{ userId: string; username: string; email: string }>('POST', '/users'),
+  /** An invited person holding the business user role for all companies (S1.12b). */
+  newUser: (options: { displayName?: string; language?: 'en' | 'ur' } = {}) =>
+    call<{ userId: string; username: string; email: string }>('POST', '/users', options),
+  /** A role with exactly these permissions for the person, for all companies or the named company codes (S1.12b). */
+  role: (username: string, permissions: string[], companies?: string[], removeBaseline = false) =>
+    call<undefined>('POST', '/roles', { username, permissions, companies: companies ?? null, removeBaseline }),
+  company: (code: string, en: string, ur: string) => call<{ id: string }>('POST', '/companies', { code, en, ur }),
+  /** Changes the licence in force; answers the claims before, for `restoreClaims` (S1.12b). */
+  licence: (change: { daysAfterEnd?: number | null; features?: string[]; companiesLimit?: number }) =>
+    call<{ claims: string }>('POST', '/licence', { setEnd: 'daysAfterEnd' in change, daysAfterEnd: change.daysAfterEnd ?? null, features: change.features ?? null, companiesLimit: change.companiesLimit ?? null }),
+  restoreClaims: (claims: string) => call<undefined>('POST', '/licence/claims', { claims }),
+  notify: (username: string, items: NotificationSeed[]) => call<undefined>('POST', '/notifications', { username, items }),
   mail: (event: string, username: string) => call<Record<string, string>>('GET', `/mail/${event}?username=${encodeURIComponent(username)}`),
   totp: async (secret: string) => (await call<{ code: string }>('GET', `/totp?secret=${encodeURIComponent(secret)}`)).code,
   setting: (key: string, json: string) => call<undefined>('POST', '/settings', { key, json }),

@@ -177,6 +177,10 @@ scenarios only). Screenshots land in `web/apps/web/test-results/screenshots`; CI
 The normal integration run leaves the browser tests out: `--filter-not-trait "Suite=TenantIsolation" --filter-not-trait "Suite=WebE2E"`,
 so "all tests" with `dotnet test --solution Erp.sln` needs the web test build. Run the API host with the web application:
 `Web__Root=web/apps/web/dist dotnet run --project src/Host/Erp.Host.Api --urls http://127.0.0.1:5080`.
+Shell (S1.12b): each web module declares its screens in `web/apps/web/src/modules/<module>.ts` (path, label key, icon, menu group,
+permission, feature); `navigation/screens.ts` decides licence → locked → permission → screen; who is signed in comes from
+`GET /api/kernel/me` (`useShell()`, `useWritable()`). A later screen slice adds its component to its declaration. The browser tests'
+control server also gives roles, adds companies, changes the licence and adds notifications (`e2e/support.ts` `server.*`).
 
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.

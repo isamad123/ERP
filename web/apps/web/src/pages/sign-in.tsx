@@ -7,7 +7,7 @@ import { Banner, Button, CheckboxField, CopyButton, Link, OneTimeCodeField, Pass
 import { formatDate, isolate, useLocaleSettings, useText } from '@erp/i18n';
 import { ApiProblem } from '../api/client';
 import { identity, type AuthAnswer, type Enrolment } from '../api/identity';
-import { safeReturn, useSession } from '../app/session-context';
+import { noteFreshSignIn, safeReturn, useSession } from '../app/session-context';
 import { AuthLayout, ProblemBanner, usePasswordErrors, useSignInFlow } from './auth-layout';
 
 /** Moves to the screen of the step the server answered. */
@@ -19,6 +19,7 @@ export function useNextStep() {
     switch (answer.outcome) {
       case 'tokens':
         session.signedIn(answer);
+        noteFreshSignIn();
         setFlow({ challengeToken: null, recoveryCodes: answer.recoveryCodes ?? null, enrolBy: answer.mfaEnrolBy ?? null, returnTo });
         if (answer.recoveryCodes && answer.recoveryCodes.length > 0) navigate('/sign-in/recovery-codes', { replace: true });
         else if (answer.mfaEnrolBy) navigate('/sign-in/reminder', { replace: true });

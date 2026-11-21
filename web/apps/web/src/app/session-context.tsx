@@ -25,6 +25,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// A sign-in made in this page (a sign-in step answered with tokens), as opposed to a reload or another tab's session: the
+// shell applies the person's stored language once after it (product owner ruling 2026-11-21, S1.12b).
+let freshSignIn = false;
+
+export function noteFreshSignIn(): void {
+  freshSignIn = true;
+}
+
+/** True once after a sign-in made in this page. */
+export function takeFreshSignIn(): boolean {
+  const fresh = freshSignIn;
+  freshSignIn = false;
+  return fresh;
+}
+
 export function useSession(): SessionManager {
   const manager = useContext(SessionContext);
   if (!manager) throw new Error('SessionProvider is missing');

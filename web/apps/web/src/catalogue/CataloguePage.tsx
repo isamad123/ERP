@@ -5,17 +5,17 @@ import { useState } from 'react';
 import { parseDate } from '@internationalized/date';
 import {
   ActionMenu, Badge, Banner, Breadcrumbs, Button, CheckboxField, ComboBoxField, DateField, Dialog, EmptyState, ErrorPanel, IconButton,
-  Link, NumberField, OneTimeCodeField, PageHeader, PasswordField, QrCode, RadioGroupField, SelectField, Skeleton, Spinner, STATUSES,
+  Link, NavList, NumberField, OneTimeCodeField, PageHeader, PopoverPanel, PasswordField, QrCode, RadioGroupField, SelectField, Skeleton, Spinner, STATUSES,
   StatusChip, SwitchField, Tabs, TextAreaField, TextField, Tooltip, useToast, type Option, type Status,
 } from '@erp/ui';
 import { formatDecimal, formatMoney, isolate } from '@erp/i18n';
-import { Bell, Settings } from 'lucide-react';
+import { Bell, Building2, House, Settings, Users } from 'lucide-react';
 import { useDisplay } from '../app/display-context';
 import type { Density, Theme } from '../app/preferences';
 
 const SAMPLE = {
-  en: { title: 'Component catalogue', name: 'Branch name', code: 'Code', notes: 'Notes', help: 'Shown on letters and payslips.', required: 'Enter a name.', count: 'Employees', date: 'Start date', city: 'City', company: 'Company', save: 'Save', cancel: 'Cancel', delete: 'Delete', more: 'Open settings', banner: 'The licence ends in 12 days. Contact your administrator.', toast: 'Branch saved.', dialog: 'Delete this branch?', dialogBody: 'The branch and its address are removed. This cannot be undone.', tabs: ['Details', 'History'], tooltip: 'Settings of this screen', empty: 'No branches yet', error: 'The branch could not be saved.', active: 'Active', remember: 'Remember this browser', option: ['Karachi', 'Lahore', 'Islamabad'] },
-  ur: { title: 'اجزاء کی فہرست', name: 'برانچ کا نام', code: 'کوڈ', notes: 'نوٹس', help: 'خطوط اور تنخواہ کی پرچیوں پر دکھایا جاتا ہے۔', required: 'نام درج کریں۔', count: 'ملازمین', date: 'آغاز کی تاریخ', city: 'شہر', company: 'کمپنی', save: 'محفوظ کریں', cancel: 'منسوخ کریں', delete: 'حذف کریں', more: 'ترتیبات کھولیں', banner: 'لائسنس 12 دن میں ختم ہو رہا ہے۔ اپنے منتظم سے رابطہ کریں۔', toast: 'برانچ محفوظ ہو گئی۔', dialog: 'کیا یہ برانچ حذف کریں؟', dialogBody: 'برانچ اور اس کا پتہ ہٹا دیا جائے گا۔ یہ واپس نہیں ہو سکتا۔', tabs: ['تفصیلات', 'تاریخچہ'], tooltip: 'اس اسکرین کی ترتیبات', empty: 'ابھی کوئی برانچ نہیں', error: 'برانچ محفوظ نہیں ہو سکی۔', active: 'فعال', remember: 'اس براؤزر کو یاد رکھیں', option: ['کراچی', 'لاہور', 'اسلام آباد'] },
+  en: { title: 'Component catalogue', name: 'Branch name', code: 'Code', notes: 'Notes', help: 'Shown on letters and payslips.', required: 'Enter a name.', count: 'Employees', date: 'Start date', city: 'City', company: 'Company', save: 'Save', cancel: 'Cancel', delete: 'Delete', more: 'Open settings', banner: 'The licence ends in 12 days. Contact your administrator.', toast: 'Branch saved.', dialog: 'Delete this branch?', dialogBody: 'The branch and its address are removed. This cannot be undone.', tabs: ['Details', 'History'], tooltip: 'Settings of this screen', empty: 'No branches yet', error: 'The branch could not be saved.', active: 'Active', remember: 'Remember this browser', option: ['Karachi', 'Lahore', 'Islamabad'], menu: 'Main menu', home: 'Home', people: 'People', branches: 'Branches', panel: 'Panel' },
+  ur: { title: 'اجزاء کی فہرست', name: 'برانچ کا نام', code: 'کوڈ', notes: 'نوٹس', help: 'خطوط اور تنخواہ کی پرچیوں پر دکھایا جاتا ہے۔', required: 'نام درج کریں۔', count: 'ملازمین', date: 'آغاز کی تاریخ', city: 'شہر', company: 'کمپنی', save: 'محفوظ کریں', cancel: 'منسوخ کریں', delete: 'حذف کریں', more: 'ترتیبات کھولیں', banner: 'لائسنس 12 دن میں ختم ہو رہا ہے۔ اپنے منتظم سے رابطہ کریں۔', toast: 'برانچ محفوظ ہو گئی۔', dialog: 'کیا یہ برانچ حذف کریں؟', dialogBody: 'برانچ اور اس کا پتہ ہٹا دیا جائے گا۔ یہ واپس نہیں ہو سکتا۔', tabs: ['تفصیلات', 'تاریخچہ'], tooltip: 'اس اسکرین کی ترتیبات', empty: 'ابھی کوئی برانچ نہیں', error: 'برانچ محفوظ نہیں ہو سکی۔', active: 'فعال', remember: 'اس براؤزر کو یاد رکھیں', option: ['کراچی', 'لاہور', 'اسلام آباد'], menu: 'مرکزی مینو', home: 'ہوم', people: 'افراد', branches: 'برانچیں', panel: 'پینل' },
 } as const;
 
 export default function CataloguePage() {
@@ -104,6 +104,19 @@ export default function CataloguePage() {
             <p>{s.dialogBody}</p>
           </Dialog>
           <Dialog title={s.tabs[1]} drawer trigger={<Button>{s.tabs[1]}</Button>}><Skeleton lines={4} /></Dialog>
+        </div>
+        <div className="erp-row">
+          <Dialog title={s.menu} drawer side="start" trigger={<Button>{s.menu}</Button>}><Skeleton lines={2} /></Dialog>
+          <PopoverPanel label={s.panel} trigger={<IconButton label={s.panel} icon={<Bell size={20} aria-hidden="true" />} />}>
+            <p>{s.help}</p>
+          </PopoverPanel>
+        </div>
+        <div className="erp-catalogue-grid">
+          <NavList label={s.menu} sections={[
+            { id: 'a', label: s.home, items: [{ id: 'h', href: '/catalogue', label: s.home, icon: House, current: true }] },
+            { id: 'b', label: s.people, items: [{ id: 'p', href: '/catalogue', label: s.people, icon: Users }, { id: 'r', href: '/catalogue', label: s.branches, icon: Building2 }] },
+          ]} />
+          <NavList label={`${s.menu} 2`} collapsed sections={[{ id: 'c', label: s.people, items: [{ id: 'q', href: '/catalogue', label: s.people, icon: Users, current: true }] }]} />
         </div>
         <QrCode value="otpauth://totp/ERP:catalogue?secret=JBSWY3DPEHPK3PXP&issuer=ERP" label="QR" />
       </section>

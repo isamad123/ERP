@@ -78,7 +78,7 @@ export class SessionManager {
     }
     if (this.access === null) {
       const ok = await this.refreshNow();
-      if (!ok) this.setStatus('signedOut');
+      if (!ok && this.access === null) this.setStatus('signedOut');
     }
     return this.status;
   }
@@ -220,8 +220,10 @@ export class SessionManager {
         this.share();
         return true;
       } catch {
-        if (this.status === 'signedIn') this.end('expired', true);
-        return false;
+        // A refresh that started before a sign-in finished (the page's first check, S1.12b finding) must not end the
+        // session the sign-in just made: only the session it tried to refresh ends.
+        if (this.status === 'signedIn' && this.access === tokenBefore) this.end('expired', true);
+        return this.access !== null && this.access !== tokenBefore;
       }
     }).finally(() => { this.refreshing = null; });
     return this.refreshing;

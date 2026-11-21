@@ -24,10 +24,11 @@ async function verifyWithAuthenticator(pages: Page[], page: Page, secret: string
 }
 
 async function home(page: Page): Promise<void> {
-  await expect(page.getByRole('heading', { name: 'You are signed in' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Waiting for you', level: 1 })).toBeVisible(); // the shell's home page (S1.12b)
 }
 
 async function signOut(page: Page): Promise<void> {
+  await page.getByRole('button', { name: /^Account menu of / }).click(); // sign-out sits in the user menu (S1.12b)
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByText('You are signed out.')).toBeVisible();
 }
@@ -403,7 +404,7 @@ test('FR-KRN-LOC-01 NFR-11 sign-in screens in English and Urdu, light and dark, 
       const page = await openPage(context);
       for (const width of WIDTHS) {
         await page.setViewportSize({ width, height: 900 });
-        for (const [name, path] of [['sign-in', '/sign-in'], ['forgot', '/forgot-password'], ['reset', '/reset-password?token=x'], ['activate', '/activate?token=x'], ['not-found', '/no-such-page']] as const) {
+        for (const [name, path] of [['sign-in', '/sign-in'], ['forgot', '/forgot-password'], ['reset', '/reset-password?token=x'], ['activate', '/activate?token=x']] as const) { // "not found" is now a page of the shell, after sign-in (shell.spec.ts, S1.12b)
           await page.goto(path);
           await expect(page.locator('h1')).toBeVisible();
           expect(await page.evaluate(() => document.documentElement.dir)).toBe(language === 'ur' ? 'rtl' : 'ltr');
@@ -443,7 +444,8 @@ test('spec 13 FR-UX-CMP-01 component catalogue in English and Urdu, light, dark 
       await display(context, { language, theme });
       const page = await openPage(context);
       await page.goto('/catalogue');
-      await expect(page.locator('h1')).toBeVisible();
+      // Its own heading: a missing catalogue would show the "not found" page, which also has a heading (S1.12b finding).
+      await expect(page.getByRole('heading', { name: language === 'en' ? 'Component catalogue' : 'اجزاء کی فہرست', level: 1 })).toBeVisible();
       await accessible(page, `catalogue ${language} ${theme}`);
       await shot(page, `catalogue-${language}-${theme}-1280`);
       noProblems(page);
