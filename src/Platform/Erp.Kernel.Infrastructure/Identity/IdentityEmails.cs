@@ -215,6 +215,7 @@ public sealed class IdentityEmailService(
         }
 
         var ended = await IdentityDb.RevokeAllSessionsAsync(c, tx, account.Id, "password_reset", now, cancellationToken).ConfigureAwait(false);
+        await TrustedDevices.RevokeAllAsync(c, tx, account.Id, TrustedDevices.PasswordReset, account.Id, now, cancellationToken).ConfigureAwait(false);
         await IdentityDb.RaiseAsync(c, tx, IdentityEvents.PasswordChanged, account.Id, account.Id, now, new { reason = "reset", sessions_revoked = ended }, cancellationToken).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return [];

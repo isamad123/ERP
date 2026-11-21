@@ -1,0 +1,5 @@
+# Web workspace (slice S1.12a, ruling Q1). Exact versions only; the lockfile is committed and CI installs from it.
+packages:
+  - apps/*
+  - packages/*
+  - generated

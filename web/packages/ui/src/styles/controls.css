@@ -1,0 +1,141 @@
+/* Buttons, links, chips, badges (slice S1.12a, spec 13 section 7). React Aria sets the data-* state attributes. */
+.erp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-block-size: var(--control-height);
+  padding-inline: var(--space-4);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--motion-ease);
+}
+
+.erp-button[data-variant="primary"] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.erp-button[data-variant="primary"][data-hovered],
+.erp-button[data-variant="primary"][data-pressed] {
+  background: var(--color-primary-hover);
+}
+
+.erp-button[data-variant="secondary"] {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.erp-button[data-variant="secondary"][data-hovered] {
+  background: var(--color-surface-sunken);
+}
+
+.erp-button[data-variant="danger"] {
+  background: var(--color-danger);
+  color: var(--color-on-danger);
+}
+
+.erp-button[data-variant="danger"][data-hovered] {
+  background: var(--color-danger-hover);
+}
+
+.erp-button[data-variant="quiet"] {
+  background: transparent;
+  color: var(--color-link);
+}
+
+.erp-button[data-variant="quiet"][data-hovered] {
+  background: var(--color-primary-subtle);
+}
+
+.erp-button[data-disabled] {
+  cursor: not-allowed;
+  background: var(--color-neutral-subtle);
+  color: var(--color-text-disabled);
+  border-color: var(--color-border-subtle);
+}
+
+.erp-button[data-pending] {
+  cursor: progress;
+}
+
+.erp-button[data-focus-visible] {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.erp-button[data-block] {
+  inline-size: 100%;
+}
+
+.erp-icon-button {
+  padding-inline: 0;
+  min-inline-size: var(--control-height);
+}
+
+.erp-link {
+  color: var(--color-link);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.erp-link[data-focus-visible] {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-small);
+}
+
+.erp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+}
+
+.erp-chip[data-tone="neutral"] {
+  background: var(--color-neutral-subtle);
+  color: var(--color-text);
+}
+
+.erp-chip[data-tone="warning"] {
+  background: var(--color-warning-subtle);
+  color: var(--color-warning);
+}
+
+.erp-chip[data-tone="success"] {
+  background: var(--color-success-subtle);
+  color: var(--color-success);
+}
+
+.erp-chip[data-tone="danger"] {
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
+}
+
+.erp-chip[data-tone="info"] {
+  background: var(--color-info-subtle);
+  color: var(--color-info);
+}
+
+.erp-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--space-5);
+  padding-inline: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--color-danger);
+  color: var(--color-on-danger);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-strong);
+}

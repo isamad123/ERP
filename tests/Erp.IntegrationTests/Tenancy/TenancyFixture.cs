@@ -17,6 +17,7 @@ using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Erp.Kernel.Infrastructure.ControlPlane.Tenancy;
 using Erp.Kernel.Infrastructure.Identity;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -119,10 +120,18 @@ public sealed class TenancyFixture : IAsyncLifetime
     /// </summary>
     /// <remarks><paramref name="realAccess"/>: keep the real access engine (slice S1.06) instead of the allow-all doubles.</remarks>
     /// <remarks><paramref name="controlPlaneConnectionString"/>: another control-plane login (S1.03 review finding 11, the cp_api role).</remarks>
-    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken, Action<IServiceCollection>? extra = null, bool realAccess = false, string? controlPlaneConnectionString = null)
+    public async Task<WebApplication> StartAppAsync(Action<WebApplication>? configure, CancellationToken cancellationToken, Action<IServiceCollection>? extra = null, bool realAccess = false, string? controlPlaneConnectionString = null, IReadOnlyDictionary<string, string?>? settings = null, Action<IWebHostBuilder>? realServer = null)
     {
         var builder = WebApplication.CreateBuilder();
-        builder.WebHost.UseTestServer();
+        if (realServer is null)
+        {
+            builder.WebHost.UseTestServer();
+        }
+        else
+        {
+            realServer(builder.WebHost); // a real Kestrel server for the browser tests (slice S1.12a)
+        }
+
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
 
         // The isolation suite makes the database refuse thousands of cross-customer writes on purpose (answered 409);
@@ -134,6 +143,11 @@ public sealed class TenancyFixture : IAsyncLifetime
         builder.Configuration["Auth:Issuer"] = Issuer;
         builder.Configuration["Auth:Audience"] = Audience;
         builder.Configuration["Auth:SigningPublicKeys:0"] = _tokenKey.ExportSubjectPublicKeyInfoPem();
+        foreach (var (key, value) in settings ?? new Dictionary<string, string?>())
+        {
+            builder.Configuration[key] = value; // further host settings, such as Web:Root (slice S1.12a)
+        }
+
         var app = ApiHost.Build(builder, Secrets, services =>
         {
             if (!realAccess)

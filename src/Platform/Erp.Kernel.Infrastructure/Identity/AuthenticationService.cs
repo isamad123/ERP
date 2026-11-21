@@ -97,7 +97,7 @@ public sealed class AuthenticationService(
         return result;
     }
 
-    public async Task<AuthResult> CompleteMfaAsync(string? challengeToken, string? code, string? recoveryCode, ClientInfo client, CancellationToken cancellationToken)
+    public async Task<AuthResult> CompleteMfaAsync(string? challengeToken, string? code, string? recoveryCode, bool rememberDevice, ClientInfo client, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(client);
         var now = clock.UtcNow;
@@ -150,6 +150,15 @@ public sealed class AuthenticationService(
 
         await IdentityDb.UseTokenAsync(connection, tx, token.Id, account.Id, now, cancellationToken).ConfigureAwait(false);
         var result = await ContinueAsync(connection, tx, account, policy, mfaDone: true, client, now, cancellationToken).ConfigureAwait(false);
+
+        // "Remember this device" (slice S1.12a, ruling Q4): only when the customer allows it for this person and the sign-in
+        // ends in a session; a further step (required password change) would end the trust again at once.
+        if (rememberDevice && policy.RememberDeviceDays > 0 && result.Outcome == AuthOutcome.Tokens)
+        {
+            var (deviceToken, deviceExpires) = await TrustedDevices.AddAsync(connection, tx, account.Id, policy.RememberDeviceDays, client.UserAgent, now, cancellationToken).ConfigureAwait(false);
+            result = result with { TrustedDeviceToken = deviceToken, TrustedDeviceExpiresAt = deviceExpires };
+        }
+
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return result;
     }
@@ -176,6 +185,7 @@ public sealed class AuthenticationService(
         await IdentityDb.SetPasswordAsync(connection, tx, account.Id, hasher.Hash(newPassword!), hasher.Algorithm, account.Id, now, cancellationToken).ConfigureAwait(false);
         await IdentityDb.UseTokenAsync(connection, tx, token.Id, account.Id, now, cancellationToken).ConfigureAwait(false);
         var ended = await IdentityDb.RevokeAllSessionsAsync(connection, tx, account.Id, "password_changed", now, cancellationToken).ConfigureAwait(false);
+        await TrustedDevices.RevokeAllAsync(connection, tx, account.Id, TrustedDevices.PasswordChanged, account.Id, now, cancellationToken).ConfigureAwait(false);
         await IdentityDb.RaiseAsync(connection, tx, IdentityEvents.PasswordChanged, account.Id, account.Id, now, new { reason = "required", sessions_revoked = ended }, cancellationToken).ConfigureAwait(false);
 
         // The change token is only issued after the second factor (or when the user has none), so MFA is done here.
@@ -345,7 +355,7 @@ public sealed class AuthenticationService(
         await IdentityDb.RotateRefreshAsync(connection, tx, session.Id, OpaqueTokens.Hash(refresh), now, cancellationToken).ConfigureAwait(false);
         var (access, expires) = issuer.Issue(session.UserId, tenant.TenantCode, session.Id, now);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
-        return new AuthResult(AuthOutcome.Tokens, new TokenPair(access, expires, refresh, session.Id));
+        return new AuthResult(AuthOutcome.Tokens, new TokenPair(access, expires, refresh, session.Id)) { IdleTimeoutMinutes = policy.Session.IdleMinutes };
     }
 
     public async Task SignOutAsync(Guid userId, Guid sessionId, CancellationToken cancellationToken)
@@ -404,10 +414,18 @@ public sealed class AuthenticationService(
             r => r.GetString(0), cancellationToken, account.Id).ConfigureAwait(false);
         List<string> usable = [.. kinds.Where(k => k != MfaKinds.Email || policy.Mfa.AllowedMethods.Contains(MfaKinds.Email, StringComparer.Ordinal))];
         var hasDevice = usable.Count > 0;
+
+        // A remembered browser (slice S1.12a, ruling Q4) skips the second factor after the proven password, while the
+        // customer's setting allows it for this person; every use is a security event.
+        if (hasDevice && !mfaDone && await TrustedDevices.UseAsync(connection, tx, account.Id, client.TrustedDeviceToken, policy.RememberDeviceDays, now, cancellationToken).ConfigureAwait(false))
+        {
+            mfaDone = true;
+        }
+
         if (hasDevice && !mfaDone)
         {
             var challenge = await IdentityDb.IssueTokenAsync(connection, tx, account.Id, IdentityDb.MfaChallenge, policy.ChallengeLifetime, account.Id, now, cancellationToken).ConfigureAwait(false);
-            return new AuthResult(AuthOutcome.MfaRequired, ChallengeToken: challenge, MfaMethods: usable);
+            return new AuthResult(AuthOutcome.MfaRequired, ChallengeToken: challenge, MfaMethods: usable) { RememberDeviceDays = policy.RememberDeviceDays };
         }
 
         if (account.MustChange || (account.PasswordChangedAt is { } changed && PasswordRules.IsExpired(changed, now, policy.Password)))
@@ -440,7 +458,7 @@ public sealed class AuthenticationService(
         await IdentityDb.ExecuteAsync(connection, tx, "update iam.users set last_login_at = $2 where id = $1", cancellationToken, account.Id, now).ConfigureAwait(false);
         await IdentityDb.LogAttemptAsync(connection, tx, account.Username, "success", client, account.Id, now, cancellationToken).ConfigureAwait(false);
         var (access, expires) = issuer.Issue(account.Id, tenant.TenantCode, sessionId, now);
-        return new AuthResult(AuthOutcome.Tokens, new TokenPair(access, expires, refresh, sessionId), MfaEnrolBy: enrolBy);
+        return new AuthResult(AuthOutcome.Tokens, new TokenPair(access, expires, refresh, sessionId), MfaEnrolBy: enrolBy) { IdleTimeoutMinutes = policy.Session.IdleMinutes };
     }
 
     /// <summary>A valid challenge token of the purpose and its user, who must still be active.</summary>

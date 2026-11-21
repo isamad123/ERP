@@ -17,12 +17,19 @@ public sealed class TenantResolutionOptions
 
     /// <summary>Name of the token claim that carries the customer code (issued by the identity slice S1.05).</summary>
     public string TenantClaim { get; init; } = "tenant";
+
+    /// <summary>
+    /// Requests of the web application's files (slice S1.12a, ruling Q2): on a known customer host, a request no endpoint
+    /// matched that this returns true for goes on without a licence check, so the application loads in every access mode
+    /// and shows the locked or read-only state itself. Unknown hosts still answer 404; <c>/api</c> paths never qualify.
+    /// </summary>
+    public Func<HttpContext, bool>? IsWebApplicationRequest { get; init; }
 }
 
 /// <summary>
 /// Binds every request to exactly one customer (FR-KRN-TEN-03, FR-KRN-TEN-04). The customer comes only from the
 /// request's host name looked up in cp.tenant_domains; the body, query string and other headers are never read.
-/// Unknown host → 404. Slice S1.09b: the licence is worked out for the customer's day (FR-KRN-ENT-04); an endpoint of a
+/// Unknown host → 404. Slice S1.12a: the web application's files are served for a known host in every access mode. Slice S1.09b: the licence is worked out for the customer's day (FR-KRN-ENT-04); an endpoint of a
 /// module or feature the customer is not licensed for, or whose module is not installed, answers exactly like a path that
 /// does not exist (FR-KRN-ENT-03, ruling Q9). The access mode (FR-KRN-TEN-09) is then enforced: unavailable → 503;
 /// locked licence or suspended customer → 403 except sign-in steps and endpoints marked allowed when locked (ruling Q5);
@@ -68,6 +75,14 @@ public static class TenantResolution
                 case TenantAccessMode.Unavailable:
                     await ProblemAsync(context, StatusCodes.Status503ServiceUnavailable, Unavailable).ConfigureAwait(false);
                     return;
+            }
+
+            // The web application's files (slice S1.12a): no endpoint, a known customer, nothing of the customer's data is read.
+            if (context.GetEndpoint() is null && !context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase)
+                && settings.IsWebApplicationRequest?.Invoke(context) == true)
+            {
+                await next(context).ConfigureAwait(false);
+                return;
             }
 
             var factory = (ITenantDataSourceFactory)services.GetService(typeof(ITenantDataSourceFactory))!;

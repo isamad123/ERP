@@ -1,0 +1,21 @@
+{
+  "name": "@erp/ui",
+  "private": true,
+  "description": "Design system: tokens, themes and components built on React Aria (slice S1.12a, Build items 2 and 3).",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/tokens/tokens.css",
+    "./styles.css": "./src/styles/index.css"
+  },
+  "dependencies": {
+    "@erp/i18n": "workspace:*",
+    "@internationalized/date": "3.12.4",
+    "lucide-react": "1.70.0",
+    "react": "19.3.1",
+    "react-aria-components": "1.22.1",
+    "react-dom": "19.3.1",
+    "react-intl": "12.1.6",
+    "uqr": "0.1.3"
+  }
+}

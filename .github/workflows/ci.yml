@@ -169,8 +169,8 @@ jobs:
           "$RUNNER_TEMP/pg16/pg_dump" --version
           "$RUNNER_TEMP/pg16/pg_restore" --version
 
-      - name: Integration tests (PostgreSQL 16; the tenant-isolation suite runs in its own job below)
-        run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-not-trait "Suite=TenantIsolation" --report-xunit-trx --results-directory logs/test-results
+      - name: Integration tests (PostgreSQL 16; the tenant-isolation suite and the browser tests run in their own jobs below)
+        run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-not-trait "Suite=TenantIsolation" --filter-not-trait "Suite=WebE2E" --report-xunit-trx --results-directory logs/test-results
 
       - name: Data dictionary drift (live database must match the committed dictionary)
         run: |
@@ -243,4 +243,100 @@ jobs:
           name: tenant-isolation-logs
           path: logs/
           if-no-files-found: warn
+          retention-days: 14
+
+  # Slice S1.12a (ruling Q19): the web application. Install from the lockfile, npm licence gate (Q20, CR-064), lint, type
+  # check, unit and component tests, token contrast check, production build with size budgets, then the browser
+  # end-to-end tests (Playwright 1.63.0, Chromium) against the real API host on PostgreSQL 16. Screenshots (English and
+  # Urdu, light and dark, three widths) are kept as the artifact `web-screenshots` for the product owner.
+  web:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: erp
+          POSTGRES_PASSWORD: erp-ci-only
+          POSTGRES_DB: erp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U erp -d erp_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: pnpm (the version in web/package.json, through corepack)
+        working-directory: web
+        run: |
+          corepack enable
+          pnpm --version
+
+      - name: Install from the lockfile
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: npm licence gate (D-09; development-only exceptions of ruling Q20 and CR-064, each named)
+        run: |
+          python3 build/licence-gate.py --self-test
+          python3 build/licence-gate.py --npm web
+
+      - name: Lint (ESLint and Stylelint rules of spec 13 section 24)
+        working-directory: web
+        run: pnpm lint
+
+      - name: Type check
+        working-directory: web
+        run: pnpm typecheck
+
+      - name: Unit and component tests
+        working-directory: web
+        run: pnpm test
+
+      - name: Token contrast check (fails below 4.5:1 and 3:1; the self-test proves it fails on a bad pair)
+        working-directory: web
+        run: pnpm contrast
+
+      - name: Production build with size budgets (shell under 300 KB, route chunks under 200 KB, compressed)
+        working-directory: web
+        run: pnpm build
+
+      - name: Test build (with the component catalogue)
+        working-directory: web
+        run: pnpm build:e2e
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Build the integration tests (they host the API for the browser tests)
+        run: dotnet build tests/Erp.IntegrationTests -c Release -v q
+
+      - name: Chromium for Playwright 1.63.0
+        working-directory: web/apps/web
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser end-to-end tests (real API host over HTTPS, real PostgreSQL)
+        run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-trait "Suite=WebE2E"
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-screenshots
+          path: |
+            web/apps/web/test-results/screenshots
+            web/apps/web/test-results/output
+          if-no-files-found: ignore
           retention-days: 14

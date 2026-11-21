@@ -156,6 +156,28 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
 - Secret scan (S1.11f1, CR-053): gitleaks 8.28.0 runs first in the CI job `build-and-test` over the history reachable from the checked-out commit and the working tree and fails on any
   finding; configuration `.gitleaks.toml` (default rules, exact-value allowances only). Run locally with the same binary: `gitleaks detect -c .gitleaks.toml --redact`.
 
+## Front-end rules (spec 13 section 24.1, shortened; S1.12a, CR-063)
+- Use only the design system (`web/packages/ui`). No other UI library without an ADR and the npm licence gate.
+- Design tokens only (CSS variables from `web/packages/ui/tokens/tokens.json`): no raw colours, sizes, fonts or z-index.
+- Logical CSS properties only (start/end, inline/block), never left/right. Every screen works in English and Urdu (RTL).
+- No hard-coded user-facing text: messages in `web/packages/i18n/messages/{en,ur}.json` (ICU). Server texts are keys.
+- Numbers, money and dates through `@erp/i18n` formatters; money is an exact decimal string, never a float.
+- Keyboard first: accessible names, visible focus, no serious or critical axe finding. Loading, empty, error and
+  permission-denied states on every screen. No token or personal data in browser storage.
+- Stay within the budgets (shell under 300 KB, route chunks under 200 KB compressed); lazy-load module routes.
+- Assets are bundled; nothing is fetched from another host. The content security policy allows no inline script or style.
+
+## Web commands (S1.12a)
+Run from `web/` (Node 22, pnpm through corepack): `pnpm install --frozen-lockfile`, then `pnpm lint`, `pnpm typecheck`,
+`pnpm test` (vitest), `pnpm contrast`, `pnpm build` (production build and size budgets), `pnpm build:e2e` (test build with
+the component catalogue). npm licence gate (repository root): `python3 build/licence-gate.py --npm web`.
+Browser tests (needs `pnpm build:e2e` first and PostgreSQL as above; Chromium of Playwright 1.63.0):
+`dotnet test --project tests/Erp.IntegrationTests --no-build --filter-trait "Suite=WebE2E"` (`E2E_GREP` runs matching
+scenarios only). Screenshots land in `web/apps/web/test-results/screenshots`; CI job `web` keeps them as an artifact.
+The normal integration run leaves the browser tests out: `--filter-not-trait "Suite=TenantIsolation" --filter-not-trait "Suite=WebE2E"`,
+so "all tests" with `dotnet test --solution Erp.sln` needs the web test build. Run the API host with the web application:
+`Web__Root=web/apps/web/dist dotnet run --project src/Host/Erp.Host.Api --urls http://127.0.0.1:5080`.
+
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.
 Slices: `docs/slices`. Handoff notes: `docs/handoff`.

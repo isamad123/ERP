@@ -2,7 +2,7 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 219 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 220 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
@@ -10,7 +10,7 @@ Release 1.0. Customer database: 219 tables. Control-plane database: 15 tables. E
 | customer | cfg | 18 |
 | customer | doc | 7 |
 | customer | hrm | 112 |
-| customer | iam | 23 |
+| customer | iam | 24 |
 | customer | itg | 11 |
 | customer | job | 5 |
 | customer | meta | 4 |
@@ -5675,6 +5675,37 @@ Triggers:
 
 - `tg_sessions_append_only` CREATE TRIGGER tg_sessions_append_only BEFORE DELETE OR UPDATE ON iam.sessions FOR EACH ROW EXECUTE FUNCTION iam.tg_refuse_change('last_seen_at', 'revoked_at', 'revoked_reason', 'refresh_token_hash', 'previous_refresh_hash')
 - `tg_sessions_no_truncate` CREATE TRIGGER tg_sessions_no_truncate BEFORE TRUNCATE ON iam.sessions FOR EACH STATEMENT EXECUTE FUNCTION iam.tg_refuse_change()
+
+### iam.trusted_devices
+
+Browsers a person chose to remember after the second factor (remember-device, FR-ADM-USR-24). Requirements: ADM-USR-24, KRN-IAM-02. Source: kernel.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| user_id | uuid | no |  | fk iam.users |
+| token_hash | text | no |  | SHA-256 (hex) of the device token kept in the browser's HttpOnly cookie; the token itself is never stored |
+| label | text | yes |  | browser name from the user agent, at most 100 characters |
+| expires_at | timestamp with time zone | no |  | issue time plus iam.session.remember_device_days; a shorter current setting ends it earlier |
+| last_used_at | timestamp with time zone | yes |  |  |
+| revoked_at | timestamp with time zone | yes |  |  |
+| revoked_reason | text | yes |  |  |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `ck_trusted_devices_revoked_reason` CHECK ((revoked_reason = ANY (ARRAY['password_changed'::text, 'password_reset'::text, 'mfa_reset'::text, 'sessions_revoked'::text, 'removed'::text])))
+- `fk_trusted_devices_user_id` FOREIGN KEY (user_id) REFERENCES iam.users(id)
+- `pk_trusted_devices` PRIMARY KEY (id)
+- `uq_trusted_devices_token_hash` UNIQUE (token_hash)
+
+Indexes:
+
+- `ix_trusted_devices_user_id_expires_at` CREATE INDEX ix_trusted_devices_user_id_expires_at ON iam.trusted_devices USING btree (user_id, expires_at)
 
 ### iam.user_credentials
 

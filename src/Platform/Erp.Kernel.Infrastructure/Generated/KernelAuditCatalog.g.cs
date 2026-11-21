@@ -60,6 +60,7 @@ public static class KernelAuditCatalog
         new(typeof(global::Erp.Kernel.Domain.Generated.Iam.RolePermission), "iam.role_permissions", true, null, "role_id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Iam.Role), "iam.roles", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Iam.Session), "iam.sessions", false, "append-only: the row itself is the record and is never changed (S1.07 Q4); last_seen_at is machinery", "id", null, null, null, null),
+        new(typeof(global::Erp.Kernel.Domain.Generated.Iam.TrustedDevice), "iam.trusted_devices", false, "machinery: device token hashes; adding, using and ending a trust are security events (S1.12a, ruling Q4)", "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Iam.UserCredential), "iam.user_credentials", false, "secrets and sign-in counters; password, lockout and credential changes are security events (S1.07 Q4, Q7)", "user_id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Iam.UserGroupMember), "iam.user_group_members", true, null, "group_id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Iam.UserGroupRole), "iam.user_group_roles", true, null, "id", "company_id", null, null, null),

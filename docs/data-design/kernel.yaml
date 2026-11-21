@@ -159,6 +159,27 @@
   audit_reason: "machinery: one-time code hashes; regeneration is a security event (S1.07 Q4)"
   reqs: [KRN-IAM-02, ADM-USR-21]
 
+# S1.12a (CR-063 item 2, ruling Q4; data design approved by the product owner 2026-11-20): "remember this device".
+# A browser that passed the second factor may skip it for remember_device_days; the password is always asked.
+- table: iam.trusted_devices
+  purpose: "Browsers a person chose to remember after the second factor (remember-device, FR-ADM-USR-24)"
+  traits: [std]
+  added_in: S1.12a
+  columns:
+    - [user_id, uuid, req, fk iam.users]
+    - [token_hash, text, req, "SHA-256 (hex) of the device token kept in the browser's HttpOnly cookie; the token itself is never stored"]
+    - [label, text, opt, "browser name from the user agent, at most 100 characters"]
+    - [expires_at, ts, req, "issue time plus iam.session.remember_device_days; a shorter current setting ends it earlier"]
+    - [last_used_at, ts, opt]
+    - [revoked_at, ts, opt]
+    - ["revoked_reason", "enum(password_changed,password_reset,mfa_reset,sessions_revoked,removed)", opt]
+  unique: [[token_hash]]
+  indexes: [[user_id, expires_at]]
+  scope: {user: user_id}
+  audit: false
+  audit_reason: "machinery: device token hashes; adding, using and ending a trust are security events (S1.12a, ruling Q4)"
+  reqs: [ADM-USR-24, KRN-IAM-02]
+
 - table: iam.permissions
   purpose: Registered from module manifests at start-up
   traits: [std]

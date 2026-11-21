@@ -35,23 +35,42 @@ Product projects use only Npgsql.EntityFrameworkCore.PostgreSQL and its dependen
 and its dependencies (S1.03), NSec.Cryptography and Microsoft.IdentityModel.JsonWebTokens (S1.05), MailKit (S1.11b2), AWSSDK.S3 (S1.11c1), Scriban, PuppeteerSharp and QRCoder (S1.11c2), plus the shared .NET and ASP.NET Core frameworks (MIT). Encryption and signatures (AES-GCM, ECDSA P-256) use
 the .NET base library only. Backups call the PostgreSQL client tools pg_dump and pg_restore (PostgreSQL licence) installed on the server. The Api projects reference the ASP.NET Core shared framework for minimal APIs.
 
-## Approved for slice S1.12 (product owner 2026-11-20, S1.12 rulings Q1 and Q20; added by the build parts)
-Licences checked on the npm registry on 2026-11-20. Versions are fixed at build time (newest release at least two weeks
-old) and this section then moves into the table above.
+## Web packages (slice S1.12a; product owner 2026-11-20, rulings Q1 and Q20, CR-064)
+Pinned exactly in `web/package.json` files and `web/pnpm-lock.yaml`; versions are the newest release at least 14 days old
+on 2026-11-20 unless the note says otherwise. The npm licence gate (`python3 build/licence-gate.py --npm web`) checks every
+package, transitive ones included: packages shipped to browsers against the D-09 list, development-only packages against
+the D-09 list, each with only the exceptions named below.
 
-| Package | Licence | Use | Shipped to browsers |
-| --- | --- | --- | --- |
-| react, react-dom | MIT | Web framework | Yes |
-| react-router | MIT | Screens and addresses | Yes |
-| @tanstack/react-query | MIT | Server data and caching | Yes |
-| react-aria-components, @internationalized/date | Apache-2.0 | Accessible primitives, date fields | Yes |
-| @tanstack/react-table, @tanstack/react-virtual | MIT | Grid and long lists | Yes |
-| react-hook-form, zod, @hookform/resolvers | MIT | Forms and validation | Yes |
-| react-intl | BSD-3-Clause | ICU message catalogues | Yes |
-| lucide-react | ISC | Icons | Yes |
-| Noto Sans, Noto Naskh Arabic (font files) | SIL OFL 1.1 (fonts only, CR-045) | Screen fonts | Yes |
-| vite, @vitejs/plugin-react, typescript, pnpm | MIT; TypeScript Apache-2.0 | Build | No |
-| vitest, @testing-library/react, @testing-library/user-event, jsdom | MIT | Unit and component tests | No |
-| @playwright/test (Playwright already on the build machine) | Apache-2.0 | End-to-end tests and screenshots | No |
-| eslint, typescript-eslint, eslint-plugin-jsx-a11y, eslint-plugin-react-hooks, stylelint | MIT | Lint | No |
-| axe-core, @axe-core/playwright | MPL-2.0 (development only, S1.12 Q20) | Accessibility checks in tests | No |
+| Package | Version | Licence | Use | Shipped to browsers |
+| --- | --- | --- | --- | --- |
+| react, react-dom | 19.3.1 | MIT | Web framework | Yes |
+| react-router | 8.5.1 | MIT | Screens and addresses | Yes |
+| react-aria-components | 1.22.1 | Apache-2.0 | Accessible primitives (brings react-aria, react-stately, @internationalized/* , Apache-2.0) | Yes |
+| @internationalized/date | 3.12.4 | Apache-2.0 | Date fields | Yes |
+| react-intl | 12.1.6 | BSD-3-Clause | ICU message catalogues (brings @formatjs/*, MIT, and intl-messageformat, BSD-3-Clause) | Yes |
+| lucide-react | 1.70.0 | ISC | Icons | Yes |
+| uqr | 0.1.3 | MIT | QR code of authenticator enrolment (approved 2026-11-20) | Yes |
+| @fontsource/noto-sans, @fontsource/noto-naskh-arabic | 5.3.0 | OFL-1.1 (fonts only, CR-045; named in the gate) | Screen fonts, WOFF2 split by script (approved 2026-11-20) | Yes |
+| tslib | 2.9.1 (transitive, React Aria) | 0BSD (CR-064, named in the gate) | Helper of React Aria | Yes |
+| vite | 8.3.6 | MIT | Build (brings lightningcss, MPL-2.0, named in the gate) | No |
+| @vitejs/plugin-react | 6.2.1 | MIT | Build | No |
+| typescript | 6.0.3 (not 7.0.2: typescript-eslint supports up to 6.0; approved 2026-11-20) | Apache-2.0 | Type check | No |
+| pnpm | 10.34.9 | MIT | Package manager (`packageManager` field, through corepack) | No |
+| vitest | 5.1.0 | MIT | Unit and component tests | No |
+| jsdom | 31.0.0 | MIT | Test DOM | No |
+| @testing-library/react, @testing-library/dom, @testing-library/user-event | 16.3.3, 10.4.2, 14.6.8 | MIT | Component tests (@testing-library/dom approved 2026-11-20) | No |
+| @playwright/test | 1.63.0 (not 1.65.0: must match the browser on the build machine; approved 2026-11-20) | Apache-2.0 | Browser end-to-end tests and screenshots | No |
+| eslint, @eslint/js | 9.39.5 (not 10: eslint-plugin-jsx-a11y supports up to 9; approved 2026-11-20) | MIT | Lint (brings argparse, Python-2.0 / PSF-2.0, named in the gate, CR-064) | No |
+| typescript-eslint | 8.72.1 | MIT | Lint | No |
+| eslint-plugin-jsx-a11y | 6.10.2 | MIT | Accessibility lint | No |
+| eslint-plugin-react-hooks | 7.1.1 | MIT | Lint | No |
+| globals | 17.14.0 | MIT | Lint configuration (approved 2026-11-20) | No |
+| stylelint | 18.0.0 | MIT | Style lint (brings @csstools/* MIT-0, lru-cache and minimatch BlueOak-1.0.0, mdn-data CC0-1.0, named in the gate, CR-064) | No |
+| @types/react, @types/react-dom | 19.3.0 | MIT | Type definitions (approved 2026-11-20) | No |
+| @types/node | 22.20.5 | MIT | Type definitions (approved 2026-11-20) | No |
+| axe-core, @axe-core/playwright | 4.14.0 | MPL-2.0 (development only, S1.12 Q20; named in the gate) | Accessibility checks in browser tests | No |
+| caniuse-lite (transitive) | lockfile | CC-BY-4.0 (data, development only, Q20; named in the gate) | Browser support data of build tools | No |
+| language-subtag-registry (transitive) | lockfile | CC0-1.0 (data, development only, Q20; named in the gate) | Data of the accessibility lint | No |
+
+Approved but not used yet (added with their part): @tanstack/react-query (S1.12b), @tanstack/react-table,
+@tanstack/react-virtual, react-hook-form, zod, @hookform/resolvers (S1.12c); all MIT.

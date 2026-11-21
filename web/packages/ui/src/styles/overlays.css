@@ -1,0 +1,277 @@
+/* Menus, tooltips, dialogs, drawers, tabs, banners, toasts and states (slice S1.12a, spec 13 sections 7, 10, 16). */
+.erp-popover {
+  min-inline-size: var(--trigger-width);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-overlay);
+  z-index: var(--layer-menu);
+}
+
+.erp-menu {
+  padding: var(--space-1);
+  min-inline-size: calc(var(--space-8) * 3);
+  outline: none;
+}
+
+.erp-tooltip {
+  max-inline-size: calc(var(--space-8) * 4);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-control);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: var(--font-size-sm);
+  z-index: var(--layer-menu);
+}
+
+.erp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--color-backdrop);
+  z-index: var(--layer-modal);
+}
+
+.erp-modal {
+  inline-size: min(100%, var(--dialog-width));
+  max-block-size: calc(100vh - var(--space-7));
+  overflow: auto;
+  border-radius: var(--radius-dialog);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-overlay);
+}
+
+.erp-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  outline: none;
+}
+
+.erp-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.erp-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.erp-drawer-overlay {
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 0;
+}
+
+.erp-drawer {
+  inline-size: min(100%, var(--panel-width));
+  max-block-size: none;
+  block-size: 100%;
+  border-radius: 0;
+}
+
+.erp-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.erp-tab-list {
+  display: flex;
+  gap: var(--space-1);
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+}
+
+.erp-tab {
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  border-block-end: var(--focus-width) solid transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  outline: none;
+}
+
+.erp-tab[data-selected] {
+  border-block-end-color: var(--color-primary);
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+}
+
+.erp-tab[data-focus-visible] {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: calc(var(--focus-width) * -1);
+}
+
+.erp-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width) solid currentcolor;
+  border-radius: var(--radius-card);
+}
+
+.erp-banner-body {
+  flex: 1;
+  color: var(--color-text);
+}
+
+.erp-banner[data-tone="info"] {
+  background: var(--color-info-subtle);
+  color: var(--color-info);
+}
+
+.erp-banner[data-tone="success"] {
+  background: var(--color-success-subtle);
+  color: var(--color-success);
+}
+
+.erp-banner[data-tone="warning"] {
+  background: var(--color-warning-subtle);
+  color: var(--color-warning);
+}
+
+.erp-banner[data-tone="danger"] {
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
+}
+
+.erp-toast-region {
+  position: fixed;
+  inset-block-end: var(--space-4);
+  inset-inline-end: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  inline-size: min(calc(100% - var(--space-6)), var(--toast-width));
+  z-index: var(--layer-toast);
+}
+
+.erp-toast {
+  box-shadow: var(--shadow-overlay);
+}
+
+.erp-skeleton {
+  display: block;
+  block-size: var(--space-4);
+  border-radius: var(--radius-small);
+  background: var(--color-skeleton);
+}
+
+.erp-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.erp-spinner svg {
+  animation: erp-spin 1s linear infinite;
+}
+
+@keyframes erp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erp-spinner svg {
+    animation: none;
+  }
+}
+
+.erp-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+}
+
+.erp-panel-icon {
+  color: var(--color-text-muted);
+}
+
+.erp-panel[data-tone="danger"] .erp-panel-icon {
+  color: var(--color-danger);
+}
+
+.erp-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block-end: var(--space-4);
+}
+
+.erp-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.erp-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.erp-breadcrumb a {
+  color: var(--color-link);
+}
+
+.erp-breadcrumb[data-current] {
+  color: var(--color-text);
+}
+
+.erp-qr {
+  inline-size: calc(var(--space-8) * 3);
+  block-size: calc(var(--space-8) * 3);
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+}
+
+.erp-qr rect[data-dark] {
+  fill: var(--color-text);
+}
+
+:root[data-theme="dark"] .erp-qr,
+:root[data-theme="contrast"] .erp-qr {
+  background: var(--color-text);
+}
+
+:root[data-theme="dark"] .erp-qr rect[data-dark],
+:root[data-theme="contrast"] .erp-qr rect[data-dark] {
+  fill: var(--color-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .erp-qr {
+    background: var(--color-text);
+  }
+
+  :root:not([data-theme]) .erp-qr rect[data-dark] {
+    fill: var(--color-bg);
+  }
+}

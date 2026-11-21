@@ -1,0 +1,8 @@
+/* React Aria's touch rule for pressable elements, shipped as a file (slice S1.12a). React Aria would otherwise inject it
+   as an inline style, which the content security policy (style-src 'self') blocks; it skips the injection when an
+   element with the id react-aria-pressable-style exists (index.html). Keep in step with react-aria's usePress. */
+@layer {
+  [data-react-aria-pressable] {
+    touch-action: pan-x pan-y pinch-zoom;
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "name": "erp-web",
+  "private": true,
+  "type": "module",
+  "description": "Web application of the ERP product (slice S1.12): application, design system, localisation and the generated API client.",
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "tokens": "node packages/ui/scripts/tokens.mjs",
+    "catalogues": "node packages/i18n/scripts/collect-server.mjs",
+    "prepare-sources": "pnpm run tokens && pnpm run catalogues",
+    "lint": "pnpm run prepare-sources && eslint --max-warnings 0 . && stylelint --max-warnings 0 \"apps/*/src/**/*.css\" \"packages/*/src/**/*.css\"",
+    "typecheck": "pnpm run prepare-sources && tsc -p tsconfig.json && tsc -p generated/tsconfig.json",
+    "test": "pnpm run prepare-sources && vitest run",
+    "contrast": "node packages/ui/scripts/tokens.mjs --check && node packages/ui/scripts/tokens.mjs --self-test",
+    "build": "pnpm run prepare-sources && pnpm --filter @erp/web build && node apps/web/scripts/budget.mjs apps/web/dist",
+    "e2e": "pnpm --filter @erp/web exec playwright test",
+    "build:e2e": "pnpm run prepare-sources && pnpm --filter @erp/web build:e2e"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@eslint/js": "9.39.5",
+    "@playwright/test": "1.63.0",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.8",
+    "@types/node": "22.20.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "axe-core": "4.14.0",
+    "eslint": "9.39.5",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.14.0",
+    "jsdom": "31.0.0",
+    "stylelint": "18.0.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.6",
+    "vitest": "5.1.0"
+  }
+}

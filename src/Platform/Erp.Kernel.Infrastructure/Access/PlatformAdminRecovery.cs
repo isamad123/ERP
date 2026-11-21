@@ -153,6 +153,7 @@ public sealed class PlatformAdminRecovery(ControlPlaneOptions options, ISecretSt
                 where ur.role_id = r.id and lower(r.code) = lower($2) and ur.user_id = $1 and ur.valid_from >= $3
                 """, cancellationToken, userId, ProtectedRoles.TenantAdmin, today).ConfigureAwait(false);
             var sessions = await IdentityDb.RevokeAllSessionsAsync(c, tx, userId, "platform_admin_revoked", now, cancellationToken).ConfigureAwait(false);
+            await TrustedDevices.RevokeAllAsync(c, tx, userId, TrustedDevices.SessionsRevoked, BaselineSeed.SystemUserId, now, cancellationToken).ConfigureAwait(false); // S1.12a, ruling Q4
             messages.Add($"{ended} Tenant Admin assignment(s) of {email} ended; {sessions} session(s) ended");
 
             var groups = new List<string>();
