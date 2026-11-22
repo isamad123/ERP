@@ -1429,5 +1429,8 @@
   "chart.compare.fromTo": "from {from} to {to}",
   "nav.settings": "Settings",
   "nav.featureFlags": "Feature flags",
-  "nav.signInPage": "Sign-in page"
+  "nav.signInPage": "Sign-in page",
+  "nav.labels": "Labels",
+  "nav.optionLists": "Option lists",
+  "nav.customFields": "Custom fields"
 }

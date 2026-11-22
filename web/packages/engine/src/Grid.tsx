@@ -18,6 +18,8 @@ export interface GridColumn<Row> {
   align?: 'start' | 'end';
   /** Width in pixels when the person has not chosen one. */
   width?: number;
+  /** Not shown until the person chooses it (custom field columns, S1.15b). */
+  hiddenByDefault?: boolean;
 }
 
 /** What the person chose for one column: shown or not, its width; the array order is the column order. */
@@ -72,7 +74,7 @@ export function arrange<Row>(columns: GridColumn<Row>[], choices: ColumnChoice[]
   const byId = new Map(columns.map((c) => [c.id, c]));
   const ordered = [
     ...(choices ?? []).flatMap((c) => { const column = byId.get(c.id); return column ? [{ column, choice: c as ColumnChoice | undefined }] : []; }),
-    ...columns.filter((c) => !(choices ?? []).some((x) => x.id === c.id)).map((column) => ({ column, choice: undefined })),
+    ...columns.filter((c) => !(choices ?? []).some((x) => x.id === c.id)).map((column) => ({ column, choice: column.hiddenByDefault ? ({ id: column.id, hidden: true } as ColumnChoice) : undefined })),
   ];
   return ordered.filter((x) => !x.choice?.hidden).map(({ column, choice }) => ({ ...column, width: Math.max(MIN_COLUMN_WIDTH, choice?.width ?? column.width ?? DEFAULT_COLUMN_WIDTH) }));
 }

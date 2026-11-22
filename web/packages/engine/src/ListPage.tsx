@@ -12,6 +12,7 @@ import { isProblem, queryString, tableClient, useEngineApi, type Row } from './d
 import { decimalFields, fieldOf, type TableMetadata } from './metadata';
 import { useLabel } from './labels';
 import { Value } from './values';
+import { CustomValue, CUSTOM_PREFIX, customOf, useCustomFields } from './custom';
 
 export const PAGE_SIZE = 100;
 
@@ -84,8 +85,19 @@ export function ListPage({ metadata, columns, companies, canCreate, canShare, on
   });
   const rows = useMemo(() => list.data?.pages.flatMap((p) => p.items) ?? [], [list.data]);
 
+  // Custom fields can be chosen as columns (S1.15b): display only, no sort, hidden until the person picks them.
+  const customFields = useCustomFields(metadata.table, params.companyId, metadata.fields.some((f) => f.field === 'custom'));
+  const { locale } = useLocaleSettings();
   const companyNames = useMemo(() => new Map((companies?.options ?? []).map((o) => [o.id, o.label])), [companies]);
-  const gridColumns = useMemo<GridColumn<Row>[]>(() => (columns ?? metadata.listFields).flatMap((name) => {
+  const customColumns = useMemo<GridColumn<Row>[]>(() => (customFields.data ?? []).filter((f) => !f.retired).map((f) => ({
+    id: `${CUSTOM_PREFIX}${f.fieldKey}`,
+    header: f.label[locale] ?? f.label.en ?? f.fieldKey,
+    align: f.dataType === 'number' || f.dataType === 'decimal' ? 'end' as const : 'start' as const,
+    width: 180,
+    hiddenByDefault: true,
+    cell: (row: Row) => <CustomValue field={f} value={customOf(row)[f.fieldKey]} />,
+  })), [customFields.data, locale]);
+  const gridColumns = useMemo<GridColumn<Row>[]>(() => [...(columns ?? metadata.listFields).flatMap((name) => {
     const field = fieldOf(metadata, name);
     if (!field) return [];
     const own = cells?.[name];
@@ -93,13 +105,13 @@ export function ListPage({ metadata, columns, companies, canCreate, canShare, on
       id: name,
       header: label(field.labelKey),
       sortable: !!field.sortable,
-      align: ['Int4', 'BigInteger', 'Money', 'Qty', 'Rate', 'Pct', 'Numeric'].includes(field.kind) ? 'end' : 'start',
+      align: ['Int4', 'BigInteger', 'Money', 'Qty', 'Rate', 'Pct', 'Numeric'].includes(field.kind) ? 'end' as const : 'start' as const,
       width: field.kind === 'I18n' ? 260 : field.kind === 'Bool' ? 140 : 180,
       cell: own ?? ((row: Row) => field.references === 'org.companies' && typeof row[name] === 'string' && companyNames.has(row[name] as string)
         ? <bdi>{companyNames.get(row[name] as string)}</bdi>
         : <Value field={field} value={row[name]} label={label} />),
     }];
-  }), [columns, metadata, label, cells, companyNames]);
+  }), ...customColumns], [columns, metadata, label, cells, companyNames, customColumns]);
 
   const apply = (next: ViewDefinition, id = 'custom') => {
     setDefinition(next);
@@ -171,7 +183,7 @@ export function ColumnsChooser<Row>({ columns, choices, onChange }: { columns: G
   const [open, setOpen] = useState(false);
   const ordered: ColumnChoice[] = [
     ...(choices ?? []).filter((c) => columns.some((x) => x.id === c.id)),
-    ...columns.filter((c) => !(choices ?? []).some((x) => x.id === c.id)).map((c) => ({ id: c.id })),
+    ...columns.filter((c) => !(choices ?? []).some((x) => x.id === c.id)).map((c) => ({ id: c.id, ...(c.hiddenByDefault ? { hidden: true } : {}) })),
   ];
   const header = (id: string) => columns.find((c) => c.id === id)?.header ?? id;
   const moveBy = (index: number, by: number) => {
@@ -188,7 +200,7 @@ export function ColumnsChooser<Row>({ columns, choices, onChange }: { columns: G
       <Dialog title={t('engine.columns.title')} isOpen={open} onOpenChange={setOpen} drawer
         actions={(close) => (
           <>
-            <Button variant="quiet" onPress={() => onChange(columns.map((c) => ({ id: c.id })))}>{t('engine.columns.reset')}</Button>
+            <Button variant="quiet" onPress={() => onChange(columns.map((c) => ({ id: c.id, ...(c.hiddenByDefault ? { hidden: true } : {}) })))}>{t('engine.columns.reset')}</Button>
             <Button variant="primary" onPress={close}>{t('engine.columns.done')}</Button>
           </>
         )}>
