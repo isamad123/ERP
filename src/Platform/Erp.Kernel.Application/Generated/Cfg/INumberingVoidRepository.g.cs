@@ -6,10 +6,12 @@
 
 namespace Erp.Kernel.Application.Generated.Cfg;
 
-/// <summary>Equality filters for listing cfg.numbering_voids (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing cfg.numbering_voids (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record NumberingVoidFilter
 {
     public global::System.Guid? SchemeId { get; init; }
+    /// <summary>Sort key: number; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of cfg.numbering_voids.</summary>

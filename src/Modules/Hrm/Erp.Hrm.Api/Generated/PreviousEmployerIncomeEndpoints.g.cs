@@ -55,6 +55,9 @@ public sealed class PreviousEmployerIncomeListQuery
     public global::System.Guid? EmploymentId { get; init; }
 
     public global::System.Guid? FileId { get; init; }
+
+    /// <summary>Sort key: taxYear, employerName; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.previous_employer_income: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -75,7 +78,7 @@ internal static class PreviousEmployerIncomeEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.previous_employer_income.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PreviousEmployerIncomeFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, FileId = query.FileId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PreviousEmployerIncomeFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, FileId = query.FileId, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PreviousEmployerIncomeAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

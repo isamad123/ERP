@@ -6,11 +6,13 @@
 
 namespace Erp.Kernel.Application.Generated.Wf;
 
-/// <summary>Equality filters for listing wf.workflow_versions (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing wf.workflow_versions (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record WorkflowVersionFilter
 {
     public global::System.Guid? DefinitionId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: version; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of wf.workflow_versions.</summary>

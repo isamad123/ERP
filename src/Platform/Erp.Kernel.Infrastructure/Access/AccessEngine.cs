@@ -110,6 +110,10 @@ public sealed class AccessEngine(ITenantConnectionProvider tenant, IClock clock,
         return grants.Select(g => new PermissionGrantView(g.Key, g.Value?.Order().ToList())).ToList();
     }
 
+    /// <summary>The roles the user holds today, own and through groups (slice S1.12c: views shared with a role, ruling Q12).</summary>
+    public async Task<IReadOnlySet<Guid>> RoleIdsAsync(CancellationToken cancellationToken) =>
+        (await SnapshotAsync(cancellationToken).ConfigureAwait(false)).Assignments.Select(a => a.RoleId).ToHashSet();
+
     // ------------------------------------------------------------------ data scopes
 
     public async ValueTask<IQueryable<T>> ApplyAsync<T>(IQueryable<T> query, ScopeTarget<T> target, string action, IScopeQuerySource? source, CancellationToken cancellationToken)

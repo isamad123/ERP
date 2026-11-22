@@ -39,6 +39,15 @@
     "workflowInstanceId",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_duty_requests_kind": "kind",
+    "ck_duty_requests_status": "status",
+    "fk_duty_requests_company_id": "companyId",
+    "fk_duty_requests_employment_id": "employmentId",
+    "fk_duty_requests_workflow_instance_id": "workflowInstanceId",
+    "uq_duty_requests_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

@@ -6,10 +6,12 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.statutory_tables (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.statutory_tables (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record StatutoryTableFilter
 {
     public global::System.Guid? CompanyId { get; init; }
+    /// <summary>Case-insensitive text found in code.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated repository of hrm.statutory_tables.</summary>

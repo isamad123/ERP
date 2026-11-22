@@ -36,6 +36,16 @@
     "movement",
     "currencyCode"
   ],
+  "search": [],
+  "constraints": {
+    "ck_liability_accruals_kind": "kind",
+    "fk_liability_accruals_accounting_event_id": "accountingEventId",
+    "fk_liability_accruals_company_id": "companyId",
+    "fk_liability_accruals_employment_id": "employmentId",
+    "fk_liability_accruals_pay_period_id": "payPeriodId",
+    "fk_liability_accruals_reverses_accrual_id": "reversesAccrualId",
+    "uq_liability_accruals_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -102,7 +112,8 @@
           "value": "other",
           "labelKey": "options.hrm.liability_accruals.kind.other"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "seq",
@@ -112,7 +123,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.liability_accruals.seq"
+      "labelKey": "fields.hrm.liability_accruals.seq",
+      "sortable": true
     },
     {
       "column": "balance",

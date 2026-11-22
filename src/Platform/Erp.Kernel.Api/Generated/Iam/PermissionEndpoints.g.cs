@@ -32,6 +32,12 @@ public sealed class PermissionListQuery
     public global::System.Guid? After { get; init; }
 
     public int? Limit { get; init; }
+
+    /// <summary>Sort key: code; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+
+    /// <summary>Case-insensitive text found in code.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated endpoints of iam.permissions: read. Answers pass through field security (S1.06).</summary>
@@ -50,7 +56,7 @@ internal static class PermissionEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "iam.permissions.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.PermissionFilter {  }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.PermissionFilter { Sort = query.Sort, Search = query.Search }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Iam.PermissionAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

@@ -43,6 +43,18 @@
     "firstIn",
     "lastOut"
   ],
+  "search": [],
+  "constraints": {
+    "ck_attendance_days_day_type": "dayType",
+    "ck_attendance_days_result": "result",
+    "fk_attendance_days_company_id": "companyId",
+    "fk_attendance_days_duty_request_id": "dutyRequestId",
+    "fk_attendance_days_employment_id": "employmentId",
+    "fk_attendance_days_leave_request_id": "leaveRequestId",
+    "fk_attendance_days_period_id": "periodId",
+    "fk_attendance_days_policy_version_id": "policyVersionId",
+    "fk_attendance_days_shift_id": "shiftId"
+  },
   "fields": [
     {
       "column": "id",
@@ -84,7 +96,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.attendance_days.work_date"
+      "labelKey": "fields.hrm.attendance_days.work_date",
+      "sortable": true
     },
     {
       "column": "shift_id",
@@ -167,7 +180,8 @@
           "value": "incomplete",
           "labelKey": "options.hrm.attendance_days.result.incomplete"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "first_in",

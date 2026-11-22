@@ -37,6 +37,14 @@
     "attendanceDayId",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_attendance_exceptions_kind": "kind",
+    "ck_attendance_exceptions_status": "status",
+    "fk_attendance_exceptions_company_id": "companyId",
+    "fk_attendance_exceptions_employment_id": "employmentId",
+    "uq_attendance_exceptions_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -79,7 +87,8 @@
       "system": false,
       "filter": true,
       "labelKey": "fields.hrm.attendance_exceptions.work_date",
-      "references": "hrm.attendance_days"
+      "references": "hrm.attendance_days",
+      "sortable": true
     },
     {
       "column": "kind",
@@ -158,7 +167,8 @@
           "value": "closed",
           "labelKey": "options.hrm.attendance_exceptions.status.closed"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "created_at",

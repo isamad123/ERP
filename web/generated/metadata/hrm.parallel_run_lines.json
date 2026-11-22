@@ -39,6 +39,13 @@
     "newAmount",
     "difference"
   ],
+  "search": [],
+  "constraints": {
+    "ck_parallel_run_lines_component_code_code": "componentCode",
+    "fk_parallel_run_lines_company_id": "companyId",
+    "fk_parallel_run_lines_employment_id": "employmentId",
+    "fk_parallel_run_lines_parallel_run_id": "parallelRunId"
+  },
   "fields": [
     {
       "column": "id",

@@ -32,6 +32,13 @@
     "reason",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_maker_checker_requests_action_type_code": "actionType",
+    "ck_maker_checker_requests_status": "status",
+    "fk_maker_checker_requests_decided_by": "decidedBy",
+    "fk_maker_checker_requests_requested_by": "requestedBy"
+  },
   "fields": [
     {
       "column": "id",
@@ -152,7 +159,8 @@
           "value": "expired",
           "labelKey": "options.iam.maker_checker_requests.status.expired"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "created_at",
@@ -162,7 +170,8 @@
       "readOnly": true,
       "system": true,
       "filter": false,
-      "labelKey": "fields.iam.maker_checker_requests.created_at"
+      "labelKey": "fields.iam.maker_checker_requests.created_at",
+      "sortable": true
     },
     {
       "column": "created_by",

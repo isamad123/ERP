@@ -33,6 +33,13 @@
     "requestedBy",
     "leaseOwner"
   ],
+  "search": [],
+  "constraints": {
+    "ck_runs_status": "status",
+    "fk_runs_actor_user_id": "actorUserId",
+    "fk_runs_definition_id": "definitionId",
+    "fk_runs_result_file_id": "resultFileId"
+  },
   "fields": [
     {
       "column": "id",
@@ -163,7 +170,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.job.runs.priority"
+      "labelKey": "fields.job.runs.priority",
+      "sortable": true
     },
     {
       "column": "attempt",
@@ -257,7 +265,8 @@
           "value": "cancelled",
           "labelKey": "options.job.runs.status.cancelled"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "created_at",
@@ -267,7 +276,8 @@
       "readOnly": true,
       "system": true,
       "filter": false,
-      "labelKey": "fields.job.runs.created_at"
+      "labelKey": "fields.job.runs.created_at",
+      "sortable": true
     },
     {
       "column": "created_by",

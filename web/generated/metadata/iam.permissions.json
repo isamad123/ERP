@@ -26,6 +26,14 @@
     "isSensitive",
     "retiredAt"
   ],
+  "search": [
+    "code"
+  ],
+  "constraints": {
+    "ck_permissions_description_i18n_object": "descriptionI18n",
+    "ck_permissions_module_id_code": "moduleId",
+    "uq_permissions_code": "code"
+  },
   "fields": [
     {
       "column": "id",
@@ -45,7 +53,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.iam.permissions.code"
+      "labelKey": "fields.iam.permissions.code",
+      "sortable": true
     },
     {
       "column": "module_id",

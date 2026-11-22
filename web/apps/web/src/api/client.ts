@@ -20,6 +20,8 @@ export class ApiProblem extends Error {
     readonly fieldErrors: Readonly<Record<string, readonly string[]>>,
     /** `X-Correlation-Id`, shown as "Reference" for support. */
     readonly reference: string | null,
+    /** `detail`: for a refused save, the database rule (constraint) that refused it, e.g. `ck_branches_one_per_company` (S1.12c). */
+    readonly detail: string | null = null,
   ) {
     super(key);
     this.name = 'ApiProblem';
@@ -46,7 +48,7 @@ const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve
 /** Reads a problem answer into an ApiProblem (never throws while reading). */
 export async function problemOf(response: Response): Promise<ApiProblem> {
   const reference = response.headers.get('X-Correlation-Id');
-  let body: { title?: unknown; errors?: unknown } = {};
+  let body: { title?: unknown; errors?: unknown; detail?: unknown } = {};
   try {
     body = (await response.json()) as typeof body;
   } catch {
@@ -57,11 +59,13 @@ export async function problemOf(response: Response): Promise<ApiProblem> {
   const fieldErrors = body.errors && typeof body.errors === 'object' && !Array.isArray(body.errors)
     ? Object.fromEntries(Object.entries(body.errors as Record<string, unknown>).map(([k, v]) => [k, Array.isArray(v) ? v.map(String) : [String(v)]]))
     : {};
-  return new ApiProblem(response.status, title, errors, fieldErrors, reference);
+  return new ApiProblem(response.status, title, errors, fieldErrors, reference, typeof body.detail === 'string' ? body.detail : null);
 }
 
 export interface SendOptions {
   body?: unknown;
+  /** A body already written as JSON (the list and form engine writes exact decimals itself, S1.12c). */
+  rawBody?: string;
   /** Send the access token and refresh once on 401 (false for the anonymous sign-in steps). */
   auth?: boolean;
   signal?: AbortSignal;
@@ -72,14 +76,14 @@ export async function send(method: string, path: string, options: SendOptions = 
   const auth = options.auth ?? true;
   const attempt = async (): Promise<Response> => {
     const headers: Record<string, string> = { [CLIENT_HEADER]: CLIENT_WEB, Accept: 'application/json' };
-    if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+    if (options.body !== undefined || options.rawBody !== undefined) headers['Content-Type'] = 'application/json';
     const token = auth ? tokens?.accessToken() : null;
     if (token) headers.Authorization = `Bearer ${token}`;
     try {
       return await fetch(path, {
         method,
         headers,
-        body: options.body === undefined ? null : JSON.stringify(options.body),
+        body: options.rawBody ?? (options.body === undefined ? null : JSON.stringify(options.body)),
         credentials: 'same-origin',
         cache: 'no-store',
         signal: options.signal ?? null,
@@ -126,4 +130,14 @@ export function configureGeneratedClient(): void {
     body: typeof init.body === 'string' ? JSON.parse(init.body) : undefined,
     ...(init.signal ? { signal: init.signal } : {}),
   }));
+}
+
+/**
+ * The list and form engine's way to the server (S1.12c): the same path as every other request; the engine reads the
+ * answer's text itself (exact decimals) and receives problem answers as ApiProblem.
+ */
+export async function sendText(method: string, path: string, body?: string, signal?: AbortSignal): Promise<string> {
+  const response = await send(method, path, { ...(body === undefined ? {} : { rawBody: body }), ...(signal ? { signal } : {}) });
+  if (!response.ok) throw await problemOf(response);
+  return response.status === 204 ? '' : await response.text();
 }

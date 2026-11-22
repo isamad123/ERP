@@ -324,11 +324,16 @@ test('FR-ADM-USR-24 remember this device skips the second factor in this browser
 
     // A password reset ends the trust.
     await signOut(page);
+    // An earlier scenario already sent Alice a reset link; the new e-mail is queued just after the answer, so wait for it
+    // (S1.12c: reading the latest e-mail at once could pick the earlier, already used link).
+    const earlier = await server.mail('identity.password_reset', alice.username).then((m) => m.link).catch(() => null);
     await page.goto('/forgot-password');
     await field(page, 'Username or e-mail address').fill(alice.username);
     await page.getByRole('button', { name: 'Send reset link' }).click();
     await expect(page.getByText(/If an account exists/)).toBeVisible();
-    await page.goto((await server.mail('identity.password_reset', alice.username)).link!);
+    let link: string | undefined;
+    await expect.poll(async () => { link = (await server.mail('identity.password_reset', alice.username).catch(() => ({ link: undefined }))).link; return link !== undefined && link !== earlier; }).toBe(true);
+    await page.goto(link!);
     const third = 'Third-Harbour-73'; // a password not used before (the history rule refuses recent ones)
     await field(page, 'New password').fill(third);
     await field(page, 'Repeat the new password').fill(third);

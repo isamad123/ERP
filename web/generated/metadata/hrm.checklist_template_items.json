@@ -36,6 +36,13 @@
     "dueOffsetDays",
     "isClearance"
   ],
+  "search": [],
+  "constraints": {
+    "ck_checklist_template_items_owner_kind": "ownerKind",
+    "ck_checklist_template_items_title_i18n_object": "titleI18n",
+    "fk_checklist_template_items_owner_role_id": "ownerRoleId",
+    "fk_checklist_template_items_template_id": "templateId"
+  },
   "fields": [
     {
       "column": "id",

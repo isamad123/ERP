@@ -53,8 +53,11 @@ internal sealed class SetupTaskRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        return await Sorts.PageAsync(Context.Set<global::Erp.Kernel.Domain.Generated.Cfg.SetupTask>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Cfg.SetupTask> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Cfg.SetupTask>().Key("moduleId", e => e.ModuleId).Key("taskKey", e => e.TaskKey);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.SetupTask>> FindByModuleIdAndTaskKeyAndCompanyIdAsync(string moduleId, string taskKey, global::System.Guid? companyId, global::System.Threading.CancellationToken cancellationToken)
     {

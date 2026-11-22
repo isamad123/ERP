@@ -45,6 +45,11 @@ internal sealed class SubscriptionRepository(
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
         var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var pattern = global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Pattern(filter.Search);
+            query = query.Where(e => global::Microsoft.EntityFrameworkCore.EF.Functions.ILike(e.Name!, pattern, global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Escape));
+        }
         return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 }

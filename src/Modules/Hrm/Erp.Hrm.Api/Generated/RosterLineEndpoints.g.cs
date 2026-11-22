@@ -57,6 +57,9 @@ public sealed class RosterLineListQuery
     public global::System.Guid? EmploymentId { get; init; }
 
     public global::System.Guid? ShiftId { get; init; }
+
+    /// <summary>Sort key: workDate; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.roster_lines: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -77,7 +80,7 @@ internal static class RosterLineEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.roster_lines.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.RosterLineFilter { CompanyId = query.CompanyId, RosterId = query.RosterId, EmploymentId = query.EmploymentId, ShiftId = query.ShiftId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.RosterLineFilter { CompanyId = query.CompanyId, RosterId = query.RosterId, EmploymentId = query.EmploymentId, ShiftId = query.ShiftId, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.RosterLineAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

@@ -6,11 +6,13 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.provident_fund_ledger (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.provident_fund_ledger (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record ProvidentFundLedgerFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? AccountId { get; init; }
+    /// <summary>Sort key: entryDate; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.provident_fund_ledger.</summary>

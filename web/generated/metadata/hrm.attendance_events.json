@@ -39,6 +39,14 @@
     "deviceId",
     "receivedAt"
   ],
+  "search": [],
+  "constraints": {
+    "ck_attendance_events_direction": "direction",
+    "ck_attendance_events_source": "source",
+    "fk_attendance_events_company_id": "companyId",
+    "fk_attendance_events_device_id": "deviceId",
+    "fk_attendance_events_employment_id": "employmentId"
+  },
   "fields": [
     {
       "column": "id",
@@ -80,7 +88,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.attendance_events.event_date"
+      "labelKey": "fields.hrm.attendance_events.event_date",
+      "sortable": true
     },
     {
       "column": "event_at",
@@ -185,7 +194,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.attendance_events.idempotency_key"
+      "labelKey": "fields.hrm.attendance_events.idempotency_key",
+      "sortable": true
     },
     {
       "column": "ip_address",

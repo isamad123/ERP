@@ -61,6 +61,9 @@ public sealed class ReviewAssignmentListQuery
     public global::System.Guid? FormResponseId { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Sort key: reviewType; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.review_assignments: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -81,7 +84,7 @@ internal static class ReviewAssignmentEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.review_assignments.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ReviewAssignmentFilter { CompanyId = query.CompanyId, ParticipantId = query.ParticipantId, ReviewerEmploymentId = query.ReviewerEmploymentId, FormResponseId = query.FormResponseId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ReviewAssignmentFilter { CompanyId = query.CompanyId, ParticipantId = query.ParticipantId, ReviewerEmploymentId = query.ReviewerEmploymentId, FormResponseId = query.FormResponseId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ReviewAssignmentAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

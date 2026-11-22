@@ -43,6 +43,15 @@
     "lastSeenAt",
     "lastSyncAt"
   ],
+  "search": [],
+  "constraints": {
+    "ck_attendance_devices_status": "status",
+    "fk_attendance_devices_company_id": "companyId",
+    "fk_attendance_devices_connector_id": "connectorId",
+    "fk_attendance_devices_location_id": "locationId",
+    "uq_attendance_devices_company_id_id": "id",
+    "uq_attendance_devices_company_id_serial_no": "serialNo"
+  },
   "fields": [
     {
       "column": "id",
@@ -95,7 +104,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.attendance_devices.serial_no"
+      "labelKey": "fields.hrm.attendance_devices.serial_no",
+      "sortable": true
     },
     {
       "column": "model",

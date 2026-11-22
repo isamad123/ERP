@@ -39,6 +39,18 @@
     "chequeNo",
     "accountTitle"
   ],
+  "search": [],
+  "constraints": {
+    "ck_payment_lines_status": "status",
+    "fk_payment_lines_bank_account_id": "bankAccountId",
+    "fk_payment_lines_bank_id": "bankId",
+    "fk_payment_lines_batch_id": "batchId",
+    "fk_payment_lines_company_id": "companyId",
+    "fk_payment_lines_reissued_in_line_id": "reissuedInLineId",
+    "fk_payment_lines_result_id": "resultId",
+    "fk_payment_lines_source_run_id": "sourceRunId",
+    "uq_payment_lines_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

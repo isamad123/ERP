@@ -49,8 +49,11 @@ internal sealed class ChangeLogRepository(
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
         var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        return await Sorts.PageAsync(Context.Set<global::Erp.Kernel.Domain.Generated.Aud.ChangeLog>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Aud.ChangeLog> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Aud.ChangeLog>().Key("occurredAt", e => e.OccurredAt).Key("entityType", e => e.EntityType);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Aud.ChangeLog>> FindByEntityTypeAndEntityIdAndOccurredAtAsync(string entityType, global::System.Guid entityId, global::System.DateTimeOffset occurredAt, global::System.Threading.CancellationToken cancellationToken)
     {

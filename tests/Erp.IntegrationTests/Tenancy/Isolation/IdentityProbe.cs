@@ -30,7 +30,10 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
 
     private sealed record Material(
         Guid UserId, string Username, Guid SessionId, string Refresh, string MfaChallenge, string PasswordChange, string MfaEnrolment,
-        string Activation, string RecoveryCode, Guid PendingDeviceId, string PasswordReset, Guid TrustedDeviceId, string TrustedDeviceToken);
+        string Activation, string RecoveryCode, Guid PendingDeviceId, string PasswordReset, Guid TrustedDeviceId, string TrustedDeviceToken, Guid SavedViewId);
+
+    /// <summary>The list of the saved views every probe customer has one of (slice S1.12c, cfg.saved_views).</summary>
+    private const string ViewList = "org.branches";
 
     public async Task<IReadOnlyList<string>> RunAsync(ApiEndpoint endpoint, CancellationToken ct)
     {
@@ -50,7 +53,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             return failures;
         }
 
-        var markers = new[] { a.UserId.ToString(), a.SessionId.ToString(), a.PendingDeviceId.ToString(), sessionA.Value.SessionId.ToString(), a.Refresh, a.MfaChallenge, a.Activation, a.PasswordReset, a.TrustedDeviceId.ToString(), a.TrustedDeviceToken };
+        var markers = new[] { a.UserId.ToString(), a.SessionId.ToString(), a.PendingDeviceId.ToString(), sessionA.Value.SessionId.ToString(), a.Refresh, a.MfaChallenge, a.Activation, a.PasswordReset, a.TrustedDeviceId.ToString(), a.TrustedDeviceToken, a.SavedViewId.ToString() };
         var method = new HttpMethod(endpoint.Method);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
 
@@ -170,6 +173,9 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
         "/api/iam/me/mfa-devices/{id:guid}/confirm" => (pattern.Replace("{id:guid}", a.PendingDeviceId.ToString(), StringComparison.Ordinal), Json(new { code = "123456" }), HttpStatusCode.BadRequest, tokenB),
         "/api/iam/me/password" => (pattern, Json(new { currentPassword = Password, newPassword = "Probe-New-Pass-22" }), null, tokenB),
         "/api/iam/me/trusted-devices/{id:guid}" => (pattern.Replace("{id:guid}", a.TrustedDeviceId.ToString(), StringComparison.Ordinal), null, HttpStatusCode.NotFound, tokenB),
+        // Saved views (S1.12c): B cannot change or delete A's view (404), and B's own list and new view never show A's.
+        "/api/cfg/saved-views/{id:guid}" => (pattern.Replace("{id:guid}", a.SavedViewId.ToString(), StringComparison.Ordinal) + "?rowVersion=1", ViewBody(), HttpStatusCode.NotFound, tokenB),
+        "/api/cfg/saved-views/" => (pattern + "?list=" + ViewList, ViewBody(), null, tokenB),
         _ when !pattern.Contains('{', StringComparison.Ordinal) => (pattern, Json(new { currentPassword = Password, label = "probe" }), null, tokenB),
         _ => throw new InvalidOperationException($"No probe target for self-service endpoint {pattern}; extend IdentityProbe."),
     };
@@ -211,11 +217,18 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
                 return (int)reply.Status is >= 200 and < 300 ? null : $"A's own material was refused on A's host ({(int)reply.Status}). {Short(reply.Body)}";
             case EndpointKind.IdentitySelf:
                 var path = endpoint.Pattern
+                    .Replace("/saved-views/{id:guid}", "/saved-views/" + a.SavedViewId + "?rowVersion=1", StringComparison.Ordinal)
                     .Replace("/sessions/{id:guid}", "/sessions/" + a.SessionId, StringComparison.Ordinal)
                     .Replace("/trusted-devices/{id:guid}", "/trusted-devices/" + a.TrustedDeviceId, StringComparison.Ordinal)
                     .Replace("{id:guid}", a.PendingDeviceId.ToString(), StringComparison.Ordinal);
+                if (endpoint.Pattern == "/api/cfg/saved-views/")
+                {
+                    path += "?list=" + ViewList;
+                }
+
                 string? body = endpoint.Pattern switch
                 {
+                    "/api/cfg/saved-views/" or "/api/cfg/saved-views/{id:guid}" => method == HttpMethod.Delete ? null : ViewBody(),
                     "/api/iam/me/password" => Json(new { currentPassword = Password, newPassword = "Probe-Own-Pass-33" }),
                     "/api/iam/me/mfa-devices/{id:guid}/confirm" => Json(new { code = "123456" }),
                     _ when method == HttpMethod.Get || method == HttpMethod.Delete => null,
@@ -225,6 +238,11 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
                 if (endpoint.Pattern == "/api/iam/me/sessions" && !reply.Body.Contains(session.SessionId.ToString(), StringComparison.Ordinal))
                 {
                     return $"A's own session list does not contain A's session. {Short(reply.Body)}";
+                }
+
+                if (endpoint.Key == "GET /api/cfg/saved-views/" && !reply.Body.Contains(a.SavedViewId.ToString(), StringComparison.Ordinal))
+                {
+                    return $"A's own saved views do not contain A's view. {Short(reply.Body)}";
                 }
 
                 // The confirm call is found but refused for a wrong code (400); every other call is served.
@@ -292,7 +310,13 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             insert into iam.trusted_devices (id, user_id, token_hash, label, expires_at, created_at, created_by, updated_at, updated_by)
             values ($1, $2, $3, 'Chrome', now() + interval '30 days', now(), $2, now(), $2)
             """, ct, trusted, user, OpaqueTokens.Hash(trustedToken));
-        return new Material(user, username, session, refresh, tokens["mfa_challenge"], tokens["password_change"], tokens["mfa_enrolment"], tokens["activation"], recovery, device, tokens["password_reset"], trusted, trustedToken);
+        // A saved list view (slice S1.12c, cfg.saved_views).
+        var view = Guid.CreateVersion7();
+        await ExecAsync(c, """
+            insert into cfg.saved_views (id, user_id, list_key, name, definition, created_at, created_by, updated_at, updated_by)
+            values ($1, $2, $3, 'probe view', '{"search": "probe"}'::jsonb, now(), $2, now(), $2)
+            """, ct, view, user, ViewList);
+        return new Material(user, username, session, refresh, tokens["mfa_challenge"], tokens["password_change"], tokens["mfa_enrolment"], tokens["activation"], recovery, device, tokens["password_reset"], trusted, trustedToken, view);
     }
 
     /// <summary>The code of the latest identity e-mail of the event, decrypted with the customer's field key as the sender does (S1.11b2).</summary>
@@ -339,7 +363,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
     private async Task<Reply> SendAsync(string host, string? token, HttpMethod method, string pathAndQuery, string? body, bool hints, CancellationToken ct, string? cookies = null)
     {
         using var client = TenancyFixture.Client(app, host, token);
-        var target = hints ? pathAndQuery + "?tenant=" + fx.CodeA + "&tenantCode=" + fx.CodeA : pathAndQuery;
+        var target = hints ? pathAndQuery + (pathAndQuery.Contains('?', StringComparison.Ordinal) ? "&" : "?") + "tenant=" + fx.CodeA + "&tenantCode=" + fx.CodeA : pathAndQuery;
         using var request = new HttpRequestMessage(method, target);
         if (body is not null)
         {
@@ -378,6 +402,9 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
     }
 
     private static string Json(object value) => JsonSerializer.Serialize(value, JsonSerializerOptions.Web);
+
+    /// <summary>A saved view to create or change (S1.12c): the list key is read on create only, the row version on change only.</summary>
+    private static string ViewBody() => Json(new { listKey = ViewList, name = "probe " + Guid.NewGuid().ToString("N")[..8], definition = new { search = "x" }, rowVersion = 1 });
 
     private static string Short(string body) => body.Length <= 300 ? body : body[..300] + "…";
 

@@ -4,10 +4,12 @@
   "description": "Message catalogues (English, Urdu), server texts, pseudo-locale and shared formatting (slice S1.12a, Build item 4).",
   "type": "module",
   "exports": {
-    ".": "./src/index.tsx"
+    ".": "./src/index.tsx",
+    "./labels/*": "./labels/*"
   },
   "dependencies": {
     "react": "19.3.1",
     "react-intl": "12.1.6"
-  }
+  },
+  "sideEffects": false
 }

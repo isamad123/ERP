@@ -23,6 +23,10 @@
     "level",
     "message"
   ],
+  "search": [],
+  "constraints": {
+    "ck_run_logs_level": "level"
+  },
   "fields": [
     {
       "column": "id",
@@ -86,7 +90,8 @@
       "readOnly": true,
       "system": true,
       "filter": false,
-      "labelKey": "fields.job.run_logs.created_at"
+      "labelKey": "fields.job.run_logs.created_at",
+      "sortable": true
     },
     {
       "column": "created_by",

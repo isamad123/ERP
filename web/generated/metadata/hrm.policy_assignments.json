@@ -36,6 +36,11 @@
     "validFrom",
     "validTo"
   ],
+  "search": [],
+  "constraints": {
+    "fk_policy_assignments_company_id": "companyId",
+    "fk_policy_assignments_policy_id": "policyId"
+  },
   "fields": [
     {
       "column": "id",
@@ -77,7 +82,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.policy_assignments.precedence"
+      "labelKey": "fields.hrm.policy_assignments.precedence",
+      "sortable": true
     },
     {
       "column": "rule",

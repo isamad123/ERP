@@ -6,7 +6,7 @@
 
 namespace Erp.Kernel.Application.Generated.Iam;
 
-/// <summary>Equality filters for listing iam.mfa_devices (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing iam.mfa_devices (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record MfaDeviceFilter
 {
     public global::System.Guid? UserId { get; init; }

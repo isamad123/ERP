@@ -37,6 +37,14 @@
     "currencyCode",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_parallel_runs_status": "status",
+    "fk_parallel_runs_company_id": "companyId",
+    "fk_parallel_runs_import_batch_id": "importBatchId",
+    "fk_parallel_runs_pay_run_id": "payRunId",
+    "uq_parallel_runs_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

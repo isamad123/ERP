@@ -6,6 +6,8 @@
   "exports": {
     "./api": "./api/index.ts",
     "./api/*": "./api/*.ts",
-    "./metadata/*": "./metadata/*"
+    "./metadata/*": "./metadata/*",
+    "./labels/*": "./labels/*",
+    "./validation/*": "./validation/*"
   }
 }

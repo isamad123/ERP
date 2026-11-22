@@ -31,6 +31,9 @@ public sealed class SettingValueHistoryListQuery
     public global::System.Guid? After { get; init; }
 
     public int? Limit { get; init; }
+
+    /// <summary>Sort key: settingKey, createdAt; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of cfg.setting_value_history: read. Answers pass through field security (S1.06).</summary>
@@ -49,7 +52,7 @@ internal static class SettingValueHistoryEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.setting_value_history.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.SettingValueHistoryFilter {  }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.SettingValueHistoryFilter { Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.SettingValueHistoryAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

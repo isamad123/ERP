@@ -32,6 +32,17 @@
     "source",
     "activeVersionId"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_templates_code_code": "code",
+    "ck_templates_kind": "kind",
+    "ck_templates_name_i18n_object": "nameI18n",
+    "ck_templates_source": "source",
+    "fk_templates_company_id": "companyId"
+  },
   "fields": [
     {
       "column": "id",
@@ -53,7 +64,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.doc.templates.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -138,7 +150,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.doc.templates.language"
+      "labelKey": "fields.doc.templates.language",
+      "sortable": true
     },
     {
       "column": "source",
@@ -178,7 +191,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.doc.templates.is_active"
     },
     {

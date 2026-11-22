@@ -29,6 +29,12 @@
     "validFrom",
     "validTo"
   ],
+  "search": [],
+  "constraints": {
+    "fk_user_group_roles_company_id": "companyId",
+    "fk_user_group_roles_group_id": "groupId",
+    "fk_user_group_roles_role_id": "roleId"
+  },
   "fields": [
     {
       "column": "id",

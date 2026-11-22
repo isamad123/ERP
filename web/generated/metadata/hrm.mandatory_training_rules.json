@@ -35,6 +35,13 @@
     "recurrenceMonths",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_mandatory_training_rules_status": "status",
+    "fk_mandatory_training_rules_company_id": "companyId",
+    "fk_mandatory_training_rules_course_id": "courseId",
+    "uq_mandatory_training_rules_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

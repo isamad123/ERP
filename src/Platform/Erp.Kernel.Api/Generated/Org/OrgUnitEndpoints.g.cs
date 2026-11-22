@@ -62,6 +62,14 @@ public sealed class OrgUnitListQuery
     public global::System.Guid? UnitTypeId { get; init; }
 
     public global::System.Guid? LocationId { get; init; }
+
+    public bool? IsActive { get; init; }
+
+    /// <summary>Sort key: code; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+
+    /// <summary>Case-insensitive text found in code, nameI18n.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated endpoints of org.org_units: read, create, update, delete. Answers pass through field security (S1.06).</summary>
@@ -83,7 +91,7 @@ internal static class OrgUnitEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "org.org_units.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Org.OrgUnitFilter { CompanyId = query.CompanyId, UnitTypeId = query.UnitTypeId, LocationId = query.LocationId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Org.OrgUnitFilter { CompanyId = query.CompanyId, UnitTypeId = query.UnitTypeId, LocationId = query.LocationId, IsActive = query.IsActive, Sort = query.Sort, Search = query.Search }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Org.OrgUnitAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

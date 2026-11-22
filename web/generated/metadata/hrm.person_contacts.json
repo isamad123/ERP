@@ -34,6 +34,11 @@
     "value",
     "isPrimary"
   ],
+  "search": [],
+  "constraints": {
+    "ck_person_contacts_kind": "kind",
+    "fk_person_contacts_person_id": "personId"
+  },
   "fields": [
     {
       "column": "id",

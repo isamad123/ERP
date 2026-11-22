@@ -39,6 +39,14 @@
     "policyNumber",
     "validFrom"
   ],
+  "search": [],
+  "constraints": {
+    "ck_benefit_enrollments_coverage_level_code": "coverageLevel",
+    "fk_benefit_enrollments_company_id": "companyId",
+    "fk_benefit_enrollments_employment_id": "employmentId",
+    "fk_benefit_enrollments_plan_id": "planId",
+    "uq_benefit_enrollments_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

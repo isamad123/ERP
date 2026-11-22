@@ -6,11 +6,13 @@
 
 namespace Erp.Kernel.Application.Generated.Itg;
 
-/// <summary>Equality filters for listing itg.accounting_events (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing itg.accounting_events (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record AccountingEventFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? SupersedesEventId { get; init; }
+    /// <summary>Sort key: sourceModule, postingVersion; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of itg.accounting_events.</summary>

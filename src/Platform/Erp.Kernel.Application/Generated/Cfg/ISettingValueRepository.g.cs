@@ -6,10 +6,12 @@
 
 namespace Erp.Kernel.Application.Generated.Cfg;
 
-/// <summary>Equality filters for listing cfg.setting_values (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing cfg.setting_values (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record SettingValueFilter
 {
     public string? SettingKey { get; init; }
+    /// <summary>Sort key: settingKey, layer; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of cfg.setting_values.</summary>

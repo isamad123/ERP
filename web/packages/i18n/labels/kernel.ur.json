@@ -1,0 +1,9 @@
+{
+  "_note": "Urdu labels of the kernel tables on screens (slice S1.12c Build item 15, ruling Q11). Kept by hand; drafts for a native speaker's review before go-live (R-062). English comes from web/generated/labels/kernel.en.json.",
+  "entities.org.branches": "برانچیں",
+  "entities.org.branches.one": "برانچ",
+  "fields.org.branches.code": "کوڈ",
+  "fields.org.branches.company_id": "کمپنی",
+  "fields.org.branches.name_i18n": "نام",
+  "fields.org.branches.is_active": "فعال"
+}

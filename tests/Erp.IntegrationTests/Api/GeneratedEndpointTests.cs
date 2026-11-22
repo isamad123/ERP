@@ -233,6 +233,80 @@ public sealed class GeneratedEndpointTests : IAsyncLifetime
         Assert.Equal(6, seen.Count);
     }
 
+    /// <summary>S1.12c Build item 14 (FR-ADM-NAV-02): sorted pages on an indexed column keep the keyset cursor exact.</summary>
+    [Fact]
+    [Trait("Requirement", "FR-ADM-NAV-02")]
+    public async Task S112c_list_sorts_on_an_indexed_column_and_pages_without_repeats_or_gaps()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        _permissions.GrantAll("org.branches");
+        var companyId = await CreateCompanyAsync(ct);
+        // Codes in a mixed case and an order unlike creation order; the sort is without case (lower(code) is indexed).
+        string[] codes = ["delta", "Alpha", "charlie", "Bravo", "echo", "alpha2"];
+        foreach (var code in codes)
+        {
+            var response = await Client.PostAsJsonAsync("/api/org/branches", new { companyId, code, nameI18n = new { en = "Branch " + code } }, ct);
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        }
+
+        async Task<List<string>> ReadAllAsync(string sort)
+        {
+            var seen = new List<string>();
+            string? after = null;
+            do
+            {
+                var page = await Client.GetFromJsonAsync<JsonElement>($"/api/org/branches?companyId={companyId}&limit=2&sort={sort}" + (after is null ? string.Empty : "&after=" + after), Json, ct);
+                seen.AddRange(page.GetProperty("items").EnumerateArray().Select(x => x.GetProperty("code").GetString()!));
+                after = page.GetProperty("next").ValueKind == JsonValueKind.Null ? null : page.GetProperty("next").GetString();
+            }
+            while (after is not null);
+            return seen;
+        }
+
+        // The company's default branch (rule SC-2) is in the list too; the unsorted read (by id) names every row once.
+        var expected = await ReadAllAsync(string.Empty);
+        Assert.Equal(codes.Length + 1, expected.Count);
+        Assert.Subset(expected.ToHashSet(StringComparer.Ordinal), codes.ToHashSet(StringComparer.Ordinal));
+        var ascending = await ReadAllAsync("code");
+        Assert.Equal(expected.OrderBy(c => c.ToLowerInvariant(), StringComparer.Ordinal), ascending);
+        var descending = await ReadAllAsync("-code");
+        Assert.Equal(expected.OrderByDescending(c => c.ToLowerInvariant(), StringComparer.Ordinal), descending);
+
+        var unknown = await Client.GetAsync($"/api/org/branches?sort=nameI18n", ct);
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+        Assert.Equal("errors.data.invalid_sort", (await unknown.Content.ReadFromJsonAsync<JsonElement>(Json, ct)).GetProperty("title").GetString());
+        var cursor = await Client.GetAsync($"/api/org/branches?sort=code&after={Guid.CreateVersion7()}", ct);
+        Assert.Equal(HttpStatusCode.BadRequest, cursor.StatusCode);
+    }
+
+    /// <summary>S1.12c Build item 14: the search finds text in the code and in either language of the name, without case.</summary>
+    [Fact]
+    [Trait("Requirement", "FR-ADM-NAV-02")]
+    public async Task S112c_list_searches_code_and_both_name_languages_and_escapes_wildcards()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        _permissions.GrantAll("org.branches");
+        var companyId = await CreateCompanyAsync(ct);
+        foreach (var (code, en, ur) in new[] { ("KHI-01", "Karachi Head Office", "کراچی"), ("LHE", "Lahore", "لاہور"), ("ISB_2", "Islamabad 100%", "اسلام آباد") })
+        {
+            var response = await Client.PostAsJsonAsync("/api/org/branches", new { companyId, code, nameI18n = new { en, ur } }, ct);
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        }
+
+        async Task<List<string>> SearchAsync(string text)
+        {
+            var page = await Client.GetFromJsonAsync<JsonElement>($"/api/org/branches?companyId={companyId}&sort=code&search={Uri.EscapeDataString(text)}", Json, ct);
+            return page.GetProperty("items").EnumerateArray().Select(x => x.GetProperty("code").GetString()!).ToList();
+        }
+
+        Assert.Equal(["KHI-01"], await SearchAsync("khi"));
+        Assert.Equal(["KHI-01"], await SearchAsync("head off"));
+        Assert.Equal(["LHE"], await SearchAsync("لاہور"));
+        Assert.Equal(["ISB_2"], await SearchAsync("100%")); // % is text, not a wildcard
+        Assert.Equal(["ISB_2"], await SearchAsync("_")); // so is _
+        Assert.Empty(await SearchAsync("quetta"));
+    }
+
     private async Task<Guid> CreateCompanyAsync(CancellationToken ct)
     {
         await using var connection = new NpgsqlConnection(_database!.ConnectionString);

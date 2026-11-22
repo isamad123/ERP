@@ -41,6 +41,17 @@
     "workflowInstanceId",
     "letterDocumentId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_employment_events_kind": "kind",
+    "ck_employment_events_reason_code_code": "reasonCode",
+    "ck_employment_events_status": "status",
+    "fk_employment_events_company_id": "companyId",
+    "fk_employment_events_employment_id": "employmentId",
+    "fk_employment_events_letter_document_id": "letterDocumentId",
+    "fk_employment_events_workflow_instance_id": "workflowInstanceId",
+    "uq_employment_events_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -157,7 +168,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.employment_events.effective_date"
+      "labelKey": "fields.hrm.employment_events.effective_date",
+      "sortable": true
     },
     {
       "column": "notes",

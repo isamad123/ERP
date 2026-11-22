@@ -34,6 +34,11 @@
     "declaredAmount",
     "verifiedAmount"
   ],
+  "search": [],
+  "constraints": {
+    "ck_tax_declaration_lines_kind_code": "kind",
+    "fk_tax_declaration_lines_declaration_id": "declarationId"
+  },
   "fields": [
     {
       "column": "id",

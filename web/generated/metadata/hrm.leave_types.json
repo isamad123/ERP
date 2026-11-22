@@ -43,6 +43,20 @@
     "requiresDocument",
     "isCompOff"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_leave_types_code_code": "code",
+    "ck_leave_types_counting": "counting",
+    "ck_leave_types_name_i18n_object": "nameI18n",
+    "ck_leave_types_source": "source",
+    "ck_leave_types_unit": "unit",
+    "fk_leave_types_company_id": "companyId",
+    "uq_leave_types_company_id_code": "code",
+    "uq_leave_types_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -74,7 +88,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.leave_types.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -201,7 +216,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.hrm.leave_types.is_active"
     },
     {

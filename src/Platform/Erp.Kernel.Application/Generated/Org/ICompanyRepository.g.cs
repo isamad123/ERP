@@ -6,13 +6,18 @@
 
 namespace Erp.Kernel.Application.Generated.Org;
 
-/// <summary>Equality filters for listing org.companies (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing org.companies (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record CompanyFilter
 {
     public string? BaseCurrencyCode { get; init; }
     public global::System.Guid? HolidayCalendarId { get; init; }
     public global::System.Guid? LogoFileId { get; init; }
     public string? Status { get; init; }
+    public bool? IsActive { get; init; }
+    /// <summary>Sort key: code, baseCurrencyCode; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+    /// <summary>Case-insensitive text found in code, nameI18n.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated repository of org.companies.</summary>

@@ -39,6 +39,15 @@
     "evidenceFileId",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_compliance_tasks_status": "status",
+    "fk_compliance_tasks_company_id": "companyId",
+    "fk_compliance_tasks_evidence_file_id": "evidenceFileId",
+    "fk_compliance_tasks_obligation_id": "obligationId",
+    "fk_compliance_tasks_owner_user_id": "ownerUserId",
+    "uq_compliance_tasks_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -80,7 +89,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.compliance_tasks.period_label"
+      "labelKey": "fields.hrm.compliance_tasks.period_label",
+      "sortable": true
     },
     {
       "column": "due_date",

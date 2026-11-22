@@ -44,6 +44,19 @@
     "coreStart",
     "coreEnd"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_shifts_code_code": "code",
+    "ck_shifts_name_i18n_object": "nameI18n",
+    "ck_shifts_shift_type": "shiftType",
+    "fk_shifts_company_id": "companyId",
+    "fk_shifts_policy_id": "policyId",
+    "uq_shifts_company_id_code": "code",
+    "uq_shifts_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -75,7 +88,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.shifts.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -211,7 +225,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.hrm.shifts.is_active"
     },
     {

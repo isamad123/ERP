@@ -35,6 +35,11 @@
     "validFrom",
     "validTo"
   ],
+  "search": [],
+  "constraints": {
+    "ck_policy_versions_status": "status",
+    "fk_policy_versions_policy_id": "policyId"
+  },
   "fields": [
     {
       "column": "id",
@@ -65,7 +70,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.policy_versions.version"
+      "labelKey": "fields.hrm.policy_versions.version",
+      "sortable": true
     },
     {
       "column": "parameters",

@@ -37,6 +37,18 @@
     "status",
     "isActive"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_connectors_code_code": "code",
+    "ck_connectors_kind": "kind",
+    "ck_connectors_name_i18n_object": "nameI18n",
+    "ck_connectors_provider_code": "provider",
+    "ck_connectors_status": "status",
+    "uq_connectors_code": "code"
+  },
   "fields": [
     {
       "column": "id",
@@ -57,7 +69,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.itg.connectors.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -165,7 +178,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.itg.connectors.is_active"
     },
     {

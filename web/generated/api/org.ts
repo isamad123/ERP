@@ -34,6 +34,10 @@ export interface BranchListQuery
     after?: string;
     limit?: number;
     companyId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const branches =
@@ -93,6 +97,10 @@ export interface CompanyListQuery
     holidayCalendarId?: string;
     logoFileId?: string;
     status?: 'active' | 'inactive';
+    isActive?: boolean;
+    /** code, baseCurrencyCode; a leading minus sorts descending. */
+    sort?: 'code' | '-code' | 'baseCurrencyCode' | '-baseCurrencyCode';
+    search?: string;
 }
 
 export const companies =
@@ -213,6 +221,10 @@ export interface LocationListQuery
     companyId?: string;
     branchId?: string;
     holidayCalendarId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const locations =
@@ -251,6 +263,10 @@ export interface OrgHierarchyListQuery
 {
     after?: string;
     limit?: number;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const orgHierarchies =
@@ -330,6 +346,10 @@ export interface OrgUnitTypeListQuery
 {
     after?: string;
     limit?: number;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const orgUnitTypes =
@@ -383,6 +403,10 @@ export interface OrgUnitListQuery
     companyId?: string;
     unitTypeId?: string;
     locationId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const orgUnits =

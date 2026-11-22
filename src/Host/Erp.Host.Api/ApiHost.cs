@@ -22,6 +22,7 @@ using Erp.Kernel.Api.Jobs;
 using Erp.Kernel.Api.Documents;
 using Erp.Kernel.Api.Notifications;
 using Erp.Kernel.Infrastructure.Documents;
+using Erp.Kernel.Api.Views;
 using Erp.Kernel.Api.Workflow;
 using Erp.Kernel.Infrastructure.Jobs;
 using Erp.Kernel.Infrastructure.Notifications;
@@ -136,6 +137,9 @@ public static class ApiHost
         services.AddScoped<ILicenceService, LicenceService>();
         // Session context of the web shell (S1.12b, S1.12 ruling Q9).
         services.AddScoped<ISessionContextService, SessionContextService>();
+        // Saved list views and label overrides of the web lists and forms (S1.12c, S1.12 rulings Q11 and Q12).
+        services.AddScoped<Erp.Kernel.Contracts.Views.ISavedViewService, Erp.Kernel.Infrastructure.Views.SavedViewService>();
+        services.AddScoped<Erp.Kernel.Contracts.Views.ILabelOverrideService, Erp.Kernel.Infrastructure.Views.LabelOverrideService>();
         // Limits (S1.09b, ruling Q7): one guard; the kernel counts named users, concurrent users and companies.
         services.AddSingleton<ILimitCounter, NamedUserCounter>();
         services.AddSingleton<ILimitCounter, ConcurrentUserCounter>();
@@ -209,6 +213,7 @@ public static class ApiHost
         api.MapSettingsEndpoints();
         api.MapLicenceEndpoints();
         api.MapSessionContextEndpoints();
+        api.MapViewEndpoints();
         api.MapWorkflowEndpoints();
         api.MapJobEndpoints();
         api.MapNotificationEndpoints();

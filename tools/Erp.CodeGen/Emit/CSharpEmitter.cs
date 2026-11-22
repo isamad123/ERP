@@ -61,11 +61,68 @@ public static class CSharpEmitter
 
     public static IReadOnlyList<Column> ResponseColumns(Table t) => t.Columns.Where(c => !c.IsSensitive).ToList();
 
-    /// <summary>Equality filters on list endpoints: foreign-key columns and status.</summary>
+    /// <summary>Equality filters on list endpoints: foreign-key columns, status and (S1.12c, the list engine's "Active" filter) is_active.</summary>
     public static IReadOnlyList<Column> FilterColumns(Table t)
     {
-        var names = t.ForeignKeys.SelectMany(f => f.Columns).Append("status").ToHashSet(StringComparer.Ordinal);
+        var names = t.ForeignKeys.SelectMany(f => f.Columns).Append("status").Append("is_active").ToHashSet(StringComparer.Ordinal);
         return t.Columns.Where(c => names.Contains(c.Name) && c.Kind is not (ColumnKind.Json or ColumnKind.I18n or ColumnKind.TextArray or ColumnKind.UuidArray or ColumnKind.Bytea)).ToList();
+    }
+
+    private static readonly ColumnKind[] SortableKinds =
+    [
+        ColumnKind.Code, ColumnKind.Text, ColumnKind.Enum, ColumnKind.FixedText, ColumnKind.Date, ColumnKind.Timestamp, ColumnKind.Time,
+        ColumnKind.Int4, ColumnKind.BigInteger, ColumnKind.Money, ColumnKind.Qty, ColumnKind.Rate, ColumnKind.Pct, ColumnKind.Numeric,
+    ];
+
+    /// <summary>Languages a name is searched in (Release 1.0: English and Urdu, D-42).</summary>
+    public static readonly string[] SearchLanguages = ["en", "ur"];
+
+    /// <summary>
+    /// Sort keys of the list endpoint (slice S1.12c Build item 14, ruling Q11): required columns the data design indexes (an
+    /// item of a unique key or index), so a sorted page comes from an index. Codes and text indexed as <c>lower(column)</c>
+    /// sort without case. Ids and references are left out (their order means nothing to a reader); so are optional columns
+    /// (keyset paging needs a value on every row) and booleans.
+    /// </summary>
+    public static IReadOnlyList<(Column Column, bool Lower)> SortColumns(Table t)
+    {
+        var items = t.Uniques.SelectMany(u => u.Items).Concat(t.Indexes.SelectMany(i => i.Items)).ToHashSet(StringComparer.Ordinal);
+        return t.Columns
+            .Where(c => c.Required && c.OptionalIn is null && !c.IsSensitive && !c.IsGenerated && c.Name != "id" && SortableKinds.Contains(c.Kind))
+            .Where(c => items.Contains(c.Name) || items.Contains($"lower({c.Name})"))
+            .Select(c => (c, items.Contains($"lower({c.Name})") && c.Kind is ColumnKind.Code or ColumnKind.Text))
+            .ToList();
+    }
+
+    /// <summary>Columns the list search looks in (Build item 14): the code and the name (plain text or every language of a two-language name).</summary>
+    public static IReadOnlyList<Column> SearchColumns(Table t) =>
+        t.Columns.Where(c => (c.Name == "code" && c.Kind is ColumnKind.Code or ColumnKind.Text)
+            || (c.Name == "name" && c.Kind is ColumnKind.Text)
+            || (c.Name == "name_i18n" && c.Kind is ColumnKind.I18n)).ToList();
+
+    /// <summary><c>Sort</c> and <c>Search</c> of a list query or filter, for tables that have sort keys or search columns.</summary>
+    private static void ListOptionProperties(CodeWriter w, Table t, bool filter)
+    {
+        if (SortColumns(t) is { Count: > 0 } sorts)
+        {
+            if (!filter)
+            {
+                w.Line();
+            }
+
+            w.Line($"/// <summary>Sort key: {CodeWriter.Xml(string.Join(", ", sorts.Select(s => Naming.Camel(s.Column.Name))))}; a leading minus sorts descending. Empty: by id (creation order).</summary>");
+            w.Line("public string? Sort { get; init; }");
+        }
+
+        if (SearchColumns(t) is { Count: > 0 } search)
+        {
+            if (!filter)
+            {
+                w.Line();
+            }
+
+            w.Line($"/// <summary>Case-insensitive text found in {CodeWriter.Xml(string.Join(", ", search.Select(c => Naming.Camel(c.Name))))}.</summary>");
+            w.Line("public string? Search { get; init; }");
+        }
     }
 
     public static void Emit(DesignModel model, OutputSet output)
@@ -294,8 +351,33 @@ public static class CSharpEmitter
                 w.Close();
             }
 
-            w.Line("return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);");
+            var search = SearchColumns(t);
+            if (search.Count > 0)
+            {
+                w.Open("if (!string.IsNullOrWhiteSpace(filter.Search))");
+                w.Line("var pattern = global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Pattern(filter.Search);");
+                const string like = "global::Microsoft.EntityFrameworkCore.EF.Functions.ILike";
+                const string escape = "global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Escape";
+                var terms = search.SelectMany(c => c.Kind is ColumnKind.I18n
+                    ? SearchLanguages.Select(l => $"{like}(e.{N.Property(t, c)}.RootElement.GetProperty({CodeWriter.CSharpString(l)}).GetString()!, pattern, {escape})")
+                    : [$"{like}(e.{N.Property(t, c)}{(c.Required ? string.Empty : "!")}, pattern, {escape})"]);
+                w.Line($"query = query.Where(e => {string.Join(" || ", terms)});");
+                w.Close();
+            }
+
+            w.Line(SortColumns(t).Count > 0
+                ? "return await Sorts.PageAsync(Context.Set<" + e + ">().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);"
+                : "return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);");
             w.Close();
+            if (SortColumns(t) is { Count: > 0 } sorts)
+            {
+                w.Line();
+                w.Line("/// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>");
+                var chain = string.Concat(sorts.Select(s => s.Lower
+                    ? $".Text({CodeWriter.CSharpString(Naming.Camel(s.Column.Name))}, e => e.{N.Property(t, s.Column)})"
+                    : $".Key({CodeWriter.CSharpString(Naming.Camel(s.Column.Name))}, e => e.{N.Property(t, s.Column)})"));
+                w.Line($"private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<{e}> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<{e}>(){chain};");
+            }
             if (t.IsCompanyScoped)
             {
                 w.Line();
@@ -403,7 +485,7 @@ public static class CSharpEmitter
             : "IRepository";
         var w = new CodeWriter();
         w.Line(Header).Line($"namespace {N.Namespace(t, "Application")};").Line();
-        w.Line($"/// <summary>Equality filters for listing {CodeWriter.Xml(t.FullName)} (foreign keys and status). Null means no filter.</summary>");
+        w.Line($"/// <summary>Equality filters for listing {CodeWriter.Xml(t.FullName)} (foreign keys, status and is_active). Null means no filter.</summary>");
         w.Open($"public sealed record {N.Filter(t)}");
         foreach (var c in FilterColumns(t))
         {
@@ -411,6 +493,7 @@ public static class CSharpEmitter
             w.Line($"public {type}? {N.Property(t, c)} {{ get; init; }}");
         }
 
+        ListOptionProperties(w, t, filter: true);
         w.Close().Line();
         w.Line($"/// <summary>Generated repository of {CodeWriter.Xml(t.FullName)}.</summary>");
         w.Open($"public interface {N.RepositoryInterface(t)} : global::Erp.BuildingBlocks.Application.Data.{baseInterface}<{e}>");
@@ -573,6 +656,7 @@ public static class CSharpEmitter
             w.Line($"public {type}? {N.Property(t, c)} {{ get; init; }}");
         }
 
+        ListOptionProperties(w, t, filter: false);
         w.Close().Line();
 
         w.Line($"/// <summary>Generated endpoints of {CodeWriter.Xml(t.FullName)}: {string.Join(", ", Actions(t))}. Answers pass through field security (S1.06).</summary>");
@@ -608,7 +692,9 @@ public static class CSharpEmitter
         const string json = "global::System.Text.Json.Nodes.JsonObject";
 
         // List
-        var filterInit = string.Join(", ", FilterColumns(t).Select(c => $"{N.Property(t, c)} = query.{N.Property(t, c)}"));
+        var filterInit = string.Join(", ", FilterColumns(t).Select(c => $"{N.Property(t, c)} = query.{N.Property(t, c)}")
+            .Concat(SortColumns(t).Count > 0 ? ["Sort = query.Sort"] : [])
+            .Concat(SearchColumns(t).Count > 0 ? ["Search = query.Search"] : []));
         w.Line();
         w.Line($"private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] {entity}ListQuery query, {repo} repository, {permissions}, {fields}, {ct}) =>");
         w.Line($"    GeneratedEndpointSupport.RunAsync(permissions, {CodeWriter.CSharpString(N.Permission(t, "read"))}, async () =>");

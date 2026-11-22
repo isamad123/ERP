@@ -32,6 +32,12 @@
     "actionAfter",
     "legalMinimumMonths"
   ],
+  "search": [],
+  "constraints": {
+    "ck_retention_rules_action_after": "actionAfter",
+    "ck_retention_rules_document_type_code": "documentType",
+    "uq_retention_rules_document_type": "documentType"
+  },
   "fields": [
     {
       "column": "id",
@@ -52,7 +58,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.doc.retention_rules.document_type",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "keep_months",

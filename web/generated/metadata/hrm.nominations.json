@@ -38,6 +38,12 @@
     "validFrom",
     "validTo"
   ],
+  "search": [],
+  "constraints": {
+    "ck_nominations_scheme_code": "scheme",
+    "fk_nominations_person_id": "personId",
+    "fk_nominations_relation_id": "relationId"
+  },
   "fields": [
     {
       "column": "id",

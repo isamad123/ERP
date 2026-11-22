@@ -39,6 +39,11 @@
     "validFrom",
     "validTo"
   ],
+  "search": [],
+  "constraints": {
+    "fk_salary_bands_company_id": "companyId",
+    "fk_salary_bands_grade_id": "gradeId"
+  },
   "fields": [
     {
       "column": "id",

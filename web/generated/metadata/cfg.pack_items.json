@@ -34,6 +34,10 @@
     "version",
     "isOverridden"
   ],
+  "search": [],
+  "constraints": {
+    "ck_pack_items_pack_id_code": "packId"
+  },
   "fields": [
     {
       "column": "id",
@@ -54,7 +58,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.cfg.pack_items.pack_id",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "object_type",
@@ -64,7 +69,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.cfg.pack_items.object_type"
+      "labelKey": "fields.cfg.pack_items.object_type",
+      "sortable": true
     },
     {
       "column": "object_key",
@@ -74,7 +80,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.cfg.pack_items.object_key"
+      "labelKey": "fields.cfg.pack_items.object_key",
+      "sortable": true
     },
     {
       "column": "version",

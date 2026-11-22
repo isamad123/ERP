@@ -1,0 +1,305 @@
+/* Grid, list and form engine (slice S1.12c, spec 13 sections 8 and 9): tokens and logical properties only. */
+.erp-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.erp-views {
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.erp-grid-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.erp-grid-state {
+  padding-block: var(--space-4);
+}
+
+.erp-grid-scroll {
+  overflow: auto;
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.erp-grid-scroll[data-virtual] {
+  max-block-size: 70vh;
+}
+
+.erp-grid {
+  inline-size: max-content;
+  min-inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.erp-grid th,
+.erp-grid td {
+  block-size: var(--row-height);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3);
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+  text-align: start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.erp-grid th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--layer-base);
+  background: var(--color-surface-sunken);
+  font-weight: var(--font-weight-strong);
+  font-size: var(--font-size-sm);
+}
+
+.erp-grid [data-align='end'] {
+  text-align: end;
+}
+
+.erp-grid tbody tr:hover {
+  background: var(--color-neutral-subtle);
+}
+
+.erp-grid tr[data-selected] {
+  background: var(--color-primary-subtle);
+}
+
+.erp-grid td:focus-visible,
+.erp-grid th:focus-visible {
+  outline-offset: calc(-1 * var(--focus-width));
+}
+
+.erp-grid-spacer td {
+  padding: 0;
+  border: 0;
+}
+
+.erp-grid-check,
+.erp-grid-check-col {
+  inline-size: var(--touch-target);
+}
+
+.erp-grid-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+
+.erp-grid-sort,
+.erp-grid-open {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-inline-size: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.erp-grid-open {
+  color: var(--color-link);
+  text-decoration: underline;
+}
+
+.erp-grid-resizer {
+  flex: none;
+  inline-size: var(--space-2);
+  block-size: var(--control-height);
+  padding: 0;
+  border: 0;
+  border-inline-end: var(--border-width) solid var(--color-border);
+  background: none;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.erp-grid-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--color-primary-subtle);
+}
+
+.erp-grid-more {
+  display: flex;
+  justify-content: center;
+}
+
+.erp-grid-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-grid-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.erp-grid-card[data-selected] {
+  border-color: var(--color-primary);
+}
+
+.erp-grid-card-fields {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.erp-grid-card-field {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--space-2);
+}
+
+.erp-grid-card-field dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.erp-columns-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-columns-list li {
+  justify-content: space-between;
+}
+
+.erp-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  max-inline-size: var(--dialog-width);
+}
+
+.erp-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.erp-form-summary:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+}
+
+.erp-form-summary ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: var(--space-5);
+}
+
+/* Each link to a field is a full-size target (WCAG 2.5.8). */
+.erp-form-summary a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-target);
+}
+
+.erp-fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.erp-i18n-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+
+.erp-field-readonly {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.erp-compare {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.erp-compare th,
+.erp-compare td {
+  padding: var(--space-2);
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+  text-align: start;
+  vertical-align: top;
+}
+
+.erp-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-history-entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block-end: var(--space-3);
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+}
+
+.erp-history-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.erp-history-changes {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.erp-history-change {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--space-2);
+}
+
+.erp-history-change dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

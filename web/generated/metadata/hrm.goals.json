@@ -40,6 +40,17 @@
     "title",
     "description"
   ],
+  "search": [],
+  "constraints": {
+    "ck_goals_framework": "framework",
+    "ck_goals_status": "status",
+    "fk_goals_company_id": "companyId",
+    "fk_goals_cycle_id": "cycleId",
+    "fk_goals_org_unit_id": "orgUnitId",
+    "fk_goals_owner_employment_id": "ownerEmploymentId",
+    "fk_goals_parent_goal_id": "parentGoalId",
+    "uq_goals_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

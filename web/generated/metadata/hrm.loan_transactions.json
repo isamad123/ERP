@@ -35,6 +35,12 @@
     "sourceType",
     "sourceId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_loan_transactions_kind": "kind",
+    "fk_loan_transactions_company_id": "companyId",
+    "fk_loan_transactions_loan_id": "loanId"
+  },
   "fields": [
     {
       "column": "id",
@@ -102,7 +108,8 @@
           "value": "settlement_recovery",
           "labelKey": "options.hrm.loan_transactions.kind.settlement_recovery"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "amount",
@@ -123,7 +130,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.loan_transactions.txn_date"
+      "labelKey": "fields.hrm.loan_transactions.txn_date",
+      "sortable": true
     },
     {
       "column": "source_type",

@@ -24,6 +24,10 @@
     "reason",
     "documentId"
   ],
+  "search": [],
+  "constraints": {
+    "fk_numbering_voids_scheme_id": "schemeId"
+  },
   "fields": [
     {
       "column": "id",
@@ -54,7 +58,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.cfg.numbering_voids.number"
+      "labelKey": "fields.cfg.numbering_voids.number",
+      "sortable": true
     },
     {
       "column": "reason",

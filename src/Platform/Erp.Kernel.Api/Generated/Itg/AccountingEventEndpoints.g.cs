@@ -55,6 +55,9 @@ public sealed class AccountingEventListQuery
     public global::System.Guid? CompanyId { get; init; }
 
     public global::System.Guid? SupersedesEventId { get; init; }
+
+    /// <summary>Sort key: sourceModule, postingVersion; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of itg.accounting_events: read, create. Answers pass through field security (S1.06).</summary>
@@ -74,7 +77,7 @@ internal static class AccountingEventEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "itg.accounting_events.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Itg.AccountingEventFilter { CompanyId = query.CompanyId, SupersedesEventId = query.SupersedesEventId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Itg.AccountingEventFilter { CompanyId = query.CompanyId, SupersedesEventId = query.SupersedesEventId, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.AccountingEventAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

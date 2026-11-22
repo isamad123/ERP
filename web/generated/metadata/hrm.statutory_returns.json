@@ -35,6 +35,14 @@
     "employmentId",
     "generatedDocumentId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_statutory_returns_return_code_code": "returnCode",
+    "fk_statutory_returns_company_id": "companyId",
+    "fk_statutory_returns_compliance_task_id": "complianceTaskId",
+    "fk_statutory_returns_employment_id": "employmentId",
+    "fk_statutory_returns_generated_document_id": "generatedDocumentId"
+  },
   "fields": [
     {
       "column": "id",
@@ -66,7 +74,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.statutory_returns.return_code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "period_label",
@@ -76,7 +85,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.statutory_returns.period_label"
+      "labelKey": "fields.hrm.statutory_returns.period_label",
+      "sortable": true
     },
     {
       "column": "compliance_task_id",

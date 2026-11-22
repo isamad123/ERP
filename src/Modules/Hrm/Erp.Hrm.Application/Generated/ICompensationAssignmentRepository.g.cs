@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.compensation_assignments (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.compensation_assignments (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record CompensationAssignmentFilter
 {
     public global::System.Guid? CompanyId { get; init; }
@@ -14,6 +14,8 @@ public sealed record CompensationAssignmentFilter
     public global::System.Guid? StructureId { get; init; }
     public global::System.Guid? EventId { get; init; }
     public global::System.Guid? IncrementProposalId { get; init; }
+    /// <summary>Sort key: validFrom; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.compensation_assignments.</summary>

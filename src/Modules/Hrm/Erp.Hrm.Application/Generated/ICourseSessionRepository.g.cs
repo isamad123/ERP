@@ -6,13 +6,15 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.course_sessions (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.course_sessions (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record CourseSessionFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? CourseId { get; init; }
     public global::System.Guid? LocationId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: startAt; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.course_sessions.</summary>

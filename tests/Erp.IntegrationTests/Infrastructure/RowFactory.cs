@@ -80,12 +80,25 @@ public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction tr
                 continue;
             }
 
-            values[column.Name] = column.NotNull ? Value(column) : null;
+            values[column.Name] = !column.NotNull ? null
+                : KnownFormats.TryGetValue(table.FullName + "." + column.Name, out var format) ? format(Interlocked.Increment(ref _formatted))
+                : Value(column);
         }
 
         await InsertRowAsync(table, values, ct).ConfigureAwait(false);
         return values;
     }
+
+    /// <summary>
+    /// Text columns whose database check asks for a shape the generic "t1" value does not have (slice S1.12c:
+    /// <c>ck_saved_views_list_key</c> wants a dotted list key).
+    /// </summary>
+    private static readonly Dictionary<string, Func<int, object>> KnownFormats = new(StringComparer.Ordinal)
+    {
+        ["cfg.saved_views.list_key"] = n => "org.list_" + n.ToString(CultureInfo.InvariantCulture),
+    };
+
+    private int _formatted;
 
     private bool IsPartitionColumnOfTarget(ExpectedForeignKey fk, string column) =>
         catalog.Tables.First(t => t.FullName == fk.Target).PartitionColumn == column;

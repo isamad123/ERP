@@ -38,6 +38,12 @@
     "validFrom",
     "validTo"
   ],
+  "search": [],
+  "constraints": {
+    "fk_headcount_budgets_company_id": "companyId",
+    "fk_headcount_budgets_grade_id": "gradeId",
+    "fk_headcount_budgets_org_unit_id": "orgUnitId"
+  },
   "fields": [
     {
       "column": "id",

@@ -46,8 +46,11 @@ internal sealed class FeatureFlagOverrideRepository(
         {
             query = query.Where(e => e.FlagKey == flagKeyFilter);
         }
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        return await Sorts.PageAsync(Context.Set<global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride>().Key("flagKey", e => e.FlagKey).Key("layer", e => e.Layer);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride>> FindByFlagKeyAndLayerAndScopeIdAsync(string flagKey, string layer, global::System.Guid? scopeId, global::System.Threading.CancellationToken cancellationToken)
     {

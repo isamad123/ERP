@@ -38,6 +38,14 @@
     "trainer",
     "capacity"
   ],
+  "search": [],
+  "constraints": {
+    "ck_course_sessions_status": "status",
+    "fk_course_sessions_company_id": "companyId",
+    "fk_course_sessions_course_id": "courseId",
+    "fk_course_sessions_location_id": "locationId",
+    "uq_course_sessions_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -79,7 +87,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.course_sessions.start_at"
+      "labelKey": "fields.hrm.course_sessions.start_at",
+      "sortable": true
     },
     {
       "column": "end_at",

@@ -6,10 +6,14 @@
 
 namespace Erp.Kernel.Application.ControlPlane.Generated;
 
-/// <summary>Equality filters for listing cp.tenants (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing cp.tenants (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record TenantFilter
 {
     public string? Status { get; init; }
+    /// <summary>Sort key: code; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+    /// <summary>Case-insensitive text found in code, name.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated repository of cp.tenants.</summary>

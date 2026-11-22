@@ -56,6 +56,14 @@ public sealed class FormDefinitionListQuery
     public global::System.Guid? CompanyId { get; init; }
 
     public global::System.Guid? ActiveVersionId { get; init; }
+
+    public bool? IsActive { get; init; }
+
+    /// <summary>Sort key: code; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+
+    /// <summary>Case-insensitive text found in code, nameI18n.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.form_definitions: read, create, update, delete. Answers pass through field security (S1.06).</summary>
@@ -77,7 +85,7 @@ internal static class FormDefinitionEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.form_definitions.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.FormDefinitionFilter { Id = query.Id, CompanyId = query.CompanyId, ActiveVersionId = query.ActiveVersionId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.FormDefinitionFilter { Id = query.Id, CompanyId = query.CompanyId, ActiveVersionId = query.ActiveVersionId, IsActive = query.IsActive, Sort = query.Sort, Search = query.Search }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.FormDefinitionAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

@@ -53,8 +53,11 @@ internal sealed class PolicyVersionRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        return await Sorts.PageAsync(Context.Set<global::Erp.Hrm.Domain.Generated.PolicyVersion>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.PolicyVersion> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.PolicyVersion>().Key("version", e => e.Version);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PolicyVersion>> FindByPolicyIdAndVersionAsync(global::System.Guid policyId, int version, global::System.Threading.CancellationToken cancellationToken)
     {

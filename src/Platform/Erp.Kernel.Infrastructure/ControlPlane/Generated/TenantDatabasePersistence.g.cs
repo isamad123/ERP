@@ -60,8 +60,11 @@ internal sealed class TenantDatabaseRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        return await Sorts.PageAsync(Context.Set<global::Erp.Kernel.Domain.ControlPlane.Generated.TenantDatabase>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.ControlPlane.Generated.TenantDatabase> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.ControlPlane.Generated.TenantDatabase>().Key("envType", e => e.EnvType).Key("databaseName", e => e.DatabaseName);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.TenantDatabase>> FindByDbClusterIdAndDatabaseNameAsync(global::System.Guid dbClusterId, string databaseName, global::System.Threading.CancellationToken cancellationToken)
     {

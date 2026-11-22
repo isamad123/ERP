@@ -6,9 +6,11 @@
 
 namespace Erp.Kernel.Application.Generated.Doc;
 
-/// <summary>Equality filters for listing doc.retention_rules (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing doc.retention_rules (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record RetentionRuleFilter
 {
+    /// <summary>Sort key: documentType; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of doc.retention_rules.</summary>

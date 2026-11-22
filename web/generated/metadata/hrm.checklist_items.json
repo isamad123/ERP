@@ -40,6 +40,13 @@
     "completedAt",
     "notes"
   ],
+  "search": [],
+  "constraints": {
+    "ck_checklist_items_status": "status",
+    "fk_checklist_items_checklist_id": "checklistId",
+    "fk_checklist_items_owner_user_id": "ownerUserId",
+    "fk_checklist_items_template_item_id": "templateItemId"
+  },
   "fields": [
     {
       "column": "id",
@@ -160,7 +167,8 @@
           "value": "waived",
           "labelKey": "options.hrm.checklist_items.status.waived"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "created_at",

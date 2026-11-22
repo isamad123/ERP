@@ -30,6 +30,11 @@
     "progressPct",
     "comment"
   ],
+  "search": [],
+  "constraints": {
+    "fk_goal_updates_company_id": "companyId",
+    "fk_goal_updates_goal_id": "goalId"
+  },
   "fields": [
     {
       "column": "id",
@@ -101,7 +106,8 @@
       "readOnly": true,
       "system": true,
       "filter": false,
-      "labelKey": "fields.hrm.goal_updates.created_at"
+      "labelKey": "fields.hrm.goal_updates.created_at",
+      "sortable": true
     },
     {
       "column": "created_by",

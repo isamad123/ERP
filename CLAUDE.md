@@ -181,6 +181,10 @@ Shell (S1.12b): each web module declares its screens in `web/apps/web/src/module
 permission, feature); `navigation/screens.ts` decides licence → locked → permission → screen; who is signed in comes from
 `GET /api/kernel/me` (`useShell()`, `useWritable()`). A later screen slice adds its component to its declaration. The browser tests'
 control server also gives roles, adds companies, changes the licence and adds notifications (`e2e/support.ts` `server.*`).
+List and form engine (S1.12c): `web/packages/engine` (`ListPage`, `FormPage`, `DataGrid`, `HistoryPanel`) makes screens from
+`web/generated/metadata/<table>.json` and `validation/<table>.json`; see `web/apps/web/src/modules/kernel/branches.tsx`. A screen
+declaration lists its `tables`, and `modules/labels.test.ts` fails until their Urdu labels are in `web/packages/i18n/labels/<module>.ur.json`.
+Generated lists take `sort` (indexed columns) and `search` (code and name); saved views live in `cfg.saved_views` (`/api/cfg/saved-views`).
 
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.

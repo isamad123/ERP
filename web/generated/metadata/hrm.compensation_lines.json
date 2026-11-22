@@ -37,6 +37,12 @@
     "percent",
     "units"
   ],
+  "search": [],
+  "constraints": {
+    "fk_compensation_lines_assignment_id": "assignmentId",
+    "fk_compensation_lines_company_id": "companyId",
+    "fk_compensation_lines_component_id": "componentId"
+  },
   "fields": [
     {
       "column": "id",

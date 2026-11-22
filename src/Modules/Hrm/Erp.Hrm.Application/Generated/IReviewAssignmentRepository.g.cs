@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.review_assignments (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.review_assignments (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record ReviewAssignmentFilter
 {
     public global::System.Guid? CompanyId { get; init; }
@@ -14,6 +14,8 @@ public sealed record ReviewAssignmentFilter
     public global::System.Guid? ReviewerEmploymentId { get; init; }
     public global::System.Guid? FormResponseId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: reviewType; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.review_assignments.</summary>

@@ -6,7 +6,7 @@
 
 namespace Erp.Kernel.Application.Generated.Org;
 
-/// <summary>Equality filters for listing org.org_unit_links (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing org.org_unit_links (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record OrgUnitLinkFilter
 {
     public global::System.Guid? HierarchyId { get; init; }

@@ -39,6 +39,12 @@
     "isPaid",
     "requestStatus"
   ],
+  "search": [],
+  "constraints": {
+    "fk_leave_request_days_company_id": "companyId",
+    "fk_leave_request_days_employment_id": "employmentId",
+    "fk_leave_request_days_leave_request_id": "leaveRequestId"
+  },
   "fields": [
     {
       "column": "id",
@@ -91,7 +97,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.leave_request_days.leave_date"
+      "labelKey": "fields.hrm.leave_request_days.leave_date",
+      "sortable": true
     },
     {
       "column": "quantity",

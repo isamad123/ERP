@@ -45,6 +45,17 @@
     "confirmationDate",
     "expectedEndDate"
   ],
+  "search": [],
+  "constraints": {
+    "ck_employments_employee_type_code": "employeeType",
+    "ck_employments_status": "status",
+    "fk_employments_company_id": "companyId",
+    "fk_employments_person_id": "personId",
+    "fk_employments_previous_employment_id": "previousEmploymentId",
+    "uq_employments_company_id_employee_no": "employeeNo",
+    "uq_employments_company_id_id": "id",
+    "uq_employments_person_id": "personId"
+  },
   "fields": [
     {
       "column": "id",
@@ -86,7 +97,8 @@
       "readOnly": true,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.employments.employee_no"
+      "labelKey": "fields.hrm.employments.employee_no",
+      "sortable": true
     },
     {
       "column": "employee_type",
@@ -210,7 +222,8 @@
           "value": "cancelled",
           "labelKey": "options.hrm.employments.status.cancelled"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "custom",

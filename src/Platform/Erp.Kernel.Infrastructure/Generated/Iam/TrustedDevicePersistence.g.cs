@@ -49,8 +49,11 @@ internal sealed class TrustedDeviceRepository(
         {
             query = query.Where(e => e.UserId == userIdFilter);
         }
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        return await Sorts.PageAsync(Context.Set<global::Erp.Kernel.Domain.Generated.Iam.TrustedDevice>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Iam.TrustedDevice> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Iam.TrustedDevice>().Key("tokenHash", e => e.TokenHash).Key("expiresAt", e => e.ExpiresAt);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.TrustedDevice>> FindByTokenHashAsync(string tokenHash, global::System.Threading.CancellationToken cancellationToken)
     {

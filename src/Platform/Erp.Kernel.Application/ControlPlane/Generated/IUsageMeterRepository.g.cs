@@ -6,10 +6,12 @@
 
 namespace Erp.Kernel.Application.ControlPlane.Generated;
 
-/// <summary>Equality filters for listing cp.usage_meters (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing cp.usage_meters (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record UsageMeterFilter
 {
     public global::System.Guid? TenantId { get; init; }
+    /// <summary>Sort key: meterKey, period; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of cp.usage_meters.</summary>

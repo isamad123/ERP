@@ -64,6 +64,9 @@ public sealed class ContractListQuery
     public global::System.Guid? RenewsContractId { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Sort key: contractNo; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.contracts: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -84,7 +87,7 @@ internal static class ContractEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.contracts.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ContractFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, FileId = query.FileId, RenewsContractId = query.RenewsContractId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ContractFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, FileId = query.FileId, RenewsContractId = query.RenewsContractId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ContractAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

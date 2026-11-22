@@ -29,6 +29,13 @@
     "fileId",
     "isPasswordProtected"
   ],
+  "search": [],
+  "constraints": {
+    "fk_generated_documents_company_id": "companyId",
+    "fk_generated_documents_file_id": "fileId",
+    "fk_generated_documents_template_version_id": "templateVersionId",
+    "uq_generated_documents_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -70,7 +77,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.doc.generated_documents.owner_type"
+      "labelKey": "fields.doc.generated_documents.owner_type",
+      "sortable": true
     },
     {
       "column": "owner_id",

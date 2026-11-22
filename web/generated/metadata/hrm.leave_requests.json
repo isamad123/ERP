@@ -44,6 +44,21 @@
     "endDate",
     "startPart"
   ],
+  "search": [],
+  "constraints": {
+    "ck_leave_requests_days_rule": "days",
+    "ck_leave_requests_end_part": "endPart",
+    "ck_leave_requests_start_part": "startPart",
+    "ck_leave_requests_status": "status",
+    "fk_leave_requests_branch_id": "branchId",
+    "fk_leave_requests_company_id": "companyId",
+    "fk_leave_requests_employment_id": "employmentId",
+    "fk_leave_requests_leave_type_id": "leaveTypeId",
+    "fk_leave_requests_modifies_request_id": "modifiesRequestId",
+    "fk_leave_requests_workflow_instance_id": "workflowInstanceId",
+    "uq_leave_requests_company_id_id": "id",
+    "uq_leave_requests_company_id_request_no": "requestNo"
+  },
   "fields": [
     {
       "column": "id",
@@ -85,7 +100,8 @@
       "readOnly": true,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.leave_requests.request_no"
+      "labelKey": "fields.hrm.leave_requests.request_no",
+      "sortable": true
     },
     {
       "column": "employment_id",
@@ -117,7 +133,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.leave_requests.start_date"
+      "labelKey": "fields.hrm.leave_requests.start_date",
+      "sortable": true
     },
     {
       "column": "end_date",
@@ -273,7 +290,8 @@
           "value": "cancelled",
           "labelKey": "options.hrm.leave_requests.status.cancelled"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "custom",

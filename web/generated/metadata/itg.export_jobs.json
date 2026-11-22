@@ -36,6 +36,13 @@
     "fileId",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_export_jobs_format": "format",
+    "ck_export_jobs_status": "status",
+    "fk_export_jobs_company_id": "companyId",
+    "fk_export_jobs_file_id": "fileId"
+  },
   "fields": [
     {
       "column": "id",

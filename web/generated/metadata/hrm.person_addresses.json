@@ -34,6 +34,11 @@
     "validFrom",
     "validTo"
   ],
+  "search": [],
+  "constraints": {
+    "ck_person_addresses_kind": "kind",
+    "fk_person_addresses_person_id": "personId"
+  },
   "fields": [
     {
       "column": "id",

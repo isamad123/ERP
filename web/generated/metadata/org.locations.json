@@ -44,6 +44,20 @@
     "longitude",
     "timeZone"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_locations_code_code": "code",
+    "ck_locations_name_i18n_object": "nameI18n",
+    "ck_locations_region_code_code": "regionCode",
+    "fk_locations_branch_id": "branchId",
+    "fk_locations_company_id": "companyId",
+    "fk_locations_holiday_calendar_id": "holidayCalendarId",
+    "uq_locations_company_id_code": "code",
+    "uq_locations_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -75,7 +89,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.org.locations.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -167,7 +182,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.org.locations.is_active"
     },
     {

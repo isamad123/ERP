@@ -37,6 +37,13 @@
     "currencyCode",
     "totalDebit"
   ],
+  "search": [],
+  "constraints": {
+    "ck_accounting_events_source_module_code": "sourceModule",
+    "fk_accounting_events_company_id": "companyId",
+    "fk_accounting_events_supersedes_event_id": "supersedesEventId",
+    "uq_accounting_events_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -68,7 +75,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.itg.accounting_events.source_module",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "source_type",
@@ -98,7 +106,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.itg.accounting_events.posting_version"
+      "labelKey": "fields.itg.accounting_events.posting_version",
+      "sortable": true
     },
     {
       "column": "event_date",

@@ -36,6 +36,11 @@
     "currencyCode",
     "validFrom"
   ],
+  "search": [],
+  "constraints": {
+    "fk_salary_structure_components_component_id": "componentId",
+    "fk_salary_structure_components_structure_id": "structureId"
+  },
   "fields": [
     {
       "column": "id",

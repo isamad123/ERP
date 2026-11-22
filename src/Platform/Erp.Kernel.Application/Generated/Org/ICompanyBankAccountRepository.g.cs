@@ -6,7 +6,7 @@
 
 namespace Erp.Kernel.Application.Generated.Org;
 
-/// <summary>Equality filters for listing org.company_bank_accounts (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing org.company_bank_accounts (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record CompanyBankAccountFilter
 {
     public global::System.Guid? CompanyId { get; init; }

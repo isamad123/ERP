@@ -6,13 +6,15 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.checklist_items (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.checklist_items (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record ChecklistItemFilter
 {
     public global::System.Guid? ChecklistId { get; init; }
     public global::System.Guid? TemplateItemId { get; init; }
     public global::System.Guid? OwnerUserId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: status; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.checklist_items.</summary>

@@ -2,12 +2,12 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 220 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 221 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
 | customer | aud | 7 |
-| customer | cfg | 18 |
+| customer | cfg | 19 |
 | customer | doc | 7 |
 | customer | hrm | 112 |
 | customer | iam | 24 |
@@ -560,6 +560,39 @@ Constraints:
 - `ck_pack_items_pack_id_code` CHECK ((((length(pack_id) >= 1) AND (length(pack_id) <= 40)) AND (pack_id = btrim(pack_id))))
 - `pk_pack_items` PRIMARY KEY (id)
 - `uq_pack_items_pack_id_object_type_object_key` UNIQUE (pack_id, object_type, object_key)
+
+### cfg.saved_views
+
+Saved views of a list (search, filters, sort, columns), kept per person or shared with the holders of a role (FR-ADM-NAV-02). Requirements: ADM-NAV-02. Source: kernel.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| user_id | uuid | no |  | fk iam.users; the person who saved it and the only one who may change it |
+| list_key | text | no |  | the list, e.g. org.branches; at most 100 characters |
+| name | text | no |  | 1 to 80 characters |
+| definition | jsonb | no |  | {search, filters, sort, columns [{field, width}]}; at most 8 KB |
+| role_id | uuid | yes |  | fk iam.roles; shared with the holders of this role (permission cfg.saved_views.share) |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `ck_saved_views_definition` CHECK (((jsonb_typeof(definition) = 'object'::text) AND (octet_length((definition)::text) <= 8192)))
+- `ck_saved_views_list_key` CHECK (((list_key ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'::text) AND (length(list_key) <= 100)))
+- `ck_saved_views_name` CHECK ((((length(name) >= 1) AND (length(name) <= 80)) AND (name = btrim(name))))
+- `fk_saved_views_role_id` FOREIGN KEY (role_id) REFERENCES iam.roles(id)
+- `fk_saved_views_user_id` FOREIGN KEY (user_id) REFERENCES iam.users(id)
+- `pk_saved_views` PRIMARY KEY (id)
+
+Indexes:
+
+- `ix_saved_views_list_key_role_id` CREATE INDEX ix_saved_views_list_key_role_id ON cfg.saved_views USING btree (list_key, role_id)
+- `ix_saved_views_role_id` CREATE INDEX ix_saved_views_role_id ON cfg.saved_views USING btree (role_id)
+- `uq_saved_views_user_id_list_key_name` CREATE UNIQUE INDEX uq_saved_views_user_id_list_key_name ON cfg.saved_views USING btree (user_id, list_key, lower(name))
 
 ### cfg.setting_value_history
 

@@ -42,6 +42,19 @@
     "currencyCode",
     "statementDocumentId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_final_settlements_clearance_status": "clearanceStatus",
+    "ck_final_settlements_status": "status",
+    "fk_final_settlements_company_id": "companyId",
+    "fk_final_settlements_employment_id": "employmentId",
+    "fk_final_settlements_pay_run_id": "payRunId",
+    "fk_final_settlements_separation_id": "separationId",
+    "fk_final_settlements_statement_document_id": "statementDocumentId",
+    "fk_final_settlements_workflow_instance_id": "workflowInstanceId",
+    "uq_final_settlements_company_id_id": "id",
+    "uq_final_settlements_employment_id": "employmentId"
+  },
   "fields": [
     {
       "column": "id",

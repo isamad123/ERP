@@ -26,6 +26,12 @@
     "isMandatory",
     "name"
   ],
+  "search": [
+    "name"
+  ],
+  "constraints": {
+    "ck_subscriptions_event_code_code": "eventCode"
+  },
   "fields": [
     {
       "column": "id",

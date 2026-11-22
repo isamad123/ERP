@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.leave_ledger (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.leave_ledger (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record LeaveLedgerFilter
 {
     public global::System.Guid? CompanyId { get; init; }
@@ -14,6 +14,8 @@ public sealed record LeaveLedgerFilter
     public global::System.Guid? LeaveTypeId { get; init; }
     public global::System.Guid? PolicyVersionId { get; init; }
     public global::System.Guid? ReversesEntryId { get; init; }
+    /// <summary>Sort key: leaveYear, kind; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.leave_ledger.</summary>

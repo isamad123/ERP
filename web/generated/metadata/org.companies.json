@@ -43,6 +43,20 @@
     "holidayCalendarId",
     "logoFileId"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_companies_code_code": "code",
+    "ck_companies_cost_center_model": "costCenterModel",
+    "ck_companies_name_i18n_object": "nameI18n",
+    "ck_companies_status": "status",
+    "fk_companies_base_currency_code": "baseCurrencyCode",
+    "fk_companies_holiday_calendar_id": "holidayCalendarId",
+    "fk_companies_logo_file_id": "logoFileId",
+    "uq_companies_code": "code"
+  },
   "fields": [
     {
       "column": "id",
@@ -63,7 +77,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.org.companies.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -104,7 +119,8 @@
       "system": false,
       "filter": true,
       "labelKey": "fields.org.companies.base_currency_code",
-      "references": "ref.currencies"
+      "references": "ref.currencies",
+      "sortable": true
     },
     {
       "column": "default_language",
@@ -185,7 +201,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.org.companies.is_active"
     },
     {

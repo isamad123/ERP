@@ -44,6 +44,15 @@
     "gender",
     "dateOfBirth"
   ],
+  "search": [],
+  "constraints": {
+    "ck_persons_gender": "gender",
+    "ck_persons_marital_status_code": "maritalStatus",
+    "ck_persons_religion_code": "religion",
+    "fk_persons_nationality_code": "nationalityCode",
+    "fk_persons_photo_file_id": "photoFileId",
+    "uq_persons_person_no": "personNo"
+  },
   "fields": [
     {
       "column": "id",
@@ -63,7 +72,8 @@
       "readOnly": true,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.persons.person_no"
+      "labelKey": "fields.hrm.persons.person_no",
+      "sortable": true
     },
     {
       "column": "first_name",

@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.pay_runs (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.pay_runs (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record PayRunFilter
 {
     public global::System.Guid? CompanyId { get; init; }
@@ -15,6 +15,8 @@ public sealed record PayRunFilter
     public global::System.Guid? CalcJobRunId { get; init; }
     public global::System.Guid? WorkflowInstanceId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: runNo; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.pay_runs.</summary>

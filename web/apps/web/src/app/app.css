@@ -163,6 +163,15 @@
   max-inline-size: calc(var(--space-8) * 3);
 }
 
+/* The switcher's name and arrow stay on one line; the name is shortened instead (S1.12b handoff, tidied in S1.12c). */
+.erp-button > span:has(> .erp-topbar-company-name) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  white-space: nowrap;
+}
+
 .erp-topbar-spacer {
   flex: 1;
 }

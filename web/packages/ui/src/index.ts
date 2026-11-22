@@ -12,4 +12,5 @@ export * from './components/Feedback';
 export * from './components/Overlays';
 export * from './components/Navigation';
 export * from './components/Fields';
+export * from './components/NumberDate';
 export * from './components/QrCode';

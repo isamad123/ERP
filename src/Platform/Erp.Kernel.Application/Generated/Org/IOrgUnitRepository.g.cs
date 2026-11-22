@@ -6,12 +6,17 @@
 
 namespace Erp.Kernel.Application.Generated.Org;
 
-/// <summary>Equality filters for listing org.org_units (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing org.org_units (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record OrgUnitFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? UnitTypeId { get; init; }
     public global::System.Guid? LocationId { get; init; }
+    public bool? IsActive { get; init; }
+    /// <summary>Sort key: code; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+    /// <summary>Case-insensitive text found in code, nameI18n.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated repository of org.org_units.</summary>

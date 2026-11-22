@@ -34,6 +34,13 @@
     "jobRunId",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_leave_year_end_runs_status": "status",
+    "fk_leave_year_end_runs_company_id": "companyId",
+    "fk_leave_year_end_runs_job_run_id": "jobRunId",
+    "uq_leave_year_end_runs_company_id_leave_year": "leaveYear"
+  },
   "fields": [
     {
       "column": "id",
@@ -64,7 +71,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.leave_year_end_runs.leave_year"
+      "labelKey": "fields.hrm.leave_year_end_runs.leave_year",
+      "sortable": true
     },
     {
       "column": "job_run_id",

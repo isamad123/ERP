@@ -6,12 +6,14 @@
 
 namespace Erp.Kernel.Application.Generated.Ntf;
 
-/// <summary>Equality filters for listing ntf.outbound_messages (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing ntf.outbound_messages (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record OutboundMessageFilter
 {
     public global::System.Guid? TemplateId { get; init; }
     public global::System.Guid? UserId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: status, createdAt; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of ntf.outbound_messages.</summary>

@@ -24,6 +24,11 @@
     "scopeId",
     "enabled"
   ],
+  "search": [],
+  "constraints": {
+    "ck_feature_flag_overrides_layer": "layer",
+    "fk_feature_flag_overrides_flag_key": "flagKey"
+  },
   "fields": [
     {
       "column": "id",
@@ -44,7 +49,8 @@
       "system": false,
       "filter": true,
       "labelKey": "fields.cfg.feature_flag_overrides.flag_key",
-      "references": "cfg.feature_flags"
+      "references": "cfg.feature_flags",
+      "sortable": true
     },
     {
       "column": "layer",
@@ -68,7 +74,8 @@
           "value": "user_group",
           "labelKey": "options.cfg.feature_flag_overrides.layer.user_group"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "scope_id",

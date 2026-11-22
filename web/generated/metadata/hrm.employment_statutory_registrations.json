@@ -39,6 +39,12 @@
     "validFrom",
     "validTo"
   ],
+  "search": [],
+  "constraints": {
+    "ck_employment_statutory_registrations_scheme_code": "scheme",
+    "fk_employment_statutory_registrations_company_id": "companyId",
+    "fk_employment_statutory_registrations_employment_id": "employmentId"
+  },
   "fields": [
     {
       "column": "id",

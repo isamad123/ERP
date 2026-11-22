@@ -6,13 +6,15 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.attendance_devices (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.attendance_devices (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record AttendanceDeviceFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? LocationId { get; init; }
     public global::System.Guid? ConnectorId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: serialNo; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.attendance_devices.</summary>

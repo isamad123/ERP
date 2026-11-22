@@ -32,6 +32,13 @@
     "approvedBy",
     "reversedAt"
   ],
+  "search": [],
+  "constraints": {
+    "fk_pay_result_reversals_approved_by": "approvedBy",
+    "fk_pay_result_reversals_company_id": "companyId",
+    "fk_pay_result_reversals_result_id": "resultId",
+    "uq_pay_result_reversals_result_id": "resultId"
+  },
   "fields": [
     {
       "column": "id",

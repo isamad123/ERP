@@ -6,12 +6,17 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.benefit_plans (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.benefit_plans (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record BenefitPlanFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? EmployeePremiumComponentId { get; init; }
     public global::System.Guid? EmployerPremiumComponentId { get; init; }
+    public bool? IsActive { get; init; }
+    /// <summary>Sort key: code; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+    /// <summary>Case-insensitive text found in code, nameI18n.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated repository of hrm.benefit_plans.</summary>

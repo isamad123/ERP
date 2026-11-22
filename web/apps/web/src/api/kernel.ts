@@ -91,6 +91,8 @@ export const kernel = {
   me: (companyId?: string | null) => requestJson<Me>('GET', `/api/kernel/me${query({ companyId })}`),
   capabilities: () => requestJson<Capabilities>('GET', '/api/kernel/capabilities'),
   inboxCounts: () => requestJson<InboxCounts>('GET', '/api/wf/inbox/counts'),
+  /** Label overrides of the customer and the company in hand, language → key → text (S1.12c Build item 15). */
+  labels: (companyId?: string | null) => requestJson<Record<string, Record<string, string>>>('GET', `/api/kernel/labels${query({ companyId })}`),
 };
 
 export const notifications = {

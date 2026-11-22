@@ -6,10 +6,12 @@
 
 namespace Erp.Kernel.Application.Generated.Ntf;
 
-/// <summary>Equality filters for listing ntf.templates (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing ntf.templates (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record TemplateFilter
 {
     public string? Status { get; init; }
+    /// <summary>Sort key: eventCode, channel, language, version; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of ntf.templates.</summary>

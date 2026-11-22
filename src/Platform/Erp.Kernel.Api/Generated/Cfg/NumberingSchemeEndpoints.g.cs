@@ -41,6 +41,9 @@ public sealed class NumberingSchemeListQuery
     public global::System.Guid? BranchId { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Sort key: documentType; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of cfg.numbering_schemes: read. Answers pass through field security (S1.06).</summary>
@@ -59,7 +62,7 @@ internal static class NumberingSchemeEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.numbering_schemes.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.NumberingSchemeFilter { CompanyId = query.CompanyId, BranchId = query.BranchId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.NumberingSchemeFilter { CompanyId = query.CompanyId, BranchId = query.BranchId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.NumberingSchemeAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

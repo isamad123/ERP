@@ -35,6 +35,16 @@
     "source",
     "isActive"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_calendars_code_code": "code",
+    "ck_calendars_name_i18n_object": "nameI18n",
+    "ck_calendars_source": "source",
+    "uq_calendars_code": "code"
+  },
   "fields": [
     {
       "column": "id",
@@ -55,7 +65,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.ref.calendars.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -104,7 +115,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.ref.calendars.is_active"
     },
     {

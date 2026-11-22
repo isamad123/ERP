@@ -31,6 +31,12 @@
     "expiryDate",
     "fileId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_person_identifiers_kind_code": "kind",
+    "fk_person_identifiers_file_id": "fileId",
+    "fk_person_identifiers_person_id": "personId"
+  },
   "fields": [
     {
       "column": "id",
@@ -62,7 +68,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.person_identifiers.kind",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "country_code",
@@ -72,7 +79,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.person_identifiers.country_code"
+      "labelKey": "fields.hrm.person_identifiers.country_code",
+      "sortable": true
     },
     {
       "column": "value_last4",

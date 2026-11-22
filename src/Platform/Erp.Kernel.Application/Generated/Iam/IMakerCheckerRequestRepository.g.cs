@@ -6,12 +6,14 @@
 
 namespace Erp.Kernel.Application.Generated.Iam;
 
-/// <summary>Equality filters for listing iam.maker_checker_requests (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing iam.maker_checker_requests (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record MakerCheckerRequestFilter
 {
     public global::System.Guid? RequestedBy { get; init; }
     public global::System.Guid? DecidedBy { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: status, createdAt; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of iam.maker_checker_requests.</summary>

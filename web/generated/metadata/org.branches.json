@@ -39,6 +39,17 @@
     "nameI18n",
     "isActive"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_branches_code_code": "code",
+    "ck_branches_name_i18n_object": "nameI18n",
+    "fk_branches_company_id": "companyId",
+    "uq_branches_company_id_code": "code",
+    "uq_branches_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -70,7 +81,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.org.branches.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -89,7 +101,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.org.branches.is_active"
     },
     {

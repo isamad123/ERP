@@ -6,12 +6,14 @@
 
 namespace Erp.Kernel.Application.Generated.Iam;
 
-/// <summary>Equality filters for listing iam.delegations (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing iam.delegations (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record DelegationFilter
 {
     public global::System.Guid? FromUserId { get; init; }
     public global::System.Guid? ToUserId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: validFrom; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of iam.delegations.</summary>

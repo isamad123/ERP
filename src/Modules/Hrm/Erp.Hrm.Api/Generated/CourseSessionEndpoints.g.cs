@@ -61,6 +61,9 @@ public sealed class CourseSessionListQuery
     public global::System.Guid? LocationId { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Sort key: startAt; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.course_sessions: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -81,7 +84,7 @@ internal static class CourseSessionEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.course_sessions.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.CourseSessionFilter { CompanyId = query.CompanyId, CourseId = query.CourseId, LocationId = query.LocationId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.CourseSessionFilter { CompanyId = query.CompanyId, CourseId = query.CourseId, LocationId = query.LocationId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.CourseSessionAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

@@ -6,7 +6,7 @@
 
 namespace Erp.Kernel.Application.Generated.Itg;
 
-/// <summary>Equality filters for listing itg.export_jobs (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing itg.export_jobs (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record ExportJobFilter
 {
     public global::System.Guid? CompanyId { get; init; }

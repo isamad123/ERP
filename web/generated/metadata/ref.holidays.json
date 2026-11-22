@@ -33,6 +33,14 @@
     "kind",
     "isTentative"
   ],
+  "search": [
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_holidays_kind": "kind",
+    "ck_holidays_name_i18n_object": "nameI18n",
+    "fk_holidays_calendar_id": "calendarId"
+  },
   "fields": [
     {
       "column": "id",
@@ -63,7 +71,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.ref.holidays.holiday_date"
+      "labelKey": "fields.ref.holidays.holiday_date",
+      "sortable": true
     },
     {
       "column": "name_i18n",

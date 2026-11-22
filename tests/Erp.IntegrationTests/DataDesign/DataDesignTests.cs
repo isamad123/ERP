@@ -29,9 +29,10 @@ public sealed partial class DataDesignTests(MigratedDatabases db)
         var design = MigratedDatabases.Catalog.Tables.Where(t => t.Traits.Count > 0 || t.Name is not ("outbox_messages" or "inbox_messages")).ToList();
         // 204 tables approved by D-50 plus the two of CR-010 (slice S1.05), the one of CR-019 (slice S1.06), the
         // control-plane table of CR-027 (slice S1.07), the change counters of CR-036 (slice S1.09a) and the control-plane
-        // migration history of CR-054 (slice S1.11f2, CR-006) and the remembered browsers of CR-063 (slice S1.12a, data
-        // design approved 2026-11-20).
-        Assert.Equal(211, design.Count);
+        // migration history of CR-054 (slice S1.11f2, CR-006), the remembered browsers of CR-063 (slice S1.12a, data
+        // design approved 2026-11-20) and the saved list views of CR-063 (slice S1.12c, data design approved 2026-11-22).
+        Assert.Equal(212, design.Count);
+        Assert.Contains(design, t => t.Schema == "cfg" && t.Name == "saved_views");
         Assert.Contains(design, t => t.Schema == "iam" && t.Name == "trusted_devices");
         Assert.Contains(design, t => t.Schema == "cp" && t.Name == "schema_history");
         Assert.Contains(design, t => t.Schema == "cfg" && t.Name == "config_versions");

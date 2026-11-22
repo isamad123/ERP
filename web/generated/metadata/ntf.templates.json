@@ -29,6 +29,13 @@
     "source",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_templates_channel": "channel",
+    "ck_templates_event_code_code": "eventCode",
+    "ck_templates_source": "source",
+    "ck_templates_status": "status"
+  },
   "fields": [
     {
       "column": "id",
@@ -49,7 +56,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.ntf.templates.event_code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "channel",
@@ -69,7 +77,8 @@
           "value": "email",
           "labelKey": "options.ntf.templates.channel.email"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "language",
@@ -79,7 +88,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.ntf.templates.language"
+      "labelKey": "fields.ntf.templates.language",
+      "sortable": true
     },
     {
       "column": "subject",
@@ -109,7 +119,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.ntf.templates.version"
+      "labelKey": "fields.ntf.templates.version",
+      "sortable": true
     },
     {
       "column": "source",

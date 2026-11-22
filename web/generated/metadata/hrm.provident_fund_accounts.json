@@ -38,6 +38,14 @@
     "currencyCode",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_provident_fund_accounts_scheme_code_code": "schemeCode",
+    "ck_provident_fund_accounts_status": "status",
+    "fk_provident_fund_accounts_company_id": "companyId",
+    "fk_provident_fund_accounts_employment_id": "employmentId",
+    "uq_provident_fund_accounts_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -80,7 +88,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.provident_fund_accounts.scheme_code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "opened_on",

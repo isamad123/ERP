@@ -42,6 +42,18 @@
     "reimburseVia",
     "payInputId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_expense_claims_reimburse_via": "reimburseVia",
+    "ck_expense_claims_status": "status",
+    "fk_expense_claims_branch_id": "branchId",
+    "fk_expense_claims_company_id": "companyId",
+    "fk_expense_claims_employment_id": "employmentId",
+    "fk_expense_claims_pay_input_id": "payInputId",
+    "fk_expense_claims_workflow_instance_id": "workflowInstanceId",
+    "uq_expense_claims_company_id_claim_no": "claimNo",
+    "uq_expense_claims_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -83,7 +95,8 @@
       "readOnly": true,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.expense_claims.claim_no"
+      "labelKey": "fields.hrm.expense_claims.claim_no",
+      "sortable": true
     },
     {
       "column": "employment_id",

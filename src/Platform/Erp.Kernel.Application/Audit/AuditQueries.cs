@@ -5,7 +5,11 @@ namespace Erp.Kernel.Application.Audit;
 /// <summary>Filters of the change-log search (FR-KRN-AUD-04): user, entity, record, date range, action, source.</summary>
 public sealed record ChangeQuery(Guid? UserId, string? EntityType, Guid? EntityId, DateTimeOffset? From, DateTimeOffset? To, string? Action, string? Source, string? Cursor, int Limit);
 
-/// <summary>One change-log entry as an allowed viewer sees it: protected values decrypted, or hidden by field security.</summary>
+/// <summary>
+/// One change-log entry as an allowed viewer sees it: protected values decrypted, or hidden by field security.
+/// <see cref="ActorName"/> (slice S1.12c, record-history panel): the display name of the person who made the change, null
+/// for system and job changes or a person who no longer exists.
+/// </summary>
 public sealed record ChangeItem(
     Guid Id,
     DateTimeOffset OccurredAt,
@@ -18,7 +22,8 @@ public sealed record ChangeItem(
     string? Source,
     Guid? CorrelationId,
     string? IpAddress,
-    JsonArray Changes);
+    JsonArray Changes,
+    string? ActorName = null);
 
 /// <summary>A page of results, newest first; <see cref="Next"/> is the cursor of the following page.</summary>
 public sealed record AuditPage<T>(IReadOnlyList<T> Items, string? Next);

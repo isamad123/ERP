@@ -28,6 +28,10 @@ export interface WorkflowDefinitionListQuery
     id?: string;
     activeVersionId?: string;
     status?: 'active' | 'inactive';
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const workflowDefinitions =
@@ -56,6 +60,8 @@ export interface WorkflowHistoryListQuery
     limit?: number;
     instanceId?: string;
     taskId?: string;
+    /** createdAt; a leading minus sorts descending. */
+    sort?: 'createdAt' | '-createdAt';
 }
 
 export const workflowHistory =
@@ -93,6 +99,8 @@ export interface WorkflowInstanceListQuery
     versionId?: string;
     requesterUserId?: string;
     status?: 'running' | 'approved' | 'rejected' | 'cancelled' | 'failed' | 'returned';
+    /** documentType, status; a leading minus sorts descending. */
+    sort?: 'documentType' | '-documentType' | 'status' | '-status';
 }
 
 export const workflowInstances =
@@ -136,6 +144,8 @@ export interface WorkflowTaskListQuery
     assigneeRoleId?: string;
     actedBy?: string;
     status?: 'pending' | 'approved' | 'rejected' | 'changes_requested' | 'reassigned' | 'skipped' | 'escalated';
+    /** status; a leading minus sorts descending. */
+    sort?: 'status' | '-status';
 }
 
 export const workflowTasks =
@@ -167,6 +177,8 @@ export interface WorkflowVersionListQuery
     limit?: number;
     definitionId?: string;
     status?: 'draft' | 'active' | 'retired';
+    /** version; a leading minus sorts descending. */
+    sort?: 'version' | '-version';
 }
 
 export const workflowVersions =

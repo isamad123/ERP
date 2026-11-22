@@ -41,6 +41,18 @@
     "activeVersionId",
     "isActive"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_form_definitions_code_code": "code",
+    "ck_form_definitions_name_i18n_object": "nameI18n",
+    "ck_form_definitions_purpose": "purpose",
+    "fk_form_definitions_company_id": "companyId",
+    "uq_form_definitions_company_id_code": "code",
+    "uq_form_definitions_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -73,7 +85,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.form_definitions.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -131,7 +144,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.hrm.form_definitions.is_active"
     },
     {

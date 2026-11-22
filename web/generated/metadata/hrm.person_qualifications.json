@@ -43,6 +43,13 @@
     "expiryDate",
     "gradeOrLevel"
   ],
+  "search": [],
+  "constraints": {
+    "ck_person_qualifications_kind": "kind",
+    "fk_person_qualifications_file_id": "fileId",
+    "fk_person_qualifications_learning_record_id": "learningRecordId",
+    "fk_person_qualifications_person_id": "personId"
+  },
   "fields": [
     {
       "column": "id",
@@ -91,7 +98,8 @@
           "value": "certification",
           "labelKey": "options.hrm.person_qualifications.kind.certification"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "title",

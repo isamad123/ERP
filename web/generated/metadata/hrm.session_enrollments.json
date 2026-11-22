@@ -40,6 +40,15 @@
     "workflowInstanceId",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_session_enrollments_status": "status",
+    "fk_session_enrollments_company_id": "companyId",
+    "fk_session_enrollments_employment_id": "employmentId",
+    "fk_session_enrollments_session_id": "sessionId",
+    "fk_session_enrollments_workflow_instance_id": "workflowInstanceId",
+    "uq_session_enrollments_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

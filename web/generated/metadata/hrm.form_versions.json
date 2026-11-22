@@ -31,6 +31,11 @@
     "version",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_form_versions_status": "status",
+    "fk_form_versions_form_id": "formId"
+  },
   "fields": [
     {
       "column": "id",
@@ -61,7 +66,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.form_versions.version"
+      "labelKey": "fields.hrm.form_versions.version",
+      "sortable": true
     },
     {
       "column": "schema",

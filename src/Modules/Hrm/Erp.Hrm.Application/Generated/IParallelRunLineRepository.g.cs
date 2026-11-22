@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.parallel_run_lines (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.parallel_run_lines (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record ParallelRunLineFilter
 {
     public global::System.Guid? CompanyId { get; init; }

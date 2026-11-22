@@ -40,6 +40,16 @@
     "rateMultiplier",
     "payInputId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_overtime_entries_day_type": "dayType",
+    "ck_overtime_entries_status": "status",
+    "fk_overtime_entries_comp_off_entry_id": "compOffEntryId",
+    "fk_overtime_entries_company_id": "companyId",
+    "fk_overtime_entries_employment_id": "employmentId",
+    "fk_overtime_entries_pay_input_id": "payInputId",
+    "fk_overtime_entries_workflow_instance_id": "workflowInstanceId"
+  },
   "fields": [
     {
       "column": "id",
@@ -82,7 +92,8 @@
       "system": false,
       "filter": true,
       "labelKey": "fields.hrm.overtime_entries.work_date",
-      "references": "hrm.attendance_days"
+      "references": "hrm.attendance_days",
+      "sortable": true
     },
     {
       "column": "day_type",

@@ -6,13 +6,15 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.statutory_returns (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.statutory_returns (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record StatutoryReturnFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? ComplianceTaskId { get; init; }
     public global::System.Guid? EmploymentId { get; init; }
     public global::System.Guid? GeneratedDocumentId { get; init; }
+    /// <summary>Sort key: returnCode, periodLabel; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.statutory_returns.</summary>

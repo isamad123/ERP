@@ -39,6 +39,17 @@
     "totalAmount",
     "lineCount"
   ],
+  "search": [],
+  "constraints": {
+    "ck_payment_batches_payment_mode": "paymentMode",
+    "ck_payment_batches_status": "status",
+    "fk_payment_batches_company_bank_account_id": "companyBankAccountId",
+    "fk_payment_batches_company_id": "companyId",
+    "fk_payment_batches_file_id": "fileId",
+    "fk_payment_batches_pay_run_id": "payRunId",
+    "fk_payment_batches_template_id": "templateId",
+    "uq_payment_batches_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -109,7 +120,8 @@
           "value": "mobile_wallet",
           "labelKey": "options.hrm.payment_batches.payment_mode.mobile_wallet"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "template_id",

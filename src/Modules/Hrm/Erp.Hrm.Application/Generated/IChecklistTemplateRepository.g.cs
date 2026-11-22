@@ -6,10 +6,15 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.checklist_templates (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.checklist_templates (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record ChecklistTemplateFilter
 {
     public global::System.Guid? CompanyId { get; init; }
+    public bool? IsActive { get; init; }
+    /// <summary>Sort key: code, kind; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+    /// <summary>Case-insensitive text found in code, nameI18n.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated repository of hrm.checklist_templates.</summary>

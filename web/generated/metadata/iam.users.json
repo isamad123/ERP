@@ -41,6 +41,13 @@
     "lastLoginAt",
     "employeeRef"
   ],
+  "search": [],
+  "constraints": {
+    "ck_users_status": "status",
+    "fk_users_default_company_id": "defaultCompanyId",
+    "uq_users_email": "email",
+    "uq_users_username": "username"
+  },
   "fields": [
     {
       "column": "id",
@@ -60,7 +67,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.iam.users.username"
+      "labelKey": "fields.iam.users.username",
+      "sortable": true
     },
     {
       "column": "email",
@@ -71,7 +79,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.iam.users.email",
-      "createOnly": true
+      "createOnly": true,
+      "sortable": true
     },
     {
       "column": "display_name",

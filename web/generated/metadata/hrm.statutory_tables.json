@@ -42,6 +42,16 @@
     "packVersion",
     "validFrom"
   ],
+  "search": [
+    "code"
+  ],
+  "constraints": {
+    "ck_statutory_tables_code_code": "code",
+    "ck_statutory_tables_description_i18n_object": "descriptionI18n",
+    "ck_statutory_tables_kind": "kind",
+    "ck_statutory_tables_source": "source",
+    "fk_statutory_tables_company_id": "companyId"
+  },
   "fields": [
     {
       "column": "id",

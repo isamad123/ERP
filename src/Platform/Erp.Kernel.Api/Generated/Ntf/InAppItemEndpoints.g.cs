@@ -37,6 +37,9 @@ public sealed class InAppItemListQuery
     public int? Limit { get; init; }
 
     public global::System.Guid? UserId { get; init; }
+
+    /// <summary>Sort key: createdAt; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of ntf.in_app_items: read. Answers pass through field security (S1.06).</summary>
@@ -55,7 +58,7 @@ internal static class InAppItemEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "ntf.in_app_items.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Ntf.InAppItemFilter { UserId = query.UserId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Ntf.InAppItemFilter { UserId = query.UserId, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Ntf.InAppItemAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

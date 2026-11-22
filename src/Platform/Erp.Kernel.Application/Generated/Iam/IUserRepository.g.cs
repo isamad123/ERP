@@ -6,11 +6,13 @@
 
 namespace Erp.Kernel.Application.Generated.Iam;
 
-/// <summary>Equality filters for listing iam.users (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing iam.users (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record UserFilter
 {
     public global::System.Guid? DefaultCompanyId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: username, email; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of iam.users.</summary>

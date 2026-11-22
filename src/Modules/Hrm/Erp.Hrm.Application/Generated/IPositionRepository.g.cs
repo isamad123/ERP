@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.positions (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.positions (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record PositionFilter
 {
     public global::System.Guid? CompanyId { get; init; }

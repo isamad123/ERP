@@ -52,6 +52,8 @@ export interface CustomFieldDefListQuery
     limit?: number;
     optionListId?: string;
     status?: 'active' | 'retired';
+    /** entityType, fieldKey; a leading minus sorts descending. */
+    sort?: 'entityType' | '-entityType' | 'fieldKey' | '-fieldKey';
 }
 
 export const customFieldDefs =
@@ -82,6 +84,8 @@ export interface FeatureFlagOverrideListQuery
     after?: string;
     limit?: number;
     flagKey?: string;
+    /** flagKey, layer; a leading minus sorts descending. */
+    sort?: 'flagKey' | '-flagKey' | 'layer' | '-layer';
 }
 
 export const featureFlagOverrides =
@@ -118,6 +122,8 @@ export interface InstalledPackListQuery
     after?: string;
     limit?: number;
     status?: 'installed' | 'upgrading' | 'failed';
+    /** packId; a leading minus sorts descending. */
+    sort?: 'packId' | '-packId';
 }
 
 export const installedPacks =
@@ -157,6 +163,8 @@ export interface LabelListQuery
 {
     after?: string;
     limit?: number;
+    /** key, language, layer; a leading minus sorts descending. */
+    sort?: 'key' | '-key' | 'language' | '-language' | 'layer' | '-layer';
 }
 
 export const labels =
@@ -193,6 +201,8 @@ export interface NumberingSchemeListQuery
     companyId?: string;
     branchId?: string;
     status?: 'active' | 'retired';
+    /** documentType; a leading minus sorts descending. */
+    sort?: 'documentType' | '-documentType';
 }
 
 export const numberingSchemes =
@@ -218,6 +228,8 @@ export interface NumberingVoidListQuery
     after?: string;
     limit?: number;
     schemeId?: string;
+    /** number; a leading minus sorts descending. */
+    sort?: 'number' | '-number';
 }
 
 export const numberingVoids =
@@ -258,6 +270,10 @@ export interface OptionListItemListQuery
     after?: string;
     limit?: number;
     listId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const optionListItems =
@@ -295,6 +311,10 @@ export interface OptionListListQuery
 {
     after?: string;
     limit?: number;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const optionLists =
@@ -334,6 +354,8 @@ export interface PackItemListQuery
 {
     after?: string;
     limit?: number;
+    /** packId, objectType, objectKey; a leading minus sorts descending. */
+    sort?: 'packId' | '-packId' | 'objectType' | '-objectType' | 'objectKey' | '-objectKey';
 }
 
 export const packItems =
@@ -363,6 +385,8 @@ export interface SettingValueHistoryListQuery
 {
     after?: string;
     limit?: number;
+    /** settingKey, createdAt; a leading minus sorts descending. */
+    sort?: 'settingKey' | '-settingKey' | 'createdAt' | '-createdAt';
 }
 
 export const settingValueHistory =
@@ -406,6 +430,8 @@ export interface SetupTaskListQuery
     limit?: number;
     companyId?: string;
     status?: 'pending' | 'done' | 'skipped';
+    /** moduleId, taskKey; a leading minus sorts descending. */
+    sort?: 'moduleId' | '-moduleId' | 'taskKey' | '-taskKey';
 }
 
 export const setupTasks =

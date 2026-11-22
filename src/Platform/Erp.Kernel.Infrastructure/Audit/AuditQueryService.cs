@@ -264,6 +264,7 @@ public sealed class AuditQueryService(
         await using var connection = (NpgsqlConnection)await tenant.DataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         var reader = new AuditValueReader(connection, key);
         var maps = new Dictionary<(string, Guid?), FieldAccessMap?>();
+        var actorNames = await ActorNamesAsync(connection, rows, cancellationToken).ConfigureAwait(false);
         foreach (var row in rows)
         {
             var resource = resources.Find(row.EntityType);
@@ -331,10 +332,32 @@ public sealed class AuditQueryService(
             }
 
             items.Add(new ChangeItem(row.Id, row.OccurredAt, row.ActorUserId, row.ActorKind, row.EntityType, row.EntityId, row.CompanyId, row.Action, row.Source,
-                row.CorrelationId, row.IpAddress?.ToString(), changes));
+                row.CorrelationId, row.IpAddress?.ToString(), changes,
+                row.ActorUserId is { } actorId && actorNames.TryGetValue(actorId, out var actorName) ? actorName : null));
         }
 
         return (items, [.. shown]);
+    }
+
+    /// <summary>Display names of the people who made the changes (S1.12c: "who" in the record-history panel).</summary>
+    private static async Task<Dictionary<Guid, string>> ActorNamesAsync(NpgsqlConnection connection, List<ChangeLog> rows, CancellationToken cancellationToken)
+    {
+        var ids = rows.Where(r => r.ActorUserId is not null).Select(r => r.ActorUserId!.Value).Distinct().ToArray();
+        var names = new Dictionary<Guid, string>();
+        if (ids.Length == 0)
+        {
+            return names;
+        }
+
+        await using var command = new NpgsqlCommand("select id, display_name from iam.users where id = any($1) and not is_system", connection);
+        command.Parameters.Add(new NpgsqlParameter { Value = ids });
+        await using var result = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await result.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            names[result.GetGuid(0)] = result.GetString(1);
+        }
+
+        return names;
     }
 
     private async Task LogShownAsync(string entityType, Guid? entityId, List<string> shown, string action, int rows, CancellationToken cancellationToken, bool always = false)

@@ -25,6 +25,12 @@
     "outputFormat",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_template_versions_output_format": "outputFormat",
+    "ck_template_versions_status": "status",
+    "fk_template_versions_template_id": "templateId"
+  },
   "fields": [
     {
       "column": "id",
@@ -55,7 +61,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.doc.template_versions.version"
+      "labelKey": "fields.doc.template_versions.version",
+      "sortable": true
     },
     {
       "column": "body",

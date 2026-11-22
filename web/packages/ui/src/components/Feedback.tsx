@@ -2,7 +2,7 @@
 // icon, never colour alone, FR-UX-TOK-03), banner, toast (shown at least 6 seconds and announced), skeleton, spinner
 // (shown only after 300 ms, so quick answers do not flicker), empty state and error panel with the reference code.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AlertCircle, AlertTriangle, Ban, CheckCircle2, CircleDashed, Clock, Info, Inbox, Loader2, PauseCircle, X, XCircle } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Ban, CheckCircle2, CircleDashed, Clock, Info, Inbox, Loader2, PauseCircle, X, XCircle, CircleSlash } from 'lucide-react';
 import { isolate, useText } from '@erp/i18n';
 import { Button as AriaButton } from 'react-aria-components';
 
@@ -17,6 +17,9 @@ export const STATUSES = {
   blocked: { tone: 'danger', icon: Ban },
   on_hold: { tone: 'warning', icon: PauseCircle },
   info: { tone: 'info', icon: Info },
+  // S1.12c: master data that is in use or switched off (branches, locations, ...).
+  active: { tone: 'success', icon: CheckCircle2 },
+  inactive: { tone: 'neutral', icon: CircleSlash },
 } as const;
 
 export type Status = keyof typeof STATUSES;

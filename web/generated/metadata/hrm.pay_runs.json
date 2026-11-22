@@ -41,6 +41,18 @@
     "snapshotTakenAt",
     "calcJobRunId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_pay_runs_kind": "kind",
+    "ck_pay_runs_status": "status",
+    "fk_pay_runs_calc_job_run_id": "calcJobRunId",
+    "fk_pay_runs_company_id": "companyId",
+    "fk_pay_runs_pay_group_id": "payGroupId",
+    "fk_pay_runs_pay_period_id": "payPeriodId",
+    "fk_pay_runs_workflow_instance_id": "workflowInstanceId",
+    "uq_pay_runs_company_id_id": "id",
+    "uq_pay_runs_company_id_run_no": "runNo"
+  },
   "fields": [
     {
       "column": "id",
@@ -71,7 +83,8 @@
       "readOnly": true,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_runs.run_no"
+      "labelKey": "fields.hrm.pay_runs.run_no",
+      "sortable": true
     },
     {
       "column": "pay_group_id",
