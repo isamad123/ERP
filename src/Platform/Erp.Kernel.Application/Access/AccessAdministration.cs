@@ -186,7 +186,8 @@ public sealed record CatalogEntry(string Code, string Module, string Resource, s
 /// <summary>The records of a resource a user would see: how many, and the ids of the first page (FR-ADM-ROL-06).</summary>
 public sealed record ScopePreview(string Resource, Guid UserId, long Count, IReadOnlyList<Guid> FirstPage);
 
-public sealed record FieldPreviewItem(string Field, string? FieldClass, string Access);
+/// <summary>One field of a resource for a role. <paramref name="Label"/> (S1.15b, additive): the name of a custom field in both languages.</summary>
+public sealed record FieldPreviewItem(string Field, string? FieldClass, string Access, IReadOnlyDictionary<string, string>? Label = null);
 
 /// <summary>The fields of a resource as one role sees them (FR-ADM-ROL-07).</summary>
 public sealed record FieldPreview(string Resource, Guid RoleId, IReadOnlyList<FieldPreviewItem> Fields);

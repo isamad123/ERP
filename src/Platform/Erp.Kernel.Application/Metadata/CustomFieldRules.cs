@@ -82,7 +82,7 @@ public static partial class CustomFieldRules
             result[property.Name] = node;
         }
 
-        return (result, RangeError(dataType, result));
+        return RangeError(dataType, result) is { } range ? (null, range) : (result, null);
     }
 
     private static (JsonNode? Node, string? Error) NormalizeSetting(string dataType, string name, JsonElement value)
