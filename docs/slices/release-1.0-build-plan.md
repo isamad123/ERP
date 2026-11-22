@@ -46,7 +46,7 @@ Each slice is one fresh session (or one fresh session per part where its slice f
 ## Batch 4 — Time and leave (mixed)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.27 | Biometric device connector and import (one reference device type first); API clients and keys (FR-ADM-SEC-02) (S1.13 ruling Q2, CR-069) (two parts; slice file approved except Q2, CR-088) | C | Sonnet (CR-082; was Opus) |
+| S1.27 | Biometric device connector and import (one reference device type first); API clients and keys (FR-ADM-SEC-02) (S1.13 ruling Q2, CR-069) (three parts: S1.27a capture, S1.27c API clients with a fresh Opus review, S1.27b devices, in that order; slice file approved except Q2, CR-088, CR-095) | C | Sonnet (CR-082; was Opus) |
 | S1.28 | Shifts, rosters, Ramzan timings (two parts; slice file approved, CR-085) | D | Sonnet |
 | S1.29 | Attendance engine: punches to daily results with explanation, exceptions, overtime (two parts, fresh Opus review of each; slice file approved, CR-089) | B | Opus |
 | S1.30 | Regularization and duty requests, attendance dashboard and reports (two parts; slice file approved, CR-090) | D | Sonnet |

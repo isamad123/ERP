@@ -17,7 +17,7 @@ At most **three** build sessions run at once, each on its own branch from the la
 | Wave | Lanes (run together) | Needs first |
 | --- | --- | --- |
 | 1 (now) | A: S1.13b onward, then S1.14 to S1.19 (screens) - B: S1.20a to d (Opus) - C: slice files for Wave 2 and 3 (planning only) | S1.12 (done) |
-| 2 | A: S1.21, S1.22, S1.23c - B: S1.23a, b then S1.32 engine (Opus) - C: S1.28 shifts, S1.34 pay set-up | S1.20b |
+| 2 | A: S1.21, S1.22, S1.23c - B: S1.23a, b then S1.32 engine (Opus) - C: S1.28 shifts, S1.34 pay set-up, then S1.27a, c, b (attendance capture and API clients; CR-095) | S1.20b |
 | 3 | A: S1.24, S1.25, S1.26 - B: S1.29 attendance engine (Opus), then S1.31 - C: S1.30, S1.33, S1.35 payroll engine (Opus) | S1.20, S1.28, S1.32 |
 | 4 | A: S1.36 and S1.37 (Opus, after the tax professional's rules arrive) - B: S1.38, S1.39 (Opus) - C: S1.40, S1.41, S1.42 | S1.35 |
 | 5 | S1.43 (Opus), S1.44, S1.45, S1.46 (calendar only), S1.48 to S1.51 | S1.38 |
