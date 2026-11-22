@@ -262,6 +262,38 @@ tables:
     notes:
       - text: "Cycle check trigger on reports_to_position_id."
         stub: { name: positions_reporting_cycle, owner: S1.22 }
+        # S1.22a (CR-078 S1.22a detail b): a position never reports to itself, directly or through others. A position is its code:
+        # a change from a date adds a row with a new id, so the chain follows codes and refuses a cycle on any date (stricter than
+        # a cycle on one date, never looser). An AFTER trigger, so the row being written is part of the chain it closes.
+        implemented:
+          slice: S1.22a
+          triggers:
+            - [hrm.positions, tg_positions_reporting_cycle]
+          sql: |
+            create or replace function hrm.tg_positions_reporting_cycle() returns trigger
+            language plpgsql as $fn$
+            begin
+                if new.reports_to_position_id is null then
+                    return null;
+                end if;
+                if exists (
+                    with recursive up(code) as (
+                        select p.position_code_lower from hrm.positions p
+                        where p.company_id = new.company_id and p.id = new.reports_to_position_id
+                        union
+                        select r.position_code_lower
+                        from up
+                        join hrm.positions c on c.company_id = new.company_id and c.position_code_lower = up.code
+                        join hrm.positions r on r.company_id = new.company_id and r.id = c.reports_to_position_id)
+                    select 1 from up where up.code = lower(new.position_code)) then
+                    raise exception 'position % reports to itself, directly or through others', new.position_code
+                        using errcode = '23514', constraint = 'ck_positions_reporting_cycle';
+                end if;
+                return null;
+            end
+            $fn$;
+            create or replace trigger tg_positions_reporting_cycle after insert or update of reports_to_position_id, position_code, valid_from, valid_to
+                on hrm.positions for each row execute function hrm.tg_positions_reporting_cycle();
 
   hrm.policy_versions:
     notes:
@@ -1192,3 +1224,55 @@ functions:
       $fn$;
       create or replace trigger tg_employment_events_fixed before update or delete on hrm.employment_events
           for each row execute function hrm.tg_employment_events_fixed();
+
+  # S1.22a (CR-078 S1.22a detail c; slice S1.22 Build items 2 to 4): numbers that cannot be negative, kept by the database like the
+  # other value rules (a function entry, not a design check, because the first migrations are frozen). Each refusal names its
+  # constraint, so the screens show it next to the field.
+  - slice: S1.22a
+    name: hrm.tg_positions_value_checks
+    purpose: "A position's budgeted FTE is not negative (constraint ck_positions_budgeted_fte); a grade's rank is not negative (ck_grades_rank); a sanctioned count is not negative (ck_headcount_budgets_sanctioned_count)."
+    triggers:
+      - [hrm.positions, tg_positions_value_checks]
+      - [hrm.grades, tg_grades_value_checks]
+      - [hrm.headcount_budgets, tg_headcount_budgets_value_checks]
+    sql: |
+      create or replace function hrm.tg_positions_value_checks() returns trigger
+      language plpgsql as $fn$
+      begin
+          if new.budgeted_fte < 0 then
+              raise exception 'position % has a negative budgeted FTE', new.position_code
+                  using errcode = '23514', constraint = 'ck_positions_budgeted_fte';
+          end if;
+          return new;
+      end
+      $fn$;
+      create or replace function hrm.tg_grades_value_checks() returns trigger
+      language plpgsql as $fn$
+      begin
+          if new.rank < 0 then
+              raise exception 'grade % has a negative rank', new.code
+                  using errcode = '23514', constraint = 'ck_grades_rank';
+          end if;
+          if jsonb_typeof(new.defaults) is distinct from 'object' then
+              raise exception 'grade % needs its defaults as an object', new.code
+                  using errcode = '23514', constraint = 'ck_grades_defaults_object';
+          end if;
+          return new;
+      end
+      $fn$;
+      create or replace function hrm.tg_headcount_budgets_value_checks() returns trigger
+      language plpgsql as $fn$
+      begin
+          if new.sanctioned_count < 0 then
+              raise exception 'a sanctioned count cannot be negative'
+                  using errcode = '23514', constraint = 'ck_headcount_budgets_sanctioned_count';
+          end if;
+          return new;
+      end
+      $fn$;
+      create or replace trigger tg_positions_value_checks before insert or update of budgeted_fte on hrm.positions
+          for each row execute function hrm.tg_positions_value_checks();
+      create or replace trigger tg_grades_value_checks before insert or update of rank, defaults on hrm.grades
+          for each row execute function hrm.tg_grades_value_checks();
+      create or replace trigger tg_headcount_budgets_value_checks before insert or update of sanctioned_count on hrm.headcount_budgets
+          for each row execute function hrm.tg_headcount_budgets_value_checks();
