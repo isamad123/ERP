@@ -51,6 +51,12 @@ public interface IHeldChangeHandler
     /// <summary>The permission an approver (and a rejecter) of this kind must hold, instead of <c>iam.maker_checker.approve</c>.</summary>
     string ApprovePermission { get; }
 
+    /// <summary>
+    /// True when the signed-in caller may see this change at all (its records are inside their data scope; review S1.20a finding
+    /// 2). Otherwise the inbox does not offer it to them and approve and reject answer as if it did not exist.
+    /// </summary>
+    Task<bool> VisibleAsync(HeldChange change, DbTransaction transaction, CancellationToken cancellationToken);
+
     /// <summary>The refusal approving would give now, or null. Runs in a transaction that is rolled back.</summary>
     Task<HeldChangeProblem?> CheckAsync(HeldChange change, DbTransaction transaction, CancellationToken cancellationToken);
 

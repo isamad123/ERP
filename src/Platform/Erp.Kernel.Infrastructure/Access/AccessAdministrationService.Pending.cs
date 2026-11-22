@@ -57,7 +57,13 @@ public sealed partial class AccessAdministrationService
 
             if (HandlerOf(row.Kind) is { } handler)
             {
-                var (heldSubject, heldDetails, heldProblem) = await DescribeHeldAsync(handler, tx, row.Id, row.Kind, row.By, row.Payload, row.Reason, own, cancellationToken).ConfigureAwait(false);
+                if (await DescribeHeldAsync(handler, tx, row.Id, row.Kind, row.By, row.Payload, row.Reason, own, cancellationToken).ConfigureAwait(false) is not { } held)
+                {
+                    continue; // outside the caller's data scope: not offered (review S1.20a finding 2)
+                }
+
+                var (heldSubject, heldDetails, heldProblem) = held;
+
                 (own ? mine : toDecide).Add(new ChangeRequestView(row.Id, row.Kind, row.By, row.ByName, row.At, row.At.AddDays(days), row.Reason, heldSubject, heldDetails, heldProblem is null, heldProblem));
                 continue;
             }

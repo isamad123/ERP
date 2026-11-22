@@ -58,7 +58,13 @@ public sealed partial class AccessAdministrationService
             }
 
             var requestReason = await IdentityDb.ScalarAsync<string>(c, tx, "select reason from iam.maker_checker_requests where id = $1", cancellationToken, requestId).ConfigureAwait(false);
-            if (approve && await handler.ApplyAsync(new HeldChange(requestId, request.ActionType, request.RequestedBy, request.Payload, requestReason), tx, cancellationToken).ConfigureAwait(false) is { } problem)
+            var change = new HeldChange(requestId, request.ActionType, request.RequestedBy, request.Payload, requestReason);
+            if (!await handler.VisibleAsync(change, tx, cancellationToken).ConfigureAwait(false))
+            {
+                return AccessResult.NotFound; // its records are outside the decider's data scope (review S1.20a finding 2)
+            }
+
+            if (approve && await handler.ApplyAsync(change, tx, cancellationToken).ConfigureAwait(false) is { } problem)
             {
                 return problem.Forbidden ? AccessResult.Forbidden(problem.ErrorKey) : AccessResult.Invalid(problem.ErrorKey);
             }
@@ -87,15 +93,34 @@ public sealed partial class AccessAdministrationService
         return ([.. decidable], [.. HeldHandlers.Select(h => h.Kind)]);
     }
 
-    /// <summary>A module's pending request in the inbox: described by its handler, with the refusal approving would give now.</summary>
-    private static async Task<(IReadOnlyDictionary<string, string>? Subject, IReadOnlyList<ChangeDetail> Details, string? Problem)> DescribeHeldAsync(
+    /// <summary>
+    /// A module's pending request in the inbox: described by its handler, with the refusal approving would give now; null when the
+    /// caller may not see it (its records are outside their scope; their own requests are always shown). A handler that fails
+    /// on one request leaves the others listed: its work is rolled back to a savepoint and the request is shown as not decidable
+    /// now (review S1.20a finding 11).
+    /// </summary>
+    private static async Task<(IReadOnlyDictionary<string, string>? Subject, IReadOnlyList<ChangeDetail> Details, string? Problem)?> DescribeHeldAsync(
         IHeldChangeHandler handler, NpgsqlTransaction tx, Guid id, string kind, Guid by, string payload, string? reason, bool own, CancellationToken ct)
     {
         var change = new HeldChange(id, kind, by, payload, reason);
-        var description = await handler.DescribeAsync(change, tx, ct).ConfigureAwait(false);
-        var details = description.Details.Select(d => new ChangeDetail(d.Label, d.Type, d.Text, d.Date, d.Names, d.Items)).ToList();
-        var problem = own ? OwnRequest : (await handler.CheckAsync(change, tx, ct).ConfigureAwait(false))?.ErrorKey;
-        return (description.Subject, details, problem);
+        await tx.SaveAsync("held_change", ct).ConfigureAwait(false);
+        try
+        {
+            if (!own && !await handler.VisibleAsync(change, tx, ct).ConfigureAwait(false))
+            {
+                return null;
+            }
+
+            var description = await handler.DescribeAsync(change, tx, ct).ConfigureAwait(false);
+            var details = description.Details.Select(d => new ChangeDetail(d.Label, d.Type, d.Text, d.Date, d.Names, d.Items)).ToList();
+            var problem = own ? OwnRequest : (await handler.CheckAsync(change, tx, ct).ConfigureAwait(false))?.ErrorKey;
+            return (description.Subject, details, problem);
+        }
+        catch (Exception ex) when (ex is NpgsqlException or InvalidOperationException or System.Text.Json.JsonException or System.Data.Common.DbException)
+        {
+            await tx.RollbackAsync("held_change", ct).ConfigureAwait(false);
+            return (null, [], InvalidRequest);
+        }
     }
 }
 
