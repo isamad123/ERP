@@ -12,6 +12,14 @@
     {
       "action": "read",
       "permission": "hrm.employment_statutory_registrations.read"
+    },
+    {
+      "action": "create",
+      "permission": "hrm.employment_statutory_registrations.create"
+    },
+    {
+      "action": "update",
+      "permission": "hrm.employment_statutory_registrations.update"
     }
   ],
   "companyScoped": true,

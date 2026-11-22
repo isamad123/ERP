@@ -207,7 +207,7 @@ another user's e-mail (trigger `tg_users_username_email_clash`, a rules.yaml `fu
 Browser tests: `server.licence({ usersLimit })` changes the named-user limit.
 
 Persons (S1.20a): HR person services `src/Modules/Hrm/Erp.Hrm.Infrastructure/People/` (endpoints `Erp.Hrm.Api/People/PersonEndpoints.cs`, under `/api/hrm/persons`,
-`/api/hrm/duplicates`, `/api/hrm/person-catalogue`); the generated writes of `hrm.persons` to `hrm.employment_statutory_registrations` are closed (`api_actions: [read]`),
+`/api/hrm/duplicates`, `/api/hrm/person-catalogue`); the generated writes of the seven person tables are closed (`api_actions: [read]`; S1.20b to d close the employment tables),
 their actions are hand-written permissions in `Erp.Hrm.Infrastructure/Access/permissions.json`. A module holds a change for a second person through
 `IHeldChanges` and an `IHeldChangeHandler` (Kernel.Contracts `Access/HeldChanges.cs`; example `PersonMergeHandler`). HR endpoints carry `HrmEndpointMetadata`
 for the isolation suite (`HrmProbe`). Tests: `tests/Erp.IntegrationTests/People`.

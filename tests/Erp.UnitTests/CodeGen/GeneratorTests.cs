@@ -412,22 +412,18 @@ public sealed class GeneratorTests
     public void S108_FR_KRN_NUM_03_numbered_columns_are_filled_by_the_numbering_service_and_never_accepted_from_the_caller()
     {
         var files = Generator.Generate(Root).Files;
-        var loans = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/LoanEndpoints.g.cs"];
-        var request = loans[loans.IndexOf("public sealed class LoanWriteRequest", StringComparison.Ordinal)..loans.IndexOf("public sealed class LoanListQuery", StringComparison.Ordinal)];
-        Assert.DoesNotContain("LoanNo", request, StringComparison.Ordinal);
-        Assert.Contains("row.LoanNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest(\"hrm.loan_no\", row.CompanyId, null, null)", loans, StringComparison.Ordinal);
-        Assert.Contains("NumberRequest(\"hrm.service_request_no\", row.CompanyId, row.BranchId, null)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/ServiceRequestEndpoints.g.cs"], StringComparison.Ordinal);
+        var employments = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/EmploymentEndpoints.g.cs"];
+        var request = employments[employments.IndexOf("public sealed class EmploymentWriteRequest", StringComparison.Ordinal)..employments.IndexOf("public sealed class EmploymentListQuery", StringComparison.Ordinal)];
+        Assert.DoesNotContain("EmployeeNo", request, StringComparison.Ordinal);
+        Assert.Contains("row.EmployeeNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest(\"hrm.employee_no\", row.CompanyId, null, null)", employments, StringComparison.Ordinal);
+        Assert.Contains("NumberRequest(\"hrm.contract_no\", row.CompanyId, null, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/ContractEndpoints.g.cs"], StringComparison.Ordinal);
         Assert.Contains("NumberRequest(\"hrm.leave_request_no\", row.CompanyId, row.BranchId, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/LeaveRequestEndpoints.g.cs"], StringComparison.Ordinal);
 
-        // Slice S1.20a (ruling Q1): persons, employments and contracts have no generated create at all, so no caller can type
-        // their number there; the HR services number them (hrm.person_no in the person service; employee and contract numbers in S1.20b, c).
-        foreach (var closed in new[] { "Person", "Employment", "Contract" })
-        {
-            var endpoints = files[$"src/Modules/Hrm/Erp.Hrm.Api/Generated/{closed}Endpoints.g.cs"];
-            Assert.DoesNotContain("WriteRequest", endpoints, StringComparison.Ordinal);
-            Assert.DoesNotContain("AssignOnCreateAsync", endpoints, StringComparison.Ordinal);
-        }
-
+        // Slice S1.20a (ruling Q1): persons have no generated create, so nobody can type a person number; the person service
+        // takes it from the kernel numbering service.
+        var persons = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/PersonEndpoints.g.cs"];
+        Assert.DoesNotContain("WriteRequest", persons, StringComparison.Ordinal);
+        Assert.DoesNotContain("AssignOnCreateAsync", persons, StringComparison.Ordinal);
         Assert.Contains("new NumberRequest(\"hrm.person_no\", null, null, null)", File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Infrastructure/People/PersonService.cs")), StringComparison.Ordinal);
 
         var registry = files["src/Modules/Hrm/Erp.Hrm.Infrastructure/Generated/HrmNumberingTypes.g.cs"];

@@ -29,6 +29,22 @@ public sealed class ProbationRecordResponse
     public long RowVersion { get; init; }
 }
 
+/// <summary>Body of create and update calls for hrm.probation_records. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
+public sealed class ProbationRecordWriteRequest
+{
+    public global::System.Guid? CompanyId { get; init; }
+    public global::System.Guid? EmploymentId { get; init; }
+    public global::System.DateOnly? StartDate { get; init; }
+    public global::System.DateOnly? EndDate { get; init; }
+    public global::System.DateOnly? ExtendedTo { get; init; }
+    public global::System.Guid? ReviewFormResponseId { get; init; }
+    public global::System.DateOnly? DecisionDate { get; init; }
+    public string? Status { get; init; }
+
+    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
+    public long? RowVersion { get; init; }
+}
+
 /// <summary>Query string of the list endpoint for hrm.probation_records.</summary>
 public sealed class ProbationRecordListQuery
 {
@@ -45,7 +61,7 @@ public sealed class ProbationRecordListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.probation_records: read. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.probation_records: read, create, update. Answers pass through field security (S1.06).</summary>
 internal static class ProbationRecordEndpoints
 {
     private const string Resource = "hrm.probation_records";
@@ -55,6 +71,8 @@ internal static class ProbationRecordEndpoints
         var group = app.MapGroup("/api/hrm/probation-records").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.probation_records.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.probation_records.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.probation_records.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.probation_records.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
+        group.MapPost("/", CreateAsync).WithName("hrm.probation_records.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.probation_records.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
+        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.probation_records.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.probation_records.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ProbationRecordListQuery query, global::Erp.Hrm.Application.Generated.IProbationRecordRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -71,6 +89,53 @@ internal static class ProbationRecordEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ProbationRecordAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ProbationRecordWriteRequest request, global::Erp.Hrm.Application.Generated.IProbationRecordRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.probation_records.create", async () =>
+        {
+            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ProbationRecordAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
+            var errors = Validate(request, update: false, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var row = new global::Erp.Hrm.Domain.Generated.ProbationRecord();
+            var denied = Apply(request, row, update: false, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
+            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created("/api/hrm/probation-records/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ProbationRecordAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
+        }, cancellationToken);
+
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ProbationRecordWriteRequest request, global::Erp.Hrm.Application.Generated.IProbationRecordRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
+        GeneratedEndpointSupport.RunAsync(permissions, "hrm.probation_records.update", async () =>
+        {
+            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
+            if (row is null)
+            {
+                return GeneratedEndpointSupport.NotFound();
+            }
+
+            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.ProbationRecordAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
+            var errors = Validate(request, update: true, access);
+            if (errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.Invalid(errors);
+            }
+
+            var denied = Apply(request, row, update: true, access);
+            if (denied.Count > 0)
+            {
+                return GeneratedEndpointSupport.NotEditable(denied);
+            }
+
+            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ProbationRecordAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static ProbationRecordResponse ToResponse(global::Erp.Hrm.Domain.Generated.ProbationRecord row) => new()
@@ -90,4 +155,109 @@ internal static class ProbationRecordEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
+
+    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
+    private static global::System.Collections.Generic.List<string> Validate(ProbationRecordWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
+    {
+        var errors = new global::System.Collections.Generic.List<string>();
+        if (!update && request.CompanyId is null)
+        {
+            errors.Add("companyId");
+        }
+        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
+        {
+            errors.Add("employmentId");
+        }
+        if (request.StartDate is null && (!update || access.CanEdit("start_date")))
+        {
+            errors.Add("startDate");
+        }
+        if (request.EndDate is null && (!update || access.CanEdit("end_date")))
+        {
+            errors.Add("endDate");
+        }
+        if (request.Status is null && (!update || access.CanEdit("status")))
+        {
+            errors.Add("status");
+        }
+        if (update && request.RowVersion is null)
+        {
+            errors.Add("rowVersion");
+        }
+        return errors;
+    }
+
+    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
+    private static global::System.Collections.Generic.List<string> Apply(ProbationRecordWriteRequest request, global::Erp.Hrm.Domain.Generated.ProbationRecord row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
+    {
+        var denied = new global::System.Collections.Generic.List<string>();
+        if (!update)
+        {
+            if (access.CanEdit("company_id"))
+            {
+                row.CompanyId = request.CompanyId!.Value;
+            }
+            else if (request.CompanyId is not null)
+            {
+                denied.Add("companyId");
+            }
+        }
+        if (access.CanEdit("employment_id"))
+        {
+            row.EmploymentId = request.EmploymentId!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
+        {
+            denied.Add("employmentId");
+        }
+        if (access.CanEdit("start_date"))
+        {
+            row.StartDate = request.StartDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StartDate, row.StartDate, update))
+        {
+            denied.Add("startDate");
+        }
+        if (access.CanEdit("end_date"))
+        {
+            row.EndDate = request.EndDate!.Value;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EndDate, row.EndDate, update))
+        {
+            denied.Add("endDate");
+        }
+        if (access.CanEdit("extended_to"))
+        {
+            row.ExtendedTo = request.ExtendedTo;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ExtendedTo, row.ExtendedTo, update))
+        {
+            denied.Add("extendedTo");
+        }
+        if (access.CanEdit("review_form_response_id"))
+        {
+            row.ReviewFormResponseId = request.ReviewFormResponseId;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReviewFormResponseId, row.ReviewFormResponseId, update))
+        {
+            denied.Add("reviewFormResponseId");
+        }
+        if (access.CanEdit("decision_date"))
+        {
+            row.DecisionDate = request.DecisionDate;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DecisionDate, row.DecisionDate, update))
+        {
+            denied.Add("decisionDate");
+        }
+        if (access.CanEdit("status"))
+        {
+            row.Status = request.Status!;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
+        {
+            denied.Add("status");
+        }
+        return denied;
+    }
 }

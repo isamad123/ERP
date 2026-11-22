@@ -154,7 +154,7 @@ public sealed class PersonServiceTests(TenancyFixture fx) : IAsyncLifetime
         var (id, _, _) = await PlainAsync(hr);
         var contact = await _h.PostAsync(hr, $"{Persons}/{id}/contacts", new { kind = "phone", value = "042-1" }, Ct);
         Assert.Equal(HttpStatusCode.Created, contact.Status);
-        foreach (var (method, path) in new[] { ("POST", "/api/hrm/person-contacts"), ("PUT", $"/api/hrm/person-contacts/{contact.Json.GetProperty("id").GetGuid()}"), ("DELETE", $"/api/hrm/persons/{id}"), ("POST", "/api/hrm/employments") })
+        foreach (var (method, path) in new[] { ("POST", "/api/hrm/person-contacts"), ("PUT", $"/api/hrm/person-contacts/{contact.Json.GetProperty("id").GetGuid()}"), ("DELETE", $"/api/hrm/persons/{id}"), ("POST", "/api/hrm/nominations") })
         {
             var answer = method switch
             {

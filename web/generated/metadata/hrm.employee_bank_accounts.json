@@ -12,6 +12,14 @@
     {
       "action": "read",
       "permission": "hrm.employee_bank_accounts.read"
+    },
+    {
+      "action": "create",
+      "permission": "hrm.employee_bank_accounts.create"
+    },
+    {
+      "action": "update",
+      "permission": "hrm.employee_bank_accounts.update"
     }
   ],
   "companyScoped": true,

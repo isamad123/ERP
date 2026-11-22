@@ -13,6 +13,14 @@
     {
       "action": "read",
       "permission": "hrm.employment_assignments.read"
+    },
+    {
+      "action": "create",
+      "permission": "hrm.employment_assignments.create"
+    },
+    {
+      "action": "update",
+      "permission": "hrm.employment_assignments.update"
     }
   ],
   "companyScoped": true,

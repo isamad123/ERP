@@ -11,6 +11,14 @@
     {
       "action": "read",
       "permission": "hrm.contracts.read"
+    },
+    {
+      "action": "create",
+      "permission": "hrm.contracts.create"
+    },
+    {
+      "action": "update",
+      "permission": "hrm.contracts.update"
     }
   ],
   "companyScoped": true,
