@@ -184,10 +184,17 @@
         "hrm.person_qualifications.update",
         "hrm.person_qualifications.delete",
         "hrm.person_duplicate_cases.read",
-        "hrm.person_duplicate_cases.update"
+        "hrm.person_duplicate_cases.update",
+        "hrm.employments.create",
+        "hrm.employments.number_override",
+        "hrm.employments.link_user",
+        "hrm.employment_events.create",
+        "wf.workflow_tasks.read",
+        "wf.workflow_tasks.update"
       ],
       "scopes": {
-        "*": "all"
+        "*": "all",
+        "wf.workflow_tasks": "own"
       },
       "fields": []
     },
