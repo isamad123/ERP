@@ -119,6 +119,8 @@ test('FR-ADM-USR-03 FR-ADM-USR-05 FR-KRN-IAM-04 disabling a person with two open
   const page = admin.page;
   await page.goto('/admin/users');
   await search(page, manager.username);
+  // Earlier scenarios of the run leave other people with the same name: wait until the search has narrowed the list to this one.
+  await expect(grid(page).getByRole('button', { name: 'Open Imran Manager' })).toHaveCount(1);
   await grid(page).getByRole('button', { name: 'Open Imran Manager' }).click();
   await expect(page.getByRole('heading', { name: 'Imran Manager', level: 1 })).toBeVisible();
 
