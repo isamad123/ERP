@@ -87,6 +87,7 @@ public static class HrmGeneratedEndpoints
         global::Erp.Hrm.Api.Generated.PaymentLineEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.PersonAddressEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.PersonContactEndpoints.Map(app);
+        global::Erp.Hrm.Api.Generated.PersonDuplicateCaseEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.PersonIdentifierEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.PersonQualificationEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.PersonRelationEndpoints.Map(app);

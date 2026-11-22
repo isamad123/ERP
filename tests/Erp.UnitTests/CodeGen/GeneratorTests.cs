@@ -194,7 +194,7 @@ public sealed class GeneratorTests
     {
         var files = Generator.Generate(Root).Files;
         var grants = files[SqlEmitter.KernelMigrations + "/V202611150200__kernel__grants.sql"] + files[SqlEmitter.HrmMigrations + "/V202611150101__hrm__grants.sql"]
-            + string.Concat(files.Where(f => f.Key.Contains("__kernel__design_", StringComparison.Ordinal)).Select(f => f.Value));
+            + string.Concat(files.Where(f => f.Key.Contains("__kernel__design_", StringComparison.Ordinal) || f.Key.Contains("__hrm__design_", StringComparison.Ordinal)).Select(f => f.Value));
         foreach (var table in Model.Value.Tables.Where(t => t.Database == DatabaseKind.Tenant))
         {
             var lines = grants.Split('\n').Where(l => l.EndsWith($" on {table.FullName} to app_rw;", StringComparison.Ordinal)).ToList();
@@ -417,8 +417,14 @@ public sealed class GeneratorTests
         Assert.DoesNotContain("EmployeeNo", request, StringComparison.Ordinal);
         Assert.Contains("row.EmployeeNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest(\"hrm.employee_no\", row.CompanyId, null, null)", employments, StringComparison.Ordinal);
         Assert.Contains("NumberRequest(\"hrm.contract_no\", row.CompanyId, null, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/ContractEndpoints.g.cs"], StringComparison.Ordinal);
-        Assert.Contains("NumberRequest(\"hrm.person_no\", null, null, null)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/PersonEndpoints.g.cs"], StringComparison.Ordinal);
         Assert.Contains("NumberRequest(\"hrm.leave_request_no\", row.CompanyId, row.BranchId, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/LeaveRequestEndpoints.g.cs"], StringComparison.Ordinal);
+
+        // Slice S1.20a (ruling Q1): persons have no generated create, so nobody can type a person number; the person service
+        // takes it from the kernel numbering service.
+        var persons = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/PersonEndpoints.g.cs"];
+        Assert.DoesNotContain("WriteRequest", persons, StringComparison.Ordinal);
+        Assert.DoesNotContain("AssignOnCreateAsync", persons, StringComparison.Ordinal);
+        Assert.Contains("new NumberRequest(\"hrm.person_no\", null, null, null)", File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Infrastructure/People/PersonService.cs")), StringComparison.Ordinal);
 
         var registry = files["src/Modules/Hrm/Erp.Hrm.Infrastructure/Generated/HrmNumberingTypes.g.cs"];
         Assert.Equal(9, Model.Value.Tables.Sum(t => t.Numbering.Count));

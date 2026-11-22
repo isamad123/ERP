@@ -1,0 +1,126 @@
+{
+  "_comment": "Hand-written permissions of the HR module's purpose-built services (slice S1.20a, CR-076): the generated writes of these tables are closed (ruling Q1; S1.20a closes the person tables, S1.20b to d the employment tables), so their actions are declared here. Registered with permissions.g.json by migrate and provisioning (AccessSetup). Keep in step with Erp.Hrm.Contracts.People.PeoplePermissions.",
+  "module": "hrm",
+  "permissions": [
+    {
+      "code": "hrm.persons.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.persons.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.persons.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.persons.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.persons.merge",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.persons.merge",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.person_identifiers.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_identifiers.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_identifiers.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_identifiers.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_identifiers.delete",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_identifiers.delete",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_identifiers.reveal",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_identifiers.reveal",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.person_contacts.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_contacts.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_contacts.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_contacts.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_contacts.delete",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_contacts.delete",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_addresses.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_addresses.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_addresses.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_addresses.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_addresses.delete",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_addresses.delete",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_relations.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_relations.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_relations.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_relations.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_relations.delete",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_relations.delete",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_qualifications.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_qualifications.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_qualifications.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_qualifications.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_qualifications.delete",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_qualifications.delete",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.person_duplicate_cases.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.person_duplicate_cases.update",
+      "sensitive": false
+    }
+  ]
+}

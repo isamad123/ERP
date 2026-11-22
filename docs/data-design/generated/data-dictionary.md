@@ -2,14 +2,14 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 221 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 222 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
 | customer | aud | 7 |
 | customer | cfg | 19 |
 | customer | doc | 7 |
-| customer | hrm | 112 |
+| customer | hrm | 113 |
 | customer | iam | 24 |
 | customer | itg | 11 |
 | customer | job | 5 |
@@ -3917,6 +3917,44 @@ Indexes:
 
 - `ix_person_contacts_person_id` CREATE INDEX ix_person_contacts_person_id ON hrm.person_contacts USING btree (person_id)
 
+### hrm.person_duplicate_cases
+
+Possible duplicate persons kept for HR review (FR-HRM-EMP-18). Requirements: EMP-18. Source: hrm-people.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| person_id | uuid | no |  | fk hrm.persons; the person whose creation raised the case |
+| other_person_id | uuid | no |  | fk hrm.persons; the existing person it resembles |
+| match_kind | text | no |  |  |
+| source | text | no |  |  |
+| decided_by | uuid | yes |  | fk iam.users |
+| decided_at | timestamp with time zone | yes |  |  |
+| decision_note | text | yes |  |  |
+| status | text | no |  |  |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `ck_person_duplicate_cases_match_kind` CHECK ((match_kind = ANY (ARRAY['name_and_birth_date'::text, 'bank_account'::text])))
+- `ck_person_duplicate_cases_source` CHECK ((source = ANY (ARRAY['create'::text, 'import'::text])))
+- `ck_person_duplicate_cases_status` CHECK ((status = ANY (ARRAY['open'::text, 'distinct'::text, 'merged'::text])))
+- `fk_person_duplicate_cases_decided_by` FOREIGN KEY (decided_by) REFERENCES iam.users(id)
+- `fk_person_duplicate_cases_other_person_id` FOREIGN KEY (other_person_id) REFERENCES hrm.persons(id)
+- `fk_person_duplicate_cases_person_id` FOREIGN KEY (person_id) REFERENCES hrm.persons(id)
+- `pk_person_duplicate_cases` PRIMARY KEY (id)
+- `uq_person_duplicate_cases_person_id_other_person_id_match_kind` UNIQUE (person_id, other_person_id, match_kind)
+
+Indexes:
+
+- `ix_person_duplicate_cases_decided_by` CREATE INDEX ix_person_duplicate_cases_decided_by ON hrm.person_duplicate_cases USING btree (decided_by)
+- `ix_person_duplicate_cases_other_person_id` CREATE INDEX ix_person_duplicate_cases_other_person_id ON hrm.person_duplicate_cases USING btree (other_person_id)
+- `ix_person_duplicate_cases_status_created_at` CREATE INDEX ix_person_duplicate_cases_status_created_at ON hrm.person_duplicate_cases USING btree (status, created_at)
+
 ### hrm.person_identifiers
 
 National IDs, passports, tax numbers; validated per country pack. Requirements: EMP-05, EMP-16, EMP-18. One row per identifier; renewal updates issue and expiry dates (history in the audit log). Source: hrm-people.yaml.
@@ -4059,18 +4097,21 @@ One row per human (FR-XM-28). Employments hang off the person. Requirements: EMP
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| merged_into_person_id | uuid | yes |  | fk hrm.persons; set when this person was merged into another (retired, FR-HRM-EMP-18) |
 
 Constraints:
 
 - `ck_persons_gender` CHECK ((gender = ANY (ARRAY['male'::text, 'female'::text, 'other'::text, 'unspecified'::text])))
 - `ck_persons_marital_status_code` CHECK ((((length(marital_status) >= 1) AND (length(marital_status) <= 40)) AND (marital_status = btrim(marital_status))))
 - `ck_persons_religion_code` CHECK ((((length(religion) >= 1) AND (length(religion) <= 40)) AND (religion = btrim(religion))))
+- `fk_persons_merged_into_person_id` FOREIGN KEY (merged_into_person_id) REFERENCES hrm.persons(id)
 - `fk_persons_nationality_code` FOREIGN KEY (nationality_code) REFERENCES ref.countries(code)
 - `fk_persons_photo_file_id` FOREIGN KEY (photo_file_id) REFERENCES doc.files(id)
 - `pk_persons` PRIMARY KEY (id)
 
 Indexes:
 
+- `ix_persons_merged_into_person_id` CREATE INDEX ix_persons_merged_into_person_id ON hrm.persons USING btree (merged_into_person_id)
 - `ix_persons_nationality_code` CREATE INDEX ix_persons_nationality_code ON hrm.persons USING btree (nationality_code)
 - `ix_persons_photo_file_id` CREATE INDEX ix_persons_photo_file_id ON hrm.persons USING btree (photo_file_id)
 - `uq_persons_person_no` CREATE UNIQUE INDEX uq_persons_person_no ON hrm.persons USING btree (lower(person_no)) WHERE (NOT is_deleted)

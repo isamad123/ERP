@@ -25128,6 +25128,224 @@
     {
       "database": "tenant",
       "schema": "hrm",
+      "name": "person_duplicate_cases",
+      "module": "hrm",
+      "traits": [
+        "std"
+      ],
+      "requirements": [
+        "EMP-18"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "person_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "other_person_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "match_kind",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "name_and_birth_date",
+            "bank_account"
+          ]
+        },
+        {
+          "name": "source",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "create",
+            "import"
+          ]
+        },
+        {
+          "name": "decided_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "decided_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "decision_note",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "status",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "open",
+            "distinct",
+            "merged"
+          ]
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [
+        "uq_person_duplicate_cases_person_id_other_person_id_match_kind"
+      ],
+      "checks": [
+        "ck_person_duplicate_cases_match_kind",
+        "ck_person_duplicate_cases_source",
+        "ck_person_duplicate_cases_status"
+      ],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_person_duplicate_cases_person_id",
+          "columns": [
+            "person_id"
+          ],
+          "target": "hrm.persons",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "fk_person_duplicate_cases_other_person_id",
+          "columns": [
+            "other_person_id"
+          ],
+          "target": "hrm.persons",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "fk_person_duplicate_cases_decided_by",
+          "columns": [
+            "decided_by"
+          ],
+          "target": "iam.users",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_person_duplicate_cases_status_created_at",
+        "ix_person_duplicate_cases_other_person_id",
+        "ix_person_duplicate_cases_decided_by"
+      ],
+      "triggers": [],
+      "append_only_updatable": [],
+      "has_api": true,
+      "full_name": "hrm.person_duplicate_cases"
+    },
+    {
+      "database": "tenant",
+      "schema": "hrm",
       "name": "person_identifiers",
       "module": "hrm",
       "traits": [
@@ -26084,6 +26302,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "merged_into_person_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -26115,11 +26343,22 @@
           "target_columns": [
             "id"
           ]
+        },
+        {
+          "name": "fk_persons_merged_into_person_id",
+          "columns": [
+            "merged_into_person_id"
+          ],
+          "target": "hrm.persons",
+          "target_columns": [
+            "id"
+          ]
         }
       ],
       "indexes": [
         "ix_persons_nationality_code",
-        "ix_persons_photo_file_id"
+        "ix_persons_photo_file_id",
+        "ix_persons_merged_into_person_id"
       ],
       "triggers": [],
       "append_only_updatable": [],

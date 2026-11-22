@@ -54,6 +54,9 @@ public sealed partial class Person : global::Erp.BuildingBlocks.Domain.Entities.
     /// <summary>party_ref: kernel party when Finance or Procurement pays the person (Later); no FK</summary>
     public global::System.Guid? PartyRef { get; set; }
 
+    /// <summary>merged_into_person_id: fk hrm.persons; set when this person was merged into another (retired, FR-HRM-EMP-18)</summary>
+    public global::System.Guid? MergedIntoPersonId { get; set; }
+
     /// <summary>custom</summary>
     public global::System.Text.Json.JsonDocument Custom { get; set; } = global::System.Text.Json.JsonDocument.Parse("{}");
 

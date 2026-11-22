@@ -99,10 +99,19 @@ public enum EndpointKind
 
     /// <summary>Notification action on an item or rule id (S1.11b1): A's id on B's host is 404.</summary>
     NotificationRecordAction,
+
+    /// <summary>HR create (S1.20a): B's create writes nothing in A and answers nothing of A's.</summary>
+    HrmCreate,
+
+    /// <summary>HR action on a record's route (S1.20a: persons, their sections, review cases): A's id on B's host is 404.</summary>
+    HrmRecordAction,
+
+    /// <summary>HR list or catalogue of the bound customer (S1.20a): B's answer shows nothing of A's.</summary>
+    HrmCatalog,
 }
 
 /// <summary>One API endpoint as the API host maps it: method, route and the table it serves.</summary>
-public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null, string? AuditKind = null, string? NumberingKind = null, string? SettingsKind = null, string? LicenceKind = null, string? WorkflowKind = null, string? JobKind = null, string? NotificationKind = null)
+public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null, string? AuditKind = null, string? NumberingKind = null, string? SettingsKind = null, string? LicenceKind = null, string? WorkflowKind = null, string? JobKind = null, string? NotificationKind = null, string? HrmKind = null)
 {
     private const string IdSegment = "/{id:guid}";
 
@@ -116,6 +125,14 @@ public sealed record ApiEndpoint(string Method, string Pattern, string? Resource
     {
         get
         {
+            switch (HrmKind)
+            {
+                case "create": return EndpointKind.HrmCreate;
+                case "record_action": return EndpointKind.HrmRecordAction;
+                case "catalog": return EndpointKind.HrmCatalog;
+                case not null: return EndpointKind.Unclassified;
+            }
+
             switch (NotificationKind)
             {
                 case "catalog" or "own_catalog": return EndpointKind.NotificationCatalog;
@@ -273,13 +290,14 @@ public static class EndpointInventory
             var workflow = endpoint.Metadata.GetMetadata<WorkflowEndpointMetadata>();
             var job = endpoint.Metadata.GetMetadata<JobEndpointMetadata>();
             var notification = endpoint.Metadata.GetMetadata<NotificationEndpointMetadata>();
-            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource ?? audit?.Resource ?? numbering?.Resource ?? settings?.Resource ?? workflow?.Resource ?? job?.Resource ?? notification?.Resource
+            var hrm = endpoint.Metadata.GetMetadata<Erp.Hrm.Contracts.HrmEndpointMetadata>();
+            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource ?? audit?.Resource ?? numbering?.Resource ?? settings?.Resource ?? workflow?.Resource ?? job?.Resource ?? notification?.Resource ?? hrm?.Resource
                 ?? (licence is null ? null : "cp.entitlements");
             var identity = endpoint.Metadata.GetMetadata<IdentityEndpointMetadata>()?.Kind;
             var anonymous = endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null || endpoint.Metadata.GetMetadata<IAuthorizeData>() is null;
             foreach (var method in methods is { Count: > 0 } ? methods : ["*"])
             {
-                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind, audit?.Kind, numbering?.Kind, settings?.Kind, licence?.Kind, workflow?.Kind, job?.Kind, notification?.Kind));
+                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind, audit?.Kind, numbering?.Kind, settings?.Kind, licence?.Kind, workflow?.Kind, job?.Kind, notification?.Kind, hrm?.Kind));
             }
         }
 

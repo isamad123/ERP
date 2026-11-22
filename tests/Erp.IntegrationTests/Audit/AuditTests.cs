@@ -382,17 +382,27 @@ public sealed class AuditTests(TenancyFixture fx) : IAsyncLifetime
     [Fact]
     public async Task Spec03_R21_HRM_PRV_04_personal_values_are_unreadable_raw_readable_in_history_and_erased_after_the_key_is_destroyed()
     {
-        var role = await _h.RoleAsync(Ct, ["hrm.persons.read", "hrm.persons.create", "hrm.persons.update", "aud.history.view"], [("hrm.persons", "all")]);
+        // Slice S1.20a: persons are written by the HR person service (generated writes closed, ruling Q1) and religion is refused
+        // until a pack asks for it, so the second personal value checked is a relation's phone, written in the same transaction.
+        var role = await _h.RoleAsync(Ct, ["hrm.persons.read", "hrm.persons.create", "hrm.persons.update", "hrm.person_relations.create", "aud.history.view"],
+            [("hrm.persons", "all"), ("hrm.person_relations", "all")]);
         var user = await _h.UserAsync(Ct);
         await _h.AssignAsync(user, role, null, _h.Today.AddDays(-1), null, Ct);
-        var created = await SendAsync(HttpMethod.Post, user, "/api/hrm/persons", new { personNo = "P" + Guid.NewGuid().ToString("N")[..8], firstName = "Ayesha", gender = "female", dateOfBirth = "1991-07-23", religion = "islam" });
+        var created = await SendAsync(HttpMethod.Post, user, "/api/hrm/persons", new
+        {
+            firstName = "Ayesha", gender = "female", dateOfBirth = "1991-07-23",
+            relations = new[] { new { relation = "parent", fullName = "Rashid", phone = "0321-7654321" } },
+        });
         Assert.Equal(HttpStatusCode.Created, created.Status);
         var person = created.Json.GetProperty("id").GetGuid();
 
         var raw = await _h.ScalarAsync<string>("select changes::text from aud.change_log where entity_type = 'hrm.persons' and entity_id = $1", Ct, person);
         Assert.DoesNotContain("1991-07-23", raw, StringComparison.Ordinal);
-        Assert.DoesNotContain("islam", raw, StringComparison.Ordinal);
         Assert.Contains("Ayesha", raw, StringComparison.Ordinal); // names stay readable (Q5)
+        var relationRaw = await _h.ScalarAsync<string>("select changes::text from aud.change_log where entity_type = 'hrm.person_relations' and entity_id = (select id from hrm.person_relations where person_id = $1)", Ct, person);
+        Assert.DoesNotContain("0321-7654321", relationRaw, StringComparison.Ordinal);
+        Assert.Contains("Rashid", relationRaw, StringComparison.Ordinal);
+        Assert.Equal(person, await _h.ScalarAsync<Guid>("select subject_person_id from aud.change_log where entity_type = 'hrm.person_relations' and entity_id = (select id from hrm.person_relations where person_id = $1)", Ct, person));
         Assert.Equal(person, await _h.ScalarAsync<Guid>("select subject_person_id from aud.change_log where entity_type = 'hrm.persons' and entity_id = $1", Ct, person));
 
         var accessBefore = await AccessRowsAsync(user, "hrm.persons");

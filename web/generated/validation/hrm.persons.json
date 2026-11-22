@@ -71,6 +71,11 @@
       "format": "uuid",
       "nullable": true
     },
+    "mergedIntoPersonId": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
     "custom": {
       "readOnly": true
     }

@@ -2960,16 +2960,6 @@ export interface Nomination
     rowVersion: number;
 }
 
-export interface NominationWrite
-{
-    personId: string;
-    scheme: string;
-    relationId: string;
-    share: number;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface NominationListQuery
 {
     after?: string;
@@ -2982,8 +2972,6 @@ export const nominations =
 {
     list: (query: NominationListQuery = {}) => request<PagedResult<Nomination>>('GET', '/api/hrm/nominations', { query }),
     get: (id: string) => request<Nomination>('GET', `/api/hrm/nominations/${id}`),
-    create: (body: NominationWrite) => request<Nomination>('POST', '/api/hrm/nominations', { body }),
-    update: (id: string, body: NominationWrite & { rowVersion: number }) => request<Nomination>('PUT', `/api/hrm/nominations/${id}`, { body }),
 };
 
 /** hrm.overtime_entries: OvertimeEntry. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3852,15 +3840,6 @@ export interface PersonAddress
     rowVersion: number;
 }
 
-export interface PersonAddressWrite
-{
-    personId: string;
-    kind: 'permanent' | 'current' | 'mailing';
-    address: unknown;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface PersonAddressListQuery
 {
     after?: string;
@@ -3872,8 +3851,6 @@ export const personAddresses =
 {
     list: (query: PersonAddressListQuery = {}) => request<PagedResult<PersonAddress>>('GET', '/api/hrm/person-addresses', { query }),
     get: (id: string) => request<PersonAddress>('GET', `/api/hrm/person-addresses/${id}`),
-    create: (body: PersonAddressWrite) => request<PersonAddress>('POST', '/api/hrm/person-addresses', { body }),
-    update: (id: string, body: PersonAddressWrite & { rowVersion: number }) => request<PersonAddress>('PUT', `/api/hrm/person-addresses/${id}`, { body }),
 };
 
 /** hrm.person_contacts: PersonContact. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3891,14 +3868,6 @@ export interface PersonContact
     rowVersion: number;
 }
 
-export interface PersonContactWrite
-{
-    personId: string;
-    kind: 'mobile' | 'phone' | 'email_personal' | 'email_work' | 'other';
-    value: string;
-    isPrimary?: boolean;
-}
-
 export interface PersonContactListQuery
 {
     after?: string;
@@ -3910,8 +3879,43 @@ export const personContacts =
 {
     list: (query: PersonContactListQuery = {}) => request<PagedResult<PersonContact>>('GET', '/api/hrm/person-contacts', { query }),
     get: (id: string) => request<PersonContact>('GET', `/api/hrm/person-contacts/${id}`),
-    create: (body: PersonContactWrite) => request<PersonContact>('POST', '/api/hrm/person-contacts', { body }),
-    update: (id: string, body: PersonContactWrite & { rowVersion: number }) => request<PersonContact>('PUT', `/api/hrm/person-contacts/${id}`, { body }),
+};
+
+/** hrm.person_duplicate_cases: Possible duplicate persons kept for HR review (FR-HRM-EMP-18). Field rules (S1.06) may leave a field out or mask it as text. */
+export interface PersonDuplicateCase
+{
+    id: string;
+    personId: string;
+    otherPersonId: string;
+    matchKind: 'name_and_birth_date' | 'bank_account';
+    source: 'create' | 'import';
+    decidedBy: string | null;
+    decidedAt: string | null;
+    decisionNote: string | null;
+    status: 'open' | 'distinct' | 'merged';
+    createdAt: string;
+    createdBy: string;
+    updatedAt: string;
+    updatedBy: string;
+    rowVersion: number;
+}
+
+export interface PersonDuplicateCaseListQuery
+{
+    after?: string;
+    limit?: number;
+    personId?: string;
+    otherPersonId?: string;
+    decidedBy?: string;
+    status?: 'open' | 'distinct' | 'merged';
+    /** matchKind, status, createdAt; a leading minus sorts descending. */
+    sort?: 'matchKind' | '-matchKind' | 'status' | '-status' | 'createdAt' | '-createdAt';
+}
+
+export const personDuplicateCases =
+{
+    list: (query: PersonDuplicateCaseListQuery = {}) => request<PagedResult<PersonDuplicateCase>>('GET', '/api/hrm/person-duplicate-cases', { query }),
+    get: (id: string) => request<PersonDuplicateCase>('GET', `/api/hrm/person-duplicate-cases/${id}`),
 };
 
 /** hrm.person_identifiers: National IDs, passports, tax numbers; validated per country pack. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3973,21 +3977,6 @@ export interface PersonQualification
     rowVersion: number;
 }
 
-export interface PersonQualificationWrite
-{
-    personId: string;
-    kind: 'education' | 'experience' | 'language' | 'certification';
-    title: string;
-    institution?: string | null;
-    startDate?: string | null;
-    endDate?: string | null;
-    expiryDate?: string | null;
-    gradeOrLevel?: string | null;
-    details: unknown;
-    fileId?: string | null;
-    learningRecordId?: string | null;
-}
-
 export interface PersonQualificationListQuery
 {
     after?: string;
@@ -4003,9 +3992,6 @@ export const personQualifications =
 {
     list: (query: PersonQualificationListQuery = {}) => request<PagedResult<PersonQualification>>('GET', '/api/hrm/person-qualifications', { query }),
     get: (id: string) => request<PersonQualification>('GET', `/api/hrm/person-qualifications/${id}`),
-    create: (body: PersonQualificationWrite) => request<PersonQualification>('POST', '/api/hrm/person-qualifications', { body }),
-    update: (id: string, body: PersonQualificationWrite & { rowVersion: number }) => request<PersonQualification>('PUT', `/api/hrm/person-qualifications/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/person-qualifications/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.person_relations: Family, dependents and emergency contacts in one table. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4030,18 +4016,6 @@ export interface PersonRelation
     rowVersion: number;
 }
 
-export interface PersonRelationWrite
-{
-    personId: string;
-    relation: string;
-    fullName: string;
-    dateOfBirth?: string | null;
-    gender?: string | null;
-    phone?: string | null;
-    isDependent?: boolean;
-    isEmergencyContact?: boolean;
-}
-
 export interface PersonRelationListQuery
 {
     after?: string;
@@ -4053,9 +4027,6 @@ export const personRelations =
 {
     list: (query: PersonRelationListQuery = {}) => request<PagedResult<PersonRelation>>('GET', '/api/hrm/person-relations', { query }),
     get: (id: string) => request<PersonRelation>('GET', `/api/hrm/person-relations/${id}`),
-    create: (body: PersonRelationWrite) => request<PersonRelation>('POST', '/api/hrm/person-relations', { body }),
-    update: (id: string, body: PersonRelationWrite & { rowVersion: number }) => request<PersonRelation>('PUT', `/api/hrm/person-relations/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/person-relations/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.persons: One row per human (FR-XM-28). Employments hang off the person. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4075,6 +4046,7 @@ export interface Person
     religion: string | null;
     photoFileId: string | null;
     partyRef: string | null;
+    mergedIntoPersonId: string | null;
     custom: unknown;
     isDeleted: boolean;
     deletedAt: string | null;
@@ -4086,29 +4058,13 @@ export interface Person
     rowVersion: number;
 }
 
-export interface PersonWrite
-{
-    firstName: string;
-    middleName?: string | null;
-    lastName?: string | null;
-    nameLocal?: string | null;
-    fatherOrSpouseName?: string | null;
-    gender: 'male' | 'female' | 'other' | 'unspecified';
-    dateOfBirth?: string | null;
-    maritalStatus?: string | null;
-    nationalityCode?: string | null;
-    religion?: string | null;
-    photoFileId?: string | null;
-    partyRef?: string | null;
-    custom?: unknown;
-}
-
 export interface PersonListQuery
 {
     after?: string;
     limit?: number;
     nationalityCode?: string;
     photoFileId?: string;
+    mergedIntoPersonId?: string;
     /** personNo; a leading minus sorts descending. */
     sort?: 'personNo' | '-personNo';
 }
@@ -4117,9 +4073,6 @@ export const persons =
 {
     list: (query: PersonListQuery = {}) => request<PagedResult<Person>>('GET', '/api/hrm/persons', { query }),
     get: (id: string) => request<Person>('GET', `/api/hrm/persons/${id}`),
-    create: (body: PersonWrite) => request<Person>('POST', '/api/hrm/persons', { body }),
-    update: (id: string, body: PersonWrite & { rowVersion: number }) => request<Person>('PUT', `/api/hrm/persons/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/persons/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.policies: Named policies by type (leave, attendance, shift, overtime, pay, expense, loan, benefits, performance). Field rules (S1.06) may leave a field out or mask it as text. */

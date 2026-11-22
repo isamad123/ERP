@@ -1023,18 +1023,6 @@
       "sensitive": false
     },
     {
-      "code": "hrm.nominations.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.nominations.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.nominations.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.nominations.update",
-      "sensitive": false
-    },
-    {
       "code": "hrm.overtime_entries.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.overtime_entries.read",
@@ -1317,33 +1305,15 @@
       "sensitive": false
     },
     {
-      "code": "hrm.person_addresses.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.person_addresses.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.person_addresses.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.person_addresses.update",
-      "sensitive": false
-    },
-    {
       "code": "hrm.person_contacts.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.person_contacts.read",
       "sensitive": false
     },
     {
-      "code": "hrm.person_contacts.create",
+      "code": "hrm.person_duplicate_cases.read",
       "module": "hrm",
-      "descriptionKey": "permissions.hrm.person_contacts.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.person_contacts.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.person_contacts.update",
+      "descriptionKey": "permissions.hrm.person_duplicate_cases.read",
       "sensitive": false
     },
     {
@@ -1359,69 +1329,15 @@
       "sensitive": false
     },
     {
-      "code": "hrm.person_qualifications.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.person_qualifications.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.person_qualifications.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.person_qualifications.update",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.person_qualifications.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.person_qualifications.delete",
-      "sensitive": false
-    },
-    {
       "code": "hrm.person_relations.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.person_relations.read",
       "sensitive": true
     },
     {
-      "code": "hrm.person_relations.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.person_relations.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.person_relations.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.person_relations.update",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.person_relations.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.person_relations.delete",
-      "sensitive": true
-    },
-    {
       "code": "hrm.persons.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.persons.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.persons.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.persons.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.persons.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.persons.update",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.persons.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.persons.delete",
       "sensitive": false
     },
     {

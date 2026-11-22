@@ -13,14 +13,6 @@
     {
       "action": "read",
       "permission": "hrm.nominations.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.nominations.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.nominations.update"
     }
   ],
   "companyScoped": false,
