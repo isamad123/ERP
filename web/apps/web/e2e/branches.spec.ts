@@ -354,7 +354,7 @@ test('FR-KRN-LOC-01 pseudo-locale: every text of the branch screens comes from t
       return [...found, ...labels];
     });
     expect(plain, `hard-coded text on ${path}`).toEqual([]);
-    await shot(page, `pseudo-branches${path.replace(/[/?=]/g, '_').slice(0, 60)}`);
+    await shot(page, `pseudo-branches${new URL(path, page.url()).pathname.replace(/[^a-z0-9-]+/gi, '_').slice(0, 60)}`);
   }
   noProblems(page);
   await context.close();

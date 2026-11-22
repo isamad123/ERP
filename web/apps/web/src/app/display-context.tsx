@@ -33,7 +33,7 @@ const DisplayContext = createContext<DisplayValue>({
 export function DisplayProvider({ children }: { children: ReactNode }) {
   const [display, setState] = useState(readDisplay);
   const [formats, setFormatState] = useState(DEFAULT_FORMATS);
-  const [overrides, setOverrides] = useState<OverridesByLanguage>(NO_OVERRIDES);
+  const [overrides, setOverrideState] = useState<OverridesByLanguage>(NO_OVERRIDES);
   const locale = uiLocale(display);
   const value = useMemo<DisplayValue>(() => ({
     display,
@@ -41,7 +41,8 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
     formats,
     setFormats: (next: Formats) => setFormatState((current) =>
       current.timeZone === next.timeZone && current.numbers.digits === next.numbers.digits && current.numbers.grouping === next.numbers.grouping ? current : next),
-    setOverrides,
+    // Unchanged overrides (an empty set again at every sign-out check) keep the same state, so nothing re-renders.
+    setOverrides: (next: OverridesByLanguage) => setOverrideState((current) => (JSON.stringify(current) === JSON.stringify(next) ? current : next)),
   }), [display, formats]);
   return (
     <DisplayContext.Provider value={value}>
