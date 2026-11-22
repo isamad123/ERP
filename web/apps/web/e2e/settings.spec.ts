@@ -75,7 +75,8 @@ test('FR-ADM-SET-01 FR-ADM-SET-02 FR-ADM-SET-03 FR-ADM-SET-06 an administrator f
   await expect(zone).toHaveCount(1);
   await page.getByRole('button', { name: /Show values for/ }).click();
   await page.getByRole('option', { name: `Second Co ${run}` }).click();
-  await expect(zone.getByText('Asia/Karachi', { exact: true })).toBeVisible();
+  const inherited = (await zone.locator('bdi').first().innerText()).trim(); // whatever the customer value is now (other scenarios may have set it)
+  expect(inherited).not.toBe('Asia/Dubai');
   drawer = await openSetting(page, 'Time zone');
   await change(drawer, /^Time zone/, 'Asia/Dubai', 'Branch in the Gulf', 'Override for this company');
   await expect(page.getByText('The setting was saved.').first()).toBeVisible();
@@ -84,7 +85,7 @@ test('FR-ADM-SET-01 FR-ADM-SET-02 FR-ADM-SET-03 FR-ADM-SET-06 an administrator f
   await expect(zone.getByText('Company', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Show values for/ }).click();
   await page.getByRole('option', { name: 'The whole customer' }).click();
-  await expect(zone.getByText('Asia/Karachi', { exact: true })).toBeVisible(); // the customer value is unchanged
+  await expect(zone.getByText(inherited, { exact: true })).toBeVisible(); // the customer value is unchanged
 
   // Reset the company value to the inherited one.
   await page.getByRole('button', { name: /Show values for/ }).click();
@@ -94,7 +95,7 @@ test('FR-ADM-SET-01 FR-ADM-SET-02 FR-ADM-SET-03 FR-ADM-SET-06 an administrator f
   await drawer.getByRole('button', { name: 'Reset to inherited' }).click();
   await expect(page.getByText('The setting was saved.').first()).toBeVisible();
   await closeDrawer(page);
-  await expect(zone.getByText('Asia/Karachi', { exact: true })).toBeVisible();
+  await expect(zone.getByText(inherited, { exact: true })).toBeVisible();
   await expect(zone.getByText('Company', { exact: true })).toHaveCount(0);
 
   // The history lists the changes; restoring the first one brings the standard value back.

@@ -15,7 +15,8 @@ export function useBranding(): ShownBranding {
   const query = useQuery({ queryKey: ['kernel', 'branding'], queryFn: ({ signal }) => readBranding(signal), staleTime: 60_000, retry: false });
   const data = query.data;
   return {
-    productName: data?.productName?.trim() ? data.productName : t('product.name'),
+    // The standard name is the translatable web text; a customer's own name is shown as written.
+    productName: data?.productName?.trim() && data.productName !== 'ERP' ? data.productName : t('product.name'),
     logoUrl: data?.logoUrl ?? null,
     banner: pickText(data?.banner, locale),
     terms: pickText(data?.terms, locale),
