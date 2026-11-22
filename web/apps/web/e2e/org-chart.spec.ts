@@ -137,14 +137,15 @@ test('FR-ADM-ORG-03 the same move works by keyboard, and a unit that is in no pl
   await dialog.getByRole('button', { name: 'Move' }).press('Enter');
   await expect(page.getByText(/Unit DIVB moved from/)).toBeVisible();
 
-  await page.getByRole('button', { name: 'Place Unit LOOSE…' }).first().click();
+  const loose = page.getByRole('listitem').filter({ hasText: `${run}K-LOOSE` }); // other structures have units of the same name
+  await loose.getByRole('button', { name: 'Place Unit LOOSE…' }).click();
   const place = page.getByRole('dialog', { name: /Place Unit LOOSE/ });
   await chooseParent(page, /^Unit ROOT$/);
   await place.getByRole('button', { name: 'Place' }).click();
   await expect(page.getByText(/Unit LOOSE moved from/)).toBeVisible();
   await expect(unitK('LOOSE')).toBeVisible();
   // Units of other structures are not in this hierarchy either, so the list may remain; this unit must have left it.
-  await expect(page.getByRole('button', { name: 'Place Unit LOOSE…' })).toHaveCount(0);
+  await expect(loose).toHaveCount(0);
 });
 
 test('FR-ADM-ORG-04 units, unit types and hierarchies are listed and edited, and the unit sections link to each other and to the chart', async ({ browser }) => {
