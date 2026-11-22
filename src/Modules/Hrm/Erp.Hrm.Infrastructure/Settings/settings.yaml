@@ -1,0 +1,11 @@
+# Settings of the HR module (slice S1.09a format). S1.20a (CR-076 S1.20a detail c; slice S1.20 ruling Q4): merging duplicate
+# persons waits for a second person while this setting is on. Urdu texts to be reviewed by a native speaker (R-062).
+settings:
+  - key: hrm.person_merge.requires_approval
+    type: bool
+    default: true
+    layers: [tenant]
+    area: hr.people
+    name: {en: "Approval of person merges", ur: "افراد کے انضمام کی منظوری"}
+    description: {en: "Merging two person records needs a second person's approval", ur: "دو افراد کے ریکارڈ ضم کرنے کے لیے دوسرے شخص کی منظوری درکار"}
+    help: {en: "A merge of duplicate person records waits until another person with the merge permission approves it. The person who asked can never approve it.", ur: "دہرائے گئے افراد کے ریکارڈ کا انضمام اس وقت تک رکا رہتا ہے جب تک انضمام کی اجازت والا کوئی دوسرا شخص اسے منظور نہ کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔"}

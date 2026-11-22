@@ -26,19 +26,6 @@ public sealed class PersonAddressResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for hrm.person_addresses. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class PersonAddressWriteRequest
-{
-    public global::System.Guid? PersonId { get; init; }
-    public string? Kind { get; init; }
-    public global::System.Text.Json.JsonElement? Address { get; init; }
-    public global::System.DateOnly? ValidFrom { get; init; }
-    public global::System.DateOnly? ValidTo { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for hrm.person_addresses.</summary>
 public sealed class PersonAddressListQuery
 {
@@ -49,7 +36,7 @@ public sealed class PersonAddressListQuery
     public global::System.Guid? PersonId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.person_addresses: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.person_addresses: read. Answers pass through field security (S1.06).</summary>
 internal static class PersonAddressEndpoints
 {
     private const string Resource = "hrm.person_addresses";
@@ -59,8 +46,6 @@ internal static class PersonAddressEndpoints
         var group = app.MapGroup("/api/hrm/person-addresses").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.person_addresses.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.person_addresses.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.person_addresses.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.person_addresses.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.person_addresses.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.person_addresses.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.person_addresses.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.person_addresses.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PersonAddressListQuery query, global::Erp.Hrm.Application.Generated.IPersonAddressRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -79,53 +64,6 @@ internal static class PersonAddressEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PersonAddressAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PersonAddressWriteRequest request, global::Erp.Hrm.Application.Generated.IPersonAddressRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.person_addresses.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PersonAddressAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.PersonAddress();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/person-addresses/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PersonAddressAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PersonAddressWriteRequest request, global::Erp.Hrm.Application.Generated.IPersonAddressRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.person_addresses.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.PersonAddressAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PersonAddressAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static PersonAddressResponse ToResponse(global::Erp.Hrm.Domain.Generated.PersonAddress row) => new()
     {
         Id = row.Id,
@@ -140,78 +78,4 @@ internal static class PersonAddressEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(PersonAddressWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.PersonId is null && (!update || access.CanEdit("person_id")))
-        {
-            errors.Add("personId");
-        }
-        if (request.Kind is null && (!update || access.CanEdit("kind")))
-        {
-            errors.Add("kind");
-        }
-        if (request.Address is null && (!update || access.CanEdit("address")))
-        {
-            errors.Add("address");
-        }
-        if (request.ValidFrom is null && (!update || access.CanEdit("valid_from")))
-        {
-            errors.Add("validFrom");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(PersonAddressWriteRequest request, global::Erp.Hrm.Domain.Generated.PersonAddress row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("person_id"))
-        {
-            row.PersonId = request.PersonId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PersonId, row.PersonId, update))
-        {
-            denied.Add("personId");
-        }
-        if (access.CanEdit("kind"))
-        {
-            row.Kind = request.Kind!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Kind, row.Kind, update))
-        {
-            denied.Add("kind");
-        }
-        if (access.CanEdit("address"))
-        {
-            row.Address = GeneratedEndpointSupport.ToDocument(request.Address)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Address, row.Address, update))
-        {
-            denied.Add("address");
-        }
-        if (access.CanEdit("valid_from"))
-        {
-            row.ValidFrom = request.ValidFrom!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidFrom, row.ValidFrom, update))
-        {
-            denied.Add("validFrom");
-        }
-        if (access.CanEdit("valid_to"))
-        {
-            row.ValidTo = request.ValidTo;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidTo, row.ValidTo, update))
-        {
-            denied.Add("validTo");
-        }
-        return denied;
-    }
 }

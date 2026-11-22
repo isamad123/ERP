@@ -16,14 +16,6 @@
     {
       "action": "read",
       "permission": "hrm.employments.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.employments.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.employments.update"
     }
   ],
   "companyScoped": true,

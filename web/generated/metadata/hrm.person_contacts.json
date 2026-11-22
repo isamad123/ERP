@@ -11,14 +11,6 @@
     {
       "action": "read",
       "permission": "hrm.person_contacts.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.person_contacts.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.person_contacts.update"
     }
   ],
   "companyScoped": false,

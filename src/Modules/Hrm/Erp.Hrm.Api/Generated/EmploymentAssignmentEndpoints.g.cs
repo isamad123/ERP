@@ -38,31 +38,6 @@ public sealed class EmploymentAssignmentResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for hrm.employment_assignments. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class EmploymentAssignmentWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public global::System.Guid? EmploymentId { get; init; }
-    public global::System.Guid? EventId { get; init; }
-    public global::System.Guid? OrgUnitId { get; init; }
-    public global::System.Guid? PositionId { get; init; }
-    public string? Title { get; init; }
-    public global::System.Guid? GradeId { get; init; }
-    public global::System.Guid? BranchId { get; init; }
-    public global::System.Guid? LocationId { get; init; }
-    public global::System.Guid? ManagerEmploymentId { get; init; }
-    public global::System.Guid? PayGroupId { get; init; }
-    public global::System.Text.Json.JsonElement? CostAllocation { get; init; }
-    public decimal? Fte { get; init; }
-    public string? WorkSchedule { get; init; }
-    public bool? IsActing { get; init; }
-    public global::System.DateOnly? ValidFrom { get; init; }
-    public global::System.DateOnly? ValidTo { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for hrm.employment_assignments.</summary>
 public sealed class EmploymentAssignmentListQuery
 {
@@ -94,7 +69,7 @@ public sealed class EmploymentAssignmentListQuery
     public string? Sort { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.employment_assignments: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.employment_assignments: read. Answers pass through field security (S1.06).</summary>
 internal static class EmploymentAssignmentEndpoints
 {
     private const string Resource = "hrm.employment_assignments";
@@ -104,8 +79,6 @@ internal static class EmploymentAssignmentEndpoints
         var group = app.MapGroup("/api/hrm/employment-assignments").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.employment_assignments.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.employment_assignments.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.employment_assignments.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.employment_assignments.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.employment_assignments.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.employment_assignments.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.employment_assignments.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.employment_assignments.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] EmploymentAssignmentListQuery query, global::Erp.Hrm.Application.Generated.IEmploymentAssignmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -122,53 +95,6 @@ internal static class EmploymentAssignmentEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmploymentAssignmentAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(EmploymentAssignmentWriteRequest request, global::Erp.Hrm.Application.Generated.IEmploymentAssignmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.employment_assignments.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.EmploymentAssignmentAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.EmploymentAssignment();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/employment-assignments/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmploymentAssignmentAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, EmploymentAssignmentWriteRequest request, global::Erp.Hrm.Application.Generated.IEmploymentAssignmentRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.employment_assignments.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.EmploymentAssignmentAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmploymentAssignmentAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static EmploymentAssignmentResponse ToResponse(global::Erp.Hrm.Domain.Generated.EmploymentAssignment row) => new()
@@ -197,199 +123,4 @@ internal static class EmploymentAssignmentEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(EmploymentAssignmentWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
-        {
-            errors.Add("employmentId");
-        }
-        if (request.EventId is null && (!update || access.CanEdit("event_id")))
-        {
-            errors.Add("eventId");
-        }
-        if (request.OrgUnitId is null && (!update || access.CanEdit("org_unit_id")))
-        {
-            errors.Add("orgUnitId");
-        }
-        if (request.Title is null && (!update || access.CanEdit("title")))
-        {
-            errors.Add("title");
-        }
-        if (request.BranchId is null && (!update || access.CanEdit("branch_id")))
-        {
-            errors.Add("branchId");
-        }
-        if (request.CostAllocation is null && (!update || access.CanEdit("cost_allocation")))
-        {
-            errors.Add("costAllocation");
-        }
-        if (request.ValidFrom is null && (!update || access.CanEdit("valid_from")))
-        {
-            errors.Add("validFrom");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(EmploymentAssignmentWriteRequest request, global::Erp.Hrm.Domain.Generated.EmploymentAssignment row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("employment_id"))
-        {
-            row.EmploymentId = request.EmploymentId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
-        {
-            denied.Add("employmentId");
-        }
-        if (access.CanEdit("event_id"))
-        {
-            row.EventId = request.EventId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EventId, row.EventId, update))
-        {
-            denied.Add("eventId");
-        }
-        if (access.CanEdit("org_unit_id"))
-        {
-            row.OrgUnitId = request.OrgUnitId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OrgUnitId, row.OrgUnitId, update))
-        {
-            denied.Add("orgUnitId");
-        }
-        if (access.CanEdit("position_id"))
-        {
-            row.PositionId = request.PositionId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PositionId, row.PositionId, update))
-        {
-            denied.Add("positionId");
-        }
-        if (access.CanEdit("title"))
-        {
-            row.Title = request.Title!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Title, row.Title, update))
-        {
-            denied.Add("title");
-        }
-        if (access.CanEdit("grade_id"))
-        {
-            row.GradeId = request.GradeId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.GradeId, row.GradeId, update))
-        {
-            denied.Add("gradeId");
-        }
-        if (access.CanEdit("branch_id"))
-        {
-            row.BranchId = request.BranchId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.BranchId, row.BranchId, update))
-        {
-            denied.Add("branchId");
-        }
-        if (access.CanEdit("location_id"))
-        {
-            row.LocationId = request.LocationId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LocationId, row.LocationId, update))
-        {
-            denied.Add("locationId");
-        }
-        if (access.CanEdit("manager_employment_id"))
-        {
-            row.ManagerEmploymentId = request.ManagerEmploymentId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ManagerEmploymentId, row.ManagerEmploymentId, update))
-        {
-            denied.Add("managerEmploymentId");
-        }
-        if (access.CanEdit("pay_group_id"))
-        {
-            row.PayGroupId = request.PayGroupId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PayGroupId, row.PayGroupId, update))
-        {
-            denied.Add("payGroupId");
-        }
-        if (access.CanEdit("cost_allocation"))
-        {
-            row.CostAllocation = GeneratedEndpointSupport.ToDocument(request.CostAllocation)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CostAllocation, row.CostAllocation, update))
-        {
-            denied.Add("costAllocation");
-        }
-        if (access.CanEdit("fte"))
-        {
-            if (request.Fte is not null)
-            {
-                row.Fte = request.Fte!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Fte, row.Fte, update))
-        {
-            denied.Add("fte");
-        }
-        if (access.CanEdit("work_schedule"))
-        {
-            row.WorkSchedule = request.WorkSchedule;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkSchedule, row.WorkSchedule, update))
-        {
-            denied.Add("workSchedule");
-        }
-        if (access.CanEdit("is_acting"))
-        {
-            if (request.IsActing is not null)
-            {
-                row.IsActing = request.IsActing!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsActing, row.IsActing, update))
-        {
-            denied.Add("isActing");
-        }
-        if (access.CanEdit("valid_from"))
-        {
-            row.ValidFrom = request.ValidFrom!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidFrom, row.ValidFrom, update))
-        {
-            denied.Add("validFrom");
-        }
-        if (access.CanEdit("valid_to"))
-        {
-            row.ValidTo = request.ValidTo;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidTo, row.ValidTo, update))
-        {
-            denied.Add("validTo");
-        }
-        return denied;
-    }
 }

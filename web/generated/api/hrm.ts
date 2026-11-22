@@ -921,19 +921,6 @@ export interface Contract
     rowVersion: number;
 }
 
-export interface ContractWrite
-{
-    companyId: string;
-    employmentId: string;
-    startDate: string;
-    endDate?: string | null;
-    renewalNoticeDays?: number | null;
-    terms: unknown;
-    fileId?: string | null;
-    renewsContractId?: string | null;
-    status: 'draft' | 'active' | 'expired' | 'renewed' | 'terminated';
-}
-
 export interface ContractListQuery
 {
     after?: string;
@@ -951,8 +938,6 @@ export const contracts =
 {
     list: (query: ContractListQuery = {}) => request<PagedResult<Contract>>('GET', '/api/hrm/contracts', { query }),
     get: (id: string) => request<Contract>('GET', `/api/hrm/contracts/${id}`),
-    create: (body: ContractWrite) => request<Contract>('POST', '/api/hrm/contracts', { body }),
-    update: (id: string, body: ContractWrite & { rowVersion: number }) => request<Contract>('PUT', `/api/hrm/contracts/${id}`, { body }),
 };
 
 /** hrm.course_sessions: CourseSession. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -1187,20 +1172,6 @@ export interface EmployeeBankAccount
     rowVersion: number;
 }
 
-export interface EmployeeBankAccountWrite
-{
-    companyId: string;
-    employmentId: string;
-    paymentMode: 'bank_transfer' | 'cheque' | 'cash' | 'mobile_wallet';
-    bankId?: string | null;
-    accountTitle?: string | null;
-    splitKind: 'remainder' | 'percent' | 'amount';
-    splitValue?: number | null;
-    priority: number;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface EmployeeBankAccountListQuery
 {
     after?: string;
@@ -1216,8 +1187,6 @@ export const employeeBankAccounts =
 {
     list: (query: EmployeeBankAccountListQuery = {}) => request<PagedResult<EmployeeBankAccount>>('GET', '/api/hrm/employee-bank-accounts', { query }),
     get: (id: string) => request<EmployeeBankAccount>('GET', `/api/hrm/employee-bank-accounts/${id}`),
-    create: (body: EmployeeBankAccountWrite) => request<EmployeeBankAccount>('POST', '/api/hrm/employee-bank-accounts', { body }),
-    update: (id: string, body: EmployeeBankAccountWrite & { rowVersion: number }) => request<EmployeeBankAccount>('PUT', `/api/hrm/employee-bank-accounts/${id}`, { body }),
 };
 
 /** hrm.employee_documents: Employee document vault entries (file in doc.files). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -1367,27 +1336,6 @@ export interface EmploymentAssignment
     rowVersion: number;
 }
 
-export interface EmploymentAssignmentWrite
-{
-    companyId: string;
-    employmentId: string;
-    eventId: string;
-    orgUnitId: string;
-    positionId?: string | null;
-    title: string;
-    gradeId?: string | null;
-    branchId: string;
-    locationId?: string | null;
-    managerEmploymentId?: string | null;
-    payGroupId?: string | null;
-    costAllocation: unknown;
-    fte?: number;
-    workSchedule?: string | null;
-    isActing?: boolean;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface EmploymentAssignmentListQuery
 {
     after?: string;
@@ -1410,8 +1358,6 @@ export const employmentAssignments =
 {
     list: (query: EmploymentAssignmentListQuery = {}) => request<PagedResult<EmploymentAssignment>>('GET', '/api/hrm/employment-assignments', { query }),
     get: (id: string) => request<EmploymentAssignment>('GET', `/api/hrm/employment-assignments/${id}`),
-    create: (body: EmploymentAssignmentWrite) => request<EmploymentAssignment>('POST', '/api/hrm/employment-assignments', { body }),
-    update: (id: string, body: EmploymentAssignmentWrite & { rowVersion: number }) => request<EmploymentAssignment>('PUT', `/api/hrm/employment-assignments/${id}`, { body }),
 };
 
 /** hrm.employment_events: Why something changed (hire, promotion, transfer ... termination) with reason code. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -1435,20 +1381,6 @@ export interface EmploymentEvent
     rowVersion: number;
 }
 
-export interface EmploymentEventWrite
-{
-    companyId: string;
-    employmentId: string;
-    kind: 'hire' | 'rehire' | 'promotion' | 'demotion' | 'transfer' | 'grade_change' | 'acting' | 'secondment' | 'confirmation' | 'probation_extension' | 'salary_revision' | 'separation' | 'data_correction';
-    reasonCode: string;
-    effectiveDate: string;
-    notes?: string | null;
-    carryOver?: unknown | null;
-    workflowInstanceId?: string | null;
-    letterDocumentId?: string | null;
-    status: 'draft' | 'pending_approval' | 'approved' | 'effective' | 'cancelled';
-}
-
 export interface EmploymentEventListQuery
 {
     after?: string;
@@ -1466,8 +1398,6 @@ export const employmentEvents =
 {
     list: (query: EmploymentEventListQuery = {}) => request<PagedResult<EmploymentEvent>>('GET', '/api/hrm/employment-events', { query }),
     get: (id: string) => request<EmploymentEvent>('GET', `/api/hrm/employment-events/${id}`),
-    create: (body: EmploymentEventWrite) => request<EmploymentEvent>('POST', '/api/hrm/employment-events', { body }),
-    update: (id: string, body: EmploymentEventWrite & { rowVersion: number }) => request<EmploymentEvent>('PUT', `/api/hrm/employment-events/${id}`, { body }),
 };
 
 /** hrm.employment_statutory_registrations: Per-employee applicability and registration for EOBI, provincial social security and provident fund. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -1488,17 +1418,6 @@ export interface EmploymentStatutoryRegistration
     rowVersion: number;
 }
 
-export interface EmploymentStatutoryRegistrationWrite
-{
-    companyId: string;
-    employmentId: string;
-    scheme: string;
-    isApplicable?: boolean;
-    exemptionReason?: string | null;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface EmploymentStatutoryRegistrationListQuery
 {
     after?: string;
@@ -1511,8 +1430,6 @@ export const employmentStatutoryRegistrations =
 {
     list: (query: EmploymentStatutoryRegistrationListQuery = {}) => request<PagedResult<EmploymentStatutoryRegistration>>('GET', '/api/hrm/employment-statutory-registrations', { query }),
     get: (id: string) => request<EmploymentStatutoryRegistration>('GET', `/api/hrm/employment-statutory-registrations/${id}`),
-    create: (body: EmploymentStatutoryRegistrationWrite) => request<EmploymentStatutoryRegistration>('POST', '/api/hrm/employment-statutory-registrations', { body }),
-    update: (id: string, body: EmploymentStatutoryRegistrationWrite & { rowVersion: number }) => request<EmploymentStatutoryRegistration>('PUT', `/api/hrm/employment-statutory-registrations/${id}`, { body }),
 };
 
 /** hrm.employments: One employment of a person with one company; transfers between companies create a new linked row (FR-XM-30). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -1540,23 +1457,6 @@ export interface Employment
     rowVersion: number;
 }
 
-export interface EmploymentWrite
-{
-    companyId: string;
-    personId: string;
-    employeeType: string;
-    joiningDate: string;
-    serviceStartDate: string;
-    confirmationDate?: string | null;
-    expectedEndDate?: string | null;
-    separationDate?: string | null;
-    previousEmploymentId?: string | null;
-    userRef?: string | null;
-    isPrimary?: boolean;
-    status: 'pre_joining' | 'active' | 'on_notice' | 'separated' | 'cancelled';
-    custom?: unknown;
-}
-
 export interface EmploymentListQuery
 {
     after?: string;
@@ -1573,8 +1473,6 @@ export const employments =
 {
     list: (query: EmploymentListQuery = {}) => request<PagedResult<Employment>>('GET', '/api/hrm/employments', { query }),
     get: (id: string) => request<Employment>('GET', `/api/hrm/employments/${id}`),
-    create: (body: EmploymentWrite) => request<Employment>('POST', '/api/hrm/employments', { body }),
-    update: (id: string, body: EmploymentWrite & { rowVersion: number }) => request<Employment>('PUT', `/api/hrm/employments/${id}`, { body }),
 };
 
 /** hrm.expense_categories: ExpenseCategory. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2960,16 +2858,6 @@ export interface Nomination
     rowVersion: number;
 }
 
-export interface NominationWrite
-{
-    personId: string;
-    scheme: string;
-    relationId: string;
-    share: number;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface NominationListQuery
 {
     after?: string;
@@ -2982,8 +2870,6 @@ export const nominations =
 {
     list: (query: NominationListQuery = {}) => request<PagedResult<Nomination>>('GET', '/api/hrm/nominations', { query }),
     get: (id: string) => request<Nomination>('GET', `/api/hrm/nominations/${id}`),
-    create: (body: NominationWrite) => request<Nomination>('POST', '/api/hrm/nominations', { body }),
-    update: (id: string, body: NominationWrite & { rowVersion: number }) => request<Nomination>('PUT', `/api/hrm/nominations/${id}`, { body }),
 };
 
 /** hrm.overtime_entries: OvertimeEntry. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3852,15 +3738,6 @@ export interface PersonAddress
     rowVersion: number;
 }
 
-export interface PersonAddressWrite
-{
-    personId: string;
-    kind: 'permanent' | 'current' | 'mailing';
-    address: unknown;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface PersonAddressListQuery
 {
     after?: string;
@@ -3872,8 +3749,6 @@ export const personAddresses =
 {
     list: (query: PersonAddressListQuery = {}) => request<PagedResult<PersonAddress>>('GET', '/api/hrm/person-addresses', { query }),
     get: (id: string) => request<PersonAddress>('GET', `/api/hrm/person-addresses/${id}`),
-    create: (body: PersonAddressWrite) => request<PersonAddress>('POST', '/api/hrm/person-addresses', { body }),
-    update: (id: string, body: PersonAddressWrite & { rowVersion: number }) => request<PersonAddress>('PUT', `/api/hrm/person-addresses/${id}`, { body }),
 };
 
 /** hrm.person_contacts: PersonContact. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3891,14 +3766,6 @@ export interface PersonContact
     rowVersion: number;
 }
 
-export interface PersonContactWrite
-{
-    personId: string;
-    kind: 'mobile' | 'phone' | 'email_personal' | 'email_work' | 'other';
-    value: string;
-    isPrimary?: boolean;
-}
-
 export interface PersonContactListQuery
 {
     after?: string;
@@ -3910,8 +3777,43 @@ export const personContacts =
 {
     list: (query: PersonContactListQuery = {}) => request<PagedResult<PersonContact>>('GET', '/api/hrm/person-contacts', { query }),
     get: (id: string) => request<PersonContact>('GET', `/api/hrm/person-contacts/${id}`),
-    create: (body: PersonContactWrite) => request<PersonContact>('POST', '/api/hrm/person-contacts', { body }),
-    update: (id: string, body: PersonContactWrite & { rowVersion: number }) => request<PersonContact>('PUT', `/api/hrm/person-contacts/${id}`, { body }),
+};
+
+/** hrm.person_duplicate_cases: Possible duplicate persons kept for HR review (FR-HRM-EMP-18). Field rules (S1.06) may leave a field out or mask it as text. */
+export interface PersonDuplicateCase
+{
+    id: string;
+    personId: string;
+    otherPersonId: string;
+    matchKind: 'name_and_birth_date' | 'bank_account';
+    source: 'create' | 'import';
+    decidedBy: string | null;
+    decidedAt: string | null;
+    decisionNote: string | null;
+    status: 'open' | 'distinct' | 'merged';
+    createdAt: string;
+    createdBy: string;
+    updatedAt: string;
+    updatedBy: string;
+    rowVersion: number;
+}
+
+export interface PersonDuplicateCaseListQuery
+{
+    after?: string;
+    limit?: number;
+    personId?: string;
+    otherPersonId?: string;
+    decidedBy?: string;
+    status?: 'open' | 'distinct' | 'merged';
+    /** matchKind, status, createdAt; a leading minus sorts descending. */
+    sort?: 'matchKind' | '-matchKind' | 'status' | '-status' | 'createdAt' | '-createdAt';
+}
+
+export const personDuplicateCases =
+{
+    list: (query: PersonDuplicateCaseListQuery = {}) => request<PagedResult<PersonDuplicateCase>>('GET', '/api/hrm/person-duplicate-cases', { query }),
+    get: (id: string) => request<PersonDuplicateCase>('GET', `/api/hrm/person-duplicate-cases/${id}`),
 };
 
 /** hrm.person_identifiers: National IDs, passports, tax numbers; validated per country pack. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3973,21 +3875,6 @@ export interface PersonQualification
     rowVersion: number;
 }
 
-export interface PersonQualificationWrite
-{
-    personId: string;
-    kind: 'education' | 'experience' | 'language' | 'certification';
-    title: string;
-    institution?: string | null;
-    startDate?: string | null;
-    endDate?: string | null;
-    expiryDate?: string | null;
-    gradeOrLevel?: string | null;
-    details: unknown;
-    fileId?: string | null;
-    learningRecordId?: string | null;
-}
-
 export interface PersonQualificationListQuery
 {
     after?: string;
@@ -4003,9 +3890,6 @@ export const personQualifications =
 {
     list: (query: PersonQualificationListQuery = {}) => request<PagedResult<PersonQualification>>('GET', '/api/hrm/person-qualifications', { query }),
     get: (id: string) => request<PersonQualification>('GET', `/api/hrm/person-qualifications/${id}`),
-    create: (body: PersonQualificationWrite) => request<PersonQualification>('POST', '/api/hrm/person-qualifications', { body }),
-    update: (id: string, body: PersonQualificationWrite & { rowVersion: number }) => request<PersonQualification>('PUT', `/api/hrm/person-qualifications/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/person-qualifications/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.person_relations: Family, dependents and emergency contacts in one table. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4030,18 +3914,6 @@ export interface PersonRelation
     rowVersion: number;
 }
 
-export interface PersonRelationWrite
-{
-    personId: string;
-    relation: string;
-    fullName: string;
-    dateOfBirth?: string | null;
-    gender?: string | null;
-    phone?: string | null;
-    isDependent?: boolean;
-    isEmergencyContact?: boolean;
-}
-
 export interface PersonRelationListQuery
 {
     after?: string;
@@ -4053,9 +3925,6 @@ export const personRelations =
 {
     list: (query: PersonRelationListQuery = {}) => request<PagedResult<PersonRelation>>('GET', '/api/hrm/person-relations', { query }),
     get: (id: string) => request<PersonRelation>('GET', `/api/hrm/person-relations/${id}`),
-    create: (body: PersonRelationWrite) => request<PersonRelation>('POST', '/api/hrm/person-relations', { body }),
-    update: (id: string, body: PersonRelationWrite & { rowVersion: number }) => request<PersonRelation>('PUT', `/api/hrm/person-relations/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/person-relations/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.persons: One row per human (FR-XM-28). Employments hang off the person. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4075,6 +3944,7 @@ export interface Person
     religion: string | null;
     photoFileId: string | null;
     partyRef: string | null;
+    mergedIntoPersonId: string | null;
     custom: unknown;
     isDeleted: boolean;
     deletedAt: string | null;
@@ -4086,29 +3956,13 @@ export interface Person
     rowVersion: number;
 }
 
-export interface PersonWrite
-{
-    firstName: string;
-    middleName?: string | null;
-    lastName?: string | null;
-    nameLocal?: string | null;
-    fatherOrSpouseName?: string | null;
-    gender: 'male' | 'female' | 'other' | 'unspecified';
-    dateOfBirth?: string | null;
-    maritalStatus?: string | null;
-    nationalityCode?: string | null;
-    religion?: string | null;
-    photoFileId?: string | null;
-    partyRef?: string | null;
-    custom?: unknown;
-}
-
 export interface PersonListQuery
 {
     after?: string;
     limit?: number;
     nationalityCode?: string;
     photoFileId?: string;
+    mergedIntoPersonId?: string;
     /** personNo; a leading minus sorts descending. */
     sort?: 'personNo' | '-personNo';
 }
@@ -4117,9 +3971,6 @@ export const persons =
 {
     list: (query: PersonListQuery = {}) => request<PagedResult<Person>>('GET', '/api/hrm/persons', { query }),
     get: (id: string) => request<Person>('GET', `/api/hrm/persons/${id}`),
-    create: (body: PersonWrite) => request<Person>('POST', '/api/hrm/persons', { body }),
-    update: (id: string, body: PersonWrite & { rowVersion: number }) => request<Person>('PUT', `/api/hrm/persons/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/persons/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.policies: Named policies by type (leave, attendance, shift, overtime, pay, expense, loan, benefits, performance). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4477,18 +4328,6 @@ export interface ProbationRecord
     rowVersion: number;
 }
 
-export interface ProbationRecordWrite
-{
-    companyId: string;
-    employmentId: string;
-    startDate: string;
-    endDate: string;
-    extendedTo?: string | null;
-    reviewFormResponseId?: string | null;
-    decisionDate?: string | null;
-    status: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed';
-}
-
 export interface ProbationRecordListQuery
 {
     after?: string;
@@ -4503,8 +4342,6 @@ export const probationRecords =
 {
     list: (query: ProbationRecordListQuery = {}) => request<PagedResult<ProbationRecord>>('GET', '/api/hrm/probation-records', { query }),
     get: (id: string) => request<ProbationRecord>('GET', `/api/hrm/probation-records/${id}`),
-    create: (body: ProbationRecordWrite) => request<ProbationRecord>('POST', '/api/hrm/probation-records', { body }),
-    update: (id: string, body: ProbationRecordWrite & { rowVersion: number }) => request<ProbationRecord>('PUT', `/api/hrm/probation-records/${id}`, { body }),
 };
 
 /** hrm.provident_fund_accounts: ProvidentFundAccount. Field rules (S1.06) may leave a field out or mask it as text. */

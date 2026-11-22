@@ -12,18 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.person_qualifications.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.person_qualifications.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.person_qualifications.update"
-    },
-    {
-      "action": "delete",
-      "permission": "hrm.person_qualifications.delete"
     }
   ],
   "companyScoped": false,

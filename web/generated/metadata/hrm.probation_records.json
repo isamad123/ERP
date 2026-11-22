@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.probation_records.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.probation_records.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.probation_records.update"
     }
   ],
   "companyScoped": true,

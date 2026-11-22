@@ -13,14 +13,6 @@
     {
       "action": "read",
       "permission": "hrm.employment_events.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.employment_events.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.employment_events.update"
     }
   ],
   "companyScoped": true,

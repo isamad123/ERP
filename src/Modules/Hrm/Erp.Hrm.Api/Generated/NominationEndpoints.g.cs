@@ -27,20 +27,6 @@ public sealed class NominationResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for hrm.nominations. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class NominationWriteRequest
-{
-    public global::System.Guid? PersonId { get; init; }
-    public string? Scheme { get; init; }
-    public global::System.Guid? RelationId { get; init; }
-    public decimal? Share { get; init; }
-    public global::System.DateOnly? ValidFrom { get; init; }
-    public global::System.DateOnly? ValidTo { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for hrm.nominations.</summary>
 public sealed class NominationListQuery
 {
@@ -53,7 +39,7 @@ public sealed class NominationListQuery
     public global::System.Guid? RelationId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.nominations: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.nominations: read. Answers pass through field security (S1.06).</summary>
 internal static class NominationEndpoints
 {
     private const string Resource = "hrm.nominations";
@@ -63,8 +49,6 @@ internal static class NominationEndpoints
         var group = app.MapGroup("/api/hrm/nominations").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.nominations.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.nominations.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.nominations.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.nominations.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.nominations.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.nominations.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.nominations.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.nominations.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] NominationListQuery query, global::Erp.Hrm.Application.Generated.INominationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -83,53 +67,6 @@ internal static class NominationEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.NominationAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(NominationWriteRequest request, global::Erp.Hrm.Application.Generated.INominationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.nominations.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.NominationAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.Nomination();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/nominations/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.NominationAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, NominationWriteRequest request, global::Erp.Hrm.Application.Generated.INominationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.nominations.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.NominationAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.NominationAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static NominationResponse ToResponse(global::Erp.Hrm.Domain.Generated.Nomination row) => new()
     {
         Id = row.Id,
@@ -145,90 +82,4 @@ internal static class NominationEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(NominationWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.PersonId is null && (!update || access.CanEdit("person_id")))
-        {
-            errors.Add("personId");
-        }
-        if (request.Scheme is null && (!update || access.CanEdit("scheme")))
-        {
-            errors.Add("scheme");
-        }
-        if (request.RelationId is null && (!update || access.CanEdit("relation_id")))
-        {
-            errors.Add("relationId");
-        }
-        if (request.Share is null && (!update || access.CanEdit("share")))
-        {
-            errors.Add("share");
-        }
-        if (request.ValidFrom is null && (!update || access.CanEdit("valid_from")))
-        {
-            errors.Add("validFrom");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(NominationWriteRequest request, global::Erp.Hrm.Domain.Generated.Nomination row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("person_id"))
-        {
-            row.PersonId = request.PersonId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PersonId, row.PersonId, update))
-        {
-            denied.Add("personId");
-        }
-        if (access.CanEdit("scheme"))
-        {
-            row.Scheme = request.Scheme!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Scheme, row.Scheme, update))
-        {
-            denied.Add("scheme");
-        }
-        if (access.CanEdit("relation_id"))
-        {
-            row.RelationId = request.RelationId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RelationId, row.RelationId, update))
-        {
-            denied.Add("relationId");
-        }
-        if (access.CanEdit("share"))
-        {
-            row.Share = request.Share!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Share, row.Share, update))
-        {
-            denied.Add("share");
-        }
-        if (access.CanEdit("valid_from"))
-        {
-            row.ValidFrom = request.ValidFrom!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidFrom, row.ValidFrom, update))
-        {
-            denied.Add("validFrom");
-        }
-        if (access.CanEdit("valid_to"))
-        {
-            row.ValidTo = request.ValidTo;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidTo, row.ValidTo, update))
-        {
-            denied.Add("validTo");
-        }
-        return denied;
-    }
 }

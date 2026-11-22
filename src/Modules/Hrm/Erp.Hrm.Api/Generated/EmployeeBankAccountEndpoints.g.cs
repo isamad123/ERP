@@ -31,24 +31,6 @@ public sealed class EmployeeBankAccountResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for hrm.employee_bank_accounts. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class EmployeeBankAccountWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public global::System.Guid? EmploymentId { get; init; }
-    public string? PaymentMode { get; init; }
-    public global::System.Guid? BankId { get; init; }
-    public string? AccountTitle { get; init; }
-    public string? SplitKind { get; init; }
-    public decimal? SplitValue { get; init; }
-    public int? Priority { get; init; }
-    public global::System.DateOnly? ValidFrom { get; init; }
-    public global::System.DateOnly? ValidTo { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for hrm.employee_bank_accounts.</summary>
 public sealed class EmployeeBankAccountListQuery
 {
@@ -66,7 +48,7 @@ public sealed class EmployeeBankAccountListQuery
     public string? Sort { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.employee_bank_accounts: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.employee_bank_accounts: read. Answers pass through field security (S1.06).</summary>
 internal static class EmployeeBankAccountEndpoints
 {
     private const string Resource = "hrm.employee_bank_accounts";
@@ -76,8 +58,6 @@ internal static class EmployeeBankAccountEndpoints
         var group = app.MapGroup("/api/hrm/employee-bank-accounts").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.employee_bank_accounts.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.employee_bank_accounts.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.employee_bank_accounts.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.employee_bank_accounts.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.employee_bank_accounts.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.employee_bank_accounts.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.employee_bank_accounts.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.employee_bank_accounts.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] EmployeeBankAccountListQuery query, global::Erp.Hrm.Application.Generated.IEmployeeBankAccountRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -94,53 +74,6 @@ internal static class EmployeeBankAccountEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(EmployeeBankAccountWriteRequest request, global::Erp.Hrm.Application.Generated.IEmployeeBankAccountRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.employee_bank_accounts.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.EmployeeBankAccount();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/employee-bank-accounts/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, EmployeeBankAccountWriteRequest request, global::Erp.Hrm.Application.Generated.IEmployeeBankAccountRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.employee_bank_accounts.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmployeeBankAccountAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static EmployeeBankAccountResponse ToResponse(global::Erp.Hrm.Domain.Generated.EmployeeBankAccount row) => new()
@@ -162,129 +95,4 @@ internal static class EmployeeBankAccountEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(EmployeeBankAccountWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
-        {
-            errors.Add("employmentId");
-        }
-        if (request.PaymentMode is null && (!update || access.CanEdit("payment_mode")))
-        {
-            errors.Add("paymentMode");
-        }
-        if (request.SplitKind is null && (!update || access.CanEdit("split_kind")))
-        {
-            errors.Add("splitKind");
-        }
-        if (request.Priority is null && (!update || access.CanEdit("priority")))
-        {
-            errors.Add("priority");
-        }
-        if (request.ValidFrom is null && (!update || access.CanEdit("valid_from")))
-        {
-            errors.Add("validFrom");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(EmployeeBankAccountWriteRequest request, global::Erp.Hrm.Domain.Generated.EmployeeBankAccount row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("employment_id"))
-        {
-            row.EmploymentId = request.EmploymentId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
-        {
-            denied.Add("employmentId");
-        }
-        if (access.CanEdit("payment_mode"))
-        {
-            row.PaymentMode = request.PaymentMode!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PaymentMode, row.PaymentMode, update))
-        {
-            denied.Add("paymentMode");
-        }
-        if (access.CanEdit("bank_id"))
-        {
-            row.BankId = request.BankId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.BankId, row.BankId, update))
-        {
-            denied.Add("bankId");
-        }
-        if (access.CanEdit("account_title"))
-        {
-            row.AccountTitle = request.AccountTitle;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.AccountTitle, row.AccountTitle, update))
-        {
-            denied.Add("accountTitle");
-        }
-        if (access.CanEdit("split_kind"))
-        {
-            row.SplitKind = request.SplitKind!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SplitKind, row.SplitKind, update))
-        {
-            denied.Add("splitKind");
-        }
-        if (access.CanEdit("split_value"))
-        {
-            row.SplitValue = request.SplitValue;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SplitValue, row.SplitValue, update))
-        {
-            denied.Add("splitValue");
-        }
-        if (access.CanEdit("priority"))
-        {
-            row.Priority = request.Priority!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Priority, row.Priority, update))
-        {
-            denied.Add("priority");
-        }
-        if (access.CanEdit("valid_from"))
-        {
-            row.ValidFrom = request.ValidFrom!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidFrom, row.ValidFrom, update))
-        {
-            denied.Add("validFrom");
-        }
-        if (access.CanEdit("valid_to"))
-        {
-            row.ValidTo = request.ValidTo;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidTo, row.ValidTo, update))
-        {
-            denied.Add("validTo");
-        }
-        return denied;
-    }
 }

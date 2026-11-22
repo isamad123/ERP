@@ -30,6 +30,7 @@ internal sealed class PersonConfiguration : IEntityTypeConfiguration<global::Erp
         builder.Property(e => e.Religion).HasColumnName("religion").HasColumnType("text");
         builder.Property(e => e.PhotoFileId).HasColumnName("photo_file_id").HasColumnType("uuid");
         builder.Property(e => e.PartyRef).HasColumnName("party_ref").HasColumnType("uuid");
+        builder.Property(e => e.MergedIntoPersonId).HasColumnName("merged_into_person_id").HasColumnType("uuid");
         builder.Property(e => e.Custom).HasColumnName("custom").HasColumnType("jsonb").IsRequired();
         builder.Property(e => e.IsDeleted).HasColumnName("is_deleted").HasColumnType("boolean");
         builder.Property(e => e.DeletedAt).HasColumnName("deleted_at").HasColumnType("timestamptz");
@@ -62,6 +63,10 @@ internal sealed class PersonRepository(
         if (filter.PhotoFileId is { } photoFileIdFilter)
         {
             query = query.Where(e => e.PhotoFileId == photoFileIdFilter);
+        }
+        if (filter.MergedIntoPersonId is { } mergedIntoPersonIdFilter)
+        {
+            query = query.Where(e => e.MergedIntoPersonId == mergedIntoPersonIdFilter);
         }
         return await Sorts.PageAsync(Context.Set<global::Erp.Hrm.Domain.Generated.Person>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
