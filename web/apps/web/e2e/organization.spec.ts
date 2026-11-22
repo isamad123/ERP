@@ -19,7 +19,7 @@ async function choose(page: Page, label: string, option: string | RegExp): Promi
   const opener = page.getByRole('button', { name: new RegExp(`\\s${label}$`) }).first();
   await opener.click();
   if (!(await page.getByRole('option').first().isVisible().catch(() => false))) await opener.click();
-  await page.getByRole('option', { name: option }).click();
+  await page.getByRole('option', { name: option }).first().click();
 }
 
 test('FR-ADM-ORG-01 FR-KRN-IAM-14 an administrator adds a company with another currency, its registration and a bank account that waits for a second administrator', async ({ browser }) => {
