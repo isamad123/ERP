@@ -134,19 +134,19 @@ test('FR-ADM-LOC-04 a holiday year is copied forward, the moon-sighting date is 
     await dialog.getByRole('button', { name: 'Save' }).click();
     await expect(page.getByText('The holiday was added.')).toBeVisible();
   }
-  await expect(page.getByText('Tentative')).toBeVisible();
+  await expect(page.getByText('Tentative', { exact: true })).toBeVisible();
   await accessible(page, 'calendar record');
   await shot(page, 'organization-calendar-en-light-1280');
 
   await page.getByRole('button', { name: `Copy to ${year + 1}` }).click();
   await expect(page.getByText(new RegExp(`2 holidays were copied from ${year} to ${year + 1}`))).toBeVisible();
   const row = page.getByRole('row', { name: new RegExp(`${year + 1}-03-31|Eid ul-Fitr`) }).first();
-  await expect(row.getByText('Tentative')).toBeVisible();
+  await expect(row.getByText('Tentative', { exact: true })).toBeVisible();
   await row.getByRole('button', { name: 'Confirm' }).click();
   await page.getByRole('dialog').getByRole('switch', { name: /tentative/ }).uncheck({ force: true });
   await page.getByRole('dialog').getByRole('button', { name: 'Confirm' }).click();
   await expect(page.getByText('The holiday was saved.')).toBeVisible();
-  await expect(page.getByText('Tentative')).toHaveCount(0);
+  await expect(page.getByText('Tentative', { exact: true })).toHaveCount(0);
 });
 
 test('FR-KRN-LOC-01 NFR-11 NFR-12 every organization screen passes axe in Urdu and fits three widths', async ({ browser }) => {
