@@ -46,19 +46,19 @@ Each slice is one fresh session (or one fresh session per part where its slice f
 ## Batch 4 — Time and leave (mixed)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.27 | Biometric device connector and import (one reference device type first); API clients and keys (FR-ADM-SEC-02) (S1.13 ruling Q2, CR-069) | C | Sonnet (CR-082; was Opus) |
+| S1.27 | Biometric device connector and import (one reference device type first); API clients and keys (FR-ADM-SEC-02) (S1.13 ruling Q2, CR-069) (parts S1.27a API clients with a fresh Opus review, S1.27b devices and drivers, S1.27c web, kiosk, HR entry and file import; slice file approved, CR-088) | C | Sonnet (CR-082; was Opus) |
 | S1.28 | Shifts, rosters, Ramzan timings (two parts; slice file approved, CR-085) | D | Sonnet |
-| S1.29 | Attendance engine: punches to daily results with explanation, exceptions, overtime | B | Opus |
-| S1.30 | Regularization and duty requests, attendance dashboard and reports | D | Sonnet |
-| S1.31 | Attendance period lock and retro adjustments (FR-XM-26) | B | Opus |
+| S1.29 | Attendance engine: punches to daily results with explanation, exceptions, overtime (parts S1.29a processing, S1.29b exceptions, overtime, late and early rules; fresh Opus review of each; slice file approved, CR-089) | B | Opus |
+| S1.30 | Regularization and duty requests, attendance dashboard and reports (parts S1.30a requests and queues, S1.30b dashboard and reports; slice file approved, CR-090) | D | Sonnet |
+| S1.31 | Attendance period lock and retro adjustments (FR-XM-26) (parts S1.31a lock and reopening, S1.31b changes after lock; fresh Opus review of each; slice file approved, CR-091) | B | Opus |
 | S1.32 | Leave engine: ledger, accrual, carry-forward, encashment, sandwich rules, year-end (two parts, fresh Opus review of each; slice file approved, CR-086) | B | Opus |
-| S1.33 | Leave screens: types, requests, calendars, balances | D | Sonnet |
+| S1.33 | Leave screens: types, requests, calendars, balances (parts S1.33a employee and manager, S1.33b HR administration; slice file approved, CR-092) | D | Sonnet |
 
 ## Batch 5 — Payroll (Opus, then Sonnet) — needs the validated Pakistan rules
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
 | S1.34 | Pay set-up: groups, periods, components, structures, compensation assignments (two parts, fresh Opus review of part b; slice file approved, CR-087) | C | Sonnet |
-| S1.35 | Payroll engine: snapshot, calculation, trace, chunked job, determinism tests | B | Opus |
+| S1.35 | Payroll engine: snapshot, calculation, trace, chunked job, determinism tests (parts S1.35a evaluator and pro-rata, S1.35b runs, inputs and snapshot, S1.35c calculation, trace and performance; fresh Opus review of each; slice file approved, CR-093) | B | Opus |
 | S1.36 | Pakistan income tax (salaried slabs, irregular income, declarations, previous employer) | B | Opus |
 | S1.37 | Statutory contributions: EOBI, provincial social security, WWF, provident fund, gratuity accrual | B | Opus |
 | S1.38 | Run stages, validation flags, variance report, maker-checker approval, lock and reopen | B | Opus |
