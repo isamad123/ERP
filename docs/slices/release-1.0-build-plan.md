@@ -41,23 +41,23 @@ Each slice is one fresh session (or one fresh session per part where its slice f
 | S1.23 | Policy framework: types, versions, attribute-rule assignment, resolution view, Pakistan pack loader (parts S1.23a policies and S1.23b pack loader on Opus with fresh reviews, S1.23c first Pakistan pack content on Sonnet) | B | Opus (S1.23c Sonnet, CR-079) |
 | S1.24 | Documents vault, letters from templates with approval, policy acknowledgements (parts S1.24a vault with a fresh Opus review (uploads), S1.24b letters, S1.24c publications) | C | Sonnet |
 | S1.25 | Onboarding and offboarding checklists, separations, clearance (parts S1.25a, S1.25b) | C | Sonnet |
-| S1.26 | Self-service web: profile change requests, service requests, home page | D | Sonnet |
+| S1.26 | Self-service web: profile change requests, service requests, home page (two parts; slice file approved, CR-084) | D | Sonnet |
 
 ## Batch 4 — Time and leave (mixed)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
 | S1.27 | Biometric device connector and import (one reference device type first); API clients and keys (FR-ADM-SEC-02) (S1.13 ruling Q2, CR-069) | C | Sonnet (CR-082; was Opus) |
-| S1.28 | Shifts, rosters, Ramzan timings | D | Sonnet |
+| S1.28 | Shifts, rosters, Ramzan timings (two parts; slice file approved, CR-085) | D | Sonnet |
 | S1.29 | Attendance engine: punches to daily results with explanation, exceptions, overtime | B | Opus |
 | S1.30 | Regularization and duty requests, attendance dashboard and reports | D | Sonnet |
 | S1.31 | Attendance period lock and retro adjustments (FR-XM-26) | B | Opus |
-| S1.32 | Leave engine: ledger, accrual, carry-forward, encashment, sandwich rules, year-end | B | Opus |
+| S1.32 | Leave engine: ledger, accrual, carry-forward, encashment, sandwich rules, year-end (two parts, fresh Opus review of each; slice file approved, CR-086) | B | Opus |
 | S1.33 | Leave screens: types, requests, calendars, balances | D | Sonnet |
 
 ## Batch 5 — Payroll (Opus, then Sonnet) — needs the validated Pakistan rules
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.34 | Pay set-up: groups, periods, components, structures, compensation assignments | C | Sonnet |
+| S1.34 | Pay set-up: groups, periods, components, structures, compensation assignments (two parts, fresh Opus review of part b; slice file approved, CR-087) | C | Sonnet |
 | S1.35 | Payroll engine: snapshot, calculation, trace, chunked job, determinism tests | B | Opus |
 | S1.36 | Pakistan income tax (salaried slabs, irregular income, declarations, previous employer) | B | Opus |
 | S1.37 | Statutory contributions: EOBI, provincial social security, WWF, provident fund, gratuity accrual | B | Opus |
