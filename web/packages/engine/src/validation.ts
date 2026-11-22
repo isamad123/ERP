@@ -76,10 +76,15 @@ export function validate(values: FormValues, schema: ValidationSchema, fields: r
  * The body to send: text trimmed, empty language entries of a two-language name left out, empty optional values sent as
  * null, decimals kept as their digits (written to the JSON as numbers by {@link toJson}).
  */
-export function cleanValues(values: FormValues, schema: ValidationSchema, fields: readonly string[]): FormValues {
+export function cleanValues(values: FormValues, schema: ValidationSchema, fields: readonly string[], own?: ReadonlySet<string>): FormValues {
   const body: FormValues = {};
   for (const field of fields) {
     const property = schema.properties[field];
+    // A field with a screen's own editor (S1.14a) is sent as the editor made it, even though the schema cannot describe it.
+    if (own?.has(field) && field in values) {
+      body[field] = values[field] ?? null;
+      continue;
+    }
     if (!property || property.readOnly) continue;
     const value = values[field];
     if (property.type === 'object' && value && typeof value === 'object') {

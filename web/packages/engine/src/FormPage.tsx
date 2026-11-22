@@ -19,6 +19,24 @@ import { HistoryPanel, useHistory } from './HistoryPanel';
 import { Value } from './values';
 import { useDocumentTitle } from './ListPage';
 
+/**
+ * A screen's own editor for one field the engine cannot edit itself (a JSON value such as an address or opening hours,
+ * slice S1.14a). It gets the field's value and reports a new one; the engine still trims nothing in it, checks nothing in
+ * it and sends it as it is, so the editor keeps the value valid (the server and the database check it again).
+ */
+export interface FieldEditorProps {
+  label: string;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  readOnly: boolean;
+  error: string | null;
+  help: string | undefined;
+  /** Every value of the form, for a field that depends on another (a branch of the chosen company). */
+  values: FormValues;
+}
+
+export type FieldEditor = (props: FieldEditorProps) => ReactNode;
+
 export interface FormPageProps {
   metadata: TableMetadata;
   schema: ValidationSchema;
@@ -40,6 +58,8 @@ export interface FormPageProps {
   ruleTexts?: Record<string, string>;
   /** Help under a field (field → text). */
   help?: Record<string, string>;
+  /** Own editors for fields the engine shows read-only (field → editor), e.g. an address or opening hours (S1.14a). */
+  editors?: Record<string, FieldEditor>;
   /** What deleting removes and keeps, said in the confirmation. */
   deleteText?: (row: FormValues) => string;
   /** After a save: `activation` when the Activate or Deactivate button saved it (the screen usually stays on the record). */
@@ -85,7 +105,7 @@ function initialValues(fields: FieldMetadata[], saved: Row | null, defaults: For
   return values;
 }
 
-function FormBody({ metadata, schema, id, fields: order, defaults, companies, canCreate, canUpdate, canDelete, canHistory, recordTitle, ruleTexts, help, deleteText,
+function FormBody({ metadata, schema, id, fields: order, defaults, companies, canCreate, canUpdate, canDelete, canHistory, recordTitle, ruleTexts, help, editors, deleteText,
   onSaved, onDeleted, onCancel, saved, client }: FormPageProps & { saved: Row | null; client: ReturnType<typeof tableClient> }) {
   const { t, server } = useText();
   const label = useLabel();
@@ -159,7 +179,7 @@ function FormBody({ metadata, schema, id, fields: order, defaults, companies, ca
     setBusy(true);
     setSummary(null);
     try {
-      const clean = cleanValues(body, schema, creating ? editableFields : editableFields.filter((f) => f !== 'companyId'));
+      const clean = cleanValues(body, schema, creating ? editableFields : editableFields.filter((f) => f !== 'companyId'), editors ? new Set(Object.keys(editors)) : undefined);
       const row = id === null || version === undefined ? await client.create(clean) : await client.update(id, clean, version);
       await queryClient.invalidateQueries({ queryKey: ['engine', metadata.table] });
       if (override?.how === 'activation') {
@@ -267,7 +287,7 @@ function FormBody({ metadata, schema, id, fields: order, defaults, companies, ca
             <div key={field.field} id={`field-${field.field}`} className="erp-form-field" data-kind={field.kind}>
               <FieldInput field={field} value={values[field.field]} label={label} readOnly={readOnlyField(field)} companies={companies}
                 required={schema.required.includes(field.field) || (schema.properties[field.field]?.minProperties ?? 0) > 0}
-                error={problem ? problemText(problem, t, server) : null} help={help?.[field.field]}
+                error={problem ? problemText(problem, t, server) : null} help={help?.[field.field]} editor={editors?.[field.field]} values={values}
                 onChange={(v) => setValue(field.field, v)} onBlur={() => leave(field.field)} hidden={saved !== null && !(field.field in saved)} />
             </div>
           );
@@ -355,14 +375,17 @@ interface FieldInputProps {
   help: string | undefined;
   hidden: boolean;
   companies: Option[] | undefined;
+  editor: FieldEditor | undefined;
+  values: FormValues;
   onChange: (value: unknown) => void;
   onBlur: () => void;
 }
 
 /** One renderer per field kind (FR-ADM-UXA-02). JSON and binary values are shown, never edited, here. */
-function FieldInput({ field, value, label, readOnly, required, error, help, hidden, companies, onChange, onBlur }: FieldInputProps): ReactNode {
+function FieldInput({ field, value, label, readOnly, required, error, help, hidden, companies, editor, values, onChange, onBlur }: FieldInputProps): ReactNode {
   const { t } = useText();
   const name = label(field.labelKey);
+  if (editor && !hidden) return editor({ label: name, value, onChange, readOnly, error, help, values });
   const common = { label: name, isRequired: required && !readOnly, error, ...(help ? { help } : {}) };
   const company = field.references === 'org.companies' ? companies?.find((c) => c.id === value) : undefined;
   if (hidden || readOnly && (field.kind === 'I18n' || field.kind === 'Json' || field.kind === 'Bool' || field.references || field.kind === 'Enum')) {

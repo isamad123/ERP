@@ -30,6 +30,8 @@ export const server = {
   role: (username: string, permissions: string[], companies?: string[], removeBaseline = false) =>
     call<undefined>('POST', '/roles', { username, permissions, companies: companies ?? null, removeBaseline }),
   company: (code: string, en: string, ur: string) => call<{ id: string }>('POST', '/companies', { code, en, ur }),
+  /** S1.14a: reference rows the country pack will install (S1.23): the US dollar and a bank `TESTBANK`. */
+  reference: () => call<undefined>('POST', '/reference', {}),
   /** Changes the licence in force; answers the claims before, for `restoreClaims` (S1.12b). */
   licence: (change: { daysAfterEnd?: number | null; features?: string[]; companiesLimit?: number; usersLimit?: number }) =>
     call<{ claims: string }>('POST', '/licence', { setEnd: 'daysAfterEnd' in change, daysAfterEnd: change.daysAfterEnd ?? null, features: change.features ?? null, companiesLimit: change.companiesLimit ?? null, usersLimit: change.usersLimit ?? null }),
