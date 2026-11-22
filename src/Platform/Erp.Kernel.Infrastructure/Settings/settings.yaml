@@ -202,6 +202,16 @@ settings:
     name: {en: "Approval waiting time", ur: "منظوری کے انتظار کی مدت"}
     description: {en: "Days a change waiting for approval stays open", ur: "منظوری کی منتظر تبدیلی کتنے دن کھلی رہتی ہے"}
     help: {en: "A change waiting for approval expires after this many days.", ur: "منظوری کی منتظر تبدیلی اتنے دن بعد ختم ہو جاتی ہے۔"}
+  - key: iam.report.inactive_days
+    type: int
+    default: 90
+    validation: {min: 1}
+    layers: [tenant]
+    area: security.reports
+    unit: days
+    name: {en: "Days without sign-in before a user is listed as inactive", ur: "غیر فعال صارف شمار ہونے سے پہلے سائن اِن کے بغیر دن"}
+    description: {en: "Days without a sign-in after which an active user appears in the role usage report", ur: "سائن اِن کے بغیر وہ دن جن کے بعد فعال صارف کردار کے استعمال کی رپورٹ میں آتا ہے"}
+    help: {en: "The role usage report lists active users who have not signed in for this many days.", ur: "کردار کے استعمال کی رپورٹ ان فعال صارفین کو دکھاتی ہے جنہوں نے اتنے دن سائن اِن نہیں کیا۔"}
   - key: cfg.numbering.fiscal_year_start_month
     type: int
     default: 1

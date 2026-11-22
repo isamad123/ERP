@@ -68,6 +68,9 @@ public static class KernelSettingKeys
     /// <summary>Days a change waiting for approval stays open.</summary>
     public const string IamMakerCheckerExpiryDays = "iam.maker_checker.expiry_days";
 
+    /// <summary>Days without a sign-in after which an active user appears in the role usage report.</summary>
+    public const string IamReportInactiveDays = "iam.report.inactive_days";
+
     /// <summary>Month the fiscal year starts in (1 = January); used by fiscal-year numbering.</summary>
     public const string CfgNumberingFiscalYearStartMonth = "cfg.numbering.fiscal_year_start_month";
 

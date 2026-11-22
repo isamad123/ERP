@@ -52,7 +52,8 @@
   font-size: var(--font-size-lg);
 }
 
-@media (max-width: 47.99rem) {
+/* Wide tables (audit search, reports) become one card per row below 1024 pixels, so they never widen the page. */
+@media (max-width: 63.99rem) {
   .erp-table thead {
     position: absolute;
     inline-size: var(--space-1);

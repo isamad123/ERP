@@ -102,6 +102,7 @@ public static class ApiHost
         services.AddScoped<IMakerCheckerService>(sp => sp.GetRequiredService<AccessAdministrationService>());
         services.AddScoped<IAccessPreviewService>(sp => sp.GetRequiredService<AccessAdministrationService>());
         services.AddScoped<IUserConsoleService, UserConsoleService>();
+        services.AddScoped<IAccessConsoleService, AccessConsoleService>();
         services.AddScoped<IAccessSettingsService>(sp => sp.GetRequiredService<AccessAdministrationService>());
 
         // Identity (S1.05): the API trusts only tokens signed with the keys in the secret store (created by the migrator's
@@ -210,6 +211,7 @@ public static class ApiHost
         api.MapIdentityAccountEndpoints();
         api.MapAccessEndpoints();
         api.MapUserConsoleEndpoints();
+        api.MapAccessConsoleEndpoints();
         api.MapAuditEndpoints();
         api.MapNumberingEndpoints();
         api.MapSettingsEndpoints();
