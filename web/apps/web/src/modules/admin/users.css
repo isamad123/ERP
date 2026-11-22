@@ -75,3 +75,14 @@
     padding-inline: 0;
   }
 }
+
+/* Ten tabs do not fit a phone: the tab list scrolls inside its own box, never the page. */
+.erp-tabs {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.erp-tabs .erp-tab-list {
+  overflow-x: auto;
+  max-inline-size: 100%;
+}
