@@ -50,8 +50,12 @@
   ],
   "constraints": {
     "ck_locations_code_code": "code",
+    "ck_locations_latitude_range": "latitude",
+    "ck_locations_longitude_range": "longitude",
     "ck_locations_name_i18n_object": "nameI18n",
+    "ck_locations_operating_hours": "operatingHours",
     "ck_locations_region_code_code": "regionCode",
+    "ck_locations_time_zone": "timeZone",
     "fk_locations_branch_id": "branchId",
     "fk_locations_company_id": "companyId",
     "fk_locations_holiday_calendar_id": "holidayCalendarId",
@@ -174,6 +178,16 @@
       "filter": true,
       "labelKey": "fields.org.locations.holiday_calendar_id",
       "references": "ref.calendars"
+    },
+    {
+      "column": "operating_hours",
+      "field": "operatingHours",
+      "kind": "Json",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.org.locations.operating_hours"
     },
     {
       "column": "is_active",

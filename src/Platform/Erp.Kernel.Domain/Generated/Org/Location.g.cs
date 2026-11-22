@@ -45,6 +45,9 @@ public sealed partial class Location : global::Erp.BuildingBlocks.Domain.Entitie
     /// <summary>holiday_calendar_id: fk ref.calendars</summary>
     public global::System.Guid? HolidayCalendarId { get; set; }
 
+    /// <summary>operating_hours: S1.14a (CR-070, Q5): per weekday {open, close, closed}; null means not stated</summary>
+    public global::System.Text.Json.JsonDocument? OperatingHours { get; set; }
+
     /// <summary>is_active</summary>
     public bool IsActive { get; set; } = true;
 

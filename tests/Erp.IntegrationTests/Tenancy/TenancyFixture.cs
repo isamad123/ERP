@@ -97,8 +97,8 @@ public sealed class TenancyFixture : IAsyncLifetime
         var admin = new ControlPlaneAdmin(Options, Secrets, Clock);
         Admin = await admin.BootstrapAsync(Migrations, "platform.admin@example.test", "Platform Admin", ct);
         var server = new NpgsqlConnectionStringBuilder(_server.ConnectionString);
-        // Capacity 120: the job tests of S1.11a give each test its own customer.
-        await admin.AddClusterAsync(Admin, ClusterName, "pk-1", server.Host!, server.Port, 120, new DatabaseCredential(server.Username!, server.Password!), ct);
+        // Capacity 160 (S1.14a added three customers; was 120): the job tests of S1.11a give each test its own customer.
+        await admin.AddClusterAsync(Admin, ClusterName, "pk-1", server.Host!, server.Port, 160, new DatabaseCredential(server.Username!, server.Password!), ct);
         await admin.AddSigningKeyAsync(Admin, "it-" + Suffix, "entitlement", _entitlementKey.ExportSubjectPublicKeyInfo(), ct);
 
         await ProvisionAsync(CodeA, ct);

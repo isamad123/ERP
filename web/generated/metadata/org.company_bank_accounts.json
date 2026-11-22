@@ -11,10 +11,6 @@
     {
       "action": "read",
       "permission": "org.company_bank_accounts.read"
-    },
-    {
-      "action": "delete",
-      "permission": "org.company_bank_accounts.delete"
     }
   ],
   "companyScoped": true,

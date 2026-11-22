@@ -39,7 +39,7 @@ public sealed class CompanyBankAccountListQuery
     public global::System.Guid? CompanyId { get; init; }
 }
 
-/// <summary>Generated endpoints of org.company_bank_accounts: read, delete. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of org.company_bank_accounts: read. Answers pass through field security (S1.06).</summary>
 internal static class CompanyBankAccountEndpoints
 {
     private const string Resource = "org.company_bank_accounts";
@@ -49,7 +49,6 @@ internal static class CompanyBankAccountEndpoints
         var group = app.MapGroup("/api/org/company-bank-accounts").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("org.company_bank_accounts.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.company_bank_accounts.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("org.company_bank_accounts.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "org.company_bank_accounts.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapDelete("/{id:guid}", DeleteAsync).WithName("org.company_bank_accounts.delete").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "delete", "org.company_bank_accounts.delete"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] CompanyBankAccountListQuery query, global::Erp.Kernel.Application.Generated.Org.ICompanyBankAccountRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -66,18 +65,6 @@ internal static class CompanyBankAccountEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Org.CompanyBankAccountAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> DeleteAsync(global::System.Guid id, long? rowVersion, global::Erp.Kernel.Application.Generated.Org.ICompanyBankAccountRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "org.company_bank_accounts.delete", async () =>
-        {
-            if (rowVersion is null)
-            {
-                return GeneratedEndpointSupport.Invalid(["rowVersion"]);
-            }
-
-            var deleted = await repository.SoftDeleteAsync(id, rowVersion.Value, cancellationToken).ConfigureAwait(false);
-            return deleted ? TypedResults.NoContent() : GeneratedEndpointSupport.NotFound();
         }, cancellationToken);
 
     private static CompanyBankAccountResponse ToResponse(global::Erp.Kernel.Domain.Generated.Org.CompanyBankAccount row) => new()

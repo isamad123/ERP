@@ -66,6 +66,8 @@ export interface SendOptions {
   body?: unknown;
   /** A body already written as JSON (the list and form engine writes exact decimals itself, S1.12c). */
   rawBody?: string;
+  /** A multipart form (a file upload, S1.14a): the browser writes the content type and boundary itself. */
+  form?: FormData;
   /** Send the access token and refresh once on 401 (false for the anonymous sign-in steps). */
   auth?: boolean;
   signal?: AbortSignal;
@@ -83,7 +85,7 @@ export async function send(method: string, path: string, options: SendOptions = 
       return await fetch(path, {
         method,
         headers,
-        body: options.rawBody ?? (options.body === undefined ? null : JSON.stringify(options.body)),
+        body: options.form ?? options.rawBody ?? (options.body === undefined ? null : JSON.stringify(options.body)),
         credentials: 'same-origin',
         cache: 'no-store',
         signal: options.signal ?? null,

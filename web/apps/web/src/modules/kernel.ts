@@ -2,7 +2,7 @@
 // catalogue (S1.11b1: /settings/licence, /admin/jobs/runs, /admin/jobs/health, /admin/audit, /admin/documents/quarantine,
 // /documents/{id}); screens of later slices open "not available yet" until their slice adds the component.
 import { lazy } from 'react';
-import { Activity, BarChart3, Bell, Building2, ClipboardCheck, Download, EyeOff, FileText, Filter, House, KeyRound, ScrollText, ShieldAlert, ShieldCheck, UserCog, Users, UsersRound } from 'lucide-react';
+import { Activity, BarChart3, Bell, Building2, CalendarDays, ClipboardCheck, Download, EyeOff, FileText, Filter, House, KeyRound, Landmark, MapPin, ScrollText, ShieldAlert, ShieldCheck, UserCog, Users, UsersRound } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
 import { HomePage } from '../pages/home';
 
@@ -11,6 +11,10 @@ const NotificationsPage = lazy(() => import('../pages/notifications'));
 const BranchesScreen = lazy(() => import('./kernel/branches'));
 // S1.12d: the approval inbox (workflow tasks and approvals of changes), loaded with its route.
 const ApprovalsScreen = lazy(() => import('./kernel/approvals'));
+// S1.14a: companies, locations and holiday calendars (the units and the org chart follow in S1.14b).
+const CompaniesScreen = lazy(() => import('./organization/companies'));
+const LocationsScreen = lazy(() => import('./organization/locations'));
+const CalendarsScreen = lazy(() => import('./organization/calendars'));
 // S1.13a: the administrator's user console.
 const UsersScreen = lazy(() => import('./admin/users'));
 // S1.13b: roles, groups, data scopes, field security, delegations, access reports and audit search (ruling Q1).
@@ -26,8 +30,12 @@ export const kernelScreens: ScreenDeclaration[] = [
   { id: 'home', path: '/', labelKey: 'nav.home', icon: House, group: 'home', allowedWhenLocked: false, component: HomePage },
   { id: 'notifications', path: '/notifications', labelKey: 'nav.notifications', icon: Bell, group: 'home', permission: 'ntf.in_app_items.read', component: NotificationsPage },
   { id: 'approvals', path: '/approvals/*', labelKey: 'nav.approvals', icon: ClipboardCheck, group: 'approvals', permission: 'wf.workflow_tasks.read', component: ApprovalsScreen },
+  // S1.14a (ruling Q1: menu group Administration; each entry needs the permission to read what it shows).
+  { id: 'companies', path: '/organization/companies/*', labelKey: 'nav.companies', icon: Landmark, group: 'administration', permission: 'org.companies.read', component: CompaniesScreen, tables: ['org.companies'] },
   // S1.12c (FR-KRN-ORG-02): branches; `tables` lists what the screen shows, for the Urdu label check (Build item 15).
   { id: 'branches', path: '/organization/branches/*', labelKey: 'nav.branches', icon: Building2, group: 'administration', permission: 'org.branches.read', component: BranchesScreen, tables: ['org.branches'] },
+  { id: 'locations', path: '/organization/locations/*', labelKey: 'nav.locations', icon: MapPin, group: 'administration', permission: 'org.locations.read', component: LocationsScreen, tables: ['org.locations'] },
+  { id: 'holiday-calendars', path: '/organization/holiday-calendars/*', labelKey: 'nav.holidayCalendars', icon: CalendarDays, group: 'administration', permission: 'ref.calendars.read', component: CalendarsScreen, tables: ['ref.calendars', 'ref.holidays'] },
   // S1.13a (FR-ADM-USR-01): the user console; the menu entry needs the permission to read users (ruling Q1).
   { id: 'users', path: '/admin/users/*', labelKey: 'nav.users', icon: Users, group: 'administration', permission: 'iam.users.read', component: UsersScreen },
   // S1.13b (FR-ADM-ROL-01 to -11, FR-ADM-USR-06, FR-KRN-AUD-04): each entry needs its own permission.

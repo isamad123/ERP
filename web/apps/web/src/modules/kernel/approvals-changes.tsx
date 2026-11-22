@@ -13,13 +13,15 @@ import { useShell } from '../../shell/context';
 /** Kinds of held changes with a plain-words title (others: a general one). */
 const KINDS = ['iam.role.set_permissions', 'iam.role.set_data_scopes', 'iam.role.set_field_policies', 'iam.role.assign', 'iam.role.end_assignment',
   'iam.group.assign', 'iam.group.end_role', 'iam.group.add_member', 'iam.group.remove_member', 'iam.setting.set', 'cfg.setting.change',
-  'wf.version.activate', 'iam.user.change_email'] as const;
+  'wf.version.activate', 'iam.user.change_email', 'org.bank_account.save', 'org.bank_account.delete'] as const;
 
 const LABELS = ['changes.detail.role', 'changes.detail.company', 'changes.detail.from', 'changes.detail.to', 'changes.detail.endDate', 'changes.detail.member',
   'changes.detail.permissionsAdded', 'changes.detail.permissionsRemoved', 'changes.detail.dataScopes', 'changes.detail.fieldRules', 'changes.detail.settingKey',
-  'changes.detail.layer', 'changes.detail.newValue', 'changes.detail.version', 'changes.detail.previousEmail', 'changes.detail.newEmail'] as const;
+  'changes.detail.layer', 'changes.detail.newValue', 'changes.detail.version', 'changes.detail.previousEmail', 'changes.detail.newEmail',
+  'changes.detail.operation', 'changes.detail.bankAccount', 'changes.detail.bankCode', 'changes.detail.accountTitle', 'changes.detail.accountNumber', 'changes.detail.iban', 'changes.detail.currency'] as const;
 
-const KEYS = ['changes.detail.allCompanies', 'changes.detail.reset', 'changes.layer.tenant', 'changes.layer.company', 'changes.layer.role', 'changes.layer.user', 'changes.layer.pack'] as const;
+const KEYS = ['changes.detail.allCompanies', 'changes.detail.reset', 'changes.layer.tenant', 'changes.layer.company', 'changes.layer.role', 'changes.layer.user', 'changes.layer.pack',
+  'changes.operation.create', 'changes.operation.update', 'changes.operation.delete', 'changes.detail.removed', 'changes.detail.changed'] as const;
 
 export function ChangeApprovals() {
   const { t } = useText();
