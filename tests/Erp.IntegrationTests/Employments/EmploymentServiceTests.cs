@@ -371,6 +371,16 @@ public sealed class EmploymentServiceTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal("Manager", await TitleOnAsync(hr, id, Today));
         Assert.Equal(1L, await OutboxAsync("hrm.employee_changed", id));
 
+        // Review S1.20b finding 1: job details cannot change through an untargeted correction, and a correction of a promotion
+        // waits for the route like the promotion itself (FR-XM-32).
+        var untargeted = await ChangeAsync(hr, id, new { kind = "data_correction", reasonCode = "entry_error", effectiveDate = Iso(Today), assignment = new { title = "Director" }, rowVersion = await VersionAsync(id) });
+        Assert.Equal("errors.hrm.employment_event.job_details_need_target", untargeted.Json.GetProperty("errors").GetProperty("assignment")[0].GetString());
+        var correction = await ChangeAsync(hr, id, new { kind = "data_correction", reasonCode = "entry_error", effectiveDate = Iso(Today), correctsEventId = eventId, assignment = new { title = "Director" }, rowVersion = await VersionAsync(id) });
+        Assert.True(correction.Status == HttpStatusCode.Accepted, correction.Body);
+        Assert.Equal("Manager", await TitleOnAsync(hr, id, Today));
+        var correctionTask = await _h.ScalarAsync<Guid>("select id from wf.workflow_tasks where instance_id = $1 and status = 'pending' order by created_at limit 1", Ct, correction.Json.GetProperty("instanceId").GetGuid());
+        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(checker, $"/api/wf/tasks/{correctionTask}/reject", new { comment = "no" }, Ct)).Status);
+
         // A rejected one is cancelled and changes nothing.
         var second = await ChangeAsync(hr, id, new { kind = "demotion", reasonCode = "performance", effectiveDate = Iso(Today), assignment = new { title = "Clerk" }, rowVersion = await VersionAsync(id) });
         var secondTask = await _h.ScalarAsync<Guid>("select id from wf.workflow_tasks where instance_id = $1 and status = 'pending' order by created_at limit 1", Ct, second.Json.GetProperty("instanceId").GetGuid());
@@ -483,6 +493,10 @@ public sealed class EmploymentServiceTests(TenancyFixture fx) : IAsyncLifetime
             select c->>'before' from aud.change_log l, jsonb_array_elements(l.changes) c where l.entity_id = $1 and l.action = 'update' and c->>'field' = 'user_ref' and c->>'after' is null
             """, Ct, id));
 
+        // Nobody links their own user (review S1.20b finding 5).
+        var self = await _h.PutAsync(hr, $"{Employments}/{other}/user", new { userId = hr, rowVersion = otherVersion }, Ct);
+        Assert.Equal("errors.hrm.user_link.own_user", self.Text("title"));
+
         // Linking needs its own (sensitive) permission.
         Assert.Equal(HttpStatusCode.Forbidden, (await _h.PutAsync(employee, $"{Employments}/{other}/user", new { userId = employee, rowVersion = otherVersion }, Ct)).Status);
     }
@@ -592,6 +606,86 @@ public sealed class EmploymentServiceTests(TenancyFixture fx) : IAsyncLifetime
         var change = await ChangeAsync(user, id, new { kind = "acting", reasonCode = "acting_start", effectiveDate = Iso(Today), assignment = new { title = "Hidden change" }, rowVersion = await VersionAsync(id) });
         Assert.Equal(HttpStatusCode.BadRequest, change.Status);
         Assert.Equal("errors.access.field_not_editable", change.Json.GetProperty("errors").GetProperty("title")[0].GetString());
+
+        // Review S1.20b finding 4: the timeline shows the job details of each event by the same rules (title hidden, unit shown),
+        // and nothing of them without the assignment read; the generated event read hides `changes` (salary class, GHR-06).
+        var reader = await _h.UserAsync(Ct);
+        var readRole = await _h.RoleAsync(Ct, ["hrm.employments.read", "hrm.employment_assignments.read", "hrm.employment_events.read"],
+            [("hrm.employments", "all"), ("hrm.employment_assignments", "all"), ("hrm.employment_events", "all")], [("hrm.employment_assignments", "title", "hidden")]);
+        await _h.AssignAsync(reader, readRole, null, _h.Today.AddDays(-1), null, Ct);
+        var hire = (await _h.GetAsync(reader, $"{Employments}/{id}/timeline", Ct)).Json.GetProperty("items")[0].GetProperty("changes").GetProperty("assignment");
+        Assert.False(hire.TryGetProperty("title", out _));
+        Assert.Equal(place.OrgUnit.ToString(), hire.GetProperty("org_unit_id").GetString());
+
+        var eventsOnly = await _h.UserAsync(Ct);
+        var eventsRole = await _h.RoleAsync(Ct, ["hrm.employments.read", "hrm.employment_events.read"], [("hrm.employments", "all"), ("hrm.employment_events", "all")]);
+        await _h.AssignAsync(eventsOnly, eventsRole, null, _h.Today.AddDays(-1), null, Ct);
+        Assert.False((await _h.GetAsync(eventsOnly, $"{Employments}/{id}/timeline", Ct)).Json.GetProperty("items")[0].GetProperty("changes").TryGetProperty("assignment", out _));
+        var generated = await _h.GetAsync(eventsOnly, $"/api/hrm/employment-events?employmentId={id}", Ct);
+        Assert.Equal(HttpStatusCode.OK, generated.Status);
+        Assert.False(generated.Json.GetProperty("items")[0].TryGetProperty("changes", out _));
+    }
+
+    [Fact]
+    public async Task FR_XM_32_review_12_the_employee_the_change_is_about_cannot_approve_it_even_holding_the_approver_role()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var subject = await _h.UserAsync(Ct, null, "hr_admin");
+        var checker = await _h.UserAsync(Ct, null, "hr_admin");
+        var (company, place) = await CompanyAsync();
+        var (id, version, _) = await HireAsync(hr, company, place);
+        Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(hr, $"{Employments}/{id}/user", new { userId = subject, rowVersion = version }, Ct)).Status);
+
+        var asked = await ChangeAsync(hr, id, new { kind = "promotion", reasonCode = "merit", effectiveDate = Iso(Today), assignment = new { title = "Head" }, rowVersion = await VersionAsync(id) });
+        Assert.True(asked.Status == HttpStatusCode.Accepted, asked.Body);
+        var task = await _h.ScalarAsync<Guid>("select id from wf.workflow_tasks where instance_id = $1 and status = 'pending' order by created_at limit 1", Ct, asked.Json.GetProperty("instanceId").GetGuid());
+        Assert.NotEqual(HttpStatusCode.OK, (await _h.PostAsync(subject, $"/api/wf/tasks/{task}/approve", new { comment = "my own promotion" }, Ct)).Status);
+        Assert.Equal("pending_approval", await _h.ScalarAsync<string>("select status from hrm.employment_events where id = $1", Ct, asked.Json.GetProperty("eventId").GetGuid()));
+        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(checker, $"/api/wf/tasks/{task}/approve", new { comment = "agreed" }, Ct)).Status);
+        Assert.Equal("Head", await TitleOnAsync(hr, id, Today));
+    }
+
+    [Fact]
+    public async Task FR_KRN_IAM_12_review_3_a_backdated_change_cannot_rewrite_later_job_details_in_a_branch_outside_the_callers_records()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var (company, place) = await CompanyAsync();
+        await ApprovalKindsAsync(company);
+        var (id, _, _) = await HireAsync(hr, company, place, Iso(Today.AddDays(-300)));
+        var branchB = (Guid)(await _h.RowAsync("org.branches", company, null, Ct))["id"]!;
+        Assert.Equal(HttpStatusCode.Created, (await ChangeAsync(hr, id, new { kind = "transfer", reasonCode = "business_need", effectiveDate = Iso(Today.AddDays(-100)), assignment = new { branchId = branchB }, rowVersion = await VersionAsync(id) })).Status);
+
+        // An officer limited to branch A records a title change dated while the employee was still in branch A: it would carry
+        // into the branch-B rows from the transfer on, which the officer may not touch.
+        var officer = await _h.UserAsync(Ct);
+        var role = await _h.RoleAsync(Ct, ["hrm.employments.read", "hrm.employment_assignments.read", "hrm.employment_events.create"],
+            [("hrm.employments", "all"), ("hrm.employment_assignments", await _h.ScopeAsync("branches", new { branch_ids = new[] { place.Branch } }, Ct)), ("hrm.employment_events", "all")]);
+        await _h.AssignAsync(officer, role, null, _h.Today.AddDays(-1), null, Ct);
+        var backdated = await ChangeAsync(officer, id, new { kind = "acting", reasonCode = "acting_start", effectiveDate = Iso(Today.AddDays(-200)), assignment = new { title = "Acting lead" }, rowVersion = await VersionAsync(id) });
+        Assert.Equal(HttpStatusCode.Forbidden, backdated.Status);
+        Assert.Equal("Officer", await TitleOnAsync(hr, id, Today));
+    }
+
+    [Fact]
+    public async Task FR_KRN_IAM_12_the_subtree_scope_reaches_the_units_below_the_users_own_and_no_further()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var (company, place) = await CompanyAsync();
+        var hierarchy = (Guid)(await _h.RowAsync("org.org_hierarchies", company, new Dictionary<string, object?> { ["kind"] = "reporting" }, Ct))["id"]!;
+        var child = (Guid)(await _h.RowAsync("org.org_units", company, null, Ct))["id"]!;
+        var unrelated = (Guid)(await _h.RowAsync("org.org_units", company, null, Ct))["id"]!;
+        await _h.RowAsync("org.org_unit_links", company, new Dictionary<string, object?> { ["hierarchy_id"] = hierarchy, ["unit_id"] = child, ["parent_unit_id"] = place.OrgUnit, ["valid_from"] = Today.AddDays(-1000), ["valid_to"] = null }, Ct);
+        var (head, headVersion, _) = await HireAsync(hr, company, place, title: "Head");
+        var (below, _, _) = await HireAsync(hr, company, (child, place.Branch));
+        var (outside, _, _) = await HireAsync(hr, company, (unrelated, place.Branch));
+        var user = await _h.UserAsync(Ct);
+        Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(hr, $"{Employments}/{head}/user", new { userId = user, rowVersion = headVersion }, Ct)).Status);
+        var role = await _h.RoleAsync(Ct, ["hrm.employments.read", "hrm.employment_assignments.read"], [("hrm.employments", "subtree"), ("hrm.employment_assignments", "subtree")]);
+        await _h.AssignAsync(user, role, null, _h.Today.AddDays(-1), null, Ct);
+
+        Assert.Equal(HttpStatusCode.OK, (await _h.GetAsync(user, $"{Employments}/{below}/as-of", Ct)).Status);
+        Assert.Equal(HttpStatusCode.OK, (await _h.GetAsync(user, $"{Employments}/{head}/as-of", Ct)).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await _h.GetAsync(user, $"{Employments}/{outside}/as-of", Ct)).Status);
     }
 
     // ------------------------------------------------------------------ database rules

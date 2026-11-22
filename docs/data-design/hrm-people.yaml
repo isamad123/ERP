@@ -247,6 +247,9 @@
   scope: {company: company_id, employment: employment_id}
   # S1.20b (CR-076 S1.20b detail; ruling Q1, R-113): generated writes closed; events are recorded by the HR employment services.
   api_actions: [read]
+  # S1.20b review finding 4: `changes` holds job details (and, from S1.34, pay), so the generated read hides it unless the role is
+  # granted the salary class (GHR-06); the timeline shows it field by field under the assignment and employment rules.
+  field_class: {changes: salary}
   reqs: [EMP-03, EMP-11, FR-XM-30]
 
 - table: hrm.contracts

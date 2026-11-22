@@ -214,7 +214,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.employment_events.changes"
+      "labelKey": "fields.hrm.employment_events.changes",
+      "fieldClass": "salary"
     },
     {
       "column": "corrects_event_id",

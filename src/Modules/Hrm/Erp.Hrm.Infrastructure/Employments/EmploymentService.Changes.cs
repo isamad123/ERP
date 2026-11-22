@@ -20,6 +20,9 @@ namespace Erp.Hrm.Infrastructure.Employments;
 internal sealed partial class EmploymentService
 {
     public const string ConfirmationOnly = "errors.hrm.employment_event.confirmation_only";
+    public const string CorrectionNeedsTargetForJob = "errors.hrm.employment_event.job_details_need_target";
+    public const string ConfirmationBeforeJoiningAfter = "errors.hrm.employment.confirmation_before_new_joining";
+    public const string ServiceStartAfterJoining = "errors.hrm.employment.service_start_after_joining";
 
     public Task<PeopleResult> CheckChangeAsync(Guid employmentId, EmploymentChangeRequest request, CancellationToken cancellationToken) =>
         ChangeAsync(employmentId, request, save: false, cancellationToken);
@@ -180,6 +183,13 @@ internal sealed partial class EmploymentService
             errors.Add("effectiveDate", BeforeJoining);
         }
 
+        // Job details change through a kind, or through a correction of the event that set them, so the approval configured for
+        // that kind always applies (review S1.20b finding 1, FR-XM-32); a correction without a target corrects employment fields only.
+        if (kind == "data_correction" && r.CorrectsEventId is null && delta.Count > 0)
+        {
+            errors.Add("assignment", CorrectionNeedsTargetForJob);
+        }
+
         if (kind == "data_correction" && target is null && delta.Count == 0 && employmentDelta.Count == 0)
         {
             errors.Add(r.CorrectsEventId is null ? "correctsEventId" : "assignment", r.CorrectsEventId is null ? CorrectionNeedsTarget : NothingChanges);
@@ -239,32 +249,64 @@ internal sealed partial class EmploymentService
             return invalid;
         }
 
-        // Data scope before (the job details in force on the earliest day) and after (those the change puts in force), and field
-        // security of the fields it changes (FR-KRN-IAM-13).
+        // Data scope and field security of every job-details row the change touches (review S1.20b finding 3): a change carries
+        // forward until a later event sets the same field, so it can rewrite later rows too. Each stored row it removes, shortens or
+        // changes must be in the caller's records, with the changed fields editable; each row it puts in force must be too.
         var earliest = target is not null && target.EffectiveDate < date ? target.EffectiveDate : date;
         var stored = await db.Set<EmploymentAssignment>().AsNoTracking().Where(a => a.EmploymentId == employment.Id).ToListAsync(ct).ConfigureAwait(false);
-        var before = stored.LastOrDefault(a => a.ValidFrom <= earliest && (a.ValidTo == null || a.ValidTo > earliest)) ?? stored.OrderBy(a => a.ValidFrom).FirstOrDefault();
-        if (before is not null && !await AllowsAsync(before, EmploymentAssignmentAccess.Scope, "read", ct).ConfigureAwait(false))
+        var denied = new List<string>();
+        foreach (var row in stored)
         {
-            return PeopleResult.Forbidden(AccessDeniedException.OutOfScope);
+            var plan = planned.FirstOrDefault(p => p.ValidFrom == row.ValidFrom) ?? EmploymentTimeline.On(planned, row.ValidFrom);
+            var changedKeys = plan is null ? [.. AssignmentKeys.All] : EmploymentApplier.Differences(row, plan.Values);
+            var touched = plan is null || plan.ValidFrom != row.ValidFrom || plan.ValidTo != row.ValidTo || changedKeys.Count > 0;
+            if (!touched)
+            {
+                continue;
+            }
+
+            if (!await AllowsAsync(row, EmploymentAssignmentAccess.Scope, "read", ct).ConfigureAwait(false))
+            {
+                return PeopleResult.Forbidden(AccessDeniedException.OutOfScope);
+            }
+
+            denied.AddRange(await NotEditableAsync(EmploymentAssignmentAccess.Fields, EmploymentAssignmentAccess.Scope, row, changedKeys, ct).ConfigureAwait(false));
         }
 
-        if (EmploymentTimeline.On(planned, date) is { } after && !await AllowsAsync(Transient(employment, after), EmploymentAssignmentAccess.Scope, "read", ct).ConfigureAwait(false))
+        foreach (var plan in planned)
         {
-            return PeopleResult.Forbidden(AccessDeniedException.OutOfScope);
+            var row = stored.FirstOrDefault(a => a.ValidFrom == plan.ValidFrom);
+            if ((row is null || row.ValidTo != plan.ValidTo || EmploymentApplier.Differences(row, plan.Values).Count > 0)
+                && !await AllowsAsync(Transient(employment, plan), EmploymentAssignmentAccess.Scope, "read", ct).ConfigureAwait(false))
+            {
+                return PeopleResult.Forbidden(AccessDeniedException.OutOfScope);
+            }
+
+            // A new row splits the stored row in force on its date: the fields it changes there must be editable on that row.
+            if (row is null && stored.LastOrDefault(a => a.ValidFrom <= plan.ValidFrom && (a.ValidTo == null || a.ValidTo > plan.ValidFrom)) is { } covering)
+            {
+                denied.AddRange(await NotEditableAsync(EmploymentAssignmentAccess.Fields, EmploymentAssignmentAccess.Scope, covering, EmploymentApplier.Differences(covering, plan.Values), ct).ConfigureAwait(false));
+            }
         }
 
-        var denied = before is null ? [] : await NotEditableAsync(EmploymentAssignmentAccess.Fields, EmploymentAssignmentAccess.Scope, before, delta.Select(d => d.Key), ct).ConfigureAwait(false);
         denied.AddRange(await NotEditableAsync(EmploymentAccess.Fields, EmploymentAccess.Scope, employment, employmentDelta.Select(d => d.Key).Where(k => k != "confirmation_date"), ct).ConfigureAwait(false));
         if (denied.Count > 0)
         {
             return NotEditable(denied);
         }
 
+        // The employment's dates stay consistent with a corrected joining date (review S1.20b finding 10, BR-02).
+        if (DatesProblem(employment, planned, employmentDelta) is { } dates)
+        {
+            return dates;
+        }
+
         // The backdated change check (GHR-04, ruling Q6, CR-096): asked before saving and kept on the event; never a refusal here.
         var report = await impact.RunAsync(new EmploymentChange(employment.Id, employment.CompanyId, kind!, date, earliest, IsTermination: false), today, ct).ConfigureAwait(false);
         changes["impact"] = JsonSerializer.SerializeToNode(report, JsonSerializerOptions.Web);
-        var needsApproval = await NeedsApprovalAsync(kind!, employment.CompanyId, ct).ConfigureAwait(false);
+        // A correction waits when its own kind is listed or when the kind it finally replaces is (review S1.20b finding 1).
+        var needsApproval = await NeedsApprovalAsync(kind!, employment.CompanyId, ct).ConfigureAwait(false)
+            || (rootKind is not null && await NeedsApprovalAsync(rootKind, employment.CompanyId, ct).ConfigureAwait(false));
         if (!save)
         {
             return new PeopleResult(PeopleOutcome.Done, Body: new
@@ -309,6 +351,25 @@ internal sealed partial class EmploymentService
         Touch(employment, r.RowVersion!.Value);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
         return new PeopleResult(PeopleOutcome.Created, Body: new { eventId = e.Id, status = e.Status, rowVersion = employment.RowVersion, impact = report });
+    }
+
+    /// <summary>
+    /// The joining date the planned rows give (a correction of the hire moves it) checked against the employment's other dates as
+    /// they will be: the confirmation not before it (BR-02), the service start not after it (an earlier one is carried over by a
+    /// transfer, S1.20c), the expected end not before it.
+    /// </summary>
+    private static PeopleResult? DatesProblem(Employment employment, IReadOnlyList<PlannedRow> planned, JsonObject delta)
+    {
+        var joining = planned.Count > 0 ? planned[0].ValidFrom : employment.JoiningDate;
+        static DateOnly? Date(JsonObject d, string key, DateOnly? current) =>
+            d.ContainsKey(key) ? d[key] is { } v ? DateOnly.Parse(v.GetValue<string>(), System.Globalization.CultureInfo.InvariantCulture) : null : current;
+        var service = Date(delta, "service_start_date", employment.ServiceStartDate == employment.JoiningDate ? joining : employment.ServiceStartDate);
+        var confirmation = Date(delta, "confirmation_date", employment.ConfirmationDate);
+        var end = Date(delta, "expected_end_date", employment.ExpectedEndDate);
+        return confirmation < joining ? Field("effectiveDate", ConfirmationBeforeJoiningAfter)
+            : service > joining ? Field("employment.serviceStartDate", ServiceStartAfterJoining)
+            : end < joining ? Field("employment.expectedEndDate", DateOrder)
+            : null;
     }
 
     /// <summary>The kind a correction finally replaces (a correction of a correction replaces what the first one replaced).</summary>

@@ -1414,7 +1414,7 @@ export interface EmploymentEvent
     carryOver: unknown | null;
     workflowInstanceId: string | null;
     letterDocumentId: string | null;
-    changes: unknown | null;
+    changes?: unknown | string | null;
     correctsEventId: string | null;
     status: 'draft' | 'pending_approval' | 'approved' | 'effective' | 'cancelled';
     createdAt: string;

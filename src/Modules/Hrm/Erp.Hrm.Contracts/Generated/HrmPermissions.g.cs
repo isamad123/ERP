@@ -90,7 +90,7 @@ public static class HrmPermissions
         new("hrm.employee_letters.create", "hrm", "permissions.hrm.employee_letters.create", false),
         new("hrm.employee_letters.update", "hrm", "permissions.hrm.employee_letters.update", false),
         new("hrm.employment_assignments.read", "hrm", "permissions.hrm.employment_assignments.read", false),
-        new("hrm.employment_events.read", "hrm", "permissions.hrm.employment_events.read", false),
+        new("hrm.employment_events.read", "hrm", "permissions.hrm.employment_events.read", true),
         new("hrm.employment_statutory_registrations.read", "hrm", "permissions.hrm.employment_statutory_registrations.read", true),
         new("hrm.employment_statutory_registrations.create", "hrm", "permissions.hrm.employment_statutory_registrations.create", true),
         new("hrm.employment_statutory_registrations.update", "hrm", "permissions.hrm.employment_statutory_registrations.update", true),

@@ -85,6 +85,7 @@ internal sealed partial class EmploymentService(
     public const string UserLinkedElsewhere = "errors.hrm.user_link.user_linked";
     public const string UserOtherPerson = "errors.hrm.user_link.other_person";
     public const string NotLinked = "errors.hrm.user_link.not_linked";
+    public const string OwnUser = "errors.hrm.user_link.own_user";
 
     /// <summary>The kinds recorded through <c>POST /api/hrm/employments/{id}/events</c> (hire, rehire, transfer between companies, probation, pay and separation have their own services).</summary>
     public static readonly IReadOnlyList<string> ChangeKinds = EmploymentCatalogue.ChangeKinds;
@@ -160,6 +161,12 @@ internal sealed partial class EmploymentService(
             if (request.ExpectedEndDate is { } end && end < joining)
             {
                 errors.Add("expectedEndDate", DateOrder);
+            }
+
+            // An earlier service start is carried over (S1.20c); a later one is a mistake (review S1.20b finding 10).
+            if (request.ServiceStartDate is { } service && service > joining)
+            {
+                errors.Add("serviceStartDate", ServiceStartAfterJoining);
             }
 
             employment.Status = joining <= today ? "active" : "pre_joining";

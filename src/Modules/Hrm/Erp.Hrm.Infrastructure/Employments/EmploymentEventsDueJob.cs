@@ -62,11 +62,20 @@ internal sealed class EmploymentEventsDueJob(IClock clock) : IJobHandler
                         continue;
                     }
 
+                    // The employment's lock, as the change service and the approval take it (review S1.20b finding 6); the event is
+                    // read again under it and moved only if it is still approved.
+                    await db.Database.ExecuteSqlInterpolatedAsync($"select 1 from hrm.employments where id = {e.EmploymentId} for update", ct).ConfigureAwait(false);
                     var employment = await db.Set<Employment>().FirstAsync(x => x.Id == e.EmploymentId, ct).ConfigureAwait(false);
                     var events = await applier.EventsAsync(employment.Id, ct).ConfigureAwait(false);
                     var tracked = events.First(x => x.Id == e.Id);
+                    await db.Entry(tracked).ReloadAsync(ct).ConfigureAwait(false);
+                    if (tracked.Status != "approved")
+                    {
+                        continue;
+                    }
+
                     tracked.Status = "effective";
-                    EmploymentApplier.Stamp(tracked, now, actor.UserId);
+                    EmploymentApplier.Bump(tracked, now, actor.UserId);
                     await applier.ApplyEmploymentFieldsAsync(employment, tracked, today, ct).ConfigureAwait(false);
                     if (db.Entry(employment).State == EntityState.Modified)
                     {

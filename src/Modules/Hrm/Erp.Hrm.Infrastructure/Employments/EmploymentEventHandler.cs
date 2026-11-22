@@ -43,7 +43,7 @@ internal sealed class EmploymentEventHandler(IServiceProvider services, IClock c
         if (outcome.Outcome != WorkflowOutcomes.Approved)
         {
             e.Status = outcome.Outcome == WorkflowOutcomes.Returned ? "draft" : "cancelled";
-            EmploymentApplier.Stamp(e, now, by);
+            EmploymentApplier.Bump(e, now, by);
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return;
         }
@@ -65,6 +65,7 @@ internal sealed class EmploymentEventHandler(IServiceProvider services, IClock c
         var today = await applier.TodayAsync(employment.CompanyId, now, cancellationToken).ConfigureAwait(false);
         var others = events.Where(x => x.Id != e.Id).ToList();
         EmploymentApplier.SetApplied(e, others, today, now, by);
+        e.RowVersion++; // a stored row that changed (review S1.20b finding 6)
         if (await applier.SyncRowsAsync(employment, events, now, by, cancellationToken).ConfigureAwait(false) is { } problem)
         {
             throw new WorkflowException(problem);

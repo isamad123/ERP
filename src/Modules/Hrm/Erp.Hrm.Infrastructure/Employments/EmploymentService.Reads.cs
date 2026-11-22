@@ -58,8 +58,33 @@ internal sealed partial class EmploymentService
 
         var all = await db.Set<EmploymentEvent>().AsNoTracking().Where(e => e.EmploymentId == employment.Id)
             .OrderBy(e => e.CreatedAt).ThenBy(e => e.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
-        var replacedBy = all.Where(e => EmploymentTimeline.IsApplied(e.Status) && e.CorrectsEventId is not null)
-            .ToDictionary(e => e.CorrectsEventId!.Value, e => e.Id);
+        var replacedBy = EmploymentTimeline.ReplacedBy([.. all.Select(EmploymentApplier.ToTimeline)]);
+
+        // What an event changes is shown as the job details and employment fields themselves would be (review S1.20b finding 4):
+        // job details only with the assignment read permission and the scope of the row they concern, each field by its rule.
+        var rows = await HasAsync(EmploymentPermissions.AssignmentsRead, cancellationToken).ConfigureAwait(false)
+            ? await db.Set<EmploymentAssignment>().AsNoTracking().Where(a => a.EmploymentId == employment.Id).OrderBy(a => a.ValidFrom).ToListAsync(cancellationToken).ConfigureAwait(false)
+            : [];
+        var rowMaps = new Dictionary<Guid, FieldAccessMap?>();
+        async Task<FieldAccessMap?> AssignmentMapAsync(EmploymentEvent e)
+        {
+            var row = rows.FirstOrDefault(a => a.EventId == e.Id) ?? rows.LastOrDefault(a => a.ValidFrom <= e.EffectiveDate) ?? rows.FirstOrDefault();
+            if (row is null)
+            {
+                return null;
+            }
+
+            if (!rowMaps.TryGetValue(row.Id, out var map))
+            {
+                rowMaps[row.Id] = map = await AllowsAsync(row, EmploymentAssignmentAccess.Scope, "read", cancellationToken).ConfigureAwait(false)
+                    ? await MapAsync(EmploymentAssignmentAccess.Fields, EmploymentAssignmentAccess.Scope, row, cancellationToken).ConfigureAwait(false)
+                    : null;
+            }
+
+            return map;
+        }
+
+        var employmentMap = await MapAsync(EmploymentAccess.Fields, EmploymentAccess.Scope, employment, cancellationToken).ConfigureAwait(false);
         var items = new List<JsonObject>();
         foreach (var e in all.Where(e => kind is null || e.Kind == kind).OrderByDescending(e => e.EffectiveDate).ThenByDescending(e => e.CreatedAt))
         {
@@ -76,7 +101,6 @@ internal sealed partial class EmploymentService
                 ["effectiveDate"] = Iso(e.EffectiveDate),
                 ["status"] = e.Status,
                 ["notes"] = e.Notes,
-                ["changes"] = e.Changes is null ? null : JsonNode.Parse(e.Changes.RootElement.GetRawText()),
                 ["correctsEventId"] = e.CorrectsEventId,
                 ["workflowInstanceId"] = e.WorkflowInstanceId,
                 ["createdAt"] = e.CreatedAt,
@@ -84,6 +108,7 @@ internal sealed partial class EmploymentService
                 ["updatedAt"] = e.UpdatedAt,
                 ["updatedBy"] = e.UpdatedBy,
             }, cancellationToken).ConfigureAwait(false);
+            node["changes"] = e.Changes is null ? null : ShapeChanges(JsonNode.Parse(e.Changes.RootElement.GetRawText())!.AsObject(), await AssignmentMapAsync(e).ConfigureAwait(false), employmentMap);
             node["replacedBy"] = replacedBy.TryGetValue(e.Id, out var by) ? by : null;
             items.Add(node);
         }
@@ -119,9 +144,18 @@ internal sealed partial class EmploymentService
             return PeopleResult.Invalid(RowVersionRequired);
         }
 
+        // Nobody links their own user (review S1.20b finding 5): the link decides who is the employee and who the line manager,
+        // so making oneself someone's employee or manager needs another person with the permission (FR-XM-32).
+        if (user == actor.UserId)
+        {
+            return PeopleResult.Conflict(OwnUser);
+        }
+
         return await InTransactionAsync(async () =>
         {
             await db.Database.ExecuteSqlInterpolatedAsync($"select 1 from hrm.employments where id = {employmentId} for update", cancellationToken).ConfigureAwait(false);
+            // One link decision per user at a time, so two requests cannot link one user to two persons (review finding 7).
+            await db.Database.ExecuteSqlInterpolatedAsync($"select pg_advisory_xact_lock(hashtextextended('hrm.user_link:' || {user.ToString()}, 0))", cancellationToken).ConfigureAwait(false);
             var (employment, problem) = await ChangeableAsync(employmentId, expected, cancellationToken).ConfigureAwait(false);
             if (problem is not null)
             {
@@ -224,6 +258,56 @@ internal sealed partial class EmploymentService
 
     private async Task<PeopleResult> RunReadAsync(string permission, Func<PeopleResult> work, CancellationToken ct) =>
         await HasAsync(permission, ct).ConfigureAwait(false) ? work() : PeopleResult.Forbidden();
+
+    /// <summary>
+    /// An event's changes as the caller may see them: the job details by the assignment row's field map (left out without one), the
+    /// employment fields by the employment's; hidden fields removed, masked ones masked.
+    /// </summary>
+    private static JsonObject ShapeChanges(JsonObject changes, FieldAccessMap? assignment, FieldAccessMap employment)
+    {
+        static void Apply(JsonObject section, FieldAccessMap map)
+        {
+            foreach (var key in section.Select(p => p.Key).ToList())
+            {
+                switch (map.Of(key))
+                {
+                    case FieldAccessLevel.Hidden:
+                        section.Remove(key);
+                        break;
+                    case FieldAccessLevel.Masked:
+                        section[key] = FieldShaping.Mask(section[key]);
+                        break;
+                }
+            }
+        }
+
+        if (changes["assignment"] is JsonObject job)
+        {
+            if (assignment is null)
+            {
+                changes.Remove("assignment");
+            }
+            else
+            {
+                Apply(job, assignment);
+            }
+        }
+
+        if (changes["employment"] is JsonObject fields)
+        {
+            Apply(fields, employment);
+        }
+
+        return changes;
+    }
+
+    /// <summary>The field access of the roles whose data scope covers the row.</summary>
+    private async Task<FieldAccessMap> MapAsync<T>(FieldCatalog catalog, ScopeTarget<T> target, T row, CancellationToken ct)
+        where T : class, Erp.BuildingBlocks.Domain.Entities.IEntity
+    {
+        var plan = await fields.PlanAsync(catalog, target, "read", Source, ct).ConfigureAwait(false);
+        return (await plan.ResolveAsync([row], Source, ct).ConfigureAwait(false))[0];
+    }
 
     /// <summary>A view shaped by the field access of the roles whose data scope covers the row; sensitive values shown are access-logged.</summary>
     private async Task<JsonObject> ShapeAsync<T>(FieldCatalog catalog, ScopeTarget<T> target, T row, JsonObject view, CancellationToken ct)

@@ -68,6 +68,28 @@ public sealed partial class EmploymentUnitTests
     }
 
     [Fact]
+    public void FR_XM_05_review_2_a_correction_of_a_correction_still_in_the_future_never_brings_back_the_event_the_first_one_replaced()
+    {
+        var hire = Ev("hire", Jan1, Full("Officer"));
+        var promotion = Ev("promotion", new DateOnly(2026, 11, 1), new JsonObject { [AssignmentKeys.Title] = "Manager" });
+        // C1 moved the promotion to 1 January 2027 (still in the future, so approved); C2 then moved it to 1 December and C1 was
+        // cancelled on the spot (it never takes effect).
+        var c1 = Ev("data_correction", new DateOnly(2027, 1, 1), new JsonObject { [AssignmentKeys.Title] = "Manager" }, status: "cancelled", corrects: promotion.Id);
+        var c2 = Ev("data_correction", new DateOnly(2026, 12, 1), new JsonObject { [AssignmentKeys.Title] = "Manager" }, corrects: c1.Id);
+
+        var events = new[] { hire, promotion, c1, c2 };
+        var rows = EmploymentTimeline.Plan(events, out _);
+        Assert.Equal("Officer", EmploymentTimeline.On(rows, new DateOnly(2026, 11, 20))!.Values[AssignmentKeys.Title]!.GetValue<string>());
+        Assert.Equal("Manager", EmploymentTimeline.On(rows, new DateOnly(2026, 12, 1))!.Values[AssignmentKeys.Title]!.GetValue<string>());
+        var by = EmploymentTimeline.ReplacedBy(events);
+        Assert.Equal(c1.Id, by[promotion.Id]);
+        Assert.Equal(c2.Id, by[c1.Id]);
+
+        // A correction that never counted (rejected: cancelled and named by nobody) replaces nothing.
+        Assert.Empty(EmploymentTimeline.Replaced([hire, promotion, c1]));
+    }
+
+    [Fact]
     public void FR_HRM_EMP_03_two_events_on_one_date_share_one_row_owned_by_the_last_and_nothing_starts_without_a_full_assignment()
     {
         var hire = Ev("hire", Jan1, Full("Officer"));

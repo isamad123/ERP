@@ -54,7 +54,7 @@ public static class EmploymentEventAccess
         new("carry_over", "CarryOver", null),
         new("workflow_instance_id", "WorkflowInstanceId", null),
         new("letter_document_id", "LetterDocumentId", null),
-        new("changes", "Changes", null),
+        new("changes", "Changes", "salary"),
         new("corrects_event_id", "CorrectsEventId", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),

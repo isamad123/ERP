@@ -127,7 +127,7 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
         if (e.CorrectsEventId is { } replaced && events.FirstOrDefault(x => x.Id == replaced) is { Status: "approved" } future)
         {
             future.Status = "cancelled";
-            Stamp(future, now, actor);
+            Bump(future, now, actor);
         }
     }
 
@@ -231,7 +231,16 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
         row.UpdatedBy = actor;
     }
 
-    private static void Touch(EmploymentAssignment row, DateTimeOffset now, Guid actor) => Stamp(row, now, actor);
+    /// <summary>A stored row that changed: next row version (the column is a concurrency token; review S1.20b finding 6) and stamp.</summary>
+    public static void Bump<T>(T row, DateTimeOffset now, Guid actor)
+        where T : class, IVersioned
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        row.RowVersion++;
+        Stamp(row, now, actor);
+    }
+
+    private static void Touch(EmploymentAssignment row, DateTimeOffset now, Guid actor) => Bump(row, now, actor);
 
     private static bool Later(DateOnly? a, DateOnly? b) => b is not null && (a is null || a > b);
 
@@ -260,6 +269,35 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
         row.IsActing = v[AssignmentKeys.IsActing]!.GetValue<bool>();
         var after = (row.EventId, row.OrgUnitId, row.BranchId, row.LocationId, row.PositionId, row.GradeId, row.Title, row.ManagerEmploymentId, Cost: before.Cost, row.Fte, row.WorkSchedule, row.IsActing);
         return costChanged || before != after;
+    }
+
+    /// <summary>The assignment keys whose stored value differs from the planned one (review S1.20b finding 3).</summary>
+    public static List<string> Differences(EmploymentAssignment row, JsonObject values)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        ArgumentNullException.ThrowIfNull(values);
+        string? Id(string key) => values[key]?.GetValue<string>();
+        var keys = new List<string>();
+        void Check(string key, bool same)
+        {
+            if (!same)
+            {
+                keys.Add(key);
+            }
+        }
+
+        Check(AssignmentKeys.OrgUnit, Id(AssignmentKeys.OrgUnit) == row.OrgUnitId.ToString());
+        Check(AssignmentKeys.Branch, Id(AssignmentKeys.Branch) == row.BranchId.ToString());
+        Check(AssignmentKeys.Location, Id(AssignmentKeys.Location) == row.LocationId?.ToString());
+        Check(AssignmentKeys.Position, Id(AssignmentKeys.Position) == row.PositionId?.ToString());
+        Check(AssignmentKeys.Grade, Id(AssignmentKeys.Grade) == row.GradeId?.ToString());
+        Check(AssignmentKeys.Title, Id(AssignmentKeys.Title) == row.Title);
+        Check(AssignmentKeys.Manager, Id(AssignmentKeys.Manager) == row.ManagerEmploymentId?.ToString());
+        Check(AssignmentKeys.CostAllocation, values[AssignmentKeys.CostAllocation] is { } cost && JsonNode.DeepEquals(JsonNode.Parse(row.CostAllocation.RootElement.GetRawText()), cost));
+        Check(AssignmentKeys.Fte, values[AssignmentKeys.Fte]?.GetValue<decimal>() == row.Fte);
+        Check(AssignmentKeys.WorkSchedule, Id(AssignmentKeys.WorkSchedule) == row.WorkSchedule);
+        Check(AssignmentKeys.IsActing, values[AssignmentKeys.IsActing]?.GetValue<bool>() == row.IsActing);
+        return keys;
     }
 
     private static Guid? OptionalId(JsonObject v, string key) => v[key] is { } node ? Guid.Parse(node.GetValue<string>()) : null;

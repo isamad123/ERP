@@ -55,9 +55,34 @@ public static class EmploymentTimeline
 
     public static bool IsApplied(string status) => status is "approved" or "effective";
 
-    /// <summary>The events replaced by an applied correction.</summary>
-    public static IReadOnlySet<Guid> Replaced(IEnumerable<TimelineEvent> events) =>
-        events.Where(e => IsApplied(e.Status) && e.CorrectsEventId is not null).Select(e => e.CorrectsEventId!.Value).ToHashSet();
+    /// <summary>The events replaced by an applied correction (the keys of <see cref="ReplacedBy"/>).</summary>
+    public static IReadOnlySet<Guid> Replaced(IEnumerable<TimelineEvent> events) => ReplacedBy(events).Keys.ToHashSet();
+
+    /// <summary>
+    /// Each replaced event and the correction that replaces it. Replacement follows the chain (review S1.20b finding 2): an applied
+    /// correction replaces its target, and when that target is itself a correction (cancelled because it was replaced before its
+    /// date, or still in force) it goes on replacing its own target, so a correction of a correction never brings back the event
+    /// the first one removed. A correction that never counted (pending, draft, rejected) replaces nothing.
+    /// </summary>
+    public static IReadOnlyDictionary<Guid, Guid> ReplacedBy(IEnumerable<TimelineEvent> events)
+    {
+        ArgumentNullException.ThrowIfNull(events);
+        var list = events.ToList();
+        var byId = list.ToDictionary(e => e.Id);
+        var replaced = new Dictionary<Guid, Guid>();
+        foreach (var start in list.Where(e => IsApplied(e.Status) && e.CorrectsEventId is not null))
+        {
+            var by = start.Id;
+            var target = start.CorrectsEventId;
+            while (target is { } id && replaced.TryAdd(id, by))
+            {
+                by = id;
+                target = byId.TryGetValue(id, out var next) ? next.CorrectsEventId : null;
+            }
+        }
+
+        return replaced;
+    }
 
     /// <summary>The applied, not replaced events in the order they count.</summary>
     public static IReadOnlyList<TimelineEvent> Counted(IReadOnlyList<TimelineEvent> events)

@@ -480,7 +480,7 @@
       "code": "hrm.employment_events.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.employment_events.read",
-      "sensitive": false
+      "sensitive": true
     },
     {
       "code": "hrm.employment_statutory_registrations.read",
