@@ -25,15 +25,17 @@ public sealed partial class AccessAdministrationService
         await using var c = await IdentityDb.OpenAsync(tenant.DataSource, cancellationToken).ConfigureAwait(false);
         await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var days = await AccessDb.SettingIntAsync(c, tx, IdentitySettings.MakerCheckerExpiryDays, 7, cancellationToken).ConfigureAwait(false);
+        var (decidableHeld, allHeld) = await HeldKindsAsync(cancellationToken).ConfigureAwait(false); // modules' held changes (S1.20a)
 
         // Requests older than the expiry can no longer be decided (they expire at the next decision or the daily job).
         var rows = new List<(Guid Id, string Kind, Guid By, string? ByName, DateTimeOffset At, string? Reason, string Payload)>();
         await using (var command = IdentityDb.Command(c, tx, """
             select r.id, r.action_type, r.requested_by, u.display_name, r.created_at, r.reason, r.payload::text
             from iam.maker_checker_requests r left join iam.users u on u.id = r.requested_by
-            where r.status = 'pending' and r.created_at > $1 and (r.requested_by = $2 or $3)
+            where r.status = 'pending' and r.created_at > $1
+              and (r.requested_by = $2 or ($3 and not r.action_type = any($4)) or r.action_type = any($5))
             order by r.created_at, r.id
-            """, now.AddDays(-days), me, mayDecide))
+            """, now.AddDays(-days), me, mayDecide, allHeld, decidableHeld))
         await using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
         {
             while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
@@ -50,6 +52,13 @@ public sealed partial class AccessAdministrationService
             var own = row.By == me;
             if ((own ? mine : toDecide).Count >= PendingMaxItems)
             {
+                continue;
+            }
+
+            if (HandlerOf(row.Kind) is { } handler)
+            {
+                var (heldSubject, heldDetails, heldProblem) = await DescribeHeldAsync(handler, tx, row.Id, row.Kind, row.By, row.Payload, row.Reason, own, cancellationToken).ConfigureAwait(false);
+                (own ? mine : toDecide).Add(new ChangeRequestView(row.Id, row.Kind, row.By, row.ByName, row.At, row.At.AddDays(days), row.Reason, heldSubject, heldDetails, heldProblem is null, heldProblem));
                 continue;
             }
 
