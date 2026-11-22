@@ -206,6 +206,12 @@ User console (S1.13a): `/admin/users` (`web/apps/web/src/modules/admin/users*.ts
 another user's e-mail (trigger `tg_users_username_email_clash`, a rules.yaml `functions` entry: new rules never go in as design notes, the first migrations are frozen).
 Browser tests: `server.licence({ usersLimit })` changes the named-user limit.
 
+Persons (S1.20a): HR person services `src/Modules/Hrm/Erp.Hrm.Infrastructure/People/` (endpoints `Erp.Hrm.Api/People/PersonEndpoints.cs`, under `/api/hrm/persons`,
+`/api/hrm/duplicates`, `/api/hrm/person-catalogue`); the generated writes of `hrm.persons` to `hrm.employment_statutory_registrations` are closed (`api_actions: [read]`),
+their actions are hand-written permissions in `Erp.Hrm.Infrastructure/Access/permissions.json`. A module holds a change for a second person through
+`IHeldChanges` and an `IHeldChangeHandler` (Kernel.Contracts `Access/HeldChanges.cs`; example `PersonMergeHandler`). HR endpoints carry `HrmEndpointMetadata`
+for the isolation suite (`HrmProbe`). Tests: `tests/Erp.IntegrationTests/People`.
+
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.
 Slices: `docs/slices`. Handoff notes: `docs/handoff`.
