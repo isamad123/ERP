@@ -145,6 +145,24 @@ public static class KernelSettingKeys
 
     /// <summary>A generated PDF with more pages than this is refused.</summary>
     public const string DocPdfMaxPages = "doc.pdf.max_pages";
+
+    /// <summary>The name shown on the sign-in page and in the top bar.</summary>
+    public const string CfgBrandingProductName = "cfg.branding.product_name";
+
+    /// <summary>The uploaded logo shown on the sign-in page (set by the Sign-in page screen).</summary>
+    public const string CfgBrandingLogoFileId = "cfg.branding.logo_file_id";
+
+    /// <summary>A short notice above the sign-in form, shown in English.</summary>
+    public const string CfgBrandingBannerEn = "cfg.branding.banner_en";
+
+    /// <summary>A short notice above the sign-in form, shown in Urdu.</summary>
+    public const string CfgBrandingBannerUr = "cfg.branding.banner_ur";
+
+    /// <summary>The terms of use notice shown under the sign-in form, in English.</summary>
+    public const string CfgBrandingTermsEn = "cfg.branding.terms_en";
+
+    /// <summary>The terms of use notice shown under the sign-in form, in Urdu.</summary>
+    public const string CfgBrandingTermsUr = "cfg.branding.terms_ur";
 }
 
 /// <summary>Keys of the feature flags declared in the kernel settings manifest (FR-KRN-SET-05).</summary>
