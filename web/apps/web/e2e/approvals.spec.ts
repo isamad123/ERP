@@ -110,7 +110,7 @@ test('FR-KRN-IAM-14 FR-XM-32 a setting change held for a second administrator is
   const card = page.getByRole('listitem', { name: /Change the setting .Days to keep drafts./ }).first();
   await expect(card).toBeVisible();
   await expect(card.getByText('Their reason: Longer drafts for the audit')).toBeVisible();
-  await expect(card.getByText('42')).toBeVisible();
+  await expect(card.getByText('42', { exact: true })).toBeVisible(); // the new value (exact: the random key may contain "42")
   await accessible(page, 'approvals of changes');
   await shot(page, 'approvals-changes-en-light-1280');
   expect(await server.settingValue(held.key)).toBeNull(); // nothing changes before the approval
