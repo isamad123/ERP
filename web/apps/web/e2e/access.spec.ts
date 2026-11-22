@@ -3,7 +3,7 @@
 // administrator copies a shipped role, removes permissions, compares it with its source, sees the change in the permission
 // change report and the audit search, and every screen of the console passes axe in English and Urdu.
 import { expect, test, type Page } from '@playwright/test';
-import { accessible, display, fitsWidth, freshContext, menu, noProblems, openPage, PASSWORD, person, server, shot } from './support';
+import { accessible, display, freshContext, menu, noProblems, openPage, PASSWORD, person, server, shot } from './support';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -29,7 +29,7 @@ test('FR-ADM-ROL-01 FR-ADM-ROL-02 FR-ADM-ROL-11 FR-KRN-AUD-04 an administrator c
   await expect(page.getByRole('heading', { name: 'Roles', level: 1 })).toBeVisible();
   await accessible(page, 'role list');
   await shot(page, 'access-roles-en-light-1280');
-  await page.getByRole('link', { name: 'Permission catalogue' }).click();
+  await page.getByRole('button', { name: 'Permission catalogue' }).click();
   await expect(page.getByRole('heading', { name: 'Permission catalogue', level: 1 })).toBeVisible();
   await accessible(page, 'permission catalogue');
   await shot(page, 'access-catalogue-en-light-1280');
@@ -111,7 +111,8 @@ test('FR-KRN-LOC-01 NFR-11 NFR-12 the access console in English and Urdu, light 
           await expect(page.locator('main h1')).toBeVisible();
           await expect(page.locator('main [aria-busy="true"]')).toHaveCount(0);
           expect(await page.evaluate(() => document.documentElement.dir)).toBe(language === 'ur' ? 'rtl' : 'ltr');
-          await fitsWidth(page);
+          const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+          expect(overflow, `${name} ${language} ${scheme} ${width}`).toBeLessThanOrEqual(0);
           if (width === 1280) await accessible(page, `${name} ${language} ${scheme}`);
           if (width === 1280 || (language === 'ur' && scheme === 'light')) await shot(page, `access-${name}-${language}-${scheme}-${width}`);
         }

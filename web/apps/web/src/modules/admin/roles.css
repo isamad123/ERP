@@ -37,3 +37,11 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Permission codes are long and have no spaces: they wrap inside their cell instead of widening the page. */
+.erp-table th,
+.erp-table td,
+.erp-table .erp-code,
+.erp-perm-resource .erp-code {
+  overflow-wrap: anywhere;
+}

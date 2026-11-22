@@ -35,7 +35,7 @@ export const kernelScreens: ScreenDeclaration[] = [
   { id: 'groups', path: '/admin/groups/*', labelKey: 'nav.groups', icon: UsersRound, group: 'administration', permission: 'iam.user_groups.read', component: GroupsScreen },
   { id: 'data-scopes', path: '/admin/data-scopes/*', labelKey: 'nav.dataScopes', icon: Filter, group: 'administration', permission: 'iam.data_scopes.read', component: ScopesScreen },
   { id: 'field-security', path: '/admin/field-security/*', labelKey: 'nav.fieldSecurity', icon: EyeOff, group: 'administration', permission: 'iam.roles.read', component: FieldsScreen },
-  { id: 'delegations', path: '/admin/delegations/*', labelKey: 'nav.delegations', icon: UserCog, group: 'administration', permission: 'iam.delegations.read', component: DelegationsScreen },
+  { id: 'delegations', path: '/admin/delegations/*', labelKey: 'nav.delegations', icon: UserCog, group: 'administration', permission: 'iam.users.read', component: DelegationsScreen },
   { id: 'access-reports', path: '/admin/access-reports/*', labelKey: 'nav.accessReports', icon: BarChart3, group: 'administration', permission: 'iam.roles.read', component: ReportsScreen },
   { id: 'licence', path: '/settings/licence', labelKey: 'nav.licence', icon: KeyRound, group: 'administration', permission: 'cfg.licence.read', allowedWhenLocked: true, comesWith: 'S1.16' },
   { id: 'jobs', path: '/admin/jobs/*', labelKey: 'nav.jobs', icon: Activity, group: 'administration', permission: 'job.runs.read', comesWith: 'S1.16' },
