@@ -455,6 +455,20 @@ public sealed partial class AccessAdministrationService(
                 return await workflow.ValidateActivationAsync(c, tx, versionId, rowVersion, ct).ConfigureAwait(false) is { } refused ? AccessResult.Invalid(refused) : null;
             }
 
+            case AccessChange.SaveBankAccount:
+            case AccessChange.DeleteBankAccount:
+            {
+                // Slice S1.14a: the account still exists and was not edited since the request was made.
+                if (change.BankAccount is not { } bank)
+                {
+                    return AccessResult.Invalid(InvalidRequest);
+                }
+
+                return await Org.OrganizationAdministrationService.CheckHeldAsync(c, tx, bank, ct).ConfigureAwait(false) is { } stale
+                    ? stale == ConcurrencyConflict ? AccessResult.Conflict(stale) : AccessResult.Invalid(stale)
+                    : null;
+            }
+
             case AccessChange.ChangeSetting:
                 return await ValidateHeldSettingAsync(c, tx, change, ct).ConfigureAwait(false);
 

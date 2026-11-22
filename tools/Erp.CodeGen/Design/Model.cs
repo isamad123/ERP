@@ -93,6 +93,9 @@ public sealed class Column
     /// </summary>
     public string? FieldClass { get; set; }
 
+    /// <summary>An encrypted column that a hand-written view shows, so field security can mask or hide it (design key field_view, S1.14a).</summary>
+    public bool InFieldCatalogue { get; set; }
+
     public bool IsSensitive => Kind is ColumnKind.Encrypted or ColumnKind.Hmac;
 
     public bool IsGenerated => GeneratedExpression is not null;
@@ -322,7 +325,9 @@ public sealed record NumberingDef(
 
 /// <summary>A database function a slice writes (rules.yaml <c>functions</c>, slice S1.07): reviewed SQL, emitted as a migration.</summary>
 /// <remarks><paramref name="Triggers"/>: the triggers the SQL creates, as (table, trigger name) (slice S1.09a).</remarks>
-public sealed record FunctionDef(string Slice, string Name, string Purpose, string Sql, IReadOnlyList<(string Table, string Trigger)> Triggers);
+/// <remarks><paramref name="ConstraintFields"/>: constraint names the SQL raises and the column each one is about, as (table, constraint, column), so the web form shows the refusal next to the field (slice S1.14a).</remarks>
+public sealed record FunctionDef(string Slice, string Name, string Purpose, string Sql, IReadOnlyList<(string Table, string Trigger)> Triggers,
+    IReadOnlyList<(string Table, string Constraint, string Column)> ConstraintFields);
 
 public sealed class DesignModel
 {

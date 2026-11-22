@@ -102,7 +102,7 @@ public sealed class RuleBook
             var map = YamlNode.Map(entry, "rules.yaml functions");
             var name = YamlNode.Text(map.GetValueOrDefault("name"), "rules.yaml functions name");
             var where = "rules.yaml function " + name;
-            var unknown = map.Keys.Except(["slice", "name", "purpose", "sql", "triggers"]).ToList();
+            var unknown = map.Keys.Except(["slice", "name", "purpose", "sql", "triggers", "constraint_fields"]).ToList();
             if (unknown.Count > 0)
             {
                 throw new DesignException(where, "unknown keys: " + string.Join(", ", unknown));
@@ -113,8 +113,12 @@ public sealed class RuleBook
                 .Select(t => YamlNode.Texts(t, where))
                 .Select(t => t.Count == 2 ? (t[0], t[1]) : throw new DesignException(where, "each trigger is [table, trigger_name]"))
                 .ToList();
+            var constraintFields = YamlNode.List(map.GetValueOrDefault("constraint_fields"), where + " constraint_fields")
+                .Select(t => YamlNode.Texts(t, where))
+                .Select(t => t.Count == 3 ? (t[0], t[1], t[2]) : throw new DesignException(where, "each constraint field is [table, constraint, column]"))
+                .ToList();
             functions.Add(new FunctionDef(YamlNode.Text(map.GetValueOrDefault("slice"), where + " slice"), name,
-                YamlNode.Text(map.GetValueOrDefault("purpose"), where + " purpose"), YamlNode.Text(map.GetValueOrDefault("sql"), where + " sql"), triggers));
+                YamlNode.Text(map.GetValueOrDefault("purpose"), where + " purpose"), YamlNode.Text(map.GetValueOrDefault("sql"), where + " sql"), triggers, constraintFields));
         }
 
         return new RuleBook(tables, functions);

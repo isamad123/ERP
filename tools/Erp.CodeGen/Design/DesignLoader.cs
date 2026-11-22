@@ -13,7 +13,7 @@ public static partial class DesignLoader
 
     private static readonly string[] KnownKeys =
         ["table", "purpose", "traits", "status", "columns", "unique", "indexes", "eff_key", "key", "checks", "notes", "partition", "reqs",
-         "added_in", "updatable_added_in", "api_read_only", "api_create_only", "scope", "field_class", "api_actions", "audit", "audit_reason", "indexes_added_in",
+         "added_in", "updatable_added_in", "api_read_only", "api_create_only", "scope", "field_class", "field_view", "api_actions", "audit", "audit_reason", "indexes_added_in",
          "numbering", "optional_added_in", "enum_added_in", "checks_added_in", "uniques_added_in", "uniques_replaced_in", "entitlement"];
 
     /// <summary>Keys of a design file's <c>defaults</c> entry (slice S1.09b): values every table of the file takes unless it overrides them.</summary>
@@ -535,6 +535,18 @@ public static partial class DesignLoader
             }
 
             table.Column(name).FieldClass = fieldClass;
+        }
+
+        // S1.14a (CR-070): encrypted columns a hand-written view shows (masked or hidden by field security) join the field catalogue.
+        foreach (var name in map.ContainsKey("field_view") ? YamlNode.Texts(map["field_view"], table.FullName + ".field_view") : [])
+        {
+            var column = table.Column(name);
+            if (column.Kind is not ColumnKind.Encrypted)
+            {
+                throw new DesignException(table.FullName, $"field_view names {name}, which is not an encrypted column (other columns are in the field catalogue already)");
+            }
+
+            column.InFieldCatalogue = true;
         }
 
         if (map.ContainsKey("api_actions"))

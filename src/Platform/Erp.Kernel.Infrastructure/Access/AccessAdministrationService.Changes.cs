@@ -166,6 +166,16 @@ public sealed partial class AccessAdministrationService
             return AccessResult.Forbidden(Forbidden);
         }
 
+        // A held bank account change (slice S1.14a): the approver may make the change themselves for that company.
+        if (change.Kind is AccessChange.SaveBankAccount or AccessChange.DeleteBankAccount && change.BankAccount is { } bank)
+        {
+            var permission = change.Kind == AccessChange.DeleteBankAccount ? "org.company_bank_accounts.delete" : bank.Operation == "create" ? "org.company_bank_accounts.create" : "org.company_bank_accounts.update";
+            if (!await caller.CoversCompanyAsync(permission, bank.CompanyId, ct).ConfigureAwait(false))
+            {
+                return AccessResult.Forbidden(CompanyNotCovered);
+            }
+        }
+
         // A held e-mail change (S1.11b2 review finding 2, CR-062): the approver may change addresses themselves.
         if (change.Kind is AccessChange.ChangeUserEmail && !await permissions.HasPermissionAsync(Contracts.Identity.IdentityPermissions.ChangeEmail, ct).ConfigureAwait(false))
         {
@@ -242,6 +252,8 @@ public sealed partial class AccessAdministrationService
             AccessChange.AddMember => await ApplyAddMemberAsync(c, tx, change, now, by, ct).ConfigureAwait(false),
             AccessChange.RemoveMember => await ApplyRemoveMemberAsync(c, tx, change, now, by, ct).ConfigureAwait(false),
             AccessChange.SetSetting or AccessChange.ChangeSetting => await ApplySettingAsync(c, tx, change, now, by, ct).ConfigureAwait(false),
+            AccessChange.SaveBankAccount or AccessChange.DeleteBankAccount when change.BankAccount is { } bank =>
+                await Org.OrganizationAdministrationService.ApplyAsync(c, tx, bank, now, by, ct).ConfigureAwait(false),
             AccessChange.ActivateWorkflowVersion => AccessResult.Done(await Workflow.WorkflowAdministrationService.ApplyHeldActivationAsync(c, tx, change.WorkflowVersionId!.Value, now, by, ct).ConfigureAwait(false)),
             _ => AccessResult.Invalid("errors.data.invalid_request"),
         };

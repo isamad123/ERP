@@ -64,27 +64,27 @@ Each slice is one fresh session (or one fresh session per part where its slice f
 | S1.38 | Run stages, validation flags, variance report, maker-checker approval, lock and reopen | B | Opus |
 | S1.39 | Arrears and retro corrections, off-cycle runs, salary hold | B | Opus |
 | S1.40 | Payslips (bilingual PDF), bank salary files, payment status import (two parts, fresh Opus review of part a; slice file approved, CR-094) | C | Sonnet |
-| S1.41 | Loans and advances with payroll recovery | C | Sonnet |
-| S1.42 | Expense claims with policy checks and reimbursement | C | Sonnet |
-| S1.43 | Final settlement with clearance blocking (FR-XM-29) | B | Opus |
-| S1.44 | Compensation: bands, increment cycles, benefits, provident fund ledger, liabilities | C | Sonnet |
-| S1.45 | Journal export (accounting events, account mapping, file formats) | C | Sonnet |
-| S1.46 | Compliance calendar, statutory returns, tax certificates | C | Sonnet |
+| S1.41 | Loans and advances with payroll recovery (slice file approved, CR-097) | C | Sonnet |
+| S1.42 | Expense claims with policy checks and reimbursement (slice file approved, CR-098) | C | Sonnet |
+| S1.43 | Final settlement with clearance blocking (FR-XM-29) (fresh Opus review; slice file approved, CR-099) | B | Opus |
+| S1.44 | Compensation: bands, increment cycles, benefits, provident fund ledger, liabilities (two parts, fresh Opus review of part b; slice file approved, CR-100) | C | Sonnet |
+| S1.45 | Journal export (accounting events, account mapping, file formats) (slice file approved, CR-101) | C | Sonnet |
+| S1.46 | Compliance calendar, statutory returns, tax certificates (two parts, part b waits for validated formats; slice file approved, CR-102) | C | Sonnet |
 | S1.47 | Parallel-run comparison tool (moved to Release 1.1 by CR-082) | C | Sonnet |
 
 ## Batch 6 — Performance and learning (Sonnet)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.48 | Form designer and responses | C | Sonnet |
-| S1.49 | Review cycles, goals, reviews, sign-off | C | Sonnet |
-| S1.50 | Courses, sessions, enrolments, learning records, mandatory training, bonds | D | Sonnet |
+| S1.48 | Form designer and responses (built minimal; slice file approved, CR-103) | C | Sonnet |
+| S1.49 | Review cycles, goals, reviews, sign-off (two parts; slice file approved, CR-104) | C | Sonnet |
+| S1.50 | Courses, sessions, enrolments, learning records, mandatory training, bonds (two parts; slice file approved, CR-105) | D | Sonnet |
 
 ## Batch 7 — Hardening (Opus)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.51 | Standard reports and dashboards (HR, attendance, leave, payroll) | D | Sonnet |
-| S1.52 | Load test: payroll for 50,000 employees, attendance volume, isolation under load | B | Opus |
-| S1.53 | Security review checklist, backup and restore drill, release packaging | B | Opus |
+| S1.51 | Standard reports and dashboards (HR, attendance, leave, payroll) (core dashboards only; slice file approved, CR-106) | D | Sonnet |
+| S1.52 | Load test: payroll for 50,000 employees, attendance volume, isolation under load (fresh Opus review; slice file approved, CR-107) | B | Opus |
+| S1.53 | Security review checklist, backup and restore drill, release packaging (two parts, fresh Opus review of each; privacy tools added; slice file approved, CR-108) | B | Opus |
 
 ## Count
 53 slices: 26 on Opus (mostly foundation, engines and payroll), 27 on Sonnet (screens, set-up, reports, routine modules).

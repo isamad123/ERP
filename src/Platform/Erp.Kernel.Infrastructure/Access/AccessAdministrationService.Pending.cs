@@ -210,6 +210,46 @@ public sealed partial class AccessAdministrationService
                 return (await Names("select d.name_i18n::text from wf.workflow_definitions d join wf.workflow_versions v on v.definition_id = d.id where v.id = $1", change.WorkflowVersionId).ConfigureAwait(false), details);
             }
 
+            case AccessChange.SaveBankAccount:
+            case AccessChange.DeleteBankAccount:
+            {
+                var bank = change.BankAccount!;
+                details.Add(new ChangeDetail("changes.detail.operation", "key", "changes.operation." + bank.Operation));
+                var stored = bank.Operation == "create" ? null : await IdentityDb.ScalarAsync<string>(c, tx, "select bank_code || ' ' || account_title from org.company_bank_accounts where id = $1", ct, bank.Id).ConfigureAwait(false);
+                if (stored is not null)
+                {
+                    details.Add(new ChangeDetail("changes.detail.bankAccount", "text", stored));
+                }
+
+                if (bank.BankCode is not null)
+                {
+                    details.Add(new ChangeDetail("changes.detail.bankCode", "text", bank.BankCode));
+                }
+
+                if (bank.AccountTitle is not null)
+                {
+                    details.Add(new ChangeDetail("changes.detail.accountTitle", "text", bank.AccountTitle));
+                }
+
+                if (bank.AccountNumberLast4 is not null)
+                {
+                    details.Add(new ChangeDetail("changes.detail.accountNumber", "text", "****" + bank.AccountNumberLast4));
+                }
+
+                if (bank.Iban is not null || bank.ClearIban)
+                {
+                    details.Add(new ChangeDetail("changes.detail.iban", "key", bank.ClearIban ? "changes.detail.removed" : "changes.detail.changed"));
+                }
+
+                if (bank.CurrencyCode is not null)
+                {
+                    details.Add(new ChangeDetail("changes.detail.currency", "text", bank.CurrencyCode));
+                }
+
+                details.Add(new ChangeDetail("changes.detail.company", "names", Names: await Names(CompanyName, bank.CompanyId).ConfigureAwait(false)));
+                return (await Names(CompanyName, bank.CompanyId).ConfigureAwait(false), details);
+            }
+
             case AccessChange.ChangeUserEmail:
                 details.Add(new ChangeDetail("changes.detail.previousEmail", "text", change.PreviousEmail));
                 details.Add(new ChangeDetail("changes.detail.newEmail", "text", change.Email));

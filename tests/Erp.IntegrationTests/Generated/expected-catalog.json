@@ -42043,6 +42043,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "operating_hours",
+          "kind": "Json",
+          "type": "jsonb",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -42093,7 +42103,9 @@
         "ix_locations_company_id_branch_id",
         "ix_locations_holiday_calendar_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_locations_checks"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "org.locations"

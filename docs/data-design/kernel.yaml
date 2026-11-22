@@ -370,6 +370,8 @@
     - [authority, code, req, "e.g. PESSI, SESSI, EOBI, FBR; 'none' when not applicable"]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.14a (CR-070): the registration number is shown by the hand-written view, masked or hidden by field security.
+  field_view: [value]
   reqs: [KRN-ORG-01, HRM-CPL-02]
 
 - table: org.company_bank_accounts
@@ -385,6 +387,10 @@
     - [salary_file_format, code, opt, doc.templates code of the bank file format]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.14a (CR-070): payment details are shown by the hand-written view, masked or hidden by field security.
+  field_view: [account_number, iban]
+  # S1.14a (CR-070): removal goes through the hand-written endpoint (maker-checker), so the generated delete is closed.
+  api_actions: [read]
   reqs: [HRM-PAY-23]
 
 - table: org.branches
@@ -406,7 +412,10 @@
     - [longitude, "numeric(9,6)", opt]
     - [time_zone, text, req]
     - [holiday_calendar_id, uuid, opt, fk ref.calendars]
+    - [operating_hours, json, opt, "S1.14a (CR-070, Q5): per weekday {open, close, closed}; null means not stated"]
   unique: [[company_id, lower(code)]]
+  # S1.14a (CR-070): operating hours of a site (FR-ADM-ORG-02).
+  added_in: {S1.14a: [operating_hours]}
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, branch: branch_id}
   reqs: [KRN-ORG-02, ADM-ORG-02]
