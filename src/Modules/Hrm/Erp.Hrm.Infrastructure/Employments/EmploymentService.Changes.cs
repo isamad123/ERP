@@ -23,6 +23,7 @@ internal sealed partial class EmploymentService
     public const string CorrectionNeedsTargetForJob = "errors.hrm.employment_event.job_details_need_target";
     public const string ConfirmationBeforeJoiningAfter = "errors.hrm.employment.confirmation_before_new_joining";
     public const string ServiceStartAfterJoining = "errors.hrm.employment.service_start_after_joining";
+    public const string AfterEnd = "errors.hrm.employment.after_end";
 
     public Task<PeopleResult> CheckChangeAsync(Guid employmentId, EmploymentChangeRequest request, CancellationToken cancellationToken) =>
         ChangeAsync(employmentId, request, save: false, cancellationToken);
@@ -128,6 +129,18 @@ internal sealed partial class EmploymentService
             {
                 errors.Add("correctsEventId", CorrectionPending);
             }
+        }
+
+        // Nothing changes on or after a recorded end (a transfer's separation, S1.20c), and an end is not corrected here: it is
+        // withdrawn or reversed by the separation services (S1.25).
+        if (events.Any(x => x.Kind == EmploymentApplier.SeparationKind && x.Status is "pending_approval" or "approved" or "effective" && x.EffectiveDate <= date))
+        {
+            errors.Add("effectiveDate", AfterEnd);
+        }
+
+        if (target?.Kind == EmploymentApplier.SeparationKind)
+        {
+            errors.Add("correctsEventId", CorrectionTarget);
         }
 
         var delta = r.Assignment is { } input ? AssignmentDelta(input, errors, hire: false) : [];
@@ -430,6 +443,14 @@ internal sealed partial class EmploymentService
         if (changed[AssignmentKeys.Manager] is { } node)
         {
             var manager = Guid.Parse(node.GetValue<string>());
+
+            // The manager's employment is held until commit (review S1.20b finding 7): two opposite manager changes made at the same
+            // moment wait for each other, so the reporting-cycle trigger of the second sees the first (or one is stopped as a deadlock).
+            if (db.Database.CurrentTransaction is not null)
+            {
+                await db.Database.ExecuteSqlInterpolatedAsync($"select 1 from hrm.employments where id = {manager} for share", ct).ConfigureAwait(false);
+            }
+
             if (!await db.Set<Employment>().AsNoTracking().AnyAsync(m => m.Id == manager && m.CompanyId == employment.CompanyId && CurrentStatuses.Contains(m.Status), ct).ConfigureAwait(false))
             {
                 return Field("assignment.managerEmploymentId", ManagerNotCurrent);
