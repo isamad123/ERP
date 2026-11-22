@@ -8,12 +8,13 @@ The `release` column in `requirements.csv` is authoritative. Status: **approved 
 | --- | --- | --- | --- | --- |
 | Kernel | 82 | 57 | 92 | 5 |
 | Admin console | 67 | 33 | 75 | 0 |
-| HRMIS | 212 | 395 | 64 | 4 |
+| HRMIS | 211 | 396 | 64 | 4 |
 | Cross-module rules | 8 | 0 | 24 | 0 |
-| **Total** | **369** | **485** | **255** | **9** |
+| **Total** | **368** | **486** | **255** | **9** |
 
 Admin console counts corrected by CR-052: FR-ADM-ORG-05 and FR-ADM-SEC-09 moved from 1.0 to 1.1 during the data
 design check (15 November 2026, "for consistency with TEN-12 / ORG-05"); the csv was changed but this table was not.
+CR-082 (2026-11-22): FR-HRM-PAY-35 moved from 1.0 to 1.1 (parallel-run tool).
 
 ## Totals
 
