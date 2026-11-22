@@ -83,6 +83,9 @@ test('FR-ADM-NAV-02 NFR-01 the branch list: 100 rows within a second, server sor
   await save.getByText('Share with a role').click();
   await save.getByRole('button', { name: /\sRole$/ }).click();
   await page.getByRole('option', { name: /^Business User/ }).click();
+  // Check the dialog once the role list has closed (while it fades out it lies over the dialog's buttons).
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+  await expect(save.getByRole('button', { name: 'Save view' })).toBeEnabled();
   await accessible(page, 'save view dialog');
   await save.getByRole('button', { name: 'Save view' }).click();
   await expect(page.getByRole('button', { name: new RegExp(`Inactive ${run} \\(shared with Business User\\) View$`) })).toBeVisible();
