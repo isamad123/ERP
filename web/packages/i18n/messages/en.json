@@ -1426,5 +1426,8 @@
   "chart.compare.top": "top level",
   "chart.compare.under": "now under {parent}",
   "chart.compare.wasUnder": "was under {parent}",
-  "chart.compare.fromTo": "from {from} to {to}"
+  "chart.compare.fromTo": "from {from} to {to}",
+  "nav.settings": "Settings",
+  "nav.featureFlags": "Feature flags",
+  "nav.signInPage": "Sign-in page"
 }

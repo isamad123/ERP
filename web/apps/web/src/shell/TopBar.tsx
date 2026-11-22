@@ -9,6 +9,7 @@ import { ActionMenu, Badge, Button, ErrorPanel, IconButton, Link, PopoverPanel, 
 import { formatDateTime, formatInteger, isolate, useLocaleSettings, useText } from '@erp/i18n';
 import { ApiProblem } from '../api/client';
 import { notifications, type NotificationItem } from '../api/kernel';
+import { useBranding } from '../app/branding';
 import { useDisplay } from '../app/display-context';
 import type { Density, Theme } from '../app/preferences';
 import { safeReturn, useSession } from '../app/session-context';
@@ -20,6 +21,7 @@ export const latestKey = ['ntf', 'latest'] as const;
 export function TopBar({ onOpenMenu, showMenuButton }: { onOpenMenu: () => void; showMenuButton: boolean }) {
   const { t } = useText();
   const { can } = useShell();
+  const brand = useBranding();
   return (
     <header className="erp-topbar">
       {showMenuButton && (
@@ -27,7 +29,7 @@ export function TopBar({ onOpenMenu, showMenuButton }: { onOpenMenu: () => void;
           <IconButton label={t('shell.menu.open')} icon={<Menu size={20} aria-hidden="true" />} onPress={onOpenMenu} />
         </span>
       )}
-      <span className="erp-topbar-product">{t('product.name')}</span>
+      <span className="erp-topbar-product">{brand.productName}</span>
       <CompanySwitcher />
       <span className="erp-topbar-spacer" />
       {can('ntf.in_app_items.read') && <NotificationBell />}

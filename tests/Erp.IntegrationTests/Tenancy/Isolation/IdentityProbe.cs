@@ -28,6 +28,9 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
 {
     private const string Password = "Probe-Password-1";
 
+    /// <summary>Customer A's product name, banner and terms (S1.15a branding): none of these may ever appear on B's host.</summary>
+    private const string BrandMarker = "Probe Brand Of Customer A";
+
     private sealed record Material(
         Guid UserId, string Username, Guid SessionId, string Refresh, string MfaChallenge, string PasswordChange, string MfaEnrolment,
         string Activation, string RecoveryCode, Guid PendingDeviceId, string PasswordReset, Guid TrustedDeviceId, string TrustedDeviceToken, Guid SavedViewId);
@@ -53,7 +56,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             return failures;
         }
 
-        var markers = new[] { a.UserId.ToString(), a.SessionId.ToString(), a.PendingDeviceId.ToString(), sessionA.Value.SessionId.ToString(), a.Refresh, a.MfaChallenge, a.Activation, a.PasswordReset, a.TrustedDeviceId.ToString(), a.TrustedDeviceToken, a.SavedViewId.ToString() };
+        var markers = new[] { BrandMarker, a.UserId.ToString(), a.SessionId.ToString(), a.PendingDeviceId.ToString(), sessionA.Value.SessionId.ToString(), a.Refresh, a.MfaChallenge, a.Activation, a.PasswordReset, a.TrustedDeviceId.ToString(), a.TrustedDeviceToken, a.SavedViewId.ToString() };
         var method = new HttpMethod(endpoint.Method);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
 
@@ -62,7 +65,13 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
         {
             // Forgot password answers 202 whatever the login (S1.11b2, no account enumeration); the check is that A is untouched.
             EndpointKind.IdentityAnonymous => (endpoint.Pattern, AnonymousBody(endpoint.Pattern, a),
-                (HttpStatusCode?)(endpoint.Pattern == "/api/iam/auth/password/forgot" ? HttpStatusCode.Accepted : HttpStatusCode.Unauthorized), (string?)null),
+                (HttpStatusCode?)(endpoint.Pattern switch
+                {
+                    "/api/iam/auth/password/forgot" => HttpStatusCode.Accepted,
+                    "/api/kernel/branding" => HttpStatusCode.OK, // B's own branding, never A's (S1.15a)
+                    "/api/kernel/branding/logo" => HttpStatusCode.NotFound, // B has no logo
+                    _ => HttpStatusCode.Unauthorized,
+                }), (string?)null),
             EndpointKind.IdentitySelf => SelfTarget(endpoint.Pattern, a, sessionB.Value.Access),
             _ => (endpoint.Pattern.Replace("{id:guid}", a.UserId.ToString(), StringComparison.Ordinal), "{\"reason\":\"probe\",\"status\":\"disabled\"}", (HttpStatusCode?)HttpStatusCode.NotFound, adminB),
         };
@@ -150,7 +159,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
         return failures;
     }
 
-    private static string AnonymousBody(string pattern, Material a) => pattern switch
+    private static string? AnonymousBody(string pattern, Material a) => pattern switch
     {
         "/api/iam/auth/sign-in" => Json(new { login = a.Username, password = Password }),
         "/api/iam/auth/mfa" => Json(new { challengeToken = a.MfaChallenge, recoveryCode = a.RecoveryCode }),
@@ -162,6 +171,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
         "/api/iam/auth/password/forgot" => Json(new { login = a.Username }),
         "/api/iam/auth/password/reset" => Json(new { token = a.PasswordReset, newPassword = "Probe-New-Pass-22" }),
         "/api/iam/auth/mfa/email-code" => Json(new { challengeToken = a.MfaChallenge }),
+        "/api/kernel/branding" or "/api/kernel/branding/logo" => null,
         _ => throw new InvalidOperationException($"No probe body for anonymous endpoint {pattern}; extend IdentityProbe."),
     };
 
@@ -214,6 +224,16 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
                 }
 
                 reply = await SendAsync(fx.HostA, null, method, endpoint.Pattern, AnonymousBody(endpoint.Pattern, a), false, ct);
+                if (endpoint.Pattern == "/api/kernel/branding/logo")
+                {
+                    return reply.Status == HttpStatusCode.NotFound ? null : $"A has no logo, so 404 was expected on A's host, got {(int)reply.Status}.";
+                }
+
+                if (endpoint.Pattern == "/api/kernel/branding")
+                {
+                    return reply.Status == HttpStatusCode.OK && reply.Body.Contains(BrandMarker, StringComparison.Ordinal) ? null : $"A's own branding was not served on A's host ({(int)reply.Status}). {Short(reply.Body)}";
+                }
+
                 return (int)reply.Status is >= 200 and < 300 ? null : $"A's own material was refused on A's host ({(int)reply.Status}). {Short(reply.Body)}";
             case EndpointKind.IdentitySelf:
                 var path = endpoint.Pattern
@@ -316,6 +336,16 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             insert into cfg.saved_views (id, user_id, list_key, name, definition, created_at, created_by, updated_at, updated_by)
             values ($1, $2, $3, 'probe view', '{"search": "probe"}'::jsonb, now(), $2, now(), $2)
             """, ct, view, user, ViewList);
+        // Login branding (slice S1.15a): every probe customer has its own product name, banner and terms.
+        foreach (var (key, text) in new[] { ("cfg.branding.product_name", BrandMarker), ("cfg.branding.banner_en", BrandMarker + " banner"), ("cfg.branding.terms_ur", BrandMarker + " terms") })
+        {
+            await ExecAsync(c, """
+                insert into cfg.setting_values (id, setting_key, layer, scope_id, value, created_at, created_by, updated_at, updated_by)
+                values ($1, $2, 'tenant', null, to_jsonb($3::text), now(), $4, now(), $4)
+                on conflict (setting_key, layer, scope_id) do update set value = excluded.value
+                """, ct, Guid.CreateVersion7(), key, code == fx.CodeA ? text : "Neighbour brand of B", actor);
+        }
+
         return new Material(user, username, session, refresh, tokens["mfa_challenge"], tokens["password_change"], tokens["mfa_enrolment"], tokens["activation"], recovery, device, tokens["password_reset"], trusted, trustedToken, view);
     }
 

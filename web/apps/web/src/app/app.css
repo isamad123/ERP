@@ -384,3 +384,21 @@
     max-inline-size: calc(var(--space-8) * 1.75);
   }
 }
+
+/* The sign-in page's branding block (logo, banner, terms; slice S1.15a, FR-ADM-SEC-08). */
+.erp-auth-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.erp-auth-logo {
+  max-inline-size: 14rem;
+  max-block-size: 5rem;
+  object-fit: contain;
+}
+
+.erp-auth-terms {
+  color: var(--color-text-muted);
+  white-space: pre-line;
+}
