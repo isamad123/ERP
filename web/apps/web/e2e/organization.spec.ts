@@ -126,8 +126,11 @@ test('FR-ADM-LOC-04 a holiday year is copied forward, the moon-sighting date is 
   for (const [name, date, tentative] of [['Pakistan Day', `${year}-03-23`, false], ['Eid ul-Fitr', `${year}-03-31`, true]] as const) {
     await page.getByRole('button', { name: 'Add a holiday' }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByRole('group', { name: 'Date' }).first().click();
-    await page.keyboard.type(date.replaceAll('-', ''));
+    const [y, m, d] = date.split('-') as [string, string, string];
+    for (const [segment, text] of [['month', m], ['day', d], ['year', y]] as const) {
+      await dialog.getByRole('spinbutton', { name: new RegExp(`^${segment}`, 'i') }).first().click();
+      await page.keyboard.type(text);
+    }
     await dialog.getByLabel(/^Name in English/).fill(name);
     if (tentative) {
       await choose(page, 'Kind', /Religious/);
