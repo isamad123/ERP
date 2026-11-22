@@ -633,6 +633,37 @@
       }
     },
     {
+      "key": "iam.report.inactive_days",
+      "module": "iam",
+      "type": "int",
+      "default": 90,
+      "validation": {
+        "min": 1
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "security.reports",
+      "unit": "days",
+      "name": {
+        "en": "Days without sign-in before a user is listed as inactive",
+        "ur": "غیر فعال صارف شمار ہونے سے پہلے سائن اِن کے بغیر دن"
+      },
+      "description": {
+        "en": "Days without a sign-in after which an active user appears in the role usage report",
+        "ur": "سائن اِن کے بغیر وہ دن جن کے بعد فعال صارف کردار کے استعمال کی رپورٹ میں آتا ہے"
+      },
+      "help": {
+        "en": "The role usage report lists active users who have not signed in for this many days.",
+        "ur": "کردار کے استعمال کی رپورٹ ان فعال صارفین کو دکھاتی ہے جنہوں نے اتنے دن سائن اِن نہیں کیا۔"
+      }
+    },
+    {
       "key": "cfg.numbering.fiscal_year_start_month",
       "module": "cfg",
       "type": "int",

@@ -102,7 +102,8 @@ test('FR-KRN-WFL-08 FR-XM-32 a manager decides requests, a delegate acts for Sar
 });
 
 test('FR-KRN-IAM-14 FR-XM-32 a setting change held for a second administrator is approved from the inbox and takes effect', async ({ browser }) => {
-  const checker = await person(browser, { permissions: APPROVER, displayName: 'Bilal Checker' });
+  // On the real access engine (S1.13b, Q10) approving a change to access settings needs the right to make it: the checker also holds cfg.setting_values.update.
+  const checker = await person(browser, { permissions: [...APPROVER, 'cfg.setting_values.update'], displayName: 'Bilal Checker' });
   const held = await server.heldSetting(42, 'Longer drafts for the audit');
   const page = checker.page;
   await page.waitForLoadState('networkidle');
