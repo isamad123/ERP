@@ -1930,7 +1930,7 @@ Indexes:
 
 ### hrm.employment_assignments
 
-Effective-dated job details; every change closes the current row and opens a new one. Requirements: EMP-02, EMP-03, POS-01. Pending rule (S1.20, placeholder hrm.todo_employment_assignments_manager_cycle): Cycle check trigger on manager_employment_id. Source: hrm-people.yaml.
+Effective-dated job details; every change closes the current row and opens a new one. Requirements: EMP-02, EMP-03, POS-01. Rule (implemented in S1.20b): Cycle check trigger on manager_employment_id. Source: hrm-people.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -1991,6 +1991,11 @@ Indexes:
 - `ix_employment_assignments_manager_employment_id` CREATE INDEX ix_employment_assignments_manager_employment_id ON hrm.employment_assignments USING btree (manager_employment_id)
 - `ix_employment_assignments_org_unit_id` CREATE INDEX ix_employment_assignments_org_unit_id ON hrm.employment_assignments USING btree (org_unit_id)
 
+Triggers:
+
+- `tg_employment_assignments_cost_allocation_sum` CREATE TRIGGER tg_employment_assignments_cost_allocation_sum BEFORE INSERT OR UPDATE OF cost_allocation ON hrm.employment_assignments FOR EACH ROW EXECUTE FUNCTION hrm.tg_employment_assignments_cost_allocation_sum()
+- `tg_employment_assignments_manager_cycle` CREATE TRIGGER tg_employment_assignments_manager_cycle AFTER INSERT OR UPDATE OF manager_employment_id, employment_id, valid_from, valid_to ON hrm.employment_assignments FOR EACH ROW EXECUTE FUNCTION hrm.tg_employment_assignments_manager_cycle()
+
 ### hrm.employment_events
 
 Why something changed (hire, promotion, transfer ... termination) with reason code. Requirements: EMP-03, EMP-11, FR-XM-30. Source: hrm-people.yaml.
@@ -2013,6 +2018,8 @@ Why something changed (hire, promotion, transfer ... termination) with reason co
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| changes | jsonb | yes |  | what the event changes: assignment and employment fields with their new values, and the backdated change check (S1.20b) |
+| corrects_event_id | uuid | yes |  | fk hrm.employment_events; the earlier event a data_correction replaces (FR-XM-05: never edited) |
 
 Constraints:
 
@@ -2020,6 +2027,7 @@ Constraints:
 - `ck_employment_events_reason_code_code` CHECK ((((length(reason_code) >= 1) AND (length(reason_code) <= 40)) AND (reason_code = btrim(reason_code))))
 - `ck_employment_events_status` CHECK ((status = ANY (ARRAY['draft'::text, 'pending_approval'::text, 'approved'::text, 'effective'::text, 'cancelled'::text])))
 - `fk_employment_events_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
+- `fk_employment_events_corrects_event_id` FOREIGN KEY (company_id, corrects_event_id) REFERENCES hrm.employment_events(company_id, id)
 - `fk_employment_events_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
 - `fk_employment_events_letter_document_id` FOREIGN KEY (company_id, letter_document_id) REFERENCES doc.generated_documents(company_id, id)
 - `fk_employment_events_workflow_instance_id` FOREIGN KEY (company_id, workflow_instance_id) REFERENCES wf.workflow_instances(company_id, id)
@@ -2028,10 +2036,15 @@ Constraints:
 
 Indexes:
 
+- `ix_employment_events_company_id_corrects_event_id` CREATE INDEX ix_employment_events_company_id_corrects_event_id ON hrm.employment_events USING btree (company_id, corrects_event_id)
 - `ix_employment_events_company_id_employment_id` CREATE INDEX ix_employment_events_company_id_employment_id ON hrm.employment_events USING btree (company_id, employment_id)
 - `ix_employment_events_company_id_letter_document_id` CREATE INDEX ix_employment_events_company_id_letter_document_id ON hrm.employment_events USING btree (company_id, letter_document_id)
 - `ix_employment_events_company_id_workflow_instance_id` CREATE INDEX ix_employment_events_company_id_workflow_instance_id ON hrm.employment_events USING btree (company_id, workflow_instance_id)
 - `ix_employment_events_employment_id_effective_date` CREATE INDEX ix_employment_events_employment_id_effective_date ON hrm.employment_events USING btree (employment_id, effective_date)
+
+Triggers:
+
+- `tg_employment_events_fixed` CREATE TRIGGER tg_employment_events_fixed BEFORE DELETE OR UPDATE ON hrm.employment_events FOR EACH ROW EXECUTE FUNCTION hrm.tg_employment_events_fixed()
 
 ### hrm.employment_statutory_registrations
 
@@ -2112,6 +2125,7 @@ Indexes:
 - `ix_employments_company_id_status` CREATE INDEX ix_employments_company_id_status ON hrm.employments USING btree (company_id, status)
 - `ix_employments_person_id` CREATE INDEX ix_employments_person_id ON hrm.employments USING btree (person_id)
 - `uq_employments_company_id_employee_no` CREATE UNIQUE INDEX uq_employments_company_id_employee_no ON hrm.employments USING btree (company_id, lower(employee_no))
+- `uq_employments_company_id_user_ref` CREATE UNIQUE INDEX uq_employments_company_id_user_ref ON hrm.employments USING btree (company_id, user_ref) NULLS NOT DISTINCT WHERE ((user_ref IS NOT NULL) AND (status = ANY (ARRAY['pre_joining'::text, 'active'::text, 'on_notice'::text])))
 - `uq_employments_person_id` CREATE UNIQUE INDEX uq_employments_person_id ON hrm.employments USING btree (person_id) WHERE (is_primary AND (status = ANY (ARRAY['pre_joining'::text, 'active'::text, 'on_notice'::text])))
 
 ### hrm.expense_categories
@@ -7488,12 +7502,13 @@ Constraints:
 - `cfg.tg_config_version` 
 - `cfg.tg_refuse_change` 
 - `doc.tg_refuse_change` 
+- `hrm.tg_employment_assignments_cost_allocation_sum` 
+- `hrm.tg_employment_assignments_manager_cycle` 
+- `hrm.tg_employment_events_fixed` 
 - `hrm.tg_refuse_change` 
 - `hrm.todo_attendance_days_lock` Pending rule for hrm.attendance_days, owned by S1.31: Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26).
 - `hrm.todo_attendance_periods_lock` Pending rule for hrm.attendance_periods, owned by S1.31: A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments.
 - `hrm.todo_employee_bank_accounts_bank_fields_required` Pending rule for hrm.employee_bank_accounts, owned by S1.20: bank fields required when payment_mode = bank_transfer or mobile_wallet
-- `hrm.todo_employment_assignments_cost_allocation_sum` Pending rule for hrm.employment_assignments, owned by S1.20: cost_allocation: list of {cost_center_ref or department, pct}; must sum to 1
-- `hrm.todo_employment_assignments_manager_cycle` Pending rule for hrm.employment_assignments, owned by S1.20: Cycle check trigger on manager_employment_id.
 - `hrm.todo_final_settlements_approval_needs_clearance` Pending rule for hrm.final_settlements, owned by S1.43: status may become approved only when clearance_status in (cleared, waived) (FR-XM-29)
 - `hrm.todo_final_settlements_lock` Pending rule for hrm.final_settlements, owned by S1.43: Header and lines locked by trigger from approved onward; correction by cancel and reissue (FR-XM-05).
 - `hrm.todo_goals_parent_cycle` Pending rule for hrm.goals, owned by S1.49: Cycle check trigger on parent_goal_id.
