@@ -381,6 +381,8 @@ export interface BenefitEnrollmentListQuery
     companyId?: string;
     planId?: string;
     employmentId?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const benefitEnrollments =
@@ -742,6 +744,8 @@ export interface CompensationAssignmentListQuery
     incrementProposalId?: string;
     /** validFrom; a leading minus sorts descending. */
     sort?: 'validFrom' | '-validFrom';
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const compensationAssignments =
@@ -1107,6 +1111,8 @@ export interface DeviceUserMapListQuery
     companyId?: string;
     deviceId?: string;
     employmentId?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const deviceUserMaps =
@@ -1210,6 +1216,8 @@ export interface EmployeeBankAccountListQuery
     bankId?: string;
     /** validFrom; a leading minus sorts descending. */
     sort?: 'validFrom' | '-validFrom';
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const employeeBankAccounts =
@@ -1367,27 +1375,6 @@ export interface EmploymentAssignment
     rowVersion: number;
 }
 
-export interface EmploymentAssignmentWrite
-{
-    companyId: string;
-    employmentId: string;
-    eventId: string;
-    orgUnitId: string;
-    positionId?: string | null;
-    title: string;
-    gradeId?: string | null;
-    branchId: string;
-    locationId?: string | null;
-    managerEmploymentId?: string | null;
-    payGroupId?: string | null;
-    costAllocation: unknown;
-    fte?: number;
-    workSchedule?: string | null;
-    isActing?: boolean;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface EmploymentAssignmentListQuery
 {
     after?: string;
@@ -1404,14 +1391,14 @@ export interface EmploymentAssignmentListQuery
     payGroupId?: string;
     /** validFrom; a leading minus sorts descending. */
     sort?: 'validFrom' | '-validFrom';
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const employmentAssignments =
 {
     list: (query: EmploymentAssignmentListQuery = {}) => request<PagedResult<EmploymentAssignment>>('GET', '/api/hrm/employment-assignments', { query }),
     get: (id: string) => request<EmploymentAssignment>('GET', `/api/hrm/employment-assignments/${id}`),
-    create: (body: EmploymentAssignmentWrite) => request<EmploymentAssignment>('POST', '/api/hrm/employment-assignments', { body }),
-    update: (id: string, body: EmploymentAssignmentWrite & { rowVersion: number }) => request<EmploymentAssignment>('PUT', `/api/hrm/employment-assignments/${id}`, { body }),
 };
 
 /** hrm.employment_events: Why something changed (hire, promotion, transfer ... termination) with reason code. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -1427,26 +1414,14 @@ export interface EmploymentEvent
     carryOver: unknown | null;
     workflowInstanceId: string | null;
     letterDocumentId: string | null;
+    changes?: unknown | string | null;
+    correctsEventId: string | null;
     status: 'draft' | 'pending_approval' | 'approved' | 'effective' | 'cancelled';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface EmploymentEventWrite
-{
-    companyId: string;
-    employmentId: string;
-    kind: 'hire' | 'rehire' | 'promotion' | 'demotion' | 'transfer' | 'grade_change' | 'acting' | 'secondment' | 'confirmation' | 'probation_extension' | 'salary_revision' | 'separation' | 'data_correction';
-    reasonCode: string;
-    effectiveDate: string;
-    notes?: string | null;
-    carryOver?: unknown | null;
-    workflowInstanceId?: string | null;
-    letterDocumentId?: string | null;
-    status: 'draft' | 'pending_approval' | 'approved' | 'effective' | 'cancelled';
 }
 
 export interface EmploymentEventListQuery
@@ -1457,6 +1432,7 @@ export interface EmploymentEventListQuery
     employmentId?: string;
     workflowInstanceId?: string;
     letterDocumentId?: string;
+    correctsEventId?: string;
     status?: 'draft' | 'pending_approval' | 'approved' | 'effective' | 'cancelled';
     /** effectiveDate; a leading minus sorts descending. */
     sort?: 'effectiveDate' | '-effectiveDate';
@@ -1466,8 +1442,6 @@ export const employmentEvents =
 {
     list: (query: EmploymentEventListQuery = {}) => request<PagedResult<EmploymentEvent>>('GET', '/api/hrm/employment-events', { query }),
     get: (id: string) => request<EmploymentEvent>('GET', `/api/hrm/employment-events/${id}`),
-    create: (body: EmploymentEventWrite) => request<EmploymentEvent>('POST', '/api/hrm/employment-events', { body }),
-    update: (id: string, body: EmploymentEventWrite & { rowVersion: number }) => request<EmploymentEvent>('PUT', `/api/hrm/employment-events/${id}`, { body }),
 };
 
 /** hrm.employment_statutory_registrations: Per-employee applicability and registration for EOBI, provincial social security and provident fund. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -1505,6 +1479,8 @@ export interface EmploymentStatutoryRegistrationListQuery
     limit?: number;
     companyId?: string;
     employmentId?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const employmentStatutoryRegistrations =
@@ -1540,23 +1516,6 @@ export interface Employment
     rowVersion: number;
 }
 
-export interface EmploymentWrite
-{
-    companyId: string;
-    personId: string;
-    employeeType: string;
-    joiningDate: string;
-    serviceStartDate: string;
-    confirmationDate?: string | null;
-    expectedEndDate?: string | null;
-    separationDate?: string | null;
-    previousEmploymentId?: string | null;
-    userRef?: string | null;
-    isPrimary?: boolean;
-    status: 'pre_joining' | 'active' | 'on_notice' | 'separated' | 'cancelled';
-    custom?: unknown;
-}
-
 export interface EmploymentListQuery
 {
     after?: string;
@@ -1573,8 +1532,6 @@ export const employments =
 {
     list: (query: EmploymentListQuery = {}) => request<PagedResult<Employment>>('GET', '/api/hrm/employments', { query }),
     get: (id: string) => request<Employment>('GET', `/api/hrm/employments/${id}`),
-    create: (body: EmploymentWrite) => request<Employment>('POST', '/api/hrm/employments', { body }),
-    update: (id: string, body: EmploymentWrite & { rowVersion: number }) => request<Employment>('PUT', `/api/hrm/employments/${id}`, { body }),
 };
 
 /** hrm.expense_categories: ExpenseCategory. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2177,6 +2134,8 @@ export interface HeadcountBudgetListQuery
     companyId?: string;
     orgUnitId?: string;
     gradeId?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const headcountBudgets =
@@ -2966,6 +2925,8 @@ export interface NominationListQuery
     limit?: number;
     personId?: string;
     relationId?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const nominations =
@@ -3176,6 +3137,8 @@ export interface PayComponentVersionListQuery
     after?: string;
     limit?: number;
     componentId?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const payComponentVersions =
@@ -3845,6 +3808,8 @@ export interface PersonAddressListQuery
     after?: string;
     limit?: number;
     personId?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const personAddresses =
@@ -4196,6 +4161,8 @@ export interface PolicyAssignmentListQuery
     policyId?: string;
     /** precedence; a leading minus sorts descending. */
     sort?: 'precedence' | '-precedence';
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const policyAssignments =
@@ -4291,6 +4258,8 @@ export interface PolicyVersionListQuery
     status?: 'draft' | 'active' | 'retired';
     /** version; a leading minus sorts descending. */
     sort?: 'version' | '-version';
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const policyVersions =
@@ -4353,6 +4322,8 @@ export interface PositionListQuery
     reportsToPositionId?: string;
     locationId?: string;
     status?: 'planned' | 'open' | 'filled' | 'frozen' | 'closed';
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const positions =
@@ -4953,6 +4924,8 @@ export interface SalaryBandListQuery
     limit?: number;
     companyId?: string;
     gradeId?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const salaryBands =
@@ -5051,6 +5024,8 @@ export interface SalaryStructureComponentListQuery
     limit?: number;
     structureId?: string;
     componentId?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const salaryStructureComponents =
@@ -5473,6 +5448,8 @@ export interface StatutoryTableListQuery
     limit?: number;
     companyId?: string;
     search?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const statutoryTables =

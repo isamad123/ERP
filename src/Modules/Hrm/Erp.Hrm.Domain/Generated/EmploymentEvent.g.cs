@@ -42,6 +42,12 @@ public sealed partial class EmploymentEvent : global::Erp.BuildingBlocks.Domain.
     /// <summary>letter_document_id: fk doc.generated_documents</summary>
     public global::System.Guid? LetterDocumentId { get; set; }
 
+    /// <summary>changes: what the event changes: assignment and employment fields with their new values, and the backdated change check (S1.20b)</summary>
+    public global::System.Text.Json.JsonDocument? Changes { get; set; }
+
+    /// <summary>corrects_event_id: fk hrm.employment_events; the earlier event a data_correction replaces (FR-XM-05: never edited)</summary>
+    public global::System.Guid? CorrectsEventId { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

@@ -33,6 +33,83 @@
         "en": "A merge of duplicate person records waits until another person with the merge permission approves it. The person who asked can never approve it.",
         "ur": "دہرائے گئے افراد کے ریکارڈ کا انضمام اس وقت تک رکا رہتا ہے جب تک انضمام کی اجازت والا کوئی دوسرا شخص اسے منظور نہ کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔"
       }
+    },
+    {
+      "key": "hrm.employment_events.approval_kinds",
+      "module": "hrm",
+      "type": "list",
+      "default": [
+        "promotion",
+        "demotion",
+        "transfer",
+        "grade_change"
+      ],
+      "validation": {
+        "choices": [
+          "promotion",
+          "demotion",
+          "transfer",
+          "grade_change",
+          "acting",
+          "secondment",
+          "confirmation",
+          "data_correction"
+        ],
+        "max_items": 8
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": true,
+      "area": "hr.employment",
+      "unit": null,
+      "name": {
+        "en": "Employment changes needing approval",
+        "ur": "منظوری طلب ملازمتی تبدیلیاں"
+      },
+      "description": {
+        "en": "The kinds of employment change that wait for approval before they apply",
+        "ur": "ملازمتی تبدیلیوں کی وہ اقسام جو نافذ ہونے سے پہلے منظوری کا انتظار کرتی ہیں"
+      },
+      "help": {
+        "en": "A change of a listed kind goes to the approval route of employment changes and applies only once approved. The person who asked and the employee can never approve it. Other kinds apply when they are saved.",
+        "ur": "فہرست میں شامل قسم کی تبدیلی ملازمتی تبدیلیوں کے منظوری کے راستے پر جاتی ہے اور منظوری کے بعد ہی نافذ ہوتی ہے۔ درخواست کرنے والا اور ملازم اسے کبھی منظور نہیں کر سکتے۔ باقی اقسام محفوظ ہوتے ہی نافذ ہو جاتی ہیں۔"
+      }
+    },
+    {
+      "key": "hrm.user_link.disable_on_separation",
+      "module": "hrm",
+      "type": "bool",
+      "default": true,
+      "validation": {},
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.employment",
+      "unit": null,
+      "name": {
+        "en": "Disable the user at separation",
+        "ur": "علیحدگی پر صارف کو غیر فعال کریں"
+      },
+      "description": {
+        "en": "The user linked to an employment is disabled when the employment ends",
+        "ur": "ملازمت ختم ہونے پر اس سے منسلک صارف غیر فعال ہو جاتا ہے"
+      },
+      "help": {
+        "en": "On the last working day the linked user is disabled, after their open approval tasks are passed on. Switch it off where people keep their user after leaving (for example to see their payslips).",
+        "ur": "آخری کام کے دن منسلک صارف غیر فعال کر دیا جاتا ہے، ان کے زیرِ التوا منظوری کے کام آگے منتقل کرنے کے بعد۔ جہاں لوگ رخصت کے بعد بھی اپنا صارف رکھتے ہیں (مثلاً تنخواہ کی پرچیاں دیکھنے کے لیے) وہاں اسے بند کریں۔"
+      }
     }
   ],
   "flags": []

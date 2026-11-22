@@ -30,6 +30,9 @@ public interface IEmploymentRepository : global::Erp.BuildingBlocks.Application.
     /// <summary>Rows matching (person_id); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Employment>> FindByPersonIdAsync(global::System.Guid personId, global::System.Threading.CancellationToken cancellationToken);
 
+    /// <summary>Rows matching (company_id, user_ref); at most PageRequest.MaxLimit rows.</summary>
+    global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Employment>> FindByCompanyIdAndUserRefAsync(global::System.Guid companyId, global::System.Guid? userRef, global::System.Threading.CancellationToken cancellationToken);
+
     /// <summary>Rows matching (company_id, status); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Employment>> FindByCompanyIdAndStatusAsync(global::System.Guid companyId, string status, global::System.Threading.CancellationToken cancellationToken);
 }

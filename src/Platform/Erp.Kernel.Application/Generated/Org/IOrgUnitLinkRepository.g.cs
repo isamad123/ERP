@@ -12,6 +12,8 @@ public sealed record OrgUnitLinkFilter
     public global::System.Guid? HierarchyId { get; init; }
     public global::System.Guid? UnitId { get; init; }
     public global::System.Guid? ParentUnitId { get; init; }
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated repository of org.org_unit_links.</summary>

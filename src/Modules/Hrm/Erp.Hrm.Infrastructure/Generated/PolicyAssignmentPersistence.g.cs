@@ -52,6 +52,10 @@ internal sealed class PolicyAssignmentRepository(
         {
             query = query.Where(e => e.PolicyId == policyIdFilter);
         }
+        if (filter.AsOf is { } asOf)
+        {
+            query = query.Where(e => e.ValidFrom <= asOf && (e.ValidTo == null || e.ValidTo > asOf));
+        }
         return await Sorts.PageAsync(Context.Set<global::Erp.Hrm.Domain.Generated.PolicyAssignment>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
 

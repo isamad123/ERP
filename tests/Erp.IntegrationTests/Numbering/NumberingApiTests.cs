@@ -1,7 +1,7 @@
 #pragma warning disable CA1861 // literal test data arrays, each used once
 using System.Net;
-using System.Text.Json;
 using Erp.IntegrationTests.Access;
+using Erp.IntegrationTests.Employments;
 using Erp.IntegrationTests.Tenancy;
 using Erp.Kernel.Contracts.Numbering;
 using Erp.Kernel.Infrastructure.Numbering;
@@ -11,7 +11,7 @@ namespace Erp.IntegrationTests.Numbering;
 /// <summary>
 /// Slice S1.08 through the real API pipeline and the real access engine: the scheme services (create, edit before first
 /// use, retire, continuation), the document-type list and the void report, their permissions and roles (Q11), the change
-/// log of scheme changes, and numbers given by the generated create endpoint (FR-KRN-NUM-03).
+/// log of scheme changes, and numbers given to new employments (FR-KRN-NUM-03; by the hire service from S1.20b).
 /// </summary>
 [Collection(TenancyGroup.Name)]
 public sealed class NumberingApiTests(TenancyFixture fx) : IAsyncLifetime
@@ -37,36 +37,38 @@ public sealed class NumberingApiTests(TenancyFixture fx) : IAsyncLifetime
     // ------------------------------------------------------------------ FR-KRN-NUM-03: numbers come from the service, never from the caller
 
     [Fact]
-    public async Task FR_KRN_NUM_03_FR_HRM_EMP_04_creating_an_employment_through_the_generated_api_gives_the_next_employee_number_and_no_update_changes_it()
+    public async Task FR_KRN_NUM_03_FR_HRM_EMP_04_a_hire_gives_the_next_employee_number_a_typed_one_needs_the_override_and_no_update_changes_it()
     {
+        // S1.20b: employments are created by the hire service (the generated create is closed, ruling Q1); the number still
+        // comes only from the numbering service.
         var admin = await _h.UserAsync(Ct);
-        var role = await _h.RoleAsync(Ct, ["hrm.employments.read", "hrm.employments.create", "hrm.employments.update"], [("hrm.employments", "all")]);
+        var role = await _h.RoleAsync(Ct, ["hrm.employments.read", "hrm.employments.create", "hrm.employment_assignments.read", "hrm.persons.read"], [("hrm.employments", "all"), ("hrm.employment_assignments", "all"), ("hrm.persons", "all")]);
         await _h.AssignAsync(admin, role, null, _h.Today.AddDays(-1), null, Ct);
         var company = await _h.CompanyAsync(Ct);
+        var place = await _h.PlaceAsync(company, Ct);
         var numbers = new List<string>();
         for (var i = 0; i < 2; i++)
         {
             var person = (Guid)(await _h.RowAsync("hrm.persons", Guid.Empty, null, Ct))["id"]!;
-            var created = await _h.PostAsync(admin, "/api/hrm/employments", new
-            {
-                companyId = company, personId = person, employeeNo = "HACK-1", employeeType = "permanent", joiningDate = "2026-01-05",
-                serviceStartDate = "2026-01-05", status = "active", isPrimary = true,
-            }, Ct);
+            var created = await _h.PostAsync(admin, "/api/hrm/employments", EmploymentTestSupport.HireBody(company, place, person), Ct);
             Assert.True(created.Status == HttpStatusCode.Created, created.Body);
             numbers.Add(created.Text("employeeNo")!);
         }
 
         Assert.Equal(["EMP-00001", "EMP-00002"], numbers);
 
-        // The number is read-only: an update that names another number leaves it as it is.
+        // A typed number without hrm.employments.number_override is refused, and takes no number from the series.
+        var other = (Guid)(await _h.RowAsync("hrm.persons", Guid.Empty, null, Ct))["id"]!;
+        Assert.Equal(HttpStatusCode.Forbidden, (await _h.PostAsync(admin, "/api/hrm/employments", EmploymentTestSupport.HireBody(company, place, other, employeeNo: "HACK-1"), Ct)).Status);
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.employments where company_id = $1 and employee_no = 'HACK-1'", Ct, company));
+
+        // The number is read-only: there is no update endpoint that could change it.
         var row = await _h.ScalarAsync<Guid>("select id from hrm.employments where company_id = $1 and employee_no = 'EMP-00001'", Ct, company);
-        var current = await _h.GetAsync(admin, $"/api/hrm/employments/{row}", Ct);
-        var body = JsonSerializer.Deserialize<Dictionary<string, object?>>(current.Body, JsonSerializerOptions.Web)!;
-        body["employeeNo"] = "EMP-99999";
-        var updated = await _h.PutAsync(admin, $"/api/hrm/employments/{row}", body, Ct);
-        Assert.True(updated.Status == HttpStatusCode.OK, updated.Body);
-        Assert.Equal("EMP-00001", updated.Text("employeeNo"));
+        var updated = await _h.PutAsync(admin, $"/api/hrm/employments/{row}", new { employeeNo = "EMP-99999", rowVersion = 1 }, Ct);
+        Assert.Contains(updated.Status, new[] { HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed });
         Assert.Equal("EMP-00001", await _h.ScalarAsync<string>("select employee_no from hrm.employments where id = $1", Ct, row));
+        var third = (Guid)(await _h.RowAsync("hrm.persons", Guid.Empty, null, Ct))["id"]!;
+        Assert.Equal("EMP-00003", (await _h.PostAsync(admin, "/api/hrm/employments", EmploymentTestSupport.HireBody(company, place, third), Ct)).Text("employeeNo"));
     }
 
     [Fact]

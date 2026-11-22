@@ -56,6 +56,9 @@ public sealed class DeviceUserMapListQuery
     public global::System.Guid? DeviceId { get; init; }
 
     public global::System.Guid? EmploymentId { get; init; }
+
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.device_user_maps: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -76,7 +79,7 @@ internal static class DeviceUserMapEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.device_user_maps.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.DeviceUserMapFilter { CompanyId = query.CompanyId, DeviceId = query.DeviceId, EmploymentId = query.EmploymentId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.DeviceUserMapFilter { CompanyId = query.CompanyId, DeviceId = query.DeviceId, EmploymentId = query.EmploymentId, AsOf = query.AsOf }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.DeviceUserMapAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

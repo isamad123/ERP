@@ -66,6 +66,15 @@
       "format": "uuid",
       "nullable": true
     },
+    "changes": {
+      "readOnly": true,
+      "nullable": true
+    },
+    "correctsEventId": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
     "status": {
       "type": "string",
       "enum": [

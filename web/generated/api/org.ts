@@ -165,6 +165,8 @@ export interface CompanyRegistrationListQuery
     after?: string;
     limit?: number;
     companyId?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const companyRegistrations =
@@ -310,6 +312,8 @@ export interface OrgUnitLinkListQuery
     hierarchyId?: string;
     unitId?: string;
     parentUnitId?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const orgUnitLinks =

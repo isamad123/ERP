@@ -54,6 +54,10 @@ internal sealed class SalaryBandRepository(
         {
             query = query.Where(e => e.GradeId == gradeIdFilter);
         }
+        if (filter.AsOf is { } asOf)
+        {
+            query = query.Where(e => e.ValidFrom <= asOf && (e.ValidTo == null || e.ValidTo > asOf));
+        }
         return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 

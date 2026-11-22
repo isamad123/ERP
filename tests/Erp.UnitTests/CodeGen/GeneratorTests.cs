@@ -127,8 +127,12 @@ public sealed class GeneratorTests
     public void Rules_every_free_text_rule_becomes_sql_or_a_tracked_placeholder()
     {
         var stubs = Model.Value.Stubs.ToList();
-        Assert.Equal(27, stubs.Count); // 30 from S1.02; S1.03 implemented SC-2 (org.branches), S1.10a FR-XM-32 (wf.workflow_tasks), S1.14b the unit link cycle check (org.org_unit_links)
+        // 30 from S1.02; S1.03 implemented SC-2 (org.branches), S1.10a FR-XM-32 (wf.workflow_tasks), S1.14b the unit link cycle check
+        // (org.org_unit_links), S1.20b the manager cycle and the cost allocation of hrm.employment_assignments.
+        Assert.Equal(25, stubs.Count);
         Assert.Equal(30, Model.Value.AllStubs.Count());
+        Assert.Equal(["employment_assignments_cost_allocation_sum", "employment_assignments_manager_cycle"],
+            Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.20b").Select(s => s.Name).Order(StringComparer.Ordinal));
         Assert.All(stubs, s => Assert.Matches(@"^S1\.\d{2}$", s.Owner));
         Assert.Contains(stubs, s => s.Name == "attendance_periods_lock" && s.Owner == "S1.31"); // FR-XM-26
         Assert.Contains(Model.Value.ImplementedStubs, s => s.Name == "workflow_tasks_no_self_approval" && s.Owner == "S1.10"); // FR-XM-32
@@ -412,10 +416,9 @@ public sealed class GeneratorTests
     public void S108_FR_KRN_NUM_03_numbered_columns_are_filled_by_the_numbering_service_and_never_accepted_from_the_caller()
     {
         var files = Generator.Generate(Root).Files;
-        var employments = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/EmploymentEndpoints.g.cs"];
-        var request = employments[employments.IndexOf("public sealed class EmploymentWriteRequest", StringComparison.Ordinal)..employments.IndexOf("public sealed class EmploymentListQuery", StringComparison.Ordinal)];
-        Assert.DoesNotContain("EmployeeNo", request, StringComparison.Ordinal);
-        Assert.Contains("row.EmployeeNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest(\"hrm.employee_no\", row.CompanyId, null, null)", employments, StringComparison.Ordinal);
+        var contracts = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/ContractEndpoints.g.cs"];
+        var request = contracts[contracts.IndexOf("public sealed class ContractWriteRequest", StringComparison.Ordinal)..contracts.IndexOf("public sealed class ContractListQuery", StringComparison.Ordinal)];
+        Assert.DoesNotContain("ContractNo", request, StringComparison.Ordinal);
         Assert.Contains("NumberRequest(\"hrm.contract_no\", row.CompanyId, null, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/ContractEndpoints.g.cs"], StringComparison.Ordinal);
         Assert.Contains("NumberRequest(\"hrm.leave_request_no\", row.CompanyId, row.BranchId, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/LeaveRequestEndpoints.g.cs"], StringComparison.Ordinal);
 
@@ -425,6 +428,15 @@ public sealed class GeneratorTests
         Assert.DoesNotContain("WriteRequest", persons, StringComparison.Ordinal);
         Assert.DoesNotContain("AssignOnCreateAsync", persons, StringComparison.Ordinal);
         Assert.Contains("new NumberRequest(\"hrm.person_no\", null, null, null)", File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Infrastructure/People/PersonService.cs")), StringComparison.Ordinal);
+
+        // Slice S1.20b (ruling Q1): employments have no generated create either; the hire takes the employee number from the
+        // numbering service (or checks a typed one with the override permission).
+        var employments = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/EmploymentEndpoints.g.cs"];
+        Assert.DoesNotContain("WriteRequest", employments, StringComparison.Ordinal);
+        Assert.DoesNotContain("AssignOnCreateAsync", employments, StringComparison.Ordinal);
+        var hire = File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Infrastructure/Employments/EmploymentService.cs"));
+        Assert.Contains("numbers.AssignOnCreateAsync(new NumberRequest(\"hrm.employee_no\", company, null, employment.JoiningDate)", hire, StringComparison.Ordinal);
+        Assert.Contains("numbers.CheckManualAsync(new NumberRequest(\"hrm.employee_no\", company, null, employment.JoiningDate), typed", hire, StringComparison.Ordinal);
 
         var registry = files["src/Modules/Hrm/Erp.Hrm.Infrastructure/Generated/HrmNumberingTypes.g.cs"];
         Assert.Equal(9, Model.Value.Tables.Sum(t => t.Numbering.Count));

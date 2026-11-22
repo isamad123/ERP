@@ -95,6 +95,10 @@ internal sealed class EmploymentAssignmentRepository(
         {
             query = query.Where(e => e.PayGroupId == payGroupIdFilter);
         }
+        if (filter.AsOf is { } asOf)
+        {
+            query = query.Where(e => e.ValidFrom <= asOf && (e.ValidTo == null || e.ValidTo > asOf));
+        }
         return await Sorts.PageAsync(Context.Set<global::Erp.Hrm.Domain.Generated.EmploymentAssignment>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
 
