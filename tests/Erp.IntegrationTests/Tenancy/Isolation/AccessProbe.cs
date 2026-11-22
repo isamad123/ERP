@@ -94,6 +94,14 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
         {
             failures.Add($"{endpoint}: positive control failed: A was not served on its own host ({(int)own.Status}). {Short(own.Body)}");
         }
+        else if (endpoint.Kind == EndpointKind.AccessCatalog && endpoint.Resource == "iam.maker_checker_requests")
+        {
+            // S1.12d: the pending-changes list names A's pending request.
+            if (!own.Body.Contains(a.RequestId.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                failures.Add($"{endpoint}: positive control failed: A's pending changes do not list A's request {a.RequestId}.");
+            }
+        }
         else if (endpoint.Kind == EndpointKind.AccessCatalog && !own.Body.Contains(a.RoleCode, StringComparison.Ordinal))
         {
             failures.Add($"{endpoint}: positive control failed: A's catalogue does not list A's role {a.RoleCode}.");

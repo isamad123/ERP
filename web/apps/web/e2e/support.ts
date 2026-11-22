@@ -42,6 +42,16 @@ export const server = {
   branches: (prefix: string, count: number, company?: string) => call<undefined>('POST', '/branches', { prefix, count, company: company ?? null }),
   /** S1.12c: the customer's label override of a key in a language (null removes it). */
   label: (key: string, language: 'en' | 'ur', text: string | null) => call<undefined>('POST', '/labels', { key, language, text }),
+  /** S1.12d: a route of the test document type: one step decided by the named person, bulk approval allowed or not. */
+  route: (approver: string, bulk = true, documentType = 'test.expense') => call<undefined>('POST', '/workflow/route', { documentType, approver, bulk }),
+  /** S1.12d: a request of the test module started by the named person; answers its open tasks. */
+  request: (requester: string, amount: string, documentType = 'test.expense') =>
+    call<{ instanceId: string; taskIds: string[] }>('POST', '/workflow/start', { documentType, requester, amount }),
+  /** S1.12d: the named person delegates their approvals to another for a few days. */
+  delegate: (from: string, to: string) => call<undefined>('POST', '/delegations', { from, to }),
+  /** S1.12d: a customer setting changed by another administrator and held for a second person's approval. */
+  heldSetting: (value: number, reason: string) => call<{ key: string; requestId: string }>('POST', '/changes/setting', { value, reason }),
+  settingValue: async (key: string) => (await call<{ value: string | null }>('GET', `/settings/value?key=${encodeURIComponent(key)}`)).value,
   facts: (username: string) => call<{ liveSessions: number; reusedSessions: number; trustedDevices: number }>('GET', `/facts?username=${encodeURIComponent(username)}`),
 };
 

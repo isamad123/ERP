@@ -142,7 +142,44 @@ public interface IMakerCheckerService
     Task<AccessResult> ApproveAsync(Guid requestId, string? reason, CancellationToken cancellationToken);
 
     Task<AccessResult> RejectAsync(Guid requestId, string? reason, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Pending requests for the inbox's "approvals of changes" (slice S1.12d Build item 22, ruling Q15): those of other
+    /// people the caller may be asked to decide (holders of <c>iam.maker_checker.approve</c>), each with whether approving
+    /// would pass the checks of <see cref="ApproveAsync"/> now, and the caller's own requests (never decided by them).
+    /// </summary>
+    Task<PendingChanges> PendingAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// One line of "what will change" (slice S1.12d): <see cref="Label"/> is a localization key; the value is
+/// <see cref="Text"/> (plain text: a code, an e-mail address, a JSON value), <see cref="Date"/>, <see cref="Names"/> (a
+/// name in each language) or <see cref="Items"/> (codes such as permission codes), as <see cref="Type"/> says
+/// (<c>text</c>, <c>date</c>, <c>names</c>, <c>items</c>, <c>key</c>: <see cref="Text"/> is a localization key).
+/// </summary>
+public sealed record ChangeDetail(string Label, string Type, string? Text = null, DateOnly? Date = null, IReadOnlyDictionary<string, string>? Names = null, IReadOnlyList<string>? Items = null);
+
+/// <summary>
+/// A pending maker-checker request in plain words: its kind (<c>iam.role.set_permissions</c>, <c>cfg.setting.change</c>,
+/// ...), who asked and when, until when it can be decided, what it changes (<see cref="Subject"/>: the role, user, group,
+/// setting or route, by name in each language) and the details. <see cref="CanApprove"/> is false, with the refusal's key
+/// in <see cref="ApproveProblem"/>, when approving would be refused now; rejecting needs only a reason.
+/// </summary>
+public sealed record ChangeRequestView(
+    Guid Id,
+    string Kind,
+    Guid RequestedBy,
+    string? RequestedByName,
+    DateTimeOffset RequestedAt,
+    DateTimeOffset ExpiresAt,
+    string? Reason,
+    IReadOnlyDictionary<string, string>? Subject,
+    IReadOnlyList<ChangeDetail> Details,
+    bool CanApprove,
+    string? ApproveProblem);
+
+/// <summary>The pending requests the caller may decide, oldest first, and the caller's own pending requests.</summary>
+public sealed record PendingChanges(IReadOnlyList<ChangeRequestView> ToDecide, IReadOnlyList<ChangeRequestView> Mine);
 
 public sealed record CatalogEntry(string Code, string Module, string Resource, string Action, string DescriptionKey, bool IsSensitive, IReadOnlyList<string> Roles);
 

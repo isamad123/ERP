@@ -111,6 +111,13 @@ public static class AccessEndpoints
             Answer(s.ApproveAsync(id, body.Reason, ct))), "record_action", requests, AccessControlPermissions.ApproveChanges);
         Tag(decisions.MapPost("/{id:guid}/reject", (Guid id, ReasonBody body, IMakerCheckerService s, CancellationToken ct) =>
             Answer(s.RejectAsync(id, body.Reason, ct))), "record_action", requests, AccessControlPermissions.ApproveChanges);
+        // Slice S1.12d (Build item 22): pending requests in plain words for the inbox; approvers see those of others they may
+        // decide, everyone with access to the requests sees their own (FR-KRN-IAM-14).
+        Tag(decisions.MapGet("/pending", async (IMakerCheckerService s, IPermissionChecker p, CancellationToken ct) =>
+            await p.HasPermissionAsync(AccessControlPermissions.ApproveChanges, ct).ConfigureAwait(false)
+            || await p.HasPermissionAsync(MakerCheckerRead, ct).ConfigureAwait(false)
+                ? Results.Ok(await s.PendingAsync(ct).ConfigureAwait(false))
+                : ForbiddenResult()), "catalog", requests, AccessControlPermissions.ApproveChanges);
 
         // Data scopes are created here only; the generated create and update are closed (review S1.06 finding 2, CR-025).
         Tag(app.MapPost("/api/iam/data-scopes", (CreateScopeRequest body, IRoleService s, CancellationToken ct) =>
@@ -128,6 +135,9 @@ public static class AccessEndpoints
             .WithTags("iam.access"), "query", "iam.users", AccessControlPermissions.Preview);
         return app;
     }
+
+    /// <summary>The generated read permission of iam.maker_checker_requests (own requests by data scope).</summary>
+    private const string MakerCheckerRead = "iam.maker_checker_requests.read";
 
     private static void Tag(RouteHandlerBuilder endpoint, string kind, string resource, string permission) =>
         endpoint.WithMetadata(new AccessEndpointMetadata(kind, resource, permission));
