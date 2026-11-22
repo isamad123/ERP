@@ -97,6 +97,10 @@ higher one is a defect in the lower one: stop and report it.
 - Reserve CR and R numbers first. Edit shared files (generator, manifests, web module declarations, registers) in small separate
   commits; rebase on `main` before the pull request; a conflict that is not mechanical goes to the product owner.
 - Slice files are approved a wave at a time; silence on a recommendation means it stands. Handoff notes use the half-page template.
+- Standing ruling (product owner, 2026-11-22, CR-083): every recommendation Claude puts in a slice file, plan or change request is
+  pre-approved and pre-confirmed; record it as the ruling and build on it, without asking again. Still stop and ask when there is no
+  recommendation to take (the specification is silent or contradictory), for statutory values (they need a payroll and tax professional),
+  and for anything that would change a decision, an FR-XM rule or the release scope beyond what is already approved.
 
 ## Slice report (always end with this)
 1. What was built, in plain language. 2. Requirement IDs covered. 3. Evidence: commands run and results.
