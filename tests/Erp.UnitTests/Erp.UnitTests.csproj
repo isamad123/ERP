@@ -10,6 +10,7 @@
     <ProjectReference Include="../../tools/Erp.CodeGen/Erp.CodeGen.csproj" />
     <ProjectReference Include="../../src/Platform/Erp.Kernel.Infrastructure/Erp.Kernel.Infrastructure.csproj" />
     <ProjectReference Include="../../src/Platform/Erp.Kernel.Contracts/Erp.Kernel.Contracts.csproj" />
+    <ProjectReference Include="../../src/Modules/Hrm/Erp.Hrm.Infrastructure/Erp.Hrm.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
