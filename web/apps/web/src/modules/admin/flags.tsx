@@ -13,6 +13,7 @@ import { companyName, useShell } from '../../shell/context';
 import { ReasonDialog } from './users-parts';
 import { Layer } from './settings-parts';
 import { usePeopleNames } from './settings';
+import './config-messages';
 import './users.css';
 import './settings.css';
 

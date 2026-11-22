@@ -13,6 +13,7 @@ import { BRANDING_KEYS, brandingApi, settingsApi, type Branding } from '../../ap
 import { org } from '../../api/org';
 import { useShell } from '../../shell/context';
 import { useChangeText } from './settings-parts';
+import './config-messages';
 import './settings.css';
 
 const api: EngineApi = { send: sendText };

@@ -1,10 +1,13 @@
 // Localisation of the web application (slice S1.12a, Build item 4; rulings Q5, Q6, Q22). English and Urdu in 1.0, Urdu
 // right to left (D-42: no Arabic or Hijri in 1.0). Web texts are ICU messages (react-intl); server texts (problem titles
 // and field errors are keys) are looked up as plain text, because they are written for the server, not in ICU syntax.
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import { IntlProvider, useIntl } from 'react-intl';
 import en from '../messages/en.json';
 import ur from '../messages/ur.json';
+// Texts of the settings, feature-flag and sign-in-page screens (S1.15a) live in their own files, loaded with those screens
+// (`registerMessages`), so they do not weigh on the shell's script budget (spec 13 FR-UX-PRF-01). Only the types come from here.
+import type configEn from '../messages/config.en.json';
 import serverEn from './generated/server.en.json';
 import serverUr from './generated/server.ur.json';
 import { pseudoCatalogue, pseudoText } from './pseudo';
@@ -26,7 +29,20 @@ function strip(catalogue: Record<string, string>): Catalogue {
   return Object.fromEntries(Object.entries(catalogue).filter(([key]) => !key.startsWith('_')));
 }
 
-export type MessageKey = keyof typeof en;
+export type MessageKey = keyof typeof en | keyof typeof configEn;
+
+let registryVersion = 0;
+const listeners = new Set<() => void>();
+
+/** Adds the texts of a lazily loaded screen to the catalogues; mounted roots pick them up at once. */
+export function registerMessages(extra: Record<Locale, Record<string, string>>): void {
+  for (const locale of LANGUAGES) Object.assign(WEB[locale], strip(extra[locale]));
+  registryVersion += 1;
+  for (const listener of listeners) listener();
+}
+
+const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
+const version = () => registryVersion;
 
 export function webMessages(locale: UiLocale, overrides: Readonly<Record<string, string>> = NO_OVERRIDES): Catalogue {
   const base = locale === 'pseudo' ? pseudoCatalogue(WEB.en) : WEB[locale];
@@ -87,7 +103,9 @@ export function localeTag(locale: UiLocale, numbers: NumberPreferences = DEFAULT
 export function I18nRoot({ locale, timeZone = 'Asia/Karachi', numbers = DEFAULT_NUMBERS, overrides = NO_OVERRIDES, children }: { locale: UiLocale; timeZone?: string; numbers?: NumberPreferences; overrides?: LabelOverrides; children: ReactNode }) {
   const effective = locale === 'pseudo' ? NO_OVERRIDES : overrides;
   const settings = useMemo(() => ({ locale, timeZone, numbers, overrides: effective }), [locale, timeZone, numbers, effective]);
-  const messages = useMemo(() => webMessages(locale, effective), [locale, effective]);
+  const registered = useSyncExternalStore(subscribe, version, version);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const messages = useMemo(() => webMessages(locale, effective), [locale, effective, registered]);
   return (
     <LocaleContext.Provider value={settings}>
       <IntlProvider locale={localeTag(locale, numbers)} messages={messages} defaultLocale="en-PK" timeZone={timeZone}

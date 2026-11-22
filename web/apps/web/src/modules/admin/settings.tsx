@@ -17,6 +17,7 @@ import { companyName, useShell } from '../../shell/context';
 import { ReasonDialog } from './users-parts';
 import { ChangedBy, HistoryList, Layer, LayerTable, problemText, unitText, useChangeText, useWords, ValueEditor } from './settings-parts';
 import { GROUPS, HIDDEN_KEYS, fromDraft, groupOf, matches, sameValue, shortValue, titleOf, toDraft, type Draft } from './settings-model';
+import './config-messages';
 import './users.css';
 import './settings.css';
 
