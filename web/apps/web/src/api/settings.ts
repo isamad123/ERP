@@ -2,7 +2,10 @@
 // "Feature flag API" and the new "Branding API", CR-071). The server checks every request again; the screens show its answers
 // as confirmed, never assumed (spec 13 STA-06).
 import { requestJson, send, problemOf } from './client';
+import { readBranding, type Branding } from './branding';
 import type { Names } from './workflow';
+
+export type { Branding };
 
 export type SettingType = 'bool' | 'int' | 'decimal' | 'text' | 'choice' | 'list' | 'json';
 export type SettingLayer = 'product' | 'pack' | 'tenant' | 'company' | 'role' | 'user';
@@ -66,13 +69,6 @@ export interface FlagItem {
   overrides: FlagOverride[];
 }
 
-export interface Branding {
-  productName: string;
-  logoUrl: string | null;
-  banner: { en: string; ur: string };
-  terms: { en: string; ur: string };
-}
-
 export interface BrandingFile { id: string; fileName: string; contentType: string; sizeBytes: number }
 
 export const BRANDING_OWNER_TYPE = 'cfg.branding';
@@ -116,7 +112,7 @@ export const settingsApi = {
 
 export const brandingApi = {
   /** Public: no sign-in needed. */
-  get: (signal?: AbortSignal) => requestJson<Branding>('GET', '/api/kernel/branding', { auth: false, ...(signal ? { signal } : {}) }),
+  get: readBranding,
   file: () => requestJson<BrandingFile[]>('GET', `/api/doc/attachments?ownerType=${enc(BRANDING_OWNER_TYPE)}&ownerId=${BRANDING_OWNER_ID}`),
   upload: async (file: File): Promise<BrandingFile> => {
     const form = new FormData();

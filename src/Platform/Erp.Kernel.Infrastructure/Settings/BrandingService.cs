@@ -3,6 +3,7 @@ using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.Kernel.Contracts.Documents;
 using Erp.Kernel.Contracts.Settings;
 using Erp.Kernel.Infrastructure.Documents;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
 namespace Erp.Kernel.Infrastructure.Settings;
@@ -10,9 +11,10 @@ namespace Erp.Kernel.Infrastructure.Settings;
 /// <summary>
 /// Login branding (slice S1.15a, FR-ADM-SEC-08, ruling Q3). Reads the six <c>cfg.branding.*</c> settings of the customer the host
 /// name names and serves the logo file without a login. Only a clean PNG or JPEG that belongs to the branding owner is ever
-/// served, whatever id the setting holds, so the setting cannot be used to read another file.
+/// served, whatever id the setting holds, so the setting cannot be used to read another file. The file store is resolved only when a
+/// logo is served, so the public name, banner and terms never depend on it.
 /// </summary>
-public sealed class BrandingService(ISettings settings, ITenantConnectionProvider tenant, IFileStore store, FileEncryption encryption) : IBrandingService
+public sealed class BrandingService(ISettings settings, ITenantConnectionProvider tenant, IServiceProvider services) : IBrandingService
 {
     private static readonly string[] Pictures = ["image/png", "image/jpeg"];
 
@@ -34,6 +36,9 @@ public sealed class BrandingService(ISettings settings, ITenantConnectionProvide
             return null;
         }
 
+        // The file store is looked up only here: a customer with no logo needs none, so the sign-in page never depends on it.
+        var store = services.GetRequiredService<IFileStore>();
+        var encryption = services.GetRequiredService<FileEncryption>();
         var stored = await store.GetAsync(row.StorageKey, cancellationToken).ConfigureAwait(false);
         if (stored is null)
         {

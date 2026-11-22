@@ -32,7 +32,7 @@ const held: SettingItem = { ...base, module: 'iam', key: 'iam.maker_checker.expi
 const timezone: SettingItem = { ...base, module: 'org', key: 'org.time_zone', area: 'organization', name: { en: 'Time zone', ur: 'ٹائم زون' }, description: { en: 'Time zone of the company', ur: 'ٹائم زون' },
   type: 'text', validation: { format: 'time_zone' }, layers: ['tenant', 'company'], default: 'Asia/Karachi', value: 'Asia/Karachi', source: 'product' } as SettingItem;
 const logo: SettingItem = { ...base, module: 'cfg', key: 'cfg.branding.logo_file_id', area: 'branding', name: { en: 'Logo file', ur: 'لوگو' }, description: { en: 'The uploaded logo', ur: 'لوگو' },
-  type: 'text', default: '', value: '', source: 'product' } as SettingItem;
+  type: 'text', validation: {}, default: '', value: '', source: 'product' } as SettingItem;
 const all = [idle, length, digits, held, timezone, logo];
 
 function shell(permissions: string[] = ADMIN, companies = [{ id: C1, code: 'C1', name: { en: 'First company' } }, { id: C2, code: 'C2', name: { en: 'Second company' } }]): ShellValue {
@@ -154,7 +154,7 @@ describe('FR-ADM-SET-03 override and reset to inherited', () => {
     const s: Server = { sent: [] };
     serve(s);
     show();
-    await userEvent.click(await screen.findByRole('button', { name: 'Open the setting Minimum password length' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Change the setting Minimum password length' }));
     const drawer = await screen.findByRole('dialog', { name: 'Minimum password length' });
     await within(drawer).findByRole('table', { name: 'Where the value comes from' });
     const number = within(drawer).getByRole('textbox', { name: /Minimum password length/ });
@@ -170,7 +170,7 @@ describe('FR-ADM-SET-03 override and reset to inherited', () => {
     const s: Server = { sent: [] };
     serve(s);
     show();
-    await userEvent.click(await screen.findByRole('button', { name: 'Open the setting Minimum password length' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Change the setting Minimum password length' }));
     const drawer = await screen.findByRole('dialog', { name: 'Minimum password length' });
     await within(drawer).findByRole('table', { name: 'Where the value comes from' });
     const number = within(drawer).getByRole('textbox', { name: /Minimum password length/ });
@@ -190,7 +190,7 @@ describe('FR-ADM-SET-03 override and reset to inherited', () => {
     ] };
     serve(s);
     show(shell(), `/settings?company=${C2}`);
-    await userEvent.click(await screen.findByRole('button', { name: 'Open the setting Idle timeout' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Change the setting Idle timeout' }));
     const drawer = await screen.findByRole('dialog', { name: 'Idle timeout' });
     const table = await within(drawer).findByRole('table', { name: 'Where the value comes from' });
     expect(within(table).getByText('Company')).toBeTruthy();
@@ -206,7 +206,7 @@ describe('FR-ADM-SET-03 override and reset to inherited', () => {
     const s: Server = { sent: [] };
     serve(s);
     show();
-    await userEvent.click(await screen.findByRole('button', { name: 'Open the setting Digits' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Change the setting Digits' }));
     const drawer = await screen.findByRole('dialog', { name: 'Digits' });
     await within(drawer).findByRole('table', { name: 'Where the value comes from' });
     await userEvent.click(within(drawer).getByRole('button', { name: /Digits/ }));
@@ -222,7 +222,7 @@ describe('FR-ADM-SET-04 a change that needs approval waits for a second administ
     const s: Server = { sent: [], answer: json({ outcome: 'pending', id: null, requestId: 'r1' }, 202) };
     serve(s);
     show();
-    await userEvent.click(await screen.findByRole('button', { name: 'Open the setting Approval expiry' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Change the setting Approval expiry' }));
     const drawer = await screen.findByRole('dialog', { name: 'Approval expiry' });
     expect(within(drawer).getByText(/must be approved by a second administrator/)).toBeTruthy();
     const number = within(drawer).getByRole('textbox', { name: /Approval expiry/ });
@@ -249,7 +249,7 @@ describe('FR-ADM-SET-06 history and revert', () => {
     const s: Server = { sent: [], history: [{ id: 'h1', key: 'iam.session.idle_minutes', layer: 'tenant', scopeId: null, oldValue: 20, newValue: 30, reason: 'Slow screens', at: '2026-11-20T08:00:00Z', by: 'u1' }] };
     serve(s);
     show();
-    await userEvent.click(await screen.findByRole('button', { name: 'Open the setting Idle timeout' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Change the setting Idle timeout' }));
     const drawer = await screen.findByRole('dialog', { name: 'Idle timeout' });
     const list = await within(drawer).findByRole('list', { name: 'History' });
     expect(within(list).getByText('Slow screens')).toBeTruthy();
@@ -265,7 +265,7 @@ describe('read-only access', () => {
   it('lets a person who may only read see the setting without editing it', async () => {
     serve({ sent: [] });
     show(shell(['cfg.setting_values.read']));
-    await userEvent.click(await screen.findByRole('button', { name: 'Open the setting Idle timeout' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'View the setting Idle timeout' }));
     const drawer = await screen.findByRole('dialog', { name: 'Idle timeout' });
     expect(await within(drawer).findByText('You may read this setting but not change it.')).toBeTruthy();
     expect(within(drawer).queryByRole('button', { name: 'Override for the whole customer' })).toBeNull();

@@ -120,7 +120,7 @@ function SettingsCentre() {
                     <span className="erp-row erp-wrap"><Layer layer={s.source} /><span className="erp-small"><ChangedBy info={s.lastChange} names={names} /></span></span>
                     {waiting.has(s.key) && <StatusChip status="pending" label={t('settings.waiting')} />}
                   </span>
-                  <Button variant="secondary" aria-label={t('settings.open', { name: titleOf(s, locale) })} onPress={() => patch({ key: s.key })}>{can('cfg.setting_values.update') ? t('settings.change') : t('settings.view')}</Button>
+                  <Button variant="secondary" aria-label={t(can('cfg.setting_values.update') ? 'settings.open.change' : 'settings.open.view', { name: titleOf(s, locale) })} onPress={() => patch({ key: s.key })}>{can('cfg.setting_values.update') ? t('settings.change') : t('settings.view')}</Button>
                 </div>
               </li>
             ))}

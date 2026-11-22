@@ -47,9 +47,11 @@ export function ValueEditor({ setting, draft, onChange, error, isDisabled }: { s
   const { locale } = useLocaleSettings();
   const rules = rulesOf(setting);
   const label = titleOf(setting, locale);
-  const help = rules.min !== null || rules.max !== null
-    ? t('settings.range', { min: rules.min ?? '–', max: rules.max ?? '–', unit: setting.unit ? unitText(t, setting.unit) : '' })
-    : undefined;
+  const unit = setting.unit ? unitText(t, setting.unit) : '';
+  const help = rules.min !== null && rules.max !== null ? t('settings.range', { min: rules.min, max: rules.max, unit })
+    : rules.min !== null ? t('settings.range.min', { min: rules.min, unit })
+      : rules.max !== null ? t('settings.range.max', { max: rules.max, unit })
+        : undefined;
   switch (setting.type) {
     case 'bool':
       return <SwitchField label={label} isSelected={draft === true} onChange={onChange} isDisabled={isDisabled} />;
@@ -125,7 +127,7 @@ export function LayerTable({ setting, layers, names }: { setting: SettingItem; l
   const { me } = useShell();
   const words = useWords();
   const scope = (l: SettingLayerItem) => (l.scopeId ? companyName(me.companies.find((c) => c.id === l.scopeId) ?? null, locale) || '—' : t('settings.scope.all'));
-  const rows = [{ layer: 'product' as const, scopeId: null, value: setting.default, changed: null, ignored: null }, ...layers];
+  const rows = [...(layers.some((l) => l.layer === 'product') ? [] : [{ layer: 'product' as const, scopeId: null, value: setting.default, changed: null, ignored: null }]), ...layers];
   return (
     <table className="erp-table" aria-label={t('settings.layers.title')}>
       <thead><tr><th scope="col">{t('settings.layers.layer')}</th><th scope="col">{t('settings.layers.scope')}</th><th scope="col">{t('settings.layers.value')}</th><th scope="col">{t('settings.layers.changed')}</th></tr></thead>

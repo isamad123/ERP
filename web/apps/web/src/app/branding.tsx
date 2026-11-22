@@ -3,7 +3,7 @@
 // standard product name is shown, so the sign-in page never fails because of its branding.
 import { useQuery } from '@tanstack/react-query';
 import { useLocaleSettings, useText } from '@erp/i18n';
-import { brandingApi } from '../api/settings';
+import { readBranding } from '../api/branding';
 
 export interface ShownBranding { productName: string; logoUrl: string | null; banner: string; terms: string }
 
@@ -12,7 +12,7 @@ const pickText = (texts: { en: string; ur: string } | undefined, language: strin
 export function useBranding(): ShownBranding {
   const { t } = useText();
   const { locale } = useLocaleSettings();
-  const query = useQuery({ queryKey: ['kernel', 'branding'], queryFn: ({ signal }) => brandingApi.get(signal), staleTime: 60_000, retry: false });
+  const query = useQuery({ queryKey: ['kernel', 'branding'], queryFn: ({ signal }) => readBranding(signal), staleTime: 60_000, retry: false });
   const data = query.data;
   return {
     productName: data?.productName?.trim() ? data.productName : t('product.name'),
