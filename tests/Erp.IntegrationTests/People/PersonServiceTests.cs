@@ -62,9 +62,23 @@ public sealed class PersonServiceTests(TenancyFixture fx) : IAsyncLifetime
         _h.RowAsync("hrm.employments", company, new Dictionary<string, object?> { ["person_id"] = person, ["status"] = status, ["is_primary"] = true }, Ct)
             .ContinueWith(t => (Guid)t.Result["id"]!, TaskScheduler.Default);
 
-    private Task SetMergeApprovalAsync(Guid admin, bool on) =>
-        _h.PutAsync(admin, "/api/cfg/settings/hrm.person_merge.requires_approval", new { layer = "tenant", value = on, reason = "test" }, Ct)
-            .ContinueWith(t => Assert.True(t.Result.Status == HttpStatusCode.OK, t.Result.Body), TaskScheduler.Default);
+    /// <summary>The merge-approval setting changes only with a second administrator (review S1.20a finding 3, FR-XM-32).</summary>
+    private async Task SetMergeApprovalAsync(Guid admin, Guid second, bool on)
+    {
+        var held = await _h.PutAsync(admin, "/api/cfg/settings/hrm.person_merge.requires_approval", new { layer = "tenant", value = on, reason = "test" }, Ct);
+        Assert.True(held.Status == HttpStatusCode.Accepted, held.Body);
+        var request = held.Json.GetProperty("requestId").GetGuid();
+        Assert.Equal(HttpStatusCode.Forbidden, (await _h.PostAsync(admin, $"/api/iam/maker-checker-requests/{request}/approve", new { reason = "mine" }, Ct)).Status);
+        var approved = await _h.PostAsync(second, $"/api/iam/maker-checker-requests/{request}/approve", new { reason = "agreed" }, Ct);
+        Assert.True(approved.Status == HttpStatusCode.OK, approved.Body);
+    }
+
+    private Task<string> MergeReasonAsync(Guid person) =>
+        _h.ScalarAsync<string>("""
+            select c->>'after' from aud.change_log l, jsonb_array_elements(l.changes) c
+            where l.entity_type = 'hrm.persons' and l.entity_id = $1 and c->>'field' = 'reason'
+              and exists (select 1 from jsonb_array_elements(l.changes) e where e->>'field' = 'event' and e->>'after' = 'hrm.person_merged')
+            """, Ct, person);
 
     // ------------------------------------------------------------------ persons and sections
 
@@ -328,6 +342,7 @@ public sealed class PersonServiceTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(survivor, await _h.ScalarAsync<Guid>("select merged_into_person_id from hrm.persons where id = $1", Ct, dup));
         Assert.True(await _h.ScalarAsync<long>("select count(*) from aud.change_log where actor_user_id = $1 and action = 'update' and entity_id in ($2, $3)", Ct, checker, dup, employment) >= 2);
         Assert.Equal("approved", await _h.ScalarAsync<string>("select status from iam.maker_checker_requests where id = $1", Ct, request));
+        Assert.Equal("same CNIC on paper file", await MergeReasonAsync(dup)); // the merge audit keeps the requester's reason (review finding 5)
 
         // The retired person keeps its id and history but cannot be used.
         Assert.Equal(HttpStatusCode.OK, (await _h.GetAsync(maker, $"{Persons}/{dup}", Ct)).Status);
@@ -344,6 +359,7 @@ public sealed class PersonServiceTests(TenancyFixture fx) : IAsyncLifetime
     {
         var hr = await _h.UserAsync(Ct, null, "hr_admin");
         var admin = await _h.UserAsync(Ct, null, "tenant_admin", "hr_admin");
+        var secondAdmin = await _h.UserAsync(Ct, null, "tenant_admin");
         var company = await _h.DefaultCompanyAsync(Ct);
         var (a, _, _) = await PlainAsync(hr);
         var (b, _, _) = await PlainAsync(hr);
@@ -358,17 +374,18 @@ public sealed class PersonServiceTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal("errors.hrm.merge.same_person", (await _h.PostAsync(hr, $"{Persons}/{a}/merge", new { intoPersonId = a, reason = "x" }, Ct)).Json.GetProperty("title").GetString());
         Assert.Equal(HttpStatusCode.BadRequest, (await _h.PostAsync(hr, $"{Persons}/{a}/merge", new { intoPersonId = c }, Ct)).Status); // reason required
 
-        await SetMergeApprovalAsync(admin, on: false);
+        await SetMergeApprovalAsync(admin, secondAdmin, on: false);
         try
         {
             var merged = await _h.PostAsync(hr, $"{Persons}/{c}/merge", new { intoPersonId = a, reason = "duplicate of the active one" }, Ct);
             Assert.True(merged.Status == HttpStatusCode.OK, merged.Body);
             Assert.Equal(a, await _h.ScalarAsync<Guid>("select merged_into_person_id from hrm.persons where id = $1", Ct, c));
             Assert.Equal(2L, await _h.ScalarAsync<long>("select count(*) from hrm.employments where person_id = $1", Ct, a));
+            Assert.Equal("duplicate of the active one", await MergeReasonAsync(c)); // recorded without approval too (review finding 5)
         }
         finally
         {
-            await SetMergeApprovalAsync(admin, on: true);
+            await SetMergeApprovalAsync(admin, secondAdmin, on: true);
         }
     }
 
@@ -449,5 +466,98 @@ public sealed class PersonServiceTests(TenancyFixture fx) : IAsyncLifetime
         var removed = await _h.DeleteAsync(hr, $"{Persons}/{id}/contacts/{second.Json.GetProperty("id").GetGuid()}?rowVersion=1", Ct);
         Assert.Equal(HttpStatusCode.NoContent, removed.Status);
         Assert.Equal(1L, await _h.ScalarAsync<long>("select count(*) from aud.change_log where entity_id = $1 and action = 'delete'", Ct, second.Json.GetProperty("id").GetGuid()));
+    }
+
+    // ------------------------------------------------------------------ review S1.20a findings 2, 4, 7, 10
+
+    [Fact]
+    public async Task FR_HRM_EMP_18_FR_HRM_ROL_02_review_2_a_held_merge_is_neither_shown_nor_decidable_outside_the_deciders_data_scope()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var companyA = await _h.CompanyAsync(Ct);
+        var companyB = await _h.CompanyAsync(Ct);
+        var (dup, _, dupNo) = await PlainAsync(hr);
+        var (keep, _, _) = await PlainAsync(hr);
+        await EmployAsync(dup, companyA, "separated");
+        await EmployAsync(keep, companyA, "separated");
+        var held = await _h.PostAsync(hr, $"{Persons}/{dup}/merge", new { intoPersonId = keep, reason = "duplicate" }, Ct);
+        Assert.Equal(HttpStatusCode.Accepted, held.Status);
+        var request = held.Json.GetProperty("requestId").GetGuid();
+
+        // An HR officer of company B with the merge permission: the request is not in their inbox and they cannot decide it.
+        var officerB = await _h.UserAsync(Ct);
+        await _h.AssignAsync(officerB, await _h.RoleAsync(Ct, ["hrm.persons.read", "hrm.persons.update", "hrm.persons.merge"], [("*", "all")]), companyB, _h.Today.AddDays(-1), null, Ct);
+        var inbox = await _h.GetAsync(officerB, "/api/iam/maker-checker-requests/pending", Ct);
+        Assert.True(inbox.Status == HttpStatusCode.OK, inbox.Body);
+        Assert.DoesNotContain(request.ToString(), inbox.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(dupNo, inbox.Body, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.NotFound, (await _h.PostAsync(officerB, $"/api/iam/maker-checker-requests/{request}/reject", new { reason = "no" }, Ct)).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await _h.PostAsync(officerB, $"/api/iam/maker-checker-requests/{request}/approve", new { reason = "ok" }, Ct)).Status);
+        Assert.Equal("pending", await _h.ScalarAsync<string>("select status from iam.maker_checker_requests where id = $1", Ct, request));
+
+        // An officer of company A sees and decides it.
+        var officerA = await _h.UserAsync(Ct);
+        await _h.AssignAsync(officerA, await _h.RoleAsync(Ct, ["hrm.persons.read", "hrm.persons.update", "hrm.persons.merge", "hrm.employments.read"], [("*", "all")]), companyA, _h.Today.AddDays(-1), null, Ct);
+        Assert.Contains(request.ToString(), (await _h.GetAsync(officerA, "/api/iam/maker-checker-requests/pending", Ct)).Body, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(officerA, $"/api/iam/maker-checker-requests/{request}/reject", new { reason = "not the same person" }, Ct)).Status);
+    }
+
+    [Fact]
+    public async Task FR_HRM_EMP_18_FR_HRM_ROL_02_review_4_a_merge_never_moves_an_employment_outside_the_callers_scope()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var companyA = await _h.CompanyAsync(Ct);
+        var companyB = await _h.CompanyAsync(Ct);
+        var (dup, _, _) = await PlainAsync(hr);
+        var (keep, _, _) = await PlainAsync(hr);
+        await EmployAsync(dup, companyA, "separated");
+        var foreign = await EmployAsync(dup, companyB, "separated");
+        await EmployAsync(keep, companyA, "separated");
+
+        var officerA = await _h.UserAsync(Ct);
+        await _h.AssignAsync(officerA, await _h.RoleAsync(Ct, ["hrm.persons.read", "hrm.persons.update", "hrm.persons.merge", "hrm.employments.read"], [("*", "all")]), companyA, _h.Today.AddDays(-1), null, Ct);
+        var refused = await _h.PostAsync(officerA, $"{Persons}/{dup}/merge", new { intoPersonId = keep, reason = "duplicate" }, Ct);
+        Assert.Equal(HttpStatusCode.Forbidden, refused.Status);
+        Assert.Equal("errors.hrm.merge.employment_out_of_scope", refused.Json.GetProperty("title").GetString());
+        Assert.Equal(dup, await _h.ScalarAsync<Guid>("select person_id from hrm.employments where id = $1", Ct, foreign));
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from iam.maker_checker_requests where subject_id = $1", Ct, dup));
+
+        // The HR administrator for all companies may ask for it.
+        Assert.Equal(HttpStatusCode.Accepted, (await _h.PostAsync(hr, $"{Persons}/{dup}/merge", new { intoPersonId = keep, reason = "duplicate" }, Ct)).Status);
+    }
+
+    [Fact]
+    public async Task FR_HRM_EMP_18_review_7_confirming_a_different_person_at_create_needs_the_review_permission()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var first = Unique("Rev");
+        var birth = Birth();
+        await PlainAsync(hr, birth, first);
+        var clerk = await _h.UserAsync(Ct);
+        await _h.AssignAsync(clerk, await _h.RoleAsync(Ct, ["hrm.persons.read", "hrm.persons.create"], [("*", "all")]), null, _h.Today.AddDays(-1), null, Ct);
+        var body = new { firstName = first, lastName = "Person", gender = "male", dateOfBirth = birth, duplicates = "distinct" };
+        Assert.Equal(HttpStatusCode.Forbidden, (await _h.PostAsync(clerk, Persons, body, Ct)).Status);
+        Assert.Equal(HttpStatusCode.Created, (await _h.PostAsync(clerk, Persons, body with { duplicates = "review" }, Ct)).Status);
+    }
+
+    [Fact]
+    public async Task GHR_03_review_10_removing_an_address_leaves_no_gap_in_the_history()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var (id, _, _) = await PlainAsync(hr);
+        foreach (var from in new[] { "2020-01-01", "2022-01-01", "2024-01-01" })
+        {
+            Assert.Equal(HttpStatusCode.Created, (await _h.PostAsync(hr, $"{Persons}/{id}/addresses", new { kind = "permanent", address = new { line1 = from }, validFrom = from }, Ct)).Status);
+        }
+
+        async Task<List<(string?, string?)>> HistoryAsync() => (await RowsAsync(hr, "/api/hrm/person-addresses", id)).EnumerateArray()
+            .OrderBy(a => a.GetProperty("validFrom").GetString(), StringComparer.Ordinal)
+            .Select(a => (a.GetProperty("validFrom").GetString(), a.GetProperty("validTo").ValueKind == JsonValueKind.Null ? null : a.GetProperty("validTo").GetString())).ToList();
+        var middle = (await RowsAsync(hr, "/api/hrm/person-addresses", id)).EnumerateArray().Single(a => a.GetProperty("validFrom").GetString() == "2022-01-01");
+        Assert.Equal(HttpStatusCode.NoContent, (await _h.DeleteAsync(hr, $"{Persons}/{id}/addresses/{middle.GetProperty("id").GetGuid()}?rowVersion={middle.GetProperty("rowVersion").GetInt64()}", Ct)).Status);
+        Assert.Equal([("2020-01-01", "2024-01-01"), ("2024-01-01", (string?)null)], await HistoryAsync());
+        var last = (await RowsAsync(hr, "/api/hrm/person-addresses", id)).EnumerateArray().Single(a => a.GetProperty("validFrom").GetString() == "2024-01-01");
+        Assert.Equal(HttpStatusCode.NoContent, (await _h.DeleteAsync(hr, $"{Persons}/{id}/addresses/{last.GetProperty("id").GetGuid()}?rowVersion={last.GetProperty("rowVersion").GetInt64()}", Ct)).Status);
+        Assert.Equal([("2020-01-01", (string?)null)], await HistoryAsync());
     }
 }
