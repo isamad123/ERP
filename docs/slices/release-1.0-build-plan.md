@@ -35,12 +35,12 @@ Each slice is one fresh session (or one fresh session per part where its slice f
 ## Batch 3 — HR core (mixed)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.20 | Person and employment model, effective-dated assignments, events with reason codes, transfers between companies (proposed parts S1.20a persons, S1.20b employments, S1.20c transfers and terms, S1.20d bank and statutory; a fresh Opus review per part) | B | Opus |
-| S1.21 | Employee screens: profile sections, timeline, bulk import, duplicate check (proposed parts S1.21a, S1.21b) | D | Sonnet |
-| S1.22 | Positions, grades, headcount, org chart by position (proposed parts S1.22a, S1.22b) | C | Sonnet |
-| S1.23 | Policy framework: types, versions, attribute-rule assignment, resolution view, Pakistan pack loader (proposed parts S1.23a policies and S1.23b pack loader on Opus with fresh reviews, S1.23c first Pakistan pack content on Sonnet) | B | Opus (S1.23c Sonnet, proposed) |
-| S1.24 | Documents vault, letters from templates with approval, policy acknowledgements (proposed parts S1.24a vault with a fresh Opus review (uploads), S1.24b letters, S1.24c publications) | C | Sonnet |
-| S1.25 | Onboarding and offboarding checklists, separations, clearance (proposed parts S1.25a, S1.25b) | C | Sonnet |
+| S1.20 | Person and employment model, effective-dated assignments, events with reason codes, transfers between companies (parts S1.20a persons, S1.20b employments, S1.20c transfers and terms, S1.20d bank and statutory; a fresh Opus review per part) | B | Opus |
+| S1.21 | Employee screens: profile sections, timeline, bulk import, duplicate check (parts S1.21a, S1.21b) | D | Sonnet |
+| S1.22 | Positions, grades, headcount, org chart by position (parts S1.22a, S1.22b) | C | Sonnet |
+| S1.23 | Policy framework: types, versions, attribute-rule assignment, resolution view, Pakistan pack loader (parts S1.23a policies and S1.23b pack loader on Opus with fresh reviews, S1.23c first Pakistan pack content on Sonnet) | B | Opus (S1.23c Sonnet, CR-079) |
+| S1.24 | Documents vault, letters from templates with approval, policy acknowledgements (parts S1.24a vault with a fresh Opus review (uploads), S1.24b letters, S1.24c publications) | C | Sonnet |
+| S1.25 | Onboarding and offboarding checklists, separations, clearance (parts S1.25a, S1.25b) | C | Sonnet |
 | S1.26 | Self-service web: profile change requests, service requests, home page | D | Sonnet |
 
 ## Batch 4 — Time and leave (mixed)
