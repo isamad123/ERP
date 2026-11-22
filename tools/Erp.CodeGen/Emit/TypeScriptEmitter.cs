@@ -31,7 +31,7 @@ public static class TypeScriptEmitter
         output.Add($"{Root}/api/index.ts", Header + string.Concat(apiTables.Select(t => t.Schema).Distinct().Order(StringComparer.Ordinal).Select(s => $"export * as {s} from './{s}';\n")) + "export * from './http';\n");
         foreach (var table in apiTables)
         {
-            output.Add($"{Root}/metadata/{table.FullName}.json", Metadata(table));
+            output.Add($"{Root}/metadata/{table.FullName}.json", Metadata(table, model));
             output.Add($"{Root}/validation/{table.FullName}.json", ValidationSchema(table));
         }
 
@@ -113,7 +113,7 @@ public static class TypeScriptEmitter
     /// one is about, so the form shows a refused save next to the field (S1.12c Build item 18). Constraints that span several
     /// fields (other than the company) are left out: the form shows those in its summary.
     /// </summary>
-    private static JsonObject ConstraintFields(Table t)
+    private static JsonObject ConstraintFields(Table t, DesignModel model)
     {
         var map = new SortedDictionary<string, string>(StringComparer.Ordinal);
         var columns = CSharpEmitter.ResponseColumns(t).Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
@@ -145,6 +145,12 @@ public static class TypeScriptEmitter
         foreach (var c in t.Checks)
         {
             Add(c.Name, columns.Where(col => System.Text.RegularExpressions.Regex.IsMatch(c.Sql, $@"\b{col}\b")));
+        }
+
+        // Constraints a trigger raises (rules.yaml functions, constraint_fields; S1.14a).
+        foreach (var (table, constraint, column) in model.Functions.SelectMany(f => f.ConstraintFields).Where(c => c.Table == t.FullName))
+        {
+            Add(constraint, [column]);
         }
 
         return new JsonObject(map.Select(kv => KeyValuePair.Create(kv.Key, (JsonNode?)kv.Value)));
@@ -391,7 +397,7 @@ public static class TypeScriptEmitter
         return w.ToString().TrimEnd('\n') + "\n";
     }
 
-    private static string Metadata(Table t)
+    private static string Metadata(Table t, DesignModel model)
     {
         var filters = CSharpEmitter.FilterColumns(t).Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
         var writable = CSharpEmitter.WritableColumns(t, update: false).Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
@@ -469,7 +475,7 @@ public static class TypeScriptEmitter
                 .Concat(t.ScopeVia is { } via ? [KeyValuePair.Create("via", (JsonNode?)Naming.Camel(via))] : [])),
             ["listFields"] = new JsonArray(listFields),
             ["search"] = new JsonArray(CSharpEmitter.SearchColumns(t).Select(c => (JsonNode)Naming.Camel(c.Name)).ToArray()),
-            ["constraints"] = ConstraintFields(t),
+            ["constraints"] = ConstraintFields(t, model),
             ["fields"] = fields,
         };
         return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }) + "\n";

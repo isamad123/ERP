@@ -91,11 +91,13 @@ public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction tr
 
     /// <summary>
     /// Text columns whose database check asks for a shape the generic "t1" value does not have (slice S1.12c:
-    /// <c>ck_saved_views_list_key</c> wants a dotted list key).
+    /// <c>ck_saved_views_list_key</c> wants a dotted list key; S1.14a: <c>ck_locations_time_zone</c> wants an IANA time zone).
     /// </summary>
     private static readonly Dictionary<string, Func<int, object>> KnownFormats = new(StringComparer.Ordinal)
     {
         ["cfg.saved_views.list_key"] = n => "org.list_" + n.ToString(CultureInfo.InvariantCulture),
+        // S1.14a: a location's time zone must be an IANA name the database knows (rules.yaml org.tg_locations_checks).
+        ["org.locations.time_zone"] = _ => "Asia/Karachi",
     };
 
     private int _formatted;

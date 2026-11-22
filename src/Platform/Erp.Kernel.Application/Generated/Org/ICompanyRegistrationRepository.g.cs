@@ -34,6 +34,7 @@ public static class CompanyRegistrationAccess
         new("id", "Id", null),
         new("company_id", "CompanyId", null),
         new("kind", "Kind", null),
+        new("value", "Value", null),
         new("authority", "Authority", null),
         new("valid_from", "ValidFrom", null),
         new("valid_to", "ValidTo", null),

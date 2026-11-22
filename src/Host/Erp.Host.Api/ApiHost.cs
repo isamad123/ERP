@@ -9,6 +9,9 @@ using Erp.Hrm.Infrastructure.Access;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Api.ControlPlane.Tenancy;
 using Erp.Kernel.Api.Access;
+using Erp.Kernel.Api.Org;
+using Erp.Kernel.Application.Org;
+using Erp.Kernel.Infrastructure.Org;
 using Erp.Kernel.Api.Audit;
 using Erp.Kernel.Infrastructure.Audit;
 using Erp.Kernel.Api.Identity;
@@ -102,6 +105,7 @@ public static class ApiHost
         services.AddScoped<IMakerCheckerService>(sp => sp.GetRequiredService<AccessAdministrationService>());
         services.AddScoped<IAccessPreviewService>(sp => sp.GetRequiredService<AccessAdministrationService>());
         services.AddScoped<IUserConsoleService, UserConsoleService>();
+        services.AddScoped<IOrganizationAdministration, OrganizationAdministrationService>(); // S1.14a: registrations, bank accounts, holiday years
         services.AddScoped<IAccessConsoleService, AccessConsoleService>();
         services.AddScoped<IAccessSettingsService>(sp => sp.GetRequiredService<AccessAdministrationService>());
 
@@ -211,6 +215,7 @@ public static class ApiHost
         api.MapIdentityAccountEndpoints();
         api.MapAccessEndpoints();
         api.MapUserConsoleEndpoints();
+        api.MapOrganizationEndpoints();
         api.MapAccessConsoleEndpoints();
         api.MapAuditEndpoints();
         api.MapNumberingEndpoints();

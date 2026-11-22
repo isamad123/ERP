@@ -24,6 +24,7 @@ public sealed class LocationResponse
     public decimal? Longitude { get; init; }
     public string TimeZone { get; init; } = null!;
     public global::System.Guid? HolidayCalendarId { get; init; }
+    public global::System.Text.Json.JsonElement? OperatingHours { get; init; }
     public bool IsActive { get; init; }
     public bool IsDeleted { get; init; }
     public global::System.DateTimeOffset? DeletedAt { get; init; }
@@ -48,6 +49,7 @@ public sealed class LocationWriteRequest
     public decimal? Longitude { get; init; }
     public string? TimeZone { get; init; }
     public global::System.Guid? HolidayCalendarId { get; init; }
+    public global::System.Text.Json.JsonElement? OperatingHours { get; init; }
     public bool? IsActive { get; init; }
 
     /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
@@ -179,6 +181,7 @@ internal static class LocationEndpoints
         Longitude = row.Longitude,
         TimeZone = row.TimeZone,
         HolidayCalendarId = row.HolidayCalendarId,
+        OperatingHours = row.OperatingHours?.RootElement.Clone(),
         IsActive = row.IsActive,
         IsDeleted = row.IsDeleted,
         DeletedAt = row.DeletedAt,
@@ -315,6 +318,14 @@ internal static class LocationEndpoints
         else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.HolidayCalendarId, row.HolidayCalendarId, update))
         {
             denied.Add("holidayCalendarId");
+        }
+        if (access.CanEdit("operating_hours"))
+        {
+            row.OperatingHours = GeneratedEndpointSupport.ToDocument(request.OperatingHours);
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OperatingHours, row.OperatingHours, update))
+        {
+            denied.Add("operatingHours");
         }
         if (access.CanEdit("is_active"))
         {

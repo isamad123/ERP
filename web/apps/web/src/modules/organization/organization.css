@@ -1,0 +1,73 @@
+/* The organization screens (slice S1.14a): the sections below a company or calendar record, the opening hours table and the logo. Tokens and logical properties only. */
+.erp-company-parts,
+.erp-calendar-parts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.erp-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block-start: var(--space-3);
+  border-block-start: var(--border-width) solid var(--color-border-subtle);
+}
+
+.erp-section-head {
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.erp-h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.erp-plain-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-hours {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.erp-hours th,
+.erp-hours td {
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  text-align: start;
+  vertical-align: top;
+}
+
+.erp-logo-preview {
+  max-inline-size: 4rem;
+  max-block-size: 4rem;
+  object-fit: contain;
+  border: var(--border-width) solid var(--color-border-subtle);
+}
+
+@media (max-width: 640px) {
+  .erp-hours thead {
+    display: none;
+  }
+
+  .erp-hours tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+    padding-block: var(--space-2);
+    border-block-end: var(--border-width) solid var(--color-border-subtle);
+  }
+
+  .erp-hours th {
+    grid-column: 1 / -1;
+  }
+}
