@@ -11,6 +11,7 @@ using Erp.Hrm.Contracts.People;
 using Erp.Hrm.Domain.Generated;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Contracts.Access;
+using Erp.Kernel.Contracts.Metadata;
 using Erp.Kernel.Contracts.Numbering;
 using Erp.Kernel.Contracts.Settings;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,7 @@ internal sealed partial class PersonService(
     IPermissionChecker permissions,
     IDataScopeFilter scope,
     IFieldAccess fields,
+    ICustomFieldValidator customFields,
     ISensitiveAccessLog accessLog,
     IFieldEncryptorProvider keys,
     INumberAllocator numbers,
@@ -157,6 +159,13 @@ internal sealed partial class PersonService(
             return NotEditable(denied);
         }
 
+        var (customCheck, customRefused) = await CheckCustomAsync(request, person, null, hire?.CompanyId, cancellationToken).ConfigureAwait(false);
+        await using var heldLocks = customCheck;
+        if (customRefused is not null)
+        {
+            return customRefused;
+        }
+
         // Exact identifier match on the blind index blocks (FR-HRM-EMP-05, -18).
         foreach (var identifier in identifiers)
         {
@@ -275,6 +284,7 @@ internal sealed partial class PersonService(
         var errors = new FieldErrors();
         var changes = PersonChanges(request, creating: false);
         var original = Copy(person);
+        var storedCustom = person.Custom;
         ApplyPersonFields(person, request, errors, creating: false);
         if (errors.Any)
         {
@@ -287,6 +297,14 @@ internal sealed partial class PersonService(
         {
             db.ChangeTracker.Clear();
             return NotEditable(denied);
+        }
+
+        var (customCheck, customRefused) = await CheckCustomAsync(request, person, storedCustom, null, cancellationToken).ConfigureAwait(false);
+        await using var heldLocks = customCheck;
+        if (customRefused is not null)
+        {
+            db.ChangeTracker.Clear();
+            return customRefused;
         }
 
         Touch(person, expected);
@@ -392,11 +410,50 @@ internal sealed partial class PersonService(
             person.PhotoFileId = null;
         }
 
-        // Custom fields are checked against their definitions by S1.15b; until then none can be defined, so none can be set.
-        if (f.Custom is { } custom && !(custom.ValueKind == JsonValueKind.Object && !custom.EnumerateObject().Any()))
+        // Custom values are checked against their definitions after field security (CheckCustomAsync, S1.15b).
+    }
+
+    /// <summary>
+    /// Checks the custom values of a person write (FR-KRN-MET-02, S1.15b): field security first (a field the caller may not edit
+    /// keeps its stored value), then the active definitions. Returns the check to hold until the save is done (it holds the locks of
+    /// unique fields), or the refusal. An update without a <c>custom</c> object leaves the custom values as they are.
+    /// </summary>
+    private async Task<(CustomCheck? Check, PeopleResult? Refused)> CheckCustomAsync(PersonFields request, Person person, JsonDocument? stored, Guid? hireCompany, CancellationToken ct)
+    {
+        var update = stored is not null;
+        if (update && request.Custom is null)
         {
-            errors.Add("custom", CustomNotAvailable);
+            return (null, null);
         }
+
+        FieldAccessMap map;
+        if (update)
+        {
+            var plan = await fields.PlanAsync(PersonAccess.Fields, PersonAccess.Scope, "update", Source, ct).ConfigureAwait(false);
+            map = (await plan.ResolveAsync([person], Source, ct).ConfigureAwait(false))[0];
+        }
+        else
+        {
+            map = await fields.ForAsync(PersonAccess.Fields, "create", hireCompany, ct).ConfigureAwait(false);
+        }
+
+        var denied = new List<string>();
+        var merged = FieldShaping.MergeCustom(request.Custom, stored, map, denied);
+        if (denied.Count > 0)
+        {
+            return (null, NotEditable(denied));
+        }
+
+        var check = await customFields.CheckAsync(new CustomWrite("hrm.persons", update ? person.Id : null, null, merged, stored, key => map.CanEdit(FieldAccessMap.CustomPrefix + key), update), ct).ConfigureAwait(false);
+        if (check.Errors.Count > 0)
+        {
+            var refused = PeopleResult.Fields(check.Errors.ToDictionary(e => e.Key, e => new[] { e.Value }, StringComparer.Ordinal));
+            await check.DisposeAsync().ConfigureAwait(false);
+            return (null, refused);
+        }
+
+        person.Custom = check.Values;
+        return (check, null);
     }
 
     /// <summary>The person columns a request sets (field security keys), for the "not editable" check.</summary>

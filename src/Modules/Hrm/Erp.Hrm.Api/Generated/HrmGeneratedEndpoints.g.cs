@@ -176,6 +176,10 @@ internal static class GeneratedEndpointSupport
     public static IResult NotEditable(global::System.Collections.Generic.List<string> fields) =>
         TypedResults.ValidationProblem(fields.ToDictionary(f => f, _ => new[] { global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable }), title: global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable);
 
+    /// <summary>Custom values refused (FR-KRN-MET-02, S1.15b): 400 naming each <c>custom.&lt;key&gt;</c> with its error key.</summary>
+    public static IResult InvalidCustom(global::System.Collections.Generic.IReadOnlyDictionary<string, string> errors) =>
+        TypedResults.ValidationProblem(errors.ToDictionary(e => e.Key, e => new[] { e.Value }), title: "errors.data.invalid_request");
+
     /// <summary>The answer for one row with hidden fields left out and masked fields masked (field security of the roles whose scope covers it).</summary>
     public static async global::System.Threading.Tasks.Task<global::System.Text.Json.Nodes.JsonObject> ShapeOneAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Data.IRepository<TRow> repository, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, TRow row, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)
         where TRow : class, global::Erp.BuildingBlocks.Domain.Entities.IEntity =>

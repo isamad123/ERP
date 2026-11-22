@@ -629,6 +629,13 @@
     - [seq, int, req]
     - [version, int, req]
   unique: [[entity_type, field_key]]
+  # S1.15b (CR-071 S1.15b detail, slice S1.15 rulings Q5 to Q8): definitions change only through the custom-field service (type, key and option list fixed after creation, retire instead of delete; permission codes kept).
+  checks_added_in:
+    S1.15b:
+      - "a custom field key is lower-case letters, digits and underscores, starts with a letter, at most 40 characters"
+      - "a choice or multi-choice field names an option list; other fields do not"
+      - "unique applies only to text, number, decimal, date, choice, user and employee fields"
+  api_actions: [read]
   reqs: [KRN-MET-01, KRN-MET-02, KRN-MET-05]
 
 - table: cfg.option_lists
@@ -661,6 +668,11 @@
     - [scope_id, uuid, opt]
     - [text, text, req]
   unique: [[key, language, layer, scope_id]]
+  checks_added_in:
+    S1.15b:
+      - "a label text has 1 to 300 characters"
+  # S1.15b (CR-071 S1.15b detail, slice S1.15 rulings Q5 to Q8): overrides change only through the label service (one call sets or resets both languages of a key and layer; permission codes kept).
+  api_actions: [read]
   reqs: [KRN-ORG-08, KRN-MET-22, ADM-STU-25]
 
 # Slice S1.12c (ruling Q12, CR-063; data design approved by the product owner 2026-11-22): saved list views.

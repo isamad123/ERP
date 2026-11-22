@@ -13,14 +13,6 @@
     {
       "action": "read",
       "permission": "cfg.custom_field_defs.read"
-    },
-    {
-      "action": "create",
-      "permission": "cfg.custom_field_defs.create"
-    },
-    {
-      "action": "update",
-      "permission": "cfg.custom_field_defs.update"
     }
   ],
   "companyScoped": false,
@@ -41,6 +33,7 @@
   "search": [],
   "constraints": {
     "ck_custom_field_defs_data_type": "dataType",
+    "ck_custom_field_defs_field_key": "fieldKey",
     "ck_custom_field_defs_field_key_code": "fieldKey",
     "ck_custom_field_defs_help_i18n_object": "helpI18n",
     "ck_custom_field_defs_label_i18n_object": "labelI18n",

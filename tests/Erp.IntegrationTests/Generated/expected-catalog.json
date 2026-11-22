@@ -1108,7 +1108,10 @@
         "ck_custom_field_defs_data_type",
         "ck_custom_field_defs_label_i18n_object",
         "ck_custom_field_defs_help_i18n_object",
-        "ck_custom_field_defs_status"
+        "ck_custom_field_defs_status",
+        "ck_custom_field_defs_field_key",
+        "ck_custom_field_defs_option_list",
+        "ck_custom_field_defs_unique_types"
       ],
       "exclusions": [],
       "foreign_keys": [
@@ -1710,7 +1713,8 @@
         "uq_labels_key_language_layer_scope_id"
       ],
       "checks": [
-        "ck_labels_layer"
+        "ck_labels_layer",
+        "ck_labels_text_length"
       ],
       "exclusions": [],
       "foreign_keys": [],
@@ -2283,7 +2287,7 @@
       "indexes": [],
       "triggers": [],
       "append_only_updatable": [],
-      "has_api": true,
+      "has_api": false,
       "full_name": "cfg.option_list_items"
     },
     {
@@ -2417,7 +2421,7 @@
       "indexes": [],
       "triggers": [],
       "append_only_updatable": [],
-      "has_api": true,
+      "has_api": false,
       "full_name": "cfg.option_lists"
     },
     {
