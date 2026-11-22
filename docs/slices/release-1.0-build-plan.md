@@ -1,6 +1,6 @@
 # Release 1.0 build plan
 
-Status: approved 15 November 2026 (D-50). Slice files (`S1.n-*.md`) are written one batch ahead.
+Status: approved 15 November 2026 (D-50). Waves, lanes and model changes: `acceleration-plan.md` (CR-082). Slice files (`S1.n-*.md`) are written one batch ahead.
 
 Each slice is one fresh session (or one fresh session per part where its slice file splits it). **Model** is what to select with `/model` before starting the batch. Classes follow
 `docs/token-strategy.md`: A and B use Opus 5.5 at high effort, C and D use Sonnet 5.5 unless stated.
@@ -46,7 +46,7 @@ Each slice is one fresh session (or one fresh session per part where its slice f
 ## Batch 4 — Time and leave (mixed)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.27 | Biometric device connector and import (one reference device type first); API clients and keys (FR-ADM-SEC-02) (S1.13 ruling Q2, CR-069) | C | Opus |
+| S1.27 | Biometric device connector and import (one reference device type first); API clients and keys (FR-ADM-SEC-02) (S1.13 ruling Q2, CR-069) | C | Sonnet (CR-082; was Opus) |
 | S1.28 | Shifts, rosters, Ramzan timings | D | Sonnet |
 | S1.29 | Attendance engine: punches to daily results with explanation, exceptions, overtime | B | Opus |
 | S1.30 | Regularization and duty requests, attendance dashboard and reports | D | Sonnet |
@@ -70,7 +70,7 @@ Each slice is one fresh session (or one fresh session per part where its slice f
 | S1.44 | Compensation: bands, increment cycles, benefits, provident fund ledger, liabilities | C | Sonnet |
 | S1.45 | Journal export (accounting events, account mapping, file formats) | C | Sonnet |
 | S1.46 | Compliance calendar, statutory returns, tax certificates | C | Sonnet |
-| S1.47 | Parallel-run comparison tool | C | Sonnet |
+| S1.47 | Parallel-run comparison tool (moved to Release 1.1 by CR-082) | C | Sonnet |
 
 ## Batch 6 — Performance and learning (Sonnet)
 | Slice | Work | Class | Model |

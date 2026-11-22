@@ -22,7 +22,8 @@ higher one is a defect in the lower one: stop and report it.
 
 ## Before you write any code
 1. Confirm the slice cites requirement IDs whose `release` in `docs/registers/requirements.csv` is the release being built (1.0 first). Build nothing marked Later or Not planned.
-2. Use plan mode. Present files, tables, endpoints, tests and open questions. Wait for approval.
+2. The approved slice file is the plan: start from it without a separate plan-mode wait (CR-082). If the slice file has no
+   approved Build section, use plan mode and wait for approval.
 3. If the specification is silent, ambiguous or contradictory, STOP and ask. Never invent a business rule.
 
 ## Non-negotiable engineering rules
@@ -90,6 +91,12 @@ higher one is a defect in the lower one: stop and report it.
 - Never merge with failing CI. If `main` moved on, update the branch from `main` and rerun CI before merging.
 - Never merge a class B slice (or a part named in `docs/token-strategy.md` section 7) before its fresh Opus review is
   in `docs/reviews/` and its high and medium findings are fixed or ruled on (CR-052 Q8).
+
+## Parallel lanes and batch approvals (CR-082, `docs/slices/acceleration-plan.md`)
+- At most three build sessions at once, one slice part each, each on its own branch from the latest `main` and in its own module area.
+- Reserve CR and R numbers first. Edit shared files (generator, manifests, web module declarations, registers) in small separate
+  commits; rebase on `main` before the pull request; a conflict that is not mechanical goes to the product owner.
+- Slice files are approved a wave at a time; silence on a recommendation means it stands. Handoff notes use the half-page template.
 
 ## Slice report (always end with this)
 1. What was built, in plain language. 2. Requirement IDs covered. 3. Evidence: commands run and results.
