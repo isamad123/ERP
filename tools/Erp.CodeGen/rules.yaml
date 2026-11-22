@@ -930,6 +930,8 @@ functions:
   - slice: S1.13a
     name: iam.tg_users_username_email_clash
     purpose: "A username never equals another user's e-mail address, and an e-mail address never equals another user's username, in any letter case (CR-069, S1.05 deferral); refused with constraint ck_users_username_email_clash."
+    triggers:
+      - [iam.users, tg_users_username_email_clash]
     sql: |
       create or replace function iam.tg_users_username_email_clash() returns trigger
       language plpgsql as $fn$

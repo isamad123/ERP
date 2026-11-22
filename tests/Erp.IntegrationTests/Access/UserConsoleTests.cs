@@ -180,14 +180,16 @@ public sealed class UserConsoleTests(TenancyFixture fx) : IAsyncLifetime
         await _h.AssignAsync(disabled, plain, company, _h.Today.AddDays(-1), null, Ct);
         await _h.ExecAsync("update iam.users set status = 'disabled' where id = $1", Ct, disabled);
 
+        // The page holds 20 at most and a shared customer has many people, so each person is looked up by name.
         var answer = await _h.GetAsync(approver, "/api/iam/people-lookup", Ct);
         Assert.Equal(HttpStatusCode.OK, answer.Status);
-        var ids = answer.Json.EnumerateArray().Select(e => e.GetProperty("id").GetGuid()).ToList();
-        Assert.Contains(neighbour, ids);
-        Assert.DoesNotContain(stranger, ids);
-        Assert.DoesNotContain(disabled, ids);
+        Assert.True(answer.Json.GetArrayLength() <= 20);
         Assert.All(answer.Json.EnumerateArray(), e => Assert.Equal(["displayName", "id", "username"], e.EnumerateObject().Select(p => p.Name).Order().ToArray()));
-        Assert.True(ids.Count <= 20);
+        async Task<List<Guid>> FindAsync(Guid caller, Guid person) =>
+            (await _h.GetAsync(caller, $"/api/iam/people-lookup?search={await UsernameAsync(person)}", Ct)).Json.EnumerateArray().Select(e => e.GetProperty("id").GetGuid()).ToList();
+        Assert.Contains(neighbour, await FindAsync(approver, neighbour));
+        Assert.DoesNotContain(stranger, await FindAsync(approver, stranger));
+        Assert.DoesNotContain(disabled, await FindAsync(approver, disabled));
 
         var found = await _h.GetAsync(approver, $"/api/iam/people-lookup?search={await UsernameAsync(neighbour)}", Ct);
         Assert.Equal(neighbour, Assert.Single(found.Json.EnumerateArray()).GetProperty("id").GetGuid());
