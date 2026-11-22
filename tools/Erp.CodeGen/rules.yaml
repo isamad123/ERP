@@ -203,7 +203,8 @@ tables:
         text: "list of {cost_center_ref or department, pct}; must sum to 1"
         stub: { name: employment_assignments_cost_allocation_sum, owner: S1.20 }
         # S1.20b (CR-076 S1.20b detail): a non-empty list of shares, each naming exactly one of a cost centre reference or a
-        # department (org unit id) with a share above 0 and at most 1; the shares sum to exactly 1 (numeric, no rounding).
+        # department (an org unit of the assignment's company, like a foreign key) with a share above 0 and at most 1; the
+        # shares sum to exactly 1 (numeric, no rounding).
         implemented:
           slice: S1.20b
           triggers:
@@ -225,6 +226,12 @@ tables:
                        or (item ? 'cost_center_ref') = (item ? 'department') then
                         raise exception 'cost allocation of assignment % has a share without exactly one target and a number', new.id
                             using errcode = '23514', constraint = 'ck_employment_assignments_cost_allocation_sum';
+                    end if;
+                    if item ? 'department' and (jsonb_typeof(item -> 'department') is distinct from 'string'
+                       or (item ->> 'department') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                       or not exists (select 1 from org.org_units u where u.id = (item ->> 'department')::uuid and u.company_id = new.company_id)) then
+                        raise exception 'cost allocation of assignment % names a department that is not an org unit of its company', new.id
+                            using errcode = '23514', constraint = 'ck_employment_assignments_cost_allocation_department';
                     end if;
                     share := (item ->> 'pct')::numeric;
                     if share <= 0 or share > 1 then

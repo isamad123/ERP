@@ -23,6 +23,12 @@ begin
             raise exception 'cost allocation of assignment % has a share without exactly one target and a number', new.id
                 using errcode = '23514', constraint = 'ck_employment_assignments_cost_allocation_sum';
         end if;
+        if item ? 'department' and (jsonb_typeof(item -> 'department') is distinct from 'string'
+           or (item ->> 'department') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+           or not exists (select 1 from org.org_units u where u.id = (item ->> 'department')::uuid and u.company_id = new.company_id)) then
+            raise exception 'cost allocation of assignment % names a department that is not an org unit of its company', new.id
+                using errcode = '23514', constraint = 'ck_employment_assignments_cost_allocation_department';
+        end if;
         share := (item ->> 'pct')::numeric;
         if share <= 0 or share > 1 then
             raise exception 'cost allocation of assignment % has a share of %', new.id, share
