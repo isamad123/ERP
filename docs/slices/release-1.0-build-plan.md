@@ -2,7 +2,7 @@
 
 Status: approved 15 November 2026 (D-50). Slice files (`S1.n-*.md`) are written one batch ahead.
 
-Each slice is one fresh session. **Model** is what to select with `/model` before starting the batch. Classes follow
+Each slice is one fresh session (or one fresh session per part where its slice file splits it). **Model** is what to select with `/model` before starting the batch. Classes follow
 `docs/token-strategy.md`: A and B use Opus 5.5 at high effort, C and D use Sonnet 5.5 unless stated.
 
 ## Batch 1 — Foundation (Opus)
@@ -24,29 +24,29 @@ Each slice is one fresh session. **Model** is what to select with `/model` befor
 ## Batch 2 — Foundation screens (Sonnet)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.13 | Admin console: users, groups, roles, permissions, data scopes, field security screens | D | Sonnet |
-| S1.14 | Organization screens: companies, branches, locations, units, hierarchies, org chart | D | Sonnet |
-| S1.15 | Settings centre, labels, custom fields, option lists, numbering screens, workflow route step-list editor (S1.10 ruling Q2), notification and document template editor (S1.11 ruling Q15) | D | Sonnet |
-| S1.16 | Import and export centre, job centre, notification log, system health, licence page | D | Sonnet |
-| S1.17 | Vendor platform console: customer list, provisioning wizard, entitlements | C | Sonnet |
-| S1.18 | First-run wizard and readiness checklist | C | Sonnet |
-| S1.19 | English and Urdu translations, right-to-left checks | D | Sonnet |
+| S1.13 | Admin console: users, groups, roles, permissions, data scopes, field security screens (parts S1.13a users, S1.13b access; slice file Q0) | D | Sonnet |
+| S1.14 | Organization screens: companies, branches, locations, units, hierarchies, org chart, holiday calendars (parts S1.14a, S1.14b; fresh Opus review of the bank-account part, Q4) | D | Sonnet |
+| S1.15 | Settings centre, labels, custom fields, option lists, numbering screens, workflow route step-list editor (S1.10 ruling Q2), notification and document template editor (S1.11 ruling Q15) (parts S1.15a settings and branding, S1.15b labels and custom fields at high effort, S1.15c numbering and routes, S1.15d templates) | D | Sonnet |
+| S1.16 | Import and export centre, job centre, notification log, system health, licence page (parts S1.16a imports with a fresh Opus review (uploaded files), S1.16b exports, S1.16c operations; slice file Q0) | C (a, b), D (c) | Sonnet |
+| S1.17 | Vendor platform console: platform sign-in and roles, customer list, provisioning wizard, entitlements (parts: S1.17a platform sign-in on Opus with a fresh review, S1.17b screens on Sonnet, CR-073) | C | Sonnet (Opus for S1.17a, CR-073) |
+| S1.18 | First-run wizard and readiness checklist (parts S1.18a, S1.18b) | C | Sonnet |
+| S1.19 | English and Urdu translations, right-to-left checks (parts S1.19a, S1.19b with a native Urdu review between them) | D | Sonnet |
 
 ## Batch 3 — HR core (mixed)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.20 | Person and employment model, effective-dated assignments, events with reason codes, transfers between companies | B | Opus |
-| S1.21 | Employee screens: profile sections, timeline, bulk import, duplicate check | D | Sonnet |
-| S1.22 | Positions, grades, headcount, org chart by position | C | Sonnet |
-| S1.23 | Policy framework: types, versions, attribute-rule assignment, resolution view, Pakistan pack loader | B | Opus |
-| S1.24 | Documents vault, letters from templates with approval, policy acknowledgements | C | Sonnet |
-| S1.25 | Onboarding and offboarding checklists, separations, clearance | C | Sonnet |
+| S1.20 | Person and employment model, effective-dated assignments, events with reason codes, transfers between companies (proposed parts S1.20a persons, S1.20b employments, S1.20c transfers and terms, S1.20d bank and statutory; a fresh Opus review per part) | B | Opus |
+| S1.21 | Employee screens: profile sections, timeline, bulk import, duplicate check (proposed parts S1.21a, S1.21b) | D | Sonnet |
+| S1.22 | Positions, grades, headcount, org chart by position (proposed parts S1.22a, S1.22b) | C | Sonnet |
+| S1.23 | Policy framework: types, versions, attribute-rule assignment, resolution view, Pakistan pack loader (proposed parts S1.23a policies and S1.23b pack loader on Opus with fresh reviews, S1.23c first Pakistan pack content on Sonnet) | B | Opus (S1.23c Sonnet, proposed) |
+| S1.24 | Documents vault, letters from templates with approval, policy acknowledgements (proposed parts S1.24a vault with a fresh Opus review (uploads), S1.24b letters, S1.24c publications) | C | Sonnet |
+| S1.25 | Onboarding and offboarding checklists, separations, clearance (proposed parts S1.25a, S1.25b) | C | Sonnet |
 | S1.26 | Self-service web: profile change requests, service requests, home page | D | Sonnet |
 
 ## Batch 4 — Time and leave (mixed)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.27 | Biometric device connector and import (one reference device type first) | C | Opus |
+| S1.27 | Biometric device connector and import (one reference device type first); API clients and keys (FR-ADM-SEC-02) (S1.13 ruling Q2, CR-069) | C | Opus |
 | S1.28 | Shifts, rosters, Ramzan timings | D | Sonnet |
 | S1.29 | Attendance engine: punches to daily results with explanation, exceptions, overtime | B | Opus |
 | S1.30 | Regularization and duty requests, attendance dashboard and reports | D | Sonnet |
