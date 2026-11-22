@@ -128,3 +128,5 @@ CR-082 (2026-11-22): FR-HRM-PAY-35 moved from 1.0 to 1.1 (parallel-run tool).
 - Cross-module rules: FR-XM-05, 06, 26 to 30 and 32 are R; the rest need Finance or later modules.
 
 The tagging was done by rule and then spot-checked by hand; individual tags can be changed by any reviewer before approval.
+
+CR-088 Q2 (2026-11-22): the selfie and geo-fence validation parts of FR-HRM-ATT-01 move to release 1.1 with geo-attendance; the requirement stays tagged 1.0 for web, kiosk, QR and biometric-device capture.
