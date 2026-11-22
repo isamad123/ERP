@@ -89,6 +89,12 @@ internal sealed partial class PersonService(
             errors.Add("duplicates", DuplicatesAnswer);
         }
 
+        // Confirming "a different person" decides the review case at once, so it needs the review permission (review S1.20a finding 7).
+        if (request.Duplicates == "distinct" && !await HasAsync(PeoplePermissions.DuplicatesUpdate, cancellationToken).ConfigureAwait(false))
+        {
+            return PeopleResult.Forbidden();
+        }
+
         Stamp(person);
         var enc = await keys.GetAsync(cancellationToken).ConfigureAwait(false);
         var identifiers = new List<PersonIdentifier>();
@@ -154,6 +160,15 @@ internal sealed partial class PersonService(
             return PeopleResult.Conflict(PossibleDuplicates, new Dictionary<string, object?> { ["matches"] = matches });
         }
 
+        var visibleMatches = new HashSet<Guid>();
+        foreach (var other in similar)
+        {
+            if (await AllowsAsync(other, PersonAccess.Scope, "read", cancellationToken).ConfigureAwait(false))
+            {
+                visibleMatches.Add(other.Id);
+            }
+        }
+
         try
         {
             person.PersonNo = await numbers.AssignOnCreateAsync(new NumberRequest("hrm.person_no", null, null, null), cancellationToken).ConfigureAwait(false);
@@ -201,7 +216,8 @@ internal sealed partial class PersonService(
             id = person.Id,
             personNo = person.PersonNo,
             rowVersion = person.RowVersion,
-            duplicateCases = cases.Select(c => new { id = c.Id, otherPersonId = c.OtherPersonId, matchKind = c.MatchKind, status = c.Status }).ToList(),
+            // The other person is named only when the caller may read them (review S1.20a finding 6, CR-076 detail h).
+            duplicateCases = cases.Select(c => new { id = c.Id, otherPersonId = visibleMatches.Contains(c.OtherPersonId) ? c.OtherPersonId : (Guid?)null, matchKind = c.MatchKind, status = c.Status }).ToList(),
         });
     }
 

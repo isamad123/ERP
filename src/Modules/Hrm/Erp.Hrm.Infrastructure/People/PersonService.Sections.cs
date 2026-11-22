@@ -295,8 +295,28 @@ internal sealed partial class PersonService
             },
             [("address", input.Address is not null)], null, cancellationToken);
 
+    /// <summary>
+    /// Removes an address; the address of the same kind before it then runs on to the removed one's end, so the history keeps no
+    /// gap (GHR-03; review S1.20a finding 10).
+    /// </summary>
     public Task<PeopleResult> DeleteAddressAsync(Guid personId, Guid addressId, long? rowVersion, CancellationToken cancellationToken) =>
-        DeleteSectionAsync<PersonAddress>(personId, addressId, Addresses, PersonAddressAccess.Scope, r => r.PersonId, rowVersion, cancellationToken);
+        DeleteSectionAsync<PersonAddress>(personId, addressId, Addresses, PersonAddressAccess.Scope, r => r.PersonId, rowVersion, cancellationToken, async row =>
+        {
+            var before = await db.Set<PersonAddress>().FirstOrDefaultAsync(a => a.PersonId == row.PersonId && a.Kind == row.Kind && a.ValidTo == row.ValidFrom && a.Id != row.Id, cancellationToken).ConfigureAwait(false);
+            if (before is null)
+            {
+                return null;
+            }
+
+            if (!await AllowsAsync(before, PersonAddressAccess.Scope, "update", cancellationToken).ConfigureAwait(false))
+            {
+                return PeopleResult.Forbidden(AccessDeniedException.OutOfScope);
+            }
+
+            before.ValidTo = row.ValidTo;
+            Touch(before, before.RowVersion);
+            return null;
+        });
 
     private static PersonAddress ApplyAddress(PersonAddress row, AddressInput input, FieldErrors errors, string prefix, bool creating)
     {
@@ -656,7 +676,8 @@ internal sealed partial class PersonService
         return await SaveAsync(ct).ConfigureAwait(false) ?? Done(row.Id, row.RowVersion);
     }
 
-    private async Task<PeopleResult> DeleteSectionAsync<T>(Guid personId, Guid rowId, string table, ScopeTarget<T> target, Func<T, Guid> personOf, long? rowVersion, CancellationToken ct)
+    private async Task<PeopleResult> DeleteSectionAsync<T>(Guid personId, Guid rowId, string table, ScopeTarget<T> target, Func<T, Guid> personOf, long? rowVersion, CancellationToken ct,
+        Func<T, Task<PeopleResult?>>? beforeDelete = null)
         where T : class, IEntity, IVersioned
     {
         if (!await HasAsync(PeoplePermissions.Of(table, "delete"), ct).ConfigureAwait(false))
@@ -690,6 +711,12 @@ internal sealed partial class PersonService
         if (row.RowVersion != expected)
         {
             return PeopleResult.Conflict(Concurrency);
+        }
+
+        if (beforeDelete is not null && await beforeDelete(row).ConfigureAwait(false) is { } problem)
+        {
+            db.ChangeTracker.Clear();
+            return problem;
         }
 
         if (row is ISoftDeletable soft)

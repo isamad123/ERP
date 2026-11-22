@@ -17,6 +17,7 @@
   "errors.hrm.identifier.reveal_masked": "Your field access shows this identifier masked, so its full value cannot be shown.",
   "errors.hrm.identifier.unknown_kind": "This kind of identifier is not known for this country.",
   "errors.hrm.merge.both_employed": "Both persons have a current main employment. Only one of them may have one when they are merged.",
+  "errors.hrm.merge.employment_out_of_scope": "An employment of this person is outside your records, so the merge would move it without anyone responsible for it. Ask someone who covers that company.",
   "errors.hrm.merge.nominations": "The person to merge has nominations. They must be moved before the merge.",
   "errors.hrm.merge.person_not_found": "One of the two persons was not found or is outside your records.",
   "errors.hrm.merge.same_person": "A person cannot be merged into itself.",

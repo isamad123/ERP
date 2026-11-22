@@ -18,7 +18,7 @@
       "tightenOnly": false,
       "selfService": false,
       "visible": true,
-      "requiresApproval": false,
+      "requiresApproval": true,
       "area": "hr.people",
       "unit": null,
       "name": {

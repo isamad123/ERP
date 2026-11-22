@@ -83,7 +83,10 @@ internal sealed partial class PersonService
             return PeopleResult.NotFound;
         }
 
-        if (!await AllowsAsync(row, PersonDuplicateCaseAccess.Scope, "update", cancellationToken).ConfigureAwait(false))
+        // Both persons of the pair must be inside the reviewer's records to decide it (review S1.20a finding 8).
+        var other = await db.Set<Person>().AsNoTracking().FirstOrDefaultAsync(p => p.Id == row.OtherPersonId, cancellationToken).ConfigureAwait(false);
+        if (!await AllowsAsync(row, PersonDuplicateCaseAccess.Scope, "update", cancellationToken).ConfigureAwait(false)
+            || other is null || !await AllowsAsync(other, PersonAccess.Scope, "read", cancellationToken).ConfigureAwait(false))
         {
             return PeopleResult.Forbidden(BuildingBlocks.Application.Security.AccessDeniedException.OutOfScope);
         }
@@ -136,7 +139,7 @@ internal sealed partial class PersonService
         var into = request.IntoPersonId!.Value;
         if (await merger.RunAsync(db, personId, into, apply: false, cancellationToken).ConfigureAwait(false) is { } problem)
         {
-            return problem == PersonMerger.NotFound ? PeopleResult.NotFound : PeopleResult.Conflict(problem);
+            return MergeRefusal(problem);
         }
 
         db.ChangeTracker.Clear();
@@ -153,12 +156,13 @@ internal sealed partial class PersonService
 
         if (await merger.RunAsync(db, personId, into, apply: true, cancellationToken).ConfigureAwait(false) is { } late)
         {
-            return late == PersonMerger.NotFound ? PeopleResult.NotFound : PeopleResult.Conflict(late);
+            return MergeRefusal(late);
         }
 
         try
         {
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await merger.RecordAsync(personId, into, reason!, null, actor.UserId, tx.GetDbTransaction(), cancellationToken).ConfigureAwait(false);
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateConcurrencyException)
@@ -174,4 +178,11 @@ internal sealed partial class PersonService
 
         return new PeopleResult(PeopleOutcome.Done, Body: new { status = "merged", id = personId, intoPersonId = into });
     }
+
+    private static PeopleResult MergeRefusal(string key) => key switch
+    {
+        PersonMerger.NotFound => PeopleResult.NotFound,
+        PersonMerger.EmploymentOutOfScope => PeopleResult.Forbidden(key),
+        _ => PeopleResult.Conflict(key),
+    };
 }

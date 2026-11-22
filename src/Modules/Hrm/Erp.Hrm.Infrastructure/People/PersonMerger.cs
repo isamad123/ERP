@@ -30,13 +30,15 @@ namespace Erp.Hrm.Infrastructure.People;
 /// its id and is marked retired with a pointer to the survivor (<c>merged_into_person_id</c>), so its audit history stays readable.
 /// Every moved row is an audited change made by the acting user (GHR-09).
 /// </summary>
-internal sealed class PersonMerger(IClock clock, ICurrentActor actor, IDataScopeFilter scope)
+internal sealed class PersonMerger(IClock clock, ICurrentActor actor, IDataScopeFilter scope, Erp.Kernel.Contracts.Audit.IAuditEvents audit)
 {
     public const string Kind = "hrm.person.merge";
     public const string NotFound = "errors.hrm.merge.person_not_found";
     public const string SamePerson = "errors.hrm.merge.same_person";
     public const string BothEmployed = "errors.hrm.merge.both_employed";
     public const string HasNominations = "errors.hrm.merge.nominations";
+    public const string EmploymentOutOfScope = "errors.hrm.merge.employment_out_of_scope";
+    public const string MergedEvent = "hrm.person_merged";
 
     private static readonly string[] ActiveStatuses = ["pre_joining", "active", "on_notice"];
 
@@ -93,6 +95,19 @@ internal sealed class PersonMerger(IClock clock, ICurrentActor actor, IDataScope
             return HasNominations;
         }
 
+        // Every employment that moves must be inside the caller's records too: a person is seen through any one of their
+        // employments, so the two persons' scope alone would let a company-limited role move another company's employment
+        // (review S1.20a finding 4). The merge permission authorizes the move; the employment's data scope (read: the records
+        // the caller may see; employment writes arrive with S1.20b) is checked before the move and again with the new person.
+        var moving = await db.Set<Employment>().Where(e => e.PersonId == personId).ToListAsync(ct).ConfigureAwait(false);
+        foreach (var e in moving)
+        {
+            if (!await scope.AllowsAsync(e, EmploymentAccess.Scope, "read", source, ct).ConfigureAwait(false))
+            {
+                return EmploymentOutOfScope;
+            }
+        }
+
         if (!apply)
         {
             return null;
@@ -107,9 +122,14 @@ internal sealed class PersonMerger(IClock clock, ICurrentActor actor, IDataScope
             Touch(db, row, row.RowVersion, now, by);
         }
 
-        foreach (var e in await db.Set<Employment>().Where(e => e.PersonId == personId).ToListAsync(ct).ConfigureAwait(false))
+        foreach (var e in moving)
         {
             Move(e, x => x.PersonId = intoPersonId);
+            if (!await scope.AllowsAsync(e, EmploymentAccess.Scope, "read", source, ct).ConfigureAwait(false))
+            {
+                db.ChangeTracker.Clear();
+                return EmploymentOutOfScope;
+            }
         }
 
         foreach (var i in await db.Set<PersonIdentifier>().Where(i => i.PersonId == personId).ToListAsync(ct).ConfigureAwait(false))
@@ -160,6 +180,35 @@ internal sealed class PersonMerger(IClock clock, ICurrentActor actor, IDataScope
         return null;
     }
 
+    /// <summary>
+    /// True when every existing one of the two persons is inside the caller's data scope for read and update: who may see a held
+    /// merge in the approvals inbox, and decide it (review S1.20a finding 2).
+    /// </summary>
+    public async Task<bool> VisibleAsync(HrmDbContext db, Guid personId, Guid intoPersonId, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(db);
+        var source = new DbContextScopeSource(db);
+        var persons = await db.Set<Person>().AsNoTracking().Where(p => p.Id == personId || p.Id == intoPersonId).ToListAsync(ct).ConfigureAwait(false);
+        foreach (var p in persons)
+        {
+            if (!await scope.AllowsAsync(p, PersonAccess.Scope, "read", source, ct).ConfigureAwait(false)
+                || !await scope.AllowsAsync(p, PersonAccess.Scope, "update", source, ct).ConfigureAwait(false))
+            {
+                return false;
+            }
+        }
+
+        return persons.Count > 0;
+    }
+
+    /// <summary>
+    /// The merge with its reason in the audit log (event <c>hrm.person_merged</c> on the merged person: a security event and a
+    /// change-log entry), in the merge's transaction, by the acting user; on both paths, held or not (review S1.20a finding 5,
+    /// FR-HRM-EMP-18 "merge audit").
+    /// </summary>
+    public Task RecordAsync(Guid personId, Guid intoPersonId, string reason, Guid? requestId, Guid requestedBy, DbTransaction transaction, CancellationToken ct) =>
+        audit.RecordAsync(MergedEvent, "hrm.person", personId, new { into_person_id = intoPersonId, reason, request_id = requestId, requested_by = requestedBy }, transaction, ct);
+
     /// <summary>Marks a tracked row changed with optimistic concurrency on <paramref name="expected"/>.</summary>
     internal static void Touch<T>(DbContext db, T entity, long expected, DateTimeOffset now, Guid by)
         where T : class, IVersioned
@@ -184,6 +233,18 @@ internal sealed class PersonMergeHandler(IServiceProvider services, PersonMerger
     public string Kind => PersonMerger.Kind;
 
     public string ApprovePermission => PeoplePermissions.PersonsMerge;
+
+    public async Task<bool> VisibleAsync(HeldChange change, DbTransaction transaction, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        if (Read(change) is not { } payload)
+        {
+            return false;
+        }
+
+        await using var db = await OnAsync(transaction, cancellationToken).ConfigureAwait(false);
+        return await merger.VisibleAsync(db, payload.PersonId, payload.IntoPersonId, cancellationToken).ConfigureAwait(false);
+    }
 
     public async Task<HeldChangeProblem?> CheckAsync(HeldChange change, DbTransaction transaction, CancellationToken cancellationToken)
     {
@@ -214,6 +275,7 @@ internal sealed class PersonMergeHandler(IServiceProvider services, PersonMerger
         try
         {
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await merger.RecordAsync(payload.PersonId, payload.IntoPersonId, payload.Reason, change.RequestId, change.RequestedBy, transaction, cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateConcurrencyException)
         {
