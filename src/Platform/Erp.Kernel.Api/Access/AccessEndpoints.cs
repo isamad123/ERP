@@ -113,9 +113,11 @@ public static class AccessEndpoints
             Answer(s.RejectAsync(id, body.Reason, ct))), "record_action", requests, AccessControlPermissions.ApproveChanges);
         // Slice S1.12d (Build item 22): pending requests in plain words for the inbox; approvers see those of others they may
         // decide, everyone with access to the requests sees their own (FR-KRN-IAM-14).
-        Tag(decisions.MapGet("/pending", async (IMakerCheckerService s, IPermissionChecker p, CancellationToken ct) =>
+        // Holders of a module's approval permission (S1.20a held changes, e.g. hrm.persons.merge) see the list too.
+        Tag(decisions.MapGet("/pending", async (IMakerCheckerService s, IPermissionChecker p, IEnumerable<IHeldChangeHandler> held, CancellationToken ct) =>
             await p.HasPermissionAsync(AccessControlPermissions.ApproveChanges, ct).ConfigureAwait(false)
             || await p.HasPermissionAsync(MakerCheckerRead, ct).ConfigureAwait(false)
+            || await HoldsAnyAsync(p, held.Select(h => h.ApprovePermission), ct).ConfigureAwait(false)
                 ? Results.Ok(await s.PendingAsync(ct).ConfigureAwait(false))
                 : ForbiddenResult()), "catalog", requests, AccessControlPermissions.ApproveChanges);
 
@@ -158,6 +160,19 @@ public static class AccessEndpoints
     }
 
     private static IResult Invalid(string error) => Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: error);
+
+    private static async Task<bool> HoldsAnyAsync(IPermissionChecker p, IEnumerable<string> codes, CancellationToken ct)
+    {
+        foreach (var code in codes)
+        {
+            if (await p.HasPermissionAsync(code, ct).ConfigureAwait(false))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static IResult ForbiddenResult() => Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "errors.access.forbidden");
 

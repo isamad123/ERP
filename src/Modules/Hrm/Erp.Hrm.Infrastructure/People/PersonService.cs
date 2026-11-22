@@ -174,23 +174,24 @@ internal sealed partial class PersonService(
             DecidedAt = request.Duplicates == "distinct" ? clock.UtcNow : null,
         })).ToList();
 
-        db.Add(person);
-        db.AddRange(identifiers);
-        db.AddRange(contacts);
-        db.AddRange(addresses);
-        db.AddRange(relations);
-        db.AddRange(qualifications);
-        db.AddRange(cases);
         foreach (var (row, target) in SectionTargets(identifiers, contacts, addresses, relations, qualifications))
         {
             if (!await target(row).ConfigureAwait(false))
             {
-                db.ChangeTracker.Clear();
                 return PeopleResult.Forbidden(AccessDeniedException.OutOfScope);
             }
         }
 
-        if (await SaveAsync(cancellationToken).ConfigureAwait(false) is { } failed)
+        // The person first, then the rows that reference it (EF knows no relationships here), in one transaction.
+        if (await SaveAsync(cancellationToken, () => db.Add(person), () =>
+            {
+                db.AddRange(identifiers);
+                db.AddRange(contacts);
+                db.AddRange(addresses);
+                db.AddRange(relations);
+                db.AddRange(qualifications);
+                db.AddRange(cases);
+            }).ConfigureAwait(false) is { } failed)
         {
             return failed;
         }
@@ -532,11 +533,18 @@ internal sealed partial class PersonService(
         where T : class, IVersioned => PersonMerger.Touch(db, entity, expected, clock.UtcNow, actor.UserId);
 
     /// <summary>Saves the pending changes in one transaction; constraint refusals become answers with their keys.</summary>
-    private async Task<PeopleResult?> SaveAsync(CancellationToken ct)
+    /// <remarks>Each of <paramref name="stages"/> adds rows and is saved before the next (parents before children).</remarks>
+    private async Task<PeopleResult?> SaveAsync(CancellationToken ct, params Action[] stages)
     {
         try
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+            foreach (var stage in stages)
+            {
+                stage();
+                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            }
+
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
             await tx.CommitAsync(ct).ConfigureAwait(false);
             return null;
