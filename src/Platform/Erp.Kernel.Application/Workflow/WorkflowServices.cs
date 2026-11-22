@@ -108,7 +108,9 @@ public sealed record InboxItem(
     Guid? ActingForUserId,
     bool Overdue,
     int EscalationLevel,
-    bool BulkApproval);
+    bool BulkApproval,
+    string? RequesterName = null,
+    string? ActingForName = null);
 
 /// <summary>
 /// Inbox filters (ruling Q12); all optional. <see cref="Sort"/> is <c>received</c> (default, oldest first) or <c>due</c>
@@ -201,10 +203,39 @@ public sealed record WorkflowInstanceView(
     IReadOnlyDictionary<string, string> Title,
     string Link);
 
-/// <summary>One row of the decision history (append-only): event, who, for whom, when, and its details.</summary>
-public sealed record WorkflowHistoryView(Guid Id, Guid? TaskId, string Event, Guid? ActorId, Guid? ActingForUserId, DateTimeOffset At, JsonElement Details);
+/// <summary>
+/// One row of the decision history (append-only): event, who, for whom, when, and its details. S1.12d: the display names
+/// of the actor and of the person acted for (null when not known), for the inbox screen.
+/// </summary>
+public sealed record WorkflowHistoryView(Guid Id, Guid? TaskId, string Event, Guid? ActorId, Guid? ActingForUserId, DateTimeOffset At, JsonElement Details,
+    string? ActorName = null, string? ActingForName = null);
 
-public sealed record WorkflowTaskDetail(WorkflowTaskView Task, WorkflowInstanceView Request, IReadOnlyList<WorkflowHistoryView> History);
+/// <summary>
+/// A declared field of the document type (manifest <c>fields</c>) with its value in the request (slice S1.12d Build item 20).
+/// <see cref="DisplayName"/> is the person's display name of a <c>user</c> field; <see cref="DisplayNames"/> the name of a
+/// <c>company</c> or <c>org_unit</c> field in each language; both null for other types or when not found.
+/// </summary>
+public sealed record WorkflowFieldValue(string Name, string Type, IReadOnlyDictionary<string, string> Label, JsonElement? Value, string? DisplayName,
+    IReadOnlyDictionary<string, string>? DisplayNames);
+
+/// <summary>
+/// What the inbox screen shows beside a task (slice S1.12d Build items 20 and 21; FR-XM-32): the document type, the
+/// requester and the person acted for by name, the declared fields, and the actions the engine would accept from the caller
+/// on this task now (<c>approve</c>, <c>reject</c>, <c>return</c>, <c>ask</c>, <c>reassign</c>, <c>claim</c>, <c>release</c>);
+/// the server still checks every decision. <see cref="ReasonRequired"/> lists the actions that need a reason.
+/// </summary>
+public sealed record WorkflowTaskContext(
+    string Module,
+    IReadOnlyDictionary<string, string> DocumentTypeName,
+    string? RequesterName,
+    string? ActingForName,
+    bool Queue,
+    bool BulkApproval,
+    IReadOnlyList<WorkflowFieldValue> Fields,
+    IReadOnlyList<string> Actions,
+    IReadOnlyList<string> ReasonRequired);
+
+public sealed record WorkflowTaskDetail(WorkflowTaskView Task, WorkflowInstanceView Request, IReadOnlyList<WorkflowHistoryView> History, WorkflowTaskContext? Context = null);
 
 /// <summary>A comment (approve) or reason (reject, return); reject and return need one.</summary>
 public sealed record DecisionRequest(string? Comment);

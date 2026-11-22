@@ -1,0 +1,100 @@
+/* The approval inbox (slice S1.12d; spec 13 PAT-04 master-detail): the list and the task side by side on wide screens,
+   one after the other on narrow ones (the detail first once a task is open). Tokens and logical properties only. */
+.erp-approvals-counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-master-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.erp-master-detail.erp-has-detail {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+
+.erp-master {
+  min-inline-size: 0;
+}
+
+.erp-detail {
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+}
+
+.erp-detail-head {
+  justify-content: space-between;
+}
+
+.erp-task-marks {
+  gap: var(--space-1);
+}
+
+.erp-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+}
+
+.erp-facts dt {
+  color: var(--color-text-muted);
+}
+
+.erp-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.erp-history,
+.erp-change-list,
+.erp-bulk-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-history > li {
+  padding-inline-start: var(--space-3);
+  border-inline-start: var(--border-width) solid var(--color-border);
+}
+
+.erp-change-card {
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+}
+
+.erp-change-items {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+@media (width <= 1023px) {
+  .erp-master-detail.erp-has-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .erp-master-detail.erp-has-detail .erp-detail {
+    order: -1;
+  }
+}
+
+@media (width <= 599px) {
+  .erp-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

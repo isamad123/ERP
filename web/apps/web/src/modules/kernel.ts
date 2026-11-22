@@ -9,11 +9,13 @@ import { HomePage } from '../pages/home';
 const NotificationsPage = lazy(() => import('../pages/notifications'));
 // S1.12c: the first list and form screen (the engine is loaded with it, not with the shell).
 const BranchesScreen = lazy(() => import('./kernel/branches'));
+// S1.12d: the approval inbox (workflow tasks and approvals of changes), loaded with its route.
+const ApprovalsScreen = lazy(() => import('./kernel/approvals'));
 
 export const kernelScreens: ScreenDeclaration[] = [
   { id: 'home', path: '/', labelKey: 'nav.home', icon: House, group: 'home', allowedWhenLocked: false, component: HomePage },
   { id: 'notifications', path: '/notifications', labelKey: 'nav.notifications', icon: Bell, group: 'home', permission: 'ntf.in_app_items.read', component: NotificationsPage },
-  { id: 'approvals', path: '/approvals/*', labelKey: 'nav.approvals', icon: ClipboardCheck, group: 'approvals', permission: 'wf.workflow_tasks.read', comesWith: 'S1.12d' },
+  { id: 'approvals', path: '/approvals/*', labelKey: 'nav.approvals', icon: ClipboardCheck, group: 'approvals', permission: 'wf.workflow_tasks.read', component: ApprovalsScreen },
   // S1.12c (FR-KRN-ORG-02): branches; `tables` lists what the screen shows, for the Urdu label check (Build item 15).
   { id: 'branches', path: '/organization/branches/*', labelKey: 'nav.branches', icon: Building2, group: 'administration', permission: 'org.branches.read', component: BranchesScreen, tables: ['org.branches'] },
   { id: 'licence', path: '/settings/licence', labelKey: 'nav.licence', icon: KeyRound, group: 'administration', permission: 'cfg.licence.read', allowedWhenLocked: true, comesWith: 'S1.16' },

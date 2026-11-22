@@ -28,6 +28,9 @@ export interface ShellValue {
 
 const ShellContext = createContext<ShellValue | null>(null);
 
+/** Gives a screen a fixed shell value (component tests of screens, S1.12d); the application uses ShellDataProvider. */
+export const ShellValueProvider = ShellContext.Provider;
+
 export function useShell(): ShellValue {
   const value = useContext(ShellContext);
   if (!value) throw new Error('ShellDataProvider is missing');

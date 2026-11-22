@@ -133,7 +133,13 @@ public sealed partial class WorkflowEngine
                 request.Type.Module, actingFor, row.Due is { } due && due <= work.Now, row.Level, request.Type.BulkApproval && step?.BulkApproval == true));
         }
 
-        return items;
+        // S1.12d: the requester and the person acted for by name ("for Sara").
+        var names = await UserNamesAsync(work, [.. items.Select(i => i.RequesterUserId), .. items.Where(i => i.ActingForUserId is not null).Select(i => i.ActingForUserId!.Value)], cancellationToken).ConfigureAwait(false);
+        return [.. items.Select(i => i with
+        {
+            RequesterName = names.GetValueOrDefault(i.RequesterUserId),
+            ActingForName = i.ActingForUserId is { } f ? names.GetValueOrDefault(f) : null,
+        })];
     }
 
     /// <summary>
@@ -240,24 +246,136 @@ public sealed partial class WorkflowEngine
         if (await work.TaskAsync(taskId, lockRow: false, cancellationToken).ConfigureAwait(false) is not { } task
             || await work.InstanceAsync(task.InstanceId, lockRow: false, cancellationToken).ConfigureAwait(false) is not { } instance
             || await LoadAsync(work, instance, cancellationToken).ConfigureAwait(false) is not { } request
-            || await CapacityAsync(work, request, task, work.Actor, cancellationToken).ConfigureAwait(false) is null)
+            || await CapacityAsync(work, request, task, work.Actor, cancellationToken).ConfigureAwait(false) is not { } capacity)
         {
             return null;
         }
 
-        return new WorkflowTaskDetail(TaskView(request, task), InstanceView(request), await HistoryAsync(work, instance.Id, cancellationToken).ConfigureAwait(false));
+        var history = await HistoryAsync(work, instance.Id, cancellationToken).ConfigureAwait(false);
+        Guid[] people = capacity.ActingFor is { } delegator ? [instance.RequesterUserId, delegator] : [instance.RequesterUserId];
+        var names = await UserNamesAsync(work, people, cancellationToken).ConfigureAwait(false);
+        var step = request.Route.Steps.FirstOrDefault(s => s.Key == task.StepKey);
+        var context = new WorkflowTaskContext(request.Type.Module, request.Type.Name, names.GetValueOrDefault(instance.RequesterUserId),
+            capacity.ActingFor is { } actingFor ? names.GetValueOrDefault(actingFor) : null, task.AssigneeUserId is null && task.AssigneeRoleId is not null,
+            request.Type.BulkApproval && step?.BulkApproval == true, await FieldValuesAsync(work, request, cancellationToken).ConfigureAwait(false),
+            await ActionsAsync(work, request, task, capacity, cancellationToken).ConfigureAwait(false), ReasonActions);
+        return new WorkflowTaskDetail(TaskView(request, task), InstanceView(request), history, context);
+    }
+
+    /// <summary>The actions that need a reason (reject, return and reassign refuse an empty one: <c>errors.workflow.reason_required</c>).</summary>
+    private static readonly IReadOnlyList<string> ReasonActions = ["reject", "return", "reassign"];
+
+    /// <summary>
+    /// The actions the engine would accept from the caller on the task now (slice S1.12d Build item 21), by the same tests
+    /// as the decisions themselves: a pending task of a running request; the right to decide (for a delegate: the
+    /// delegator's); "ask" only while no question waits; "claim" on a queue task nobody holds; "release" for the claimer
+    /// while no question waits. The caller's capacity (assignee, delegate, queue holder; never the requester) is known.
+    /// </summary>
+    private static async Task<IReadOnlyList<string>> ActionsAsync(WorkflowWork work, Request request, TaskRow task, Capacity capacity, CancellationToken ct)
+    {
+        var actions = new List<string>();
+        if (task.Status != "pending" || request.Instance.Status != "running")
+        {
+            return actions;
+        }
+
+        var queueOpen = task.AssigneeUserId is null && task.AssigneeRoleId is not null;
+        if (await CanDecideAsync(work, request, capacity.ActingFor ?? work.Actor, ct).ConfigureAwait(false))
+        {
+            actions.AddRange(["approve", "reject", "return", "reassign"]);
+            if (task.InfoRequestedAt is null)
+            {
+                actions.Add("ask");
+            }
+
+            if (queueOpen)
+            {
+                actions.Add("claim");
+            }
+        }
+
+        if (task.AssigneeRoleId is not null && task.ClaimedAt is not null && task.AssigneeUserId == work.Actor && task.InfoRequestedAt is null)
+        {
+            actions.Add("release");
+        }
+
+        return actions;
+    }
+
+    /// <summary>The document type's declared fields with the request's frozen values; people, companies and units by name.</summary>
+    private static async Task<IReadOnlyList<WorkflowFieldValue>> FieldValuesAsync(WorkflowWork work, Request request, CancellationToken ct)
+    {
+        var result = new List<WorkflowFieldValue>();
+        foreach (var field in request.Type.Fields)
+        {
+            JsonElement? value = request.Values.TryGetValue(field.Name, out var v) && v.ValueKind is not (JsonValueKind.Null or JsonValueKind.Undefined) ? v.Clone() : null;
+            string? person = null;
+            IReadOnlyDictionary<string, string>? names = null;
+            if (value is { ValueKind: JsonValueKind.String } text && Guid.TryParse(text.GetString(), out var id))
+            {
+                switch (field.Type)
+                {
+                    case "user":
+                        person = (await UserNamesAsync(work, [id], ct).ConfigureAwait(false)).GetValueOrDefault(id);
+                        break;
+                    case "company":
+                        names = await NameI18nAsync(work, "select name_i18n::text from org.companies where id = $1", id, ct).ConfigureAwait(false);
+                        break;
+                    case "org_unit":
+                        names = await NameI18nAsync(work, "select name_i18n::text from org.org_units where id = $1", id, ct).ConfigureAwait(false);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            result.Add(new WorkflowFieldValue(field.Name, field.Type, field.Label, value, person, names));
+        }
+
+        return result;
+    }
+
+    private static async Task<IReadOnlyDictionary<string, string>?> NameI18nAsync(WorkflowWork work, string sql, Guid id, CancellationToken ct) =>
+        await work.ScalarAsync<string>(sql, ct, id).ConfigureAwait(false) is { } json
+            ? JsonSerializer.Deserialize<Dictionary<string, string>>(json)
+            : null;
+
+    /// <summary>Display names of users (S1.12d: requester, person acted for).</summary>
+    private static async Task<Dictionary<Guid, string>> UserNamesAsync(WorkflowWork work, Guid[] ids, CancellationToken ct)
+    {
+        var names = new Dictionary<Guid, string>();
+        if (ids.Length == 0)
+        {
+            return names;
+        }
+
+        await using var command = work.Command("select id, display_name from iam.users where id = any($1)", ids.Distinct().ToArray());
+        await using var r = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await r.ReadAsync(ct).ConfigureAwait(false))
+        {
+            names[r.GetGuid(0)] = r.GetString(1);
+        }
+
+        return names;
     }
 
     private static async Task<List<WorkflowHistoryView>> HistoryAsync(WorkflowWork work, Guid instanceId, CancellationToken ct)
     {
         var history = new List<WorkflowHistoryView>();
-        await using var command = work.Command("select id, task_id, event, actor_id, acting_for_user_id, created_at, details::text from wf.workflow_history where instance_id = $1 order by created_at, id", instanceId);
+        // S1.12d: the actor and the person acted for by name.
+        await using var command = work.Command("""
+            select h.id, h.task_id, h.event, h.actor_id, h.acting_for_user_id, h.created_at, h.details::text, a.display_name, f.display_name
+            from wf.workflow_history h
+            left join iam.users a on a.id = h.actor_id
+            left join iam.users f on f.id = h.acting_for_user_id
+            where h.instance_id = $1 order by h.created_at, h.id
+            """, instanceId);
         await using var r = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
         while (await r.ReadAsync(ct).ConfigureAwait(false))
         {
             using var details = JsonDocument.Parse(r.GetString(6));
             history.Add(new WorkflowHistoryView(r.GetGuid(0), WorkflowWork.NullableGuid(r, 1), r.GetString(2), WorkflowWork.NullableGuid(r, 3), WorkflowWork.NullableGuid(r, 4),
-                r.GetFieldValue<DateTimeOffset>(5), details.RootElement.Clone()));
+                r.GetFieldValue<DateTimeOffset>(5), details.RootElement.Clone(), r.IsDBNull(7) ? null : r.GetString(7), r.IsDBNull(8) ? null : r.GetString(8)));
         }
 
         return history;

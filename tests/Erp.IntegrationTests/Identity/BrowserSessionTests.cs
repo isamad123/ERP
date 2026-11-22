@@ -162,6 +162,33 @@ public sealed class BrowserSessionTests(TenancyFixture fx) : IAsyncLifetime
         Assert.False(browser.Has("__Secure-erp_rt"));
     }
 
+    /// <summary>
+    /// Found by the S1.12d browser tests: the sign-in page's start-up check (a refresh without a cookie) can answer after an
+    /// activation or sign-in that has just set the cookie; its refusal must not tell the browser to forget that new cookie,
+    /// or the person is signed out at the next reload. A refused refresh that did send a cookie still clears it.
+    /// </summary>
+    [Fact]
+    public async Task S112d_KRN_IAM_04_a_refused_refresh_without_a_cookie_does_not_clear_a_cookie_set_meanwhile()
+    {
+        var (_, username, _) = await h.ActiveUserAsync(A, Ct);
+        var startUpCheck = new TestBrowser(h, A);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await startUpCheck.RefreshAsync(Ct)).Status);
+        Assert.Null(startUpCheck.SetCookie("__Secure-erp_rt")); // nothing sent, nothing cleared
+
+        // The browser's real state: the sign-in set the cookie, then the late refusal arrived; the cookie still works.
+        var browser = new TestBrowser(h, A);
+        await browser.SignInAsync(username, Ct);
+        Assert.True(browser.Has("__Secure-erp_rt"));
+        Assert.Equal(HttpStatusCode.OK, (await browser.RefreshAsync(Ct)).Status);
+
+        // A stale cookie is still forgotten when its refresh is refused.
+        var stale = new TestBrowser(h, A);
+        stale.Put("__Secure-erp_rt", "not-a-live-token");
+        Assert.Equal(HttpStatusCode.Unauthorized, (await stale.RefreshAsync(Ct)).Status);
+        Assert.NotNull(stale.SetCookie("__Secure-erp_rt"));
+        Assert.False(stale.Has("__Secure-erp_rt"));
+    }
+
     [Fact]
     public async Task S112a_KRN_IAM_04_the_cookie_is_refused_without_the_web_header_and_a_browser_body_token_is_ignored()
     {

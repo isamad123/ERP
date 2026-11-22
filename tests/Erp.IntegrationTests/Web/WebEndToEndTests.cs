@@ -6,10 +6,12 @@ using System.Security.Cryptography.X509Certificates;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.IntegrationTests.Identity;
 using Erp.IntegrationTests.Tenancy;
+using Erp.IntegrationTests.Workflow;
 using Erp.Kernel.Domain.Identity;
 using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.Identity;
+using Erp.Kernel.Infrastructure.Workflow;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -59,11 +61,19 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
                 """, Ct, Guid.CreateVersion7(), host, BaselineSeed.SystemUserId, code);
         }
 
+        // S1.12d: the test workflow module (document types, outcome handlers and its start endpoint), as a module would
+        // register them, so the inbox has real requests to decide; its routes are seeded like provisioning seeds a module's.
+        await using (var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct))
+        {
+            await WorkflowSetup.EnsureAsync(owner, null, WorkflowRig.Types, DateTimeOffset.UtcNow, Ct);
+        }
+
         var clock = new TestClock();
         using var certificate = SelfSigned(host);
-        var api = await fx.StartAppAsync(null, Ct,
+        var api = await fx.StartAppAsync(WorkflowRig.MapModule, Ct,
             services =>
             {
+                WorkflowRig.RegisterTestModule(services);
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(clock);
                 // Access tokens are checked against the same test clock (the real time is also accepted, for the
@@ -296,6 +306,92 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
             return Results.NoContent();
         });
 
+        // S1.12d: a route for a test document type: one step decided by the named person, bulk approval allowed or not (as
+        // the route editor will put one in force, S1.15), activated with the administrator token.
+        app.MapPost("/workflow/route", async (RouteBody body) =>
+        {
+            var approver = await UserIdAsync(code, body.Approver);
+            using var client = ApiClient(apiUrl, host, fx.Token(code));
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            var definition = await TenancyFixture.ScalarTextAsync(owner, "select id::text from wf.workflow_definitions where document_type = $1", Ct, body.DocumentType);
+            var route = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                route = new { steps = new[] { new { key = "manager", name = new { en = "Manager approval", ur = "مینیجر کی منظوری" }, approver = new { kind = "user", user_id = approver }, bulk_approval = body.Bulk } } },
+            });
+            using var draft = await client.PostAsync($"/api/wf/definitions/{definition}/versions", new StringContent(route, System.Text.Encoding.UTF8, "application/json"), Ct);
+            if (!draft.IsSuccessStatusCode)
+            {
+                return Results.Problem($"draft {(int)draft.StatusCode} {await draft.Content.ReadAsStringAsync(Ct)}");
+            }
+
+            var version = (await draft.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(Ct)).GetProperty("id").GetGuid();
+            using var activated = await client.PostAsJsonAsync($"/api/wf/versions/{version}/activate", new { rowVersion = 1 }, Ct);
+            return activated.IsSuccessStatusCode ? Results.NoContent() : Results.Problem($"activate {(int)activated.StatusCode} {await activated.Content.ReadAsStringAsync(Ct)}");
+        });
+
+        // S1.12d: a request of the test module started by the named person in the customer's first company (as a module's
+        // save starts one); answers the request and its open tasks.
+        app.MapPost("/workflow/start", async (StartBody body) =>
+        {
+            var requester = await UserIdAsync(code, body.Requester);
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            var company = Guid.Parse((await TenancyFixture.ScalarTextAsync(owner, "select id::text from org.companies where lower(code) = lower($1)", Ct, code))!);
+            using var client = ApiClient(apiUrl, host, fx.Token(code, user: requester));
+            using var started = await client.PostAsJsonAsync("/test/wf/start", new
+            {
+                documentType = body.DocumentType,
+                documentId = Guid.CreateVersion7(),
+                companyId = company,
+                subjects = Array.Empty<Guid>(),
+                values = new Dictionary<string, object> { ["company"] = company, ["amount"] = body.Amount, ["category"] = "travel" },
+            }, Ct);
+            if (!started.IsSuccessStatusCode)
+            {
+                return Results.Problem($"start {(int)started.StatusCode} {await started.Content.ReadAsStringAsync(Ct)}");
+            }
+
+            var instance = (await started.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(Ct)).GetProperty("instanceId").GetGuid();
+            var tasks = await TenancyFixture.ScalarTextAsync(owner, "select string_agg(id::text, ',') from wf.workflow_tasks where instance_id = $1 and status = 'pending'", Ct, instance);
+            return Results.Ok(new { instanceId = instance, taskIds = (tasks ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries) });
+        });
+
+        // S1.12d: the named person hands their approvals to another for a few days (self-service delegation, S1.26).
+        app.MapPost("/delegations", async (DelegationBody body) =>
+        {
+            var from = await UserIdAsync(code, body.From);
+            var to = await UserIdAsync(code, body.To);
+            var today = DateOnly.FromDateTime(clock.UtcNow.ToOffset(TimeSpan.FromHours(5)).DateTime);
+            using var client = ApiClient(apiUrl, host, fx.Token(code, user: from));
+            using var created = await client.PostAsJsonAsync("/api/iam/me/delegations", new { toUserId = to, from = today, to = today.AddDays(5), reason = "leave" }, Ct);
+            return created.IsSuccessStatusCode ? Results.NoContent() : Results.Problem($"delegation {(int)created.StatusCode} {await created.Content.ReadAsStringAsync(Ct)}");
+        });
+
+        // S1.12d: a customer setting that needs a second administrator, changed by the administrator token (held for
+        // approval, 202); answers the key and the held request. GET answers the setting's customer value.
+        app.MapPost("/changes/setting", async (HeldSettingBody body) =>
+        {
+            var key = "test.e2e_" + Guid.NewGuid().ToString("N")[..8];
+            await using (var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct))
+            {
+                await IdentityHarness.ExecAsync(owner, """
+                    insert into cfg.settings (key, module_id, data_type, default_value, validation, allowed_layers, requires_approval, description_i18n, name_i18n, is_visible, area, role_rule, self_service, tighten_only)
+                    values ($1, 'test', 'int', '10', '{"min":1,"max":1000}', '{tenant}', true, '{"en":"Days to keep drafts","ur":"مسودے رکھنے کے دن"}', '{"en":"Days to keep drafts","ur":"مسودے رکھنے کے دن"}', true, 'test', 'highest', false, false)
+                    """, Ct, key);
+            }
+
+            using var client = ApiClient(apiUrl, host, fx.Token(code));
+            using var held = await client.PutAsJsonAsync($"/api/cfg/settings/{key}", new { layer = "tenant", scopeId = (Guid?)null, value = body.Value, reason = body.Reason }, Ct);
+            var text = await held.Content.ReadAsStringAsync(Ct);
+            return held.StatusCode == HttpStatusCode.Accepted
+                ? Results.Ok(new { key, requestId = System.Text.Json.JsonDocument.Parse(text).RootElement.GetProperty("requestId").GetGuid() })
+                : Results.Problem($"setting {(int)held.StatusCode} {text}");
+        });
+        app.MapGet("/settings/value", async (string key) =>
+        {
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            return Results.Ok(new { value = await TenancyFixture.ScalarTextAsync(owner, "select value::text from cfg.setting_values where setting_key = $1 and layer = 'tenant'", Ct, key) });
+        });
+
         // Facts the browser cannot see: live sessions and trusts of a person.
         app.MapGet("/facts", async (string username) =>
         {
@@ -314,6 +410,13 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
 
         await app.StartAsync(Ct);
         return app;
+    }
+
+    private async Task<Guid> UserIdAsync(string code, string username)
+    {
+        await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+        return Guid.Parse((await TenancyFixture.ScalarTextAsync(owner, "select id::text from iam.users where lower(username) = lower($1)", Ct, username))
+            ?? throw new InvalidOperationException("no user " + username));
     }
 
     private static HttpClient ApiClient(Uri apiUrl, string host, string token)
@@ -412,4 +515,12 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
     private sealed record BranchesBody(string? Company, string Prefix, int Count);
 
     private sealed record LabelBody(string Key, string Language, string? Text);
+
+    private sealed record RouteBody(string DocumentType, string Approver, bool Bulk);
+
+    private sealed record StartBody(string DocumentType, string Requester, string Amount);
+
+    private sealed record DelegationBody(string From, string To);
+
+    private sealed record HeldSettingBody(int Value, string Reason);
 }

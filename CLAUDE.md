@@ -185,6 +185,10 @@ List and form engine (S1.12c): `web/packages/engine` (`ListPage`, `FormPage`, `D
 `web/generated/metadata/<table>.json` and `validation/<table>.json`; see `web/apps/web/src/modules/kernel/branches.tsx`. A screen
 declaration lists its `tables`, and `modules/labels.test.ts` fails until their Urdu labels are in `web/packages/i18n/labels/<module>.ur.json`.
 Generated lists take `sort` (indexed columns) and `search` (code and name); saved views live in `cfg.saved_views` (`/api/cfg/saved-views`).
+Approvals (S1.12d): `/approvals` (`web/apps/web/src/modules/kernel/approvals.tsx`) shows every registered document type's tasks and the pending
+maker-checker requests; a module adds no screen work, only its `workflow.json` (fields, title, link). Decisions shown are the task's `context.actions`
+from `GET /api/wf/tasks/{id}`; pending changes come from `GET /api/iam/maker-checker-requests/pending`. Browser tests start requests through the
+control server (`server.route`, `server.request`, `server.delegate`, `server.heldSetting` in `e2e/support.ts`).
 
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.

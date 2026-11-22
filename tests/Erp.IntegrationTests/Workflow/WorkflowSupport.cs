@@ -122,7 +122,7 @@ public sealed class WorkflowRig
     }
 
     /// <summary>The test module: starts or resubmits a request inside its own transaction, as a module's save would.</summary>
-    private static void MapModule(WebApplication app)
+    internal static void MapModule(WebApplication app)
     {
         app.MapPost("/test/wf/start", async (StartBody body, ITenantConnectionProvider tenant, IWorkflowService workflow, CancellationToken ct) =>
             await InTransactionAsync(tenant, tx => workflow.StartAsync(new WorkflowStartRequest(body.DocumentType, body.DocumentId, body.CompanyId, body.Subjects ?? [], body.Values ?? []), tx, ct), body.RollBack, ct))

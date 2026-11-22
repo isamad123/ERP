@@ -340,9 +340,13 @@ public static class IdentityEndpoints
                 BrowserCookies.SetDevice(http, device, until);
             }
         }
-        else if (browser && result.Outcome == AuthOutcome.Failed && http.Request.Path.Value?.EndsWith("/refresh", StringComparison.Ordinal) == true)
+        else if (browser && result.Outcome == AuthOutcome.Failed && http.Request.Path.Value?.EndsWith("/refresh", StringComparison.Ordinal) == true
+            && BrowserCookies.RefreshToken(http) is not null)
         {
-            BrowserCookies.ClearRefresh(http); // the session has ended: forget its token
+            // The session of the token sent has ended: forget it. A refresh that sent no cookie clears nothing (S1.12d):
+            // its answer can arrive after a sign-in or activation that has just set a new cookie (the page's start-up
+            // check races the form), and clearing then would end the new session at the next reload.
+            BrowserCookies.ClearRefresh(http);
         }
 
         return result.Outcome switch
