@@ -127,7 +127,7 @@ public sealed class GeneratorTests
     public void Rules_every_free_text_rule_becomes_sql_or_a_tracked_placeholder()
     {
         var stubs = Model.Value.Stubs.ToList();
-        Assert.Equal(28, stubs.Count); // 30 from S1.02; S1.03 implemented SC-2 (org.branches), S1.10a FR-XM-32 (wf.workflow_tasks)
+        Assert.Equal(27, stubs.Count); // 30 from S1.02; S1.03 implemented SC-2 (org.branches), S1.10a FR-XM-32 (wf.workflow_tasks), S1.14b the unit link cycle check (org.org_unit_links)
         Assert.Equal(30, Model.Value.AllStubs.Count());
         Assert.All(stubs, s => Assert.Matches(@"^S1\.\d{2}$", s.Owner));
         Assert.Contains(stubs, s => s.Name == "attendance_periods_lock" && s.Owner == "S1.31"); // FR-XM-26
