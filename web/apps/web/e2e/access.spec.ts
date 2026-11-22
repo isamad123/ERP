@@ -46,13 +46,9 @@ test('FR-ADM-ROL-01 FR-ADM-ROL-02 FR-ADM-ROL-11 FR-KRN-AUD-04 an administrator c
   await expect(page.getByRole('heading', { name: `Copied approver ${run}`, level: 1 })).toBeVisible();
   await expect(page.getByText('The role was created.')).toBeVisible();
 
-  const boxes = page.getByRole('checkbox').filter({ hasNotText: /Select all/ });
-  const checked = page.locator('input[type="checkbox"]:checked');
-  const before = await checked.count();
-  expect(before).toBeGreaterThan(2);
-  // Two permission boxes (not the "select all" ones) that are ticked.
+  // A copy starts with the permissions of its source; wait for the picker to show them.
   const ticked = page.getByRole('checkbox', { checked: true }).filter({ hasNot: page.getByText(/Select all/) });
-  void boxes;
+  await expect(ticked.nth(2)).toBeVisible();
   await ticked.nth(1).uncheck({ force: true });
   await ticked.nth(2).uncheck({ force: true });
   await page.getByRole('button', { name: 'Save permissions' }).click();
