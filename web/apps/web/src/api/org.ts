@@ -65,6 +65,30 @@ export interface SettingItem { key: string; area: string | null; name: Record<st
 /** A file attached to a record (the company logo). */
 export interface AttachmentInfo { id: string; fileName: string; contentType: string; sizeBytes: number }
 
+/** One unit of a hierarchy on a date (S1.14b); `parentUnitId` is null for a root, `linkId` null for a unit not in the hierarchy on that date. */
+export interface OrgTreeNode {
+  unitId: string;
+  parentUnitId: string | null;
+  code: string;
+  name: Record<string, string> | null;
+  unitTypeId: string;
+  companyId: string;
+  locationId: string | null;
+  isActive: boolean;
+  linkId: string | null;
+  validFrom: string | null;
+  validTo: string | null;
+}
+
+export interface OrgTree { hierarchyId: string; asOf: string; nodes: OrgTreeNode[]; unplaced: OrgTreeNode[] }
+
+export interface OrgCompareChange { unitId: string; code: string; name: Record<string, string> | null; fromParentId: string | null; fromParentCode: string | null; toParentId: string | null; toParentCode: string | null }
+
+export interface OrgCompare { hierarchyId: string; from: string; to: string; added: OrgCompareChange[]; removed: OrgCompareChange[]; moved: OrgCompareChange[] }
+
+/** A move: the unit goes under `newParentId` (null: a root) from `effectiveFrom`; the old parent still applies the day before. */
+export interface MoveUnitBody { hierarchyId: string; newParentId: string | null; effectiveFrom: string; reason?: string }
+
 const company = (id: string) => `/api/org/companies/${id}`;
 
 export const org = {
@@ -108,6 +132,14 @@ export const org = {
       reader.readAsDataURL(blob);
     });
   },
+  /** A hierarchy as it stood on a date (S1.14b, FR-ADM-ORG-03). */
+  tree: (hierarchyId: string, asOf: string, signal?: AbortSignal) =>
+    requestJson<OrgTree>('GET', `/api/org/hierarchies/${hierarchyId}/tree?asOf=${encodeURIComponent(asOf)}`, signal ? { signal } : {}),
+  /** Units added, removed and moved between two dates. */
+  compare: (hierarchyId: string, from: string, to: string, signal?: AbortSignal) =>
+    requestJson<OrgCompare>('GET', `/api/org/hierarchies/${hierarchyId}/compare?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, signal ? { signal } : {}),
+  moveUnit: (unitId: string, body: MoveUnitBody) =>
+    requestJson<AccessAnswer>('POST', `/api/org/org-units/${unitId}/move`, { body }),
   copyYear: (calendarId: string, fromYear: number, toYear: number) =>
     requestJson<CopyYearResult>('POST', `/api/ref/calendars/${calendarId}/copy-year`, { body: { fromYear, toYear } }),
 };
