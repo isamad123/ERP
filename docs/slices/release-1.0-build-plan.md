@@ -24,13 +24,13 @@ Each slice is one fresh session (or one fresh session per part where its slice f
 ## Batch 2 — Foundation screens (Sonnet)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.13 | Admin console: users, groups, roles, permissions, data scopes, field security screens (proposed parts S1.13a users, S1.13b access; slice file Q0) | D | Sonnet |
-| S1.14 | Organization screens: companies, branches, locations, units, hierarchies, org chart, holiday calendars (proposed parts S1.14a, S1.14b; fresh Opus review of the bank-account part proposed, Q4) | D | Sonnet |
-| S1.15 | Settings centre, labels, custom fields, option lists, numbering screens, workflow route step-list editor (S1.10 ruling Q2), notification and document template editor (S1.11 ruling Q15) (proposed parts S1.15a settings and branding, S1.15b labels and custom fields at high effort, S1.15c numbering and routes, S1.15d templates) | D | Sonnet |
-| S1.16 | Import and export centre, job centre, notification log, system health, licence page (proposed parts S1.16a imports with a fresh Opus review (uploaded files), S1.16b exports, S1.16c operations; slice file Q0) | C (a, b), D (c) | Sonnet |
-| S1.17 | Vendor platform console: platform sign-in and roles, customer list, provisioning wizard, entitlements (proposed parts: S1.17a platform sign-in on Opus with a fresh review, S1.17b screens on Sonnet; slice file Q0, CR-073) | C | Sonnet (Opus for S1.17a, proposed) |
-| S1.18 | First-run wizard and readiness checklist (proposed parts S1.18a, S1.18b) | C | Sonnet |
-| S1.19 | English and Urdu translations, right-to-left checks (proposed parts S1.19a, S1.19b with a native Urdu review between them) | D | Sonnet |
+| S1.13 | Admin console: users, groups, roles, permissions, data scopes, field security screens (parts S1.13a users, S1.13b access; slice file Q0) | D | Sonnet |
+| S1.14 | Organization screens: companies, branches, locations, units, hierarchies, org chart, holiday calendars (parts S1.14a, S1.14b; fresh Opus review of the bank-account part, Q4) | D | Sonnet |
+| S1.15 | Settings centre, labels, custom fields, option lists, numbering screens, workflow route step-list editor (S1.10 ruling Q2), notification and document template editor (S1.11 ruling Q15) (parts S1.15a settings and branding, S1.15b labels and custom fields at high effort, S1.15c numbering and routes, S1.15d templates) | D | Sonnet |
+| S1.16 | Import and export centre, job centre, notification log, system health, licence page (parts S1.16a imports with a fresh Opus review (uploaded files), S1.16b exports, S1.16c operations; slice file Q0) | C (a, b), D (c) | Sonnet |
+| S1.17 | Vendor platform console: platform sign-in and roles, customer list, provisioning wizard, entitlements (parts: S1.17a platform sign-in on Opus with a fresh review, S1.17b screens on Sonnet, CR-073) | C | Sonnet (Opus for S1.17a, CR-073) |
+| S1.18 | First-run wizard and readiness checklist (parts S1.18a, S1.18b) | C | Sonnet |
+| S1.19 | English and Urdu translations, right-to-left checks (parts S1.19a, S1.19b with a native Urdu review between them) | D | Sonnet |
 
 ## Batch 3 — HR core (mixed)
 | Slice | Work | Class | Model |
@@ -46,7 +46,7 @@ Each slice is one fresh session (or one fresh session per part where its slice f
 ## Batch 4 — Time and leave (mixed)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.27 | Biometric device connector and import (one reference device type first); API clients and keys (FR-ADM-SEC-02) if S1.13 Q2 is accepted | C | Opus |
+| S1.27 | Biometric device connector and import (one reference device type first); API clients and keys (FR-ADM-SEC-02) (S1.13 ruling Q2, CR-069) | C | Opus |
 | S1.28 | Shifts, rosters, Ramzan timings | D | Sonnet |
 | S1.29 | Attendance engine: punches to daily results with explanation, exceptions, overtime | B | Opus |
 | S1.30 | Regularization and duty requests, attendance dashboard and reports | D | Sonnet |
