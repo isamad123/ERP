@@ -27,6 +27,7 @@ internal sealed class LocationConfiguration : IEntityTypeConfiguration<global::E
         builder.Property(e => e.Longitude).HasColumnName("longitude").HasColumnType("numeric(9,6)");
         builder.Property(e => e.TimeZone).HasColumnName("time_zone").HasColumnType("text").IsRequired();
         builder.Property(e => e.HolidayCalendarId).HasColumnName("holiday_calendar_id").HasColumnType("uuid");
+        builder.Property(e => e.OperatingHours).HasColumnName("operating_hours").HasColumnType("jsonb");
         builder.Property(e => e.IsActive).HasColumnName("is_active").HasColumnType("boolean");
         builder.Property(e => e.IsDeleted).HasColumnName("is_deleted").HasColumnType("boolean");
         builder.Property(e => e.DeletedAt).HasColumnName("deleted_at").HasColumnType("timestamptz");

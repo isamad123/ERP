@@ -24,6 +24,7 @@ public static class DocumentRegistration
         services.AddScoped<FileScanning>();
         services.AddScoped<IAttachmentService, AttachmentService>();
         services.AddScoped<IAttachmentOwner, WorkflowTaskOwner>();
+        services.AddScoped<IAttachmentOwner, CompanyAttachmentOwner>(); // S1.14a: the company logo
         return services;
     }
 

@@ -700,6 +700,7 @@
   "fields.org.locations.latitude": "Latitude",
   "fields.org.locations.longitude": "Longitude",
   "fields.org.locations.name_i18n": "Name",
+  "fields.org.locations.operating_hours": "Operating hours",
   "fields.org.locations.region_code": "Region code",
   "fields.org.locations.row_version": "Row version",
   "fields.org.locations.time_zone": "Time zone",

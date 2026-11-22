@@ -239,6 +239,18 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
             return Results.Ok(new { id });
         });
 
+        // S1.14a: reference rows the country pack installs later (S1.23): the US dollar and a bank, for the organization screens.
+        app.MapPost("/reference", async () =>
+        {
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            await IdentityHarness.ExecAsync(owner, "insert into ref.currencies (code, name_i18n, symbol, decimals, is_active) values ('USD', '{\"en\":\"US dollar\"}', '$', 2, true) on conflict do nothing", Ct);
+            await IdentityHarness.ExecAsync(owner, """
+                insert into ref.banks (id, code, name_i18n, country_code, created_at, created_by, updated_at, updated_by)
+                values ($1, 'TESTBANK', '{"en":"Test Bank"}', 'PK', now(), $2, now(), $2) on conflict do nothing
+                """, Ct, Guid.CreateVersion7(), BaselineSeed.SystemUserId);
+            return Results.NoContent();
+        });
+
         // S1.12b: the licence in force: days after its end on the test clock's day (null: no end), licensed features, the
         // company limit (as the licence loop and `entitlement apply` change them, S1.09b).
         app.MapPost("/licence", async (LicenceBody body) =>

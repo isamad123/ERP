@@ -20,12 +20,6 @@ public sealed partial class KernelDbContext
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
-    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
-    {
-        RefuseAccessSettings();
-        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
-    }
-
     private void RefuseAccessSettings()
     {
         foreach (var entry in ChangeTracker.Entries<SettingValue>())

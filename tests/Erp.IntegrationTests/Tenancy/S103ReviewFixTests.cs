@@ -188,7 +188,7 @@ public sealed class S103ReviewFixTests(TenancyFixture fx)
         var secretBefore = await fx.Secrets.GetAsync("cluster/" + fx.ClusterName + "/admin", ct);
 
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            admin.AddClusterAsync(fx.Admin, fx.ClusterName, "pk-1", "elsewhere.example.test", server.Port, 120, new DatabaseCredential("someone", "other"), ct));
+            admin.AddClusterAsync(fx.Admin, fx.ClusterName, "pk-1", "elsewhere.example.test", server.Port, 160, new DatabaseCredential("someone", "other"), ct));
         Assert.Contains("--change-address yes", error.Message, StringComparison.Ordinal);
         Assert.Equal(secretBefore, await fx.Secrets.GetAsync("cluster/" + fx.ClusterName + "/admin", ct)); // nothing written
         await using (var cp = await fx.OpenControlPlaneAsync(ct))
@@ -197,7 +197,7 @@ public sealed class S103ReviewFixTests(TenancyFixture fx)
         }
 
         // The same address (a credential or capacity update) is still accepted.
-        await admin.AddClusterAsync(fx.Admin, fx.ClusterName, "pk-1", server.Host!, server.Port, 120, new DatabaseCredential(server.Username!, server.Password!), ct);
+        await admin.AddClusterAsync(fx.Admin, fx.ClusterName, "pk-1", server.Host!, server.Port, 160, new DatabaseCredential(server.Username!, server.Password!), ct);
 
         // An empty cluster may move freely.
         var empty = "it-empty-" + fx.Suffix;

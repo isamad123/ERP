@@ -1,0 +1,14 @@
+{
+  "errors.org.account_number_required": "Enter the account number (up to 50 characters).",
+  "errors.org.account_title_required": "Enter the account title (up to 120 characters).",
+  "errors.org.authority_invalid": "Enter the issuing authority (up to 40 characters), or \"none\" when there is none.",
+  "errors.org.bank_unknown": "This bank is not in the list of banks.",
+  "errors.org.calendar_is_pack": "This calendar comes with a country pack and cannot be changed. Copy it into a calendar of your own first.",
+  "errors.org.currency_unknown": "This currency is not in the list of currencies.",
+  "errors.org.dates_invalid": "The end date cannot be before the start date.",
+  "errors.org.iban_invalid": "This IBAN is not valid. Check the letters, digits and check digits.",
+  "errors.org.kind_invalid": "Choose the kind of registration.",
+  "errors.org.registration_overlap": "This company already has a registration of this kind and authority for these dates. End the earlier one first.",
+  "errors.org.value_required": "Enter the registration number (up to 60 characters).",
+  "errors.org.year_invalid": "Choose two different years between 2000 and 2100."
+}

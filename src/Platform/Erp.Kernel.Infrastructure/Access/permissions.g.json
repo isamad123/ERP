@@ -489,6 +489,18 @@
       "sensitive": true
     },
     {
+      "code": "org.company_bank_accounts.create",
+      "module": "org",
+      "descriptionKey": "permissions.org.company_bank_accounts.create",
+      "sensitive": true
+    },
+    {
+      "code": "org.company_bank_accounts.update",
+      "module": "org",
+      "descriptionKey": "permissions.org.company_bank_accounts.update",
+      "sensitive": true
+    },
+    {
       "code": "org.company_bank_accounts.delete",
       "module": "org",
       "descriptionKey": "permissions.org.company_bank_accounts.delete",
@@ -498,6 +510,18 @@
       "code": "org.company_registrations.read",
       "module": "org",
       "descriptionKey": "permissions.org.company_registrations.read",
+      "sensitive": true
+    },
+    {
+      "code": "org.company_registrations.create",
+      "module": "org",
+      "descriptionKey": "permissions.org.company_registrations.create",
+      "sensitive": true
+    },
+    {
+      "code": "org.company_registrations.update",
+      "module": "org",
+      "descriptionKey": "permissions.org.company_registrations.update",
       "sensitive": true
     },
     {

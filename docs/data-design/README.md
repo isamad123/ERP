@@ -118,6 +118,7 @@ Every table also follows: primary key on `id` (or the composite key given); ever
 | `scope` | `scope: {company: company_id, employment: employment_id, attributes: [status]}` | The uuid columns that locate a row for data scopes: `company`, `branch`, `org_unit`, `employment`, `person`, `user`; `attributes` lists text columns that scope conditions ("equals / is one of") may test. A table without `scope` is not scoped: the permission alone decides. |
 | `scope: {via: …}` | `scope: {via: declaration_id}` | The row is located through its parent (a foreign key to a table of the same schema with its own `scope`): the child's permission and the role's scope for the child's resource apply to the parent's locators (CR-025). Used for detail lines without their own employment or company column. |
 | `field_class` | `field_class: {gross_amount: salary}` | `salary`, `personal` or `restricted`. Salary fields are hidden from every role unless a field rule opens them (GHR-06); in Release 1.0 only salary is marked (ruling B, CR-022). |
+| `field_view` | `field_view: [value]` | Encrypted columns that a hand-written view shows, so field security can mask or hide them (S1.14a, CR-070). The generated API still never returns encrypted columns. |
 | `api_actions` | `api_actions: [read]` | The generated API actions kept (read is required); the closed ones are replaced by purpose-built services. |
 
 The generator emits, per table, `<Entity>Access` (scope locators and field catalogue) in the module's Application

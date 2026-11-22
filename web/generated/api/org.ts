@@ -142,7 +142,6 @@ export const companyBankAccounts =
 {
     list: (query: CompanyBankAccountListQuery = {}) => request<PagedResult<CompanyBankAccount>>('GET', '/api/org/company-bank-accounts', { query }),
     get: (id: string) => request<CompanyBankAccount>('GET', `/api/org/company-bank-accounts/${id}`),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/org/company-bank-accounts/${id}`, { query: { rowVersion } }),
 };
 
 /** org.company_registrations: Tax and statutory registration numbers of a company (NTN, EOBI, social security). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -188,6 +187,7 @@ export interface Location
     longitude: number | null;
     timeZone: string;
     holidayCalendarId: string | null;
+    operatingHours: unknown | null;
     isActive: boolean;
     isDeleted: boolean;
     deletedAt: string | null;
@@ -211,6 +211,7 @@ export interface LocationWrite
     longitude?: number | null;
     timeZone: string;
     holidayCalendarId?: string | null;
+    operatingHours?: unknown | null;
     isActive?: boolean;
 }
 

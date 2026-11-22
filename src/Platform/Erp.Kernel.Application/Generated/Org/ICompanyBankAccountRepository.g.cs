@@ -37,6 +37,8 @@ public static class CompanyBankAccountAccess
         new("company_id", "CompanyId", null),
         new("bank_code", "BankCode", null),
         new("account_title", "AccountTitle", null),
+        new("account_number", "AccountNumber", null),
+        new("iban", "Iban", null),
         new("currency_code", "CurrencyCode", null),
         new("salary_file_format", "SalaryFileFormat", null),
         new("is_deleted", "IsDeleted", null),

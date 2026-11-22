@@ -55,6 +55,7 @@ public static class LocationAccess
         new("longitude", "Longitude", null),
         new("time_zone", "TimeZone", null),
         new("holiday_calendar_id", "HolidayCalendarId", null),
+        new("operating_hours", "OperatingHours", null),
         new("is_active", "IsActive", null),
         new("is_deleted", "IsDeleted", null),
         new("deleted_at", "DeletedAt", null),
