@@ -46,6 +46,7 @@ the D-09 list, each with only the exceptions named below.
 | react, react-dom | 19.3.1 | MIT | Web framework | Yes |
 | react-router | 8.5.1 | MIT | Screens and addresses | Yes |
 | @tanstack/react-query (with @tanstack/query-core) | 5.107.1 (newest at least two weeks old on 2026-11-21; approved in S1.12 Q1) | MIT | Server data and caching of the web shell (S1.12b): session context, capabilities, bell, notification centre | Yes |
+| @tanstack/react-virtual (with @tanstack/virtual-core 3.19.11) | 3.14.26 (newest at least two weeks old on 2026-11-22; approved in S1.12 Q1) | MIT | Row virtualisation of the grid (S1.12c, `web/packages/engine`): only the rows in view are drawn from 100 rows on | Yes |
 | react-aria-components | 1.22.1 | Apache-2.0 | Accessible primitives (brings react-aria, react-stately, @internationalized/* , Apache-2.0) | Yes |
 | @internationalized/date | 3.12.4 | Apache-2.0 | Date fields | Yes |
 | react-intl | 12.1.6 | BSD-3-Clause | ICU message catalogues (brings @formatjs/*, MIT, and intl-messageformat, BSD-3-Clause) | Yes |
@@ -75,3 +76,11 @@ the D-09 list, each with only the exceptions named below.
 
 Approved but not used yet (added with their part): @tanstack/react-table,
 @tanstack/react-virtual, react-hook-form, zod, @hookform/resolvers (S1.12c); all MIT.
+
+S1.12c note (2026-11-22, deviation r of CR-063): of the packages approved in ruling Q1, `@tanstack/react-table`, `react-hook-form`,
+`zod` and `@hookform/resolvers` are not added. Sorting and filtering are done by the server, so the grid keeps its own
+column state (order, width, shown) in about a hundred lines; the newest TanStack Table at least two weeks old is a new
+major version (9). The form engine checks values straight from the generated validation schema
+(`web/generated/validation/<table>.json`), so there is no second schema language to keep in step. Either can still be
+added later under the Q1 approval.
+

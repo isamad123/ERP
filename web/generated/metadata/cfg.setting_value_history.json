@@ -26,6 +26,8 @@
     "scopeId",
     "reason"
   ],
+  "search": [],
+  "constraints": {},
   "fields": [
     {
       "column": "id",
@@ -55,7 +57,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.cfg.setting_value_history.setting_key"
+      "labelKey": "fields.cfg.setting_value_history.setting_key",
+      "sortable": true
     },
     {
       "column": "layer",
@@ -115,7 +118,8 @@
       "readOnly": true,
       "system": true,
       "filter": false,
-      "labelKey": "fields.cfg.setting_value_history.created_at"
+      "labelKey": "fields.cfg.setting_value_history.created_at",
+      "sortable": true
     },
     {
       "column": "created_by",

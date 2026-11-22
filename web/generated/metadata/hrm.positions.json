@@ -43,6 +43,16 @@
     "reportsToPositionId",
     "locationId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_positions_status": "status",
+    "fk_positions_company_id": "companyId",
+    "fk_positions_grade_id": "gradeId",
+    "fk_positions_location_id": "locationId",
+    "fk_positions_org_unit_id": "orgUnitId",
+    "fk_positions_reports_to_position_id": "reportsToPositionId",
+    "uq_positions_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

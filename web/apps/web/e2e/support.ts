@@ -3,7 +3,7 @@
 // shared clock of server and browsers, accessibility checks (axe: no serious or critical violation), screenshots, and
 // a guard that fails a test on any content-security-policy violation or script error.
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import { expect, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
 
 const control = process.env.E2E_CONTROL_URL ?? 'http://127.0.0.1:0';
 
@@ -38,6 +38,10 @@ export const server = {
   mail: (event: string, username: string) => call<Record<string, string>>('GET', `/mail/${event}?username=${encodeURIComponent(username)}`),
   totp: async (secret: string) => (await call<{ code: string }>('GET', `/totp?secret=${encodeURIComponent(secret)}`)).code,
   setting: (key: string, json: string) => call<undefined>('POST', '/settings', { key, json }),
+  /** S1.12c: `count` branches coded `<prefix>-001`... in a company (default: the customer's first); every 7th inactive. */
+  branches: (prefix: string, count: number, company?: string) => call<undefined>('POST', '/branches', { prefix, count, company: company ?? null }),
+  /** S1.12c: the customer's label override of a key in a language (null removes it). */
+  label: (key: string, language: 'en' | 'ur', text: string | null) => call<undefined>('POST', '/labels', { key, language, text }),
   facts: (username: string) => call<{ liveSessions: number; reusedSessions: number; trustedDevices: number }>('GET', `/facts?username=${encodeURIComponent(username)}`),
 };
 
@@ -116,4 +120,55 @@ export async function display(context: BrowserContext, choice: { language?: 'en'
 /** A form field by its visible label; a required field's label ends with the "*" marker (hidden from screen readers). */
 export function field(page: Page, label: string): Locator {
   return page.getByLabel(new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\*?$`));
+}
+
+// Shared by the shell (S1.12b) and screen (S1.12c) scenarios: a fresh person on the home page, the menu, sign-out.
+export interface Person { username: string; page: Page; context: BrowserContext }
+
+export async function freshContext(browser: Browser, language: 'en' | 'ur' = 'en', theme = 'system', width = 1280): Promise<BrowserContext> {
+  const context = await browser.newContext({ viewport: { width, height: 900 } });
+  await display(context, { language, theme });
+  return context;
+}
+
+/** Passes the "protect your account" reminder when a customer setting asks for a second step later. */
+export async function landHome(page: Page, heading = 'Waiting for you'): Promise<void> {
+  const home = page.getByRole('heading', { name: heading, level: 1 });
+  const reminder = page.getByRole('heading', { name: 'Protect your account' });
+  await expect(home.or(reminder)).toBeVisible();
+  if (await reminder.isVisible()) await page.getByRole('button', { name: 'Remind me later' }).click();
+  await expect(home).toBeVisible();
+}
+
+/** A new person, activated from the e-mailed link (a fresh sign-in), on the home page. */
+export async function person(browser: Browser, options: { permissions?: string[]; companies?: string[]; removeBaseline?: boolean; displayName?: string; language?: 'en' | 'ur'; homeHeading?: string; context?: BrowserContext } = {}): Promise<Person> {
+  const user = await server.newUser({ displayName: options.displayName, language: options.language });
+  if (options.permissions) await server.role(user.username, options.permissions, options.companies, options.removeBaseline);
+  const context = options.context ?? await freshContext(browser);
+  const page = await openPage(context);
+  const { link } = await server.mail('identity.invitation', user.username);
+  await page.goto(link!);
+  await field(page, 'New password').fill(PASSWORD);
+  await field(page, 'Repeat the new password').fill(PASSWORD);
+  await page.getByRole('button', { name: 'Activate account' }).click();
+  await landHome(page, options.homeHeading);
+  return { username: user.username, page, context };
+}
+
+export function menu(page: Page) {
+  return page.getByRole('navigation', { name: 'Main menu' });
+}
+
+export async function menuEntries(page: Page): Promise<string[]> {
+  return (await menu(page).getByRole('link').allInnerTexts()).map((t) => t.trim());
+}
+
+export async function mainText(page: Page): Promise<string> {
+  return (await page.locator('main').innerText()).replace(/\s+/g, ' ').trim();
+}
+
+export async function signOut(page: Page): Promise<void> {
+  await page.getByRole('button', { name: /^Account menu of / }).click();
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page.getByText('You are signed out.')).toBeVisible();
 }

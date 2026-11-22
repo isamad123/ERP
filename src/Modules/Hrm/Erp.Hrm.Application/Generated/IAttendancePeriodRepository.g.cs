@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.attendance_periods (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.attendance_periods (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record AttendancePeriodFilter
 {
     public global::System.Guid? CompanyId { get; init; }

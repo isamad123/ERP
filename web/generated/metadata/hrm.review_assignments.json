@@ -38,6 +38,15 @@
     "dueDate",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_review_assignments_review_type": "reviewType",
+    "ck_review_assignments_status": "status",
+    "fk_review_assignments_company_id": "companyId",
+    "fk_review_assignments_form_response_id": "formResponseId",
+    "fk_review_assignments_participant_id": "participantId",
+    "fk_review_assignments_reviewer_employment_id": "reviewerEmploymentId"
+  },
   "fields": [
     {
       "column": "id",
@@ -112,7 +121,8 @@
           "value": "360",
           "labelKey": "options.hrm.review_assignments.review_type.360"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "is_anonymous",

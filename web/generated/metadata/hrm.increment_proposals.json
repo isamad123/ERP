@@ -40,6 +40,15 @@
     "promotionGradeId",
     "rating"
   ],
+  "search": [],
+  "constraints": {
+    "ck_increment_proposals_status": "status",
+    "fk_increment_proposals_company_id": "companyId",
+    "fk_increment_proposals_cycle_id": "cycleId",
+    "fk_increment_proposals_employment_id": "employmentId",
+    "fk_increment_proposals_promotion_grade_id": "promotionGradeId",
+    "uq_increment_proposals_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

@@ -40,6 +40,9 @@ public sealed class DelegationListQuery
     public global::System.Guid? ToUserId { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Sort key: validFrom; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of iam.delegations: read. Answers pass through field security (S1.06).</summary>
@@ -58,7 +61,7 @@ internal static class DelegationEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "iam.delegations.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.DelegationFilter { FromUserId = query.FromUserId, ToUserId = query.ToUserId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.DelegationFilter { FromUserId = query.FromUserId, ToUserId = query.ToUserId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Iam.DelegationAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

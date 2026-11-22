@@ -39,8 +39,11 @@ internal sealed class LoginAttemptRepository(
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
         var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        return await Sorts.PageAsync(Context.Set<global::Erp.Kernel.Domain.Generated.Iam.LoginAttempt>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Iam.LoginAttempt> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Iam.LoginAttempt>().Key("occurredAt", e => e.OccurredAt).Key("username", e => e.Username);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.LoginAttempt>> FindByUsernameAndOccurredAtAsync(string username, global::System.DateTimeOffset occurredAt, global::System.Threading.CancellationToken cancellationToken)
     {

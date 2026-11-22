@@ -53,6 +53,9 @@ public sealed class SetupTaskListQuery
     public global::System.Guid? CompanyId { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Sort key: moduleId, taskKey; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of cfg.setup_tasks: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -73,7 +76,7 @@ internal static class SetupTaskEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "cfg.setup_tasks.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.SetupTaskFilter { CompanyId = query.CompanyId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Cfg.SetupTaskFilter { CompanyId = query.CompanyId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.SetupTaskAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

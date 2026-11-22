@@ -6,11 +6,13 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.persons (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.persons (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record PersonFilter
 {
     public string? NationalityCode { get; init; }
     public global::System.Guid? PhotoFileId { get; init; }
+    /// <summary>Sort key: personNo; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.persons.</summary>

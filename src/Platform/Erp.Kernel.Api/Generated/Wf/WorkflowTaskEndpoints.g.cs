@@ -52,6 +52,9 @@ public sealed class WorkflowTaskListQuery
     public global::System.Guid? ActedBy { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Sort key: status; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of wf.workflow_tasks: read. Answers pass through field security (S1.06).</summary>
@@ -70,7 +73,7 @@ internal static class WorkflowTaskEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "wf.workflow_tasks.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Wf.WorkflowTaskFilter { InstanceId = query.InstanceId, AssigneeUserId = query.AssigneeUserId, AssigneeRoleId = query.AssigneeRoleId, ActedBy = query.ActedBy, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Wf.WorkflowTaskFilter { InstanceId = query.InstanceId, AssigneeUserId = query.AssigneeUserId, AssigneeRoleId = query.AssigneeRoleId, ActedBy = query.ActedBy, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Wf.WorkflowTaskAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

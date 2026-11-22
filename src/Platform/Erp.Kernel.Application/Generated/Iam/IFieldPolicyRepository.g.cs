@@ -6,10 +6,12 @@
 
 namespace Erp.Kernel.Application.Generated.Iam;
 
-/// <summary>Equality filters for listing iam.field_policies (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing iam.field_policies (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record FieldPolicyFilter
 {
     public global::System.Guid? RoleId { get; init; }
+    /// <summary>Sort key: resourceType, fieldKey; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of iam.field_policies.</summary>

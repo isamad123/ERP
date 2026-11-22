@@ -39,6 +39,14 @@
     "recoveryRule",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_training_bonds_recovery_rule": "recoveryRule",
+    "ck_training_bonds_status": "status",
+    "fk_training_bonds_company_id": "companyId",
+    "fk_training_bonds_employment_id": "employmentId",
+    "fk_training_bonds_enrollment_id": "enrollmentId"
+  },
   "fields": [
     {
       "column": "id",

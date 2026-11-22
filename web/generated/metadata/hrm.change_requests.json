@@ -38,6 +38,13 @@
     "workflowInstanceId",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_change_requests_status": "status",
+    "fk_change_requests_company_id": "companyId",
+    "fk_change_requests_employment_id": "employmentId",
+    "fk_change_requests_workflow_instance_id": "workflowInstanceId"
+  },
   "fields": [
     {
       "column": "id",

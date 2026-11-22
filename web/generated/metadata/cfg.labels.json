@@ -35,6 +35,10 @@
     "scopeId",
     "text"
   ],
+  "search": [],
+  "constraints": {
+    "ck_labels_layer": "layer"
+  },
   "fields": [
     {
       "column": "id",
@@ -54,7 +58,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.cfg.labels.key"
+      "labelKey": "fields.cfg.labels.key",
+      "sortable": true
     },
     {
       "column": "language",
@@ -64,7 +69,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.cfg.labels.language"
+      "labelKey": "fields.cfg.labels.language",
+      "sortable": true
     },
     {
       "column": "layer",
@@ -88,7 +94,8 @@
           "value": "company",
           "labelKey": "options.cfg.labels.layer.company"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "scope_id",

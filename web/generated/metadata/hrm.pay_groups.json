@@ -43,6 +43,20 @@
     "cutOffDay",
     "paymentDay"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_pay_groups_code_code": "code",
+    "ck_pay_groups_frequency": "frequency",
+    "ck_pay_groups_name_i18n_object": "nameI18n",
+    "fk_pay_groups_company_bank_account_id": "companyBankAccountId",
+    "fk_pay_groups_company_id": "companyId",
+    "fk_pay_groups_currency_code": "currencyCode",
+    "uq_pay_groups_company_id_code": "code",
+    "uq_pay_groups_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -74,7 +88,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.pay_groups.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -123,7 +138,8 @@
       "system": false,
       "filter": true,
       "labelKey": "fields.hrm.pay_groups.currency_code",
-      "references": "ref.currencies"
+      "references": "ref.currencies",
+      "sortable": true
     },
     {
       "column": "tax_year_start_month",
@@ -183,7 +199,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.hrm.pay_groups.is_active"
     },
     {

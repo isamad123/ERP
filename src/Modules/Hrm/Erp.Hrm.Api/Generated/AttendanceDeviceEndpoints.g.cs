@@ -68,6 +68,9 @@ public sealed class AttendanceDeviceListQuery
     public global::System.Guid? ConnectorId { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Sort key: serialNo; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.attendance_devices: read, create, update, delete. Answers pass through field security (S1.06).</summary>
@@ -89,7 +92,7 @@ internal static class AttendanceDeviceEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_devices.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.AttendanceDeviceFilter { CompanyId = query.CompanyId, LocationId = query.LocationId, ConnectorId = query.ConnectorId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.AttendanceDeviceFilter { CompanyId = query.CompanyId, LocationId = query.LocationId, ConnectorId = query.ConnectorId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.AttendanceDeviceAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

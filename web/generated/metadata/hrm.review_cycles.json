@@ -38,6 +38,16 @@
     "formId",
     "status"
   ],
+  "search": [
+    "name"
+  ],
+  "constraints": {
+    "ck_review_cycles_cycle_type": "cycleType",
+    "ck_review_cycles_status": "status",
+    "fk_review_cycles_company_id": "companyId",
+    "fk_review_cycles_form_id": "formId",
+    "uq_review_cycles_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

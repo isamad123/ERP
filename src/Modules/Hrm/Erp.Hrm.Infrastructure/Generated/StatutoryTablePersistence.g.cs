@@ -51,6 +51,11 @@ internal sealed class StatutoryTableRepository(
         {
             query = query.Where(e => e.CompanyId == companyIdFilter);
         }
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var pattern = global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Pattern(filter.Search);
+            query = query.Where(e => global::Microsoft.EntityFrameworkCore.EF.Functions.ILike(e.Code, pattern, global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Escape));
+        }
         return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 }

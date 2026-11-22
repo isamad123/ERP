@@ -6,12 +6,14 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.person_qualifications (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.person_qualifications (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record PersonQualificationFilter
 {
     public global::System.Guid? PersonId { get; init; }
     public global::System.Guid? FileId { get; init; }
     public global::System.Guid? LearningRecordId { get; init; }
+    /// <summary>Sort key: kind; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.person_qualifications.</summary>

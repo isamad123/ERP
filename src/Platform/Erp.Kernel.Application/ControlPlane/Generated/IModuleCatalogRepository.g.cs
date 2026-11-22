@@ -6,9 +6,13 @@
 
 namespace Erp.Kernel.Application.ControlPlane.Generated;
 
-/// <summary>Equality filters for listing cp.module_catalog (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing cp.module_catalog (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record ModuleCatalogFilter
 {
+    /// <summary>Sort key: moduleId; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+    /// <summary>Case-insensitive text found in name.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated repository of cp.module_catalog.</summary>

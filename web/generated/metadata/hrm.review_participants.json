@@ -40,6 +40,15 @@
     "signedOffAt",
     "acknowledgedAt"
   ],
+  "search": [],
+  "constraints": {
+    "ck_review_participants_status": "status",
+    "fk_review_participants_company_id": "companyId",
+    "fk_review_participants_cycle_id": "cycleId",
+    "fk_review_participants_employment_id": "employmentId",
+    "fk_review_participants_manager_employment_id": "managerEmploymentId",
+    "uq_review_participants_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

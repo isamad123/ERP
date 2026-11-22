@@ -36,6 +36,7 @@ public sealed partial class KernelDbContext(DbContextOptions<KernelDbContext> op
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.OptionListConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.OutboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.PackItemConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.SavedViewConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.SettingValueHistoryConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.SettingValueConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.SettingConfiguration());
@@ -143,6 +144,7 @@ public static class KernelGeneratedServices
         services.AddScoped<global::Erp.Kernel.Application.Generated.Cfg.IOptionListItemRepository, global::Erp.Kernel.Infrastructure.Generated.Cfg.OptionListItemRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Cfg.IOptionListRepository, global::Erp.Kernel.Infrastructure.Generated.Cfg.OptionListRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Cfg.IPackItemRepository, global::Erp.Kernel.Infrastructure.Generated.Cfg.PackItemRepository>();
+        services.AddScoped<global::Erp.Kernel.Application.Generated.Cfg.ISavedViewRepository, global::Erp.Kernel.Infrastructure.Generated.Cfg.SavedViewRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Cfg.ISettingValueHistoryRepository, global::Erp.Kernel.Infrastructure.Generated.Cfg.SettingValueHistoryRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Cfg.ISettingValueRepository, global::Erp.Kernel.Infrastructure.Generated.Cfg.SettingValueRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository, global::Erp.Kernel.Infrastructure.Generated.Cfg.SetupTaskRepository>();

@@ -44,8 +44,11 @@ internal sealed class SigningKeyRepository(
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
         var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        return await Sorts.PageAsync(Context.Set<global::Erp.Kernel.Domain.ControlPlane.Generated.SigningKey>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.ControlPlane.Generated.SigningKey> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.ControlPlane.Generated.SigningKey>().Key("keyId", e => e.KeyId);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.SigningKey>> FindByKeyIdAsync(string keyId, global::System.Threading.CancellationToken cancellationToken)
     {

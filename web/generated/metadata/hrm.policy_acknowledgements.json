@@ -31,6 +31,12 @@
     "employmentId",
     "acknowledgedAt"
   ],
+  "search": [],
+  "constraints": {
+    "fk_policy_acknowledgements_company_id": "companyId",
+    "fk_policy_acknowledgements_employment_id": "employmentId",
+    "fk_policy_acknowledgements_publication_id": "publicationId"
+  },
   "fields": [
     {
       "column": "id",

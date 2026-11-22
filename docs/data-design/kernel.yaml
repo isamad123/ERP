@@ -654,6 +654,22 @@
   unique: [[key, language, layer, scope_id]]
   reqs: [KRN-ORG-08, KRN-MET-22, ADM-STU-25]
 
+# Slice S1.12c (ruling Q12, CR-063; data design approved by the product owner 2026-11-22): saved list views.
+- table: cfg.saved_views
+  purpose: "Saved views of a list (search, filters, sort, columns), kept per person or shared with the holders of a role (FR-ADM-NAV-02)"
+  traits: [std]
+  added_in: S1.12c
+  columns:
+    - [user_id, uuid, req, fk iam.users; the person who saved it and the only one who may change it]
+    - [list_key, text, req, "the list, e.g. org.branches; at most 100 characters"]
+    - [name, text, req, 1 to 80 characters]
+    - [definition, json, req, "{search, filters, sort, columns [{field, width}]}; at most 8 KB"]
+    - [role_id, uuid, opt, fk iam.roles; shared with the holders of this role (permission cfg.saved_views.share)]
+  unique: [[user_id, list_key, lower(name)]]
+  indexes: [[list_key, role_id]]
+  scope: {user: user_id}
+  reqs: [ADM-NAV-02]
+
 - table: cfg.numbering_schemes
   traits: [std, co]
   status: [active, retired]

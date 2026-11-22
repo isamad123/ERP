@@ -6,7 +6,7 @@
 
 namespace Erp.Kernel.Application.Generated.Iam;
 
-/// <summary>Equality filters for listing iam.mfa_recovery_codes (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing iam.mfa_recovery_codes (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record MfaRecoveryCodeFilter
 {
     public global::System.Guid? UserId { get; init; }

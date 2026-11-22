@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.overtime_entries (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.overtime_entries (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record OvertimeEntryFilter
 {
     public global::System.Guid? CompanyId { get; init; }
@@ -17,6 +17,8 @@ public sealed record OvertimeEntryFilter
     public global::System.Guid? CompOffEntryId { get; init; }
     public global::System.Guid? WorkflowInstanceId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: workDate; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.overtime_entries.</summary>

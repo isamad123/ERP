@@ -35,6 +35,10 @@ export interface BankListQuery
     after?: string;
     limit?: number;
     countryCode?: string;
+    isActive?: boolean;
+    /** code, countryCode; a leading minus sorts descending. */
+    sort?: 'code' | '-code' | 'countryCode' | '-countryCode';
+    search?: string;
 }
 
 export const banks =
@@ -74,6 +78,10 @@ export interface CalendarListQuery
 {
     after?: string;
     limit?: number;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const calendars =
@@ -114,6 +122,9 @@ export interface HolidayListQuery
     after?: string;
     limit?: number;
     calendarId?: string;
+    /** holidayDate; a leading minus sorts descending. */
+    sort?: 'holidayDate' | '-holidayDate';
+    search?: string;
 }
 
 export const holidays =

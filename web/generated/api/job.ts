@@ -30,6 +30,9 @@ export interface DefinitionListQuery
     after?: string;
     limit?: number;
     ownerUserId?: string;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const definitions =
@@ -53,6 +56,8 @@ export interface RunLogListQuery
 {
     after?: string;
     limit?: number;
+    /** createdAt; a leading minus sorts descending. */
+    sort?: 'createdAt' | '-createdAt';
 }
 
 export const runLogs =
@@ -99,6 +104,8 @@ export interface RunListQuery
     resultFileId?: string;
     actorUserId?: string;
     status?: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+    /** priority, status, createdAt; a leading minus sorts descending. */
+    sort?: 'priority' | '-priority' | 'status' | '-status' | 'createdAt' | '-createdAt';
 }
 
 export const runs =

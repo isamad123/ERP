@@ -6,10 +6,12 @@
 
 namespace Erp.Kernel.Application.ControlPlane.Generated;
 
-/// <summary>Equality filters for listing cp.platform_users (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing cp.platform_users (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record PlatformUserFilter
 {
     public string? Status { get; init; }
+    /// <summary>Sort key: email; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of cp.platform_users.</summary>

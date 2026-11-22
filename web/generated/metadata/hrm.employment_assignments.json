@@ -43,6 +43,20 @@
     "gradeId",
     "branchId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_employment_assignments_work_schedule_code": "workSchedule",
+    "fk_employment_assignments_branch_id": "branchId",
+    "fk_employment_assignments_company_id": "companyId",
+    "fk_employment_assignments_employment_id": "employmentId",
+    "fk_employment_assignments_event_id": "eventId",
+    "fk_employment_assignments_grade_id": "gradeId",
+    "fk_employment_assignments_location_id": "locationId",
+    "fk_employment_assignments_manager_employment_id": "managerEmploymentId",
+    "fk_employment_assignments_org_unit_id": "orgUnitId",
+    "fk_employment_assignments_pay_group_id": "payGroupId",
+    "fk_employment_assignments_position_id": "positionId"
+  },
   "fields": [
     {
       "column": "id",
@@ -223,7 +237,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.employment_assignments.valid_from"
+      "labelKey": "fields.hrm.employment_assignments.valid_from",
+      "sortable": true
     },
     {
       "column": "valid_to",

@@ -6,12 +6,14 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.previous_employer_income (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.previous_employer_income (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record PreviousEmployerIncomeFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? EmploymentId { get; init; }
     public global::System.Guid? FileId { get; init; }
+    /// <summary>Sort key: taxYear, employerName; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.previous_employer_income.</summary>

@@ -3,14 +3,14 @@
 // code. Each has a visible label, help text, required marker and an error message tied to the control for screen readers.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  Button as AriaButton, Checkbox as AriaCheckbox, Radio, RadioGroup, ComboBox as AriaComboBox, DateField as AriaDateField, DateInput, DateSegment, FieldError,
-  Input, Label, ListBox, ListBoxItem, NumberField as AriaNumberField, Popover, Select as AriaSelect, SelectValue, Switch as AriaSwitch, Text,
-  TextArea, TextField as AriaTextField, type DateValue, type Key,
+  Button as AriaButton, Checkbox as AriaCheckbox, Radio, RadioGroup, ComboBox as AriaComboBox, FieldError,
+  Input, Label, ListBox, ListBoxItem, Popover, Select as AriaSelect, SelectValue, Switch as AriaSwitch, Text,
+  TextArea, TextField as AriaTextField, type Key,
 } from 'react-aria-components';
 import { AlertCircle, Check, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import { useText } from '@erp/i18n';
 
-interface FieldBase {
+export interface FieldBase {
   label: string;
   help?: ReactNode;
   /** A server or validation message shown under the field and announced with it. */
@@ -21,7 +21,7 @@ interface FieldBase {
   name?: string;
 }
 
-function FieldLabel({ label, isRequired }: { label: string; isRequired?: boolean | undefined }) {
+export function FieldLabel({ label, isRequired }: { label: string; isRequired?: boolean | undefined }) {
   const { t } = useText();
   return (
     <Label className="erp-label">
@@ -31,7 +31,7 @@ function FieldLabel({ label, isRequired }: { label: string; isRequired?: boolean
   );
 }
 
-function Messages({ help, error }: { help?: ReactNode; error?: string | null | undefined }) {
+export function Messages({ help, error }: { help?: ReactNode; error?: string | null | undefined }) {
   return (
     <>
       {help && <Text slot="description" className="erp-help">{help}</Text>}
@@ -57,6 +57,8 @@ export interface TextFieldProps extends FieldBase {
   maxLength?: number;
   /** Codes and identifiers read left to right inside Urdu text too. */
   isCode?: boolean;
+  /** Called when focus leaves the field (forms check a value when it is left, S1.12c). */
+  onBlur?: () => void;
 }
 
 export function TextField({ label, help, error, isCode, autoComplete, inputMode, maxLength, type = 'text', ...props }: TextFieldProps) {
@@ -102,28 +104,6 @@ export function TextAreaField({ label, help, error, ...props }: FieldBase & { va
       <TextArea className="erp-input" />
       <Messages help={help} error={error} />
     </AriaTextField>
-  );
-}
-
-/** Whole numbers and counts. Money is never entered here: the money input keeps exact decimals (S1.12c, FR-UX-CMP-04). */
-export function NumberField({ label, help, error, ...props }: FieldBase & { value?: number; onChange?: (value: number) => void; minValue?: number; maxValue?: number }) {
-  return (
-    <AriaNumberField {...props} className="erp-field" isInvalid={!!error} validationBehavior="aria" formatOptions={{ maximumFractionDigits: 0 }}>
-      <FieldLabel label={label} isRequired={props.isRequired} />
-      <Input className="erp-input" />
-      <Messages help={help} error={error} />
-    </AriaNumberField>
-  );
-}
-
-/** A date typed by segments (day, month, year) in the person's language; Gregorian only in 1.0 (D-42). */
-export function DateField({ label, help, error, ...props }: FieldBase & { value?: DateValue | null; onChange?: (value: DateValue | null) => void }) {
-  return (
-    <AriaDateField {...props} className="erp-field" isInvalid={!!error} validationBehavior="aria">
-      <FieldLabel label={label} isRequired={props.isRequired} />
-      <DateInput className="erp-date-input">{(segment) => <DateSegment segment={segment} className="erp-date-segment" />}</DateInput>
-      <Messages help={help} error={error} />
-    </AriaDateField>
   );
 }
 

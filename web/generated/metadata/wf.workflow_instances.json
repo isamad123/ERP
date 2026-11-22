@@ -32,6 +32,14 @@
     "completedAt",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_workflow_instances_status": "status",
+    "fk_workflow_instances_company_id": "companyId",
+    "fk_workflow_instances_requester_user_id": "requesterUserId",
+    "fk_workflow_instances_version_id": "versionId",
+    "uq_workflow_instances_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -73,7 +81,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.wf.workflow_instances.document_type"
+      "labelKey": "fields.wf.workflow_instances.document_type",
+      "sortable": true
     },
     {
       "column": "document_id",
@@ -170,7 +179,8 @@
           "value": "returned",
           "labelKey": "options.wf.workflow_instances.status.returned"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "created_at",

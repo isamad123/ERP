@@ -38,6 +38,15 @@
     "isUnique",
     "optionListId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_custom_field_defs_data_type": "dataType",
+    "ck_custom_field_defs_field_key_code": "fieldKey",
+    "ck_custom_field_defs_help_i18n_object": "helpI18n",
+    "ck_custom_field_defs_label_i18n_object": "labelI18n",
+    "ck_custom_field_defs_status": "status",
+    "fk_custom_field_defs_option_list_id": "optionListId"
+  },
   "fields": [
     {
       "column": "id",
@@ -57,7 +66,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.cfg.custom_field_defs.entity_type"
+      "labelKey": "fields.cfg.custom_field_defs.entity_type",
+      "sortable": true
     },
     {
       "column": "field_key",
@@ -68,7 +78,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.cfg.custom_field_defs.field_key",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "data_type",

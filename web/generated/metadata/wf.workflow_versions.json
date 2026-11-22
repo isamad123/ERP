@@ -28,6 +28,11 @@
     "activatedBy",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_workflow_versions_status": "status",
+    "fk_workflow_versions_definition_id": "definitionId"
+  },
   "fields": [
     {
       "column": "id",
@@ -58,7 +63,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.wf.workflow_versions.version"
+      "labelKey": "fields.wf.workflow_versions.version",
+      "sortable": true
     },
     {
       "column": "definition",

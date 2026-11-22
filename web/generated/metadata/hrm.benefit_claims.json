@@ -37,6 +37,13 @@
     "amountApproved",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_benefit_claims_status": "status",
+    "fk_benefit_claims_company_id": "companyId",
+    "fk_benefit_claims_enrollment_id": "enrollmentId",
+    "fk_benefit_claims_patient_relation_id": "patientRelationId"
+  },
   "fields": [
     {
       "column": "id",

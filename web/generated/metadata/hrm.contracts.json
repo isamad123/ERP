@@ -39,6 +39,16 @@
     "fileId",
     "renewsContractId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_contracts_status": "status",
+    "fk_contracts_company_id": "companyId",
+    "fk_contracts_employment_id": "employmentId",
+    "fk_contracts_file_id": "fileId",
+    "fk_contracts_renews_contract_id": "renewsContractId",
+    "uq_contracts_company_id_contract_no": "contractNo",
+    "uq_contracts_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -80,7 +90,8 @@
       "readOnly": true,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.contracts.contract_no"
+      "labelKey": "fields.hrm.contracts.contract_no",
+      "sortable": true
     },
     {
       "column": "start_date",

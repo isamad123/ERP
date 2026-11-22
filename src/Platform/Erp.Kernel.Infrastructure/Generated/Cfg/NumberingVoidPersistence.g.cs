@@ -43,8 +43,11 @@ internal sealed class NumberingVoidRepository(
         {
             query = query.Where(e => e.SchemeId == schemeIdFilter);
         }
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        return await Sorts.PageAsync(Context.Set<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid>().Key("number", e => e.Number);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Cfg.NumberingVoid>> FindBySchemeIdAndNumberAsync(global::System.Guid schemeId, string number, global::System.Threading.CancellationToken cancellationToken)
     {

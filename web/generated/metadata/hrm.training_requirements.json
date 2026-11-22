@@ -37,6 +37,14 @@
     "learningRecordId",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_training_requirements_status": "status",
+    "fk_training_requirements_company_id": "companyId",
+    "fk_training_requirements_employment_id": "employmentId",
+    "fk_training_requirements_learning_record_id": "learningRecordId",
+    "fk_training_requirements_rule_id": "ruleId"
+  },
   "fields": [
     {
       "column": "id",
@@ -89,7 +97,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.training_requirements.due_date"
+      "labelKey": "fields.hrm.training_requirements.due_date",
+      "sortable": true
     },
     {
       "column": "learning_record_id",

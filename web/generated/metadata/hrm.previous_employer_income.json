@@ -38,6 +38,12 @@
     "taxDeducted",
     "fileId"
   ],
+  "search": [],
+  "constraints": {
+    "fk_previous_employer_income_company_id": "companyId",
+    "fk_previous_employer_income_employment_id": "employmentId",
+    "fk_previous_employer_income_file_id": "fileId"
+  },
   "fields": [
     {
       "column": "id",
@@ -79,7 +85,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.previous_employer_income.tax_year"
+      "labelKey": "fields.hrm.previous_employer_income.tax_year",
+      "sortable": true
     },
     {
       "column": "employer_name",
@@ -89,7 +96,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.previous_employer_income.employer_name"
+      "labelKey": "fields.hrm.previous_employer_income.employer_name",
+      "sortable": true
     },
     {
       "column": "taxable_income",

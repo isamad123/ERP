@@ -65,6 +65,8 @@ export interface AttendanceDayListQuery
     dutyRequestId?: string;
     policyVersionId?: string;
     periodId?: string;
+    /** workDate, result; a leading minus sorts descending. */
+    sort?: 'workDate' | '-workDate' | 'result' | '-result';
 }
 
 export const attendanceDays =
@@ -123,6 +125,8 @@ export interface AttendanceDeviceListQuery
     locationId?: string;
     connectorId?: string;
     status?: 'active' | 'offline' | 'retired';
+    /** serialNo; a leading minus sorts descending. */
+    sort?: 'serialNo' | '-serialNo';
 }
 
 export const attendanceDevices =
@@ -177,6 +181,8 @@ export interface AttendanceEventListQuery
     companyId?: string;
     employmentId?: string;
     deviceId?: string;
+    /** eventDate, idempotencyKey; a leading minus sorts descending. */
+    sort?: 'eventDate' | '-eventDate' | 'idempotencyKey' | '-idempotencyKey';
 }
 
 export const attendanceEvents =
@@ -222,6 +228,8 @@ export interface AttendanceExceptionListQuery
     workDate?: string;
     attendanceDayId?: string;
     status?: 'open' | 'regularized' | 'accepted' | 'rejected' | 'closed';
+    /** workDate, status; a leading minus sorts descending. */
+    sort?: 'workDate' | '-workDate' | 'status' | '-status';
 }
 
 export const attendanceExceptions =
@@ -430,6 +438,10 @@ export interface BenefitPlanListQuery
     companyId?: string;
     employeePremiumComponentId?: string;
     employerPremiumComponentId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const benefitPlans =
@@ -533,6 +545,8 @@ export interface ChecklistItemListQuery
     templateItemId?: string;
     ownerUserId?: string;
     status?: 'pending' | 'done' | 'not_applicable' | 'waived';
+    /** status; a leading minus sorts descending. */
+    sort?: 'status' | '-status';
 }
 
 export const checklistItems =
@@ -623,6 +637,10 @@ export interface ChecklistTemplateListQuery
     after?: string;
     limit?: number;
     companyId?: string;
+    isActive?: boolean;
+    /** code, kind; a leading minus sorts descending. */
+    sort?: 'code' | '-code' | 'kind' | '-kind';
+    search?: string;
 }
 
 export const checklistTemplates =
@@ -722,6 +740,8 @@ export interface CompensationAssignmentListQuery
     structureId?: string;
     eventId?: string;
     incrementProposalId?: string;
+    /** validFrom; a leading minus sorts descending. */
+    sort?: 'validFrom' | '-validFrom';
 }
 
 export const compensationAssignments =
@@ -814,6 +834,10 @@ export interface ComplianceObligationListQuery
     companyId?: string;
     ownerRoleId?: string;
     returnTemplateId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const complianceObligations =
@@ -864,6 +888,8 @@ export interface ComplianceTaskListQuery
     ownerUserId?: string;
     evidenceFileId?: string;
     status?: 'upcoming' | 'due' | 'filed' | 'overdue' | 'not_applicable';
+    /** periodLabel; a leading minus sorts descending. */
+    sort?: 'periodLabel' | '-periodLabel';
 }
 
 export const complianceTasks =
@@ -917,6 +943,8 @@ export interface ContractListQuery
     fileId?: string;
     renewsContractId?: string;
     status?: 'draft' | 'active' | 'expired' | 'renewed' | 'terminated';
+    /** contractNo; a leading minus sorts descending. */
+    sort?: 'contractNo' | '-contractNo';
 }
 
 export const contracts =
@@ -968,6 +996,8 @@ export interface CourseSessionListQuery
     courseId?: string;
     locationId?: string;
     status?: 'planned' | 'open' | 'full' | 'in_progress' | 'completed' | 'cancelled';
+    /** startAt; a leading minus sorts descending. */
+    sort?: 'startAt' | '-startAt';
 }
 
 export const courseSessions =
@@ -1025,6 +1055,10 @@ export interface CourseListQuery
     after?: string;
     limit?: number;
     companyId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const courses =
@@ -1174,6 +1208,8 @@ export interface EmployeeBankAccountListQuery
     companyId?: string;
     employmentId?: string;
     bankId?: string;
+    /** validFrom; a leading minus sorts descending. */
+    sort?: 'validFrom' | '-validFrom';
 }
 
 export const employeeBankAccounts =
@@ -1225,6 +1261,8 @@ export interface EmployeeDocumentListQuery
     employmentId?: string;
     fileId?: string;
     status?: 'requested' | 'submitted' | 'verified' | 'rejected' | 'expired';
+    /** documentType; a leading minus sorts descending. */
+    sort?: 'documentType' | '-documentType';
 }
 
 export const employeeDocuments =
@@ -1289,6 +1327,8 @@ export interface EmployeeLetterListQuery
     generatedDocumentId?: string;
     workflowInstanceId?: string;
     status?: 'draft' | 'pending_approval' | 'approved' | 'issued' | 'acknowledged' | 'cancelled';
+    /** letterNo; a leading minus sorts descending. */
+    sort?: 'letterNo' | '-letterNo';
 }
 
 export const employeeLetters =
@@ -1362,6 +1402,8 @@ export interface EmploymentAssignmentListQuery
     locationId?: string;
     managerEmploymentId?: string;
     payGroupId?: string;
+    /** validFrom; a leading minus sorts descending. */
+    sort?: 'validFrom' | '-validFrom';
 }
 
 export const employmentAssignments =
@@ -1416,6 +1458,8 @@ export interface EmploymentEventListQuery
     workflowInstanceId?: string;
     letterDocumentId?: string;
     status?: 'draft' | 'pending_approval' | 'approved' | 'effective' | 'cancelled';
+    /** effectiveDate; a leading minus sorts descending. */
+    sort?: 'effectiveDate' | '-effectiveDate';
 }
 
 export const employmentEvents =
@@ -1521,6 +1565,8 @@ export interface EmploymentListQuery
     personId?: string;
     previousEmploymentId?: string;
     status?: 'pre_joining' | 'active' | 'on_notice' | 'separated' | 'cancelled';
+    /** employeeNo, status; a leading minus sorts descending. */
+    sort?: 'employeeNo' | '-employeeNo' | 'status' | '-status';
 }
 
 export const employments =
@@ -1570,6 +1616,10 @@ export interface ExpenseCategoryListQuery
     companyId?: string;
     policyId?: string;
     reimbursementComponentId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const expenseCategories =
@@ -1678,6 +1728,8 @@ export interface ExpenseClaimListQuery
     payInputId?: string;
     workflowInstanceId?: string;
     status?: 'draft' | 'submitted' | 'approved' | 'rejected' | 'reimbursed' | 'cancelled';
+    /** claimNo; a leading minus sorts descending. */
+    sort?: 'claimNo' | '-claimNo';
 }
 
 export const expenseClaims =
@@ -1829,6 +1881,10 @@ export interface FormDefinitionListQuery
     id?: string;
     companyId?: string;
     activeVersionId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const formDefinitions =
@@ -1884,6 +1940,8 @@ export interface FormResponseListQuery
     subjectEmploymentId?: string;
     respondentEmploymentId?: string;
     status?: 'draft' | 'submitted' | 'locked';
+    /** contextType; a leading minus sorts descending. */
+    sort?: 'contextType' | '-contextType';
 }
 
 export const formResponses =
@@ -1923,6 +1981,8 @@ export interface FormVersionListQuery
     limit?: number;
     formId?: string;
     status?: 'draft' | 'active' | 'retired';
+    /** version; a leading minus sorts descending. */
+    sort?: 'version' | '-version';
 }
 
 export const formVersions =
@@ -1961,6 +2021,8 @@ export interface GoalUpdateListQuery
     limit?: number;
     companyId?: string;
     goalId?: string;
+    /** createdAt; a leading minus sorts descending. */
+    sort?: 'createdAt' | '-createdAt';
 }
 
 export const goalUpdates =
@@ -2066,6 +2128,10 @@ export interface GradeListQuery
     after?: string;
     limit?: number;
     companyId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const grades =
@@ -2161,6 +2227,7 @@ export interface IncrementCycleListQuery
     companyId?: string;
     reviewCycleId?: string;
     status?: 'draft' | 'open' | 'in_review' | 'approved' | 'applied' | 'closed';
+    search?: string;
 }
 
 export const incrementCycles =
@@ -2273,6 +2340,8 @@ export interface LearningRecordListQuery
     courseId?: string;
     enrollmentId?: string;
     certificateFileId?: string;
+    /** completedOn; a leading minus sorts descending. */
+    sort?: 'completedOn' | '-completedOn';
 }
 
 export const learningRecords =
@@ -2330,6 +2399,8 @@ export interface LeaveLedgerListQuery
     leaveTypeId?: string;
     policyVersionId?: string;
     reversesEntryId?: string;
+    /** leaveYear, kind; a leading minus sorts descending. */
+    sort?: 'leaveYear' | '-leaveYear' | 'kind' | '-kind';
 }
 
 export const leaveLedger =
@@ -2375,6 +2446,8 @@ export interface LeaveRequestDayListQuery
     companyId?: string;
     leaveRequestId?: string;
     employmentId?: string;
+    /** leaveDate; a leading minus sorts descending. */
+    sort?: 'leaveDate' | '-leaveDate';
 }
 
 export const leaveRequestDays =
@@ -2444,6 +2517,8 @@ export interface LeaveRequestListQuery
     modifiesRequestId?: string;
     workflowInstanceId?: string;
     status?: 'draft' | 'submitted' | 'approved' | 'rejected' | 'cancel_requested' | 'cancelled';
+    /** requestNo, startDate, status; a leading minus sorts descending. */
+    sort?: 'requestNo' | '-requestNo' | 'startDate' | '-startDate' | 'status' | '-status';
 }
 
 export const leaveRequests =
@@ -2499,6 +2574,10 @@ export interface LeaveTypeListQuery
     after?: string;
     limit?: number;
     companyId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const leaveTypes =
@@ -2542,6 +2621,8 @@ export interface LeaveYearEndRunListQuery
     companyId?: string;
     jobRunId?: string;
     status?: 'preview' | 'applied' | 'rolled_back';
+    /** leaveYear; a leading minus sorts descending. */
+    sort?: 'leaveYear' | '-leaveYear';
 }
 
 export const leaveYearEndRuns =
@@ -2595,6 +2676,8 @@ export interface LiabilityAccrualListQuery
     payPeriodId?: string;
     accountingEventId?: string;
     reversesAccrualId?: string;
+    /** kind, seq; a leading minus sorts descending. */
+    sort?: 'kind' | '-kind' | 'seq' | '-seq';
 }
 
 export const liabilityAccruals =
@@ -2644,6 +2727,8 @@ export interface LoanInstallmentListQuery
     payPeriodId?: string;
     payResultLineId?: string;
     status?: 'scheduled' | 'deducted' | 'skipped' | 'settled_early';
+    /** seq; a leading minus sorts descending. */
+    sort?: 'seq' | '-seq';
 }
 
 export const loanInstallments =
@@ -2686,6 +2771,8 @@ export interface LoanTransactionListQuery
     limit?: number;
     companyId?: string;
     loanId?: string;
+    /** kind, txnDate; a leading minus sorts descending. */
+    sort?: 'kind' | '-kind' | 'txnDate' | '-txnDate';
 }
 
 export const loanTransactions =
@@ -2734,6 +2821,10 @@ export interface LoanTypeListQuery
     companyId?: string;
     policyId?: string;
     deductionComponentId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const loanTypes =
@@ -2796,6 +2887,8 @@ export interface LoanListQuery
     guarantorEmploymentId?: string;
     workflowInstanceId?: string;
     status?: 'applied' | 'approved' | 'rejected' | 'disbursed' | 'active' | 'settled' | 'written_off' | 'cancelled';
+    /** loanNo; a leading minus sorts descending. */
+    sort?: 'loanNo' | '-loanNo';
 }
 
 export const loans =
@@ -2944,6 +3037,8 @@ export interface OvertimeEntryListQuery
     compOffEntryId?: string;
     workflowInstanceId?: string;
     status?: 'calculated' | 'submitted' | 'approved' | 'rejected' | 'paid' | 'converted_to_comp_off';
+    /** workDate; a leading minus sorts descending. */
+    sort?: 'workDate' | '-workDate';
 }
 
 export const overtimeEntries =
@@ -3144,6 +3239,10 @@ export interface PayComponentListQuery
     after?: string;
     limit?: number;
     companyId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const payComponents =
@@ -3202,6 +3301,10 @@ export interface PayGroupListQuery
     companyId?: string;
     currencyCode?: string;
     companyBankAccountId?: string;
+    isActive?: boolean;
+    /** code, currencyCode; a leading minus sorts descending. */
+    sort?: 'code' | '-code' | 'currencyCode' | '-currencyCode';
+    search?: string;
 }
 
 export const payGroups =
@@ -3263,6 +3366,8 @@ export interface PayInputListQuery
     consumedByRunId?: string;
     importBatchId?: string;
     status?: 'pending' | 'consumed' | 'cancelled';
+    /** sourceType; a leading minus sorts descending. */
+    sort?: 'sourceType' | '-sourceType';
 }
 
 export const payInputs =
@@ -3313,6 +3418,8 @@ export interface PayPeriodListQuery
     companyId?: string;
     payGroupId?: string;
     status?: 'future' | 'open' | 'processing' | 'closed';
+    /** periodNo, taxYear, startDate; a leading minus sorts descending. */
+    sort?: 'periodNo' | '-periodNo' | 'taxYear' | '-taxYear' | 'startDate' | '-startDate';
 }
 
 export const payPeriods =
@@ -3465,6 +3572,8 @@ export interface PayResultListQuery
     employmentId?: string;
     payPeriodId?: string;
     correctsResultId?: string;
+    /** taxYear; a leading minus sorts descending. */
+    sort?: 'taxYear' | '-taxYear';
 }
 
 export const payResults =
@@ -3589,6 +3698,8 @@ export interface PayRunListQuery
     calcJobRunId?: string;
     workflowInstanceId?: string;
     status?: 'created' | 'inputs_imported' | 'calculated' | 'validated' | 'in_review' | 'approved' | 'locked' | 'paid' | 'posted' | 'closed' | 'cancelled';
+    /** runNo; a leading minus sorts descending. */
+    sort?: 'runNo' | '-runNo';
 }
 
 export const payRuns =
@@ -3648,6 +3759,8 @@ export interface PaymentBatchListQuery
     templateId?: string;
     fileId?: string;
     status?: 'generated' | 'validated' | 'downloaded' | 'partially_paid' | 'paid' | 'cancelled';
+    /** paymentMode; a leading minus sorts descending. */
+    sort?: 'paymentMode' | '-paymentMode';
 }
 
 export const paymentBatches =
@@ -3825,6 +3938,8 @@ export interface PersonIdentifierListQuery
     limit?: number;
     personId?: string;
     fileId?: string;
+    /** kind, countryCode; a leading minus sorts descending. */
+    sort?: 'kind' | '-kind' | 'countryCode' | '-countryCode';
 }
 
 export const personIdentifiers =
@@ -3880,6 +3995,8 @@ export interface PersonQualificationListQuery
     personId?: string;
     fileId?: string;
     learningRecordId?: string;
+    /** kind; a leading minus sorts descending. */
+    sort?: 'kind' | '-kind';
 }
 
 export const personQualifications =
@@ -3992,6 +4109,8 @@ export interface PersonListQuery
     limit?: number;
     nationalityCode?: string;
     photoFileId?: string;
+    /** personNo; a leading minus sorts descending. */
+    sort?: 'personNo' | '-personNo';
 }
 
 export const persons =
@@ -4038,6 +4157,10 @@ export interface PolicyListQuery
     after?: string;
     limit?: number;
     companyId?: string;
+    isActive?: boolean;
+    /** code, policyType; a leading minus sorts descending. */
+    sort?: 'code' | '-code' | 'policyType' | '-policyType';
+    search?: string;
 }
 
 export const policies =
@@ -4118,6 +4241,8 @@ export interface PolicyAssignmentListQuery
     limit?: number;
     companyId?: string;
     policyId?: string;
+    /** precedence; a leading minus sorts descending. */
+    sort?: 'precedence' | '-precedence';
 }
 
 export const policyAssignments =
@@ -4211,6 +4336,8 @@ export interface PolicyVersionListQuery
     limit?: number;
     policyId?: string;
     status?: 'draft' | 'active' | 'retired';
+    /** version; a leading minus sorts descending. */
+    sort?: 'version' | '-version';
 }
 
 export const policyVersions =
@@ -4319,6 +4446,8 @@ export interface PreviousEmployerIncomeListQuery
     companyId?: string;
     employmentId?: string;
     fileId?: string;
+    /** taxYear, employerName; a leading minus sorts descending. */
+    sort?: 'taxYear' | '-taxYear' | 'employerName' | '-employerName';
 }
 
 export const previousEmployerIncome =
@@ -4414,6 +4543,8 @@ export interface ProvidentFundAccountListQuery
     companyId?: string;
     employmentId?: string;
     status?: 'active' | 'closed';
+    /** schemeCode; a leading minus sorts descending. */
+    sort?: 'schemeCode' | '-schemeCode';
 }
 
 export const providentFundAccounts =
@@ -4456,6 +4587,8 @@ export interface ProvidentFundLedgerListQuery
     limit?: number;
     companyId?: string;
     accountId?: string;
+    /** entryDate; a leading minus sorts descending. */
+    sort?: 'entryDate' | '-entryDate';
 }
 
 export const providentFundLedger =
@@ -4567,6 +4700,8 @@ export interface RetroAdjustmentListQuery
     componentId?: string;
     appliedInRunId?: string;
     status?: 'pending' | 'applied' | 'cancelled';
+    /** status; a leading minus sorts descending. */
+    sort?: 'status' | '-status';
 }
 
 export const retroAdjustments =
@@ -4617,6 +4752,8 @@ export interface ReviewAssignmentListQuery
     reviewerEmploymentId?: string;
     formResponseId?: string;
     status?: 'pending' | 'submitted' | 'declined';
+    /** reviewType; a leading minus sorts descending. */
+    sort?: 'reviewType' | '-reviewType';
 }
 
 export const reviewAssignments =
@@ -4669,6 +4806,7 @@ export interface ReviewCycleListQuery
     companyId?: string;
     formId?: string;
     status?: 'draft' | 'goal_setting' | 'in_progress' | 'reviewing' | 'closed';
+    search?: string;
 }
 
 export const reviewCycles =
@@ -4768,6 +4906,8 @@ export interface RosterLineListQuery
     rosterId?: string;
     employmentId?: string;
     shiftId?: string;
+    /** workDate; a leading minus sorts descending. */
+    sort?: 'workDate' | '-workDate';
 }
 
 export const rosterLines =
@@ -4812,6 +4952,7 @@ export interface RosterListQuery
     companyId?: string;
     orgUnitId?: string;
     status?: 'draft' | 'published' | 'archived';
+    search?: string;
 }
 
 export const rosters =
@@ -4906,6 +5047,8 @@ export interface SalaryHoldListQuery
     employmentId?: string;
     heldFromRunId?: string;
     status?: 'active' | 'released';
+    /** status; a leading minus sorts descending. */
+    sort?: 'status' | '-status';
 }
 
 export const salaryHolds =
@@ -4998,6 +5141,10 @@ export interface SalaryStructureListQuery
     after?: string;
     limit?: number;
     companyId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const salaryStructures =
@@ -5111,6 +5258,8 @@ export interface ServiceRequestListQuery
     generatedDocumentId?: string;
     workflowInstanceId?: string;
     status?: 'submitted' | 'in_progress' | 'fulfilled' | 'rejected' | 'cancelled';
+    /** requestNo; a leading minus sorts descending. */
+    sort?: 'requestNo' | '-requestNo';
 }
 
 export const serviceRequests =
@@ -5223,6 +5372,10 @@ export interface ShiftListQuery
     limit?: number;
     companyId?: string;
     policyId?: string;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const shifts =
@@ -5268,6 +5421,8 @@ export interface StatutoryReturnListQuery
     complianceTaskId?: string;
     employmentId?: string;
     generatedDocumentId?: string;
+    /** returnCode, periodLabel; a leading minus sorts descending. */
+    sort?: 'returnCode' | '-returnCode' | 'periodLabel' | '-periodLabel';
 }
 
 export const statutoryReturns =
@@ -5315,6 +5470,8 @@ export interface StatutoryTableRowListQuery
     after?: string;
     limit?: number;
     tableId?: string;
+    /** seq; a leading minus sorts descending. */
+    sort?: 'seq' | '-seq';
 }
 
 export const statutoryTableRows =
@@ -5362,6 +5519,7 @@ export interface StatutoryTableListQuery
     after?: string;
     limit?: number;
     companyId?: string;
+    search?: string;
 }
 
 export const statutoryTables =
@@ -5442,6 +5600,8 @@ export interface TaxDeclarationListQuery
     companyId?: string;
     employmentId?: string;
     status?: 'draft' | 'submitted' | 'verified' | 'rejected';
+    /** taxYear; a leading minus sorts descending. */
+    sort?: 'taxYear' | '-taxYear';
 }
 
 export const taxDeclarations =
@@ -5537,6 +5697,8 @@ export interface TrainingRequirementListQuery
     employmentId?: string;
     learningRecordId?: string;
     status?: 'due' | 'overdue' | 'completed' | 'waived';
+    /** dueDate; a leading minus sorts descending. */
+    sort?: 'dueDate' | '-dueDate';
 }
 
 export const trainingRequirements =

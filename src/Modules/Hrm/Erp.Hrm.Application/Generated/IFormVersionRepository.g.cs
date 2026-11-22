@@ -6,11 +6,13 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.form_versions (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.form_versions (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record FormVersionFilter
 {
     public global::System.Guid? FormId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: version; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.form_versions.</summary>

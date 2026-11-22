@@ -89,6 +89,9 @@ public sealed class EmploymentAssignmentListQuery
     public global::System.Guid? ManagerEmploymentId { get; init; }
 
     public global::System.Guid? PayGroupId { get; init; }
+
+    /// <summary>Sort key: validFrom; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.employment_assignments: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -109,7 +112,7 @@ internal static class EmploymentAssignmentEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.employment_assignments.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.EmploymentAssignmentFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, EventId = query.EventId, OrgUnitId = query.OrgUnitId, PositionId = query.PositionId, GradeId = query.GradeId, BranchId = query.BranchId, LocationId = query.LocationId, ManagerEmploymentId = query.ManagerEmploymentId, PayGroupId = query.PayGroupId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.EmploymentAssignmentFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, EventId = query.EventId, OrgUnitId = query.OrgUnitId, PositionId = query.PositionId, GradeId = query.GradeId, BranchId = query.BranchId, LocationId = query.LocationId, ManagerEmploymentId = query.ManagerEmploymentId, PayGroupId = query.PayGroupId, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmploymentAssignmentAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

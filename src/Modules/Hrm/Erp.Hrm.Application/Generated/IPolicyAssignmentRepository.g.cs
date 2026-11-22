@@ -6,11 +6,13 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.policy_assignments (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.policy_assignments (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record PolicyAssignmentFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? PolicyId { get; init; }
+    /// <summary>Sort key: precedence; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.policy_assignments.</summary>

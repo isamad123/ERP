@@ -43,8 +43,20 @@ internal sealed class CalendarRepository(
     {
         global::System.ArgumentNullException.ThrowIfNull(filter);
         var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        if (filter.IsActive is { } isActiveFilter)
+        {
+            query = query.Where(e => e.IsActive == isActiveFilter);
+        }
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var pattern = global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Pattern(filter.Search);
+            query = query.Where(e => global::Microsoft.EntityFrameworkCore.EF.Functions.ILike(e.Code, pattern, global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Escape) || global::Microsoft.EntityFrameworkCore.EF.Functions.ILike(e.NameI18n.RootElement.GetProperty("en").GetString()!, pattern, global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Escape) || global::Microsoft.EntityFrameworkCore.EF.Functions.ILike(e.NameI18n.RootElement.GetProperty("ur").GetString()!, pattern, global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Escape));
+        }
+        return await Sorts.PageAsync(Context.Set<global::Erp.Kernel.Domain.Generated.Ref.Calendar>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Ref.Calendar> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Ref.Calendar>().Text("code", e => e.Code);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ref.Calendar>> FindByCodeAsync(string code, global::System.Threading.CancellationToken cancellationToken)
     {

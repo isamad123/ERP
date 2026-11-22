@@ -39,6 +39,17 @@
     "quantity",
     "expiresOn"
   ],
+  "search": [],
+  "constraints": {
+    "ck_leave_ledger_kind": "kind",
+    "fk_leave_ledger_company_id": "companyId",
+    "fk_leave_ledger_employment_id": "employmentId",
+    "fk_leave_ledger_leave_type_id": "leaveTypeId",
+    "fk_leave_ledger_policy_version_id": "policyVersionId",
+    "fk_leave_ledger_reverses_entry_id": "reversesEntryId",
+    "uq_leave_ledger_company_id_id": "id",
+    "uq_leave_ledger_reverses_entry_id": "reversesEntryId"
+  },
   "fields": [
     {
       "column": "id",
@@ -91,7 +102,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.leave_ledger.leave_year"
+      "labelKey": "fields.hrm.leave_ledger.leave_year",
+      "sortable": true
     },
     {
       "column": "entry_date",
@@ -165,7 +177,8 @@
           "value": "transfer_out",
           "labelKey": "options.hrm.leave_ledger.kind.transfer_out"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "quantity",

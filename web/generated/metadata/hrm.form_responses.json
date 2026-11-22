@@ -41,6 +41,15 @@
     "score",
     "submittedAt"
   ],
+  "search": [],
+  "constraints": {
+    "ck_form_responses_status": "status",
+    "fk_form_responses_company_id": "companyId",
+    "fk_form_responses_form_version_id": "formVersionId",
+    "fk_form_responses_respondent_employment_id": "respondentEmploymentId",
+    "fk_form_responses_subject_employment_id": "subjectEmploymentId",
+    "uq_form_responses_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -104,7 +113,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.form_responses.context_type"
+      "labelKey": "fields.hrm.form_responses.context_type",
+      "sortable": true
     },
     {
       "column": "context_id",

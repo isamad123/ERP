@@ -41,6 +41,18 @@
     "generatedDocumentId",
     "workflowInstanceId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_service_requests_kind_code": "kind",
+    "ck_service_requests_status": "status",
+    "fk_service_requests_branch_id": "branchId",
+    "fk_service_requests_company_id": "companyId",
+    "fk_service_requests_employment_id": "employmentId",
+    "fk_service_requests_generated_document_id": "generatedDocumentId",
+    "fk_service_requests_template_id": "templateId",
+    "fk_service_requests_workflow_instance_id": "workflowInstanceId",
+    "uq_service_requests_company_id_request_no": "requestNo"
+  },
   "fields": [
     {
       "column": "id",
@@ -82,7 +94,8 @@
       "readOnly": true,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.service_requests.request_no"
+      "labelKey": "fields.hrm.service_requests.request_no",
+      "sortable": true
     },
     {
       "column": "employment_id",

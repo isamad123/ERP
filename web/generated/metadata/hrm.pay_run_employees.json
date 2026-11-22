@@ -41,6 +41,14 @@
     "runStatus",
     "holdId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_pay_run_employees_status": "status",
+    "fk_pay_run_employees_company_id": "companyId",
+    "fk_pay_run_employees_employment_id": "employmentId",
+    "fk_pay_run_employees_hold_id": "holdId",
+    "fk_pay_run_employees_pay_run_id": "payRunId"
+  },
   "fields": [
     {
       "column": "id",

@@ -41,6 +41,13 @@
     "units",
     "rate"
   ],
+  "search": [],
+  "constraints": {
+    "fk_pay_result_lines_company_id": "companyId",
+    "fk_pay_result_lines_component_id": "componentId",
+    "fk_pay_result_lines_result_id": "resultId",
+    "uq_pay_result_lines_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

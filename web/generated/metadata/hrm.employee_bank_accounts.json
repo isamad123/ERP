@@ -40,6 +40,15 @@
     "splitValue",
     "priority"
   ],
+  "search": [],
+  "constraints": {
+    "ck_employee_bank_accounts_payment_mode": "paymentMode",
+    "ck_employee_bank_accounts_split_kind": "splitKind",
+    "fk_employee_bank_accounts_bank_id": "bankId",
+    "fk_employee_bank_accounts_company_id": "companyId",
+    "fk_employee_bank_accounts_employment_id": "employmentId",
+    "uq_employee_bank_accounts_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -175,7 +184,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.employee_bank_accounts.valid_from"
+      "labelKey": "fields.hrm.employee_bank_accounts.valid_from",
+      "sortable": true
     },
     {
       "column": "valid_to",

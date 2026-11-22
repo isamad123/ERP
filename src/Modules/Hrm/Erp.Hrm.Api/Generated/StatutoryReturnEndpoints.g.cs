@@ -51,6 +51,9 @@ public sealed class StatutoryReturnListQuery
     public global::System.Guid? EmploymentId { get; init; }
 
     public global::System.Guid? GeneratedDocumentId { get; init; }
+
+    /// <summary>Sort key: returnCode, periodLabel; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.statutory_returns: read, create. Answers pass through field security (S1.06).</summary>
@@ -70,7 +73,7 @@ internal static class StatutoryReturnEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.statutory_returns.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.StatutoryReturnFilter { CompanyId = query.CompanyId, ComplianceTaskId = query.ComplianceTaskId, EmploymentId = query.EmploymentId, GeneratedDocumentId = query.GeneratedDocumentId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.StatutoryReturnFilter { CompanyId = query.CompanyId, ComplianceTaskId = query.ComplianceTaskId, EmploymentId = query.EmploymentId, GeneratedDocumentId = query.GeneratedDocumentId, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.StatutoryReturnAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

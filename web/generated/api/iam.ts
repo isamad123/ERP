@@ -23,6 +23,10 @@ export interface DataScopeListQuery
 {
     after?: string;
     limit?: number;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const dataScopes =
@@ -56,6 +60,8 @@ export interface DelegationListQuery
     fromUserId?: string;
     toUserId?: string;
     status?: 'active' | 'revoked';
+    /** validFrom; a leading minus sorts descending. */
+    sort?: 'validFrom' | '-validFrom';
 }
 
 export const delegations =
@@ -84,6 +90,8 @@ export interface FieldPolicyListQuery
     after?: string;
     limit?: number;
     roleId?: string;
+    /** resourceType, fieldKey; a leading minus sorts descending. */
+    sort?: 'resourceType' | '-resourceType' | 'fieldKey' | '-fieldKey';
 }
 
 export const fieldPolicies =
@@ -119,6 +127,8 @@ export interface MakerCheckerRequestListQuery
     requestedBy?: string;
     decidedBy?: string;
     status?: 'pending' | 'approved' | 'rejected' | 'expired';
+    /** status, createdAt; a leading minus sorts descending. */
+    sort?: 'status' | '-status' | 'createdAt' | '-createdAt';
 }
 
 export const makerCheckerRequests =
@@ -147,6 +157,9 @@ export interface PermissionListQuery
 {
     after?: string;
     limit?: number;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const permissions =
@@ -179,6 +192,10 @@ export interface RoleListQuery
 {
     after?: string;
     limit?: number;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const roles =
@@ -240,6 +257,10 @@ export interface UserGroupListQuery
 {
     after?: string;
     limit?: number;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const userGroups =
@@ -323,6 +344,8 @@ export interface UserListQuery
     limit?: number;
     defaultCompanyId?: string;
     status?: 'invited' | 'active' | 'locked' | 'disabled' | 'archived';
+    /** username, email; a leading minus sorts descending. */
+    sort?: 'username' | '-username' | 'email' | '-email';
 }
 
 export const users =

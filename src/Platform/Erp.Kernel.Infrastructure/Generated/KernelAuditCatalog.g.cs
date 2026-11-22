@@ -32,6 +32,7 @@ public static class KernelAuditCatalog
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.OptionList), "cfg.option_lists", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.OutboxMessage), "cfg.outbox_messages", false, "machinery: transactional outbox and inbox (S1.07 Q4)", "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.PackItem), "cfg.pack_items", true, null, "id", null, null, null, null),
+        new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.SavedView), "cfg.saved_views", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.SettingValueHistory), "cfg.setting_value_history", false, "append-only: the row itself is the record and is never changed (S1.07 Q4)", "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.SettingValue), "cfg.setting_values", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.Setting), "cfg.settings", false, "setting definitions keyed by code, registered from manifests by migrations (no uuid key, no API); values are audited in cfg.setting_values (S1.07 Q4)", null, null, null, null, null),

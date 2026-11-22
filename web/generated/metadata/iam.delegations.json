@@ -31,6 +31,12 @@
     "reason",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_delegations_status": "status",
+    "fk_delegations_from_user_id": "fromUserId",
+    "fk_delegations_to_user_id": "toUserId"
+  },
   "fields": [
     {
       "column": "id",
@@ -82,7 +88,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.iam.delegations.valid_from"
+      "labelKey": "fields.iam.delegations.valid_from",
+      "sortable": true
     },
     {
       "column": "valid_to",

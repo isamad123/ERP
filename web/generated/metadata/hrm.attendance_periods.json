@@ -40,6 +40,16 @@
     "lockedByRunId",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_attendance_periods_status": "status",
+    "fk_attendance_periods_company_id": "companyId",
+    "fk_attendance_periods_locked_by_run_id": "lockedByRunId",
+    "fk_attendance_periods_pay_group_id": "payGroupId",
+    "fk_attendance_periods_pay_period_id": "payPeriodId",
+    "uq_attendance_periods_company_id_id": "id",
+    "uq_attendance_periods_pay_period_id": "payPeriodId"
+  },
   "fields": [
     {
       "column": "id",

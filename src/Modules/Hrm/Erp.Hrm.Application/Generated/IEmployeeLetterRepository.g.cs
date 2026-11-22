@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.employee_letters (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.employee_letters (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record EmployeeLetterFilter
 {
     public global::System.Guid? CompanyId { get; init; }
@@ -15,6 +15,8 @@ public sealed record EmployeeLetterFilter
     public global::System.Guid? GeneratedDocumentId { get; init; }
     public global::System.Guid? WorkflowInstanceId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: letterNo; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.employee_letters.</summary>

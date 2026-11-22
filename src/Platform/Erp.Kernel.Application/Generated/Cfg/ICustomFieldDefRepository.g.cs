@@ -6,11 +6,13 @@
 
 namespace Erp.Kernel.Application.Generated.Cfg;
 
-/// <summary>Equality filters for listing cfg.custom_field_defs (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing cfg.custom_field_defs (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record CustomFieldDefFilter
 {
     public global::System.Guid? OptionListId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: entityType, fieldKey; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of cfg.custom_field_defs.</summary>

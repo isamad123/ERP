@@ -26,6 +26,12 @@
     "actorId",
     "actingForUserId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_workflow_history_event_code": "event",
+    "fk_workflow_history_instance_id": "instanceId",
+    "fk_workflow_history_task_id": "taskId"
+  },
   "fields": [
     {
       "column": "id",
@@ -108,7 +114,8 @@
       "readOnly": true,
       "system": true,
       "filter": false,
-      "labelKey": "fields.wf.workflow_history.created_at"
+      "labelKey": "fields.wf.workflow_history.created_at",
+      "sortable": true
     },
     {
       "column": "created_by",

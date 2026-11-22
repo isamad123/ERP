@@ -24,6 +24,8 @@ export interface GeneratedDocumentListQuery
     companyId?: string;
     templateVersionId?: string;
     fileId?: string;
+    /** ownerType; a leading minus sorts descending. */
+    sort?: 'ownerType' | '-ownerType';
 }
 
 export const generatedDocuments =
@@ -59,6 +61,8 @@ export interface RetentionRuleListQuery
 {
     after?: string;
     limit?: number;
+    /** documentType; a leading minus sorts descending. */
+    sort?: 'documentType' | '-documentType';
 }
 
 export const retentionRules =
@@ -91,6 +95,8 @@ export interface TemplateVersionListQuery
     limit?: number;
     templateId?: string;
     status?: 'draft' | 'active' | 'retired';
+    /** version; a leading minus sorts descending. */
+    sort?: 'version' | '-version';
 }
 
 export const templateVersions =
@@ -126,6 +132,10 @@ export interface TemplateListQuery
     id?: string;
     companyId?: string;
     activeVersionId?: string;
+    isActive?: boolean;
+    /** code, language; a leading minus sorts descending. */
+    sort?: 'code' | '-code' | 'language' | '-language';
+    search?: string;
 }
 
 export const templates =

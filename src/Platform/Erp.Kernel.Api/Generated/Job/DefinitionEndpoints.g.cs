@@ -40,6 +40,12 @@ public sealed class DefinitionListQuery
     public int? Limit { get; init; }
 
     public global::System.Guid? OwnerUserId { get; init; }
+
+    /// <summary>Sort key: code; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+
+    /// <summary>Case-insensitive text found in code.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated endpoints of job.definitions: read. Answers pass through field security (S1.06).</summary>
@@ -58,7 +64,7 @@ internal static class DefinitionEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "job.definitions.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Job.DefinitionFilter { OwnerUserId = query.OwnerUserId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Job.DefinitionFilter { OwnerUserId = query.OwnerUserId, Sort = query.Sort, Search = query.Search }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Job.DefinitionAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

@@ -53,6 +53,9 @@ public sealed class RosterListQuery
     public global::System.Guid? OrgUnitId { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Case-insensitive text found in name.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.rosters: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -73,7 +76,7 @@ internal static class RosterEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.rosters.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.RosterFilter { CompanyId = query.CompanyId, OrgUnitId = query.OrgUnitId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.RosterFilter { CompanyId = query.CompanyId, OrgUnitId = query.OrgUnitId, Status = query.Status, Search = query.Search }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.RosterAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

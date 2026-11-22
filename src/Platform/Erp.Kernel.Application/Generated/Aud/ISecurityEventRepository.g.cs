@@ -6,9 +6,11 @@
 
 namespace Erp.Kernel.Application.Generated.Aud;
 
-/// <summary>Equality filters for listing aud.security_events (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing aud.security_events (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record SecurityEventFilter
 {
+    /// <summary>Sort key: occurredAt; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of aud.security_events.</summary>

@@ -34,6 +34,9 @@ public sealed class WorkflowHistoryListQuery
     public global::System.Guid? InstanceId { get; init; }
 
     public global::System.Guid? TaskId { get; init; }
+
+    /// <summary>Sort key: createdAt; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of wf.workflow_history: read. Answers pass through field security (S1.06).</summary>
@@ -52,7 +55,7 @@ internal static class WorkflowHistoryEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "wf.workflow_history.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Wf.WorkflowHistoryFilter { InstanceId = query.InstanceId, TaskId = query.TaskId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Wf.WorkflowHistoryFilter { InstanceId = query.InstanceId, TaskId = query.TaskId, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Wf.WorkflowHistoryAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

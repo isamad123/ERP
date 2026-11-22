@@ -38,6 +38,11 @@
     "rate",
     "key"
   ],
+  "search": [],
+  "constraints": {
+    "ck_statutory_table_rows_key_code": "key",
+    "fk_statutory_table_rows_table_id": "tableId"
+  },
   "fields": [
     {
       "column": "id",
@@ -68,7 +73,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.statutory_table_rows.seq"
+      "labelKey": "fields.hrm.statutory_table_rows.seq",
+      "sortable": true
     },
     {
       "column": "lower_bound",

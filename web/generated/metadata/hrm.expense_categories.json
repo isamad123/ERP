@@ -41,6 +41,19 @@
     "reimbursementComponentId",
     "isActive"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_expense_categories_code_code": "code",
+    "ck_expense_categories_name_i18n_object": "nameI18n",
+    "fk_expense_categories_company_id": "companyId",
+    "fk_expense_categories_policy_id": "policyId",
+    "fk_expense_categories_reimbursement_component_id": "reimbursementComponentId",
+    "uq_expense_categories_company_id_code": "code",
+    "uq_expense_categories_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -72,7 +85,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.expense_categories.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -123,7 +137,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.hrm.expense_categories.is_active"
     },
     {

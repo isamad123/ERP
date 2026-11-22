@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.person_addresses (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.person_addresses (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record PersonAddressFilter
 {
     public global::System.Guid? PersonId { get; init; }

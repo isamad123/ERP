@@ -33,6 +33,14 @@
     "seq",
     "isActive"
   ],
+  "search": [
+    "code"
+  ],
+  "constraints": {
+    "ck_option_list_items_code_code": "code",
+    "ck_option_list_items_label_i18n_object": "labelI18n",
+    "fk_option_list_items_list_id": "listId"
+  },
   "fields": [
     {
       "column": "id",
@@ -64,7 +72,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.cfg.option_list_items.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "label_i18n",
@@ -93,7 +102,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.cfg.option_list_items.is_active"
     },
     {

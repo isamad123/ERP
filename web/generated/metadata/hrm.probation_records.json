@@ -40,6 +40,13 @@
     "decisionDate",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_probation_records_status": "status",
+    "fk_probation_records_company_id": "companyId",
+    "fk_probation_records_employment_id": "employmentId",
+    "fk_probation_records_review_form_response_id": "reviewFormResponseId"
+  },
   "fields": [
     {
       "column": "id",

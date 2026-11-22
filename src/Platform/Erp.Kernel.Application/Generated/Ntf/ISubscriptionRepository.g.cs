@@ -6,9 +6,11 @@
 
 namespace Erp.Kernel.Application.Generated.Ntf;
 
-/// <summary>Equality filters for listing ntf.subscriptions (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing ntf.subscriptions (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record SubscriptionFilter
 {
+    /// <summary>Case-insensitive text found in name.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated repository of ntf.subscriptions.</summary>

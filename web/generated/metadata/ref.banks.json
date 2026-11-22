@@ -35,6 +35,15 @@
     "ibanPrefix",
     "isActive"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_banks_code_code": "code",
+    "ck_banks_name_i18n_object": "nameI18n",
+    "fk_banks_country_code": "countryCode"
+  },
   "fields": [
     {
       "column": "id",
@@ -55,7 +64,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.ref.banks.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -76,7 +86,8 @@
       "system": false,
       "filter": true,
       "labelKey": "fields.ref.banks.country_code",
-      "references": "ref.countries"
+      "references": "ref.countries",
+      "sortable": true
     },
     {
       "column": "swift_code",
@@ -105,7 +116,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.ref.banks.is_active"
     },
     {

@@ -12,8 +12,13 @@ licences only. The web application is the first client of the sign-in API, whose
   client; Vite builds, strict TypeScript, ESLint and Stylelint enforce spec 13 section 24 (no literal text, logical
   properties, token values only, accessibility rules).
 - **Accessible primitives:** React Aria Components (Apache-2.0), chosen over Radix UI for its built-in right-to-left,
-  date and internationalisation support. Grid (S1.12c): TanStack Table behind the product's grid API, chosen over AG Grid
-  Community because the features needed are not in a paid edition and the look stays the product's own.
+  date and internationalisation support. Grid (S1.12c): the product's own grid (`web/packages/engine`, `DataGrid`) over
+  TanStack Virtual for long lists, chosen over AG Grid Community because the features needed are not in a paid edition
+  and the look stays the product's own. As built (S1.12c, deviation r of CR-063) the grid keeps its own column state
+  instead of TanStack Table (the server sorts and filters; Table's newest release is a new major), and forms check values
+  from the generated validation schema instead of react-hook-form and zod.
+- **Routing (S1.12c):** React Router's data router (`createBrowserRouter`), so a form can warn before every way of leaving
+  it, the browser's Back button included (`useBlocker`; about 17 KB more in the shell).
 - **Messages:** react-intl (ICU), English and Urdu; server texts are collected at build time and looked up as plain text.
 - **Fonts:** Noto Sans and Noto Naskh Arabic from the Fontsource packages (OFL-1.1, WOFF2 split by script).
 - **Hosting:** the API host serves the build at the customer's own address (`Web:Root`), so the customer is resolved

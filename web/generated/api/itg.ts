@@ -35,6 +35,8 @@ export interface AccountMappingListQuery
     after?: string;
     limit?: number;
     companyId?: string;
+    /** sourceKind, sourceKey; a leading minus sorts descending. */
+    sort?: 'sourceKind' | '-sourceKind' | 'sourceKey' | '-sourceKey';
 }
 
 export const accountMappings =
@@ -85,6 +87,8 @@ export interface AccountingEventListQuery
     limit?: number;
     companyId?: string;
     supersedesEventId?: string;
+    /** sourceModule, postingVersion; a leading minus sorts descending. */
+    sort?: 'sourceModule' | '-sourceModule' | 'postingVersion' | '-postingVersion';
 }
 
 export const accountingEvents =
@@ -131,6 +135,10 @@ export interface ConnectorListQuery
     after?: string;
     limit?: number;
     status?: 'active' | 'disabled' | 'error';
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const connectors =
@@ -212,6 +220,8 @@ export interface ImportBatchErrorListQuery
     after?: string;
     limit?: number;
     batchId?: string;
+    /** rowNo; a leading minus sorts descending. */
+    sort?: 'rowNo' | '-rowNo';
 }
 
 export const importBatchErrors =
@@ -304,6 +314,10 @@ export interface ImportTemplateListQuery
 {
     after?: string;
     limit?: number;
+    isActive?: boolean;
+    /** code; a leading minus sorts descending. */
+    sort?: 'code' | '-code';
+    search?: string;
 }
 
 export const importTemplates =

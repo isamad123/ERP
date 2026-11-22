@@ -51,8 +51,20 @@ internal sealed class GradeRepository(
         {
             query = query.Where(e => e.CompanyId == companyIdFilter);
         }
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        if (filter.IsActive is { } isActiveFilter)
+        {
+            query = query.Where(e => e.IsActive == isActiveFilter);
+        }
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var pattern = global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Pattern(filter.Search);
+            query = query.Where(e => global::Microsoft.EntityFrameworkCore.EF.Functions.ILike(e.Code, pattern, global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Escape) || global::Microsoft.EntityFrameworkCore.EF.Functions.ILike(e.NameI18n.RootElement.GetProperty("en").GetString()!, pattern, global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Escape) || global::Microsoft.EntityFrameworkCore.EF.Functions.ILike(e.NameI18n.RootElement.GetProperty("ur").GetString()!, pattern, global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Escape));
+        }
+        return await Sorts.PageAsync(Context.Set<global::Erp.Hrm.Domain.Generated.Grade>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.Grade> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.Grade>().Text("code", e => e.Code);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Grade>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
         await PageAsync((await QueryAsync(cancellationToken).ConfigureAwait(false)).Where(e => e.CompanyId == companyId), page, cancellationToken).ConfigureAwait(false);

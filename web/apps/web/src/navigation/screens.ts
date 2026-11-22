@@ -31,6 +31,8 @@ export interface ScreenDeclaration {
   component?: ComponentType;
   /** The slice that builds a screen that is not available yet (shown to nobody; for the build plan). */
   comesWith?: string;
+  /** Tables whose labels the screen shows (S1.12c): every one needs Urdu labels while the screen is in a menu. */
+  tables?: string[];
 }
 
 /** What the shell knows about the person and the licence (from /api/kernel/me and /api/kernel/capabilities). */

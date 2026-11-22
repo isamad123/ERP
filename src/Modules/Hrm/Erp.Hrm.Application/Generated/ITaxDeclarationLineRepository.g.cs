@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.tax_declaration_lines (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.tax_declaration_lines (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record TaxDeclarationLineFilter
 {
     public global::System.Guid? DeclarationId { get; init; }

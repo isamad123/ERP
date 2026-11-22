@@ -33,6 +33,12 @@
     "sourceType",
     "sourceId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_provident_fund_ledger_kind": "kind",
+    "fk_provident_fund_ledger_account_id": "accountId",
+    "fk_provident_fund_ledger_company_id": "companyId"
+  },
   "fields": [
     {
       "column": "id",
@@ -74,7 +80,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.provident_fund_ledger.entry_date"
+      "labelKey": "fields.hrm.provident_fund_ledger.entry_date",
+      "sortable": true
     },
     {
       "column": "kind",

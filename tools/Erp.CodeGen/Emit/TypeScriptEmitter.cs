@@ -32,7 +32,222 @@ public static class TypeScriptEmitter
         foreach (var table in apiTables)
         {
             output.Add($"{Root}/metadata/{table.FullName}.json", Metadata(table));
+            output.Add($"{Root}/validation/{table.FullName}.json", ValidationSchema(table));
         }
+
+        // English labels of every table and column (S1.12c Build item 15, ruling Q11); Urdu labels are kept by hand per
+        // module (web/packages/i18n/labels), tenant overrides come from cfg.labels at run time.
+        foreach (var module in model.Tables.Where(t => t.Database == DatabaseKind.Tenant).GroupBy(t => t.Module).OrderBy(g => g.Key, StringComparer.Ordinal))
+        {
+            output.Add($"{Root}/labels/{module.Key}.en.json", Labels(module.Where(t => CSharpEmitter.HasApi(model, t)).ToList()));
+        }
+    }
+
+    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
+    /// <summary>"company_id" → "Company", "name_i18n" → "Name", "is_active" → "Active", "valid_from" → "Valid from".</summary>
+    public static string EnglishLabel(string name)
+    {
+        var words = name.Split('_', StringSplitOptions.RemoveEmptyEntries).ToList();
+        if (words.Count > 1 && words[^1] is "id" or "i18n" or "hmac")
+        {
+            words.RemoveAt(words.Count - 1);
+        }
+
+        if (words.Count > 1 && words[0] is "is" or "has")
+        {
+            words.RemoveAt(0);
+        }
+
+        var text = string.Join(' ', words.Select(w => w switch
+        {
+            "id" => "ID",
+            "url" => "URL",
+            "iban" => "IBAN",
+            "ntn" => "NTN",
+            "cnic" => "CNIC",
+            "ip" => "IP",
+            "mfa" => "MFA",
+            _ => w,
+        }));
+        return text.Length == 0 ? name : char.ToUpperInvariant(text[0]) + text[1..];
+    }
+
+    /// <summary>"org.branches" → ("Branches", "Branch"), from the table name and the entity name.</summary>
+    private static (string Many, string One) EntityLabels(Table t)
+    {
+        var many = EnglishLabel(t.Name);
+        var one = EnglishLabel(string.Concat(N.Entity(t).Select((ch, i) => i > 0 && char.IsUpper(ch) ? "_" + char.ToLowerInvariant(ch) : char.ToLowerInvariant(ch).ToString())));
+        return (many, one);
+    }
+
+    private static string Labels(IReadOnlyList<Table> tables)
+    {
+        var labels = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (var t in tables)
+        {
+            var (many, one) = EntityLabels(t);
+            labels[$"entities.{t.FullName}"] = many;
+            labels[$"entities.{t.FullName}.one"] = one;
+            foreach (var c in CSharpEmitter.ResponseColumns(t))
+            {
+                labels[$"fields.{t.FullName}.{c.Name}"] = EnglishLabel(c.Name);
+                foreach (var v in c.EnumValues)
+                {
+                    labels[$"options.{t.FullName}.{c.Name}.{v}"] = EnglishLabel(v);
+                }
+            }
+        }
+
+        var root = new JsonObject { ["_generated"] = $"{OutputSet.Marker} by tools/Erp.CodeGen from docs/data-design/*.yaml; do not edit" };
+        foreach (var (key, text) in labels)
+        {
+            root[key] = text;
+        }
+
+        return root.ToJsonString(Indented) + "\n";
+    }
+
+    /// <summary>
+    /// The constraint names the database may report for a table (unique keys, checks, foreign keys) and the API field each
+    /// one is about, so the form shows a refused save next to the field (S1.12c Build item 18). Constraints that span several
+    /// fields (other than the company) are left out: the form shows those in its summary.
+    /// </summary>
+    private static JsonObject ConstraintFields(Table t)
+    {
+        var map = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        var columns = CSharpEmitter.ResponseColumns(t).Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
+        void Add(string name, IEnumerable<string> mentioned)
+        {
+            var fields = mentioned.Select(m => m.StartsWith("lower(", StringComparison.Ordinal) ? m[6..^1] : m)
+                .Where(columns.Contains).Distinct(StringComparer.Ordinal).ToList();
+            if (fields.Count > 1)
+            {
+                fields.Remove("company_id");
+            }
+
+            if (fields.Count == 1)
+            {
+                map[name] = Naming.Camel(fields[0]);
+            }
+        }
+
+        foreach (var u in t.Uniques)
+        {
+            Add(u.Name, u.Items);
+        }
+
+        foreach (var f in t.ForeignKeys)
+        {
+            Add(f.Name, f.Columns);
+        }
+
+        foreach (var c in t.Checks)
+        {
+            Add(c.Name, columns.Where(col => System.Text.RegularExpressions.Regex.IsMatch(c.Sql, $@"\b{col}\b")));
+        }
+
+        return new JsonObject(map.Select(kv => KeyValuePair.Create(kv.Key, (JsonNode?)kv.Value)));
+    }
+
+    /// <summary>
+    /// The validation schema of a table's create and update body (S1.12c Build item 14, ruling Q11): a JSON Schema
+    /// (2020-12 subset) with the rules the server and the database check (required, code length and spacing, enum values,
+    /// decimal digits), so the web form and the server cannot drift. A required two-language name needs at least one
+    /// language filled (minProperties).
+    /// </summary>
+    private static string ValidationSchema(Table t)
+    {
+        var properties = new JsonObject();
+        var required = new JsonArray();
+        foreach (var c in CSharpEmitter.WritableColumns(t, update: false))
+        {
+            var p = SchemaOf(c);
+            if (c.Required && c.Default is null && c.Kind is not (ColumnKind.TextArray or ColumnKind.UuidArray))
+            {
+                required.Add(Naming.Camel(c.Name));
+            }
+            else if (!c.Required)
+            {
+                p["nullable"] = true;
+            }
+
+            properties[Naming.Camel(c.Name)] = p;
+        }
+
+        var root = new JsonObject
+        {
+            ["_generated"] = $"{OutputSet.Marker} by tools/Erp.CodeGen from docs/data-design/*.yaml; do not edit",
+            ["$schema"] = "https://json-schema.org/draft/2020-12/schema",
+            ["title"] = t.FullName,
+            ["type"] = "object",
+            ["required"] = required,
+            ["properties"] = properties,
+        };
+        return root.ToJsonString(Indented) + "\n";
+    }
+
+    private static JsonObject SchemaOf(Column c)
+    {
+        static JsonObject Str(string? format = null) => format is null ? new JsonObject { ["type"] = "string" } : new JsonObject { ["type"] = "string", ["format"] = format };
+        switch (c.Kind)
+        {
+            case ColumnKind.Code:
+                // The database check: length 1 to 40 and no leading or trailing spaces (ck_<table>_<column>_code).
+                return new JsonObject { ["type"] = "string", ["minLength"] = 1, ["maxLength"] = 40, ["pattern"] = "^[^ ](.*[^ ])?$" };
+            case ColumnKind.Enum:
+                return new JsonObject { ["type"] = "string", ["enum"] = new JsonArray(c.EnumValues.Select(v => (JsonNode)v).ToArray()) };
+            case ColumnKind.FixedText when System.Text.RegularExpressions.Regex.Match(c.SqlType, @"\((\d+)\)") is { Success: true } m:
+                return new JsonObject { ["type"] = "string", ["minLength"] = 1, ["maxLength"] = int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) };
+            case ColumnKind.I18n:
+                var i18n = new JsonObject
+                {
+                    ["type"] = "object",
+                    ["propertyNames"] = new JsonObject { ["enum"] = new JsonArray(CSharpEmitter.SearchLanguages.Select(l => (JsonNode)l).ToArray()) },
+                    ["additionalProperties"] = new JsonObject { ["type"] = "string", ["minLength"] = 1 },
+                };
+                if (c.Required)
+                {
+                    i18n["minProperties"] = 1;
+                }
+
+                return i18n;
+            case ColumnKind.Uuid:
+                return Str("uuid");
+            case ColumnKind.Date:
+                return Str("date");
+            case ColumnKind.Timestamp:
+                return Str("date-time");
+            case ColumnKind.Time:
+                return Str("time");
+            case ColumnKind.Int4:
+                return new JsonObject { ["type"] = "integer", ["minimum"] = int.MinValue, ["maximum"] = int.MaxValue };
+            case ColumnKind.BigInteger:
+                return new JsonObject { ["type"] = "integer" };
+            case ColumnKind.Money or ColumnKind.Qty or ColumnKind.Rate or ColumnKind.Pct or ColumnKind.Numeric:
+                // Exact decimals: the form keeps the digits as text (never a floating-point number), checked against the
+                // column's precision and scale.
+                var (precision, scale) = Precision(c.SqlType);
+                return new JsonObject { ["type"] = "string", ["format"] = "decimal", ["pattern"] = $"^-?\\d{{1,{precision - scale}}}{(scale > 0 ? $"(\\.\\d{{1,{scale}}})?" : string.Empty)}$" };
+            case ColumnKind.Bool:
+                return new JsonObject { ["type"] = "boolean" };
+            case ColumnKind.TextArray:
+                return new JsonObject { ["type"] = "array", ["items"] = Str() };
+            case ColumnKind.UuidArray:
+                return new JsonObject { ["type"] = "array", ["items"] = Str("uuid") };
+            case ColumnKind.Json:
+                return new JsonObject { ["readOnly"] = true };
+            default:
+                return Str();
+        }
+    }
+
+    private static (int Precision, int Scale) Precision(string sqlType)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(sqlType, @"\((\d+)\s*,\s*(\d+)\)");
+        return m.Success
+            ? (int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture), int.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture))
+            : (19, 4);
     }
 
     private static string TsConfig() =>
@@ -139,6 +354,17 @@ public static class TypeScriptEmitter
                 w.Line($"{Naming.Camel(c.Name)}?: {N.TsType(c)};");
             }
 
+            if (CSharpEmitter.SortColumns(t) is { Count: > 0 } sorts)
+            {
+                w.Line($"/** {string.Join(", ", sorts.Select(x => Naming.Camel(x.Column.Name)))}; a leading minus sorts descending. */");
+                w.Line($"sort?: {string.Join(" | ", sorts.SelectMany(x => new[] { $"'{Naming.Camel(x.Column.Name)}'", $"'-{Naming.Camel(x.Column.Name)}'" }))};");
+            }
+
+            if (CSharpEmitter.SearchColumns(t).Count > 0)
+            {
+                w.Line("search?: string;");
+            }
+
             w.Close().Line();
             var route = N.Route(t);
             w.Open($"export const {Naming.Camel(t.Name)} =");
@@ -173,6 +399,7 @@ public static class TypeScriptEmitter
             .Where(x => x.c != "company_id" || t.ForeignKeys.Exists(f => f.Columns.SequenceEqual(["company_id"])))
             .GroupBy(x => x.c).ToDictionary(g => g.Key, g => g.First().TargetTable, StringComparer.Ordinal);
 
+        var sortable = CSharpEmitter.SortColumns(t).Select(x => x.Column.Name).ToHashSet(StringComparer.Ordinal);
         var fields = new JsonArray();
         foreach (var c in CSharpEmitter.ResponseColumns(t))
         {
@@ -211,6 +438,11 @@ public static class TypeScriptEmitter
                 field["references"] = target;
             }
 
+            if (sortable.Contains(c.Name))
+            {
+                field["sortable"] = true;
+            }
+
             fields.Add(field);
         }
 
@@ -236,6 +468,8 @@ public static class TypeScriptEmitter
             ["scope"] = new JsonObject(t.ScopeLocators.Select(kv => KeyValuePair.Create(kv.Key, (JsonNode?)Naming.Camel(kv.Value)))
                 .Concat(t.ScopeVia is { } via ? [KeyValuePair.Create("via", (JsonNode?)Naming.Camel(via))] : [])),
             ["listFields"] = new JsonArray(listFields),
+            ["search"] = new JsonArray(CSharpEmitter.SearchColumns(t).Select(c => (JsonNode)Naming.Camel(c.Name)).ToArray()),
+            ["constraints"] = ConstraintFields(t),
             ["fields"] = fields,
         };
         return root.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }) + "\n";

@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.liability_accruals (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.liability_accruals (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record LiabilityAccrualFilter
 {
     public global::System.Guid? CompanyId { get; init; }
@@ -14,6 +14,8 @@ public sealed record LiabilityAccrualFilter
     public global::System.Guid? PayPeriodId { get; init; }
     public global::System.Guid? AccountingEventId { get; init; }
     public global::System.Guid? ReversesAccrualId { get; init; }
+    /// <summary>Sort key: kind, seq; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.liability_accruals.</summary>

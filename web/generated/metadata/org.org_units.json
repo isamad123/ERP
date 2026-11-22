@@ -44,6 +44,19 @@
     "headPositionRef",
     "isActive"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_org_units_code_code": "code",
+    "ck_org_units_name_i18n_object": "nameI18n",
+    "fk_org_units_company_id": "companyId",
+    "fk_org_units_location_id": "locationId",
+    "fk_org_units_unit_type_id": "unitTypeId",
+    "uq_org_units_company_id_code": "code",
+    "uq_org_units_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -75,7 +88,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.org.org_units.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -136,7 +150,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.org.org_units.is_active"
     },
     {

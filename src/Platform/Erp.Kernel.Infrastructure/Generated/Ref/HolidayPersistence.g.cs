@@ -47,8 +47,16 @@ internal sealed class HolidayRepository(
         {
             query = query.Where(e => e.CalendarId == calendarIdFilter);
         }
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var pattern = global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Pattern(filter.Search);
+            query = query.Where(e => global::Microsoft.EntityFrameworkCore.EF.Functions.ILike(e.NameI18n.RootElement.GetProperty("en").GetString()!, pattern, global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Escape) || global::Microsoft.EntityFrameworkCore.EF.Functions.ILike(e.NameI18n.RootElement.GetProperty("ur").GetString()!, pattern, global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Escape));
+        }
+        return await Sorts.PageAsync(Context.Set<global::Erp.Kernel.Domain.Generated.Ref.Holiday>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Ref.Holiday> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Ref.Holiday>().Key("holidayDate", e => e.HolidayDate);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Ref.Holiday>> FindByCalendarIdAndHolidayDateAsync(global::System.Guid calendarId, global::System.DateOnly holidayDate, global::System.Threading.CancellationToken cancellationToken)
     {

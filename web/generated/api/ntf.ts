@@ -27,6 +27,8 @@ export interface InAppItemListQuery
     after?: string;
     limit?: number;
     userId?: string;
+    /** createdAt; a leading minus sorts descending. */
+    sort?: 'createdAt' | '-createdAt';
 }
 
 export const inAppItems =
@@ -66,6 +68,8 @@ export interface OutboundMessageListQuery
     templateId?: string;
     userId?: string;
     status?: 'queued' | 'sent' | 'failed' | 'dead';
+    /** status, createdAt; a leading minus sorts descending. */
+    sort?: 'status' | '-status' | 'createdAt' | '-createdAt';
 }
 
 export const outboundMessages =
@@ -96,6 +100,7 @@ export interface SubscriptionListQuery
 {
     after?: string;
     limit?: number;
+    search?: string;
 }
 
 export const subscriptions =
@@ -128,6 +133,8 @@ export interface TemplateListQuery
     after?: string;
     limit?: number;
     status?: 'active' | 'retired';
+    /** eventCode, channel, language, version; a leading minus sorts descending. */
+    sort?: 'eventCode' | '-eventCode' | 'channel' | '-channel' | 'language' | '-language' | 'version' | '-version';
 }
 
 export const templates =

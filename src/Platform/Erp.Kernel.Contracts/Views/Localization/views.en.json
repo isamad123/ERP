@@ -1,0 +1,11 @@
+{
+  "permissions.cfg.saved_views.share": "Share saved list views with a role",
+  "errors.data.invalid_sort": "This list cannot be sorted by that column.",
+  "errors.data.invalid_cursor": "The list changed while you were reading it. Start again from the first page.",
+  "errors.views.invalid_list": "Name the list the view belongs to.",
+  "errors.views.invalid_name": "Give the view a name of 1 to 80 characters.",
+  "errors.views.invalid_definition": "The view could not be saved: it holds too much. Remove some filters or columns.",
+  "errors.views.too_many": "You have 50 views of this list already. Delete one before saving another.",
+  "errors.views.unknown_role": "That role does not exist or is not active.",
+  "errors.views.duplicate_name": "You already have a view with this name for this list."
+}

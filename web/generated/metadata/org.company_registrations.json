@@ -28,6 +28,12 @@
     "validFrom",
     "validTo"
   ],
+  "search": [],
+  "constraints": {
+    "ck_company_registrations_authority_code": "authority",
+    "ck_company_registrations_kind": "kind",
+    "fk_company_registrations_company_id": "companyId"
+  },
   "fields": [
     {
       "column": "id",

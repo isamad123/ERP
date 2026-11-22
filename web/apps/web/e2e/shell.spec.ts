@@ -2,8 +2,8 @@
 // FR-HRM-NTF-07, FR-HRM-NTF-09, FR-KRN-LOC-01, NFR-11, NFR-12; spec 13 SHL, STA, A11Y). Real API host, real PostgreSQL; the
 // control server sets up roles, companies, the licence and notifications as later admin screens and the notification
 // consumer would. The scenarios run in order and restore the licence they change.
-import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import { accessible, display, field, fitsWidth, noProblems, openPage, PASSWORD, server, shot } from './support';
+import { expect, test } from '@playwright/test';
+import { accessible, display, field, fitsWidth, landHome, mainText, menu, menuEntries, noProblems, openPage, PASSWORD, person, server, shot, signOut } from './support';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -11,56 +11,6 @@ const run = Math.random().toString(36).slice(2, 6).toUpperCase();
 const WIDTHS = [360, 768, 1280] as const;
 const ADMIN_PERMISSIONS = ['cfg.licence.read', 'aud.export', 'job.runs.read', 'aud.changes.view', 'hrm.persons.read', 'hrm.attendance_days.read',
   'hrm.leave_requests.read', 'hrm.pay_runs.read'];
-
-interface Person { username: string; page: Page; context: BrowserContext }
-
-async function freshContext(browser: Browser, language: 'en' | 'ur' = 'en', theme = 'system', width = 1280): Promise<BrowserContext> {
-  const context = await browser.newContext({ viewport: { width, height: 900 } });
-  await display(context, { language, theme });
-  return context;
-}
-
-/** Passes the "protect your account" reminder when a customer setting asks for a second step later. */
-async function landHome(page: Page, heading = 'Waiting for you'): Promise<void> {
-  const home = page.getByRole('heading', { name: heading, level: 1 });
-  const reminder = page.getByRole('heading', { name: 'Protect your account' });
-  await expect(home.or(reminder)).toBeVisible();
-  if (await reminder.isVisible()) await page.getByRole('button', { name: 'Remind me later' }).click();
-  await expect(home).toBeVisible();
-}
-
-/** A new person, activated from the e-mailed link (a fresh sign-in), on the home page. */
-async function person(browser: Browser, options: { permissions?: string[]; companies?: string[]; removeBaseline?: boolean; displayName?: string; language?: 'en' | 'ur'; homeHeading?: string; context?: BrowserContext } = {}): Promise<Person> {
-  const user = await server.newUser({ displayName: options.displayName, language: options.language });
-  if (options.permissions) await server.role(user.username, options.permissions, options.companies, options.removeBaseline);
-  const context = options.context ?? await freshContext(browser);
-  const page = await openPage(context);
-  const { link } = await server.mail('identity.invitation', user.username);
-  await page.goto(link!);
-  await field(page, 'New password').fill(PASSWORD);
-  await field(page, 'Repeat the new password').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Activate account' }).click();
-  await landHome(page, options.homeHeading);
-  return { username: user.username, page, context };
-}
-
-function menu(page: Page) {
-  return page.getByRole('navigation', { name: 'Main menu' });
-}
-
-async function menuEntries(page: Page): Promise<string[]> {
-  return (await menu(page).getByRole('link').allInnerTexts()).map((t) => t.trim());
-}
-
-async function mainText(page: Page): Promise<string> {
-  return (await page.locator('main').innerText()).replace(/\s+/g, ' ').trim();
-}
-
-async function signOut(page: Page): Promise<void> {
-  await page.getByRole('button', { name: /^Account menu of / }).click();
-  await page.getByRole('button', { name: 'Sign out' }).click();
-  await expect(page.getByText('You are signed out.')).toBeVisible();
-}
 
 test('FR-KRN-ENT-03 the menu shows only what is licensed and permitted; an unlicensed address is the same "not found" as a nonsense one', async ({ browser }) => {
   const { claims } = await server.licence({ features: ['platform.base', 'hrm.core'] }); // no hrm.payroll
@@ -96,7 +46,7 @@ test('FR-KRN-ENT-03 the menu shows only what is licensed and permitted; an unlic
     // A person without the permissions sees no such entries, and the address says what is missing.
     const basic = await person(browser);
     const plain = await menuEntries(basic.page);
-    expect(plain).toEqual(['Home', 'Notifications', 'Approvals']);
+    expect(plain).toEqual(['Home', 'Notifications', 'Approvals', 'Branches']); // S1.12c: Business User reads branches (org.branches.read)
     await basic.page.goto('/settings/licence');
     await expect(basic.page.getByRole('heading', { name: 'You cannot open this page', level: 1 })).toBeVisible();
     await expect(basic.page.getByText('Permission needed: See the licence page and the usage statements')).toBeVisible();

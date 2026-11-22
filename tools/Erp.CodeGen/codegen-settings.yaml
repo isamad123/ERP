@@ -28,6 +28,8 @@ api_excluded:
   - iam.mfa_recovery_codes
   # S1.12a (ruling Q4): device trust is read and removed only through /api/iam/me/trusted-devices (the caller's own).
   - iam.trusted_devices
+  # S1.12c (ruling Q12): saved views are read and changed only through /api/cfg/saved-views (own and shared views).
+  - cfg.saved_views
   - iam.api_clients
   - aud.change_log
   - aud.access_log

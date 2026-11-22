@@ -28,8 +28,36 @@ function strip(catalogue: Record<string, string>): Catalogue {
 
 export type MessageKey = keyof typeof en;
 
-export function webMessages(locale: UiLocale): Catalogue {
-  return locale === 'pseudo' ? pseudoCatalogue(WEB.en) : WEB[locale];
+export function webMessages(locale: UiLocale, overrides: Readonly<Record<string, string>> = NO_OVERRIDES): Catalogue {
+  const base = locale === 'pseudo' ? pseudoCatalogue(WEB.en) : WEB[locale];
+  return withOverrides(base, locale === 'pseudo' ? NO_OVERRIDES : overrides);
+}
+
+/** Label overrides of the customer and company (cfg.labels, slice S1.12c Build item 15) for the current language: key → text. */
+export type LabelOverrides = Readonly<Record<string, string>>;
+const NO_OVERRIDES: LabelOverrides = Object.freeze({});
+
+/**
+ * The web catalogue with the customer's label overrides (FR-KRN-ORG-08, FR-KRN-MET-22): an override replaces a web text
+ * that has no placeholders (menu names, titles, field labels), written as plain ICU text (quotes and braces escaped); a
+ * text with placeholders keeps the product's wording, so an override can never break a message.
+ */
+export function withOverrides(base: Catalogue, overrides: LabelOverrides): Catalogue {
+  const keys = Object.keys(overrides);
+  if (keys.length === 0) return base;
+  const merged = { ...base };
+  for (const key of keys) {
+    const current = base[key];
+    const text = overrides[key];
+    if (current === undefined || text === undefined || /[{}]/.test(current.replace(/'[^']*'/g, ''))) continue;
+    merged[key] = icuLiteral(text);
+  }
+  return merged;
+}
+
+/** Plain text as an ICU message: apostrophes doubled, braces, # and the like quoted. */
+export function icuLiteral(text: string): string {
+  return text.replace(/'/g, "''").replace(/[{}#<>|]+/g, (special) => `'${special}'`);
 }
 
 /** A server text in the language, English when the Urdu catalogue lacks it, else null. */
@@ -44,9 +72,11 @@ interface LocaleSettings {
   locale: UiLocale;
   timeZone: string;
   numbers: NumberPreferences;
+  /** The customer's label overrides for this language (empty signed out and in the pseudo-locale). */
+  overrides: LabelOverrides;
 }
 
-const LocaleContext = createContext<LocaleSettings>({ locale: 'en', timeZone: 'Asia/Karachi', numbers: DEFAULT_NUMBERS });
+const LocaleContext = createContext<LocaleSettings>({ locale: 'en', timeZone: 'Asia/Karachi', numbers: DEFAULT_NUMBERS, overrides: NO_OVERRIDES });
 
 /** The Intl locale tag for react-intl and React Aria (Pakistan; Western digits unless chosen otherwise, Q6). */
 export function localeTag(locale: UiLocale, numbers: NumberPreferences = DEFAULT_NUMBERS): string {
@@ -54,11 +84,13 @@ export function localeTag(locale: UiLocale, numbers: NumberPreferences = DEFAULT
   return `${base}-u-nu-${numbers.digits === 'western' ? 'latn' : 'arabext'}`;
 }
 
-export function I18nRoot({ locale, timeZone = 'Asia/Karachi', numbers = DEFAULT_NUMBERS, children }: { locale: UiLocale; timeZone?: string; numbers?: NumberPreferences; children: ReactNode }) {
-  const settings = useMemo(() => ({ locale, timeZone, numbers }), [locale, timeZone, numbers]);
+export function I18nRoot({ locale, timeZone = 'Asia/Karachi', numbers = DEFAULT_NUMBERS, overrides = NO_OVERRIDES, children }: { locale: UiLocale; timeZone?: string; numbers?: NumberPreferences; overrides?: LabelOverrides; children: ReactNode }) {
+  const effective = locale === 'pseudo' ? NO_OVERRIDES : overrides;
+  const settings = useMemo(() => ({ locale, timeZone, numbers, overrides: effective }), [locale, timeZone, numbers, effective]);
+  const messages = useMemo(() => webMessages(locale, effective), [locale, effective]);
   return (
     <LocaleContext.Provider value={settings}>
-      <IntlProvider locale={localeTag(locale, numbers)} messages={webMessages(locale)} defaultLocale="en-PK" timeZone={timeZone}
+      <IntlProvider locale={localeTag(locale, numbers)} messages={messages} defaultLocale="en-PK" timeZone={timeZone}
         onError={(e) => { if (e.code !== 'MISSING_TRANSLATION' || locale !== 'pseudo') throw e; }}>
         {children}
       </IntlProvider>

@@ -28,6 +28,16 @@
     "priority",
     "source"
   ],
+  "search": [
+    "code"
+  ],
+  "constraints": {
+    "ck_definitions_code_code": "code",
+    "ck_definitions_module_id_code": "moduleId",
+    "ck_definitions_source": "source",
+    "fk_definitions_owner_user_id": "ownerUserId",
+    "uq_definitions_code": "code"
+  },
   "fields": [
     {
       "column": "id",
@@ -48,7 +58,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.job.definitions.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "module_id",

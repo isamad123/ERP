@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.loan_installments (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.loan_installments (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record LoanInstallmentFilter
 {
     public global::System.Guid? CompanyId { get; init; }
@@ -14,6 +14,8 @@ public sealed record LoanInstallmentFilter
     public global::System.Guid? PayPeriodId { get; init; }
     public global::System.Guid? PayResultLineId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: seq; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.loan_installments.</summary>

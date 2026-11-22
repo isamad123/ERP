@@ -47,8 +47,11 @@ internal sealed class UsageMeterRepository(
         {
             query = query.Where(e => e.TenantId == tenantIdFilter);
         }
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        return await Sorts.PageAsync(Context.Set<global::Erp.Kernel.Domain.ControlPlane.Generated.UsageMeter>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.ControlPlane.Generated.UsageMeter> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.ControlPlane.Generated.UsageMeter>().Key("meterKey", e => e.MeterKey).Key("period", e => e.Period);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.UsageMeter>> FindByTenantIdAndMeterKeyAndPeriodAsync(global::System.Guid tenantId, string meterKey, string period, global::System.Threading.CancellationToken cancellationToken)
     {

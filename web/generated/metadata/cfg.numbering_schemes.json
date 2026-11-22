@@ -33,6 +33,14 @@
     "startValue",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_numbering_schemes_branch_company": "branchId",
+    "ck_numbering_schemes_reset_rule": "resetRule",
+    "ck_numbering_schemes_status": "status",
+    "fk_numbering_schemes_branch_id": "branchId",
+    "fk_numbering_schemes_company_id": "companyId"
+  },
   "fields": [
     {
       "column": "id",
@@ -74,7 +82,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.cfg.numbering_schemes.document_type"
+      "labelKey": "fields.cfg.numbering_schemes.document_type",
+      "sortable": true
     },
     {
       "column": "pattern",

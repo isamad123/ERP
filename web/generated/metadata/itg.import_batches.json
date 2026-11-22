@@ -39,6 +39,15 @@
     "jobRunId",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_import_batches_status": "status",
+    "fk_import_batches_company_id": "companyId",
+    "fk_import_batches_file_id": "fileId",
+    "fk_import_batches_job_run_id": "jobRunId",
+    "fk_import_batches_template_id": "templateId",
+    "uq_import_batches_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

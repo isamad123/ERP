@@ -6,10 +6,14 @@
 
 namespace Erp.Kernel.Application.Generated.Iam;
 
-/// <summary>Equality filters for listing iam.api_clients (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing iam.api_clients (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record ApiClientFilter
 {
     public string? Status { get; init; }
+    /// <summary>Sort key: clientId; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+    /// <summary>Case-insensitive text found in name.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated repository of iam.api_clients.</summary>

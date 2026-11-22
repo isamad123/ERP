@@ -32,6 +32,13 @@
     "providerRef",
     "error"
   ],
+  "search": [],
+  "constraints": {
+    "ck_outbound_messages_event_code_code": "eventCode",
+    "ck_outbound_messages_status": "status",
+    "fk_outbound_messages_template_id": "templateId",
+    "fk_outbound_messages_user_id": "userId"
+  },
   "fields": [
     {
       "column": "id",
@@ -192,7 +199,8 @@
           "value": "dead",
           "labelKey": "options.ntf.outbound_messages.status.dead"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "created_at",
@@ -202,7 +210,8 @@
       "readOnly": true,
       "system": true,
       "filter": false,
-      "labelKey": "fields.ntf.outbound_messages.created_at"
+      "labelKey": "fields.ntf.outbound_messages.created_at",
+      "sortable": true
     },
     {
       "column": "created_by",

@@ -42,6 +42,9 @@ public sealed class MakerCheckerRequestListQuery
     public global::System.Guid? DecidedBy { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Sort key: status, createdAt; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of iam.maker_checker_requests: read. Answers pass through field security (S1.06).</summary>
@@ -60,7 +63,7 @@ internal static class MakerCheckerRequestEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "iam.maker_checker_requests.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.MakerCheckerRequestFilter { RequestedBy = query.RequestedBy, DecidedBy = query.DecidedBy, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.MakerCheckerRequestFilter { RequestedBy = query.RequestedBy, DecidedBy = query.DecidedBy, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Iam.MakerCheckerRequestAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

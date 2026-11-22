@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.mandatory_training_rules (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.mandatory_training_rules (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record MandatoryTrainingRuleFilter
 {
     public global::System.Guid? CompanyId { get; init; }

@@ -40,6 +40,17 @@
     "units",
     "sourceType"
   ],
+  "search": [],
+  "constraints": {
+    "ck_pay_inputs_status": "status",
+    "fk_pay_inputs_company_id": "companyId",
+    "fk_pay_inputs_component_id": "componentId",
+    "fk_pay_inputs_consumed_by_run_id": "consumedByRunId",
+    "fk_pay_inputs_employment_id": "employmentId",
+    "fk_pay_inputs_import_batch_id": "importBatchId",
+    "fk_pay_inputs_pay_period_id": "payPeriodId",
+    "uq_pay_inputs_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -134,7 +145,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_inputs.source_type"
+      "labelKey": "fields.hrm.pay_inputs.source_type",
+      "sortable": true
     },
     {
       "column": "source_id",

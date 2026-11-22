@@ -6,9 +6,11 @@
 
 namespace Erp.Kernel.Application.Generated.Job;
 
-/// <summary>Equality filters for listing job.run_logs (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing job.run_logs (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record RunLogFilter
 {
+    /// <summary>Sort key: createdAt; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of job.run_logs.</summary>

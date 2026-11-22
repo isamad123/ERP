@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.attendance_exceptions (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.attendance_exceptions (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record AttendanceExceptionFilter
 {
     public global::System.Guid? CompanyId { get; init; }
@@ -14,6 +14,8 @@ public sealed record AttendanceExceptionFilter
     public global::System.DateOnly? WorkDate { get; init; }
     public global::System.Guid? AttendanceDayId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: workDate, status; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.attendance_exceptions.</summary>

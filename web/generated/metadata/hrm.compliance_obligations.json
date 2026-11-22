@@ -37,6 +37,19 @@
     "returnTemplateId",
     "isActive"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_compliance_obligations_code_code": "code",
+    "ck_compliance_obligations_name_i18n_object": "nameI18n",
+    "fk_compliance_obligations_company_id": "companyId",
+    "fk_compliance_obligations_owner_role_id": "ownerRoleId",
+    "fk_compliance_obligations_return_template_id": "returnTemplateId",
+    "uq_compliance_obligations_company_id_code": "code",
+    "uq_compliance_obligations_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -68,7 +81,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.compliance_obligations.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -129,7 +143,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.hrm.compliance_obligations.is_active"
     },
     {

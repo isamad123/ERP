@@ -39,6 +39,9 @@ public sealed class ImportBatchErrorListQuery
     public int? Limit { get; init; }
 
     public global::System.Guid? BatchId { get; init; }
+
+    /// <summary>Sort key: rowNo; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of itg.import_batch_errors: read, create. Answers pass through field security (S1.06).</summary>
@@ -58,7 +61,7 @@ internal static class ImportBatchErrorEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "itg.import_batch_errors.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorFilter { BatchId = query.BatchId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorFilter { BatchId = query.BatchId, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ImportBatchErrorAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

@@ -37,6 +37,14 @@
     "publishedAt",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_policy_publications_status": "status",
+    "ck_policy_publications_title_i18n_object": "titleI18n",
+    "fk_policy_publications_company_id": "companyId",
+    "fk_policy_publications_file_id": "fileId",
+    "uq_policy_publications_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

@@ -36,6 +36,9 @@ public sealed class GeneratedDocumentListQuery
     public global::System.Guid? TemplateVersionId { get; init; }
 
     public global::System.Guid? FileId { get; init; }
+
+    /// <summary>Sort key: ownerType; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of doc.generated_documents: read. Answers pass through field security (S1.06).</summary>
@@ -54,7 +57,7 @@ internal static class GeneratedDocumentEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "doc.generated_documents.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentFilter { CompanyId = query.CompanyId, TemplateVersionId = query.TemplateVersionId, FileId = query.FileId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentFilter { CompanyId = query.CompanyId, TemplateVersionId = query.TemplateVersionId, FileId = query.FileId, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Doc.GeneratedDocumentAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

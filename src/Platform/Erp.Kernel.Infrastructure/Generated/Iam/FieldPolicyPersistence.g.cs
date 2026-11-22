@@ -46,8 +46,11 @@ internal sealed class FieldPolicyRepository(
         {
             query = query.Where(e => e.RoleId == roleIdFilter);
         }
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        return await Sorts.PageAsync(Context.Set<global::Erp.Kernel.Domain.Generated.Iam.FieldPolicy>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Iam.FieldPolicy> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.Generated.Iam.FieldPolicy>().Key("resourceType", e => e.ResourceType).Key("fieldKey", e => e.FieldKey);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.Generated.Iam.FieldPolicy>> FindByRoleIdAndResourceTypeAndFieldKeyAsync(global::System.Guid roleId, string resourceType, string fieldKey, global::System.Threading.CancellationToken cancellationToken)
     {

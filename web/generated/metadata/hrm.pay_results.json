@@ -42,6 +42,15 @@
     "deductions",
     "net"
   ],
+  "search": [],
+  "constraints": {
+    "fk_pay_results_company_id": "companyId",
+    "fk_pay_results_corrects_result_id": "correctsResultId",
+    "fk_pay_results_employment_id": "employmentId",
+    "fk_pay_results_pay_period_id": "payPeriodId",
+    "fk_pay_results_pay_run_id": "payRunId",
+    "uq_pay_results_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -94,7 +103,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_results.tax_year"
+      "labelKey": "fields.hrm.pay_results.tax_year",
+      "sortable": true
     },
     {
       "column": "pay_period_id",

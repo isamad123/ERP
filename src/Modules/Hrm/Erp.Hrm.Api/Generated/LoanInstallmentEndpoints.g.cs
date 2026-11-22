@@ -61,6 +61,9 @@ public sealed class LoanInstallmentListQuery
     public global::System.Guid? PayResultLineId { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Sort key: seq; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.loan_installments: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -81,7 +84,7 @@ internal static class LoanInstallmentEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.loan_installments.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.LoanInstallmentFilter { CompanyId = query.CompanyId, LoanId = query.LoanId, PayPeriodId = query.PayPeriodId, PayResultLineId = query.PayResultLineId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.LoanInstallmentFilter { CompanyId = query.CompanyId, LoanId = query.LoanId, PayPeriodId = query.PayPeriodId, PayResultLineId = query.PayResultLineId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.LoanInstallmentAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

@@ -6,9 +6,11 @@
 
 namespace Erp.Kernel.Application.Generated.Cfg;
 
-/// <summary>Equality filters for listing cfg.labels (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing cfg.labels (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record LabelFilter
 {
+    /// <summary>Sort key: key, language, layer; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of cfg.labels.</summary>

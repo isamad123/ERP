@@ -38,6 +38,15 @@
     "separationId",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_checklists_kind": "kind",
+    "ck_checklists_status": "status",
+    "fk_checklists_company_id": "companyId",
+    "fk_checklists_employment_id": "employmentId",
+    "fk_checklists_separation_id": "separationId",
+    "fk_checklists_template_id": "templateId"
+  },
   "fields": [
     {
       "column": "id",

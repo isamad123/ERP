@@ -34,6 +34,12 @@
     "validFrom",
     "validTo"
   ],
+  "search": [],
+  "constraints": {
+    "fk_org_unit_links_hierarchy_id": "hierarchyId",
+    "fk_org_unit_links_parent_unit_id": "parentUnitId",
+    "fk_org_unit_links_unit_id": "unitId"
+  },
   "fields": [
     {
       "column": "id",

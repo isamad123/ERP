@@ -65,6 +65,9 @@ public sealed class LeaveLedgerListQuery
     public global::System.Guid? PolicyVersionId { get; init; }
 
     public global::System.Guid? ReversesEntryId { get; init; }
+
+    /// <summary>Sort key: leaveYear, kind; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.leave_ledger: read, create. Answers pass through field security (S1.06).</summary>
@@ -84,7 +87,7 @@ internal static class LeaveLedgerEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.leave_ledger.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.LeaveLedgerFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, LeaveTypeId = query.LeaveTypeId, PolicyVersionId = query.PolicyVersionId, ReversesEntryId = query.ReversesEntryId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.LeaveLedgerFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, LeaveTypeId = query.LeaveTypeId, PolicyVersionId = query.PolicyVersionId, ReversesEntryId = query.ReversesEntryId, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.LeaveLedgerAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

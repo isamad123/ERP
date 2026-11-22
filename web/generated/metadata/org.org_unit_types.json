@@ -33,6 +33,15 @@
     "levelHint",
     "isActive"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_org_unit_types_code_code": "code",
+    "ck_org_unit_types_name_i18n_object": "nameI18n",
+    "uq_org_unit_types_code": "code"
+  },
   "fields": [
     {
       "column": "id",
@@ -53,7 +62,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.org.org_unit_types.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -82,7 +92,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.org.org_unit_types.is_active"
     },
     {

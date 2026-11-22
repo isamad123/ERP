@@ -39,6 +39,13 @@
     "completedAt",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_setup_tasks_module_id_code": "moduleId",
+    "ck_setup_tasks_status": "status",
+    "ck_setup_tasks_task_key_code": "taskKey",
+    "fk_setup_tasks_company_id": "companyId"
+  },
   "fields": [
     {
       "column": "id",
@@ -59,7 +66,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.cfg.setup_tasks.module_id",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "task_key",
@@ -70,7 +78,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.cfg.setup_tasks.task_key",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "company_id",

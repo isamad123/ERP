@@ -30,6 +30,12 @@
     "dedupKey",
     "eventGroup"
   ],
+  "search": [],
+  "constraints": {
+    "ck_in_app_items_event_code_code": "eventCode",
+    "ck_in_app_items_event_group_code": "eventGroup",
+    "fk_in_app_items_user_id": "userId"
+  },
   "fields": [
     {
       "column": "id",
@@ -132,7 +138,8 @@
       "readOnly": true,
       "system": true,
       "filter": false,
-      "labelKey": "fields.ntf.in_app_items.created_at"
+      "labelKey": "fields.ntf.in_app_items.created_at",
+      "sortable": true
     },
     {
       "column": "created_by",

@@ -43,6 +43,9 @@ public sealed class GoalUpdateListQuery
     public global::System.Guid? CompanyId { get; init; }
 
     public global::System.Guid? GoalId { get; init; }
+
+    /// <summary>Sort key: createdAt; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.goal_updates: read, create. Answers pass through field security (S1.06).</summary>
@@ -62,7 +65,7 @@ internal static class GoalUpdateEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.goal_updates.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.GoalUpdateFilter { CompanyId = query.CompanyId, GoalId = query.GoalId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.GoalUpdateFilter { CompanyId = query.CompanyId, GoalId = query.GoalId, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.GoalUpdateAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

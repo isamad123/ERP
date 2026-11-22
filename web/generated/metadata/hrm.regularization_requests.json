@@ -39,6 +39,14 @@
     "reason",
     "workflowInstanceId"
   ],
+  "search": [],
+  "constraints": {
+    "ck_regularization_requests_status": "status",
+    "fk_regularization_requests_company_id": "companyId",
+    "fk_regularization_requests_employment_id": "employmentId",
+    "fk_regularization_requests_exception_id": "exceptionId",
+    "fk_regularization_requests_workflow_instance_id": "workflowInstanceId"
+  },
   "fields": [
     {
       "column": "id",

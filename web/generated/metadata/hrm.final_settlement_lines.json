@@ -37,6 +37,13 @@
     "componentId",
     "amount"
   ],
+  "search": [],
+  "constraints": {
+    "ck_final_settlement_lines_kind": "kind",
+    "fk_final_settlement_lines_company_id": "companyId",
+    "fk_final_settlement_lines_component_id": "componentId",
+    "fk_final_settlement_lines_settlement_id": "settlementId"
+  },
   "fields": [
     {
       "column": "id",

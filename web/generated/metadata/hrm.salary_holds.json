@@ -38,6 +38,14 @@
     "releasedBy",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_salary_holds_status": "status",
+    "fk_salary_holds_company_id": "companyId",
+    "fk_salary_holds_employment_id": "employmentId",
+    "fk_salary_holds_held_from_run_id": "heldFromRunId",
+    "uq_salary_holds_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -130,7 +138,8 @@
           "value": "released",
           "labelKey": "options.hrm.salary_holds.status.released"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "created_at",

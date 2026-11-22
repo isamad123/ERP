@@ -40,6 +40,12 @@
     "validFrom",
     "validTo"
   ],
+  "search": [],
+  "constraints": {
+    "fk_device_user_maps_company_id": "companyId",
+    "fk_device_user_maps_device_id": "deviceId",
+    "fk_device_user_maps_employment_id": "employmentId"
+  },
   "fields": [
     {
       "column": "id",

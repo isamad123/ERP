@@ -43,6 +43,17 @@
     "generatedDocumentId",
     "issuedAt"
   ],
+  "search": [],
+  "constraints": {
+    "ck_employee_letters_letter_type_code": "letterType",
+    "ck_employee_letters_status": "status",
+    "fk_employee_letters_company_id": "companyId",
+    "fk_employee_letters_employment_id": "employmentId",
+    "fk_employee_letters_generated_document_id": "generatedDocumentId",
+    "fk_employee_letters_template_id": "templateId",
+    "fk_employee_letters_workflow_instance_id": "workflowInstanceId",
+    "uq_employee_letters_company_id_letter_no": "letterNo"
+  },
   "fields": [
     {
       "column": "id",
@@ -73,7 +84,8 @@
       "readOnly": true,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.employee_letters.letter_no"
+      "labelKey": "fields.hrm.employee_letters.letter_no",
+      "sortable": true
     },
     {
       "column": "employment_id",

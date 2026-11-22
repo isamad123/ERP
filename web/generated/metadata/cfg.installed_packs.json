@@ -34,6 +34,12 @@
     "installedAt",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_installed_packs_pack_id_code": "packId",
+    "ck_installed_packs_status": "status",
+    "uq_installed_packs_pack_id": "packId"
+  },
   "fields": [
     {
       "column": "id",
@@ -54,7 +60,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.cfg.installed_packs.pack_id",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "version",

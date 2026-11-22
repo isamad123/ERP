@@ -6,10 +6,14 @@
 
 namespace Erp.Kernel.Application.Generated.Ref;
 
-/// <summary>Equality filters for listing ref.holidays (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing ref.holidays (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record HolidayFilter
 {
     public global::System.Guid? CalendarId { get; init; }
+    /// <summary>Sort key: holidayDate; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+    /// <summary>Case-insensitive text found in nameI18n.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated repository of ref.holidays.</summary>

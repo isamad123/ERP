@@ -40,6 +40,13 @@
     "validFrom",
     "validTo"
   ],
+  "search": [],
+  "constraints": {
+    "ck_pay_component_versions_pro_rata_rule": "proRataRule",
+    "ck_pay_component_versions_statutory_table_code_code": "statutoryTableCode",
+    "ck_pay_component_versions_tax_treatment_code": "taxTreatment",
+    "fk_pay_component_versions_component_id": "componentId"
+  },
   "fields": [
     {
       "column": "id",

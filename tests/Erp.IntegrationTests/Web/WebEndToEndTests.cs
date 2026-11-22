@@ -265,6 +265,37 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
             return Results.NoContent();
         });
 
+        // S1.12c: branches of a company (default: the customer's first company), as the branch screen would add them one by
+        // one, for the list's paging and its first-page timing (Acceptance: 100 rows within 1 second).
+        app.MapPost("/branches", async (BranchesBody body) =>
+        {
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            await IdentityHarness.ExecAsync(owner, """
+                insert into org.branches (id, company_id, code, name_i18n, is_active, created_at, created_by, updated_at, updated_by)
+                select gen_random_uuid(), c.id, $2 || '-' || lpad(n::text, 3, '0'), jsonb_build_object('en', 'Branch ' || $2 || ' ' || n, 'ur', 'برانچ ' || $2 || ' ' || n),
+                       n % 7 <> 0, now(), $4, now(), $4
+                from (select id from org.companies where ($1::text is null and lower(code) = lower($5)) or lower(code) = lower($1) limit 1) c, generate_series(1, $3) n
+                """, Ct, (object?)body.Company ?? DBNull.Value, body.Prefix, body.Count, BaselineSeed.SystemUserId, code);
+            return Results.NoContent();
+        });
+
+        // S1.12c: a label override of the customer (cfg.labels, layer tenant), as the settings centre will write it (S1.15);
+        // a null text removes it.
+        app.MapPost("/labels", async (LabelBody body) =>
+        {
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            await IdentityHarness.ExecAsync(owner, "delete from cfg.labels where key = $1 and language = $2 and layer = 'tenant'", Ct, body.Key, body.Language);
+            if (body.Text is { } text)
+            {
+                await IdentityHarness.ExecAsync(owner, """
+                    insert into cfg.labels (id, key, language, layer, scope_id, text, created_at, created_by, updated_at, updated_by)
+                    values (gen_random_uuid(), $1, $2, 'tenant', null, $3, now(), $4, now(), $4)
+                    """, Ct, body.Key, body.Language, text, BaselineSeed.SystemUserId);
+            }
+
+            return Results.NoContent();
+        });
+
         // Facts the browser cannot see: live sessions and trusts of a person.
         app.MapGet("/facts", async (string username) =>
         {
@@ -377,4 +408,8 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
     private sealed record NotificationsBody(string Username, NotificationBody[] Items);
 
     private sealed record NotificationBody(string EventCode, string Title, string Body, string? Link, string Group);
+
+    private sealed record BranchesBody(string? Company, string Prefix, int Count);
+
+    private sealed record LabelBody(string Key, string Language, string? Text);
 }

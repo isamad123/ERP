@@ -46,13 +46,14 @@ export const capabilitiesKey = ['kernel', 'capabilities'] as const;
 export function SessionWatch() {
   const { status } = useSessionState();
   const client = useQueryClient();
-  const { setFormats } = useDisplay();
+  const { setFormats, setOverrides } = useDisplay();
   useEffect(() => {
     if (status === 'signedOut' || status === 'expired') {
       client.clear();
       setFormats(DEFAULT_FORMATS);
+      setOverrides({});
     }
-  }, [status, client, setFormats]);
+  }, [status, client, setFormats, setOverrides]);
   return null;
 }
 
@@ -60,7 +61,7 @@ export function ShellDataProvider({ children }: { children: ReactNode }) {
   const me = useQuery({ queryKey: meKey, queryFn: () => kernel.me() });
   const capabilities = useQuery({ queryKey: capabilitiesKey, queryFn: kernel.capabilities, refetchInterval: 5 * 60_000 });
   const [chosen, setChosen] = useState<string | null>(null);
-  const { display, setDisplay, setFormats } = useDisplay();
+  const { display, setDisplay, setFormats, setOverrides } = useDisplay();
   const { t } = useText();
 
   const person = me.data;
@@ -76,6 +77,13 @@ export function ShellDataProvider({ children }: { children: ReactNode }) {
     if (!person) return;
     setFormats({ timeZone: person.timeZone, numbers: (forCompany.data ?? person).numbers });
   }, [person, forCompany.data, setFormats]);
+
+  // The customer's and the company's label overrides apply to every label shown (S1.12c Build item 15, deviation i of
+  // CR-063). They only change words: a failed load keeps the product's own labels.
+  const labels = useQuery({ queryKey: ['kernel', 'labels', activeId], queryFn: () => kernel.labels(activeId), enabled: !!person, staleTime: 5 * 60_000 });
+  useEffect(() => {
+    if (labels.data) setOverrides(labels.data);
+  }, [labels.data, setOverrides]);
 
   // Each sign-in starts in the person's stored language; the user menu's choice lasts until the next sign-in (product owner
   // ruling 2026-11-21).

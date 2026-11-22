@@ -25,6 +25,11 @@
     "fieldKey",
     "access"
   ],
+  "search": [],
+  "constraints": {
+    "ck_field_policies_access": "access",
+    "fk_field_policies_role_id": "roleId"
+  },
   "fields": [
     {
       "column": "id",
@@ -55,7 +60,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.iam.field_policies.resource_type"
+      "labelKey": "fields.iam.field_policies.resource_type",
+      "sortable": true
     },
     {
       "column": "field_key",
@@ -65,7 +71,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.iam.field_policies.field_key"
+      "labelKey": "fields.iam.field_policies.field_key",
+      "sortable": true
     },
     {
       "column": "access",

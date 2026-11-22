@@ -42,6 +42,18 @@
     "interestRate",
     "installments"
   ],
+  "search": [],
+  "constraints": {
+    "ck_loans_status": "status",
+    "fk_loans_company_id": "companyId",
+    "fk_loans_employment_id": "employmentId",
+    "fk_loans_guarantor_employment_id": "guarantorEmploymentId",
+    "fk_loans_loan_type_id": "loanTypeId",
+    "fk_loans_start_period_id": "startPeriodId",
+    "fk_loans_workflow_instance_id": "workflowInstanceId",
+    "uq_loans_company_id_id": "id",
+    "uq_loans_company_id_loan_no": "loanNo"
+  },
   "fields": [
     {
       "column": "id",
@@ -72,7 +84,8 @@
       "readOnly": true,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.loans.loan_no"
+      "labelKey": "fields.hrm.loans.loan_no",
+      "sortable": true
     },
     {
       "column": "employment_id",

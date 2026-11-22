@@ -40,6 +40,15 @@
     "hours",
     "result"
   ],
+  "search": [],
+  "constraints": {
+    "fk_learning_records_certificate_file_id": "certificateFileId",
+    "fk_learning_records_company_id": "companyId",
+    "fk_learning_records_course_id": "courseId",
+    "fk_learning_records_employment_id": "employmentId",
+    "fk_learning_records_enrollment_id": "enrollmentId",
+    "uq_learning_records_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -113,7 +122,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.learning_records.completed_on"
+      "labelKey": "fields.hrm.learning_records.completed_on",
+      "sortable": true
     },
     {
       "column": "hours",

@@ -6,12 +6,17 @@
 
 namespace Erp.Kernel.Application.Generated.Doc;
 
-/// <summary>Equality filters for listing doc.templates (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing doc.templates (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record TemplateFilter
 {
     public global::System.Guid? Id { get; init; }
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? ActiveVersionId { get; init; }
+    public bool? IsActive { get; init; }
+    /// <summary>Sort key: code, language; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+    /// <summary>Case-insensitive text found in code, nameI18n.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated repository of doc.templates.</summary>

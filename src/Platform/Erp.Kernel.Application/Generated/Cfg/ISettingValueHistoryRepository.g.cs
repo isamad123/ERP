@@ -6,9 +6,11 @@
 
 namespace Erp.Kernel.Application.Generated.Cfg;
 
-/// <summary>Equality filters for listing cfg.setting_value_history (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing cfg.setting_value_history (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record SettingValueHistoryFilter
 {
+    /// <summary>Sort key: settingKey, createdAt; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of cfg.setting_value_history.</summary>

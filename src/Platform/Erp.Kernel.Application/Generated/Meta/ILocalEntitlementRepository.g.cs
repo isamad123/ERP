@@ -6,7 +6,7 @@
 
 namespace Erp.Kernel.Application.Generated.Meta;
 
-/// <summary>Equality filters for listing meta.local_entitlement (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing meta.local_entitlement (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record LocalEntitlementFilter
 {
 }

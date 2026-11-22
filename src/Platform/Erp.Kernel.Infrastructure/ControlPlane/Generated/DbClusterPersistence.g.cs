@@ -49,8 +49,11 @@ internal sealed class DbClusterRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        return await Sorts.PageAsync(Context.Set<global::Erp.Kernel.Domain.ControlPlane.Generated.DbCluster>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.ControlPlane.Generated.DbCluster> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Kernel.Domain.ControlPlane.Generated.DbCluster>().Key("name", e => e.Name);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Kernel.Domain.ControlPlane.Generated.DbCluster>> FindByNameAsync(string name, global::System.Threading.CancellationToken cancellationToken)
     {

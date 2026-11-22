@@ -34,6 +34,14 @@
     "escalatedAt",
     "actedBy"
   ],
+  "search": [],
+  "constraints": {
+    "ck_workflow_tasks_status": "status",
+    "fk_workflow_tasks_acted_by": "actedBy",
+    "fk_workflow_tasks_assignee_role_id": "assigneeRoleId",
+    "fk_workflow_tasks_assignee_user_id": "assigneeUserId",
+    "fk_workflow_tasks_instance_id": "instanceId"
+  },
   "fields": [
     {
       "column": "id",
@@ -227,7 +235,8 @@
           "value": "escalated",
           "labelKey": "options.wf.workflow_tasks.status.escalated"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "created_at",

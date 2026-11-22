@@ -1,0 +1,11 @@
+{
+  "permissions.cfg.saved_views.share": "محفوظ فہرست ویوز کسی رول کے ساتھ شیئر کریں",
+  "errors.data.invalid_sort": "اس فہرست کو اس کالم کے لحاظ سے ترتیب نہیں دیا جا سکتا۔",
+  "errors.data.invalid_cursor": "پڑھنے کے دوران فہرست بدل گئی۔ پہلے صفحے سے دوبارہ شروع کریں۔",
+  "errors.views.invalid_list": "بتائیں کہ یہ ویو کس فہرست کا ہے۔",
+  "errors.views.invalid_name": "ویو کو 1 سے 80 حروف کا نام دیں۔",
+  "errors.views.invalid_definition": "ویو محفوظ نہیں ہو سکا: اس میں بہت زیادہ معلومات ہیں۔ کچھ فلٹر یا کالم ہٹا دیں۔",
+  "errors.views.too_many": "اس فہرست کے آپ کے پاس پہلے ہی 50 ویوز ہیں۔ نیا محفوظ کرنے سے پہلے ایک حذف کریں۔",
+  "errors.views.unknown_role": "یہ رول موجود نہیں یا فعال نہیں ہے۔",
+  "errors.views.duplicate_name": "اس فہرست کے لیے اس نام کا ویو آپ کے پاس پہلے سے ہے۔"
+}

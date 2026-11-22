@@ -41,6 +41,14 @@
     "requestedDueDate",
     "verifiedBy"
   ],
+  "search": [],
+  "constraints": {
+    "ck_employee_documents_document_type_code": "documentType",
+    "ck_employee_documents_status": "status",
+    "fk_employee_documents_company_id": "companyId",
+    "fk_employee_documents_employment_id": "employmentId",
+    "fk_employee_documents_file_id": "fileId"
+  },
   "fields": [
     {
       "column": "id",
@@ -83,7 +91,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.employee_documents.document_type",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "file_id",

@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.attendance_days (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.attendance_days (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record AttendanceDayFilter
 {
     public global::System.Guid? CompanyId { get; init; }
@@ -16,6 +16,8 @@ public sealed record AttendanceDayFilter
     public global::System.Guid? DutyRequestId { get; init; }
     public global::System.Guid? PolicyVersionId { get; init; }
     public global::System.Guid? PeriodId { get; init; }
+    /// <summary>Sort key: workDate, result; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.attendance_days.</summary>

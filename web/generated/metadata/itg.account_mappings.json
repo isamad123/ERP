@@ -37,6 +37,13 @@
     "debitAccount",
     "creditAccount"
   ],
+  "search": [],
+  "constraints": {
+    "ck_account_mappings_allocation_key_code": "allocationKey",
+    "ck_account_mappings_source_key_code": "sourceKey",
+    "ck_account_mappings_source_kind": "sourceKind",
+    "fk_account_mappings_company_id": "companyId"
+  },
   "fields": [
     {
       "column": "id",
@@ -89,7 +96,8 @@
           "value": "expense",
           "labelKey": "options.itg.account_mappings.source_kind.expense"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "source_key",
@@ -100,7 +108,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.itg.account_mappings.source_key",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "allocation_key",

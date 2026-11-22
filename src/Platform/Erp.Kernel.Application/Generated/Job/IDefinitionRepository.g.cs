@@ -6,10 +6,14 @@
 
 namespace Erp.Kernel.Application.Generated.Job;
 
-/// <summary>Equality filters for listing job.definitions (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing job.definitions (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record DefinitionFilter
 {
     public global::System.Guid? OwnerUserId { get; init; }
+    /// <summary>Sort key: code; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
+    /// <summary>Case-insensitive text found in code.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated repository of job.definitions.</summary>

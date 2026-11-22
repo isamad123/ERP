@@ -40,6 +40,17 @@
     "kind",
     "isActive"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_checklist_templates_code_code": "code",
+    "ck_checklist_templates_kind": "kind",
+    "ck_checklist_templates_name_i18n_object": "nameI18n",
+    "fk_checklist_templates_company_id": "companyId",
+    "uq_checklist_templates_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -71,7 +82,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.checklist_templates.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -101,7 +113,8 @@
           "value": "offboarding",
           "labelKey": "options.hrm.checklist_templates.kind.offboarding"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "applies_rule",
@@ -120,7 +133,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.hrm.checklist_templates.is_active"
     },
     {

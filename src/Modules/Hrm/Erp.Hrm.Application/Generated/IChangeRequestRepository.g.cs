@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.change_requests (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.change_requests (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record ChangeRequestFilter
 {
     public global::System.Guid? CompanyId { get; init; }

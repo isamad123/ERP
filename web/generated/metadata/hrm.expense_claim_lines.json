@@ -39,6 +39,13 @@
     "receiptFileId",
     "receiptHash"
   ],
+  "search": [],
+  "constraints": {
+    "fk_expense_claim_lines_category_id": "categoryId",
+    "fk_expense_claim_lines_claim_id": "claimId",
+    "fk_expense_claim_lines_company_id": "companyId",
+    "fk_expense_claim_lines_receipt_file_id": "receiptFileId"
+  },
   "fields": [
     {
       "column": "id",

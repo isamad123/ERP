@@ -6,7 +6,7 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.policy_acknowledgements (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.policy_acknowledgements (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record PolicyAcknowledgementFilter
 {
     public global::System.Guid? CompanyId { get; init; }

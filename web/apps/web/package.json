@@ -9,6 +9,7 @@
     "dev": "vite"
   },
   "dependencies": {
+    "@erp/engine": "workspace:*",
     "@erp/generated": "workspace:*",
     "@erp/i18n": "workspace:*",
     "@erp/ui": "workspace:*",

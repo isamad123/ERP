@@ -28,6 +28,10 @@
     "field",
     "message"
   ],
+  "search": [],
+  "constraints": {
+    "fk_import_batch_errors_batch_id": "batchId"
+  },
   "fields": [
     {
       "column": "id",
@@ -58,7 +62,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.itg.import_batch_errors.row_no"
+      "labelKey": "fields.itg.import_batch_errors.row_no",
+      "sortable": true
     },
     {
       "column": "field",

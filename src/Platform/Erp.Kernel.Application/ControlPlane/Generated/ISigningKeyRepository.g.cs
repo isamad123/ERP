@@ -6,9 +6,11 @@
 
 namespace Erp.Kernel.Application.ControlPlane.Generated;
 
-/// <summary>Equality filters for listing cp.signing_keys (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing cp.signing_keys (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record SigningKeyFilter
 {
+    /// <summary>Sort key: keyId; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of cp.signing_keys.</summary>

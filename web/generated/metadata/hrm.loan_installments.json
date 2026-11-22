@@ -38,6 +38,14 @@
     "payResultLineId",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_loan_installments_status": "status",
+    "fk_loan_installments_company_id": "companyId",
+    "fk_loan_installments_loan_id": "loanId",
+    "fk_loan_installments_pay_period_id": "payPeriodId",
+    "fk_loan_installments_pay_result_line_id": "payResultLineId"
+  },
   "fields": [
     {
       "column": "id",
@@ -79,7 +87,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.loan_installments.seq"
+      "labelKey": "fields.hrm.loan_installments.seq",
+      "sortable": true
     },
     {
       "column": "pay_period_id",

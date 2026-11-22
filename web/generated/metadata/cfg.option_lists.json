@@ -33,6 +33,15 @@
     "isSystem",
     "isActive"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_option_lists_code_code": "code",
+    "ck_option_lists_name_i18n_object": "nameI18n",
+    "uq_option_lists_code": "code"
+  },
   "fields": [
     {
       "column": "id",
@@ -53,7 +62,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.cfg.option_lists.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -82,7 +92,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.cfg.option_lists.is_active"
     },
     {

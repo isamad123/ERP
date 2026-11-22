@@ -41,6 +41,15 @@
     "incrementProposalId",
     "validFrom"
   ],
+  "search": [],
+  "constraints": {
+    "fk_compensation_assignments_company_id": "companyId",
+    "fk_compensation_assignments_employment_id": "employmentId",
+    "fk_compensation_assignments_event_id": "eventId",
+    "fk_compensation_assignments_increment_proposal_id": "incrementProposalId",
+    "fk_compensation_assignments_structure_id": "structureId",
+    "uq_compensation_assignments_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -136,7 +145,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.compensation_assignments.valid_from"
+      "labelKey": "fields.hrm.compensation_assignments.valid_from",
+      "sortable": true
     },
     {
       "column": "valid_to",

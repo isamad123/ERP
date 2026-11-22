@@ -38,6 +38,14 @@
     "dayType",
     "rosterStatus"
   ],
+  "search": [],
+  "constraints": {
+    "ck_roster_lines_day_type": "dayType",
+    "fk_roster_lines_company_id": "companyId",
+    "fk_roster_lines_employment_id": "employmentId",
+    "fk_roster_lines_roster_id": "rosterId",
+    "fk_roster_lines_shift_id": "shiftId"
+  },
   "fields": [
     {
       "column": "id",
@@ -90,7 +98,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.roster_lines.work_date"
+      "labelKey": "fields.hrm.roster_lines.work_date",
+      "sortable": true
     },
     {
       "column": "shift_id",

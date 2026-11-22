@@ -41,6 +41,16 @@
     "componentId",
     "amount"
   ],
+  "search": [],
+  "constraints": {
+    "ck_retro_adjustments_status": "status",
+    "fk_retro_adjustments_applied_in_run_id": "appliedInRunId",
+    "fk_retro_adjustments_company_id": "companyId",
+    "fk_retro_adjustments_component_id": "componentId",
+    "fk_retro_adjustments_employment_id": "employmentId",
+    "fk_retro_adjustments_original_pay_period_id": "originalPayPeriodId",
+    "fk_retro_adjustments_original_run_id": "originalRunId"
+  },
   "fields": [
     {
       "column": "id",
@@ -181,7 +191,8 @@
           "value": "cancelled",
           "labelKey": "options.hrm.retro_adjustments.status.cancelled"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "created_at",

@@ -39,6 +39,13 @@
     "cutOffDate",
     "paymentDate"
   ],
+  "search": [],
+  "constraints": {
+    "ck_pay_periods_status": "status",
+    "fk_pay_periods_company_id": "companyId",
+    "fk_pay_periods_pay_group_id": "payGroupId",
+    "uq_pay_periods_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -80,7 +87,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_periods.period_no"
+      "labelKey": "fields.hrm.pay_periods.period_no",
+      "sortable": true
     },
     {
       "column": "tax_year",
@@ -90,7 +98,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_periods.tax_year"
+      "labelKey": "fields.hrm.pay_periods.tax_year",
+      "sortable": true
     },
     {
       "column": "start_date",
@@ -100,7 +109,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_periods.start_date"
+      "labelKey": "fields.hrm.pay_periods.start_date",
+      "sortable": true
     },
     {
       "column": "end_date",

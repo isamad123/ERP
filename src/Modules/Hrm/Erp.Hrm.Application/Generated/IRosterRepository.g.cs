@@ -6,12 +6,14 @@
 
 namespace Erp.Hrm.Application.Generated;
 
-/// <summary>Equality filters for listing hrm.rosters (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing hrm.rosters (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record RosterFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? OrgUnitId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Case-insensitive text found in name.</summary>
+    public string? Search { get; init; }
 }
 
 /// <summary>Generated repository of hrm.rosters.</summary>

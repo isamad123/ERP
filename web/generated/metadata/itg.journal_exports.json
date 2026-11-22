@@ -38,6 +38,13 @@
     "fileId",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_journal_exports_format_code": "format",
+    "ck_journal_exports_status": "status",
+    "fk_journal_exports_company_id": "companyId",
+    "fk_journal_exports_file_id": "fileId"
+  },
   "fields": [
     {
       "column": "id",

@@ -44,6 +44,11 @@
     "isDependent",
     "isEmergencyContact"
   ],
+  "search": [],
+  "constraints": {
+    "ck_person_relations_relation_code": "relation",
+    "fk_person_relations_person_id": "personId"
+  },
   "fields": [
     {
       "column": "id",

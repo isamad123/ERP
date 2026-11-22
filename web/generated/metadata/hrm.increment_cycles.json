@@ -38,6 +38,15 @@
     "reviewCycleId",
     "status"
   ],
+  "search": [
+    "name"
+  ],
+  "constraints": {
+    "ck_increment_cycles_status": "status",
+    "fk_increment_cycles_company_id": "companyId",
+    "fk_increment_cycles_review_cycle_id": "reviewCycleId",
+    "uq_increment_cycles_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

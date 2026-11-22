@@ -42,6 +42,20 @@
     "employerPremiumComponentId",
     "currencyCode"
   ],
+  "search": [
+    "code",
+    "nameI18n"
+  ],
+  "constraints": {
+    "ck_benefit_plans_code_code": "code",
+    "ck_benefit_plans_kind": "kind",
+    "ck_benefit_plans_name_i18n_object": "nameI18n",
+    "fk_benefit_plans_company_id": "companyId",
+    "fk_benefit_plans_employee_premium_component_id": "employeePremiumComponentId",
+    "fk_benefit_plans_employer_premium_component_id": "employerPremiumComponentId",
+    "uq_benefit_plans_company_id_code": "code",
+    "uq_benefit_plans_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",
@@ -73,7 +87,8 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.benefit_plans.code",
-      "maxLength": 40
+      "maxLength": 40,
+      "sortable": true
     },
     {
       "column": "name_i18n",
@@ -182,7 +197,7 @@
       "required": true,
       "readOnly": false,
       "system": false,
-      "filter": false,
+      "filter": true,
       "labelKey": "fields.hrm.benefit_plans.is_active"
     },
     {

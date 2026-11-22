@@ -35,6 +35,12 @@
     "taxYear",
     "status"
   ],
+  "search": [],
+  "constraints": {
+    "ck_tax_declarations_status": "status",
+    "fk_tax_declarations_company_id": "companyId",
+    "fk_tax_declarations_employment_id": "employmentId"
+  },
   "fields": [
     {
       "column": "id",
@@ -76,7 +82,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.tax_declarations.tax_year"
+      "labelKey": "fields.hrm.tax_declarations.tax_year",
+      "sortable": true
     },
     {
       "column": "status",

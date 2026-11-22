@@ -31,6 +31,13 @@
     "currencyCode",
     "salaryFileFormat"
   ],
+  "search": [],
+  "constraints": {
+    "ck_company_bank_accounts_bank_code_code": "bankCode",
+    "ck_company_bank_accounts_salary_file_format_code": "salaryFileFormat",
+    "fk_company_bank_accounts_company_id": "companyId",
+    "uq_company_bank_accounts_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

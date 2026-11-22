@@ -59,6 +59,9 @@ public sealed class AttendanceEventListQuery
     public global::System.Guid? EmploymentId { get; init; }
 
     public global::System.Guid? DeviceId { get; init; }
+
+    /// <summary>Sort key: eventDate, idempotencyKey; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.attendance_events: read, create. Answers pass through field security (S1.06).</summary>
@@ -78,7 +81,7 @@ internal static class AttendanceEventEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_events.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.AttendanceEventFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, DeviceId = query.DeviceId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.AttendanceEventFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, DeviceId = query.DeviceId, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.AttendanceEventAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

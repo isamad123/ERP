@@ -6,10 +6,12 @@
 
 namespace Erp.Kernel.Application.Generated.Cfg;
 
-/// <summary>Equality filters for listing cfg.installed_packs (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing cfg.installed_packs (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record InstalledPackFilter
 {
     public string? Status { get; init; }
+    /// <summary>Sort key: packId; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of cfg.installed_packs.</summary>

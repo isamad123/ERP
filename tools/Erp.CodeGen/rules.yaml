@@ -361,6 +361,19 @@ tables:
         text: "lower-case; unique"
         check: { name: ck_tenant_domains_host_lower_case, sql: "host = lower(host)" }
 
+  # S1.12c (ruling Q12, CR-063): limits of a saved view, kept by the database as well as the saved-view service.
+  cfg.saved_views:
+    column_checks:
+      - column: list_key
+        text: "the list, e.g. org.branches; at most 100 characters"
+        check: { name: ck_saved_views_list_key, sql: "list_key ~ '^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$' and length(list_key) <= 100" }
+      - column: name
+        text: 1 to 80 characters
+        check: { name: ck_saved_views_name, sql: "length(name) between 1 and 80 and name = btrim(name)" }
+      - column: definition
+        text: "{search, filters, sort, columns [{field, width}]}; at most 8 KB"
+        check: { name: ck_saved_views_definition, sql: "jsonb_typeof(definition) = 'object' and octet_length(definition::text) <= 8192" }
+
   cp.platform_users:
     column_checks:
       - column: email

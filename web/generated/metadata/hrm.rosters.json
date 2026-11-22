@@ -37,6 +37,15 @@
     "periodEnd",
     "status"
   ],
+  "search": [
+    "name"
+  ],
+  "constraints": {
+    "ck_rosters_status": "status",
+    "fk_rosters_company_id": "companyId",
+    "fk_rosters_org_unit_id": "orgUnitId",
+    "uq_rosters_company_id_id": "id"
+  },
   "fields": [
     {
       "column": "id",

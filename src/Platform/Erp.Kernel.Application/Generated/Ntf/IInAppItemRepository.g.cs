@@ -6,10 +6,12 @@
 
 namespace Erp.Kernel.Application.Generated.Ntf;
 
-/// <summary>Equality filters for listing ntf.in_app_items (foreign keys and status). Null means no filter.</summary>
+/// <summary>Equality filters for listing ntf.in_app_items (foreign keys, status and is_active). Null means no filter.</summary>
 public sealed record InAppItemFilter
 {
     public global::System.Guid? UserId { get; init; }
+    /// <summary>Sort key: createdAt; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of ntf.in_app_items.</summary>
