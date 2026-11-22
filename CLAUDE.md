@@ -217,6 +217,11 @@ assignments and events are closed. A later module answers the backdated change c
 `hrm.employee_changed` from its `earliestDate`. Rule and function entries of rules.yaml for HR schemas are written to the HR migrations; generated lists of effective-dated
 tables take `asOf`. Tests: `tests/Erp.IntegrationTests/Employments` (`EmploymentTestSupport.PlaceAsync`, `HireBody`).
 
+Labels, option lists and custom fields (S1.15b): services `src/Platform/Erp.Kernel.Infrastructure/Metadata/` (`LabelAdministration`, `OptionListAdministration`, `CustomFieldAdministration`, `CustomFieldValidator`), endpoints `Erp.Kernel.Api/Metadata/MetadataEndpoints.cs`
+(`/api/cfg/label-overrides`, `/api/cfg/option-lists`, `/api/cfg/custom-fields`, form read `/api/kernel/custom-fields/{table}`), pure value rules `Erp.Kernel.Application/Metadata/CustomFieldRules.cs`. Every write path of a table with the `cust` trait
+must call `ICustomFieldValidator`: the generator does it for generated create and update; a hand-written write (HR person and hire services, later imports and employee screens) calls it itself after `FieldShaping.MergeCustom` and holds the result until the save is done
+(it holds the lock of unique fields). Tests: `tests/Erp.IntegrationTests/Metadata`, `tests/Erp.UnitTests/Metadata`; web `web/packages/engine/src/custom.tsx` and `web/apps/web/src/modules/admin/{labels,option-lists,custom-fields}.tsx`.
+
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.
 Slices: `docs/slices`. Handoff notes: `docs/handoff`.
