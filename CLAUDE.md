@@ -190,6 +190,11 @@ maker-checker requests; a module adds no screen work, only its `workflow.json` (
 from `GET /api/wf/tasks/{id}`; pending changes come from `GET /api/iam/maker-checker-requests/pending`. Browser tests start requests through the
 control server (`server.route`, `server.request`, `server.delegate`, `server.heldSetting` in `e2e/support.ts`).
 
+User console (S1.13a): `/admin/users` (`web/apps/web/src/modules/admin/users*.tsx`, API client `web/apps/web/src/api/users.ts`). Server views:
+`GET /api/iam/user-overview`, `/api/iam/users/{id}/access`, `/api/iam/people-lookup` (`UserConsoleEndpoints.cs`, `UserConsoleService.cs`). A username never equals
+another user's e-mail (trigger `tg_users_username_email_clash`, a rules.yaml `functions` entry: new rules never go in as design notes, the first migrations are frozen).
+Browser tests: `server.licence({ usersLimit })` changes the named-user limit.
+
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.
 Slices: `docs/slices`. Handoff notes: `docs/handoff`.

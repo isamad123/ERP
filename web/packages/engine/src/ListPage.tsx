@@ -166,7 +166,7 @@ export function useDocumentTitle(title: string) {
 }
 
 /** Column choice and order (FR-UX-GRD-02): a checkbox per column and buttons to move it, all by keyboard. */
-function ColumnsChooser<Row>({ columns, choices, onChange }: { columns: GridColumn<Row>[]; choices: ColumnChoice[] | undefined; onChange: (choices: ColumnChoice[]) => void }) {
+export function ColumnsChooser<Row>({ columns, choices, onChange }: { columns: GridColumn<Row>[]; choices: ColumnChoice[] | undefined; onChange: (choices: ColumnChoice[]) => void }) {
   const { t } = useText();
   const [open, setOpen] = useState(false);
   const ordered: ColumnChoice[] = [
@@ -215,7 +215,7 @@ function ColumnsChooser<Row>({ columns, choices, onChange }: { columns: GridColu
  * the server (cfg.saved_views). Applying a view sets search, filters, sort, companies and columns; the person saves the
  * list as it is now under a name, shares it with a role when allowed, and deletes their own views.
  */
-function SavedViews({ listKey, current, definition, canShare, onApply }: { listKey: string; current: string; definition: ViewDefinition; canShare: boolean; onApply: (view: SavedView | null) => void }) {
+export function SavedViews({ listKey, current, definition, canShare, onApply }: { listKey: string; current: string; definition: ViewDefinition; canShare: boolean; onApply: (view: SavedView | null) => void }) {
   const { t, server } = useText();
   const api = useEngineApi();
   const queryClient = useQueryClient();

@@ -2,7 +2,7 @@
 // catalogue (S1.11b1: /settings/licence, /admin/jobs/runs, /admin/jobs/health, /admin/audit, /admin/documents/quarantine,
 // /documents/{id}); screens of later slices open "not available yet" until their slice adds the component.
 import { lazy } from 'react';
-import { Activity, Bell, Building2, ClipboardCheck, Download, FileText, House, KeyRound, ScrollText, ShieldAlert } from 'lucide-react';
+import { Activity, Bell, Building2, ClipboardCheck, Download, FileText, House, KeyRound, ScrollText, ShieldAlert, Users } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
 import { HomePage } from '../pages/home';
 
@@ -11,6 +11,8 @@ const NotificationsPage = lazy(() => import('../pages/notifications'));
 const BranchesScreen = lazy(() => import('./kernel/branches'));
 // S1.12d: the approval inbox (workflow tasks and approvals of changes), loaded with its route.
 const ApprovalsScreen = lazy(() => import('./kernel/approvals'));
+// S1.13a: the administrator's user console.
+const UsersScreen = lazy(() => import('./admin/users'));
 
 export const kernelScreens: ScreenDeclaration[] = [
   { id: 'home', path: '/', labelKey: 'nav.home', icon: House, group: 'home', allowedWhenLocked: false, component: HomePage },
@@ -18,6 +20,8 @@ export const kernelScreens: ScreenDeclaration[] = [
   { id: 'approvals', path: '/approvals/*', labelKey: 'nav.approvals', icon: ClipboardCheck, group: 'approvals', permission: 'wf.workflow_tasks.read', component: ApprovalsScreen },
   // S1.12c (FR-KRN-ORG-02): branches; `tables` lists what the screen shows, for the Urdu label check (Build item 15).
   { id: 'branches', path: '/organization/branches/*', labelKey: 'nav.branches', icon: Building2, group: 'administration', permission: 'org.branches.read', component: BranchesScreen, tables: ['org.branches'] },
+  // S1.13a (FR-ADM-USR-01): the user console; the menu entry needs the permission to read users (ruling Q1).
+  { id: 'users', path: '/admin/users/*', labelKey: 'nav.users', icon: Users, group: 'administration', permission: 'iam.users.read', component: UsersScreen },
   { id: 'licence', path: '/settings/licence', labelKey: 'nav.licence', icon: KeyRound, group: 'administration', permission: 'cfg.licence.read', allowedWhenLocked: true, comesWith: 'S1.16' },
   { id: 'jobs', path: '/admin/jobs/*', labelKey: 'nav.jobs', icon: Activity, group: 'administration', permission: 'job.runs.read', comesWith: 'S1.16' },
   { id: 'audit', path: '/admin/audit/*', labelKey: 'nav.audit', icon: ScrollText, group: 'administration', permission: 'aud.changes.view', comesWith: 'S1.16' },

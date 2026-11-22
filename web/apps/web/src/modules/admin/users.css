@@ -1,0 +1,88 @@
+/* The user console (slice S1.13a): seat bar, tables and the greyed ended assignments. Tokens and logical properties only. */
+.erp-seats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.erp-seats p {
+  margin: 0;
+}
+
+.erp-meter {
+  inline-size: 100%;
+  max-inline-size: 24rem;
+  block-size: var(--space-3);
+}
+
+.erp-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.erp-table th,
+.erp-table td {
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  text-align: start;
+  vertical-align: top;
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+}
+
+.erp-table thead th {
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.erp-table tbody th {
+  font-weight: 500;
+}
+
+/* An assignment that has ended stays visible but quiet (Build item 3). */
+.erp-ended {
+  color: var(--color-text-muted);
+}
+
+.erp-wrap {
+  flex-wrap: wrap;
+}
+
+.erp-h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+@media (max-width: 47.99rem) {
+  .erp-table thead {
+    position: absolute;
+    inline-size: var(--space-1);
+    block-size: var(--space-1);
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .erp-table tr {
+    display: block;
+    padding-block: var(--space-2);
+    border-block-end: var(--border-width) solid var(--color-border-subtle);
+  }
+
+  .erp-table th,
+  .erp-table td {
+    display: block;
+    border: 0;
+    padding-block: var(--space-1);
+    padding-inline: 0;
+  }
+}
+
+/* Ten tabs do not fit a phone: the tab list scrolls inside its own box, never the page. */
+.erp-tabs {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.erp-tabs .erp-tab-list {
+  overflow-x: auto;
+  max-inline-size: 100%;
+}

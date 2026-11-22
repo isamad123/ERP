@@ -5915,6 +5915,10 @@ Indexes:
 - `uq_users_email` CREATE UNIQUE INDEX uq_users_email ON iam.users USING btree (lower(email)) WHERE (NOT is_deleted)
 - `uq_users_username` CREATE UNIQUE INDEX uq_users_username ON iam.users USING btree (lower(username)) WHERE (NOT is_deleted)
 
+Triggers:
+
+- `tg_users_username_email_clash` CREATE TRIGGER tg_users_username_email_clash BEFORE INSERT OR UPDATE OF username, email ON iam.users FOR EACH ROW EXECUTE FUNCTION iam.tg_users_username_email_clash()
+
 ### itg.account_mappings
 
 Maps payroll components and cost allocations to the customer's external chart of accounts. Requirements: KRN-INT-09, ADM-INT-07. Source: kernel.yaml.
@@ -7467,6 +7471,7 @@ Constraints:
 - `hrm.todo_statutory_table_rows_lock` Pending rule for hrm.statutory_table_rows, owned by S1.36: Immutable by trigger once the parent version is effective or referenced by any run; change by a new table version.
 - `hrm.todo_training_bonds_final_settlement_recovery` Pending rule for hrm.training_bonds, owned by S1.43: Active bonds appear in final settlement as bond_recovery (LND-06).
 - `iam.tg_refuse_change` 
+- `iam.tg_users_username_email_clash` 
 - `itg.tg_refuse_change` 
 - `job.tg_refuse_change` 
 - `meta.ensure_partitions` 
