@@ -42,6 +42,8 @@ export const server = {
   setting: (key: string, json: string) => call<undefined>('POST', '/settings', { key, json }),
   /** S1.12c: `count` branches coded `<prefix>-001`... in a company (default: the customer's first); every 7th inactive. */
   branches: (prefix: string, count: number, company?: string) => call<undefined>('POST', '/branches', { prefix, count, company: company ?? null }),
+  /** S1.14b: a reporting hierarchy with a five-level structure (`<prefix>-ROOT`, `-DIVA`, `-DIVB`, `-DEPT`, `-TEAM`) and a unit in no place (`-LOOSE`). */
+  orgStructure: (prefix: string) => call<{ hierarchy: string }>('POST', '/org-structure', { prefix }),
   /** S1.12c: the customer's label override of a key in a language (null removes it). */
   label: (key: string, language: 'en' | 'ur', text: string | null) => call<undefined>('POST', '/labels', { key, language, text }),
   /** S1.12d: a route of the test document type: one step decided by the named person, bulk approval allowed or not. */

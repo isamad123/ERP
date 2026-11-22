@@ -685,7 +685,7 @@ public sealed class OrganizationAdministrationService(
         return remainder == 1;
     }
 
-    private static ChangeEntry Entry(string table, Guid id, Guid? companyId, string action, DateTimeOffset now, Guid by, IEnumerable<(string Field, object? Before, object? After, bool Redacted)> fields)
+    internal static ChangeEntry Entry(string table, Guid id, Guid? companyId, string action, DateTimeOffset now, Guid by, IEnumerable<(string Field, object? Before, object? After, bool Redacted)> fields)
     {
         var changes = new JsonArray();
         foreach (var (field, before, after, redacted) in fields)
@@ -708,6 +708,6 @@ public sealed class OrganizationAdministrationService(
 
     private static readonly JsonSerializerOptions Plain = new(JsonSerializerDefaults.Web);
 
-    private static Task<int> WriteChangesAsync(NpgsqlConnection c, NpgsqlTransaction tx, IReadOnlyList<ChangeEntry> entries, CancellationToken ct) =>
+    internal static Task<int> WriteChangesAsync(NpgsqlConnection c, NpgsqlTransaction tx, IReadOnlyList<ChangeEntry> entries, CancellationToken ct) =>
         AuditDb.AppendChangesAsync(c, tx, entries, ct);
 }

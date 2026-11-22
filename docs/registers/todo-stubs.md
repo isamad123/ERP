@@ -8,7 +8,6 @@ Tests fail if the database and this register disagree, or if an owning slice has
 
 | Owner | Table | Placeholder | Rule (design text) |
 | --- | --- | --- | --- |
-| S1.14 | org.org_unit_links | `org.todo_org_unit_links_parent_cycle()` | parent_unit_id: fk org.org_units; null for root; cycle check by trigger |
 | S1.20 | hrm.employee_bank_accounts | `hrm.todo_employee_bank_accounts_bank_fields_required()` | bank fields required when payment_mode = bank_transfer or mobile_wallet |
 | S1.20 | hrm.nominations | `hrm.todo_nominations_shares_sum_to_one()` | deferred: shares per (person_id, scheme) on any date sum to 1 |
 | S1.22 | hrm.positions | `hrm.todo_positions_reporting_cycle()` | Cycle check trigger on reports_to_position_id. |
@@ -35,4 +34,4 @@ Tests fail if the database and this register disagree, or if an owning slice has
 | S1.44 | hrm.provident_fund_accounts | `hrm.todo_provident_fund_accounts_transfer()` | On intra-group transfer the old account closes with a transfer entry and the new account opens with the balance (employment_events.carry_over). |
 | S1.49 | hrm.goals | `hrm.todo_goals_parent_cycle()` | Cycle check trigger on parent_goal_id. |
 
-26 placeholders.
+25 placeholders.

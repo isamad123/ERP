@@ -42460,7 +42460,9 @@
         "ix_org_unit_links_unit_id",
         "ix_org_unit_links_parent_unit_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_org_unit_links_checks"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "org.org_unit_links"
@@ -45187,13 +45189,6 @@
       "table": "hrm.training_bonds",
       "owner": "S1.43",
       "rule": "Active bonds appear in final settlement as bond_recovery (LND-06)."
-    },
-    {
-      "schema": "org",
-      "function": "todo_org_unit_links_parent_cycle",
-      "table": "org.org_unit_links",
-      "owner": "S1.14",
-      "rule": "parent_unit_id: fk org.org_units; null for root; cycle check by trigger"
     }
   ]
 }

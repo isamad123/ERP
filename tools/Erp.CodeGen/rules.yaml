@@ -390,6 +390,58 @@ tables:
       - column: parent_unit_id
         text: "fk org.org_units; null for root; cycle check by trigger"
         stub: { name: org_unit_links_parent_cycle, owner: S1.14 }
+        # S1.14b (CR-070 S1.14b detail, Q9): a unit never sits under itself or under one of its own descendants in a hierarchy,
+        # on any date the new link covers (the walk up from the new parent follows only links whose periods overlap the new
+        # link's period, so a move dated in the future is checked against the structure of that time), and a unit and its
+        # parent belong to the same company (units stay in their company; FR-XM-30 is for people). The move service checks the
+        # same function first to give a clear message; the trigger stops any other path.
+        implemented:
+          slice: S1.14b
+          triggers:
+            - [org.org_unit_links, tg_org_unit_links_checks]
+          sql: |
+            create or replace function org.org_unit_link_would_cycle(p_hierarchy uuid, p_unit uuid, p_parent uuid, p_from date, p_to date, p_ignore uuid)
+            returns boolean language sql stable as $fn$
+                with recursive up(unit_id, lo, hi, depth) as (
+                    select p_parent, p_from, p_to, 0
+                    union all
+                    select l.parent_unit_id,
+                           greatest(up.lo, l.valid_from),
+                           case when up.hi is null then l.valid_to when l.valid_to is null then up.hi else least(up.hi, l.valid_to) end,
+                           up.depth + 1
+                    from up
+                    join org.org_unit_links l on l.hierarchy_id = p_hierarchy and l.unit_id = up.unit_id and l.parent_unit_id is not null
+                         and l.id is distinct from p_ignore
+                         and daterange(up.lo, up.hi, '[)') && daterange(l.valid_from, l.valid_to, '[)')
+                    where up.depth < 500
+                )
+                select exists (select 1 from up where up.unit_id = p_unit)
+            $fn$;
+            create or replace function org.tg_org_unit_links_checks() returns trigger
+            language plpgsql as $fn$
+            declare
+                unit_company uuid;
+                parent_company uuid;
+            begin
+                if new.parent_unit_id is null then
+                    return new;
+                end if;
+                if new.parent_unit_id = new.unit_id
+                   or org.org_unit_link_would_cycle(new.hierarchy_id, new.unit_id, new.parent_unit_id, new.valid_from, new.valid_to, new.id) then
+                    raise exception 'unit % cannot sit under % in hierarchy %: that would make a cycle', new.unit_id, new.parent_unit_id, new.hierarchy_id
+                        using errcode = '23514', constraint = 'ck_org_unit_links_no_cycle';
+                end if;
+                select company_id into unit_company from org.org_units where id = new.unit_id;
+                select company_id into parent_company from org.org_units where id = new.parent_unit_id;
+                if unit_company is distinct from parent_company then
+                    raise exception 'unit % and its parent % belong to different companies', new.unit_id, new.parent_unit_id
+                        using errcode = '23514', constraint = 'ck_org_unit_links_same_company';
+                end if;
+                return new;
+            end
+            $fn$;
+            create or replace trigger tg_org_unit_links_checks before insert or update on org.org_unit_links
+                for each row execute function org.tg_org_unit_links_checks();
 
   cfg.numbering_schemes:
     checks:
