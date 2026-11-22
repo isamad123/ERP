@@ -155,10 +155,12 @@ test('FR-ADM-SET-04 FR-KRN-IAM-14 a change held for a second administrator shows
   const held = await server.heldSetting(42, 'Longer drafts for the audit');
   const page = checker.page;
   await page.goto('/settings?q=drafts');
-  const row = page.locator('.erp-settings-row', { hasText: 'Days to keep drafts' });
+  // Other scenarios register settings of the same name; the one with this request is the one that waits.
+  const row = page.locator('.erp-settings-row', { hasText: 'Days to keep drafts' }).filter({ hasText: 'Waiting for a second administrator' }).first();
   await expect(row).toBeVisible();
-  await expect(row.getByText('Waiting for a second administrator')).toBeVisible();
-  const drawer = await openSetting(page, 'Days to keep drafts');
+  await row.getByRole('button', { name: /^Change the setting Days to keep drafts$/ }).click();
+  const drawer = page.getByRole('dialog', { name: 'Days to keep drafts', exact: true });
+  await expect(drawer.getByRole('table', { name: 'Where the value comes from' })).toBeVisible();
   await expect(drawer.getByText(/must be approved by a second administrator/)).toBeVisible();
   await accessible(page, 'a setting waiting for approval');
   expect(await server.settingValue(held.key)).toBeNull();
