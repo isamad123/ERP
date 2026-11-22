@@ -74,6 +74,9 @@ public sealed class PositionListQuery
     public global::System.Guid? LocationId { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.positions: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -94,7 +97,7 @@ internal static class PositionEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.positions.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PositionFilter { CompanyId = query.CompanyId, OrgUnitId = query.OrgUnitId, GradeId = query.GradeId, ReportsToPositionId = query.ReportsToPositionId, LocationId = query.LocationId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PositionFilter { CompanyId = query.CompanyId, OrgUnitId = query.OrgUnitId, GradeId = query.GradeId, ReportsToPositionId = query.ReportsToPositionId, LocationId = query.LocationId, Status = query.Status, AsOf = query.AsOf }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PositionAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

@@ -3,14 +3,17 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Microsoft.AspNetCore.Builder;
+using Npgsql;
 
 namespace Erp.IntegrationTests.Tenancy.Isolation;
 
 /// <summary>
 /// The cross-customer probe of the purpose-built HR endpoints (slice S1.20a onward, <c>HrmEndpointMetadata</c>). Each customer
 /// gets fresh material made through its own API: a person with an identifier, contact, address, relation and qualification, a
-/// second person, and a third with the first one's name and birth date sent to the duplicate review. Then, as for the other probes:
+/// second person, and a third with the first one's name and birth date sent to the duplicate review; from S1.20b two hired
+/// employments, the first linked to a user. Then, as for the other probes:
 /// <list type="number">
 /// <item>B's host and token aimed at A's ids, with and without headers naming A: actions on A's records are 404; creates and lists
 /// answer B's own data only; never 5xx; nothing of A's in any answer.</item>
@@ -22,7 +25,11 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
 {
     private sealed record Material(
         Guid Person, long PersonVersion, Guid Into, Guid Identifier, long IdentifierVersion, Guid Contact, long ContactVersion, Guid Address, long AddressVersion,
-        Guid Relation, long RelationVersion, Guid Qualification, long QualificationVersion, Guid Case, long CaseVersion, string PersonNo);
+        Guid Relation, long RelationVersion, Guid Qualification, long QualificationVersion, Guid Case, long CaseVersion, string PersonNo,
+        Hire Org, Guid Employment, long EmploymentVersion, Guid Unlinked, long UnlinkedVersion, Guid FreeUser);
+
+    /// <summary>Where the probe hires (slice S1.20b): an org unit of a company and that company's branch.</summary>
+    private sealed record Hire(Guid Company, Guid OrgUnit, Guid Branch);
 
     public async Task<IReadOnlyList<string>> RunAsync(ApiEndpoint endpoint, CancellationToken ct)
     {
@@ -32,7 +39,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
@@ -124,8 +131,70 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "GET /api/hrm/duplicates" => ("/api/hrm/duplicates", null),
             "POST /api/hrm/duplicates/{id:guid}/distinct" => ($"/api/hrm/duplicates/{m.Case}/distinct", Json(new { note = "probe", rowVersion = m.CaseVersion })),
             "GET /api/hrm/person-catalogue" => ("/api/hrm/person-catalogue", null),
+
+            // S1.20b employments: a hire into A's company (B has no such company), and actions on A's employments.
+            "POST /api/hrm/employments" => ("/api/hrm/employments", Json(HireBody(m.Org, "Hire"))),
+            "POST /api/hrm/employments/{id:guid}/events" => ($"/api/hrm/employments/{m.Employment}/events", Json(Acting(m.EmploymentVersion))),
+            "POST /api/hrm/employments/{id:guid}/events/check" => ($"/api/hrm/employments/{m.Employment}/events/check", Json(Acting(m.EmploymentVersion))),
+            "GET /api/hrm/employments/{id:guid}/as-of" => ($"/api/hrm/employments/{m.Employment}/as-of?date=2025-01-01", null),
+            "GET /api/hrm/employments/{id:guid}/timeline" => ($"/api/hrm/employments/{m.Employment}/timeline", null),
+            "PUT /api/hrm/employments/{id:guid}/user" => ($"/api/hrm/employments/{m.Unlinked}/user", Json(new { userId = m.FreeUser, rowVersion = m.UnlinkedVersion })),
+            "DELETE /api/hrm/employments/{id:guid}/user" => ($"/api/hrm/employments/{m.Employment}/user?rowVersion={m.EmploymentVersion}", null),
+            "GET /api/hrm/employment-catalogue" => ("/api/hrm/employment-catalogue", null),
             var key => throw new InvalidOperationException($"No probe target for HR endpoint {key}; extend HrmProbe."),
         };
+    }
+
+    /// <summary>A hire of a new person (S1.20b) into the org unit and branch.</summary>
+    private static object HireBody(Hire org, string name) => new
+    {
+        person = new { firstName = name + Guid.NewGuid().ToString("N")[..8], gender = "unspecified" },
+        companyId = org.Company,
+        employeeType = "permanent",
+        joiningDate = "2024-01-01",
+        assignment = new { orgUnitId = org.OrgUnit, branchId = org.Branch, title = "Probe officer" },
+    };
+
+    /// <summary>A change that applies at once (acting charges need no approval by default), dated after the probe's joining date.</summary>
+    private static object Acting(long rowVersion) => new
+    {
+        kind = "acting", reasonCode = "acting_start", effectiveDate = "2025-06-01", assignment = new { title = "Acting probe lead" }, rowVersion,
+    };
+
+    /// <summary>
+    /// Where a customer's probe hires: the seeded org unit row (its company and that company's default branch, rule SC-2), and two
+    /// fresh users of that customer (one linked to the first employment, one free to link). Written directly: the isolation host
+    /// has no organisation set-up of its own to call.
+    /// </summary>
+    private async Task<(Hire Org, Guid Linked, Guid Free)> HireSetupAsync(string code, CancellationToken ct)
+    {
+        var unit = await fx.RowAsync(code, IsolationFixture.Table("org.org_units"), ct);
+        var company = (Guid)unit["company_id"]!;
+        await using var c = await fx.OpenAdminAsync(code, ct);
+        Guid branch;
+        await using (var command = new NpgsqlCommand("select id from org.branches where company_id = $1 order by created_at limit 1", c))
+        {
+            command.Parameters.Add(new NpgsqlParameter { Value = company });
+            branch = (Guid)(await command.ExecuteScalarAsync(ct))!;
+        }
+
+        var (linked, free) = (Guid.CreateVersion7(), Guid.CreateVersion7());
+        var n = Guid.NewGuid().ToString("N")[..10];
+        await using (var command = new NpgsqlCommand("""
+            insert into iam.users (id, username, email, display_name, language, time_zone, is_system, status, created_at, created_by, updated_at, updated_by)
+            values ($1, $3, $3 || '@probe.test', $3, 'en', 'Asia/Karachi', false, 'active', now(), $4, now(), $4),
+                   ($2, $3 || 'f', $3 || 'f@probe.test', $3, 'en', 'Asia/Karachi', false, 'active', now(), $4, now(), $4)
+            """, c))
+        {
+            foreach (var v in new object[] { linked, free, "hp" + n, BaselineSeed.SystemUserId })
+            {
+                command.Parameters.Add(new NpgsqlParameter { Value = v });
+            }
+
+            await command.ExecuteNonQueryAsync(ct);
+        }
+
+        return (new Hire(company, (Guid)unit["id"]!, branch), linked, free);
     }
 
     /// <summary>Fresh records in one customer, made through its own API (allow-all access in the isolation host).</summary>
@@ -162,9 +231,19 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var address = await FirstOf("/api/hrm/person-addresses");
         var relation = await FirstOf("/api/hrm/person-relations");
         var qualification = await FirstOf("/api/hrm/person-qualifications");
+
+        // S1.20b: two employments of new persons, the first linked to a user of this customer.
+        var (org, linkedUser, freeUser) = await HireSetupAsync(host == fx.HostA ? fx.CodeA : fx.CodeB, ct);
+        var hired = (await PostAsync(host, token, "/api/hrm/employments", HireBody(org, "Employed"), ct)).GetProperty("employment");
+        var employment = hired.GetProperty("id").GetGuid();
+        var linked = await SendAsync(host, token, HttpMethod.Put, $"/api/hrm/employments/{employment}/user", Json(new { userId = linkedUser, rowVersion = hired.GetProperty("rowVersion").GetInt64() }), hints: false, ct);
+        var linkedVersion = linked.Status == HttpStatusCode.OK ? JsonDocument.Parse(linked.Body).RootElement.GetProperty("rowVersion").GetInt64()
+            : throw new InvalidOperationException($"HR probe material user link: {(int)linked.Status} {Short(linked.Body)}");
+        var second = (await PostAsync(host, token, "/api/hrm/employments", HireBody(org, "Unlinked"), ct)).GetProperty("employment");
         return new Material(person, created.GetProperty("rowVersion").GetInt64(), into, identifier.Id, identifier.Version, contact.Id, contact.Version,
             address.Id, address.Version, relation.Id, relation.Version, qualification.Id, qualification.Version,
-            match.GetProperty("id").GetGuid(), match.GetProperty("rowVersion").GetInt64(), created.GetProperty("personNo").GetString()!);
+            match.GetProperty("id").GetGuid(), match.GetProperty("rowVersion").GetInt64(), created.GetProperty("personNo").GetString()!,
+            org, employment, linkedVersion, second.GetProperty("id").GetGuid(), second.GetProperty("rowVersion").GetInt64(), freeUser);
     }
 
     private async Task<JsonElement> PostAsync(string host, string token, string path, object body, CancellationToken ct)

@@ -10,7 +10,8 @@ public static class PeopleServices
     public static IServiceCollection AddHrmPeople(this IServiceCollection services)
     {
         services.AddScoped<PersonMerger>();
-        services.AddScoped<IPersonService, PersonService>();
+        services.AddScoped<PersonService>();
+        services.AddScoped<IPersonService>(sp => sp.GetRequiredService<PersonService>());
         services.AddScoped<IHeldChangeHandler, PersonMergeHandler>();
         return services;
     }

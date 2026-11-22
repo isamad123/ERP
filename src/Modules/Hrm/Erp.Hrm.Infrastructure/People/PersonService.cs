@@ -72,7 +72,23 @@ internal sealed partial class PersonService(
 
     // ================================================================== persons
 
-    public async Task<PeopleResult> CreateAsync(CreatePersonRequest request, string source, CancellationToken cancellationToken)
+    public Task<PeopleResult> CreateAsync(CreatePersonRequest request, string source, CancellationToken cancellationToken) =>
+        CreateCoreAsync(request, source, null, cancellationToken);
+
+    /// <summary>
+    /// Creates a person together with their first employment, in one transaction (slice S1.20b "hire a new person", closes R-111):
+    /// the person's data scope is the employment's (a role limited to some companies may hire a new person into one of them), so
+    /// the person and section scope checks give way to the hire's checks of the employment, and field security is that of the
+    /// company. <paramref name="hire"/> runs inside the transaction after the person's rows are saved; any answer other than
+    /// <see cref="PeopleOutcome.Created"/> rolls everything back and is returned.
+    /// </summary>
+    internal Task<PeopleResult> CreateWithEmploymentAsync(CreatePersonRequest request, Guid companyId, Func<Person, Task<PeopleResult>> hire, CancellationToken cancellationToken) =>
+        CreateCoreAsync(request, "create", new PersonHire(companyId, hire), cancellationToken);
+
+    /// <summary>The employment a person is created with (<see cref="CreateWithEmploymentAsync"/>).</summary>
+    private sealed record PersonHire(Guid CompanyId, Func<Person, Task<PeopleResult>> Hire);
+
+    private async Task<PeopleResult> CreateCoreAsync(CreatePersonRequest request, string source, PersonHire? hire, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         if (!await HasAsync(PeoplePermissions.PersonsCreate, cancellationToken).ConfigureAwait(false)
@@ -126,13 +142,16 @@ internal sealed partial class PersonService(
             return PeopleResult.Fields(errors.ToDictionary());
         }
 
-        // Data scope of the new rows (a role limited to some companies sees only persons employed there: S1.20b hires them).
-        if (!await AllowsAsync(person, PersonAccess.Scope, "create", cancellationToken).ConfigureAwait(false))
+        // Data scope of the new rows (a role limited to some companies sees only persons employed there: a hire creates them
+        // with their employment, whose scope the hire checks).
+        if (hire is null && !await AllowsAsync(person, PersonAccess.Scope, "create", cancellationToken).ConfigureAwait(false))
         {
             return PeopleResult.Forbidden(AccessDeniedException.OutOfScope);
         }
 
-        var denied = await NotEditableAsync(PersonAccess.Fields, PersonAccess.Scope, "create", person, PersonChanges(request, creating: true), cancellationToken).ConfigureAwait(false);
+        var denied = hire is null
+            ? await NotEditableAsync(PersonAccess.Fields, PersonAccess.Scope, "create", person, PersonChanges(request, creating: true), cancellationToken).ConfigureAwait(false)
+            : await NotEditableInCompanyAsync(PersonAccess.Fields, hire.CompanyId, PersonChanges(request, creating: true), cancellationToken).ConfigureAwait(false);
         if (denied.Count > 0)
         {
             return NotEditable(denied);
@@ -189,7 +208,7 @@ internal sealed partial class PersonService(
             DecidedAt = request.Duplicates == "distinct" ? clock.UtcNow : null,
         })).ToList();
 
-        foreach (var (row, target) in SectionTargets(identifiers, contacts, addresses, relations, qualifications))
+        foreach (var (row, target) in hire is null ? SectionTargets(identifiers, contacts, addresses, relations, qualifications) : [])
         {
             if (!await target(row).ConfigureAwait(false))
             {
@@ -197,8 +216,11 @@ internal sealed partial class PersonService(
             }
         }
 
-        // The person first, then the rows that reference it (EF knows no relationships here), in one transaction.
-        if (await SaveAsync(cancellationToken, () => db.Add(person), () =>
+        // The person first, then the rows that reference it (EF knows no relationships here), in one transaction; a hire's
+        // employment last, inside the same transaction.
+        PeopleResult? hired = null;
+        if (await SaveAsync(hire is null ? null : async () => (hired = await hire.Hire(person).ConfigureAwait(false)).Outcome == PeopleOutcome.Created ? null : hired, cancellationToken,
+            () => db.Add(person), () =>
             {
                 db.AddRange(identifiers);
                 db.AddRange(contacts);
@@ -211,14 +233,15 @@ internal sealed partial class PersonService(
             return failed;
         }
 
-        return new PeopleResult(PeopleOutcome.Created, Body: new
+        var body = new
         {
             id = person.Id,
             personNo = person.PersonNo,
             rowVersion = person.RowVersion,
             // The other person is named only when the caller may read them (review S1.20a finding 6, CR-076 detail h).
             duplicateCases = cases.Select(c => new { id = c.Id, otherPersonId = visibleMatches.Contains(c.OtherPersonId) ? c.OtherPersonId : (Guid?)null, matchKind = c.MatchKind, status = c.Status }).ToList(),
-        });
+        };
+        return hired is null ? new PeopleResult(PeopleOutcome.Created, Body: body) : hired with { Body = new { person = body, employment = hired.Body } };
     }
 
     public async Task<PeopleResult> UpdateAsync(Guid personId, UpdatePersonRequest request, CancellationToken cancellationToken)
@@ -513,6 +536,13 @@ internal sealed partial class PersonService(
         return changes.Where(c => c.Changed && catalog.Find(c.Key) is not null && !map.CanEdit(c.Key)).Select(c => c.Key).ToList();
     }
 
+    /// <summary>The fields among <paramref name="changes"/> the caller may not edit on a new row of the company (FR-KRN-IAM-13).</summary>
+    private async Task<List<string>> NotEditableInCompanyAsync(FieldCatalog catalog, Guid companyId, IEnumerable<(string Key, bool Changed)> changes, CancellationToken ct)
+    {
+        var map = await fields.ForAsync(catalog, "create", companyId, ct).ConfigureAwait(false);
+        return changes.Where(c => c.Changed && catalog.Find(c.Key) is not null && !map.CanEdit(c.Key)).Select(c => c.Key).ToList();
+    }
+
     private static PeopleResult NotEditable(List<string> denied) =>
         new(PeopleOutcome.Invalid, FieldShaping.NotEditable, FieldErrors: denied.ToDictionary(f => f, _ => new[] { FieldShaping.NotEditable }, StringComparer.Ordinal));
 
@@ -550,7 +580,13 @@ internal sealed partial class PersonService(
 
     /// <summary>Saves the pending changes in one transaction; constraint refusals become answers with their keys.</summary>
     /// <remarks>Each of <paramref name="stages"/> adds rows and is saved before the next (parents before children).</remarks>
-    private async Task<PeopleResult?> SaveAsync(CancellationToken ct, params Action[] stages)
+    private Task<PeopleResult?> SaveAsync(CancellationToken ct, params Action[] stages) => SaveAsync(null, ct, stages);
+
+    /// <summary>
+    /// As <see cref="SaveAsync(CancellationToken, Action[])"/>, then <paramref name="last"/> inside the same transaction: an answer
+    /// from it rolls everything back and is returned (S1.20b: the employment of a hire).
+    /// </summary>
+    private async Task<PeopleResult?> SaveAsync(Func<Task<PeopleResult?>>? last, CancellationToken ct, params Action[] stages)
     {
         try
         {
@@ -562,6 +598,13 @@ internal sealed partial class PersonService(
             }
 
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            if (last is not null && await last().ConfigureAwait(false) is { } refused)
+            {
+                await tx.RollbackAsync(ct).ConfigureAwait(false);
+                db.ChangeTracker.Clear();
+                return refused;
+            }
+
             await tx.CommitAsync(ct).ConfigureAwait(false);
             return null;
         }

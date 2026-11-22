@@ -37,7 +37,7 @@ public static class HrmAuditCatalog
         new(typeof(global::Erp.Hrm.Domain.Generated.EmployeeDocument), "hrm.employee_documents", true, null, "id", "company_id", null, "employment_id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.EmployeeLetter), "hrm.employee_letters", true, null, "id", "company_id", null, "employment_id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.EmploymentAssignment), "hrm.employment_assignments", true, null, "id", "company_id", null, "employment_id", null),
-        new(typeof(global::Erp.Hrm.Domain.Generated.EmploymentEvent), "hrm.employment_events", true, null, "id", "company_id", null, "employment_id", null),
+        new(typeof(global::Erp.Hrm.Domain.Generated.EmploymentEvent), "hrm.employment_events", true, null, "id", "company_id", null, "employment_id", new global::System.Collections.Generic.Dictionary<string, string>(global::System.StringComparer.Ordinal) { ["changes"] = "salary" }),
         new(typeof(global::Erp.Hrm.Domain.Generated.EmploymentStatutoryRegistration), "hrm.employment_statutory_registrations", true, null, "id", "company_id", null, "employment_id", new global::System.Collections.Generic.Dictionary<string, string>(global::System.StringComparer.Ordinal) { ["registration_no"] = "personal" }),
         new(typeof(global::Erp.Hrm.Domain.Generated.Employment), "hrm.employments", true, null, "id", "company_id", "person_id", "id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.ExpenseCategory), "hrm.expense_categories", true, null, "id", "company_id", null, null, null),

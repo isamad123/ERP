@@ -61,6 +61,9 @@ public sealed class BenefitEnrollmentListQuery
     public global::System.Guid? PlanId { get; init; }
 
     public global::System.Guid? EmploymentId { get; init; }
+
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.benefit_enrollments: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -81,7 +84,7 @@ internal static class BenefitEnrollmentEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.benefit_enrollments.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.BenefitEnrollmentFilter { CompanyId = query.CompanyId, PlanId = query.PlanId, EmploymentId = query.EmploymentId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.BenefitEnrollmentFilter { CompanyId = query.CompanyId, PlanId = query.PlanId, EmploymentId = query.EmploymentId, AsOf = query.AsOf }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.BenefitEnrollmentAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

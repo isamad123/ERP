@@ -16,14 +16,6 @@
     {
       "action": "read",
       "permission": "hrm.employments.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.employments.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.employments.update"
     }
   ],
   "companyScoped": true,
@@ -54,6 +46,7 @@
     "fk_employments_previous_employment_id": "previousEmploymentId",
     "uq_employments_company_id_employee_no": "employeeNo",
     "uq_employments_company_id_id": "id",
+    "uq_employments_company_id_user_ref": "userRef",
     "uq_employments_person_id": "personId"
   },
   "fields": [

@@ -11,6 +11,8 @@ public sealed record SalaryStructureComponentFilter
 {
     public global::System.Guid? StructureId { get; init; }
     public global::System.Guid? ComponentId { get; init; }
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated repository of hrm.salary_structure_components.</summary>

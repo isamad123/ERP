@@ -13,6 +13,7 @@ public sealed record EmploymentEventFilter
     public global::System.Guid? EmploymentId { get; init; }
     public global::System.Guid? WorkflowInstanceId { get; init; }
     public global::System.Guid? LetterDocumentId { get; init; }
+    public global::System.Guid? CorrectsEventId { get; init; }
     public string? Status { get; init; }
     /// <summary>Sort key: effectiveDate; a leading minus sorts descending. Empty: by id (creation order).</summary>
     public string? Sort { get; init; }
@@ -53,6 +54,8 @@ public static class EmploymentEventAccess
         new("carry_over", "CarryOver", null),
         new("workflow_instance_id", "WorkflowInstanceId", null),
         new("letter_document_id", "LetterDocumentId", null),
+        new("changes", "Changes", "salary"),
+        new("corrects_event_id", "CorrectsEventId", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

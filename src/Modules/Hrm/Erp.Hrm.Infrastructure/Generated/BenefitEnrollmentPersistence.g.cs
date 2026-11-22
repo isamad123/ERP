@@ -60,6 +60,10 @@ internal sealed class BenefitEnrollmentRepository(
         {
             query = query.Where(e => e.EmploymentId == employmentIdFilter);
         }
+        if (filter.AsOf is { } asOf)
+        {
+            query = query.Where(e => e.ValidFrom <= asOf && (e.ValidTo == null || e.ValidTo > asOf));
+        }
         return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 

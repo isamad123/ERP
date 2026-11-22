@@ -56,6 +56,10 @@ internal sealed class UserGroupRoleRepository(
         {
             query = query.Where(e => e.CompanyId == companyIdFilter);
         }
+        if (filter.AsOf is { } asOf)
+        {
+            query = query.Where(e => e.ValidFrom <= asOf && (e.ValidTo == null || e.ValidTo > asOf));
+        }
         return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 }

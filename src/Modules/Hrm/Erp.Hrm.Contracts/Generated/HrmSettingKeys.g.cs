@@ -10,6 +10,12 @@ public static class HrmSettingKeys
 {
     /// <summary>Merging two person records needs a second person's approval.</summary>
     public const string HrmPersonMergeRequiresApproval = "hrm.person_merge.requires_approval";
+
+    /// <summary>The kinds of employment change that wait for approval before they apply.</summary>
+    public const string HrmEmploymentEventsApprovalKinds = "hrm.employment_events.approval_kinds";
+
+    /// <summary>The user linked to an employment is disabled when the employment ends.</summary>
+    public const string HrmUserLinkDisableOnSeparation = "hrm.user_link.disable_on_separation";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

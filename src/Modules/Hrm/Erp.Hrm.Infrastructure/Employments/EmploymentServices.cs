@@ -1,0 +1,58 @@
+using Erp.Hrm.Application.Employments;
+using Erp.Kernel.Contracts.Entitlements;
+using Erp.Kernel.Contracts.Jobs;
+using Erp.Kernel.Contracts.Workflow;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Erp.Hrm.Infrastructure.Employments;
+
+/// <summary>
+/// Registers the employment services of slice S1.20b. Both hosts get the document type <c>hrm.employment_event</c> with its outcome
+/// handler (escalation runs in the worker), the approver directory (line managers, ruling Q7), the employee counters (the limit at
+/// hire, the monthly meter; S1.09b ruling Q8) and the HR job manifest; the worker also gets the job's handler.
+/// </summary>
+public static class EmploymentServices
+{
+    /// <summary>The HR module's workflow manifest (embedded <c>Access/workflow.json</c>).</summary>
+    public static string WorkflowManifest { get; } = Embedded("Erp.Hrm.Infrastructure.Access.workflow.json");
+
+    /// <summary>The HR module's job manifest (embedded <c>Access/jobs.json</c>).</summary>
+    public static string JobManifest { get; } = Embedded("Erp.Hrm.Infrastructure.Access.jobs.json");
+
+    /// <summary>
+    /// What both hosts need. The API host adds <see cref="AddHrmEmploymentApi"/>, the worker <see cref="AddHrmEmploymentWorker"/>; each
+    /// host registers <see cref="WorkflowManifest"/> as a workflow document-type source (the manifest reader is the kernel's).
+    /// </summary>
+    public static IServiceCollection AddHrmEmployment(this IServiceCollection services)
+    {
+        services.AddScoped<EmploymentApplier>();
+        services.AddScoped<EmploymentChangeCheck>();
+        services.AddScoped<IWorkflowOutcomeHandler, EmploymentEventHandler>();
+        services.AddScoped<IApproverDirectory, HrmApproverDirectory>();
+        services.AddSingleton<ILimitCounter, ActiveEmployeeLimitCounter>();
+        services.AddSingleton<IActiveEmployeeCounter, ActiveEmployeeCounter>();
+        services.AddSingleton(new JobManifestSource(JobManifest));
+        return services;
+    }
+
+    /// <summary>The employment services of the API host.</summary>
+    public static IServiceCollection AddHrmEmploymentApi(this IServiceCollection services)
+    {
+        services.AddScoped<IEmploymentService, EmploymentService>();
+        return services;
+    }
+
+    /// <summary>The daily job of the worker host (ruling Q12).</summary>
+    public static IServiceCollection AddHrmEmploymentWorker(this IServiceCollection services)
+    {
+        services.AddSingleton<IJobHandler, EmploymentEventsDueJob>();
+        return services;
+    }
+
+    private static string Embedded(string name)
+    {
+        using var stream = typeof(EmploymentServices).Assembly.GetManifestResourceStream(name) ?? throw new InvalidOperationException(name + " is not embedded.");
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+}

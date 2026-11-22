@@ -154,6 +154,18 @@ public static class CSharpEmitter
             w.Line($"/// <summary>Case-insensitive text found in {CodeWriter.Xml(string.Join(", ", search.Select(c => Naming.Camel(c.Name))))}.</summary>");
             w.Line("public string? Search { get; init; }");
         }
+
+        if (t.IsEffectiveDated)
+        {
+            if (!filter)
+            {
+                w.Line();
+            }
+
+            // S1.20b (GHR-03, FR-HRM-EMP-11): every effective-dated list answers as of a date.
+            w.Line("/// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>");
+            w.Line("public global::System.DateOnly? AsOf { get; init; }");
+        }
     }
 
     public static void Emit(DesignModel model, OutputSet output)
@@ -379,6 +391,13 @@ public static class CSharpEmitter
                 var pattern = N.BaseType(c).IsValueType ? $"{{ }} {local}" : $"{{ }} {local}";
                 w.Open($"if (filter.{p} is {pattern})");
                 w.Line($"query = query.Where(e => e.{p} == {local});");
+                w.Close();
+            }
+
+            if (t.IsEffectiveDated)
+            {
+                w.Open("if (filter.AsOf is { } asOf)");
+                w.Line("query = query.Where(e => e.ValidFrom <= asOf && (e.ValidTo == null || e.ValidTo > asOf));");
                 w.Close();
             }
 
@@ -725,7 +744,8 @@ public static class CSharpEmitter
         // List
         var filterInit = string.Join(", ", FilterColumns(t).Select(c => $"{N.Property(t, c)} = query.{N.Property(t, c)}")
             .Concat(SortColumns(t).Count > 0 ? ["Sort = query.Sort"] : [])
-            .Concat(SearchColumns(t).Count > 0 ? ["Search = query.Search"] : []));
+            .Concat(SearchColumns(t).Count > 0 ? ["Search = query.Search"] : [])
+            .Concat(t.IsEffectiveDated ? ["AsOf = query.AsOf"] : []));
         w.Line();
         w.Line($"private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] {entity}ListQuery query, {repo} repository, {permissions}, {fields}, {ct}) =>");
         w.Line($"    GeneratedEndpointSupport.RunAsync(permissions, {CodeWriter.CSharpString(N.Permission(t, "read"))}, async () =>");

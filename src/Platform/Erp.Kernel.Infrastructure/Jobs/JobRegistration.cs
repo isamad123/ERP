@@ -2,6 +2,7 @@ using Erp.BuildingBlocks.Application.Audit;
 using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.Kernel.Application.Jobs;
+using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Contracts.Jobs;
 using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Entitlements;
@@ -39,7 +40,8 @@ public static class JobRegistration
         services.TryAddScoped<JobRunContext>();
         services.AddScoped<ICurrentActor, JobCurrentActor>();
         services.AddScoped<IAuditContext, JobAuditContext>();
-        services.AddSingleton(sp => new LicenceMaintenance(sp.GetRequiredService<ControlPlaneOptions>(), sp.GetRequiredService<Erp.BuildingBlocks.Application.Tenancy.ISecretStore>(), sp.GetRequiredService<IClock>()));
+        // The HR module's active employee counter, when the host registers it (S1.20b; S1.09b ruling Q8: the monthly meter).
+        services.AddSingleton(sp => new LicenceMaintenance(sp.GetRequiredService<ControlPlaneOptions>(), sp.GetRequiredService<Erp.BuildingBlocks.Application.Tenancy.ISecretStore>(), sp.GetRequiredService<IClock>(), sp.GetService<IActiveEmployeeCounter>()));
         services.AddKernelJobHandlers();
         services.AddSingleton(sp => new JobCatalog(sp.GetServices<JobManifestSource>(), sp.GetServices<IJobHandler>()));
         services.AddSingleton<JobWorker>();

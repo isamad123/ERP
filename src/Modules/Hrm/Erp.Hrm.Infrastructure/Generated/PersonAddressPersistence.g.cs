@@ -47,6 +47,10 @@ internal sealed class PersonAddressRepository(
         {
             query = query.Where(e => e.PersonId == personIdFilter);
         }
+        if (filter.AsOf is { } asOf)
+        {
+            query = query.Where(e => e.ValidFrom <= asOf && (e.ValidTo == null || e.ValidTo > asOf));
+        }
         return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 }

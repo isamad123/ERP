@@ -9,8 +9,6 @@ Tests fail if the database and this register disagree, or if an owning slice has
 | Owner | Table | Placeholder | Rule (design text) |
 | --- | --- | --- | --- |
 | S1.20 | hrm.employee_bank_accounts | `hrm.todo_employee_bank_accounts_bank_fields_required()` | bank fields required when payment_mode = bank_transfer or mobile_wallet |
-| S1.20 | hrm.employment_assignments | `hrm.todo_employment_assignments_cost_allocation_sum()` | cost_allocation: list of {cost_center_ref or department, pct}; must sum to 1 |
-| S1.20 | hrm.employment_assignments | `hrm.todo_employment_assignments_manager_cycle()` | Cycle check trigger on manager_employment_id. |
 | S1.20 | hrm.nominations | `hrm.todo_nominations_shares_sum_to_one()` | deferred: shares per (person_id, scheme) on any date sum to 1 |
 | S1.22 | hrm.positions | `hrm.todo_positions_reporting_cycle()` | Cycle check trigger on reports_to_position_id. |
 | S1.31 | hrm.attendance_days | `hrm.todo_attendance_days_lock()` | Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26). |
@@ -36,4 +34,4 @@ Tests fail if the database and this register disagree, or if an owning slice has
 | S1.44 | hrm.provident_fund_accounts | `hrm.todo_provident_fund_accounts_transfer()` | On intra-group transfer the old account closes with a transfer entry and the new account opens with the balance (employment_events.carry_over). |
 | S1.49 | hrm.goals | `hrm.todo_goals_parent_cycle()` | Cycle check trigger on parent_goal_id. |
 
-27 placeholders.
+25 placeholders.

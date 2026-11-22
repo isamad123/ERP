@@ -37,6 +37,9 @@ public sealed class NominationListQuery
     public global::System.Guid? PersonId { get; init; }
 
     public global::System.Guid? RelationId { get; init; }
+
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.nominations: read. Answers pass through field security (S1.06).</summary>
@@ -55,7 +58,7 @@ internal static class NominationEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.nominations.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.NominationFilter { PersonId = query.PersonId, RelationId = query.RelationId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.NominationFilter { PersonId = query.PersonId, RelationId = query.RelationId, AsOf = query.AsOf }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.NominationAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

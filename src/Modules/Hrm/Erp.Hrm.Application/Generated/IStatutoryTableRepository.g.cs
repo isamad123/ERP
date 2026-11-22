@@ -12,6 +12,8 @@ public sealed record StatutoryTableFilter
     public global::System.Guid? CompanyId { get; init; }
     /// <summary>Case-insensitive text found in code.</summary>
     public string? Search { get; init; }
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated repository of hrm.statutory_tables.</summary>
