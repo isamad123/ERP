@@ -57,6 +57,9 @@ public sealed class StatutoryTableListQuery
 
     /// <summary>Case-insensitive text found in code.</summary>
     public string? Search { get; init; }
+
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.statutory_tables: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -77,7 +80,7 @@ internal static class StatutoryTableEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.statutory_tables.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.StatutoryTableFilter { CompanyId = query.CompanyId, Search = query.Search }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.StatutoryTableFilter { CompanyId = query.CompanyId, Search = query.Search, AsOf = query.AsOf }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.StatutoryTableAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

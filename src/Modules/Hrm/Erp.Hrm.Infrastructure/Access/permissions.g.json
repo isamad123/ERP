@@ -477,33 +477,9 @@
       "sensitive": false
     },
     {
-      "code": "hrm.employment_assignments.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.employment_assignments.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.employment_assignments.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.employment_assignments.update",
-      "sensitive": false
-    },
-    {
       "code": "hrm.employment_events.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.employment_events.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.employment_events.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.employment_events.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.employment_events.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.employment_events.update",
       "sensitive": false
     },
     {
@@ -528,18 +504,6 @@
       "code": "hrm.employments.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.employments.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.employments.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.employments.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.employments.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.employments.update",
       "sensitive": false
     },
     {

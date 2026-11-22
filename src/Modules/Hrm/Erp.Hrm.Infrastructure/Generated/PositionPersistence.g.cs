@@ -76,6 +76,10 @@ internal sealed class PositionRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
+        if (filter.AsOf is { } asOf)
+        {
+            query = query.Where(e => e.ValidFrom <= asOf && (e.ValidTo == null || e.ValidTo > asOf));
+        }
         return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 

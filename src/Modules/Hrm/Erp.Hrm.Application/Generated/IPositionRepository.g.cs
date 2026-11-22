@@ -15,6 +15,8 @@ public sealed record PositionFilter
     public global::System.Guid? ReportsToPositionId { get; init; }
     public global::System.Guid? LocationId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated repository of hrm.positions.</summary>

@@ -23,30 +23,14 @@ public sealed class EmploymentEventResponse
     public global::System.Text.Json.JsonElement? CarryOver { get; init; }
     public global::System.Guid? WorkflowInstanceId { get; init; }
     public global::System.Guid? LetterDocumentId { get; init; }
+    public global::System.Text.Json.JsonElement? Changes { get; init; }
+    public global::System.Guid? CorrectsEventId { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for hrm.employment_events. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class EmploymentEventWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public global::System.Guid? EmploymentId { get; init; }
-    public string? Kind { get; init; }
-    public string? ReasonCode { get; init; }
-    public global::System.DateOnly? EffectiveDate { get; init; }
-    public string? Notes { get; init; }
-    public global::System.Text.Json.JsonElement? CarryOver { get; init; }
-    public global::System.Guid? WorkflowInstanceId { get; init; }
-    public global::System.Guid? LetterDocumentId { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for hrm.employment_events.</summary>
@@ -64,13 +48,15 @@ public sealed class EmploymentEventListQuery
 
     public global::System.Guid? LetterDocumentId { get; init; }
 
+    public global::System.Guid? CorrectsEventId { get; init; }
+
     public string? Status { get; init; }
 
     /// <summary>Sort key: effectiveDate; a leading minus sorts descending. Empty: by id (creation order).</summary>
     public string? Sort { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.employment_events: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.employment_events: read. Answers pass through field security (S1.06).</summary>
 internal static class EmploymentEventEndpoints
 {
     private const string Resource = "hrm.employment_events";
@@ -80,15 +66,13 @@ internal static class EmploymentEventEndpoints
         var group = app.MapGroup("/api/hrm/employment-events").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.employment_events.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.employment_events.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.employment_events.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.employment_events.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.employment_events.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.employment_events.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.employment_events.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.employment_events.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] EmploymentEventListQuery query, global::Erp.Hrm.Application.Generated.IEmploymentEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.employment_events.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.EmploymentEventFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkflowInstanceId = query.WorkflowInstanceId, LetterDocumentId = query.LetterDocumentId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.EmploymentEventFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkflowInstanceId = query.WorkflowInstanceId, LetterDocumentId = query.LetterDocumentId, CorrectsEventId = query.CorrectsEventId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmploymentEventAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
@@ -98,53 +82,6 @@ internal static class EmploymentEventEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmploymentEventAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(EmploymentEventWriteRequest request, global::Erp.Hrm.Application.Generated.IEmploymentEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.employment_events.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.EmploymentEventAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.EmploymentEvent();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/employment-events/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmploymentEventAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, EmploymentEventWriteRequest request, global::Erp.Hrm.Application.Generated.IEmploymentEventRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.employment_events.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.EmploymentEventAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.EmploymentEventAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static EmploymentEventResponse ToResponse(global::Erp.Hrm.Domain.Generated.EmploymentEvent row) => new()
@@ -159,6 +96,8 @@ internal static class EmploymentEventEndpoints
         CarryOver = row.CarryOver?.RootElement.Clone(),
         WorkflowInstanceId = row.WorkflowInstanceId,
         LetterDocumentId = row.LetterDocumentId,
+        Changes = row.Changes?.RootElement.Clone(),
+        CorrectsEventId = row.CorrectsEventId,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -166,129 +105,4 @@ internal static class EmploymentEventEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(EmploymentEventWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
-        {
-            errors.Add("employmentId");
-        }
-        if (request.Kind is null && (!update || access.CanEdit("kind")))
-        {
-            errors.Add("kind");
-        }
-        if (request.ReasonCode is null && (!update || access.CanEdit("reason_code")))
-        {
-            errors.Add("reasonCode");
-        }
-        if (request.EffectiveDate is null && (!update || access.CanEdit("effective_date")))
-        {
-            errors.Add("effectiveDate");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(EmploymentEventWriteRequest request, global::Erp.Hrm.Domain.Generated.EmploymentEvent row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("employment_id"))
-        {
-            row.EmploymentId = request.EmploymentId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
-        {
-            denied.Add("employmentId");
-        }
-        if (access.CanEdit("kind"))
-        {
-            row.Kind = request.Kind!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Kind, row.Kind, update))
-        {
-            denied.Add("kind");
-        }
-        if (access.CanEdit("reason_code"))
-        {
-            row.ReasonCode = request.ReasonCode!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReasonCode, row.ReasonCode, update))
-        {
-            denied.Add("reasonCode");
-        }
-        if (access.CanEdit("effective_date"))
-        {
-            row.EffectiveDate = request.EffectiveDate!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EffectiveDate, row.EffectiveDate, update))
-        {
-            denied.Add("effectiveDate");
-        }
-        if (access.CanEdit("notes"))
-        {
-            row.Notes = request.Notes;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Notes, row.Notes, update))
-        {
-            denied.Add("notes");
-        }
-        if (access.CanEdit("carry_over"))
-        {
-            row.CarryOver = GeneratedEndpointSupport.ToDocument(request.CarryOver);
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CarryOver, row.CarryOver, update))
-        {
-            denied.Add("carryOver");
-        }
-        if (access.CanEdit("workflow_instance_id"))
-        {
-            row.WorkflowInstanceId = request.WorkflowInstanceId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkflowInstanceId, row.WorkflowInstanceId, update))
-        {
-            denied.Add("workflowInstanceId");
-        }
-        if (access.CanEdit("letter_document_id"))
-        {
-            row.LetterDocumentId = request.LetterDocumentId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LetterDocumentId, row.LetterDocumentId, update))
-        {
-            denied.Add("letterDocumentId");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
 }

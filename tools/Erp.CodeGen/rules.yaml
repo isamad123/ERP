@@ -140,10 +140,108 @@ tables:
     notes:
       - text: "Cycle check trigger on manager_employment_id."
         stub: { name: employment_assignments_manager_cycle, owner: S1.20 }
+        # S1.20b (CR-076 S1.20b detail): nobody reports to themself, directly or through others, on any date. The fast path
+        # looks at every manager the new manager has ever had; only when the employment is among them is the chain followed
+        # on each date of the row's period where a row of that chain starts (a cycle exists on such a date if on any date).
+        # An AFTER trigger, so the row being written is part of the chain it closes.
+        implemented:
+          slice: S1.20b
+          triggers:
+            - [hrm.employment_assignments, tg_employment_assignments_manager_cycle]
+          sql: |
+            create or replace function hrm.tg_employment_assignments_manager_cycle() returns trigger
+            language plpgsql as $fn$
+            declare
+                d date;
+            begin
+                if new.manager_employment_id is null then
+                    return null;
+                end if;
+                if new.manager_employment_id = new.employment_id then
+                    raise exception 'employment % cannot be its own manager', new.employment_id
+                        using errcode = '23514', constraint = 'ck_employment_assignments_manager_cycle';
+                end if;
+                if not exists (
+                    with recursive up(id) as (
+                        select new.manager_employment_id
+                        union
+                        select a.manager_employment_id from hrm.employment_assignments a join up on a.employment_id = up.id
+                        where a.manager_employment_id is not null)
+                    select 1 from up where up.id = new.employment_id) then
+                    return null;
+                end if;
+                for d in
+                    with recursive up(id) as (
+                        select new.manager_employment_id
+                        union
+                        select a.manager_employment_id from hrm.employment_assignments a join up on a.employment_id = up.id
+                        where a.manager_employment_id is not null)
+                    select new.valid_from
+                    union
+                    select a.valid_from from hrm.employment_assignments a
+                    where a.employment_id in (select id from up) and a.valid_from > new.valid_from
+                      and (new.valid_to is null or a.valid_from < new.valid_to)
+                loop
+                    if exists (
+                        with recursive chain(id) as (
+                            select new.manager_employment_id
+                            union
+                            select a.manager_employment_id from chain c join hrm.employment_assignments a on a.employment_id = c.id
+                            where a.manager_employment_id is not null and a.valid_from <= d and (a.valid_to is null or a.valid_to > d))
+                        select 1 from chain where chain.id = new.employment_id) then
+                        raise exception 'manager % of employment % on % closes a reporting cycle', new.manager_employment_id, new.employment_id, d
+                            using errcode = '23514', constraint = 'ck_employment_assignments_manager_cycle';
+                    end if;
+                end loop;
+                return null;
+            end
+            $fn$;
+            create or replace trigger tg_employment_assignments_manager_cycle after insert or update of manager_employment_id, employment_id, valid_from, valid_to
+                on hrm.employment_assignments for each row execute function hrm.tg_employment_assignments_manager_cycle();
     column_stubs:
       - column: cost_allocation
         text: "list of {cost_center_ref or department, pct}; must sum to 1"
         stub: { name: employment_assignments_cost_allocation_sum, owner: S1.20 }
+        # S1.20b (CR-076 S1.20b detail): a non-empty list of shares, each naming exactly one of a cost centre reference or a
+        # department (org unit id) with a share above 0 and at most 1; the shares sum to exactly 1 (numeric, no rounding).
+        implemented:
+          slice: S1.20b
+          triggers:
+            - [hrm.employment_assignments, tg_employment_assignments_cost_allocation_sum]
+          sql: |
+            create or replace function hrm.tg_employment_assignments_cost_allocation_sum() returns trigger
+            language plpgsql as $fn$
+            declare
+                item jsonb;
+                share numeric;
+                total numeric := 0;
+            begin
+                if jsonb_typeof(new.cost_allocation) is distinct from 'array' or jsonb_array_length(new.cost_allocation) = 0 then
+                    raise exception 'cost allocation of assignment % must be a non-empty list', new.id
+                        using errcode = '23514', constraint = 'ck_employment_assignments_cost_allocation_sum';
+                end if;
+                for item in select value from jsonb_array_elements(new.cost_allocation) loop
+                    if jsonb_typeof(item) is distinct from 'object' or jsonb_typeof(item -> 'pct') is distinct from 'number'
+                       or (item ? 'cost_center_ref') = (item ? 'department') then
+                        raise exception 'cost allocation of assignment % has a share without exactly one target and a number', new.id
+                            using errcode = '23514', constraint = 'ck_employment_assignments_cost_allocation_sum';
+                    end if;
+                    share := (item ->> 'pct')::numeric;
+                    if share <= 0 or share > 1 then
+                        raise exception 'cost allocation of assignment % has a share of %', new.id, share
+                            using errcode = '23514', constraint = 'ck_employment_assignments_cost_allocation_sum';
+                    end if;
+                    total := total + share;
+                end loop;
+                if total <> 1 then
+                    raise exception 'cost allocation of assignment % sums to % instead of 1', new.id, total
+                        using errcode = '23514', constraint = 'ck_employment_assignments_cost_allocation_sum';
+                end if;
+                return new;
+            end
+            $fn$;
+            create or replace trigger tg_employment_assignments_cost_allocation_sum before insert or update of cost_allocation
+                on hrm.employment_assignments for each row execute function hrm.tg_employment_assignments_cost_allocation_sum();
 
   hrm.employee_bank_accounts:
     checks:
@@ -999,3 +1097,39 @@ functions:
       $fn$;
       create or replace trigger tg_locations_checks before insert or update on org.locations
           for each row execute function org.tg_locations_checks();
+
+  # S1.20b (CR-076 S1.20b detail; FR-XM-05, slice S1.20 rulings Q2 and Q12): an employment event that is approved, effective or
+  # cancelled is never edited. Only its status moves on (approved to effective on its date, or approved to cancelled when a
+  # correction replaced it before that date) and a letter may be attached later (S1.24); corrections are new events. Only a
+  # draft may be removed. A function entry, not a design note, because the first migrations are frozen.
+  - slice: S1.20b
+    name: hrm.tg_employment_events_fixed
+    purpose: "An approved, effective or cancelled employment event is never changed except its status (approved to effective or cancelled) and its letter, and only a draft may be deleted (FR-XM-05); refused with constraint ck_employment_events_fixed."
+    triggers:
+      - [hrm.employment_events, tg_employment_events_fixed]
+    sql: |
+      create or replace function hrm.tg_employment_events_fixed() returns trigger
+      language plpgsql as $fn$
+      begin
+          if tg_op = 'DELETE' then
+              if old.status <> 'draft' then
+                  raise exception 'employment event % is % and cannot be deleted', old.id, old.status
+                      using errcode = '23514', constraint = 'ck_employment_events_fixed';
+              end if;
+              return old;
+          end if;
+          if old.status in ('approved', 'effective', 'cancelled')
+             and ((new.company_id, new.employment_id, new.kind, new.reason_code, new.effective_date, new.notes, new.carry_over,
+                   new.workflow_instance_id, new.changes, new.corrects_event_id, new.created_at, new.created_by)
+                  is distinct from
+                  (old.company_id, old.employment_id, old.kind, old.reason_code, old.effective_date, old.notes, old.carry_over,
+                   old.workflow_instance_id, old.changes, old.corrects_event_id, old.created_at, old.created_by)
+                  or not (new.status = old.status or (old.status = 'approved' and new.status in ('effective', 'cancelled')))) then
+              raise exception 'employment event % is % and cannot be changed', old.id, old.status
+                  using errcode = '23514', constraint = 'ck_employment_events_fixed';
+          end if;
+          return new;
+      end
+      $fn$;
+      create or replace trigger tg_employment_events_fixed before update or delete on hrm.employment_events
+          for each row execute function hrm.tg_employment_events_fixed();

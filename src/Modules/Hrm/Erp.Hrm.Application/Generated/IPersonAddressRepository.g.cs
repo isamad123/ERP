@@ -10,6 +10,8 @@ namespace Erp.Hrm.Application.Generated;
 public sealed record PersonAddressFilter
 {
     public global::System.Guid? PersonId { get; init; }
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated repository of hrm.person_addresses.</summary>

@@ -89,6 +89,12 @@ internal sealed class EmploymentRepository(
         return await query.Where(e => e.PersonId == personId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Employment>> FindByCompanyIdAndUserRefAsync(global::System.Guid companyId, global::System.Guid? userRef, global::System.Threading.CancellationToken cancellationToken)
+    {
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.CompanyId == companyId && e.UserRef == userRef).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.Employment>> FindByCompanyIdAndStatusAsync(global::System.Guid companyId, string status, global::System.Threading.CancellationToken cancellationToken)
     {
         var query = await QueryAsync(cancellationToken).ConfigureAwait(false);

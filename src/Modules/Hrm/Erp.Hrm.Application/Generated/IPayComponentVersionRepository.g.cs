@@ -10,6 +10,8 @@ namespace Erp.Hrm.Application.Generated;
 public sealed record PayComponentVersionFilter
 {
     public global::System.Guid? ComponentId { get; init; }
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated repository of hrm.pay_component_versions.</summary>

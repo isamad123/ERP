@@ -26,6 +26,8 @@ internal sealed class EmploymentEventConfiguration : IEntityTypeConfiguration<gl
         builder.Property(e => e.CarryOver).HasColumnName("carry_over").HasColumnType("jsonb");
         builder.Property(e => e.WorkflowInstanceId).HasColumnName("workflow_instance_id").HasColumnType("uuid");
         builder.Property(e => e.LetterDocumentId).HasColumnName("letter_document_id").HasColumnType("uuid");
+        builder.Property(e => e.Changes).HasColumnName("changes").HasColumnType("jsonb");
+        builder.Property(e => e.CorrectsEventId).HasColumnName("corrects_event_id").HasColumnType("uuid");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
@@ -63,6 +65,10 @@ internal sealed class EmploymentEventRepository(
         if (filter.LetterDocumentId is { } letterDocumentIdFilter)
         {
             query = query.Where(e => e.LetterDocumentId == letterDocumentIdFilter);
+        }
+        if (filter.CorrectsEventId is { } correctsEventIdFilter)
+        {
+            query = query.Where(e => e.CorrectsEventId == correctsEventIdFilter);
         }
         if (filter.Status is { } statusFilter)
         {

@@ -64,6 +64,10 @@ internal sealed class EmployeeBankAccountRepository(
         {
             query = query.Where(e => e.BankId == bankIdFilter);
         }
+        if (filter.AsOf is { } asOf)
+        {
+            query = query.Where(e => e.ValidFrom <= asOf && (e.ValidTo == null || e.ValidTo > asOf));
+        }
         return await Sorts.PageAsync(Context.Set<global::Erp.Hrm.Domain.Generated.EmployeeBankAccount>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
 

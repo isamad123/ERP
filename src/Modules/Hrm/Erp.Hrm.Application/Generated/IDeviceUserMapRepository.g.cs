@@ -12,6 +12,8 @@ public sealed record DeviceUserMapFilter
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? DeviceId { get; init; }
     public global::System.Guid? EmploymentId { get; init; }
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated repository of hrm.device_user_maps.</summary>
