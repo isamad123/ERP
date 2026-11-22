@@ -50,7 +50,7 @@ public static class IdentitySettings
         PasswordMinLength, PasswordMinCharacterKinds, PasswordHistoryCount, PasswordExpiryDays, LockoutThreshold, LockoutMinutes,
         SessionIdleMinutes, SessionAbsoluteMinutes, SessionMaxConcurrent, SessionRememberDeviceDays, MfaRequired, MfaGraceDays,
         MfaRecoveryCodes, MfaAllowedMethods, ActivationTokenHours, ChallengeMinutes, MfaRequiredForPrivileged, PrivilegedPasswordMinLength,
-        MakerCheckerSensitiveRoles, MakerCheckerExpiryDays, PasswordResetMinutes, PasswordResetPerHour, EmailCodeMinutes, EmailCodeMaxAttempts,
+        MakerCheckerSensitiveRoles, MakerCheckerExpiryDays, PasswordResetMinutes, PasswordResetPerHour, EmailCodeMinutes, EmailCodeMaxAttempts, ReportInactiveDays,
     ];
 
     /// <summary>

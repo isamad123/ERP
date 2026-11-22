@@ -81,6 +81,7 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
                 services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o => o.TokenValidationParameters.LifetimeValidator =
                     (notBefore, expires, _, _) => Valid(notBefore, expires, clock.UtcNow) || Valid(notBefore, expires, DateTimeOffset.UtcNow));
             },
+            realAccess: true, // S1.13b (ruling Q10, R-072, R-082): the browser tests run on the real access engine
             settings: new Dictionary<string, string?> { ["Web:Root"] = webRoot },
             realServer: web => web.UseKestrel(o => o.Listen(IPAddress.Loopback, 0, l => l.UseHttps(certificate))));
         var control = await StartControlAsync(code, host, api, clock);
@@ -114,6 +115,21 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
         var app = builder.Build();
         var apiUrl = new Uri(api.Urls.Single());
 
+        // S1.13b (ruling Q10): the control server acts as a real tenant administrator (a person with the baseline role), not as the
+        // system user, because the browser tests run on the real access engine.
+        var controlAdmin = Guid.CreateVersion7(clock.UtcNow);
+        await using (var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct))
+        {
+            await IdentityHarness.ExecAsync(owner, """
+                insert into iam.users (id, username, email, display_name, language, time_zone, is_system, status, created_at, created_by, updated_at, updated_by)
+                values ($1, 'control.admin', 'control.admin@example.test', 'Control administrator', 'en', 'Asia/Karachi', false, 'active', $2, $3, $2, $3)
+                """, Ct, controlAdmin, clock.UtcNow, BaselineSeed.SystemUserId);
+            await IdentityHarness.ExecAsync(owner, """
+                insert into iam.user_roles (id, user_id, role_id, company_id, reason, valid_from, created_at, created_by, updated_at, updated_by)
+                select $1, $2, r.id, null, 'browser test control server', $3, now(), $4, now(), $4 from iam.roles r where r.code = 'tenant_admin' and not r.is_deleted
+                """, Ct, Guid.CreateVersion7(), controlAdmin, DateOnly.FromDateTime(clock.UtcNow.UtcDateTime).AddDays(-1), BaselineSeed.SystemUserId);
+        }
+
         app.MapGet("/clock", () => Results.Ok(new { now = clock.UtcNow.ToUnixTimeMilliseconds() }));
         app.MapPost("/clock/advance", (Advance body) =>
         {
@@ -141,7 +157,7 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
                     """, Ct, Guid.CreateVersion7(), id, DateOnly.FromDateTime(clock.UtcNow.UtcDateTime).AddDays(-1), BaselineSeed.SystemUserId);
             }
 
-            using var client = ApiClient(apiUrl, host, fx.Token(code));
+            using var client = ApiClient(apiUrl, host, fx.Token(code, user: controlAdmin));
             using var invited = await client.PostAsJsonAsync($"/api/iam/users/{id}/invitation", new { }, Ct);
             return invited.IsSuccessStatusCode ? Results.Ok(new { userId = id, username, email = username + "@example.test" }) : Results.Problem($"invitation {(int)invited.StatusCode}");
         });
@@ -316,7 +332,7 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
         app.MapPost("/workflow/route", async (RouteBody body) =>
         {
             var approver = await UserIdAsync(code, body.Approver);
-            using var client = ApiClient(apiUrl, host, fx.Token(code));
+            using var client = ApiClient(apiUrl, host, fx.Token(code, user: controlAdmin));
             await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
             var definition = await TenancyFixture.ScalarTextAsync(owner, "select id::text from wf.workflow_definitions where document_type = $1", Ct, body.DocumentType);
             var route = System.Text.Json.JsonSerializer.Serialize(new
@@ -384,7 +400,7 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
                     """, Ct, key);
             }
 
-            using var client = ApiClient(apiUrl, host, fx.Token(code));
+            using var client = ApiClient(apiUrl, host, fx.Token(code, user: controlAdmin));
             using var held = await client.PutAsJsonAsync($"/api/cfg/settings/{key}", new { layer = "tenant", scopeId = (Guid?)null, value = body.Value, reason = body.Reason }, Ct);
             var text = await held.Content.ReadAsStringAsync(Ct);
             return held.StatusCode == HttpStatusCode.Accepted

@@ -39,7 +39,7 @@ public static class AccessConsoleEndpoints
                 }
                 catch (ArgumentException)
                 {
-                    return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "errors.audit.filter_invalid");
+                    return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "errors.data.invalid_request");
                 }
             }).WithTags("iam.reports"),
             "query", "aud.change_log", AuditPermissions.ViewChanges);
