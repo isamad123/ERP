@@ -6953,6 +6953,10 @@ Indexes:
 - `ix_org_unit_links_parent_unit_id` CREATE INDEX ix_org_unit_links_parent_unit_id ON org.org_unit_links USING btree (parent_unit_id)
 - `ix_org_unit_links_unit_id` CREATE INDEX ix_org_unit_links_unit_id ON org.org_unit_links USING btree (unit_id)
 
+Triggers:
+
+- `tg_org_unit_links_checks` CREATE TRIGGER tg_org_unit_links_checks BEFORE INSERT OR UPDATE ON org.org_unit_links FOR EACH ROW EXECUTE FUNCTION org.tg_org_unit_links_checks()
+
 ### org.org_unit_types
 
 Requirements: KRN-ORG-03, ADM-ORG-04. Source: kernel.yaml.
@@ -7481,10 +7485,11 @@ Constraints:
 - `job.tg_refuse_change` 
 - `meta.ensure_partitions` 
 - `meta.tg_refuse_change` 
+- `org.org_unit_link_would_cycle` 
 - `org.tg_branches_keep_one_per_company` 
 - `org.tg_companies_default_branch` 
 - `org.tg_locations_checks` 
-- `org.todo_org_unit_links_parent_cycle` Pending rule for org.org_unit_links, owned by S1.14: parent_unit_id: fk org.org_units; null for root; cycle check by trigger
+- `org.tg_org_unit_links_checks` 
 - `wf.tg_refuse_change` 
 - `wf.tg_workflow_instances_parties_fixed` 
 - `wf.tg_workflow_tasks_no_self_approval` 
