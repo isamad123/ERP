@@ -921,3 +921,26 @@ functions:
     purpose: "S1.03 review finding 8: only the migrator (the owner login) records applied migrations; the application login keeps read access but can no longer insert, so it cannot mark a migration as applied (spec 03 section 3.7; risk R-038, closed by this change)."
     sql: |
       revoke insert on meta.schema_history from app_rw;
+
+  # S1.13a (CR-069, ruling Q6): the S1.05 deferral. Sign-in could match the wrong person if one user's username is another
+  # user's e-mail address. The trigger refuses both directions, case-insensitively, on insert and on a change of either
+  # column; a user's own username may equal their own e-mail address. The generated endpoints report the constraint name and
+  # the screens say "already used to sign in" (errors.users.already_used_to_sign_in). Added as a function entry, not a
+  # design note, because the first migrations are frozen.
+  - slice: S1.13a
+    name: iam.tg_users_username_email_clash
+    purpose: "A username never equals another user's e-mail address, and an e-mail address never equals another user's username, in any letter case (CR-069, S1.05 deferral); refused with constraint ck_users_username_email_clash."
+    sql: |
+      create or replace function iam.tg_users_username_email_clash() returns trigger
+      language plpgsql as $fn$
+      begin
+          if exists (select 1 from iam.users o
+                     where o.id <> new.id and (lower(o.email) = lower(new.username) or lower(o.username) = lower(new.email))) then
+              raise exception 'username or e-mail of user % is already used to sign in by another user', new.id
+                  using errcode = '23514', constraint = 'ck_users_username_email_clash';
+          end if;
+          return new;
+      end
+      $fn$;
+      create or replace trigger tg_users_username_email_clash before insert or update of username, email on iam.users
+          for each row execute function iam.tg_users_username_email_clash();

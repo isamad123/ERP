@@ -120,9 +120,11 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
             "iam.user_groups" => m.GroupId,
             "iam.user_group_roles" => m.GroupRoleId,
             "iam.maker_checker_requests" => m.RequestId,
+            "iam.users" => m.UserId, // S1.13a: the user record's views and single revocations
             _ => Guid.Empty,
         };
-        var path = endpoint.Pattern.Replace("{id:guid}", id.ToString(), StringComparison.Ordinal).Replace("{userId:guid}", m.UserId.ToString(), StringComparison.Ordinal);
+        var path = endpoint.Pattern.Replace("{id:guid}", id.ToString(), StringComparison.Ordinal).Replace("{userId:guid}", m.UserId.ToString(), StringComparison.Ordinal)
+            .Replace("{sessionId:guid}", Guid.NewGuid().ToString(), StringComparison.Ordinal).Replace("{deviceId:guid}", Guid.NewGuid().ToString(), StringComparison.Ordinal);
         var unique = Guid.NewGuid().ToString("N")[..10];
         var key = endpoint.Method + " " + endpoint.Pattern.TrimEnd('/');
         return key switch
