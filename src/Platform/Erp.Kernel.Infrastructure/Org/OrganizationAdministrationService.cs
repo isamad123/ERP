@@ -634,6 +634,10 @@ public sealed class OrganizationAdministrationService(
         _ => "full",
     };
 
+    /// <summary>
+    /// The value as the person may see it. A value that cannot be decrypted (not written by these services, or under another
+    /// key) is shown as hidden instead of failing the whole list.
+    /// </summary>
     private static string? Shown(IFieldEncryptor encryptor, byte[] ciphertext, string purpose, FieldAccessLevel level)
     {
         if (level == FieldAccessLevel.Hidden)
@@ -641,7 +645,16 @@ public sealed class OrganizationAdministrationService(
             return null;
         }
 
-        var plain = Encoding.UTF8.GetString(encryptor.Decrypt(ciphertext, purpose));
+        string plain;
+        try
+        {
+            plain = Encoding.UTF8.GetString(encryptor.Decrypt(ciphertext, purpose));
+        }
+        catch (System.Security.Cryptography.CryptographicException)
+        {
+            return null;
+        }
+
         return level == FieldAccessLevel.Masked ? FieldShaping.Mask(JsonValue.Create(plain))!.GetValue<string>() : plain;
     }
 
