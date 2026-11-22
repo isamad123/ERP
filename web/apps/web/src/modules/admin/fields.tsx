@@ -81,7 +81,7 @@ function Matrix({ resource }: { resource: string }) {
         )}
       </div>
       {shown.length === 0 || fields.length === 0 ? <EmptyState title={t('fsec.empty')}>{t('fsec.empty.body')}</EmptyState> : (
-        <div className="erp-matrix" role="region" aria-label={t('fsec.matrix')} tabIndex={0}>
+        <div className="erp-matrix">
           <table className="erp-table">
             <caption className="erp-visually-hidden">{t('fsec.matrix')}</caption>
             <thead><tr>

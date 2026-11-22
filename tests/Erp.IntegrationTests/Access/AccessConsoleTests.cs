@@ -90,28 +90,28 @@ public sealed class AccessConsoleTests(TenancyFixture fx) : IAsyncLifetime
     public async Task FR_ADM_ROL_11_S113b_role_usage_report_lists_unused_permissions_and_inactive_users_by_the_setting()
     {
         var admin = await _h.UserAsync(Ct, null, "tenant_admin");
-        var held = await _h.RoleAsync(Ct, ["org.branches.read"]);
-        var idle = await _h.RoleAsync(Ct, ["org.branches.update"]);
         var holder = await _h.UserAsync(Ct);
-        await _h.AssignAsync(holder, held, null, _h.Today.AddDays(-1), null, Ct);
         var recent = await _h.UserAsync(Ct);
         var stale = await _h.UserAsync(Ct);
         var never = await _h.UserAsync(Ct);
         await _h.ExecAsync("update iam.users set last_login_at = $2 where id = $1", Ct, recent, _h.Clock.UtcNow.AddDays(-5));
         await _h.ExecAsync("update iam.users set last_login_at = $2 where id = $1", Ct, stale, _h.Clock.UtcNow.AddDays(-45));
         await _h.ExecAsync("update iam.users set last_login_at = null where id = $1", Ct, never);
-        Assert.NotEqual(Guid.Empty, idle);
 
         var answer = await _h.GetAsync(admin, "/api/iam/reports/role-usage", Ct);
         Assert.Equal(HttpStatusCode.OK, answer.Status);
         Assert.Equal(90, answer.Json.GetProperty("inactiveDays").GetInt32());
         var unused = answer.Json.GetProperty("unusedPermissions").EnumerateArray().Select(e => e.GetProperty("code").GetString()).ToList();
-        Assert.Contains("org.branches.update", unused); // only an unassigned role holds it (or nobody does)
-        Assert.DoesNotContain("org.branches.read", unused);
-        var codes = answer.Json.GetProperty("unusedPermissions").EnumerateArray().First(e => e.GetProperty("code").GetString() == "org.branches.update");
-        Assert.Equal("org", codes.GetProperty("module").GetString());
-        Assert.Equal("branches", codes.GetProperty("resource").GetString());
-        Assert.Equal("update", codes.GetProperty("action").GetString());
+        Assert.NotEmpty(unused); // the baseline roles do not hold every permission
+        var probe = unused[0]!;
+        var entry = answer.Json.GetProperty("unusedPermissions").EnumerateArray().First(e => e.GetProperty("code").GetString() == probe);
+        Assert.Equal(probe, entry.GetProperty("module").GetString() + "." + entry.GetProperty("resource").GetString() + "." + entry.GetProperty("action").GetString());
+
+        // A role nobody holds does not use its permission; once an active user holds it, the permission leaves the list.
+        var role = await _h.RoleAsync(Ct, [probe]);
+        Assert.Contains(probe, (await _h.GetAsync(admin, "/api/iam/reports/role-usage", Ct)).Json.GetProperty("unusedPermissions").EnumerateArray().Select(e => e.GetProperty("code").GetString()));
+        await _h.AssignAsync(holder, role, null, _h.Today.AddDays(-1), null, Ct);
+        Assert.DoesNotContain(probe, (await _h.GetAsync(admin, "/api/iam/reports/role-usage", Ct)).Json.GetProperty("unusedPermissions").EnumerateArray().Select(e => e.GetProperty("code").GetString()));
         var inactive = answer.Json.GetProperty("inactiveUsers").EnumerateArray().Select(e => e.GetProperty("id").GetGuid()).ToList();
         Assert.Contains(never, inactive);
         Assert.DoesNotContain(stale, inactive); // 45 days is inside 90

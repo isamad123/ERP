@@ -147,7 +147,7 @@ describe('FR-ADM-ROL-04 roles of a group', () => {
     await userEvent.click(await screen.findByRole('tab', { name: 'Roles' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Give a role' }));
     const dialog = await screen.findByRole('alertdialog');
-    await userEvent.click(within(dialog).getByRole('button', { name: /^Role/ }));
+    await userEvent.click(within(dialog).getByRole('button', { name: /Role/ }));
     await userEvent.click(await screen.findByRole('option', { name: /Approver/ }));
     await userEvent.type(within(dialog).getByRole('textbox', { name: /^Reason/ }), 'Quarter close');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Give a role' }));

@@ -139,7 +139,7 @@ describe('FR-ADM-ROL-09 create and revoke', () => {
   });
 
   it('keeps the dialog open and shows the server\'s refusal in words', async () => {
-    const s: Server = { posted: [], failCreate: json({ status: 400, title: 'errors.workflow.delegation_overlap' }, 400) };
+    const s: Server = { posted: [], failCreate: json({ status: 400, title: 'errors.delegation.overlap' }, 400) };
     serve(s);
     show();
     await userEvent.click(await screen.findByRole('button', { name: 'New delegation' }));
@@ -148,6 +148,6 @@ describe('FR-ADM-ROL-09 create and revoke', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'New delegation' }));
     await waitFor(() => expect(s.posted).toHaveLength(1));
     expect(screen.getByRole('alertdialog')).toBeTruthy();
-    expect(within(screen.getByRole('alertdialog')).getByText(/\S/, { selector: '[role="alert"], .erp-field-error, [slot="errorMessage"]' })).toBeTruthy();
+    expect(await within(screen.getByRole('alertdialog')).findByText('These approvals are already handed to someone for some of these days.')).toBeTruthy();
   });
 });
