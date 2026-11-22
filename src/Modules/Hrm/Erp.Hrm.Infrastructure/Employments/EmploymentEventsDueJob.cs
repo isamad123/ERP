@@ -29,9 +29,14 @@ internal sealed class EmploymentEventsDueJob(IClock clock) : IJobHandler
         var settings = job.Services.GetRequiredService<ISettings>();
         var actor = job.Services.GetRequiredService<ICurrentActor>();
         var done = 0;
+        // A cursor over (date, id) pages past events not yet due in their company's time zone (review S1.20b finding 11), so one
+        // company's events a day ahead never hold back another company's due ones.
+        (DateOnly Date, Guid Id)? after = null;
         while (true)
         {
             var moved = 0;
+            var read = 0;
+            var pageStart = after; // a retried chunk reads the same page again
             await job.CommitChunkAsync(async (connection, transaction, ct) =>
             {
                 await using var db = new HrmDbContext(job.Services.GetRequiredService<DbContextOptions<HrmDbContext>>());
@@ -42,15 +47,18 @@ internal sealed class EmploymentEventsDueJob(IClock clock) : IJobHandler
 
                 // A day ahead of UTC at most: the company's own date decides below.
                 var horizon = DateOnly.FromDateTime(now.UtcDateTime).AddDays(1);
-                var due = await db.Set<EmploymentEvent>().Where(e => e.Status == "approved" && e.EffectiveDate <= horizon)
-                    .OrderBy(e => e.EffectiveDate).ThenBy(e => e.Id).Take(Chunk * 2).ToListAsync(ct).ConfigureAwait(false);
+                var query = db.Set<EmploymentEvent>().AsNoTracking().Where(e => e.Status == "approved" && e.EffectiveDate <= horizon);
+                if (pageStart is { } cursor)
+                {
+                    query = query.Where(e => e.EffectiveDate > cursor.Date || (e.EffectiveDate == cursor.Date && e.Id.CompareTo(cursor.Id) > 0));
+                }
+
+                var due = await query.OrderBy(e => e.EffectiveDate).ThenBy(e => e.Id).Take(Chunk).ToListAsync(ct).ConfigureAwait(false);
+                read = due.Count;
                 var todays = new Dictionary<Guid, DateOnly>();
                 foreach (var e in due)
                 {
-                    if (moved == Chunk)
-                    {
-                        break;
-                    }
+                    after = (e.EffectiveDate, e.Id);
 
                     if (!todays.TryGetValue(e.CompanyId, out var today))
                     {
@@ -89,7 +97,7 @@ internal sealed class EmploymentEventsDueJob(IClock clock) : IJobHandler
                 }
             }, null, null, cancellationToken).ConfigureAwait(false);
             done += moved;
-            if (moved < Chunk)
+            if (read < Chunk)
             {
                 break;
             }

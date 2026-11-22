@@ -32,7 +32,10 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
         await db.Set<EmploymentEvent>().Where(e => e.EmploymentId == employmentId).OrderBy(e => e.CreatedAt).ThenBy(e => e.Id).ToListAsync(ct).ConfigureAwait(false);
 
     public static TimelineEvent ToTimeline(EmploymentEvent e) =>
-        new(e.Id, e.Kind, e.EffectiveDate, e.Status, e.CorrectsEventId, Section(e.Changes, "assignment"));
+        new(e.Id, e.Kind, e.EffectiveDate, e.Status, e.CorrectsEventId, Section(e.Changes, "assignment"), e.Kind == SeparationKind);
+
+    /// <summary>The event kind that ends an employment (S1.20c transfers; S1.25 separations). Its date is the first day without the employment.</summary>
+    public const string SeparationKind = "separation";
 
     /// <summary>A section of an event's <c>changes</c> (<c>assignment</c>, <c>employment</c>, <c>impact</c>), or null.</summary>
     public static JsonObject? Section(JsonDocument? changes, string name) =>
@@ -154,6 +157,13 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
         if (e.Kind == "confirmation")
         {
             employment.ConfirmationDate = e.EffectiveDate;
+            await ProbationOutcomeAsync(employment, e, ct).ConfigureAwait(false);
+        }
+
+        if (e.Kind == SeparationKind && e.Status == "effective" && employment.Status != "separated")
+        {
+            await SeparateAsync(employment, e, ct).ConfigureAwait(false);
+            return;
         }
 
         if (Section(e.Changes, "employment") is { } fields)
@@ -184,6 +194,96 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
         }
     }
 
+    /// <summary>
+    /// A separation takes effect (S1.20c; S1.25 uses the same step): status <c>separated</c>, the separation date the day before the
+    /// event's date (its last day). For a transfer between companies the linked employment becomes the person's main one, after this
+    /// one is saved as separated (one current main employment per person, the database's unique key).
+    /// </summary>
+    private async Task SeparateAsync(Employment employment, EmploymentEvent e, CancellationToken ct)
+    {
+        employment.Status = "separated";
+        employment.SeparationDate = e.EffectiveDate.AddDays(-1);
+        if (NextEmployment(e) is not { } next)
+        {
+            return;
+        }
+
+        Bump(employment, e.UpdatedAt, e.UpdatedBy);
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        var linked = await db.Set<Employment>().FirstAsync(x => x.Id == next, ct).ConfigureAwait(false);
+        if (!linked.IsPrimary)
+        {
+            linked.IsPrimary = true;
+            Bump(linked, e.UpdatedAt, e.UpdatedBy);
+        }
+    }
+
+    /// <summary>The employment a transfer's separation event links to (<c>changes.transfer.to_employment_id</c>), or null.</summary>
+    public static Guid? NextEmployment(EmploymentEvent e)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+        return Section(e.Changes, "transfer") is { } t && t["to_employment_id"] is { } id ? Guid.Parse(id.GetValue<string>()) : null;
+    }
+
+    /// <summary>
+    /// A confirmation in force closes the open probation as confirmed on its date (FR-HRM-EMP-10, S1.20c), whichever way it took
+    /// effect (at once, on approval or by the daily job).
+    /// </summary>
+    private async Task ProbationOutcomeAsync(Employment employment, EmploymentEvent e, CancellationToken ct)
+    {
+        var open = await db.Set<ProbationRecord>().FirstOrDefaultAsync(p => p.EmploymentId == employment.Id && (p.Status == "in_progress" || p.Status == "extended"), ct).ConfigureAwait(false);
+        if (open is null)
+        {
+            return;
+        }
+
+        open.Status = "confirmed";
+        open.DecisionDate = e.EffectiveDate;
+        Bump(open, e.UpdatedAt, e.UpdatedBy);
+    }
+
+    /// <summary>
+    /// The probation of a hire or rehire (FR-HRM-EMP-10, ruling Q10): opened when the company's setting
+    /// <c>hrm.probation.employee_types</c> lists the employee type, from the joining date for <c>hrm.probation.default_months</c>
+    /// months (the last day is the day before the same date that many months later). Until the probation policy of S1.23 replaces
+    /// the settings; no statutory meaning is claimed. Returns the record added (tracked, saved by the caller), or null.
+    /// </summary>
+    public async Task<ProbationRecord?> OpenProbationAsync(Employment employment, DateTimeOffset now, Guid actor, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(employment);
+        var context = new SettingContext(employment.CompanyId, null);
+        var types = (await settings.GetAsync("hrm.probation.employee_types", context, ct).ConfigureAwait(false)).Value;
+        if (types.ValueKind != JsonValueKind.Array || !types.EnumerateArray().Any(t => t.ValueKind == JsonValueKind.String && t.GetString() == employment.EmployeeType))
+        {
+            return null;
+        }
+
+        var months = (await settings.GetAsync("hrm.probation.default_months", context, ct).ConfigureAwait(false)).Value;
+        var record = NewProbation(employment, employment.JoiningDate, employment.JoiningDate.AddMonths(months.ValueKind == JsonValueKind.Number ? months.GetInt32() : 3).AddDays(-1), now, actor);
+        db.Add(record);
+        return record;
+    }
+
+    /// <summary>A new open probation record of the employment (tracked by the caller).</summary>
+    public static ProbationRecord NewProbation(Employment employment, DateOnly start, DateOnly end, DateTimeOffset now, Guid actor)
+    {
+        ArgumentNullException.ThrowIfNull(employment);
+        return new ProbationRecord
+        {
+            Id = Guid.CreateVersion7(now),
+            CompanyId = employment.CompanyId,
+            EmploymentId = employment.Id,
+            StartDate = start,
+            EndDate = end,
+            Status = "in_progress",
+            CreatedAt = now,
+            CreatedBy = actor,
+            UpdatedAt = now,
+            UpdatedBy = actor,
+            RowVersion = 1,
+        };
+    }
+
     /// <summary>Raises an HR event in hrm.outbox_messages (same transaction). Ids, codes and dates only (Build item 9).</summary>
     public void Raise(string type, Employment employment, DateTimeOffset now, Guid actor, object payload)
     {
@@ -200,14 +300,42 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
         });
     }
 
+    /// <summary>Raises an HR event about another aggregate (a contract, a probation record) in hrm.outbox_messages (same transaction).</summary>
+    public void RaiseFor(string type, string aggregateType, Guid aggregateId, DateTimeOffset now, Guid actor, object payload) =>
+        db.Add(new OutboxMessage
+        {
+            Id = Guid.CreateVersion7(now),
+            OccurredAt = now,
+            EventType = type,
+            AggregateType = aggregateType,
+            AggregateId = aggregateId,
+            Payload = JsonSerializer.SerializeToDocument(payload, JsonSerializerOptions.Web),
+            Headers = JsonSerializer.SerializeToDocument(new { actor }, JsonSerializerOptions.Web),
+        });
+
     /// <summary>
-    /// <c>hrm.employee_changed</c> for an event that took effect: the first day whose results may change is the earlier of the
+    /// <c>hrm.employee_changed</c> for an event that took effect (<c>hrm.employee_separated</c> for a separation): the first day whose results may change is the earlier of the
     /// event's date and the date of the event it replaced (GHR-04: modules recalculate from there).
     /// </summary>
     public void RaiseChanged(Employment employment, EmploymentEvent e, IReadOnlyList<EmploymentEvent> events, DateTimeOffset now, Guid actor)
     {
         ArgumentNullException.ThrowIfNull(employment);
         ArgumentNullException.ThrowIfNull(e);
+        if (e.Kind == SeparationKind)
+        {
+            Raise(EmploymentEvents.EmployeeSeparated, employment, now, actor, new
+            {
+                employmentId = employment.Id,
+                personId = employment.PersonId,
+                companyId = employment.CompanyId,
+                eventId = e.Id,
+                reasonCode = e.ReasonCode,
+                separationDate = e.EffectiveDate.AddDays(-1),
+                nextEmploymentId = NextEmployment(e),
+            });
+            return;
+        }
+
         var earliest = e.CorrectsEventId is { } r && events.FirstOrDefault(x => x.Id == r) is { } replaced && replaced.EffectiveDate < e.EffectiveDate
             ? replaced.EffectiveDate
             : e.EffectiveDate;

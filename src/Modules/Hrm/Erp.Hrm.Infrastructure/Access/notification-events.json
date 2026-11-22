@@ -1,0 +1,44 @@
+{
+ "_comment": "Notifiable events of the HR module (slice S1.11b1 format). S1.20c (CR-076 S1.20c detail; slice S1.20 Build item 13, FR-HRM-EMP-09, FR-HRM-EMP-10): reminders before a contract or a probation ends, raised by the daily job hrm.employment_terms_due, for the line manager (through the manager's user link) and the company's HR administrators. Seeded into ntf.templates by migrate and provisioning (NotificationSetup); registered in both hosts. Urdu texts to be reviewed by a native speaker (R-062).",
+ "module": "hrm",
+ "events": [
+  {
+   "code": "hrm.contract_ending",
+   "source": "hrm.contract_ending",
+   "group": "system",
+   "mandatory": false,
+   "audited": true,
+   "link": "link",
+   "company": "company_id",
+   "fields": [
+    {"name": "employee_no", "type": "text", "class": "general"},
+    {"name": "end_date", "type": "date", "class": "general"},
+    {"name": "company_id", "type": "company", "class": "general"}
+   ],
+   "audience": {"users": ["manager_user_id"], "roles": ["hr_admin"]},
+   "texts": {
+    "en": {"title": "A contract ends on {end_date}", "body": "The contract of employee {employee_no} ends on {end_date}. Renew it or plan the end of the employment."},
+    "ur": {"title": "ایک معاہدہ {end_date} کو ختم ہو رہا ہے", "body": "ملازم {employee_no} کا معاہدہ {end_date} کو ختم ہو رہا ہے۔ اس کی تجدید کریں یا ملازمت کے اختتام کی منصوبہ بندی کریں۔"}
+   }
+  },
+  {
+   "code": "hrm.probation_ending",
+   "source": "hrm.probation_ending",
+   "group": "system",
+   "mandatory": false,
+   "audited": true,
+   "link": "link",
+   "company": "company_id",
+   "fields": [
+    {"name": "employee_no", "type": "text", "class": "general"},
+    {"name": "end_date", "type": "date", "class": "general"},
+    {"name": "company_id", "type": "company", "class": "general"}
+   ],
+   "audience": {"users": ["manager_user_id"], "roles": ["hr_admin"]},
+   "texts": {
+    "en": {"title": "A probation ends on {end_date}", "body": "The probation of employee {employee_no} ends on {end_date}. Review it and confirm, extend or record that it is not confirmed."},
+    "ur": {"title": "ایک آزمائشی مدت {end_date} کو ختم ہو رہی ہے", "body": "ملازم {employee_no} کی آزمائشی مدت {end_date} کو ختم ہو رہی ہے۔ جائزہ لیں اور تصدیق کریں، توسیع کریں یا عدم تصدیق درج کریں۔"}
+   }
+  }
+ ]
+}

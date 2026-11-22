@@ -46,6 +46,61 @@ public sealed partial class EmploymentUnitTests
     }
 
     [Fact]
+    public void FR_XM_30_S1_20c_a_separation_ends_the_job_details_on_its_date_and_nothing_after_it_counts()
+    {
+        var hire = Ev("hire", Jan1, Full("Officer"));
+        var promotion = Ev("promotion", new DateOnly(2026, 2, 1), new JsonObject { [AssignmentKeys.Title] = "Manager" });
+        var end = new TimelineEvent(Guid.NewGuid(), "separation", new DateOnly(2026, 3, 1), "effective", null, null, Ends: true);
+        var later = Ev("acting", new DateOnly(2026, 4, 1), new JsonObject { [AssignmentKeys.Title] = "Acting" });
+
+        var rows = EmploymentTimeline.Plan([hire, promotion, end, later], out var problem);
+
+        Assert.Null(problem);
+        Assert.Equal([Jan1, new DateOnly(2026, 2, 1)], rows.Select(r => r.ValidFrom));
+        Assert.Equal(new DateOnly(2026, 3, 1), rows[^1].ValidTo); // the transfer date is the first day without job details
+        Assert.Null(EmploymentTimeline.On(rows, new DateOnly(2026, 3, 1)));
+
+        // An end dated on a row's first day removes that row; a waiting end counts for nothing.
+        var onRow = new TimelineEvent(Guid.NewGuid(), "separation", new DateOnly(2026, 2, 1), "effective", null, null, Ends: true);
+        Assert.Single(EmploymentTimeline.Plan([hire, promotion, onRow], out _));
+        var waiting = end with { Status = "pending_approval" };
+        Assert.Null(EmploymentTimeline.Plan([hire, promotion, waiting], out _)[^1].ValidTo);
+    }
+
+    [Fact]
+    public async Task FR_XM_30_S1_20c_a_transfer_asks_the_modules_whatever_its_date_and_collects_their_open_items()
+    {
+        var module = new OpenItemsModule();
+        var check = new EmploymentChangeCheck([module]);
+        var today = new DateOnly(2026, 6, 1);
+        var carry = new TransferCarryOver("keep", "carry", "settle");
+
+        var future = await check.RunAsync(new EmploymentChange(Guid.NewGuid(), Guid.NewGuid(), "separation", today.AddDays(10), today.AddDays(10), true, carry), today, CancellationToken.None);
+        Assert.False(future.Backdated);
+        Assert.Equal(ImpactReport.NotBackdated, future.Summary);
+        Assert.Equal(["test.open_loan"], future.OpenItems);
+        Assert.Equal(1, module.Calls);
+
+        // An ordinary change dated in the future asks nobody (S1.20b behaviour kept).
+        var plain = await check.RunAsync(new EmploymentChange(Guid.NewGuid(), Guid.NewGuid(), "promotion", today.AddDays(10), today.AddDays(10), false), today, CancellationToken.None);
+        Assert.Empty(plain.OpenItems ?? []);
+        Assert.Equal(1, module.Calls);
+    }
+
+    private sealed class OpenItemsModule : IEmploymentChangeImpact
+    {
+        public int Calls { get; private set; }
+
+        public string ModuleCode => "test.loans";
+
+        public Task<EmploymentImpactAnswer> AnalyseAsync(EmploymentChange change, CancellationToken cancellationToken)
+        {
+            Calls++;
+            return Task.FromResult(new EmploymentImpactAnswer(ModuleCode, [], null, [], change.CarryOver?.Loans == "settle" ? ["test.open_loan"] : []));
+        }
+    }
+
+    [Fact]
     public void FR_XM_05_a_correction_replaces_the_event_it_names_without_editing_it_and_a_pending_or_cancelled_event_counts_for_nothing()
     {
         var hire = Ev("hire", Jan1, Full("Officer"));
