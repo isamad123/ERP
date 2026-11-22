@@ -143,7 +143,8 @@ test('FR-ADM-ORG-03 the same move works by keyboard, and a unit that is in no pl
   await place.getByRole('button', { name: 'Place' }).click();
   await expect(page.getByText(/Unit LOOSE moved from/)).toBeVisible();
   await expect(unitK('LOOSE')).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Units not in this hierarchy/ })).toHaveCount(0);
+  // Units of other structures are not in this hierarchy either, so the list may remain; this unit must have left it.
+  await expect(page.getByRole('button', { name: 'Place Unit LOOSE…' })).toHaveCount(0);
 });
 
 test('FR-ADM-ORG-04 units, unit types and hierarchies are listed and edited, and the unit sections link to each other and to the chart', async ({ browser }) => {
