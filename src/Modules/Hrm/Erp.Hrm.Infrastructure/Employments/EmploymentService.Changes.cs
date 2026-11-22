@@ -6,6 +6,7 @@ using Erp.Hrm.Application.Generated;
 using Erp.Hrm.Application.People;
 using Erp.Hrm.Contracts.Employments;
 using Erp.Hrm.Domain.Generated;
+using Erp.Hrm.Infrastructure.Positions;
 using Erp.Kernel.Contracts.Settings;
 using Erp.Kernel.Contracts.Workflow;
 using Microsoft.EntityFrameworkCore;
@@ -249,6 +250,12 @@ internal sealed partial class EmploymentService
             return invalid;
         }
 
+        // The vacancy rule (S1.22a, BR-04): a new placement beyond a budget needs an approved strength exception, named on the event.
+        if (await StrengthGuard.EnforceAsync(db, settings, employment.CompanyId, employment.Id, planned, target is not null && target.EffectiveDate < date ? target.EffectiveDate : date, changes, ct).ConfigureAwait(false) is { } overBudget)
+        {
+            return overBudget;
+        }
+
         // Data scope and field security of every job-details row the change touches (review S1.20b finding 3): a change carries
         // forward until a later event sets the same field, so it can rewrite later rows too. Each stored row it removes, shortens or
         // changes must be in the caller's records, with the changed fields editable; each row it puts in force must be too.
@@ -324,6 +331,7 @@ internal sealed partial class EmploymentService
             // FR-XM-32 (ruling Q11): the change waits for the route; the requester and the employee never approve it.
             e.Status = "pending_approval";
             db.Add(e);
+            await StrengthGuard.UseAsync(db, changes, e.Id, now, actor.UserId, ct).ConfigureAwait(false);
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
             var started = await workflow.StartAsync(new WorkflowStartRequest(DocumentType, e.Id, employment.CompanyId,
                 employment.UserRef is { } subject ? [subject] : [], RouteValues(employment, e, EmploymentTimeline.On(planned, date))), Transaction, ct).ConfigureAwait(false);
@@ -335,6 +343,7 @@ internal sealed partial class EmploymentService
 
         EmploymentApplier.SetApplied(e, events, today, now, actor.UserId);
         db.Add(e);
+        await StrengthGuard.UseAsync(db, changes, e.Id, now, actor.UserId, ct).ConfigureAwait(false);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
         List<EmploymentEvent> all = [.. events, e];
         if (await applier.SyncRowsAsync(employment, all, now, actor.UserId, ct).ConfigureAwait(false) is { } refused)
