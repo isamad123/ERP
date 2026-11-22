@@ -35,7 +35,8 @@ public sealed class SettingsAdministrationService(
     IPermissionChecker permissions,
     ICallerAccess caller,
     SettingsService settings,
-    AccessAdministrationService access) : ISettingsAdministration
+    AccessAdministrationService access,
+    IEnumerable<ISettingChangeGuard> guards) : ISettingsAdministration
 {
     public const string Forbidden = "errors.access.forbidden";
 
@@ -274,6 +275,15 @@ public sealed class SettingsAdministrationService(
             if (!selfService && !await caller.CoversCompanyAsync(permission, layer == SettingLayers.Company ? scopeId : null, ct).ConfigureAwait(false))
             {
                 return AccessResult.Forbidden(SettingsErrors.CompanyNotCovered);
+            }
+
+            // A module's own rule on the change (slice S1.22a): refused before anything is written or held for approval.
+            foreach (var guard in guards.Where(g => string.Equals(g.Key, key, StringComparison.Ordinal)))
+            {
+                if (await guard.ProblemAsync(layer == SettingLayers.Company ? scopeId : null, value, ct).ConfigureAwait(false) is { } refused)
+                {
+                    return AccessResult.Invalid(refused);
+                }
             }
 
             var valueJson = value?.GetRawText();
