@@ -106,6 +106,7 @@ public static class ApiHost
         services.AddScoped<IAccessPreviewService>(sp => sp.GetRequiredService<AccessAdministrationService>());
         services.AddScoped<IUserConsoleService, UserConsoleService>();
         services.AddScoped<IOrganizationAdministration, OrganizationAdministrationService>(); // S1.14a: registrations, bank accounts, holiday years
+        services.AddScoped<IOrgUnitService, OrgUnitService>(); // S1.14b: hierarchy on a date, compare, move of a unit
         services.AddScoped<IAccessConsoleService, AccessConsoleService>();
         services.AddScoped<IAccessSettingsService>(sp => sp.GetRequiredService<AccessAdministrationService>());
 

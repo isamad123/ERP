@@ -322,6 +322,38 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
             return Results.NoContent();
         });
 
+        // S1.14b: a reporting hierarchy with a five-level structure in the customer's first company, linked from 1 January 2026:
+        // <prefix>-ROOT, under it <prefix>-DIVA and <prefix>-DIVB, <prefix>-DEPT under DIVA, <prefix>-TEAM under DEPT, and
+        // <prefix>-LOOSE that is in no place. Answers the hierarchy id.
+        app.MapPost("/org-structure", async (OrgStructureBody body) =>
+        {
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            var system = BaselineSeed.SystemUserId;
+            var hierarchy = Guid.CreateVersion7();
+            var type = Guid.CreateVersion7();
+            await using var find = new NpgsqlCommand("select id from org.companies where lower(code) = lower($1)", owner) { Parameters = { new NpgsqlParameter { Value = code } } };
+            var company = (Guid)(await find.ExecuteScalarAsync(Ct))!;
+            await IdentityHarness.ExecAsync(owner, "insert into org.org_hierarchies (id, code, name_i18n, kind, created_at, created_by, updated_at, updated_by) values ($1, $2, $3::jsonb, 'reporting', now(), $4, now(), $4)", Ct,
+                hierarchy, body.Prefix + "-reporting", "{\"en\":\"Reporting " + body.Prefix + "\",\"ur\":\"رپورٹنگ " + body.Prefix + "\"}", system);
+            await IdentityHarness.ExecAsync(owner, "insert into org.org_unit_types (id, code, name_i18n, created_at, created_by, updated_at, updated_by) values ($1, $2, $3::jsonb, now(), $4, now(), $4)", Ct,
+                type, body.Prefix + "-TYPE", "{\"en\":\"Department\",\"ur\":\"شعبہ\"}", system);
+            var ids = new Dictionary<string, Guid>();
+            foreach (var (name, parent) in new (string, string?)[] { ("ROOT", null), ("DIVA", "ROOT"), ("DIVB", "ROOT"), ("DEPT", "DIVA"), ("TEAM", "DEPT"), ("LOOSE", "-") })
+            {
+                var id = Guid.CreateVersion7();
+                ids[name] = id;
+                await IdentityHarness.ExecAsync(owner, "insert into org.org_units (id, company_id, code, name_i18n, unit_type_id, created_at, created_by, updated_at, updated_by) values ($1, $2, $3, $4::jsonb, $5, now(), $6, now(), $6)", Ct,
+                    id, company, body.Prefix + "-" + name, "{\"en\":\"Unit " + name + "\",\"ur\":\"یونٹ " + name + "\"}", type, system);
+                if (parent != "-")
+                {
+                    await IdentityHarness.ExecAsync(owner, "insert into org.org_unit_links (id, hierarchy_id, unit_id, parent_unit_id, valid_from, created_at, created_by, updated_at, updated_by) values ($1, $2, $3, $4, '2026-01-01', now(), $5, now(), $5)", Ct,
+                        Guid.CreateVersion7(), hierarchy, id, parent is null ? null : ids[parent], system);
+                }
+            }
+
+            return Results.Ok(new { hierarchy });
+        });
+
         // S1.12c: a label override of the customer (cfg.labels, layer tenant), as the settings centre will write it (S1.15);
         // a null text removes it.
         app.MapPost("/labels", async (LabelBody body) =>
@@ -546,6 +578,8 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
     private sealed record NotificationBody(string EventCode, string Title, string Body, string? Link, string Group);
 
     private sealed record BranchesBody(string? Company, string Prefix, int Count);
+
+    private sealed record OrgStructureBody(string Prefix);
 
     private sealed record LabelBody(string Key, string Language, string? Text);
 

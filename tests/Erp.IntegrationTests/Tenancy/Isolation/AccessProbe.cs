@@ -29,7 +29,7 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
         Guid AssignmentId, Guid GroupRoleId, Guid RequestId, Guid ScopeId, OrgMaterial Org);
 
     /// <summary>S1.14a: a company's registration and bank account (written through the API, so their values are really encrypted) and a tenant calendar.</summary>
-    private sealed record OrgMaterial(Guid CompanyId, Guid RegistrationId, Guid BankAccountId, Guid CalendarId);
+    private sealed record OrgMaterial(Guid CompanyId, Guid RegistrationId, Guid BankAccountId, Guid CalendarId, Guid HierarchyId, Guid UnitId, Guid ParentUnitId);
 
     public async Task<IReadOnlyList<string>> RunAsync(ApiEndpoint endpoint, CancellationToken ct)
     {
@@ -128,6 +128,8 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
             "org.company_registrations" => endpoint.Pattern.StartsWith("/api/org/companies/", StringComparison.Ordinal) ? m.Org.CompanyId : m.Org.RegistrationId,
             "org.company_bank_accounts" => endpoint.Pattern.StartsWith("/api/org/companies/", StringComparison.Ordinal) ? m.Org.CompanyId : m.Org.BankAccountId,
             "ref.calendars" => m.Org.CalendarId,
+            "org.org_hierarchies" => m.Org.HierarchyId, // S1.14b: the tree and the comparison of a hierarchy
+            "org.org_units" => m.Org.UnitId, // S1.14b: the move of a unit
             _ => Guid.Empty,
         };
         var path = endpoint.Pattern.Replace("{id:guid}", id.ToString(), StringComparison.Ordinal).Replace("{userId:guid}", m.UserId.ToString(), StringComparison.Ordinal)
@@ -138,6 +140,7 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
         {
             "GET /api/iam/roles/compare" => ($"{path}?left={m.RoleId}&right={m.Role2Id}", null),
             "GET /api/iam/roles/{id:guid}/field-preview" => ($"{path}?resource={Resource}", null),
+            "GET /api/org/hierarchies/{id:guid}/compare" => ($"{path}?from=2026-01-01&to=2027-01-01", null),
             "GET /api/iam/data-scope-preview" => ($"{path}?userId={m.UserId}&resource={Resource}", null),
             _ when endpoint.Method == "GET" => (path, null),
             "POST /api/org/companies/{id:guid}/registrations" => (path, Json(new { kind = "other", authority = "probe" + unique, value = "PROBE-" + unique, validFrom = "2026-01-01" })),
@@ -145,6 +148,7 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
             "POST /api/org/companies/{id:guid}/bank-accounts" => (path, Json(new { bankCode = "PROBEBANK", accountTitle = "Probe " + unique, accountNumber = "99" + unique, currencyCode = "PKR" })),
             "PUT /api/org/company-bank-accounts/{id:guid}" => (path, Json(new { accountTitle = "Probe renamed", rowVersion = 1 })),
             "POST /api/org/company-bank-accounts/{id:guid}/remove" => (path, Json(new { rowVersion = 1, reason = "probe" })),
+            "POST /api/org/org-units/{id:guid}/move" => (path, Json(new { hierarchyId = m.Org.HierarchyId, newParentId = m.Org.ParentUnitId, effectiveFrom = "2027-01-01", reason = "probe" })),
             "POST /api/ref/calendars/{id:guid}/copy-year" => (path, Json(new { fromYear = 2026, toYear = 2027 })),
             "POST /api/iam/roles" => (path, Json(new { code = "probe_new_" + unique, name = new { en = "Probe" }, copyFromRoleId = m.RoleId })),
             "PUT /api/iam/roles/{id:guid}" => (path, Json(new { name = new { en = "Probe renamed" }, rowVersion = m.RoleVersion })),
@@ -225,7 +229,20 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
             var n = Guid.NewGuid().ToString("N")[..8];
             var registration = await SendAsync(host, token, HttpMethod.Post, $"/api/org/companies/{company}/registrations", Json(new { kind = "ntn", authority = "probe" + n, value = "REG-" + n, validFrom = "2026-01-01" }), hints: false, ct);
             var bank = await SendAsync(host, token, HttpMethod.Post, $"/api/org/companies/{company}/bank-accounts", Json(new { bankCode = "PROBEBANK", accountTitle = "Probe account", accountNumber = "ACC-" + n, currencyCode = "PKR" }), hints: false, ct);
-            return new OrgMaterial(company, IdOf(registration), IdOf(bank), calendar);
+            // S1.14b: a hierarchy with two units (a unit and a parent) for the tree, compare and move routes.
+            var hierarchy = Guid.CreateVersion7();
+            var unitType = Guid.CreateVersion7();
+            var unit = Guid.CreateVersion7();
+            var parent = Guid.CreateVersion7();
+            await ExecAsync(c, "insert into org.org_hierarchies (id, code, name_i18n, kind, created_at, created_by, updated_at, updated_by) values ($1, $2, '{\"en\":\"Probe\"}', 'reporting', now(), $3, now(), $3)", ct, hierarchy, "probe_h_" + n, system);
+            await ExecAsync(c, "insert into org.org_unit_types (id, code, name_i18n, created_at, created_by, updated_at, updated_by) values ($1, $2, '{\"en\":\"Probe\"}', now(), $3, now(), $3)", ct, unitType, "probe_t_" + n, system);
+            foreach (var (id, label) in new[] { (unit, "u"), (parent, "p") })
+            {
+                await ExecAsync(c, "insert into org.org_units (id, company_id, code, name_i18n, unit_type_id, created_at, created_by, updated_at, updated_by) values ($1, $2, $3, '{\"en\":\"Probe\"}', $4, now(), $5, now(), $5)", ct, id, company, "probe_" + label + "_" + n, unitType, system);
+                await ExecAsync(c, "insert into org.org_unit_links (id, hierarchy_id, unit_id, parent_unit_id, valid_from, created_at, created_by, updated_at, updated_by) values ($1, $2, $3, null, '2026-01-01', now(), $4, now(), $4)", ct, Guid.CreateVersion7(), hierarchy, id, system);
+            }
+
+            return new OrgMaterial(company, IdOf(registration), IdOf(bank), calendar, hierarchy, unit, parent);
         }
         finally
         {
