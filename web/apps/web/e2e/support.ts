@@ -31,8 +31,8 @@ export const server = {
     call<undefined>('POST', '/roles', { username, permissions, companies: companies ?? null, removeBaseline }),
   company: (code: string, en: string, ur: string) => call<{ id: string }>('POST', '/companies', { code, en, ur }),
   /** Changes the licence in force; answers the claims before, for `restoreClaims` (S1.12b). */
-  licence: (change: { daysAfterEnd?: number | null; features?: string[]; companiesLimit?: number }) =>
-    call<{ claims: string }>('POST', '/licence', { setEnd: 'daysAfterEnd' in change, daysAfterEnd: change.daysAfterEnd ?? null, features: change.features ?? null, companiesLimit: change.companiesLimit ?? null }),
+  licence: (change: { daysAfterEnd?: number | null; features?: string[]; companiesLimit?: number; usersLimit?: number }) =>
+    call<{ claims: string }>('POST', '/licence', { setEnd: 'daysAfterEnd' in change, daysAfterEnd: change.daysAfterEnd ?? null, features: change.features ?? null, companiesLimit: change.companiesLimit ?? null, usersLimit: change.usersLimit ?? null }),
   restoreClaims: (claims: string) => call<undefined>('POST', '/licence/claims', { claims }),
   notify: (username: string, items: NotificationSeed[]) => call<undefined>('POST', '/notifications', { username, items }),
   mail: (event: string, username: string) => call<Record<string, string>>('GET', `/mail/${event}?username=${encodeURIComponent(username)}`),

@@ -248,6 +248,11 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
                 await fx.SetClaimAsync(code, "limits,companies", limit, Ct);
             }
 
+            if (body.UsersLimit is { } users)
+            {
+                await fx.SetClaimAsync(code, "limits,users.named", users, Ct); // S1.13a: the named-user limit
+            }
+
             return Results.Ok(new { claims = before });
         });
 
@@ -506,7 +511,7 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
 
     private sealed record ClaimsBody(string Claims);
 
-    private sealed record LicenceBody(bool SetEnd, int? DaysAfterEnd, string[]? Features, int? CompaniesLimit);
+    private sealed record LicenceBody(bool SetEnd, int? DaysAfterEnd, string[]? Features, int? CompaniesLimit, int? UsersLimit = null);
 
     private sealed record NotificationsBody(string Username, NotificationBody[] Items);
 

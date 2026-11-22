@@ -36577,7 +36577,9 @@
       "indexes": [
         "ix_users_default_company_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_users_username_email_clash"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "iam.users"
