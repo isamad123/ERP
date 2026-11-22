@@ -6869,6 +6869,7 @@ Physical sites (office, factory, warehouse). Requirements: KRN-ORG-02, ADM-ORG-0
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| operating_hours | jsonb | yes |  | S1.14a (CR-070, Q5): per weekday {open, close, closed}; null means not stated |
 
 Constraints:
 
@@ -6886,6 +6887,10 @@ Indexes:
 - `ix_locations_company_id_branch_id` CREATE INDEX ix_locations_company_id_branch_id ON org.locations USING btree (company_id, branch_id)
 - `ix_locations_holiday_calendar_id` CREATE INDEX ix_locations_holiday_calendar_id ON org.locations USING btree (holiday_calendar_id)
 - `uq_locations_company_id_code` CREATE UNIQUE INDEX uq_locations_company_id_code ON org.locations USING btree (company_id, lower(code)) WHERE (NOT is_deleted)
+
+Triggers:
+
+- `tg_locations_checks` CREATE TRIGGER tg_locations_checks BEFORE INSERT OR UPDATE ON org.locations FOR EACH ROW EXECUTE FUNCTION org.tg_locations_checks()
 
 ### org.org_hierarchies
 
@@ -7478,6 +7483,7 @@ Constraints:
 - `meta.tg_refuse_change` 
 - `org.tg_branches_keep_one_per_company` 
 - `org.tg_companies_default_branch` 
+- `org.tg_locations_checks` 
 - `org.todo_org_unit_links_parent_cycle` Pending rule for org.org_unit_links, owned by S1.14: parent_unit_id: fk org.org_units; null for root; cycle check by trigger
 - `wf.tg_refuse_change` 
 - `wf.tg_workflow_instances_parties_fixed` 

@@ -37,6 +37,37 @@ public static class CSharpEmitter
 
     public static bool CanDelete(Table t) => t.IsSoftDeleted && t.HasRowVersion && t.AllowsApi("delete");
 
+    /// <summary>
+    /// Actions with a permission code: the generated API's, plus create and update for a table whose encrypted columns a
+    /// hand-written service writes and shows (design key field_view, S1.14a): the generated API cannot write them.
+    /// </summary>
+    public static IEnumerable<string> PermissionActions(Table t)
+    {
+        var generated = Actions(t).ToList();
+        if (t.Columns.Exists(c => c.InFieldCatalogue))
+        {
+            void Add(string action)
+            {
+                if (!generated.Contains(action, StringComparer.Ordinal))
+                {
+                    generated.Add(action);
+                }
+            }
+
+            Add("create");
+            if (t.HasRowVersion)
+            {
+                Add("update");
+                if (t.IsSoftDeleted)
+                {
+                    Add("delete");
+                }
+            }
+        }
+
+        return generated;
+    }
+
     public static IEnumerable<string> Actions(Table t)
     {
         yield return "read";
@@ -530,8 +561,8 @@ public static class CSharpEmitter
         ["user"] = "User",
     };
 
-    /// <summary>Fields the API shows (and field rules address): every returned column; custom fields by key.</summary>
-    public static IReadOnlyList<Column> FieldColumns(Table t) => ResponseColumns(t);
+    /// <summary>Fields the API shows (and field rules address): every returned column; custom fields by key; an encrypted column named in design key field_view (S1.14a: shown by hand-written views, masked by field security).</summary>
+    public static IReadOnlyList<Column> FieldColumns(Table t) => t.Columns.Where(c => !c.IsSensitive || c.InFieldCatalogue).ToList();
 
     /// <summary>Data-scope locators (design key scope, CR-018) and the field catalogue (field_class) of one table (S1.06).</summary>
     private static void Access(CodeWriter w, Table t)
@@ -1143,7 +1174,7 @@ public static class CSharpEmitter
         var items = new System.Text.Json.Nodes.JsonArray();
         foreach (var t in tables)
         {
-            foreach (var action in Actions(t))
+            foreach (var action in PermissionActions(t))
             {
                 var code = N.Permission(t, action);
                 items.Add(new System.Text.Json.Nodes.JsonObject
@@ -1235,7 +1266,7 @@ public static class CSharpEmitter
         {
             var sensitive = Sensitive(t);
             var moduleId = ModuleId(t);
-            foreach (var action in Actions(t))
+            foreach (var action in PermissionActions(t))
             {
                 var code = N.Permission(t, action);
                 w.Line($"    new({CodeWriter.CSharpString(code)}, {CodeWriter.CSharpString(moduleId)}, {CodeWriter.CSharpString("permissions." + code)}, {sensitive}),");
