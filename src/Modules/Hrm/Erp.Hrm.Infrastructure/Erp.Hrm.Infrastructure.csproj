@@ -4,4 +4,8 @@
     <ProjectReference Include="../Erp.Hrm.Application/Erp.Hrm.Application.csproj" />
     <ProjectReference Include="../../../BuildingBlocks/Erp.BuildingBlocks.Infrastructure/Erp.BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- S1.20a (ruling Q3): the provisional person catalogue (identifier kinds, marital statuses, relations). -->
+    <EmbeddedResource Include="People/people-catalogue.json" LogicalName="Erp.Hrm.Infrastructure.People.people-catalogue.json" />
+  </ItemGroup>
 </Project>

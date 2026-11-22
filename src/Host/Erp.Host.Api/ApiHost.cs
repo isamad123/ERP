@@ -5,6 +5,8 @@ using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.BuildingBlocks.Infrastructure.Time;
 using Erp.Hrm.Api.Generated;
+using Erp.Hrm.Api.People;
+using Erp.Hrm.Infrastructure.People;
 using Erp.Hrm.Infrastructure.Access;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Api.ControlPlane.Tenancy;
@@ -95,6 +97,7 @@ public static class ApiHost
         // module answers the team and department questions through the kernel's Contracts interface (Q3, D-10).
         services.AddKernelAccess();
         services.AddHrmAccess();
+        services.AddHrmPeople(); // person services and the handler of held merges (S1.20a)
         services.AddSingleton(new ResourceCatalog([.. KernelResourceCatalog.All, .. HrmResourceCatalog.All]));
         services.AddScoped<AccessAdministrationService>();
         services.AddScoped<IRoleService>(sp => sp.GetRequiredService<AccessAdministrationService>());
@@ -225,6 +228,7 @@ public static class ApiHost
         api.MapTemplateEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();
+        api.MapHrmPeopleEndpoints();
         return app;
     }
 
