@@ -16,6 +16,9 @@ public static class HrmSettingKeys
 
     /// <summary>The user linked to an employment is disabled when the employment ends.</summary>
     public const string HrmUserLinkDisableOnSeparation = "hrm.user_link.disable_on_separation";
+
+    /// <summary>Whether the company plans by positions or by headcount per unit and grade.</summary>
+    public const string HrmOrgModel = "hrm.org.model";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

@@ -128,8 +128,9 @@ public sealed class GeneratorTests
     {
         var stubs = Model.Value.Stubs.ToList();
         // 30 from S1.02; S1.03 implemented SC-2 (org.branches), S1.10a FR-XM-32 (wf.workflow_tasks), S1.14b the unit link cycle check
-        // (org.org_unit_links), S1.20b the manager cycle and the cost allocation of hrm.employment_assignments.
-        Assert.Equal(25, stubs.Count);
+        // (org.org_unit_links), S1.20b the manager cycle and the cost allocation of hrm.employment_assignments, S1.22a the position
+        // reporting cycle (hrm.positions).
+        Assert.Equal(24, stubs.Count);
         Assert.Equal(30, Model.Value.AllStubs.Count());
         Assert.Equal(["employment_assignments_cost_allocation_sum", "employment_assignments_manager_cycle"],
             Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.20b").Select(s => s.Name).Order(StringComparer.Ordinal));
