@@ -343,7 +343,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
                 insert into cfg.setting_values (id, setting_key, layer, scope_id, value, created_at, created_by, updated_at, updated_by)
                 values ($1, $2, 'tenant', null, to_jsonb($3::text), now(), $4, now(), $4)
                 on conflict (setting_key, layer, scope_id) do update set value = excluded.value
-                """, ct, Guid.CreateVersion7(), key, code == fx.CodeA ? text : "Other " + text, actor);
+                """, ct, Guid.CreateVersion7(), key, code == fx.CodeA ? text : "Neighbour brand of B", actor);
         }
 
         return new Material(user, username, session, refresh, tokens["mfa_challenge"], tokens["password_change"], tokens["mfa_enrolment"], tokens["activation"], recovery, device, tokens["password_reset"], trusted, trustedToken, view);
