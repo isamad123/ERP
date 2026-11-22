@@ -18,7 +18,7 @@ test('FR-KRN-ENT-03 the menu shows only what is licensed and permitted; an unlic
     const admin = await person(browser, { permissions: ADMIN_PERMISSIONS, displayName: 'Ayesha Khan' });
     const page = admin.page;
     const entries = await menuEntries(page);
-    expect(entries).toEqual(expect.arrayContaining(['Home', 'Notifications', 'Approvals', 'People', 'Attendance', 'Leave', 'Licence', 'Background jobs', 'Audit log']));
+    expect(entries).toEqual(expect.arrayContaining(['Home', 'Notifications', 'Approvals', 'People', 'Attendance', 'Leave', 'Licence', 'Background jobs', 'Audit log'])); // S1.15a: Settings, Feature flags and Sign-in page need cfg.setting_values.read and cfg.feature_flag_overrides.read, which this administrator lacks; a Business User has none either, so both lists are unchanged
     expect(entries).not.toContain('Payroll');
     await accessible(page, 'home with menu');
 

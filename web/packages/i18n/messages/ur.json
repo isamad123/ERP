@@ -1427,5 +1427,8 @@
   "chart.compare.top": "سب سے اوپر",
   "chart.compare.under": "اب {parent} کے نیچے",
   "chart.compare.wasUnder": "{parent} کے نیچے تھا",
-  "chart.compare.fromTo": "{from} سے {to} میں"
+  "chart.compare.fromTo": "{from} سے {to} میں",
+  "nav.settings": "ترتیبات",
+  "nav.featureFlags": "فیچر فلیگز",
+  "nav.signInPage": "سائن ان صفحہ"
 }
