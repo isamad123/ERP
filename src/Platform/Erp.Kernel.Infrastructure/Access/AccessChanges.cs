@@ -32,6 +32,11 @@ internal sealed record AccessChange
     /// <summary>The change of a privileged user's e-mail address (S1.11b2 review finding 2, CR-062).</summary>
     public const string ChangeUserEmail = "iam.user.change_email";
 
+    /// <summary>A new, changed or removed company bank account (slice S1.14a, FR-KRN-IAM-14, CR-070).</summary>
+    public const string SaveBankAccount = "org.bank_account.save";
+
+    public const string DeleteBankAccount = "org.bank_account.delete";
+
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
     public required string Kind { get; init; }
@@ -92,6 +97,9 @@ internal sealed record AccessChange
 
     public string? PreviousEmail { get; init; }
 
+    /// <summary>The bank account change of <see cref="SaveBankAccount"/> and <see cref="DeleteBankAccount"/>.</summary>
+    public Org.BankAccountChange? BankAccount { get; init; }
+
     public IReadOnlyList<RoleScopeChange>? Scopes { get; init; }
 
     public IReadOnlyList<RoleFieldChange>? Fields { get; init; }
@@ -117,6 +125,7 @@ internal sealed record AccessChange
         Assign or ChangeUserEmail => ("iam.users", UserId!.Value),
         SetSetting or ChangeSetting => ("cfg.setting_values", SettingRowId!.Value),
         ActivateWorkflowVersion => ("wf.workflow_versions", WorkflowVersionId!.Value),
+        SaveBankAccount or DeleteBankAccount => ("org.company_bank_accounts", BankAccount!.Id),
         _ => ("iam.roles", RoleId!.Value),
     };
 }

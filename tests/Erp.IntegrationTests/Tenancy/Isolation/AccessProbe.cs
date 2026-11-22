@@ -26,7 +26,10 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
 
     private sealed record Material(
         Guid RoleId, Guid Role2Id, string RoleCode, long RoleVersion, Guid UserId, Guid User2Id, Guid GroupId, long GroupVersion,
-        Guid AssignmentId, Guid GroupRoleId, Guid RequestId, Guid ScopeId);
+        Guid AssignmentId, Guid GroupRoleId, Guid RequestId, Guid ScopeId, OrgMaterial Org);
+
+    /// <summary>S1.14a: a company's registration and bank account (written through the API, so their values are really encrypted) and a tenant calendar.</summary>
+    private sealed record OrgMaterial(Guid CompanyId, Guid RegistrationId, Guid BankAccountId, Guid CalendarId);
 
     public async Task<IReadOnlyList<string>> RunAsync(ApiEndpoint endpoint, CancellationToken ct)
     {
@@ -36,7 +39,7 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
         await MaterialAsync(fx.CodeB, ct); // B's own material, so B's calls have real rows of their own to hit
         var tokenA = fx.Tenancy.Token(fx.CodeA);
         var tokenB = fx.Tenancy.Token(fx.CodeB);
-        var markers = new[] { a.RoleId, a.Role2Id, a.UserId, a.User2Id, a.GroupId, a.AssignmentId, a.GroupRoleId, a.RequestId }.Select(g => g.ToString()).Append(a.RoleCode).ToList();
+        var markers = new[] { a.RoleId, a.Role2Id, a.UserId, a.User2Id, a.GroupId, a.AssignmentId, a.GroupRoleId, a.RequestId }.Concat([a.Org.RegistrationId, a.Org.BankAccountId, a.Org.CalendarId]).Select(g => g.ToString()).Append(a.RoleCode).ToList();
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
@@ -121,6 +124,10 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
             "iam.user_group_roles" => m.GroupRoleId,
             "iam.maker_checker_requests" => m.RequestId,
             "iam.users" => m.UserId, // S1.13a: the user record's views and single revocations
+            // S1.14a: the company's routes name the company, the record routes the registration or the bank account.
+            "org.company_registrations" => endpoint.Pattern.StartsWith("/api/org/companies/", StringComparison.Ordinal) ? m.Org.CompanyId : m.Org.RegistrationId,
+            "org.company_bank_accounts" => endpoint.Pattern.StartsWith("/api/org/companies/", StringComparison.Ordinal) ? m.Org.CompanyId : m.Org.BankAccountId,
+            "ref.calendars" => m.Org.CalendarId,
             _ => Guid.Empty,
         };
         var path = endpoint.Pattern.Replace("{id:guid}", id.ToString(), StringComparison.Ordinal).Replace("{userId:guid}", m.UserId.ToString(), StringComparison.Ordinal)
@@ -133,6 +140,12 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
             "GET /api/iam/roles/{id:guid}/field-preview" => ($"{path}?resource={Resource}", null),
             "GET /api/iam/data-scope-preview" => ($"{path}?userId={m.UserId}&resource={Resource}", null),
             _ when endpoint.Method == "GET" => (path, null),
+            "POST /api/org/companies/{id:guid}/registrations" => (path, Json(new { kind = "other", authority = "probe" + unique, value = "PROBE-" + unique, validFrom = "2026-01-01" })),
+            "PUT /api/org/company-registrations/{id:guid}" => (path, Json(new { validTo = "2030-12-31", rowVersion = 1 })),
+            "POST /api/org/companies/{id:guid}/bank-accounts" => (path, Json(new { bankCode = "PROBEBANK", accountTitle = "Probe " + unique, accountNumber = "99" + unique, currencyCode = "PKR" })),
+            "PUT /api/org/company-bank-accounts/{id:guid}" => (path, Json(new { accountTitle = "Probe renamed", rowVersion = 1 })),
+            "POST /api/org/company-bank-accounts/{id:guid}/remove" => (path, Json(new { rowVersion = 1, reason = "probe" })),
+            "POST /api/ref/calendars/{id:guid}/copy-year" => (path, Json(new { fromYear = 2026, toYear = 2027 })),
             "POST /api/iam/roles" => (path, Json(new { code = "probe_new_" + unique, name = new { en = "Probe" }, copyFromRoleId = m.RoleId })),
             "PUT /api/iam/roles/{id:guid}" => (path, Json(new { name = new { en = "Probe renamed" }, rowVersion = m.RoleVersion })),
             "PUT /api/iam/roles/{id:guid}/permissions" => (path, Json(new { permissions = new[] { Resource + ".read" }, reason = "probe" })),
@@ -185,7 +198,50 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
             values ($1, 'iam.role.set_permissions', 'iam.roles', $2, jsonb_build_object('kind', 'iam.role.set_permissions', 'roleId', $2::text, 'permissions', '[]'::jsonb), $3, 'pending', now(), $3, now(), $3)
             """, ct, request, role2, user);
         var scope = await ScalarAsync<Guid>(c, "select id from iam.data_scopes where code = 'all'", ct);
-        return new Material(role, role2, "probe_role_" + n, 1, user, user2, group, 1, assignment, groupRole, request, scope);
+        var org = await OrgMaterialAsync(code, c, ct);
+        return new Material(role, role2, "probe_role_" + n, 1, user, user2, group, 1, assignment, groupRole, request, scope, org);
+    }
+
+    /// <summary>
+    /// S1.14a material: a bank for the bank accounts, a tenant calendar, and (through the API, with maker-checker off for the
+    /// moment, so the values are encrypted by the real service and the account is written at once) one registration and one
+    /// bank account of the customer's own default company.
+    /// </summary>
+    private async Task<OrgMaterial> OrgMaterialAsync(string code, NpgsqlConnection c, CancellationToken ct)
+    {
+        var system = BaselineSeed.SystemUserId;
+        var company = await ScalarAsync<Guid>(c, "select id from org.companies where not is_deleted order by created_at, id limit 1", ct);
+        var calendar = Guid.CreateVersion7();
+        await ExecAsync(c, "insert into ref.banks (id, code, name_i18n, country_code, created_at, created_by, updated_at, updated_by) values ($1, 'PROBEBANK', '{\"en\":\"Probe bank\"}', 'PK', now(), $2, now(), $2) on conflict do nothing", ct, Guid.CreateVersion7(), system);
+        await ExecAsync(c, "insert into ref.calendars (id, code, name_i18n, source, created_at, created_by, updated_at, updated_by) values ($1, $2, '{\"en\":\"Probe calendar\"}', 'tenant', now(), $3, now(), $3)", ct, calendar, "probe_cal_" + Guid.NewGuid().ToString("N")[..8], system);
+        await ExecAsync(c, """
+            insert into cfg.setting_values (id, setting_key, layer, scope_id, value, created_at, created_by, updated_at, updated_by)
+            values ($1, 'iam.maker_checker.sensitive_roles', 'tenant', null, 'false'::jsonb, now(), $2, now(), $2)
+            on conflict (setting_key, layer, scope_id) do update set value = excluded.value
+            """, ct, Guid.CreateVersion7(), system);
+        try
+        {
+            var (host, token) = code == fx.CodeA ? (fx.HostA, fx.Tenancy.Token(fx.CodeA)) : (fx.HostB, fx.Tenancy.Token(fx.CodeB));
+            var n = Guid.NewGuid().ToString("N")[..8];
+            var registration = await SendAsync(host, token, HttpMethod.Post, $"/api/org/companies/{company}/registrations", Json(new { kind = "ntn", authority = "probe" + n, value = "REG-" + n, validFrom = "2026-01-01" }), hints: false, ct);
+            var bank = await SendAsync(host, token, HttpMethod.Post, $"/api/org/companies/{company}/bank-accounts", Json(new { bankCode = "PROBEBANK", accountTitle = "Probe account", accountNumber = "ACC-" + n, currencyCode = "PKR" }), hints: false, ct);
+            return new OrgMaterial(company, IdOf(registration), IdOf(bank), calendar);
+        }
+        finally
+        {
+            await ExecAsync(c, "update cfg.setting_values set value = 'true'::jsonb where setting_key = 'iam.maker_checker.sensitive_roles' and layer = 'tenant' and scope_id is null", ct);
+        }
+    }
+
+    private static Guid IdOf(Reply reply)
+    {
+        if ((int)reply.Status is < 200 or >= 300)
+        {
+            throw new InvalidOperationException($"The probe could not create its organization material: {(int)reply.Status} {reply.Body}");
+        }
+
+        using var document = JsonDocument.Parse(reply.Body);
+        return document.RootElement.GetProperty("id").GetGuid();
     }
 
     private async Task<Reply> SendAsync(string host, string? token, HttpMethod method, string pathAndQuery, string? body, bool hints, CancellationToken ct)
