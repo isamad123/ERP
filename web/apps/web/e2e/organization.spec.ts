@@ -16,7 +16,9 @@ const ADMIN = ['org.companies.read', 'org.companies.create', 'org.companies.upda
   'ref.holidays.read', 'ref.holidays.create', 'ref.holidays.update', 'ref.banks.read', 'aud.history.view', 'cfg.saved_views.share', 'iam.maker_checker.approve', 'wf.workflow_tasks.read'];
 
 async function choose(page: Page, label: string, option: string | RegExp): Promise<void> {
-  await page.getByRole('button', { name: new RegExp(`\\s${label}$`) }).first().click();
+  const opener = page.getByRole('button', { name: new RegExp(`\\s${label}$`) }).first();
+  await opener.click();
+  if (!(await page.getByRole('option').first().isVisible().catch(() => false))) await opener.click();
   await page.getByRole('option', { name: option }).click();
 }
 
@@ -56,10 +58,10 @@ test('FR-ADM-ORG-01 FR-KRN-IAM-14 an administrator adds a company with another c
   // A bank account waits for a second administrator while approval of sensitive changes is on.
   await page.getByRole('button', { name: 'Add an account' }).click();
   const account = page.getByRole('dialog');
-  await choose(account.page(), 'Bank', /TESTBANK/);
   await account.getByLabel(/^Account title/).fill('Salary account');
   await account.getByLabel(/^Account number/).fill('0011223344556');
   await account.getByLabel(/^Currency/).fill('USD');
+  await choose(account.page(), 'Bank', /TESTBANK/); // last: the list of banks has loaded by now
   await account.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText(/waiting for a second administrator/)).toBeVisible();
   await expect(page.getByRole('grid', { name: 'Salary bank accounts' }).getByText('Salary account')).toHaveCount(0);
