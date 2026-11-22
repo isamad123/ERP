@@ -309,6 +309,16 @@ public static class SqlEmitter
             }
         }
 
+        // Company-scoped foreign keys replaced by the plain key (fks_replaced_in, S1.20c): dropped and recreated in the same file.
+        foreach (var table in tables)
+        {
+            foreach (var fk in table.ForeignKeys.Where(f => f.ReplacedIn == slice))
+            {
+                b.Append(CultureInfo.InvariantCulture, $"alter table {table.FullName} drop constraint if exists {fk.Name};\n");
+                b.Append(AddForeignKey(table, fk));
+            }
+        }
+
         foreach (var table in tables.Where(t => t.AddedIn != slice && t.UpdatableAddedIn.Exists(u => u.Slice == slice)))
         {
             var asOf = table.AppendOnlyUpdatable.Where(c => table.UpdatableAddedIn.Find(u => u.Column == c) is not { Slice: { } later } || UpTo(later, slice));
@@ -445,7 +455,7 @@ public static class SqlEmitter
         {
             foreach (var fk in table.ForeignKeys.Where(f => (crossSchemaForeignKeys || !f.CrossesSchema(schema)) && table.ForeignKeyAddedIn(f) is null))
             {
-                b.Append(AddForeignKey(table, fk));
+                b.Append(AddForeignKey(table, fk.AsFirstCreated));
             }
         }
 
@@ -469,7 +479,7 @@ public static class SqlEmitter
         {
             foreach (var fk in table.ForeignKeys.Where(f => f.CrossesSchema(table.Schema) && table.ForeignKeyAddedIn(f) is null))
             {
-                b.Append(AddForeignKey(table, fk));
+                b.Append(AddForeignKey(table, fk.AsFirstCreated));
             }
         }
 

@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.probation_records.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.probation_records.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.probation_records.update"
     }
   ],
   "companyScoped": true,
@@ -45,7 +37,8 @@
     "ck_probation_records_status": "status",
     "fk_probation_records_company_id": "companyId",
     "fk_probation_records_employment_id": "employmentId",
-    "fk_probation_records_review_form_response_id": "reviewFormResponseId"
+    "fk_probation_records_review_form_response_id": "reviewFormResponseId",
+    "uq_probation_records_employment_id": "employmentId"
   },
   "fields": [
     {

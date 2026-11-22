@@ -31,23 +31,6 @@ public sealed class ContractResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for hrm.contracts. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class ContractWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public global::System.Guid? EmploymentId { get; init; }
-    public global::System.DateOnly? StartDate { get; init; }
-    public global::System.DateOnly? EndDate { get; init; }
-    public int? RenewalNoticeDays { get; init; }
-    public global::System.Text.Json.JsonElement? Terms { get; init; }
-    public global::System.Guid? FileId { get; init; }
-    public global::System.Guid? RenewsContractId { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for hrm.contracts.</summary>
 public sealed class ContractListQuery
 {
@@ -69,7 +52,7 @@ public sealed class ContractListQuery
     public string? Sort { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.contracts: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.contracts: read. Answers pass through field security (S1.06).</summary>
 internal static class ContractEndpoints
 {
     private const string Resource = "hrm.contracts";
@@ -79,8 +62,6 @@ internal static class ContractEndpoints
         var group = app.MapGroup("/api/hrm/contracts").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.contracts.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.contracts.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.contracts.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.contracts.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.contracts.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.contracts.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.contracts.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.contracts.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ContractListQuery query, global::Erp.Hrm.Application.Generated.IContractRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -97,55 +78,6 @@ internal static class ContractEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ContractAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ContractWriteRequest request, global::Erp.Hrm.Application.Generated.IContractRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Numbering.INumberAllocator numbers, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.contracts.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ContractAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.Contract();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.EnsureCanCreateAsync(row, cancellationToken).ConfigureAwait(false);
-            row.ContractNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.contract_no", row.CompanyId, null, row.StartDate), cancellationToken).ConfigureAwait(false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/contracts/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ContractAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ContractWriteRequest request, global::Erp.Hrm.Application.Generated.IContractRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.contracts.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.ContractAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ContractAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static ContractResponse ToResponse(global::Erp.Hrm.Domain.Generated.Contract row) => new()
@@ -167,117 +99,4 @@ internal static class ContractEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(ContractWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
-        {
-            errors.Add("employmentId");
-        }
-        if (request.StartDate is null && (!update || access.CanEdit("start_date")))
-        {
-            errors.Add("startDate");
-        }
-        if (request.Terms is null && (!update || access.CanEdit("terms")))
-        {
-            errors.Add("terms");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(ContractWriteRequest request, global::Erp.Hrm.Domain.Generated.Contract row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("employment_id"))
-        {
-            row.EmploymentId = request.EmploymentId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
-        {
-            denied.Add("employmentId");
-        }
-        if (access.CanEdit("start_date"))
-        {
-            row.StartDate = request.StartDate!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StartDate, row.StartDate, update))
-        {
-            denied.Add("startDate");
-        }
-        if (access.CanEdit("end_date"))
-        {
-            row.EndDate = request.EndDate;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EndDate, row.EndDate, update))
-        {
-            denied.Add("endDate");
-        }
-        if (access.CanEdit("renewal_notice_days"))
-        {
-            row.RenewalNoticeDays = request.RenewalNoticeDays;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RenewalNoticeDays, row.RenewalNoticeDays, update))
-        {
-            denied.Add("renewalNoticeDays");
-        }
-        if (access.CanEdit("terms"))
-        {
-            row.Terms = GeneratedEndpointSupport.ToDocument(request.Terms)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Terms, row.Terms, update))
-        {
-            denied.Add("terms");
-        }
-        if (access.CanEdit("file_id"))
-        {
-            row.FileId = request.FileId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileId, row.FileId, update))
-        {
-            denied.Add("fileId");
-        }
-        if (access.CanEdit("renews_contract_id"))
-        {
-            row.RenewsContractId = request.RenewsContractId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RenewsContractId, row.RenewsContractId, update))
-        {
-            denied.Add("renewsContractId");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
 }

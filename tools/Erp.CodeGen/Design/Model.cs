@@ -124,8 +124,18 @@ public sealed record ExclusionDef(string Name, IReadOnlyList<string> Elements, s
 /// </remarks>
 public sealed record CheckDef(string Name, string Sql, string? AddedIn = null, string? BaseSql = null, string? ReplacedIn = null);
 
-public sealed record ForeignKey(string Name, IReadOnlyList<string> Columns, string TargetTable, IReadOnlyList<string> TargetColumns)
+/// <remarks>
+/// <see cref="ReplacedIn"/>, <see cref="BaseColumns"/> and <see cref="BaseTargetColumns"/> (design key <c>fks_replaced_in</c>,
+/// S1.20c): the frozen file created the key as the company-scoped pair of README rule 12; the slice's design migration replaces it
+/// with the plain key on the column, because the reference crosses companies by design (FR-XM-30: a transfer links employments of
+/// two legal entities).
+/// </remarks>
+public sealed record ForeignKey(string Name, IReadOnlyList<string> Columns, string TargetTable, IReadOnlyList<string> TargetColumns,
+    IReadOnlyList<string>? BaseColumns = null, IReadOnlyList<string>? BaseTargetColumns = null, string? ReplacedIn = null)
 {
+    /// <summary>The key as the first migrations created it.</summary>
+    public ForeignKey AsFirstCreated => ReplacedIn is null ? this : this with { Columns = BaseColumns!, TargetColumns = BaseTargetColumns!, BaseColumns = null, BaseTargetColumns = null, ReplacedIn = null };
+
     public bool CrossesSchema(string fromSchema) => !TargetTable.StartsWith(fromSchema + ".", StringComparison.Ordinal);
 }
 
@@ -191,6 +201,9 @@ public sealed class Table
 
     public List<ForeignKey> ForeignKeys { get; } = [];
 
+    /// <summary>Columns whose company-scoped foreign key a slice replaces by the plain one (<c>fks_replaced_in</c>, S1.20c).</summary>
+    public List<(string Column, string Slice)> ForeignKeysReplacedIn { get; } = [];
+
     public List<StubDef> Stubs { get; } = [];
 
     public List<string> Comments { get; } = [];
@@ -229,6 +242,7 @@ public sealed class Table
         new[] { AddedIn }.Concat(Columns.Select(c => c.AddedIn)).Concat(UpdatableAddedIn.Select(u => u.Slice)).Concat(CommentsAddedIn.Select(c => c.Slice))
             .Concat(Indexes.Select(i => i.AddedIn)).Concat(Checks.Select(c => c.AddedIn))
             .Concat(Columns.Select(c => c.OptionalIn)).Concat(Checks.Select(c => c.ReplacedIn)).Concat(Uniques.Select(u => u.AddedIn)).Concat(Uniques.Select(u => u.ReplacedIn))
+            .Concat(ForeignKeys.Select(f => f.ReplacedIn))
             .Where(s => s is not null).Select(s => s!).Distinct(StringComparer.Ordinal);
 
     /// <summary>

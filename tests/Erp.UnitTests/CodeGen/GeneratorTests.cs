@@ -416,11 +416,18 @@ public sealed class GeneratorTests
     public void S108_FR_KRN_NUM_03_numbered_columns_are_filled_by_the_numbering_service_and_never_accepted_from_the_caller()
     {
         var files = Generator.Generate(Root).Files;
+        var leave = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/LeaveRequestEndpoints.g.cs"];
+        var request = leave[leave.IndexOf("public sealed class LeaveRequestWriteRequest", StringComparison.Ordinal)..leave.IndexOf("public sealed class LeaveRequestListQuery", StringComparison.Ordinal)];
+        Assert.DoesNotContain("RequestNo", request, StringComparison.Ordinal);
+        Assert.Contains("NumberRequest(\"hrm.leave_request_no\", row.CompanyId, row.BranchId, row.StartDate)", leave, StringComparison.Ordinal);
+
+        // Slice S1.20c (R-113): contracts have no generated create; the contract service takes the number from the numbering
+        // service, dated by the start date, and the request has no number to type.
         var contracts = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/ContractEndpoints.g.cs"];
-        var request = contracts[contracts.IndexOf("public sealed class ContractWriteRequest", StringComparison.Ordinal)..contracts.IndexOf("public sealed class ContractListQuery", StringComparison.Ordinal)];
-        Assert.DoesNotContain("ContractNo", request, StringComparison.Ordinal);
-        Assert.Contains("NumberRequest(\"hrm.contract_no\", row.CompanyId, null, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/ContractEndpoints.g.cs"], StringComparison.Ordinal);
-        Assert.Contains("NumberRequest(\"hrm.leave_request_no\", row.CompanyId, row.BranchId, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/LeaveRequestEndpoints.g.cs"], StringComparison.Ordinal);
+        Assert.DoesNotContain("WriteRequest", contracts, StringComparison.Ordinal);
+        Assert.DoesNotContain("AssignOnCreateAsync", contracts, StringComparison.Ordinal);
+        Assert.Contains("numbers.AssignOnCreateAsync(new NumberRequest(\"hrm.contract_no\", contract.CompanyId, null, contract.StartDate)", File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Infrastructure/Employments/EmploymentTermsService.cs")), StringComparison.Ordinal);
+        Assert.DoesNotContain("ContractNo", File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Application/Employments/EmploymentTermsContracts.cs")), StringComparison.Ordinal);
 
         // Slice S1.20a (ruling Q1): persons have no generated create, so nobody can type a person number; the person service
         // takes it from the kernel numbering service.
