@@ -173,6 +173,7 @@ public static class ApiHost
         services.AddScoped<ISettings>(sp => sp.GetRequiredService<SettingsService>());
         services.AddScoped<IFeatureFlags>(sp => sp.GetRequiredService<SettingsService>());
         services.AddScoped<ISettingsAdministration, SettingsAdministrationService>();
+        services.AddScoped<Erp.Kernel.Contracts.Settings.IBrandingService, Erp.Kernel.Infrastructure.Settings.BrandingService>(); // S1.15a
 
         // Workflow engine (S1.10): modules register their document types (IWorkflowDocumentTypeSource), outcome handlers
         // and, for HR, the approver directory; routes are data seeded by provisioning and migrate.
@@ -226,6 +227,7 @@ public static class ApiHost
         app.UseAuthorization();
         app.MapHealthChecks("/health");
         app.MapIdentityAuthEndpoints();
+        app.MapBrandingEndpoints(); // S1.15a: the public sign-in page's branding
         var api = app.MapGroup(string.Empty).RequireAuthorization();
         api.MapIdentityAccountEndpoints();
         api.MapAccessEndpoints();

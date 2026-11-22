@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Erp.BuildingBlocks.Domain.Time;
+using Erp.IntegrationTests.Documents;
 using Erp.IntegrationTests.Identity;
 using Erp.IntegrationTests.Tenancy;
 using Erp.IntegrationTests.Workflow;
@@ -74,6 +75,8 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
             services =>
             {
                 WorkflowRig.RegisterTestModule(services);
+                // S1.15a: the login logo is a stored file; the browser tests use a folder store and a scanner that finds nothing.
+                DocumentTestServices.Register(services, Path.Combine(Path.GetTempPath(), "erp-e2e-files-" + Guid.NewGuid().ToString("N")));
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(clock);
                 // Access tokens are checked against the same test clock (the real time is also accepted, for the
