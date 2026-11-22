@@ -38,6 +38,7 @@ public static class IdentitySettings
     public const string PrivilegedPasswordMinLength = KernelSettingKeys.IamPasswordPrivilegedMinLength;
     public const string MakerCheckerSensitiveRoles = KernelSettingKeys.IamMakerCheckerSensitiveRoles;
     public const string MakerCheckerExpiryDays = KernelSettingKeys.IamMakerCheckerExpiryDays;
+    public const string ReportInactiveDays = KernelSettingKeys.IamReportInactiveDays;
     public const string PasswordResetMinutes = KernelSettingKeys.IamPasswordResetMinutes;
     public const string PasswordResetPerHour = KernelSettingKeys.IamPasswordResetPerHour;
     public const string EmailCodeMinutes = KernelSettingKeys.IamEmailCodeMinutes;

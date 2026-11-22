@@ -1,0 +1,39 @@
+/* The role screens (slice S1.13b): permission picker, catalogue and comparison columns. Tokens and logical properties only. */
+.erp-perm-module {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+}
+
+.erp-perm-resource {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-inline-start: var(--space-4);
+}
+
+.erp-perm-sensitive {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+.erp-compare {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.erp-compare ul {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+@media (max-width: 47.99rem) {
+  .erp-compare {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
