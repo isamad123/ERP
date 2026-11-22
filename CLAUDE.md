@@ -211,6 +211,11 @@ Persons (S1.20a): HR person services `src/Modules/Hrm/Erp.Hrm.Infrastructure/Peo
 their actions are hand-written permissions in `Erp.Hrm.Infrastructure/Access/permissions.json`. A module holds a change for a second person through
 `IHeldChanges` and an `IHeldChangeHandler` (Kernel.Contracts `Access/HeldChanges.cs`; example `PersonMergeHandler`). HR endpoints carry `HrmEndpointMetadata`
 for the isolation suite (`HrmProbe`). Tests: `tests/Erp.IntegrationTests/People`.
+Employments (S1.20b): HR employment services `src/Modules/Hrm/Erp.Hrm.Infrastructure/Employments/` (endpoints `Erp.Hrm.Api/Employments/EmploymentEndpoints.cs` under
+`/api/hrm/employments`); the events are the record and the assignment rows follow from them (`EmploymentTimeline`, `EmploymentApplier`); generated writes of employments,
+assignments and events are closed. A later module answers the backdated change check by registering `IEmploymentChangeImpact` (Hrm.Contracts) and recalculates on
+`hrm.employee_changed` from its `earliestDate`. Rule and function entries of rules.yaml for HR schemas are written to the HR migrations; generated lists of effective-dated
+tables take `asOf`. Tests: `tests/Erp.IntegrationTests/Employments` (`EmploymentTestSupport.PlaceAsync`, `HireBody`).
 
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.
