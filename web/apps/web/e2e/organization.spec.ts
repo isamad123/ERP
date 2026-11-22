@@ -4,7 +4,7 @@
 // second administrator, a location whose latitude is refused next to the field, and a holiday calendar copied forward with a
 // moon-sighting date confirmed; every screen passes axe in English and Urdu.
 import { expect, test, type Page } from '@playwright/test';
-import { accessible, display, field, fitsWidth, freshContext, menu, noProblems, person, server, shot } from './support';
+import { accessible, display, field, fitsWidth, menu, noProblems, person, server, shot } from './support';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -155,9 +155,9 @@ test('FR-ADM-LOC-04 a holiday year is copied forward, the moon-sighting date is 
 });
 
 test('FR-KRN-LOC-01 NFR-11 NFR-12 every organization screen passes axe in Urdu and fits three widths', async ({ browser }) => {
-  const context = await freshContext(browser, 'ur');
-  const admin = await person(browser, { permissions: ADMIN, displayName: 'Urdu Admin', language: 'ur', context });
+  const admin = await person(browser, { permissions: ADMIN, displayName: 'Urdu Admin' });
   const page = admin.page;
+  const context = admin.context;
   await display(context, { language: 'ur' });
   for (const [path, label] of [['/organization/companies', 'companies'], ['/organization/locations', 'locations'], ['/organization/holiday-calendars', 'calendars']] as const) {
     for (const width of WIDTHS) {
