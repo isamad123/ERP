@@ -14,7 +14,7 @@ namespace Erp.IntegrationTests.Tenancy.Isolation;
 /// gets fresh material made through its own API: a person with an identifier, contact, address, relation and qualification, a
 /// second person, and a third with the first one's name and birth date sent to the duplicate review; from S1.20b two hired
 /// employments, the first linked to a user; from S1.20c a second company, a former employment, a contract and a probation; from S1.20d a
-/// payment account and a statutory registration of the first employment. Then, as for
+/// payment account and a statutory registration of the first employment; from S1.34a a pay group with the periods of a tax year. Then, as for
 /// the other probes:
 /// <list type="number">
 /// <item>B's host and token aimed at A's ids, with and without headers naming A: actions on A's records are 404; creates and lists
@@ -29,7 +29,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         Guid Person, long PersonVersion, Guid Into, Guid Identifier, long IdentifierVersion, Guid Contact, long ContactVersion, Guid Address, long AddressVersion,
         Guid Relation, long RelationVersion, Guid Qualification, long QualificationVersion, Guid Case, long CaseVersion, string PersonNo,
         Hire Org, Guid Employment, long EmploymentVersion, Guid Unlinked, long UnlinkedVersion, Guid FreeUser,
-        Hire To, Guid Former, Guid Contract, long ContractVersion, long ProbationVersion, Guid BankAccount, Guid Registration, long RegistrationVersion);
+        Hire To, Guid Former, Guid Contract, long ContractVersion, long ProbationVersion, Guid BankAccount, Guid Registration, long RegistrationVersion,
+        Guid PayGroup, long PayGroupVersion, Guid Period, long PeriodVersion, string PeriodCutOff);
 
     /// <summary>Where the probe hires (slice S1.20b): an org unit of a company and that company's branch.</summary>
     private sealed record Hire(Guid Company, Guid OrgUnit, Guid Branch);
@@ -42,7 +43,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.PayGroup, a.Period }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
@@ -174,6 +175,17 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "PUT /api/hrm/statutory-registrations/{id:guid}" => ($"/api/hrm/statutory-registrations/{m.Registration}", Json(new { registrationNo = "PROBE-1", rowVersion = m.RegistrationVersion })),
             "DELETE /api/hrm/statutory-registrations/{id:guid}" => ($"/api/hrm/statutory-registrations/{m.Registration}?rowVersion={m.RegistrationVersion}", null),
             "GET /api/hrm/statutory-registrations/{id:guid}/reveal" => ($"/api/hrm/statutory-registrations/{m.Registration}/reveal", null),
+
+            // S1.34a: pay groups, the periods of a tax year, the calendar and the readiness checklist of A's group and period.
+            "POST /api/hrm/pay-groups" => ("/api/hrm/pay-groups", Json(new
+            {
+                companyId = m.Org.Company, code = "PG" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe group" }, frequency = "monthly", taxYearStartMonth = 7,
+            })),
+            "PUT /api/hrm/pay-groups/{id:guid}" => ($"/api/hrm/pay-groups/{m.PayGroup}", Json(new { cutOffDay = 2, rowVersion = m.PayGroupVersion })),
+            "POST /api/hrm/pay-groups/{id:guid}/periods/generate" => ($"/api/hrm/pay-groups/{m.PayGroup}/periods/generate", Json(new { taxYear = 2030 })),
+            "PUT /api/hrm/pay-periods/{id:guid}" => ($"/api/hrm/pay-periods/{m.Period}", Json(new { cutOffDate = m.PeriodCutOff, rowVersion = m.PeriodVersion })),
+            "GET /api/hrm/pay-calendar" => ("/api/hrm/pay-calendar", null),
+            "GET /api/hrm/pay-periods/{id:guid}/readiness" => ($"/api/hrm/pay-periods/{m.Period}/readiness", null),
             var key => throw new InvalidOperationException($"No probe target for HR endpoint {key}; extend HrmProbe."),
         };
     }
@@ -341,12 +353,18 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         }
 
         var registration = await PostAsync(host, token, $"/api/hrm/employments/{employment}/statutory-registrations", new { scheme = "eobi", isApplicable = true, registrationNo = "EOBI-" + cnic[..7], validFrom = "2024-01-01" }, ct);
+        // S1.34a: a pay group of the probe's company with the periods of tax year 2024 (a monthly group starting in July).
+        var group = await PostAsync(host, token, "/api/hrm/pay-groups", new { companyId = org.Company, code = "PG" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe group" }, frequency = "monthly", taxYearStartMonth = 7 }, ct);
+        var groupId = group.GetProperty("id").GetGuid();
+        await PostAsync(host, token, $"/api/hrm/pay-groups/{groupId}/periods/generate", new { taxYear = 2024 }, ct);
+        var period = (await GetAsync(host, token, $"/api/hrm/pay-periods?payGroupId={groupId}", ct)).GetProperty("items")[0];
         return new Material(person, created.GetProperty("rowVersion").GetInt64(), into, identifier.Id, identifier.Version, contact.Id, contact.Version,
             address.Id, address.Version, relation.Id, relation.Version, qualification.Id, qualification.Version,
             match.GetProperty("id").GetGuid(), match.GetProperty("rowVersion").GetInt64(), created.GetProperty("personNo").GetString()!,
             org, employment, linkedVersion, second.GetProperty("id").GetGuid(), second.GetProperty("rowVersion").GetInt64(), freeUser,
             to, former, contract.GetProperty("id").GetGuid(), contract.GetProperty("rowVersion").GetInt64(), probation.GetProperty("rowVersion").GetInt64(),
-            account, registration.GetProperty("id").GetGuid(), registration.GetProperty("rowVersion").GetInt64());
+            account, registration.GetProperty("id").GetGuid(), registration.GetProperty("rowVersion").GetInt64(),
+            groupId, group.GetProperty("rowVersion").GetInt64(), period.GetProperty("id").GetGuid(), period.GetProperty("rowVersion").GetInt64(), period.GetProperty("cutOffDate").GetString()!);
     }
 
     private async Task<JsonElement> PostAsync(string host, string token, string path, object body, CancellationToken ct)
