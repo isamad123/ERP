@@ -12,7 +12,7 @@ import { notifications, type NotificationItem } from '../api/kernel';
 import { useBranding } from '../app/branding';
 import { useDisplay } from '../app/display-context';
 import type { Density, Theme } from '../app/preferences';
-import { safeReturn, useSession } from '../app/session-context';
+import { safeReturn, useSignOut } from '../app/session-context';
 import { companyName, useShell } from './context';
 
 export const unreadKey = ['ntf', 'unread'] as const;
@@ -155,8 +155,7 @@ function UserMenu() {
   const { t } = useText();
   const { me } = useShell();
   const { display, setDisplay } = useDisplay();
-  const session = useSession();
-  const navigate = useNavigate();
+  const signOut = useSignOut();
   return (
     <PopoverPanel label={t('shell.user.menu')}
       trigger={(
@@ -173,7 +172,7 @@ function UserMenu() {
           options={(['system', 'light', 'dark', 'contrast'] as const).map((id) => ({ id, label: t(`shell.theme.${id}`) }))} />
         <SelectField label={t('shell.density.label')} value={display.density} onChange={(v) => setDisplay({ ...display, density: v as Density })}
           options={(['compact', 'standard', 'comfortable'] as const).map((id) => ({ id, label: t(`shell.density.${id}`) }))} />
-        <Button variant="secondary" block onPress={() => { void session.signOut().then(() => navigate('/sign-in?reason=signedOut', { replace: true })); }}>
+        <Button variant="secondary" block onPress={() => { signOut(); }}>
           {t('home.signOut')}
         </Button>
       </div>
