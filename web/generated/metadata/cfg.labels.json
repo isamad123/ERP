@@ -13,14 +13,6 @@
     {
       "action": "read",
       "permission": "cfg.labels.read"
-    },
-    {
-      "action": "create",
-      "permission": "cfg.labels.create"
-    },
-    {
-      "action": "update",
-      "permission": "cfg.labels.update"
     }
   ],
   "companyScoped": false,
@@ -37,7 +29,8 @@
   ],
   "search": [],
   "constraints": {
-    "ck_labels_layer": "layer"
+    "ck_labels_layer": "layer",
+    "ck_labels_text_length": "text"
   },
   "fields": [
     {

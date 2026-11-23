@@ -43,7 +43,7 @@ export interface RoleSummary {
 export interface RoleComparison { left: string; right: string; onlyLeft: string[]; onlyRight: string[]; both: string[] }
 export interface DataScopeRecord { id: string; code: string; nameI18n: Names; kind: ScopeKind; definition: Record<string, unknown>; isActive?: boolean }
 export interface ScopePreview { resource: string; userId: string; count: number; firstPage: string[] }
-export interface FieldPreviewItem { field: string; fieldClass: string | null; access: AccessLevel }
+export interface FieldPreviewItem { field: string; fieldClass: string | null; access: AccessLevel; /** The name of a custom field in both languages (S1.15b). */ label?: Record<string, string | null> | null }
 export interface FieldPreview { resource: string; roleId: string; fields: FieldPreviewItem[] }
 export interface GroupRecord { id: string; code: string; nameI18n: Names; isActive: boolean; rowVersion: number }
 export interface GroupDetail {

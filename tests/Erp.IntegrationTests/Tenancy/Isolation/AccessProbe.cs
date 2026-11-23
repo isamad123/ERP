@@ -29,7 +29,10 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
         Guid AssignmentId, Guid GroupRoleId, Guid RequestId, Guid ScopeId, OrgMaterial Org);
 
     /// <summary>S1.14a: a company's registration and bank account (written through the API, so their values are really encrypted) and a tenant calendar.</summary>
-    private sealed record OrgMaterial(Guid CompanyId, Guid RegistrationId, Guid BankAccountId, Guid CalendarId, Guid HierarchyId, Guid UnitId, Guid ParentUnitId);
+    private sealed record OrgMaterial(Guid CompanyId, Guid RegistrationId, Guid BankAccountId, Guid CalendarId, Guid HierarchyId, Guid UnitId, Guid ParentUnitId, MetaMaterial Meta);
+
+    /// <summary>S1.15b: an option list with one item, a custom field definition of org units and a label override of the customer.</summary>
+    private sealed record MetaMaterial(Guid ListId, string ListCode, Guid ItemId, Guid DefId, string DefKey, string LabelKey);
 
     public async Task<IReadOnlyList<string>> RunAsync(ApiEndpoint endpoint, CancellationToken ct)
     {
@@ -39,7 +42,8 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
         await MaterialAsync(fx.CodeB, ct); // B's own material, so B's calls have real rows of their own to hit
         var tokenA = fx.Tenancy.Token(fx.CodeA);
         var tokenB = fx.Tenancy.Token(fx.CodeB);
-        var markers = new[] { a.RoleId, a.Role2Id, a.UserId, a.User2Id, a.GroupId, a.AssignmentId, a.GroupRoleId, a.RequestId }.Concat([a.Org.RegistrationId, a.Org.BankAccountId, a.Org.CalendarId]).Select(g => g.ToString()).Append(a.RoleCode).ToList();
+        var markers = new[] { a.RoleId, a.Role2Id, a.UserId, a.User2Id, a.GroupId, a.AssignmentId, a.GroupRoleId, a.RequestId }.Concat([a.Org.RegistrationId, a.Org.BankAccountId, a.Org.CalendarId, a.Org.Meta.ListId, a.Org.Meta.ItemId, a.Org.Meta.DefId]).Select(g => g.ToString()).Append(a.RoleCode)
+            .Concat([a.Org.Meta.ListCode, a.Org.Meta.DefKey, a.Org.Meta.LabelKey]).ToList();
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
@@ -105,6 +109,15 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
                 failures.Add($"{endpoint}: positive control failed: A's pending changes do not list A's request {a.RequestId}.");
             }
         }
+        else if (endpoint.Kind == EndpointKind.AccessCatalog && endpoint.Resource is "cfg.labels" or "cfg.option_lists" or "cfg.custom_field_defs")
+        {
+            // S1.15b: each catalogue names A's own material (the entity list is the same for every customer).
+            var expected = endpoint.Resource == "cfg.labels" ? a.Org.Meta.LabelKey : endpoint.Resource == "cfg.option_lists" ? a.Org.Meta.ListCode : endpoint.Pattern.EndsWith("custom-field-entities", StringComparison.Ordinal) ? "org.org_units" : a.Org.Meta.DefKey;
+            if (!own.Body.Contains(expected, StringComparison.Ordinal))
+            {
+                failures.Add($"{endpoint}: positive control failed: A's catalogue does not list {expected}.");
+            }
+        }
         else if (endpoint.Kind == EndpointKind.AccessCatalog && !own.Body.Contains(a.RoleCode, StringComparison.Ordinal))
         {
             failures.Add($"{endpoint}: positive control failed: A's catalogue does not list A's role {a.RoleCode}.");
@@ -130,9 +143,11 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
             "ref.calendars" => m.Org.CalendarId,
             "org.org_hierarchies" => m.Org.HierarchyId, // S1.14b: the tree and the comparison of a hierarchy
             "org.org_units" => m.Org.UnitId, // S1.14b: the move of a unit
+            "cfg.option_lists" => m.Org.Meta.ListId, // S1.15b
+            "cfg.custom_field_defs" => m.Org.Meta.DefId,
             _ => Guid.Empty,
         };
-        var path = endpoint.Pattern.Replace("{id:guid}", id.ToString(), StringComparison.Ordinal).Replace("{userId:guid}", m.UserId.ToString(), StringComparison.Ordinal)
+        var path = endpoint.Pattern.Replace("{id:guid}", id.ToString(), StringComparison.Ordinal).Replace("{itemId:guid}", m.Org.Meta.ItemId.ToString(), StringComparison.Ordinal).Replace("{userId:guid}", m.UserId.ToString(), StringComparison.Ordinal)
             .Replace("{sessionId:guid}", Guid.NewGuid().ToString(), StringComparison.Ordinal).Replace("{deviceId:guid}", Guid.NewGuid().ToString(), StringComparison.Ordinal);
         var unique = Guid.NewGuid().ToString("N")[..10];
         var key = endpoint.Method + " " + endpoint.Pattern.TrimEnd('/');
@@ -142,7 +157,18 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
             "GET /api/iam/roles/{id:guid}/field-preview" => ($"{path}?resource={Resource}", null),
             "GET /api/org/hierarchies/{id:guid}/compare" => ($"{path}?from=2026-01-01&to=2027-01-01", null),
             "GET /api/iam/data-scope-preview" => ($"{path}?userId={m.UserId}&resource={Resource}", null),
+            "GET /api/cfg/custom-fields" => ($"{path}?entityType=org.org_units", null),
             _ when endpoint.Method == "GET" => (path, null),
+            // S1.15b: labels, option lists and custom fields (the material of the customer the ids belong to).
+            "PUT /api/cfg/label-overrides" => (path, Json(new { key = m.Org.Meta.LabelKey, layer = "company", companyId = m.Org.CompanyId, texts = new { en = "Probe company text" } })),
+            "POST /api/cfg/option-lists" => (path, Json(new { code = "probe_n_" + unique, name = new { en = "Probe" } })),
+            "PUT /api/cfg/option-lists/{id:guid}" => (path, Json(new { name = new { en = "Probe renamed" }, rowVersion = 1 })),
+            "POST /api/cfg/option-lists/{id:guid}/items" => (path, Json(new { code = "probe_" + unique, label = new { en = "Probe" } })),
+            "PUT /api/cfg/option-lists/{id:guid}/items/{itemId:guid}" => (path, Json(new { label = new { en = "Probe renamed" }, isActive = true, rowVersion = 1 })),
+            "POST /api/cfg/option-lists/{id:guid}/items/order" => (path, Json(new { itemIds = new[] { m.Org.Meta.ItemId } })),
+            "POST /api/cfg/custom-fields" => (path, Json(new { entityType = "org.org_units", fieldKey = "probe_n_" + unique, dataType = "text", label = new { en = "Probe" } })),
+            "PUT /api/cfg/custom-fields/{id:guid}" => (path, Json(new { label = new { en = "Probe renamed" }, rowVersion = 1 })),
+            "POST /api/cfg/custom-fields/{id:guid}/retire" or "POST /api/cfg/custom-fields/{id:guid}/restore" => (path, Json(new { rowVersion = 1 })),
             "POST /api/org/companies/{id:guid}/registrations" => (path, Json(new { kind = "other", authority = "probe" + unique, value = "PROBE-" + unique, validFrom = "2026-01-01" })),
             "PUT /api/org/company-registrations/{id:guid}" => (path, Json(new { validTo = "2030-12-31", rowVersion = 1 })),
             "POST /api/org/companies/{id:guid}/bank-accounts" => (path, Json(new { bankCode = "PROBEBANK", accountTitle = "Probe " + unique, accountNumber = "99" + unique, currencyCode = "PKR" })),
@@ -242,7 +268,17 @@ public sealed class AccessProbe(IsolationFixture fx, WebApplication app)
                 await ExecAsync(c, "insert into org.org_unit_links (id, hierarchy_id, unit_id, parent_unit_id, valid_from, created_at, created_by, updated_at, updated_by) values ($1, $2, $3, null, '2026-01-01', now(), $4, now(), $4)", ct, Guid.CreateVersion7(), hierarchy, id, system);
             }
 
-            return new OrgMaterial(company, IdOf(registration), IdOf(bank), calendar, hierarchy, unit, parent);
+            // S1.15b: an option list with one item, a custom field definition and a label override.
+            var list = Guid.CreateVersion7();
+            var item = Guid.CreateVersion7();
+            var def = Guid.CreateVersion7();
+            var (listCode, defKey, labelKey) = ("probe_l_" + n, "probe_f_" + n, "nav.probe_" + n);
+            await ExecAsync(c, "insert into cfg.option_lists (id, code, name_i18n, is_system, created_at, created_by, updated_at, updated_by) values ($1, $2, '{\"en\":\"Probe\"}', false, now(), $3, now(), $3)", ct, list, listCode, system);
+            await ExecAsync(c, "insert into cfg.option_list_items (id, list_id, code, label_i18n, seq, is_active, attributes, created_at, created_by, updated_at, updated_by) values ($1, $2, 'probe_item', '{\"en\":\"Probe\"}', 10, true, '{}', now(), $3, now(), $3)", ct, item, list, system);
+            await ExecAsync(c, "insert into cfg.custom_field_defs (id, entity_type, field_key, data_type, label_i18n, validation, is_required, is_unique, seq, version, status, created_at, created_by, updated_at, updated_by) values ($1, 'org.org_units', $2, 'text', '{\"en\":\"Probe\"}', '{}', false, false, 10, 1, 'active', now(), $3, now(), $3)", ct, def, defKey, system);
+            await ExecAsync(c, "insert into cfg.labels (id, key, language, layer, text, created_at, created_by, updated_at, updated_by) values ($1, $2, 'en', 'tenant', 'Probe', now(), $3, now(), $3)", ct, Guid.CreateVersion7(), labelKey, system);
+
+            return new OrgMaterial(company, IdOf(registration), IdOf(bank), calendar, hierarchy, unit, parent, new MetaMaterial(list, listCode, item, def, defKey, labelKey));
         }
         finally
         {

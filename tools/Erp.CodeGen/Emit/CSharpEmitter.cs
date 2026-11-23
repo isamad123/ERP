@@ -580,6 +580,31 @@ public static class CSharpEmitter
         ["user"] = "User",
     };
 
+    private const string CustomParameter = ", global::Erp.Kernel.Contracts.Metadata.ICustomFieldValidator customFields";
+
+    /// <summary>True when generated writes carry the table's custom fields (trait cust, FR-KRN-MET-02, S1.15b).</summary>
+    private static bool HasCustom(Table t) => CanWrite(t) && WritableColumns(t, update: false).Any(c => c.Name == "custom" && c.Kind is ColumnKind.Json);
+
+    /// <summary>
+    /// The server check of custom values (S1.15b, FR-KRN-MET-02): types, required, unique and validation against the active
+    /// definitions, held under the lock of the unique fields until the save is done. Field errors name <c>custom.&lt;key&gt;</c>.
+    /// </summary>
+    private static void CustomCheck(CodeWriter w, Table t, bool update)
+    {
+        var property = N.Property(t, t.Column("custom"));
+        var company = t.Columns.Exists(c => c.Name == "company_id") ? "row." + N.Property(t, t.Column("company_id")) : "null";
+        var rowId = update ? "row.Id" : "null";
+        var stored = update ? "storedCustom" : "null";
+        w.Line($"        await using var customCheck = await customFields.CheckAsync(new global::Erp.Kernel.Contracts.Metadata.CustomWrite({CodeWriter.CSharpString(t.FullName)}, {rowId}, {company}, row.{property}, {stored}, key => access.CanEdit(global::Erp.BuildingBlocks.Application.Security.FieldAccessMap.CustomPrefix + key), {(update ? "true" : "false")}), cancellationToken).ConfigureAwait(false);");
+        w.Line("        if (customCheck.Errors.Count > 0)");
+        w.Line("        {");
+        w.Line("            return GeneratedEndpointSupport.InvalidCustom(customCheck.Errors);");
+        w.Line("        }");
+        w.Line();
+        w.Line($"        row.{property} = customCheck.Values;");
+        w.Line();
+    }
+
     /// <summary>Fields the API shows (and field rules address): every returned column; custom fields by key; an encrypted column named in design key field_view (S1.14a: shown by hand-written views, masked by field security).</summary>
     public static IReadOnlyList<Column> FieldColumns(Table t) => t.Columns.Where(c => !c.IsSensitive || c.InFieldCatalogue).ToList();
 
@@ -773,6 +798,7 @@ public static class CSharpEmitter
                 : "null";
             w.Line();
             var numbers = t.Numbering.Count > 0 ? ", global::Erp.Kernel.Contracts.Numbering.INumberAllocator numbers" : string.Empty;
+            numbers += HasCustom(t) ? CustomParameter : string.Empty;
             w.Line($"private static global::System.Threading.Tasks.Task<IResult> CreateAsync({entity}WriteRequest request, {repo} repository, {permissions}, {fields}{numbers}, {ct}) =>");
             w.Line($"    GeneratedEndpointSupport.RunAsync(permissions, {CodeWriter.CSharpString(N.Permission(t, "create"))}, async () =>");
             w.Line("    {");
@@ -790,6 +816,11 @@ public static class CSharpEmitter
             w.Line("            return GeneratedEndpointSupport.NotEditable(denied);");
             w.Line("        }");
             w.Line();
+            if (HasCustom(t))
+            {
+                CustomCheck(w, t, update: false);
+            }
+
             if (t.Numbering.Count > 0)
             {
                 // S1.08 review finding 2: the caller's data scope before the number, so a refused row takes no number of
@@ -814,7 +845,7 @@ public static class CSharpEmitter
         if (CanUpdate(t))
         {
             w.Line();
-            w.Line($"private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, {entity}WriteRequest request, {repo} repository, {permissions}, {fields}, {ct}) =>");
+            w.Line($"private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, {entity}WriteRequest request, {repo} repository, {permissions}, {fields}{(HasCustom(t) ? CustomParameter : string.Empty)}, {ct}) =>");
             w.Line($"    GeneratedEndpointSupport.RunAsync(permissions, {CodeWriter.CSharpString(N.Permission(t, "update"))}, async () =>");
             w.Line("    {");
             w.Line("        var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);");
@@ -830,12 +861,22 @@ public static class CSharpEmitter
             w.Line("            return GeneratedEndpointSupport.Invalid(errors);");
             w.Line("        }");
             w.Line();
+            if (HasCustom(t))
+            {
+                w.Line($"        var storedCustom = row.{N.Property(t, t.Column("custom"))};");
+            }
+
             w.Line("        var denied = Apply(request, row, update: true, access);");
             w.Line("        if (denied.Count > 0)");
             w.Line("        {");
             w.Line("            return GeneratedEndpointSupport.NotEditable(denied);");
             w.Line("        }");
             w.Line();
+            if (HasCustom(t))
+            {
+                CustomCheck(w, t, update: true);
+            }
+
             w.Line("        await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);");
             w.Line($"        return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, {access}.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));");
             w.Line("    }, cancellationToken);");
@@ -1094,6 +1135,10 @@ public static class CSharpEmitter
         w.Line("/// <summary>A change to fields the caller may not edit (FR-KRN-IAM-13): 400 naming each field.</summary>");
         w.Line("public static IResult NotEditable(global::System.Collections.Generic.List<string> fields) =>");
         w.Line("    TypedResults.ValidationProblem(fields.ToDictionary(f => f, _ => new[] { global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable }), title: global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable);");
+        w.Line();
+        w.Line("/// <summary>Custom values refused (FR-KRN-MET-02, S1.15b): 400 naming each <c>custom.&lt;key&gt;</c> with its error key.</summary>");
+        w.Line("public static IResult InvalidCustom(global::System.Collections.Generic.IReadOnlyDictionary<string, string> errors) =>");
+        w.Line("    TypedResults.ValidationProblem(errors.ToDictionary(e => e.Key, e => new[] { e.Value }), title: \"errors.data.invalid_request\");");
         w.Line();
         w.Line("/// <summary>The answer for one row with hidden fields left out and masked fields masked (field security of the roles whose scope covers it).</summary>");
         w.Line("public static async global::System.Threading.Tasks.Task<global::System.Text.Json.Nodes.JsonObject> ShapeOneAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Data.IRepository<TRow> repository, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, TRow row, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)");

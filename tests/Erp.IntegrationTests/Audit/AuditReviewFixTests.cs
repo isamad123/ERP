@@ -111,6 +111,12 @@ public sealed class AuditReviewFixTests(TenancyFixture fx) : IAsyncLifetime
         var id = (Guid)(await _h.RowAsync("org.org_units", company, null, Ct))["id"]!;
         await _h.ExecAsync("update org.org_units set custom = '{\"secret\":\"hush-4711\",\"note\":\"n1\"}' where id = $1", Ct, id);
         var admin = await _h.UserAsync(Ct, null, "tenant_admin");
+        // Custom values are checked against their definitions since S1.15b: the two fields the record carries are defined first.
+        foreach (var key in new[] { "secret", "note" })
+        {
+            Assert.Equal(HttpStatusCode.Created, (await _h.PostAsync(admin, "/api/cfg/custom-fields", new { entityType = "org.org_units", fieldKey = key, dataType = "text", label = new { en = key } }, Ct)).Status);
+        }
+
         var unit = JsonNode.Parse((await _h.GetAsync(admin, $"/api/org/org-units/{id}", Ct)).Body)!.AsObject();
         unit["custom"] = new JsonObject { ["secret"] = "hush-4711", ["note"] = "note-0042" };
         Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(admin, $"/api/org/org-units/{id}", unit.ToJsonString(), Ct)).Status);
@@ -126,6 +132,7 @@ public sealed class AuditReviewFixTests(TenancyFixture fx) : IAsyncLifetime
         var custom = Field(history.Json[0], "custom");
         Assert.Equal("****0042", custom.GetProperty("after").GetProperty("note").GetString());
         Assert.Equal("note-0042", Field((await _h.GetAsync(admin, $"/api/aud/history/org.org_units/{id}", Ct)).Json[0], "custom").GetProperty("after").GetProperty("note").GetString());
+        await _h.ExecAsync("delete from cfg.custom_field_defs where entity_type = 'org.org_units' and field_key in ('secret', 'note')", Ct);
     }
 
     // ------------------------------------------------------------------ finding 4
