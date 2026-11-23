@@ -1068,7 +1068,7 @@ Partitioned by range; 37 partitions.
 Constraints:
 
 - `ck_attendance_events_direction` CHECK ((direction = ANY (ARRAY['in'::text, 'out'::text, 'break_out'::text, 'break_in'::text, 'unknown'::text])))
-- `ck_attendance_events_source` CHECK ((source = ANY (ARRAY['web'::text, 'biometric'::text, 'kiosk'::text, 'hr_entry'::text, 'import'::text])))
+- `ck_attendance_events_source` CHECK ((source = ANY (ARRAY['web'::text, 'biometric'::text, 'kiosk'::text, 'hr_entry'::text, 'import'::text, 'qr'::text])))
 - `fk_attendance_events_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_attendance_events_device_id` FOREIGN KEY (company_id, device_id) REFERENCES hrm.attendance_devices(company_id, id)
 - `fk_attendance_events_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
@@ -7523,6 +7523,7 @@ Constraints:
 - `cfg.tg_config_version` 
 - `cfg.tg_refuse_change` 
 - `doc.tg_refuse_change` 
+- `hrm.drop_expired_attendance_partitions` 
 - `hrm.tg_employee_bank_accounts_bank_fields_required` 
 - `hrm.tg_employee_bank_accounts_split` 
 - `hrm.tg_employment_assignments_cost_allocation_sum` 

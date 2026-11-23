@@ -51,12 +51,6 @@
       "sensitive": false
     },
     {
-      "code": "hrm.attendance_events.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.attendance_events.create",
-      "sensitive": false
-    },
-    {
       "code": "hrm.attendance_exceptions.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.attendance_exceptions.read",
