@@ -75,14 +75,14 @@ Each slice is one fresh session (or one fresh session per part where its slice f
 ## Batch 6 — Performance and learning (Sonnet)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.48 | Form designer and responses (built minimal; slice file approved, CR-103) | C | Sonnet |
+| S1.48 | Form designer and responses (built minimal; parts S1.48a engine and contract, S1.48b screens, CR-113; slice file approved, CR-103) | C | Sonnet |
 | S1.49 | Review cycles, goals, reviews, sign-off (two parts; slice file approved, CR-104) | C | Sonnet |
 | S1.50 | Courses, sessions, enrolments, learning records, mandatory training, bonds (two parts; slice file approved, CR-105) | D | Sonnet |
 
 ## Batch 7 — Hardening (Opus)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.51 | Standard reports and dashboards (HR, attendance, leave, payroll) (core dashboards only; slice file approved, CR-106) | D | Sonnet |
+| S1.51 | Standard reports and dashboards (HR, attendance, leave, payroll) (core dashboards only; parts S1.51a reports, S1.51b dashboards and performance, CR-113; slice file approved, CR-106) | D | Sonnet |
 | S1.52 | Load test: payroll for 50,000 employees, attendance volume, isolation under load (fresh Opus review; slice file approved, CR-107) | B | Opus |
 | S1.53 | Security review checklist, backup and restore drill, release packaging (two parts, fresh Opus review of each; privacy tools added; slice file approved, CR-108) | B | Opus |
 
