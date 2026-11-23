@@ -45,6 +45,9 @@ public static class EmploymentServices
         services.AddScoped<IEmploymentService>(sp => sp.GetRequiredService<EmploymentService>());
         services.AddScoped<IEmploymentMoves>(sp => sp.GetRequiredService<EmploymentService>());
         services.AddScoped<IEmploymentTermsService, EmploymentTermsService>();
+        services.AddScoped<IEmployeeBankAccountService, EmployeeBankAccountService>(); // S1.20d payment accounts
+        services.AddScoped<IStatutoryRegistrationService, StatutoryRegistrationService>();
+        services.AddScoped<Erp.Kernel.Contracts.Access.IHeldChangeHandler, BankAccountChangeHandler>(); // approval of held account changes
         return services;
     }
 

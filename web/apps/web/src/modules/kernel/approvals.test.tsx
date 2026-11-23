@@ -7,7 +7,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { I18nRoot } from '@erp/i18n';
+import { I18nRoot, serverTextsReady } from '@erp/i18n';
 import { ToastProvider } from '@erp/ui';
 import { accessFacts } from '../../navigation/screens';
 import { ShellValueProvider, type ShellValue } from '../../shell/context';
@@ -168,5 +168,23 @@ describe('FR-KRN-IAM-14 approvals of changes', () => {
     expect(within(mine).queryAllByRole('button')).toEqual([]);
     expect(within(mine).getByText('Waiting for a second person')).toBeTruthy();
     expect(within(approvable).getByText('42')).toBeTruthy();
+  });
+
+  it('shows a module\'s own labels and values in words (S1.20d: HR payment accounts)', async () => {
+    await serverTextsReady;
+    const held = {
+      ...change('c9', true, null), kind: 'hrm.employee_bank_accounts.change',
+      details: [
+        { label: 'hrm.bank_account.detail.payment_mode', type: 'key' as const, text: 'hrm.bank_account.mode.bank_transfer', date: null, names: null, items: null },
+        { label: 'hrm.bank_account.detail.same_account', type: 'key' as const, text: 'hrm.bank_account.detail.person_not_shown', date: null, names: null, items: null },
+      ],
+    };
+    serve({ changes: { toDecide: [held], mine: [] }, posted: [] });
+    show('/approvals/changes');
+    const [card] = await screen.findAllByRole('listitem');
+    expect(within(card as HTMLElement).getByText('Paid by')).toBeTruthy();
+    expect(within(card as HTMLElement).getByText('Bank transfer')).toBeTruthy();
+    expect(within(card as HTMLElement).getByText('Same account as')).toBeTruthy();
+    expect(within(card as HTMLElement).queryByText('hrm.bank_account.mode.bank_transfer')).toBeNull();
   });
 });
