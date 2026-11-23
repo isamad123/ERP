@@ -95,7 +95,7 @@ internal sealed class EmploymentEventHandler(IServiceProvider services, IClock c
         }
 
         await applier.ApplyEmploymentFieldsAsync(employment, e, today, cancellationToken).ConfigureAwait(false);
-        if (e.Status == "effective")
+        if (EmploymentApplier.Announces(e, events, today))
         {
             applier.RaiseChanged(employment, e, events, now, by);
         }

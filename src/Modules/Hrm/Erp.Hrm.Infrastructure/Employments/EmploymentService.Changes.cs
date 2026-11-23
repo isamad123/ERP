@@ -218,6 +218,13 @@ internal sealed partial class EmploymentService
             errors.Add("assignment", CorrectionNeedsTargetForJob);
         }
 
+        // ... and so does a correction of such a correction: its chain set no job details, so it may not start setting them (review
+        // of the S1.20b follow-up, finding 1, FR-XM-32).
+        if (kind == "data_correction" && rootKind == "data_correction" && delta.Count > 0)
+        {
+            errors.Add("assignment", CorrectionNeedsTargetForJob);
+        }
+
         if (kind == "data_correction" && target is null && delta.Count == 0 && employmentDelta.Count == 0)
         {
             errors.Add(r.CorrectsEventId is null ? "correctsEventId" : "assignment", r.CorrectsEventId is null ? CorrectionNeedsTarget : NothingChanges);
@@ -383,7 +390,7 @@ internal sealed partial class EmploymentService
         }
 
         await applier.ApplyEmploymentFieldsAsync(employment, e, today, ct).ConfigureAwait(false);
-        if (e.Status == "effective")
+        if (EmploymentApplier.Announces(e, all, today))
         {
             applier.RaiseChanged(employment, e, all, now, actor.UserId);
         }

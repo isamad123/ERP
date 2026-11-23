@@ -208,7 +208,8 @@ public sealed class EmploymentServiceTests(TenancyFixture fx) : IAsyncLifetime
     {
         var hr = await _h.UserAsync(Ct, null, "hr_admin");
         var (company, place) = await CompanyAsync();
-        var seats = await _h.ScalarAsync<long>("select count(*) from hrm.employments where status in ('pre_joining', 'active', 'on_notice')", Ct);
+        // Seats count persons (S1.20c: a transfer has two employments of one employee for a while; review of the S1.20b follow-up, low 3).
+        var seats = await _h.ScalarAsync<long>("select count(distinct person_id) from hrm.employments where status in ('pre_joining', 'active', 'on_notice')", Ct);
         var claims = await fx.SetClaimAsync(_h.Code, "limits,employees.active", seats + 1, Ct);
         try
         {
@@ -226,7 +227,7 @@ public sealed class EmploymentServiceTests(TenancyFixture fx) : IAsyncLifetime
         // The monthly meter (S1.09b ruling Q8) counts active and on-notice employments, not future joiners.
         await using var c = await _h.OwnerAsync(null, Ct);
         var meter = await new Erp.Hrm.Infrastructure.Employments.ActiveEmployeeCounter().CountAsync(c, Ct);
-        Assert.Equal(await _h.ScalarAsync<long>("select count(*) from hrm.employments where status in ('active', 'on_notice')", Ct), meter);
+        Assert.Equal(await _h.ScalarAsync<long>("select count(distinct person_id) from hrm.employments where status in ('active', 'on_notice')", Ct), meter);
     }
 
     // ------------------------------------------------------------------ changes, corrections, as-of, timeline (EMP AC)
@@ -712,13 +713,36 @@ public sealed class EmploymentServiceTests(TenancyFixture fx) : IAsyncLifetime
         Assert.True(approved.Status == HttpStatusCode.OK, approved.Body);
         Assert.Equal("Manager", await TitleOnAsync(hr, id, joining));
 
-        // A correction of the hire that only moves the joining date applies at once, as before.
+        // The check answers the same before saving (review of the follow-up, low 4).
+        var (checked_, _, _) = await HireAsync(hr, company, place, Iso(joining));
+        var checkedHire = await _h.ScalarAsync<Guid>("select id from hrm.employment_events where employment_id = $1 and kind = 'hire'", Ct, checked_);
+        var check = await _h.PostAsync(hr, $"{Employments}/{checked_}/events/check", new { kind = "data_correction", reasonCode = "entry_error", correctsEventId = checkedHire, effectiveDate = Iso(joining), assignment = new { title = "Manager" } }, Ct);
+        Assert.True(check.Status == HttpStatusCode.OK, check.Body);
+        Assert.True(check.Json.GetProperty("needsApproval").GetBoolean());
+
+                // A correction of the hire that only moves the joining date applies at once, as before.
         var (other, _, _) = await HireAsync(hr, company, place, Iso(joining));
         var otherHire = await _h.ScalarAsync<Guid>("select id from hrm.employment_events where employment_id = $1 and kind = 'hire'", Ct, other);
         var moved = await ChangeAsync(hr, other, new { kind = "data_correction", reasonCode = "entry_error", correctsEventId = otherHire, effectiveDate = Iso(joining.AddDays(-5)), rowVersion = await VersionAsync(other) });
         Assert.True(moved.Status == HttpStatusCode.Created, moved.Body);
         Assert.Equal("effective", moved.Text("status"));
         Assert.Equal(joining.AddDays(-5), await _h.ScalarAsync<DateOnly>("select joining_date from hrm.employments where id = $1", Ct, other));
+
+        // A correction of that date-only correction (its chain still starts at the hire) that sets job details waits too.
+        var chain = await ChangeAsync(hr, other, new { kind = "data_correction", reasonCode = "entry_error", correctsEventId = moved.Json.GetProperty("eventId").GetGuid(), effectiveDate = Iso(joining.AddDays(-5)), assignment = new { title = "Manager" }, rowVersion = await VersionAsync(other) });
+        Assert.True(chain.Status == HttpStatusCode.Accepted, chain.Body);
+        Assert.Equal("pending_approval", chain.Text("status"));
+
+        // The employee the correction is about cannot approve it even holding the approver role.
+        var subject = await _h.UserAsync(Ct, null, "hr_admin");
+        var (own, ownVersion, _) = await HireAsync(hr, company, place, Iso(joining));
+        Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(hr, $"{Employments}/{own}/user", new { userId = subject, rowVersion = ownVersion }, Ct)).Status);
+        var ownHire = await _h.ScalarAsync<Guid>("select id from hrm.employment_events where employment_id = $1 and kind = 'hire'", Ct, own);
+        var mine = await ChangeAsync(hr, own, new { kind = "data_correction", reasonCode = "entry_error", correctsEventId = ownHire, effectiveDate = Iso(joining), assignment = new { title = "Head" }, rowVersion = await VersionAsync(own) });
+        Assert.True(mine.Status == HttpStatusCode.Accepted, mine.Body);
+        var ownTask = await _h.ScalarAsync<Guid>("select id from wf.workflow_tasks where instance_id = $1 and status = 'pending' order by created_at limit 1", Ct, mine.Json.GetProperty("instanceId").GetGuid());
+        Assert.NotEqual(HttpStatusCode.OK, (await _h.PostAsync(subject, $"/api/wf/tasks/{ownTask}/approve", new { comment = "mine" }, Ct)).Status);
+        Assert.Equal("Officer", await TitleOnAsync(hr, own, Today));
 
         // With no job-change kind listed, the job-details correction of the hire applies at once.
         var (free, freePlace) = await CompanyAsync();
@@ -730,6 +754,24 @@ public sealed class EmploymentServiceTests(TenancyFixture fx) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task FR_XM_32_followup_review_1_a_correction_of_an_employment_field_correction_cannot_set_job_details()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var (company, place) = await CompanyAsync(); // default setting: job changes need approval
+        var (id, _, _) = await HireAsync(hr, company, place, Iso(Today.AddDays(-100)));
+
+        // An untargeted correction of the employee type (employment fields only) applies at once ...
+        var fields = await ChangeAsync(hr, id, new { kind = "data_correction", reasonCode = "entry_error", effectiveDate = Iso(Today), employment = new { employeeType = "contract" }, rowVersion = await VersionAsync(id) });
+        Assert.True(fields.Status == HttpStatusCode.Created, fields.Body);
+
+        // ... and a correction of it may not start setting job details (the reviewer's route around the approval).
+        var job = await ChangeAsync(hr, id, new { kind = "data_correction", reasonCode = "entry_error", correctsEventId = fields.Json.GetProperty("eventId").GetGuid(), effectiveDate = Iso(Today), assignment = new { title = "Manager" }, rowVersion = await VersionAsync(id) });
+        Assert.Equal(HttpStatusCode.BadRequest, job.Status);
+        Assert.Equal("errors.hrm.employment_event.job_details_need_target", job.Json.GetProperty("errors").GetProperty("assignment")[0].GetString());
+        Assert.Equal("Officer", await TitleOnAsync(hr, id, Today));
+    }
+
+    [Fact]
     public async Task GHR_04_followup_B_a_correction_of_a_correction_announces_the_earliest_date_of_the_whole_replaced_chain()
     {
         var hr = await _h.UserAsync(Ct, null, "hr_admin");
@@ -737,12 +779,15 @@ public sealed class EmploymentServiceTests(TenancyFixture fx) : IAsyncLifetime
         await ApprovalKindsAsync(company);
         var (id, _, _) = await HireAsync(hr, company, place, Iso(Today.AddDays(-400)));
 
-        // Promotion E from 30 days ago; C1 moves it 30 days ahead (approved, nothing raised); C2 corrects C1 to 10 days ago.
+        // Promotion E from 30 days ago; C1 moves it 30 days ahead (approved, but it already removes E's past days, so it is announced
+        // at once from E's date: review of the follow-up, finding 2); C2 corrects C1 to 10 days ago.
         var e = await ChangeAsync(hr, id, new { kind = "promotion", reasonCode = "merit", effectiveDate = Iso(Today.AddDays(-30)), assignment = new { title = "Manager" }, rowVersion = await VersionAsync(id) });
         Assert.True(e.Status == HttpStatusCode.Created, e.Body);
         var c1 = await ChangeAsync(hr, id, new { kind = "data_correction", reasonCode = "entry_error", correctsEventId = e.Json.GetProperty("eventId").GetGuid(), effectiveDate = Iso(Today.AddDays(30)), rowVersion = await VersionAsync(id) });
         Assert.True(c1.Status == HttpStatusCode.Created, c1.Body);
         Assert.Equal("approved", c1.Text("status"));
+        Assert.Equal(Iso(Today.AddDays(-30)), await _h.ScalarAsync<string>("select payload->>'earliestDate' from hrm.outbox_messages where event_type = 'hrm.employee_changed' and payload->>'eventId' = $1", Ct, c1.Json.GetProperty("eventId").GetGuid().ToString()));
+        Assert.Equal("Officer", await TitleOnAsync(hr, id, Today.AddDays(-1)));
         var c2 = await ChangeAsync(hr, id, new { kind = "data_correction", reasonCode = "entry_error", correctsEventId = c1.Json.GetProperty("eventId").GetGuid(), effectiveDate = Iso(Today.AddDays(-10)), rowVersion = await VersionAsync(id) });
         Assert.True(c2.Status == HttpStatusCode.Created, c2.Body);
         Assert.Equal("effective", c2.Text("status"));

@@ -390,6 +390,18 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
     }
 
     /// <summary>
+    /// Whether <c>hrm.employee_changed</c> is raised now for an event just applied (GHR-04): when it is in force, or when it waits for
+    /// its date but already changes days up to today, as a correction dated in the future of an event in force does (it removes that
+    /// event's rows at once; review of the S1.20b follow-up, finding 2). The daily job announces it again on its date; modules
+    /// recalculate from <c>earliestDate</c>, so the second message repeats the same news.
+    /// </summary>
+    public static bool Announces(EmploymentEvent e, IReadOnlyList<EmploymentEvent> events, DateOnly today)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+        return e.Status == "effective" || (e.Status == "approved" && EarliestAffected(e.EffectiveDate, e.CorrectsEventId, events) <= today);
+    }
+
+    /// <summary>
     /// The first day whose results a change may alter (GHR-04): the earliest effective date of the change and of every event its
     /// correction replaces along the chain (a correction of a correction also removes what the first one replaced; S1.20b review
     /// follow-up B, CR-076 S1.20b detail r). Used for <c>hrm.employee_changed.earliestDate</c> and for the backdated change check.
