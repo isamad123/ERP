@@ -55,6 +55,8 @@ public sealed class AccessHarness
         {
             services.RemoveAll<IClock>();
             services.AddSingleton<IClock>(clock);
+            // S1.23a (Build item 1): the policy framework's test types, registered as a module would (tests only).
+            services.AddSingleton(new Erp.Hrm.Contracts.Policies.PolicyTypeSource(Policies.PolicyTestSupport.TestTypes));
         }, realAccess: true);
         return new AccessHarness(fx, app, clock, code);
     }

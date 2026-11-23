@@ -1,7 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Erp.BuildingBlocks.Domain.Entities;
+using Erp.Hrm.Application.Policies;
 using Erp.Hrm.Contracts.Employments;
+using Erp.Hrm.Contracts.Policies;
 using Erp.Hrm.Domain.Generated;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Contracts.Settings;
@@ -15,7 +17,7 @@ namespace Erp.Hrm.Infrastructure.Employments;
 /// line with the events (<see cref="EmploymentTimeline"/>), the employment fields an event corrects are set, the event's status
 /// moves on (effective from its date, approved before it) and <c>hrm.employee_changed</c> is raised once, when the event takes effect.
 /// </summary>
-public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
+public sealed class EmploymentApplier(HrmDbContext db, ISettings settings, IPolicyResolver policies)
 {
     private static readonly TimeZoneInfo Fallback = TimeZoneInfo.Utc;
 
@@ -283,23 +285,23 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
     }
 
     /// <summary>
-    /// The probation of a hire or rehire (FR-HRM-EMP-10, ruling Q10): opened when the company's setting
-    /// <c>hrm.probation.employee_types</c> lists the employee type, from the joining date for <c>hrm.probation.default_months</c>
-    /// months (the last day is the day before the same date that many months later). Until the probation policy of S1.23 replaces
-    /// the settings; no statutory meaning is claimed. Returns the record added (tracked, saved by the caller), or null.
+    /// The probation of a hire or rehire (FR-HRM-EMP-10; slice S1.23 ruling Q3, replacing the S1.20 settings): the employment's
+    /// <c>probation</c> policy on the joining date (assignment rules choose the employee types, units, grades) gives the months; the
+    /// probation runs from the joining date to the day before the same date that many months later. No policy, no probation (ruling
+    /// Q5: the resolver never answers a default). Pending changes are saved first so the resolver reads the new assignment row in this
+    /// transaction. Returns the record added (tracked, saved by the caller), or null.
     /// </summary>
     public async Task<ProbationRecord?> OpenProbationAsync(Employment employment, DateTimeOffset now, Guid actor, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(employment);
-        var context = new SettingContext(employment.CompanyId, null);
-        var types = (await settings.GetAsync("hrm.probation.employee_types", context, ct).ConfigureAwait(false)).Value;
-        if (types.ValueKind != JsonValueKind.Array || !types.EnumerateArray().Any(t => t.ValueKind == JsonValueKind.String && t.GetString() == employment.EmployeeType))
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        var resolution = await policies.ResolveAsync(employment.Id, ProbationPolicy.Type, employment.JoiningDate, ct).ConfigureAwait(false);
+        if (ProbationPolicy.Months(resolution?.Policy) is not { } months)
         {
             return null;
         }
 
-        var months = (await settings.GetAsync("hrm.probation.default_months", context, ct).ConfigureAwait(false)).Value;
-        var record = NewProbation(employment, employment.JoiningDate, employment.JoiningDate.AddMonths(months.ValueKind == JsonValueKind.Number ? months.GetInt32() : 3).AddDays(-1), now, actor);
+        var record = NewProbation(employment, employment.JoiningDate, employment.JoiningDate.AddMonths(months).AddDays(-1), now, actor);
         db.Add(record);
         return record;
     }
@@ -455,7 +457,7 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
     private static bool Write(EmploymentAssignment row, PlannedRow plan)
     {
         var v = plan.Values;
-        var before = (row.EventId, row.OrgUnitId, row.BranchId, row.LocationId, row.PositionId, row.GradeId, row.Title, row.ManagerEmploymentId, Cost: row.CostAllocation.RootElement.GetRawText(), row.Fte, row.WorkSchedule, row.IsActing);
+        var before = (row.EventId, row.OrgUnitId, row.BranchId, row.LocationId, row.PositionId, row.GradeId, row.Title, row.ManagerEmploymentId, row.PayGroupId, Cost: row.CostAllocation.RootElement.GetRawText(), row.Fte, row.WorkSchedule, row.IsActing);
         row.EventId = plan.EventId;
         row.OrgUnitId = Guid.Parse(v[AssignmentKeys.OrgUnit]!.GetValue<string>());
         row.BranchId = Guid.Parse(v[AssignmentKeys.Branch]!.GetValue<string>());
@@ -464,6 +466,7 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
         row.GradeId = OptionalId(v, AssignmentKeys.Grade);
         row.Title = v[AssignmentKeys.Title]!.GetValue<string>();
         row.ManagerEmploymentId = OptionalId(v, AssignmentKeys.Manager);
+        row.PayGroupId = OptionalId(v, AssignmentKeys.PayGroup);
         var cost = v[AssignmentKeys.CostAllocation]!;
         var costChanged = !JsonNode.DeepEquals(JsonNode.Parse(before.Cost), cost);
         if (costChanged)
@@ -474,7 +477,7 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
         row.Fte = v[AssignmentKeys.Fte]!.GetValue<decimal>();
         row.WorkSchedule = v[AssignmentKeys.WorkSchedule]?.GetValue<string>();
         row.IsActing = v[AssignmentKeys.IsActing]!.GetValue<bool>();
-        var after = (row.EventId, row.OrgUnitId, row.BranchId, row.LocationId, row.PositionId, row.GradeId, row.Title, row.ManagerEmploymentId, Cost: before.Cost, row.Fte, row.WorkSchedule, row.IsActing);
+        var after = (row.EventId, row.OrgUnitId, row.BranchId, row.LocationId, row.PositionId, row.GradeId, row.Title, row.ManagerEmploymentId, row.PayGroupId, Cost: before.Cost, row.Fte, row.WorkSchedule, row.IsActing);
         return costChanged || before != after;
     }
 
@@ -500,6 +503,7 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
         Check(AssignmentKeys.Grade, Id(AssignmentKeys.Grade) == row.GradeId?.ToString());
         Check(AssignmentKeys.Title, Id(AssignmentKeys.Title) == row.Title);
         Check(AssignmentKeys.Manager, Id(AssignmentKeys.Manager) == row.ManagerEmploymentId?.ToString());
+        Check(AssignmentKeys.PayGroup, Id(AssignmentKeys.PayGroup) == row.PayGroupId?.ToString());
         Check(AssignmentKeys.CostAllocation, values[AssignmentKeys.CostAllocation] is { } cost && JsonNode.DeepEquals(JsonNode.Parse(row.CostAllocation.RootElement.GetRawText()), cost));
         Check(AssignmentKeys.Fte, values[AssignmentKeys.Fte]?.GetValue<decimal>() == row.Fte);
         Check(AssignmentKeys.WorkSchedule, Id(AssignmentKeys.WorkSchedule) == row.WorkSchedule);

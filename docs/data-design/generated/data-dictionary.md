@@ -2,12 +2,12 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 222 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 223 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
 | customer | aud | 7 |
-| customer | cfg | 19 |
+| customer | cfg | 20 |
 | customer | doc | 7 |
 | customer | hrm | 113 |
 | customer | iam | 24 |
@@ -313,6 +313,34 @@ Constraints:
 Triggers:
 
 - `tg_feature_flags_config_version` CREATE TRIGGER tg_feature_flags_config_version AFTER INSERT OR DELETE OR UPDATE OR TRUNCATE ON cfg.feature_flags FOR EACH STATEMENT EXECUTE FUNCTION cfg.tg_config_version('flags')
+
+### cfg.form_drafts
+
+Autosaved drafts of long forms (the hire form first), kept for the person who started them and removed after cfg.drafts.keep_days. Requirements: ADM-UXA-05. Source: kernel.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| user_id | uuid | no |  | fk iam.users; the person who started the draft and the only one who may read or change it |
+| form_key | text | no |  | the form, e.g. hrm.hire; at most 100 characters |
+| record_id | uuid | yes |  | the record the form edits; empty for a new record |
+| data | bytea | no |  | the form's values and the step reached (json, encrypted: a draft holds personal data); at most 64 KB before encryption |
+| expires_at | timestamp with time zone | no |  | renewed on every save; the daily clean-up removes drafts past it |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `fk_form_drafts_user_id` FOREIGN KEY (user_id) REFERENCES iam.users(id)
+- `pk_form_drafts` PRIMARY KEY (id)
+- `uq_form_drafts_user_id_form_key_record_id` UNIQUE NULLS NOT DISTINCT (user_id, form_key, record_id)
+
+Indexes:
+
+- `ix_form_drafts_expires_at` CREATE INDEX ix_form_drafts_expires_at ON cfg.form_drafts USING btree (expires_at)
 
 ### cfg.inbox_messages
 
@@ -1069,7 +1097,7 @@ Partitioned by range; 37 partitions.
 Constraints:
 
 - `ck_attendance_events_direction` CHECK ((direction = ANY (ARRAY['in'::text, 'out'::text, 'break_out'::text, 'break_in'::text, 'unknown'::text])))
-- `ck_attendance_events_source` CHECK ((source = ANY (ARRAY['web'::text, 'biometric'::text, 'kiosk'::text, 'hr_entry'::text, 'import'::text])))
+- `ck_attendance_events_source` CHECK ((source = ANY (ARRAY['web'::text, 'biometric'::text, 'kiosk'::text, 'hr_entry'::text, 'import'::text, 'qr'::text])))
 - `fk_attendance_events_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_attendance_events_device_id` FOREIGN KEY (company_id, device_id) REFERENCES hrm.attendance_devices(company_id, id)
 - `fk_attendance_events_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
@@ -3480,6 +3508,10 @@ Indexes:
 - `ix_pay_groups_currency_code` CREATE INDEX ix_pay_groups_currency_code ON hrm.pay_groups USING btree (currency_code)
 - `uq_pay_groups_company_id_code` CREATE UNIQUE INDEX uq_pay_groups_company_id_code ON hrm.pay_groups USING btree (company_id, lower(code)) WHERE (NOT is_deleted)
 
+Triggers:
+
+- `tg_pay_groups_rules` CREATE TRIGGER tg_pay_groups_rules BEFORE INSERT OR UPDATE ON hrm.pay_groups FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_groups_rules()
+
 ### hrm.pay_inputs
 
 One-time inputs to a period (bonus, incentive, deduction, adjustment, imported file rows). Requirements: PAY-07, PAY-08. Source: hrm-pay.yaml.
@@ -3564,6 +3596,10 @@ Constraints:
 Indexes:
 
 - `ix_pay_periods_company_id_pay_group_id` CREATE INDEX ix_pay_periods_company_id_pay_group_id ON hrm.pay_periods USING btree (company_id, pay_group_id)
+
+Triggers:
+
+- `tg_pay_periods_fixed` CREATE TRIGGER tg_pay_periods_fixed BEFORE DELETE OR UPDATE ON hrm.pay_periods FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_periods_fixed()
 
 ### hrm.pay_result_lines
 
@@ -4174,6 +4210,7 @@ Constraints:
 - `ck_policies_code_code` CHECK ((((length(code) >= 1) AND (length(code) <= 40)) AND (code = btrim(code))))
 - `ck_policies_name_i18n_object` CHECK ((jsonb_typeof(name_i18n) = 'object'::text))
 - `ck_policies_policy_type_code` CHECK ((((length(policy_type) >= 1) AND (length(policy_type) <= 40)) AND (policy_type = btrim(policy_type))))
+- `ck_policies_policy_type_format` CHECK ((policy_type ~ '^[a-z][a-z0-9_]*$'::text))
 - `ck_policies_source` CHECK ((source = ANY (ARRAY['pack'::text, 'tenant'::text])))
 - `fk_policies_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `pk_policies` PRIMARY KEY (id)
@@ -4237,6 +4274,8 @@ Assigns a policy by attribute rule with precedence. Requirements: POL-02, POL-03
 
 Constraints:
 
+- `ck_policy_assignments_precedence` CHECK (((precedence >= 1) AND (precedence <= 9999)))
+- `ck_policy_assignments_rule_object` CHECK ((jsonb_typeof(rule) = 'object'::text))
 - `ck_policy_assignments_valid_to` CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))
 - `ex_policy_assignments_policy_id_precedence` EXCLUDE USING gist (policy_id WITH =, precedence WITH =, daterange(valid_from, valid_to, '[)'::text) WITH &&)
 - `fk_policy_assignments_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
@@ -4248,6 +4287,10 @@ Indexes:
 - `ix_policy_assignments_company_id_policy_id` CREATE INDEX ix_policy_assignments_company_id_policy_id ON hrm.policy_assignments USING btree (company_id, policy_id)
 - `ix_policy_assignments_company_id_precedence` CREATE INDEX ix_policy_assignments_company_id_precedence ON hrm.policy_assignments USING btree (company_id, precedence)
 - `ix_policy_assignments_policy_id` CREATE INDEX ix_policy_assignments_policy_id ON hrm.policy_assignments USING btree (policy_id)
+
+Triggers:
+
+- `tg_policy_assignments_checks` CREATE TRIGGER tg_policy_assignments_checks BEFORE INSERT OR UPDATE ON hrm.policy_assignments FOR EACH ROW EXECUTE FUNCTION hrm.tg_policy_assignments_checks()
 
 ### hrm.policy_publications
 
@@ -4305,12 +4348,22 @@ Requirements: POL-04, POL-06. Source: hrm-people.yaml.
 
 Constraints:
 
+- `ck_policy_versions_parameters_object` CHECK ((jsonb_typeof(parameters) = 'object'::text))
 - `ck_policy_versions_status` CHECK ((status = ANY (ARRAY['draft'::text, 'active'::text, 'retired'::text])))
 - `ck_policy_versions_valid_to` CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))
+- `ck_policy_versions_version` CHECK ((version >= 1))
 - `ex_policy_versions_policy_id` EXCLUDE USING gist (policy_id WITH =, daterange(valid_from, valid_to, '[)'::text) WITH &&) WHERE ((status <> 'draft'::text))
 - `fk_policy_versions_policy_id` FOREIGN KEY (policy_id) REFERENCES hrm.policies(id)
 - `pk_policy_versions` PRIMARY KEY (id)
 - `uq_policy_versions_policy_id_version` UNIQUE (policy_id, version)
+
+Indexes:
+
+- `uq_policy_versions_policy_id` CREATE UNIQUE INDEX uq_policy_versions_policy_id ON hrm.policy_versions USING btree (policy_id) WHERE (status = 'draft'::text)
+
+Triggers:
+
+- `tg_policy_versions_fixed` CREATE TRIGGER tg_policy_versions_fixed BEFORE DELETE OR UPDATE ON hrm.policy_versions FOR EACH ROW EXECUTE FUNCTION hrm.tg_policy_versions_fixed()
 
 ### hrm.positions
 
@@ -7524,11 +7577,16 @@ Constraints:
 - `cfg.tg_config_version` 
 - `cfg.tg_refuse_change` 
 - `doc.tg_refuse_change` 
+- `hrm.drop_expired_attendance_partitions` 
 - `hrm.tg_employee_bank_accounts_bank_fields_required` 
 - `hrm.tg_employee_bank_accounts_split` 
 - `hrm.tg_employment_assignments_cost_allocation_sum` 
 - `hrm.tg_employment_assignments_manager_cycle` 
 - `hrm.tg_employment_events_fixed` 
+- `hrm.tg_pay_groups_rules` 
+- `hrm.tg_pay_periods_fixed` 
+- `hrm.tg_policy_assignments_checks` 
+- `hrm.tg_policy_versions_fixed` 
 - `hrm.tg_refuse_change` 
 - `hrm.todo_attendance_days_lock` Pending rule for hrm.attendance_days, owned by S1.31: Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26).
 - `hrm.todo_attendance_periods_lock` Pending rule for hrm.attendance_periods, owned by S1.31: A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments.

@@ -16,6 +16,9 @@ public sealed class NotificationApiTests(TenancyFixture fx) : IAsyncLifetime
     private AccessHarness _h = null!;
     private string _code = null!;
 
+    /// <summary>One customer per test: two random characters could repeat in a run, and a second test would then share the first one's customer.</summary>
+    private static int _next;
+
     private static readonly string[] Sms = ["sms"];
     private static readonly string[] ApproverRole = ["approver"];
     private static readonly string[] InApp = ["in_app"];
@@ -25,7 +28,7 @@ public sealed class NotificationApiTests(TenancyFixture fx) : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         _h = await AccessHarness.ForAsync(fx);
-        _code = await _h.ProvisionAsync("na" + Guid.NewGuid().ToString("N")[..2], Ct);
+        _code = await _h.ProvisionAsync("na" + (Interlocked.Increment(ref _next) & 0xff).ToString("x2", System.Globalization.CultureInfo.InvariantCulture), Ct);
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;

@@ -12,5 +12,8 @@
     <EmbeddedResource Include="Access/workflow.json" LogicalName="Erp.Hrm.Infrastructure.Access.workflow.json" />
     <EmbeddedResource Include="Access/jobs.json" LogicalName="Erp.Hrm.Infrastructure.Access.jobs.json" />
     <EmbeddedResource Include="Access/notification-events.json" LogicalName="Erp.Hrm.Infrastructure.Access.notification-events.json" />
+    <!-- S1.23a (ruling Q2): the HR module's policy types (probation, notice_period). -->
+    <EmbeddedResource Include="Access/policy-types.json" LogicalName="Erp.Hrm.Infrastructure.Access.policy-types.json" />
+    <EmbeddedResource Include="Access/pay-readiness.json" LogicalName="Erp.Hrm.Infrastructure.Access.pay-readiness.json" />
   </ItemGroup>
 </Project>

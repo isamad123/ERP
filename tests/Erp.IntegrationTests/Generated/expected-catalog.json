@@ -1387,6 +1387,158 @@
     {
       "database": "tenant",
       "schema": "cfg",
+      "name": "form_drafts",
+      "module": "kernel",
+      "traits": [
+        "std"
+      ],
+      "requirements": [
+        "ADM-UXA-05"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "user_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "form_key",
+          "kind": "Text",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "record_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "data",
+          "kind": "Encrypted",
+          "type": "bytea",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": true,
+          "enum_values": []
+        },
+        {
+          "name": "expires_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [
+        "uq_form_drafts_user_id_form_key_record_id"
+      ],
+      "checks": [],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_form_drafts_user_id",
+          "columns": [
+            "user_id"
+          ],
+          "target": "iam.users",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_form_drafts_expires_at"
+      ],
+      "triggers": [],
+      "append_only_updatable": [],
+      "has_api": true,
+      "full_name": "cfg.form_drafts"
+    },
+    {
+      "database": "tenant",
+      "schema": "cfg",
       "name": "inbox_messages",
       "module": "kernel",
       "traits": [],
@@ -7941,7 +8093,8 @@
             "biometric",
             "kiosk",
             "hr_entry",
-            "import"
+            "import",
+            "qr"
           ]
         },
         {
@@ -22351,7 +22504,9 @@
         "ix_pay_groups_currency_code",
         "ix_pay_groups_company_id_company_bank_account_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_pay_groups_rules"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.pay_groups"
@@ -22865,7 +23020,9 @@
       "indexes": [
         "ix_pay_periods_company_id_pay_group_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_pay_periods_fixed"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.pay_periods"
@@ -26608,7 +26765,8 @@
         "ck_policies_code_code",
         "ck_policies_name_i18n_object",
         "ck_policies_policy_type_code",
-        "ck_policies_source"
+        "ck_policies_source",
+        "ck_policies_policy_type_format"
       ],
       "exclusions": [],
       "foreign_keys": [
@@ -26913,7 +27071,9 @@
       ],
       "uniques": [],
       "checks": [
-        "ck_policy_assignments_valid_to"
+        "ck_policy_assignments_valid_to",
+        "ck_policy_assignments_rule_object",
+        "ck_policy_assignments_precedence"
       ],
       "exclusions": [
         "ex_policy_assignments_policy_id_precedence"
@@ -26947,7 +27107,9 @@
         "ix_policy_assignments_company_id_precedence",
         "ix_policy_assignments_company_id_policy_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_policy_assignments_checks"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.policy_assignments"
@@ -27308,11 +27470,14 @@
         }
       ],
       "uniques": [
-        "uq_policy_versions_policy_id_version"
+        "uq_policy_versions_policy_id_version",
+        "uq_policy_versions_policy_id"
       ],
       "checks": [
         "ck_policy_versions_status",
-        "ck_policy_versions_valid_to"
+        "ck_policy_versions_valid_to",
+        "ck_policy_versions_parameters_object",
+        "ck_policy_versions_version"
       ],
       "exclusions": [
         "ex_policy_versions_policy_id"
@@ -27330,7 +27495,9 @@
         }
       ],
       "indexes": [],
-      "triggers": [],
+      "triggers": [
+        "tg_policy_versions_fixed"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.policy_versions"

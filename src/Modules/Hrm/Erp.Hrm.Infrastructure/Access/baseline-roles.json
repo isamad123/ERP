@@ -47,7 +47,8 @@
         "hrm.learning_records.read",
         "hrm.leave_types.read",
         "hrm.shifts.read",
-        "aud.history.view"
+        "aud.history.view",
+        "hrm.attendance.punch"
       ],
       "scopes": {
         "*": "own",
@@ -123,6 +124,8 @@
         "hrm.policies.read",
         "hrm.policy_versions.read",
         "hrm.policy_assignments.read",
+        "hrm.policies.manage",
+        "hrm.policies.approve",
         "hrm.employee_documents.read",
         "hrm.policy_publications.read",
         "hrm.policy_acknowledgements.read",
@@ -202,7 +205,10 @@
         "hrm.employment_statutory_registrations.delete",
         "hrm.employment_statutory_registrations.reveal",
         "wf.workflow_tasks.read",
-        "wf.workflow_tasks.update"
+        "wf.workflow_tasks.update",
+        "hrm.attendance_events.create",
+        "hrm.attendance.kiosk",
+        "hrm.attendance.qr_display"
       ],
       "scopes": {
         "*": "all",
@@ -269,7 +275,12 @@
         "hrm.parallel_run_lines.read",
         "aud.history.view",
         "hrm.employee_bank_accounts.read",
-        "hrm.employment_statutory_registrations.read"
+        "hrm.employment_statutory_registrations.read",
+        "hrm.pay_groups.create",
+        "hrm.pay_groups.update",
+        "hrm.pay_periods.generate",
+        "hrm.pay_periods.update",
+        "hrm.pay_readiness.read"
       ],
       "scopes": {
         "*": "all"

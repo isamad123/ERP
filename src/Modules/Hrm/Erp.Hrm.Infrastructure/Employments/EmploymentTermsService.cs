@@ -5,7 +5,9 @@ using Erp.BuildingBlocks.Infrastructure.Persistence;
 using Erp.Hrm.Application.Employments;
 using Erp.Hrm.Application.Generated;
 using Erp.Hrm.Application.People;
+using Erp.Hrm.Application.Policies;
 using Erp.Hrm.Contracts.Employments;
+using Erp.Hrm.Contracts.Policies;
 using Erp.Hrm.Domain.Generated;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Hrm.Infrastructure.People;
@@ -33,7 +35,8 @@ internal sealed class EmploymentTermsService(
     IFieldAccess fields,
     INumberAllocator numbers,
     EmploymentApplier applier,
-    IEmploymentService employments) : IEmploymentTermsService
+    IEmploymentService employments,
+    IPolicyResolver policies) : IEmploymentTermsService
 {
     public const string ContractBeforeJoining = "errors.hrm.contract.before_joining";
     public const string ContractOverlaps = "errors.hrm.contract.overlaps";
@@ -44,6 +47,7 @@ internal sealed class EmploymentTermsService(
     public const string NoticeDays = "errors.hrm.contract.notice_days";
     public const string NoOpenProbation = "errors.hrm.probation.none_open";
     public const string ExtendNotLater = "errors.hrm.probation.extend_not_later";
+    public const string ExtensionLimit = "errors.hrm.probation.extension_limit";
     public const string DecisionBeforeStart = "errors.hrm.probation.decision_before_start";
     public const string EmploymentWaiting = "errors.hrm.contract.employment_waiting";
     public const string AfterEnd = "errors.hrm.contract.after_end";
@@ -347,6 +351,15 @@ internal sealed class EmploymentTermsService(
                 if (r.ExtendedTo!.Value <= (record.ExtendedTo ?? record.EndDate))
                 {
                     return PeopleResult.Fields(new Dictionary<string, string[]> { ["extendedTo"] = [ExtendNotLater] });
+                }
+
+                // The probation policy in force when the probation started may limit extensions (S1.23 ruling Q3): at most that many
+                // months after the original last day (0: none). Without a policy, or without a limit, any later date is accepted.
+                var policy = (await policies.ResolveAsync(employment!.Id, ProbationPolicy.Type, record.StartDate, ct).ConfigureAwait(false))?.Policy;
+                if (ProbationPolicy.ExtensionMonthsMax(policy) is { } limit && r.ExtendedTo.Value > record.EndDate.AddDays(1).AddMonths(limit).AddDays(-1))
+                {
+                    return new PeopleResult(PeopleOutcome.Invalid, "errors.data.invalid_request", FieldErrors: new Dictionary<string, string[]> { ["extendedTo"] = [ExtensionLimit] },
+                        Extensions: new Dictionary<string, object?> { ["months"] = limit, ["latest"] = record.EndDate.AddDays(1).AddMonths(limit).AddDays(-1) });
                 }
 
                 record.ExtendedTo = r.ExtendedTo;

@@ -54,6 +54,9 @@ public sealed class EmploymentTermsTests(TenancyFixture fx) : IAsyncLifetime
             await ApprovalKindsAsync(company);
         }
 
+        // S1.23a (slice S1.23 ruling Q3): probation comes from the probation policy, which replaced the S1.20 settings; the policy
+        // here gives what the settings' defaults gave (3 months for the types probation and permanent).
+        await Policies.PolicyTestSupport.ProbationAsync(_h, await _h.UserAsync(Ct, null, "hr_admin"), company, Ct);
         return (company, await _h.PlaceAsync(company, Ct));
     }
 
@@ -547,10 +550,21 @@ public sealed class EmploymentTermsTests(TenancyFixture fx) : IAsyncLifetime
         await rig.RunUntilIdleAsync(worker, Ct);
         Assert.Equal(1L, await OutboxAsync("hrm.contract_ending", contract));
         Assert.Equal(managerUser.ToString(), await _h.ScalarAsync<string>("select payload->>'manager_user_id' from hrm.outbox_messages where event_type = 'hrm.contract_ending' and aggregate_id = $1", Ct, contract));
+        // The dispatcher handles 100 events per pass, oldest first; the shared customer holds other tests' events too, so pass until idle.
         var dispatcher = rig.Provider().GetRequiredService<EventDispatcher>();
-        foreach (var outcome in await dispatcher.DispatchOnceAsync(_h.Code, Ct))
+        // One pass reads one batch of the customer's waiting events (100); the shared test customer holds the events of many tests, so pass until none is left.
+        for (var pass = 0; pass < 50; pass++)
         {
-            Assert.True(outcome.Error is null, outcome.Error);
+            var outcomes = await dispatcher.DispatchOnceAsync(_h.Code, Ct);
+            foreach (var outcome in outcomes)
+            {
+                Assert.True(outcome.Error is null, outcome.Error);
+            }
+
+            if (outcomes.Count == 0)
+            {
+                break;
+            }
         }
 
         Assert.Equal(1L, await _h.ScalarAsync<long>("select count(*) from ntf.in_app_items where user_id = $1 and event_code = 'hrm.contract_ending'", Ct, managerUser));

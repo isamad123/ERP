@@ -1,0 +1,102 @@
+/* The HR policy screens (slice S1.23a Build item 6). Tokens and logical properties only. */
+.erp-pol-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.erp-pol-section-link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-target);
+  padding-inline: var(--space-3);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-pill);
+  color: var(--color-link);
+  text-decoration: none;
+}
+
+.erp-pol-section-link-current {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.erp-pol-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.erp-pol-rows {
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+}
+
+.erp-pol-row-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.erp-pol-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block-end: var(--space-3);
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+}
+
+.erp-pol-diff-added {
+  color: var(--color-success);
+}
+
+.erp-pol-diff-removed {
+  color: var(--color-danger);
+}
+
+.erp-pol-conditions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.erp-pol-condition {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+}
+
+.erp-pol-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-block-size: 16rem;
+  overflow-y: auto;
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+}
+
+.erp-pol-met {
+  color: var(--color-success);
+}
+
+.erp-pol-not-met {
+  color: var(--color-danger);
+}
+
+.erp-pol-name {
+  font-weight: var(--font-weight-strong);
+}

@@ -15,10 +15,6 @@
     {
       "action": "read",
       "permission": "hrm.attendance_events.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.attendance_events.create"
     }
   ],
   "companyScoped": true,
@@ -162,6 +158,10 @@
         {
           "value": "import",
           "labelKey": "options.hrm.attendance_events.source.import"
+        },
+        {
+          "value": "qr",
+          "labelKey": "options.hrm.attendance_events.source.qr"
         }
       ]
     },

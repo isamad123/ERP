@@ -24,6 +24,9 @@ public interface IPolicyVersionRepository : global::Erp.BuildingBlocks.Applicati
 
     /// <summary>Rows matching (policy_id, version); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PolicyVersion>> FindByPolicyIdAndVersionAsync(global::System.Guid policyId, int version, global::System.Threading.CancellationToken cancellationToken);
+
+    /// <summary>Rows matching (policy_id); at most PageRequest.MaxLimit rows.</summary>
+    global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PolicyVersion>> FindByPolicyIdAsync(global::System.Guid policyId, global::System.Threading.CancellationToken cancellationToken);
 }
 
 /// <summary>How data scopes locate rows of hrm.policy_versions and which fields its API shows (slice S1.06, CR-018).</summary>

@@ -35,6 +35,12 @@ public sealed class AssignmentInput
 
     public string? Title { get; init; }
 
+    /// <summary>
+    /// The pay group the employee is paid in (slice S1.34a, FR-HRM-PAY-01): one at a time, changed only through an employment event
+    /// (or given at hire). A group with an unfinished payroll run cannot be left. Cannot be emptied.
+    /// </summary>
+    public Guid? PayGroupId { get; init; }
+
     /// <summary>The line manager: another employment of the same company.</summary>
     public Guid? ManagerEmploymentId { get; init; }
 
@@ -140,8 +146,22 @@ public sealed class UserLinkRequest
 /// Every write checks the permission, the data scope before and after, field security, and saves in one transaction with the
 /// change log under the acting user (GHR-09).
 /// </summary>
+/// <summary>
+/// The employee list (slice S1.21a Build item 1, FR-HRM-EMP-01). Every filter is optional. <paramref name="Search"/> matches the number, the job title
+/// and, for a caller who may read persons, the names (including the local-script name); <paramref name="AsOf"/> (a date) lists the employments
+/// that had started and not ended on that date with their job details of that date (the caller passes its own "today": the server uses the UTC date
+/// when it is missing). <paramref name="Sort"/> is <c>employeeNo</c> (default) or <c>joiningDate</c> (newest first); <paramref name="After"/> is the
+/// <c>next</c> value of the previous page.
+/// </summary>
+public sealed record EmployeeListQuery(
+    string? Search, string? EmployeeNo, Guid? CompanyId, Guid? OrgUnitId, string? Title, Guid? ManagerEmploymentId, string? Status, string? EmployeeType,
+    DateOnly? JoinedFrom, DateOnly? JoinedTo, DateOnly? AsOf, string? Sort, string? After, int? Limit);
+
 public interface IEmploymentService
 {
+    /// <summary>The employees the caller may read, with name and job details, by the filters of <paramref name="query"/>; no pay data (GHR-06).</summary>
+    Task<PeopleResult> EmployeeListAsync(EmployeeListQuery query, CancellationToken cancellationToken);
+
     Task<PeopleResult> HireAsync(HireRequest request, CancellationToken cancellationToken);
 
     /// <summary>The backdated change check and the validation of a change, without saving it (GHR-04: shown before saving).</summary>

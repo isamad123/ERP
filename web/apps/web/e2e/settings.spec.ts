@@ -9,6 +9,14 @@ import { accessible, display, field, fitsWidth, freshContext, menu, noProblems, 
 
 test.describe.configure({ mode: 'serial' });
 
+// Every customer-level value these scenarios change is removed again after each scenario, passed or failed, straight in the
+// database through the control server, so a failure half-way cannot leak into the next scenario or another spec file (sign-in.spec.ts
+// reads the idle time; the sign-in page reads the branding). Company-level values are made for a company of the scenario's own.
+const CHANGED = ['iam.session.idle_minutes', 'iam.password.min_length', 'cfg.branding.product_name', 'cfg.branding.logo_file_id', 'cfg.branding.banner_en', 'cfg.branding.banner_ur', 'cfg.branding.terms_en', 'cfg.branding.terms_ur'];
+test.afterEach(async () => {
+  for (const key of CHANGED) await server.clearSetting(key);
+});
+
 const run = Math.random().toString(36).slice(2, 6);
 const WIDTHS = [360, 768, 1280] as const;
 const ADMIN = ['cfg.setting_values.read', 'cfg.setting_values.update', 'cfg.feature_flag_overrides.read', 'cfg.feature_flag_overrides.update', 'iam.users.read', 'iam.maker_checker.approve',
@@ -80,6 +88,8 @@ test('FR-ADM-SET-01 FR-ADM-SET-02 FR-ADM-SET-03 FR-ADM-SET-06 an administrator f
   drawer = await openSetting(page, 'Time zone');
   await change(drawer, /^Time zone/, 'Asia/Dubai', 'Branch in the Gulf', 'Override for this company');
   await expect(page.getByText('The setting was saved.').first()).toBeVisible();
+  // The toast may still be the one of the earlier save: wait for the drawer to show the company value before closing it.
+  await expect(drawer.getByRole('table', { name: 'Where the value comes from' }).getByText('Company', { exact: true })).toBeVisible();
   await closeDrawer(page);
   await expect(zone.getByText('Asia/Dubai', { exact: true })).toBeVisible();
   await expect(zone.getByText('Company', { exact: true })).toBeVisible();
@@ -91,9 +101,12 @@ test('FR-ADM-SET-01 FR-ADM-SET-02 FR-ADM-SET-03 FR-ADM-SET-06 an administrator f
   await page.getByRole('button', { name: /Show values for/ }).click();
   await page.getByRole('option', { name: `Second Co ${run}` }).click();
   drawer = await openSetting(page, 'Time zone');
+  const reset = drawer.getByRole('button', { name: 'Reset to inherited' });
+  await expect(reset).toBeVisible(); // the company value is loaded, so the editor does not start again and clear the reason
   await drawer.getByRole('textbox', { name: /^Reason/ }).fill('Back to the customer value');
-  await drawer.getByRole('button', { name: 'Reset to inherited' }).click();
+  await reset.click();
   await expect(page.getByText('The setting was saved.').first()).toBeVisible();
+  await expect(reset).toHaveCount(0); // done: the company has no value of its own any more (the toast alone may be an earlier one)
   await closeDrawer(page);
   await expect(zone.getByText(inherited, { exact: true })).toBeVisible();
   await expect(zone.getByText('Company', { exact: true })).toHaveCount(0);
@@ -200,7 +213,7 @@ test('FR-ADM-SEC-08 the sign-in page shows the customer\'s logo, banner and term
       const logo = visitor.locator('img.erp-auth-logo');
       await expect(logo).toBeVisible();
       expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
-      expect(await visitor.title()).toContain(`Acme People ${run}`);
+      await expect(visitor).toHaveTitle(new RegExp(`Acme People ${run}`)); // the title follows the branding once it has loaded
       expect(await visitor.evaluate(() => document.documentElement.dir)).toBe(language === 'ur' ? 'rtl' : 'ltr');
       for (const width of WIDTHS) {
         await visitor.setViewportSize({ width, height: 900 });
