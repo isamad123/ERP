@@ -6,6 +6,7 @@ using Erp.BuildingBlocks.Domain.Time;
 using Erp.BuildingBlocks.Infrastructure.Time;
 using Erp.Hrm.Api.Generated;
 using Erp.Hrm.Api.Employments;
+using Erp.Hrm.Api.Payroll;
 using Erp.Hrm.Api.People;
 using Erp.Hrm.Infrastructure.Employments;
 using Erp.Hrm.Infrastructure.People;
@@ -260,6 +261,7 @@ public static class ApiHost
         api.MapHrmGeneratedEndpoints();
         api.MapHrmPeopleEndpoints();
         api.MapHrmEmploymentEndpoints();
+        api.MapHrmPayEndpoints(); // S1.34a pay groups, calendar and readiness
         return app;
     }
 

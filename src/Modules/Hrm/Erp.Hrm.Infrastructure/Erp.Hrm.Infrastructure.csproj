@@ -12,5 +12,6 @@
     <EmbeddedResource Include="Access/workflow.json" LogicalName="Erp.Hrm.Infrastructure.Access.workflow.json" />
     <EmbeddedResource Include="Access/jobs.json" LogicalName="Erp.Hrm.Infrastructure.Access.jobs.json" />
     <EmbeddedResource Include="Access/notification-events.json" LogicalName="Erp.Hrm.Infrastructure.Access.notification-events.json" />
+    <EmbeddedResource Include="Access/pay-readiness.json" LogicalName="Erp.Hrm.Infrastructure.Access.pay-readiness.json" />
   </ItemGroup>
 </Project>
