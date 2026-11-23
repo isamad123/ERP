@@ -199,6 +199,9 @@
         "hrm.positions.close",
         "hrm.strength_exceptions.read",
         "hrm.strength_exceptions.create",
+        "hrm.employments.transfer",
+        "hrm.contracts.create",
+        "hrm.probation_records.update",
         "wf.workflow_tasks.read",
         "wf.workflow_tasks.update"
       ],

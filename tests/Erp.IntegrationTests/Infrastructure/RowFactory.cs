@@ -98,6 +98,8 @@ public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction tr
         ["cfg.saved_views.list_key"] = n => "org.list_" + n.ToString(CultureInfo.InvariantCulture),
         // S1.14a: a location's time zone must be an IANA name the database knows (rules.yaml org.tg_locations_checks).
         ["org.locations.time_zone"] = _ => "Asia/Karachi",
+        // S1.15b: a custom field key is lower-case letters, digits and underscore (ck_custom_field_defs_field_key).
+        ["cfg.custom_field_defs.field_key"] = n => "f_" + n.ToString(CultureInfo.InvariantCulture),
         // S1.20b: an assignment's cost allocation is a list of shares summing to 1 (rules.yaml tg_employment_assignments_cost_allocation_sum).
         ["hrm.employment_assignments.cost_allocation"] = _ => new Json("[{\"cost_center_ref\": \"CC-1\", \"pct\": 1}]"),
     };

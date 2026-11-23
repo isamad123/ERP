@@ -24,7 +24,7 @@ const api: EngineApi = { send: sendText };
 export const UNITS_PATH = '/organization/org-units';
 export const UNIT_TYPES_PATH = `${UNITS_PATH}/types`;
 export const HIERARCHIES_PATH = `${UNITS_PATH}/hierarchies`;
-/** The labels editor of the settings centre (S1.15b); the screen is not there yet, the link opens "not available yet" until it is (R-089). */
+/** The labels editor of the settings centre (S1.15b), filtered to the table's texts (R-210). */
 export const LABELS_LINK = '/settings/labels?table=org.org_units';
 
 export default function UnitsScreen() {

@@ -1430,5 +1430,10 @@
   "chart.compare.fromTo": "{from} سے {to} میں",
   "nav.settings": "ترتیبات",
   "nav.featureFlags": "فیچر فلیگز",
-  "nav.signInPage": "سائن ان صفحہ"
+  "nav.signInPage": "سائن ان صفحہ",
+  "nav.labels": "لیبل",
+  "nav.optionLists": "اختیارات کی فہرستیں",
+  "nav.customFields": "حسب ضرورت خانے",
+  "nav.numbering": "نمبرنگ",
+  "nav.approvalRoutes": "منظوری کے راستے"
 }

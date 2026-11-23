@@ -31,7 +31,7 @@ public class PersonFields
 
     public Guid? PhotoFileId { get; init; }
 
-    /// <summary>Custom field values (S1.15b checks them); only an empty object is accepted until then.</summary>
+    /// <summary>Custom field values by key (S1.15b): checked against the active definitions and field security; an update without it leaves them as they are.</summary>
     public JsonElement? Custom { get; init; }
 
     /// <summary>Fields to clear on a change (camelCase names of the optional fields above).</summary>

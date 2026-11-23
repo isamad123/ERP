@@ -245,10 +245,13 @@ Requirements: KRN-MET-01, KRN-MET-02, KRN-MET-05. Source: kernel.yaml.
 Constraints:
 
 - `ck_custom_field_defs_data_type` CHECK ((data_type = ANY (ARRAY['text'::text, 'long_text'::text, 'number'::text, 'decimal'::text, 'date'::text, 'bool'::text, 'choice'::text, 'multi_choice'::text, 'user'::text, 'employee'::text, 'file'::text])))
+- `ck_custom_field_defs_field_key` CHECK ((field_key ~ '^[a-z][a-z0-9_]{0,39}$'::text))
 - `ck_custom_field_defs_field_key_code` CHECK ((((length(field_key) >= 1) AND (length(field_key) <= 40)) AND (field_key = btrim(field_key))))
 - `ck_custom_field_defs_help_i18n_object` CHECK ((jsonb_typeof(help_i18n) = 'object'::text))
 - `ck_custom_field_defs_label_i18n_object` CHECK ((jsonb_typeof(label_i18n) = 'object'::text))
+- `ck_custom_field_defs_option_list` CHECK (((data_type = ANY (ARRAY['choice'::text, 'multi_choice'::text])) = (option_list_id IS NOT NULL)))
 - `ck_custom_field_defs_status` CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
+- `ck_custom_field_defs_unique_types` CHECK (((NOT is_unique) OR (data_type = ANY (ARRAY['text'::text, 'number'::text, 'decimal'::text, 'date'::text, 'choice'::text, 'user'::text, 'employee'::text]))))
 - `fk_custom_field_defs_option_list_id` FOREIGN KEY (option_list_id) REFERENCES cfg.option_lists(id)
 - `pk_custom_field_defs` PRIMARY KEY (id)
 - `uq_custom_field_defs_entity_type_field_key` UNIQUE (entity_type, field_key)
@@ -370,6 +373,7 @@ Label and terminology overrides per language and layer. Requirements: KRN-ORG-08
 Constraints:
 
 - `ck_labels_layer` CHECK ((layer = ANY (ARRAY['pack'::text, 'tenant'::text, 'company'::text])))
+- `ck_labels_text_length` CHECK (((length(text) >= 1) AND (length(text) <= 300)))
 - `pk_labels` PRIMARY KEY (id)
 - `uq_labels_key_language_layer_scope_id` UNIQUE NULLS NOT DISTINCT (key, language, layer, scope_id)
 
@@ -2115,7 +2119,7 @@ Constraints:
 - `ck_employments_status` CHECK ((status = ANY (ARRAY['pre_joining'::text, 'active'::text, 'on_notice'::text, 'separated'::text, 'cancelled'::text])))
 - `fk_employments_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_employments_person_id` FOREIGN KEY (person_id) REFERENCES hrm.persons(id)
-- `fk_employments_previous_employment_id` FOREIGN KEY (company_id, previous_employment_id) REFERENCES hrm.employments(company_id, id)
+- `fk_employments_previous_employment_id` FOREIGN KEY (previous_employment_id) REFERENCES hrm.employments(id)
 - `pk_employments` PRIMARY KEY (id)
 - `uq_employments_company_id_id` UNIQUE (company_id, id)
 
@@ -2124,6 +2128,7 @@ Indexes:
 - `ix_employments_company_id_previous_employment_id` CREATE INDEX ix_employments_company_id_previous_employment_id ON hrm.employments USING btree (company_id, previous_employment_id)
 - `ix_employments_company_id_status` CREATE INDEX ix_employments_company_id_status ON hrm.employments USING btree (company_id, status)
 - `ix_employments_person_id` CREATE INDEX ix_employments_person_id ON hrm.employments USING btree (person_id)
+- `ix_employments_previous_employment_id` CREATE INDEX ix_employments_previous_employment_id ON hrm.employments USING btree (previous_employment_id)
 - `uq_employments_company_id_employee_no` CREATE UNIQUE INDEX uq_employments_company_id_employee_no ON hrm.employments USING btree (company_id, lower(employee_no))
 - `uq_employments_company_id_user_ref` CREATE UNIQUE INDEX uq_employments_company_id_user_ref ON hrm.employments USING btree (company_id, user_ref) NULLS NOT DISTINCT WHERE ((user_ref IS NOT NULL) AND (status = ANY (ARRAY['pre_joining'::text, 'active'::text, 'on_notice'::text])))
 - `uq_employments_person_id` CREATE UNIQUE INDEX uq_employments_person_id ON hrm.employments USING btree (person_id) WHERE (is_primary AND (status = ANY (ARRAY['pre_joining'::text, 'active'::text, 'on_notice'::text])))
@@ -4414,7 +4419,7 @@ Requirements: EMP-10, ONB-12. Source: hrm-people.yaml.
 
 Constraints:
 
-- `ck_probation_records_status` CHECK ((status = ANY (ARRAY['in_progress'::text, 'extended'::text, 'confirmed'::text, 'not_confirmed'::text])))
+- `ck_probation_records_status` CHECK ((status = ANY (ARRAY['in_progress'::text, 'extended'::text, 'confirmed'::text, 'not_confirmed'::text, 'transferred'::text])))
 - `fk_probation_records_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_probation_records_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
 - `fk_probation_records_review_form_response_id` FOREIGN KEY (company_id, review_form_response_id) REFERENCES hrm.form_responses(company_id, id)
@@ -4425,6 +4430,7 @@ Indexes:
 - `ix_probation_records_company_id` CREATE INDEX ix_probation_records_company_id ON hrm.probation_records USING btree (company_id)
 - `ix_probation_records_company_id_employment_id` CREATE INDEX ix_probation_records_company_id_employment_id ON hrm.probation_records USING btree (company_id, employment_id)
 - `ix_probation_records_company_id_review_form_response_id` CREATE INDEX ix_probation_records_company_id_review_form_response_id ON hrm.probation_records USING btree (company_id, review_form_response_id)
+- `uq_probation_records_employment_id` CREATE UNIQUE INDEX uq_probation_records_employment_id ON hrm.probation_records USING btree (employment_id) WHERE (status = ANY (ARRAY['in_progress'::text, 'extended'::text]))
 
 ### hrm.provident_fund_accounts
 

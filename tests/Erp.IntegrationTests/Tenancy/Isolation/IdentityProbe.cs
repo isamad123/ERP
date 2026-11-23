@@ -186,6 +186,8 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
         // Saved views (S1.12c): B cannot change or delete A's view (404), and B's own list and new view never show A's.
         "/api/cfg/saved-views/{id:guid}" => (pattern.Replace("{id:guid}", a.SavedViewId.ToString(), StringComparison.Ordinal) + "?rowVersion=1", ViewBody(), HttpStatusCode.NotFound, tokenB),
         "/api/cfg/saved-views/" => (pattern + "?list=" + ViewList, ViewBody(), null, tokenB),
+        // Custom fields of a form (S1.15b): the table name is the only input; B is served B's own definitions, never A's (AccessProbe puts A's definitions in A's database and looks for them in every catalogue).
+        "/api/kernel/custom-fields/{entityType}" => (pattern.Replace("{entityType}", "org.org_units", StringComparison.Ordinal), null, null, tokenB),
         _ when !pattern.Contains('{', StringComparison.Ordinal) => (pattern, Json(new { currentPassword = Password, label = "probe" }), null, tokenB),
         _ => throw new InvalidOperationException($"No probe target for self-service endpoint {pattern}; extend IdentityProbe."),
     };
@@ -240,6 +242,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
                     .Replace("/saved-views/{id:guid}", "/saved-views/" + a.SavedViewId + "?rowVersion=1", StringComparison.Ordinal)
                     .Replace("/sessions/{id:guid}", "/sessions/" + a.SessionId, StringComparison.Ordinal)
                     .Replace("/trusted-devices/{id:guid}", "/trusted-devices/" + a.TrustedDeviceId, StringComparison.Ordinal)
+                    .Replace("{entityType}", "org.org_units", StringComparison.Ordinal)
                     .Replace("{id:guid}", a.PendingDeviceId.ToString(), StringComparison.Ordinal);
                 if (endpoint.Pattern == "/api/cfg/saved-views/")
                 {

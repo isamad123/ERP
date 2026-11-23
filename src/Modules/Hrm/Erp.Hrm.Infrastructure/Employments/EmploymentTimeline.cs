@@ -29,9 +29,10 @@ public static class AssignmentKeys
 
 /// <summary>
 /// An employment event as the timeline reads it: its id, kind, date, status, the event it replaces (a correction) and the
-/// assignment fields it sets (a full set for a hire), or null when it changes none.
+/// assignment fields it sets (a full set for a hire), or null when it changes none. <see cref="Ends"/> marks an end of the employment
+/// (a <c>separation</c>, S1.20c): from its date there are no job details.
 /// </summary>
-public sealed record TimelineEvent(Guid Id, string Kind, DateOnly EffectiveDate, string Status, Guid? CorrectsEventId, JsonObject? Assignment);
+public sealed record TimelineEvent(Guid Id, string Kind, DateOnly EffectiveDate, string Status, Guid? CorrectsEventId, JsonObject? Assignment, bool Ends = false);
 
 /// <summary>One assignment row the events call for: from <see cref="ValidFrom"/> to <see cref="ValidTo"/> (exclusive, open when null).</summary>
 public sealed record PlannedRow(DateOnly ValidFrom, DateOnly? ValidTo, Guid EventId, JsonObject Values);
@@ -46,6 +47,8 @@ public sealed record PlannedRow(DateOnly ValidFrom, DateOnly? ValidTo, Guid Even
 /// <item>Events count in date order (on one date, in the order they were recorded); each sets only the fields it names, so a
 /// backdated change carries forward until a later event sets the same field ("a change between two rows splits correctly").</item>
 /// <item>One row per date on which an event sets assignment fields; the last event of that date owns the row.</item>
+/// <item>An event that ends the employment (a separation, S1.20c) closes the row in force on its date: its date is the first day
+/// without job details (the employment's separation date is the day before). Nothing after it counts.</item>
 /// </list>
 /// Pure: no database, so the rules are unit-tested.
 /// </summary>
@@ -105,8 +108,19 @@ public static class EmploymentTimeline
         problem = null;
         var rows = new List<PlannedRow>();
         JsonObject? state = null;
-        foreach (var e in Counted(events).Where(e => e.Assignment is { Count: > 0 }))
+        foreach (var e in Counted(events).Where(e => e.Ends || e.Assignment is { Count: > 0 }))
         {
+            if (e.Ends)
+            {
+                rows.RemoveAll(r => r.ValidFrom >= e.EffectiveDate);
+                if (rows.Count > 0 && (rows[^1].ValidTo is null || rows[^1].ValidTo > e.EffectiveDate))
+                {
+                    rows[^1] = rows[^1] with { ValidTo = e.EffectiveDate };
+                }
+
+                break;
+            }
+
             if (state is null)
             {
                 if (AssignmentKeys.Required.Any(k => e.Assignment![k] is null))

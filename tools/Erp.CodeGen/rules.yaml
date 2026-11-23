@@ -475,6 +475,20 @@ tables:
             create or replace trigger tg_org_unit_links_checks before insert or update on org.org_unit_links
                 for each row execute function org.tg_org_unit_links_checks();
 
+  cfg.custom_field_defs:
+    checks:
+      - text: "a custom field key is lower-case letters, digits and underscores, starts with a letter, at most 40 characters"
+        check: { name: ck_custom_field_defs_field_key, sql: "field_key ~ '^[a-z][a-z0-9_]{0,39}$'" }
+      - text: "a choice or multi-choice field names an option list; other fields do not"
+        check: { name: ck_custom_field_defs_option_list, sql: "(data_type in ('choice', 'multi_choice')) = (option_list_id is not null)" }
+      - text: "unique applies only to text, number, decimal, date, choice, user and employee fields"
+        check: { name: ck_custom_field_defs_unique_types, sql: "not is_unique or data_type in ('text', 'number', 'decimal', 'date', 'choice', 'user', 'employee')" }
+
+  cfg.labels:
+    checks:
+      - text: "a label text has 1 to 300 characters"
+        check: { name: ck_labels_text_length, sql: "length(text) between 1 and 300" }
+
   cfg.numbering_schemes:
     checks:
       - text: "a branch scheme belongs to a company"

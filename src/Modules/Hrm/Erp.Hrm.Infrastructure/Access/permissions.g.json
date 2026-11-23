@@ -327,18 +327,6 @@
       "sensitive": false
     },
     {
-      "code": "hrm.contracts.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.contracts.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.contracts.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.contracts.update",
-      "sensitive": false
-    },
-    {
       "code": "hrm.course_sessions.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.course_sessions.read",
@@ -1422,18 +1410,6 @@
       "code": "hrm.probation_records.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.probation_records.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.probation_records.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.probation_records.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.probation_records.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.probation_records.update",
       "sensitive": false
     },
     {

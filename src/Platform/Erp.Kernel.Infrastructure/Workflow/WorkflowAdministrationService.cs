@@ -80,7 +80,18 @@ public sealed class WorkflowAdministrationService(
             }
 
             var versions = await VersionsAsync(work, "select " + VersionColumns + " from wf.workflow_versions where definition_id = $1 order by version", cancellationToken, id).ConfigureAwait(false);
-            return new WorkflowDefinitionDetail(await ViewAsync(work, row, type, cancellationToken).ConfigureAwait(false), [.. versions.Select(VersionView)]);
+            var running = new Dictionary<Guid, int>();
+            await using (var command = work.Command("select version_id, count(*)::int from wf.workflow_instances where version_id = any($1) and status in ('running', 'returned') group by version_id", (object?)versions.Select(v => v.Id).ToArray()))
+            await using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+            {
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    running[reader.GetGuid(0)] = reader.GetInt32(1);
+                }
+            }
+
+            return new WorkflowDefinitionDetail(await ViewAsync(work, row, type, cancellationToken).ConfigureAwait(false),
+                [.. versions.Select(v => VersionView(v) with { RunningInstances = running.GetValueOrDefault(v.Id) })]);
         }, cancellationToken).ConfigureAwait(false);
 
     public Task<WorkflowVersionView> NewDraftAsync(Guid definitionId, NewDraftRequest request, CancellationToken cancellationToken) =>

@@ -117,7 +117,7 @@ internal static class LeaveRequestEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.LeaveRequestAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LeaveRequestWriteRequest request, global::Erp.Hrm.Application.Generated.ILeaveRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Numbering.INumberAllocator numbers, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LeaveRequestWriteRequest request, global::Erp.Hrm.Application.Generated.ILeaveRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Numbering.INumberAllocator numbers, global::Erp.Kernel.Contracts.Metadata.ICustomFieldValidator customFields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.leave_requests.create", async () =>
         {
             var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.LeaveRequestAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
@@ -134,13 +134,21 @@ internal static class LeaveRequestEndpoints
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await using var customCheck = await customFields.CheckAsync(new global::Erp.Kernel.Contracts.Metadata.CustomWrite("hrm.leave_requests", null, row.CompanyId, row.Custom, null, key => access.CanEdit(global::Erp.BuildingBlocks.Application.Security.FieldAccessMap.CustomPrefix + key), false), cancellationToken).ConfigureAwait(false);
+            if (customCheck.Errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.InvalidCustom(customCheck.Errors);
+            }
+
+            row.Custom = customCheck.Values;
+
             await repository.EnsureCanCreateAsync(row, cancellationToken).ConfigureAwait(false);
             row.RequestNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.leave_request_no", row.CompanyId, row.BranchId, row.StartDate), cancellationToken).ConfigureAwait(false);
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created("/api/hrm/leave-requests/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.LeaveRequestAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, LeaveRequestWriteRequest request, global::Erp.Hrm.Application.Generated.ILeaveRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, LeaveRequestWriteRequest request, global::Erp.Hrm.Application.Generated.ILeaveRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Metadata.ICustomFieldValidator customFields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.leave_requests.update", async () =>
         {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
@@ -156,11 +164,20 @@ internal static class LeaveRequestEndpoints
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
+            var storedCustom = row.Custom;
             var denied = Apply(request, row, update: true, access);
             if (denied.Count > 0)
             {
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
+
+            await using var customCheck = await customFields.CheckAsync(new global::Erp.Kernel.Contracts.Metadata.CustomWrite("hrm.leave_requests", row.Id, row.CompanyId, row.Custom, storedCustom, key => access.CanEdit(global::Erp.BuildingBlocks.Application.Security.FieldAccessMap.CustomPrefix + key), true), cancellationToken).ConfigureAwait(false);
+            if (customCheck.Errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.InvalidCustom(customCheck.Errors);
+            }
+
+            row.Custom = customCheck.Values;
 
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.LeaveRequestAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));

@@ -8,6 +8,7 @@ using Erp.Hrm.Contracts.Positions;
 using Erp.Hrm.Domain.Generated;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Hrm.Infrastructure.People;
+using Erp.Kernel.Contracts.Metadata;
 using Erp.Kernel.Contracts.Settings;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -26,7 +27,9 @@ internal sealed class PositionService(
     ICurrentActor actor,
     IPermissionChecker permissions,
     IDataScopeFilter scope,
-    ISettings settings) : IPositionService
+    ISettings settings,
+    IFieldAccess fields,
+    ICustomFieldValidator customFields) : IPositionService
 {
     public const string CodeTaken = "errors.hrm.position.code_taken";
     public const string NotLatest = "errors.hrm.position.not_latest";
@@ -124,6 +127,15 @@ internal sealed class PositionService(
             return PeopleResult.Forbidden(AccessDeniedException.OutOfScope);
         }
 
+        // Custom values (S1.15b, FR-KRN-MET-02): field security first, then the active definitions; the check holds the locks of
+        // unique fields until the position is saved.
+        await using var customCheck = await CustomAsync(company, null, request.Custom, null, update: false, cancellationToken).ConfigureAwait(false);
+        if (customCheck.Refusal is not null)
+        {
+            return customCheck.Refusal;
+        }
+
+        row.Custom = customCheck.Check!.Values;
         return await InTransactionAsync(async () =>
         {
             db.Add(row);
@@ -209,6 +221,12 @@ internal sealed class PositionService(
                 return PeopleResult.Fields(new Dictionary<string, string[]> { ["effectiveDate"] = [DateAfterStart] });
             }
 
+            await using var customCheck = await CustomAsync(old.CompanyId, old.Id, request.Custom, old.Custom, update: true, cancellationToken).ConfigureAwait(false);
+            if (customCheck.Refusal is not null)
+            {
+                return customCheck.Refusal;
+            }
+
             var next = new Position
             {
                 Id = Guid.CreateVersion7(clock.UtcNow),
@@ -223,7 +241,7 @@ internal sealed class PositionService(
                 BudgetedFte = request.BudgetedFte ?? old.BudgetedFte,
                 Status = request.Status ?? old.Status,
                 ValidFrom = date,
-                Custom = old.Custom,
+                Custom = customCheck.Check!.Values,
                 CreatedAt = clock.UtcNow,
                 CreatedBy = actor.UserId,
                 UpdatedAt = clock.UtcNow,
@@ -399,6 +417,38 @@ internal sealed class PositionService(
     }
 
     // ================================================================== helpers
+
+    /// <summary>The custom values of a write checked (S1.15b, R-217): the outcome holds either the refusal or the check to dispose after the save.</summary>
+    private async Task<CustomOutcome> CustomAsync(Guid company, Guid? rowId, System.Text.Json.JsonElement? requested, System.Text.Json.JsonDocument? stored, bool update, CancellationToken ct)
+    {
+        var access = await fields.ForAsync(PositionAccess.Fields, update ? "update" : "create", company, ct).ConfigureAwait(false);
+        var denied = new List<string>();
+        var merged = FieldShaping.MergeCustom(requested, stored, access, denied);
+        if (denied.Count > 0)
+        {
+            return new(null, new PeopleResult(PeopleOutcome.Invalid, FieldShaping.NotEditable,
+                FieldErrors: denied.Distinct(StringComparer.Ordinal).ToDictionary(f => f, _ => new[] { FieldShaping.NotEditable }, StringComparer.Ordinal)));
+        }
+
+        var check = await customFields.CheckAsync(new CustomWrite("hrm.positions", rowId, company, merged, stored, key => access.CanEdit(FieldAccessMap.CustomPrefix + key), update), ct).ConfigureAwait(false);
+        if (check.Errors.Count > 0)
+        {
+            var refusal = PeopleResult.Fields(check.Errors.ToDictionary(e => e.Key, e => new[] { e.Value }, StringComparer.Ordinal));
+            await check.DisposeAsync().ConfigureAwait(false);
+            return new(null, refusal);
+        }
+
+        return new(check, null);
+    }
+
+    private sealed class CustomOutcome(CustomCheck? check, PeopleResult? refusal) : IAsyncDisposable
+    {
+        public CustomCheck? Check { get; } = check;
+
+        public PeopleResult? Refusal { get; } = refusal;
+
+        public ValueTask DisposeAsync() => Check?.DisposeAsync() ?? ValueTask.CompletedTask;
+    }
 
     private static object Body(Position p) => new
     {

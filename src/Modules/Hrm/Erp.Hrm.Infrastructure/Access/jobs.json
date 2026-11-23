@@ -1,5 +1,5 @@
 {
-  "_comment": "HR background jobs (slice S1.11a format). S1.20b (CR-076 item 9, slice S1.20 ruling Q12): approved employment events take effect on their date. Seeded into job.definitions by migrate and provisioning, keyed by code; a customer's schedule and on/off choice are kept on upgrade. Times are in the customer's time zone (org.time_zone). The job writes through the HR module's own code and checks no permissions, so it declares none (R-009). Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "HR background jobs (slice S1.11a format). S1.20b (CR-076 item 9, slice S1.20 ruling Q12): approved employment events take effect on their date. S1.20c (CR-076 S1.20c detail, Build item 13): contracts past their end expire, and contract and probation reminders go out. Seeded into job.definitions by migrate and provisioning, keyed by code; a customer's schedule and on/off choice are kept on upgrade. Times are in the customer's time zone (org.time_zone). The job writes through the HR module's own code and checks no permissions, so it declares none (R-009). Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "jobs": [
     {
@@ -7,6 +7,22 @@
       "name": {"en": "Employment changes due", "ur": "واجب الاثر ملازمتی تبدیلیاں"},
       "description": {"en": "Puts approved employment changes into force on their date, makes new employees active from their joining date and announces each change once.", "ur": "منظور شدہ ملازمتی تبدیلیاں ان کی تاریخ پر نافذ کرتا ہے، نئے ملازمین کو ان کی شمولیت کی تاریخ سے فعال کرتا ہے اور ہر تبدیلی کی ایک بار اطلاع دیتا ہے۔"},
       "schedule": {"daily": {"at": "00:20"}},
+      "permissions": [],
+      "retry": {"max_attempts": 3, "backoff_seconds": [60, 300]},
+      "timeout_seconds": 900,
+      "priority": 50,
+      "concurrency": 1,
+      "runs_in": ["full"],
+      "entitlement": "hrm.core",
+      "manual": true,
+      "request_permission": "job.runs.create",
+      "schedule_editable": true
+    },
+    {
+      "code": "hrm.employment_terms_due",
+      "name": {"en": "Contract and probation reminders", "ur": "معاہدے اور آزمائشی مدت کی یاد دہانیاں"},
+      "description": {"en": "Marks contracts past their end date as expired and reminds line managers and HR before a contract or a probation ends.", "ur": "اختتامی تاریخ گزرنے والے معاہدوں کو ختم شدہ قرار دیتا ہے اور معاہدہ یا آزمائشی مدت ختم ہونے سے پہلے لائن مینیجرز اور ایچ آر کو یاد دلاتا ہے۔"},
+      "schedule": {"daily": {"at": "06:10"}},
       "permissions": [],
       "retry": {"max_attempts": 3, "backoff_seconds": [60, 300]},
       "timeout_seconds": 900,

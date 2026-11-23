@@ -17,6 +17,27 @@ public static class HrmSettingKeys
     /// <summary>The user linked to an employment is disabled when the employment ends.</summary>
     public const string HrmUserLinkDisableOnSeparation = "hrm.user_link.disable_on_separation";
 
+    /// <summary>Whether a transfer from a sister company keeps the service start date or starts it again.</summary>
+    public const string HrmTransferCarryOverService = "hrm.transfer.carry_over.service";
+
+    /// <summary>Whether leave balances move to the new company, are paid out or lapse on a transfer.</summary>
+    public const string HrmTransferCarryOverLeave = "hrm.transfer.carry_over.leave";
+
+    /// <summary>Whether loan and advance balances move to the new company or are settled on a transfer.</summary>
+    public const string HrmTransferCarryOverLoans = "hrm.transfer.carry_over.loans";
+
+    /// <summary>Length of the probation opened at hire for the employee types listed.</summary>
+    public const string HrmProbationDefaultMonths = "hrm.probation.default_months";
+
+    /// <summary>The employee types that start with a probation when hired.</summary>
+    public const string HrmProbationEmployeeTypes = "hrm.probation.employee_types";
+
+    /// <summary>How many days before a probation ends the manager and HR are reminded.</summary>
+    public const string HrmProbationReminderDays = "hrm.probation.reminder_days";
+
+    /// <summary>How many days before a contract ends the manager and HR are reminded, when the contract gives no number.</summary>
+    public const string HrmContractsRenewalNoticeDays = "hrm.contracts.renewal_notice_days";
+
     /// <summary>Whether the company plans by positions or by headcount per unit and grade.</summary>
     public const string HrmOrgModel = "hrm.org.model";
 }

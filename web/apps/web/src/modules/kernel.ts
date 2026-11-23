@@ -28,11 +28,17 @@ const FieldsScreen = lazy(() => import('./admin/fields'));
 const DelegationsScreen = lazy(() => import('./admin/delegations'));
 const ReportsScreen = lazy(() => import('./admin/reports'));
 const AuditScreen = lazy(() => import('./admin/audit'));
-// S1.15a: the settings centre, the feature flags and the sign-in page (login branding); labels, lists, custom fields, numbering, routes and
-// templates follow in S1.15b to d.
+// S1.15a: the settings centre, the feature flags and the sign-in page (login branding); numbering, routes and templates follow in S1.15c and d.
 const SettingsScreen = lazy(() => import('./admin/settings'));
 const FlagsScreen = lazy(() => import('./admin/flags'));
 const BrandingScreen = lazy(() => import('./admin/branding'));
+// S1.15b: labels, option lists and custom field definitions.
+const LabelsScreen = lazy(() => import('./admin/labels'));
+const OptionListsScreen = lazy(() => import('./admin/option-lists'));
+const CustomFieldsScreen = lazy(() => import('./admin/custom-fields'));
+// S1.15c: numbering schemes and the approval route editor.
+const NumberingScreen = lazy(() => import('./admin/numbering'));
+const RoutesScreen = lazy(() => import('./admin/routes'));
 
 export const kernelScreens: ScreenDeclaration[] = [
   { id: 'home', path: '/', labelKey: 'nav.home', icon: House, group: 'home', allowedWhenLocked: false, component: HomePage },
@@ -60,6 +66,14 @@ export const kernelScreens: ScreenDeclaration[] = [
   { id: 'settings', path: '/settings', labelKey: 'nav.settings', icon: Settings, group: 'administration', permission: 'cfg.setting_values.read', component: SettingsScreen },
   { id: 'feature-flags', path: '/settings/flags', labelKey: 'nav.featureFlags', icon: Flag, group: 'administration', permission: 'cfg.feature_flag_overrides.read', component: FlagsScreen },
   { id: 'sign-in-page', path: '/settings/sign-in-page', labelKey: 'nav.signInPage', icon: ImagePlus, group: 'administration', permission: 'cfg.setting_values.read', component: BrandingScreen },
+  // S1.15b (ruling Q1): "Labels", "Option lists" and "Custom fields" after "Sign-in page". The labels editor is also reached with ?table= from the
+  // screens that name a table (R-210: the unit types screen).
+  { id: 'labels', path: '/settings/labels', labelKey: 'nav.labels', icon: FileText, group: 'administration', permission: 'cfg.labels.read', component: LabelsScreen },
+  { id: 'option-lists', path: '/settings/option-lists', labelKey: 'nav.optionLists', icon: ClipboardCheck, group: 'administration', permission: 'cfg.option_lists.read', component: OptionListsScreen },
+  { id: 'custom-fields', path: '/settings/custom-fields', labelKey: 'nav.customFields', icon: Filter, group: 'administration', permission: 'cfg.custom_field_defs.read', component: CustomFieldsScreen },
+  // S1.15c (ruling Q1): "Numbering" and "Approval routes" after "Custom fields".
+  { id: 'numbering', path: '/settings/numbering', labelKey: 'nav.numbering', icon: ClipboardCheck, group: 'administration', permission: 'cfg.numbering_schemes.read', component: NumberingScreen },
+  { id: 'approval-routes', path: '/settings/approval-routes', labelKey: 'nav.approvalRoutes', icon: Workflow, group: 'administration', permission: 'wf.workflow_definitions.read', component: RoutesScreen },
   { id: 'licence', path: '/settings/licence', labelKey: 'nav.licence', icon: KeyRound, group: 'administration', permission: 'cfg.licence.read', allowedWhenLocked: true, comesWith: 'S1.16' },
   { id: 'jobs', path: '/admin/jobs/*', labelKey: 'nav.jobs', icon: Activity, group: 'administration', permission: 'job.runs.read', comesWith: 'S1.16' },
   { id: 'audit', path: '/admin/audit/*', labelKey: 'nav.audit', icon: ScrollText, group: 'administration', permission: 'aud.changes.view', component: AuditScreen },

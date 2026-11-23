@@ -33,6 +33,74 @@ settings:
     name: {en: "Disable the user at separation", ur: "علیحدگی پر صارف کو غیر فعال کریں"}
     description: {en: "The user linked to an employment is disabled when the employment ends", ur: "ملازمت ختم ہونے پر اس سے منسلک صارف غیر فعال ہو جاتا ہے"}
     help: {en: "On the last working day the linked user is disabled, after their open approval tasks are passed on. Switch it off where people keep their user after leaving (for example to see their payslips).", ur: "آخری کام کے دن منسلک صارف غیر فعال کر دیا جاتا ہے، ان کے زیرِ التوا منظوری کے کام آگے منتقل کرنے کے بعد۔ جہاں لوگ رخصت کے بعد بھی اپنا صارف رکھتے ہیں (مثلاً تنخواہ کی پرچیاں دیکھنے کے لیے) وہاں اسے بند کریں۔"}
+  # S1.20c (CR-076 S1.20c detail; slice S1.20 ruling Q9, FR-XM-30): the default of each carry-over choice of a transfer between
+  # companies; every transfer records all three choices on its events. The receiving company's value is the default.
+  - key: hrm.transfer.carry_over.service
+    type: choice
+    default: "keep"
+    validation: {choices: [keep, restart]}
+    layers: [tenant, company]
+    area: hr.employment
+    name: {en: "Service on transfer", ur: "تبادلے پر ملازمت کی مدت"}
+    description: {en: "Whether a transfer from a sister company keeps the service start date or starts it again", ur: "کیا ذیلی کمپنی سے تبادلے پر ملازمت کے آغاز کی تاریخ برقرار رہتی ہے یا نئے سرے سے شروع ہوتی ہے"}
+    help: {en: "The choice offered first on a transfer between companies. Keep: the new employment counts service from the first employment's service start date. Restart: from the transfer date.", ur: "کمپنیوں کے درمیان تبادلے پر پہلے پیش کیا جانے والا انتخاب۔ برقرار: نئی ملازمت پہلی ملازمت کی آغازِ مدت سے شمار ہوتی ہے۔ نیا آغاز: تبادلے کی تاریخ سے۔"}
+  - key: hrm.transfer.carry_over.leave
+    type: choice
+    default: "carry"
+    validation: {choices: [carry, encash, lapse]}
+    layers: [tenant, company]
+    area: hr.employment
+    name: {en: "Leave balances on transfer", ur: "تبادلے پر رخصت کا بقایا"}
+    description: {en: "Whether leave balances move to the new company, are paid out or lapse on a transfer", ur: "تبادلے پر رخصت کا بقایا نئی کمپنی میں منتقل ہوتا ہے، ادا کیا جاتا ہے یا ختم ہو جاتا ہے"}
+    help: {en: "The choice offered first on a transfer between companies. The leave module applies the recorded choice.", ur: "کمپنیوں کے درمیان تبادلے پر پہلے پیش کیا جانے والا انتخاب۔ رخصت کا ماڈیول درج شدہ انتخاب لاگو کرتا ہے۔"}
+  - key: hrm.transfer.carry_over.loans
+    type: choice
+    default: "carry"
+    validation: {choices: [carry, settle]}
+    layers: [tenant, company]
+    area: hr.employment
+    name: {en: "Loans on transfer", ur: "تبادلے پر قرضے"}
+    description: {en: "Whether loan and advance balances move to the new company or are settled on a transfer", ur: "تبادلے پر قرض اور پیشگی کا بقایا نئی کمپنی میں منتقل ہوتا ہے یا طے کیا جاتا ہے"}
+    help: {en: "The choice offered first on a transfer between companies. The loans module applies the recorded choice.", ur: "کمپنیوں کے درمیان تبادلے پر پہلے پیش کیا جانے والا انتخاب۔ قرضوں کا ماڈیول درج شدہ انتخاب لاگو کرتا ہے۔"}
+  # S1.20c (CR-076 S1.20c detail; slice S1.20 ruling Q10): probation until the policy type `probation` of S1.23 replaces these.
+  # No statutory meaning is claimed.
+  - key: hrm.probation.default_months
+    type: int
+    default: 3
+    validation: {min: 1, max: 24}
+    layers: [tenant, company]
+    area: hr.employment
+    name: {en: "Probation period (months)", ur: "آزمائشی مدت (مہینے)"}
+    description: {en: "Length of the probation opened at hire for the employee types listed", ur: "فہرست شدہ ملازمین کی اقسام کے لیے بھرتی پر شروع ہونے والی آزمائشی مدت"}
+    help: {en: "A probation of this many months starts on the joining date. It is replaced by the probation policy when policies arrive.", ur: "اتنے مہینوں کی آزمائشی مدت شمولیت کی تاریخ سے شروع ہوتی ہے۔ پالیسیاں آنے پر اس کی جگہ آزمائشی پالیسی لے لیتی ہے۔"}
+  - key: hrm.probation.employee_types
+    type: list
+    default: ["probation", "permanent"]
+    validation: {choices: [permanent, contract, probation, intern, daily_wage, consultant, part_time], max_items: 7}
+    layers: [tenant, company]
+    area: hr.employment
+    name: {en: "Employee types on probation", ur: "آزمائش والی ملازمین کی اقسام"}
+    description: {en: "The employee types that start with a probation when hired", ur: "ملازمین کی وہ اقسام جو بھرتی پر آزمائشی مدت سے شروع ہوتی ہیں"}
+    help: {en: "A hire or rehire of a listed type opens a probation record. Other types have none.", ur: "فہرست شدہ قسم کی بھرتی یا دوبارہ بھرتی پر آزمائشی ریکارڈ کھلتا ہے۔ باقی اقسام کا کوئی نہیں۔"}
+  - key: hrm.probation.reminder_days
+    type: int
+    default: 14
+    validation: {min: 1, max: 90}
+    layers: [tenant, company]
+    area: hr.employment
+    name: {en: "Probation reminder (days before)", ur: "آزمائش کی یاد دہانی (دن پہلے)"}
+    description: {en: "How many days before a probation ends the manager and HR are reminded", ur: "آزمائشی مدت ختم ہونے سے کتنے دن پہلے مینیجر اور ایچ آر کو یاد دلایا جائے"}
+    help: {en: "The line manager and HR administrators get a reminder this many days before the probation (or its extension) ends, so the review is done in time.", ur: "آزمائشی مدت (یا اس کی توسیع) ختم ہونے سے اتنے دن پہلے لائن مینیجر اور ایچ آر منتظمین کو یاد دہانی ملتی ہے تاکہ جائزہ بروقت ہو۔"}
+  # S1.20c (CR-076 S1.20c detail; slice S1.20 Build item 13, FR-HRM-EMP-09): used when a contract has no renewal notice days.
+  - key: hrm.contracts.renewal_notice_days
+    type: int
+    default: 30
+    validation: {min: 1, max: 365}
+    layers: [tenant, company]
+    area: hr.employment
+    name: {en: "Contract renewal reminder (days before)", ur: "معاہدے کی تجدید کی یاد دہانی (دن پہلے)"}
+    description: {en: "How many days before a contract ends the manager and HR are reminded, when the contract gives no number", ur: "معاہدہ ختم ہونے سے کتنے دن پہلے مینیجر اور ایچ آر کو یاد دلایا جائے، جب معاہدے میں تعداد درج نہ ہو"}
+    help: {en: "A contract's own renewal notice days come first. Without them, the line manager and HR administrators are reminded this many days before the end date.", ur: "معاہدے کے اپنے تجدیدی نوٹس کے دن پہلے آتے ہیں۔ ان کے بغیر لائن مینیجر اور ایچ آر منتظمین کو اختتامی تاریخ سے اتنے دن پہلے یاد دلایا جاتا ہے۔"}
   # S1.22a (CR-078 item 1, slice S1.22 Build item 1 and ruling Q2, FR-HRM-POS-01): how the company plans its strength. The default is
   # headcount; the size-profile presets of the first-run wizard (S1.18, D-40) write position for Mid and Enterprise (CR-078 S1.22a detail e).
   # A change is refused unless the company's assignments allow it (setting change guard of the HR module, CR-078 S1.22a detail f).

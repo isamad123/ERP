@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Erp.BuildingBlocks.Application.Security;
 using Erp.Kernel.Application.Access;
 using Erp.Kernel.Infrastructure.Identity;
@@ -72,8 +73,25 @@ public sealed partial class AccessAdministrationService
 
         // A role without the read permission sees no field of the resource, whatever its field rules say (Q4).
         var map = AccessEngine.Merge(target.Fields, rules.Permissions.Contains(resource + ".read") ? [rules] : []);
+        // The custom fields of the table (S1.15b, FR-KRN-MET-02): each defined key is a row of the matrix, retired ones too (their data stays),
+        // with the name the administrator gave it; a key with a rule but no definition (a retired experiment) stays listed.
+        var custom = new Dictionary<string, IReadOnlyDictionary<string, string>?>(StringComparer.Ordinal);
+        await using (var command = IdentityDb.Command(c, null, "select field_key, label_i18n::text from cfg.custom_field_defs where entity_type = $1 order by seq, field_key", resource))
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+        {
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                custom[FieldAccessMap.CustomPrefix + reader.GetString(0)] = JsonSerializer.Deserialize<Dictionary<string, string>>(reader.GetString(1));
+            }
+        }
+
+        foreach (var key in map.Levels.Keys.Where(k => k.StartsWith(FieldAccessMap.CustomPrefix, StringComparison.Ordinal)))
+        {
+            custom.TryAdd(key, null);
+        }
+
         var items = target.Fields.Fields.Select(f => new FieldPreviewItem(f.Key, f.FieldClass, AccessSnapshot.LevelText(map.Of(f.Key))))
-            .Concat(map.Levels.Where(l => l.Key.StartsWith(FieldAccessMap.CustomPrefix, StringComparison.Ordinal)).Select(l => new FieldPreviewItem(l.Key, null, AccessSnapshot.LevelText(l.Value))))
+            .Concat(custom.Select(k => new FieldPreviewItem(k.Key, null, AccessSnapshot.LevelText(map.Of(k.Key)), k.Value)))
             .ToList();
         return new FieldPreview(resource, roleId, items);
     }

@@ -15,6 +15,7 @@ using Erp.Hrm.Infrastructure.Access;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Api.ControlPlane.Tenancy;
 using Erp.Kernel.Api.Access;
+using Erp.Kernel.Api.Metadata;
 using Erp.Kernel.Api.Org;
 using Erp.Kernel.Application.Org;
 using Erp.Kernel.Infrastructure.Org;
@@ -111,6 +112,7 @@ public static class ApiHost
         // Positions (S1.22a): positions, strength exceptions and their approval, department-head and position approvers.
         services.AddHrmPositions().AddHrmPositionsApi();
         services.AddSingleton<Erp.Kernel.Contracts.Workflow.IWorkflowDocumentTypeSource>(new WorkflowManifestSource(EmploymentServices.WorkflowManifest));
+        services.AddSingleton(new NotificationManifestSource(EmploymentServices.NotificationManifest)); // S1.20c reminders
         services.AddScoped<Erp.Kernel.Contracts.Identity.IUserDirectory, Erp.Kernel.Infrastructure.Identity.UserDirectory>();
         services.AddSingleton(new ResourceCatalog([.. KernelResourceCatalog.All, .. HrmResourceCatalog.All]));
         services.AddScoped<AccessAdministrationService>();
@@ -161,6 +163,11 @@ public static class ApiHost
         // Saved list views and label overrides of the web lists and forms (S1.12c, S1.12 rulings Q11 and Q12).
         services.AddScoped<Erp.Kernel.Contracts.Views.ISavedViewService, Erp.Kernel.Infrastructure.Views.SavedViewService>();
         services.AddScoped<Erp.Kernel.Contracts.Views.ILabelOverrideService, Erp.Kernel.Infrastructure.Views.LabelOverrideService>();
+        // Labels, option lists and custom fields (S1.15b): the services behind the editors and the check of custom values on every write.
+        services.AddScoped<Erp.Kernel.Contracts.Metadata.ILabelAdministration, Erp.Kernel.Infrastructure.Metadata.LabelAdministration>();
+        services.AddScoped<Erp.Kernel.Contracts.Metadata.IOptionListAdministration, Erp.Kernel.Infrastructure.Metadata.OptionListAdministration>();
+        services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldAdministration, Erp.Kernel.Infrastructure.Metadata.CustomFieldAdministration>();
+        services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldValidator, Erp.Kernel.Infrastructure.Metadata.CustomFieldValidator>();
         // Limits (S1.09b, ruling Q7): one guard; the kernel counts named users, concurrent users and companies.
         services.AddSingleton<ILimitCounter, NamedUserCounter>();
         services.AddSingleton<ILimitCounter, ConcurrentUserCounter>();
@@ -240,6 +247,7 @@ public static class ApiHost
         api.MapLicenceEndpoints();
         api.MapSessionContextEndpoints();
         api.MapViewEndpoints();
+        api.MapMetadataEndpoints();
         api.MapWorkflowEndpoints();
         api.MapJobEndpoints();
         api.MapNotificationEndpoints();

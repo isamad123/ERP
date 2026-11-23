@@ -16,6 +16,9 @@ public static class EmploymentServices
     /// <summary>The HR module's workflow manifest (embedded <c>Access/workflow.json</c>).</summary>
     public static string WorkflowManifest { get; } = Embedded("Erp.Hrm.Infrastructure.Access.workflow.json");
 
+    /// <summary>The HR module's notification catalogue (embedded <c>Access/notification-events.json</c>, S1.20c); each host registers it.</summary>
+    public static string NotificationManifest { get; } = Embedded("Erp.Hrm.Infrastructure.Access.notification-events.json");
+
     /// <summary>The HR module's job manifest (embedded <c>Access/jobs.json</c>).</summary>
     public static string JobManifest { get; } = Embedded("Erp.Hrm.Infrastructure.Access.jobs.json");
 
@@ -38,14 +41,18 @@ public static class EmploymentServices
     /// <summary>The employment services of the API host.</summary>
     public static IServiceCollection AddHrmEmploymentApi(this IServiceCollection services)
     {
-        services.AddScoped<IEmploymentService, EmploymentService>();
+        services.AddScoped<EmploymentService>();
+        services.AddScoped<IEmploymentService>(sp => sp.GetRequiredService<EmploymentService>());
+        services.AddScoped<IEmploymentMoves>(sp => sp.GetRequiredService<EmploymentService>());
+        services.AddScoped<IEmploymentTermsService, EmploymentTermsService>();
         return services;
     }
 
-    /// <summary>The daily job of the worker host (ruling Q12).</summary>
+    /// <summary>The daily jobs of the worker host (ruling Q12; S1.20c contract and probation reminders).</summary>
     public static IServiceCollection AddHrmEmploymentWorker(this IServiceCollection services)
     {
         services.AddSingleton<IJobHandler, EmploymentEventsDueJob>();
+        services.AddSingleton<IJobHandler, EmploymentTermsDueJob>();
         return services;
     }
 

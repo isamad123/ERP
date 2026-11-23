@@ -28,6 +28,9 @@ public sealed class PositionCreateRequest
 
     /// <summary>The first day of the position (default: today). A date in the future makes it a planned position.</summary>
     public DateOnly? ValidFrom { get; init; }
+
+    /// <summary>Custom field values by key (S1.15b, FR-KRN-MET-02): checked against the active definitions and field security.</summary>
+    public System.Text.Json.JsonElement? Custom { get; init; }
 }
 
 /// <summary>
@@ -57,6 +60,9 @@ public sealed class PositionChangeRequest
 
     /// <summary>Optional fields to empty: gradeId, reportsToPositionId, locationId, costCenterRef.</summary>
     public IReadOnlyList<string>? Clear { get; init; }
+
+    /// <summary>Custom field values to set by key; the others are carried over (S1.15b).</summary>
+    public System.Text.Json.JsonElement? Custom { get; init; }
 
     public long? RowVersion { get; init; }
 }

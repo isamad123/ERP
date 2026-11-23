@@ -1,5 +1,5 @@
 {
-  "_comment": "Hand-written permissions of the HR module's purpose-built services (slice S1.20a, CR-076): the generated writes of these tables are closed (ruling Q1; S1.20a closes the person tables, S1.20b to d the employment tables), so their actions are declared here. Registered with permissions.g.json by migrate and provisioning (AccessSetup). Keep in step with Erp.Hrm.Contracts.People.PeoplePermissions and (S1.20b) Erp.Hrm.Contracts.Employment.EmploymentPermissions.",
+  "_comment": "Hand-written permissions of the HR module's purpose-built services (slice S1.20a, CR-076): the generated writes of these tables are closed (ruling Q1; S1.20a closes the person tables, S1.20b to d the employment tables), so their actions are declared here. Registered with permissions.g.json by migrate and provisioning (AccessSetup). Keep in step with Erp.Hrm.Contracts.People.PeoplePermissions and (S1.20b) Erp.Hrm.Contracts.Employment.EmploymentPermissions. S1.20c adds transfers between companies, contracts and probation.",
   "module": "hrm",
   "permissions": [
     {
@@ -168,6 +168,24 @@
       "code": "hrm.strength_exceptions.create",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.strength_exceptions.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.employments.transfer",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.employments.transfer",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.contracts.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.contracts.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.probation_records.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.probation_records.update",
       "sensitive": false
     }
   ]

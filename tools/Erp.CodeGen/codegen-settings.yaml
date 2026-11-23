@@ -30,6 +30,9 @@ api_excluded:
   - iam.trusted_devices
   # S1.12c (ruling Q12): saved views are read and changed only through /api/cfg/saved-views (own and shared views).
   - cfg.saved_views
+  # S1.15b (CR-071 S1.15b detail, ruling Q7): option lists and their items are read and changed only through /api/cfg/option-lists (one answer with the items).
+  - cfg.option_lists
+  - cfg.option_list_items
   - iam.api_clients
   - aud.change_log
   - aud.access_log

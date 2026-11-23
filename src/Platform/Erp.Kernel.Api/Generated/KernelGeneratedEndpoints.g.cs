@@ -20,8 +20,6 @@ public static class KernelGeneratedEndpoints
         global::Erp.Kernel.Api.Generated.Cfg.LabelEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.NumberingSchemeEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.NumberingVoidEndpoints.Map(app);
-        global::Erp.Kernel.Api.Generated.Cfg.OptionListItemEndpoints.Map(app);
-        global::Erp.Kernel.Api.Generated.Cfg.OptionListEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.PackItemEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.SettingValueHistoryEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.SetupTaskEndpoints.Map(app);
@@ -122,6 +120,10 @@ internal static class GeneratedEndpointSupport
     /// <summary>A change to fields the caller may not edit (FR-KRN-IAM-13): 400 naming each field.</summary>
     public static IResult NotEditable(global::System.Collections.Generic.List<string> fields) =>
         TypedResults.ValidationProblem(fields.ToDictionary(f => f, _ => new[] { global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable }), title: global::Erp.BuildingBlocks.Application.Security.FieldShaping.NotEditable);
+
+    /// <summary>Custom values refused (FR-KRN-MET-02, S1.15b): 400 naming each <c>custom.&lt;key&gt;</c> with its error key.</summary>
+    public static IResult InvalidCustom(global::System.Collections.Generic.IReadOnlyDictionary<string, string> errors) =>
+        TypedResults.ValidationProblem(errors.ToDictionary(e => e.Key, e => new[] { e.Value }), title: "errors.data.invalid_request");
 
     /// <summary>The answer for one row with hidden fields left out and masked fields masked (field security of the roles whose scope covers it).</summary>
     public static async global::System.Threading.Tasks.Task<global::System.Text.Json.Nodes.JsonObject> ShapeOneAsync<TRow, TResponse>(global::Erp.BuildingBlocks.Application.Data.IRepository<TRow> repository, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.BuildingBlocks.Application.Security.FieldCatalog catalog, TRow row, global::System.Func<TRow, TResponse> toResponse, global::System.Threading.CancellationToken cancellationToken)

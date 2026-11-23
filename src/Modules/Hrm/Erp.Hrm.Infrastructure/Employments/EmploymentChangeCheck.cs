@@ -15,8 +15,12 @@ public sealed record ImpactReport(
     IReadOnlyList<EmploymentImpactAnswer> Answers,
     IReadOnlyList<AffectedPeriod> Flagged,
     bool TerminationNeedsOverride,
-    string Summary)
+    string Summary,
+    IReadOnlyList<string>? OpenItems = null)
 {
+    /// <summary>A transfer is refused while a module names open items its carry-over does not carry (S1.20c, FR-XM-30).</summary>
+    public const string TransferOpenItems = "errors.hrm.transfer.open_items";
+
     public const string NotBackdated = "hrm.impact.not_backdated";
     public const string NothingAffected = "hrm.impact.nothing_affected";
     public const string PeriodsFlagged = "hrm.impact.periods_flagged";
@@ -35,7 +39,8 @@ public sealed class EmploymentChangeCheck(IEnumerable<IEmploymentChangeImpact> m
     public async Task<ImpactReport> RunAsync(EmploymentChange change, DateOnly today, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(change);
-        if (change.EarliestDate >= today)
+        // A transfer between companies asks the modules whatever its date (open items it does not carry, S1.20c).
+        if (change.EarliestDate >= today && change.CarryOver is null)
         {
             return new ImpactReport(false, change.EarliestDate, [], [], false, ImpactReport.NotBackdated);
         }
@@ -51,7 +56,9 @@ public sealed class EmploymentChangeCheck(IEnumerable<IEmploymentChangeImpact> m
             .OrderBy(p => p.From).ThenBy(p => p.Kind, StringComparer.Ordinal).ToList();
         var terminationBlocked = change.IsTermination
             && (flagged.Any(p => p.Locked) || answers.Any(a => a.LastAttendanceDate is { } last && last > change.EffectiveDate));
-        return new ImpactReport(true, change.EarliestDate, answers, flagged, terminationBlocked,
-            flagged.Count == 0 ? ImpactReport.NothingAffected : ImpactReport.PeriodsFlagged);
+        var backdated = change.EarliestDate < today;
+        var open = answers.SelectMany(a => a.OpenItems ?? []).Distinct(StringComparer.Ordinal).ToList();
+        return new ImpactReport(backdated, change.EarliestDate, answers, flagged, terminationBlocked,
+            !backdated ? ImpactReport.NotBackdated : flagged.Count == 0 ? ImpactReport.NothingAffected : ImpactReport.PeriodsFlagged, open);
     }
 }

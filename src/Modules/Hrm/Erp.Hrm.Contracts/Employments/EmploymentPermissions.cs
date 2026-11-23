@@ -25,8 +25,24 @@ public static class EmploymentPermissions
     /// <summary>Record a change of an employment as a dated event with a reason (FR-HRM-EMP-03), corrections included.</summary>
     public const string EventsCreate = "hrm.employment_events.create";
 
+    /// <summary>
+    /// Transfer to another company of the customer (FR-XM-30, slice S1.20c): ends the employment and starts a linked one there. The
+    /// caller needs the transfer scope on the employment and the create scope in the receiving company.
+    /// </summary>
+    public const string Transfer = "hrm.employments.transfer";
+
+    public const string ContractsRead = "hrm.contracts.read";
+
+    /// <summary>Record a contract of an employment or renew one as a new linked contract (FR-HRM-EMP-09, slice S1.20c).</summary>
+    public const string ContractsCreate = "hrm.contracts.create";
+
+    public const string ProbationRead = "hrm.probation_records.read";
+
+    /// <summary>Extend a probation, record it as not confirmed, or confirm it (with <see cref="EventsCreate"/>; FR-HRM-EMP-10, slice S1.20c).</summary>
+    public const string ProbationUpdate = "hrm.probation_records.update";
+
     /// <summary>Every code declared in permissions.json for the employment services (kept in step by a unit test).</summary>
-    public static IReadOnlyList<string> HandWritten { get; } = [EmploymentsCreate, NumberOverride, UserLink, EventsCreate];
+    public static IReadOnlyList<string> HandWritten { get; } = [EmploymentsCreate, NumberOverride, UserLink, EventsCreate, Transfer, ContractsCreate, ProbationUpdate];
 }
 
 /// <summary>The HR events of employments in <c>hrm.outbox_messages</c> (slice S1.20 Build item 9, spec 06a section 30.1). Ids only.</summary>
@@ -42,8 +58,18 @@ public static class EmploymentEvents
     /// </summary>
     public const string EmployeeChanged = "hrm.employee_changed";
 
-    /// <summary>An employment ended (raised by the separations of S1.25).</summary>
+    /// <summary>
+    /// An employment ended, once, when its <c>separation</c> event takes effect: {employmentId, personId, companyId, eventId, reasonCode,
+    /// separationDate (the last day), nextEmploymentId (the linked employment of a transfer, else null)}. Raised by transfers between
+    /// companies (S1.20c) and by the separations of S1.25.
+    /// </summary>
     public const string EmployeeSeparated = "hrm.employee_separated";
+
+    /// <summary>A contract's end is near (renewal reminder, FR-HRM-EMP-09): snake_case payload for the notification catalogue.</summary>
+    public const string ContractEnding = "hrm.contract_ending";
+
+    /// <summary>A probation's end is near (reminder to the manager and HR, FR-HRM-EMP-10): snake_case payload for the notification catalogue.</summary>
+    public const string ProbationEnding = "hrm.probation_ending";
 
     public const string AggregateType = "hrm.employment";
 }
