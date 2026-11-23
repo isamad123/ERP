@@ -33,6 +33,22 @@
       "manual": true,
       "request_permission": "job.runs.create",
       "schedule_editable": true
+    },
+    {
+      "code": "hrm.attendance_purge",
+      "name": {"en": "Attendance punch purge", "ur": "حاضری کے اندراجات کی صفائی"},
+      "description": {"en": "Removes whole months of attendance punches that are older than the retention period (setting hrm.att.event_retention_years). Single punches are never deleted. Monthly storage partitions are created ahead by the kernel job that creates partitions.", "ur": "حاضری کے اندراجات کے وہ پورے مہینے ہٹاتا ہے جو مدتِ حفاظت سے پرانے ہوں۔ انفرادی اندراج کبھی نہیں مٹائے جاتے۔ ماہانہ حصے آگے سے بنانے کا کام کرنل کا حصے بنانے والا کام کرتا ہے۔"},
+      "schedule": {"daily": {"at": "02:40"}},
+      "permissions": [],
+      "retry": {"max_attempts": 3, "backoff_seconds": [60, 300]},
+      "timeout_seconds": 900,
+      "priority": 70,
+      "concurrency": 1,
+      "runs_in": ["full"],
+      "entitlement": "hrm.core",
+      "manual": true,
+      "request_permission": "job.runs.create",
+      "schedule_editable": true
     }
   ]
 }

@@ -6,6 +6,8 @@ using Erp.BuildingBlocks.Domain.Time;
 using Erp.BuildingBlocks.Infrastructure.Time;
 using Erp.Hrm.Api.Generated;
 using Erp.Hrm.Api.Employments;
+using Erp.Hrm.Api.Attendance;
+using Erp.Hrm.Infrastructure.Attendance;
 using Erp.Hrm.Api.People;
 using Erp.Hrm.Infrastructure.Employments;
 using Erp.Hrm.Infrastructure.People;
@@ -107,6 +109,7 @@ public static class ApiHost
         // Employments (S1.20b): hire, events, as-of reads, user link; the approval of held events, the line-manager directory and
         // the active employee counters. The kernel's user directory answers whether a user may be linked (D-10).
         services.AddHrmEmployment().AddHrmEmploymentApi();
+        services.AddHrmAttendance().AddHrmAttendanceApi(); // S1.27a attendance capture
         services.AddSingleton<Erp.Kernel.Contracts.Workflow.IWorkflowDocumentTypeSource>(new WorkflowManifestSource(EmploymentServices.WorkflowManifest));
         services.AddSingleton(new NotificationManifestSource(EmploymentServices.NotificationManifest)); // S1.20c reminders
         services.AddScoped<Erp.Kernel.Contracts.Identity.IUserDirectory, Erp.Kernel.Infrastructure.Identity.UserDirectory>();
@@ -253,6 +256,7 @@ public static class ApiHost
         api.MapHrmGeneratedEndpoints();
         api.MapHrmPeopleEndpoints();
         api.MapHrmEmploymentEndpoints();
+        api.MapHrmAttendanceEndpoints(); // S1.27a
         return app;
     }
 

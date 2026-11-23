@@ -29,7 +29,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         Guid Person, long PersonVersion, Guid Into, Guid Identifier, long IdentifierVersion, Guid Contact, long ContactVersion, Guid Address, long AddressVersion,
         Guid Relation, long RelationVersion, Guid Qualification, long QualificationVersion, Guid Case, long CaseVersion, string PersonNo,
         Hire Org, Guid Employment, long EmploymentVersion, Guid Unlinked, long UnlinkedVersion, Guid FreeUser,
-        Hire To, Guid Former, Guid Contract, long ContractVersion, long ProbationVersion, Guid BankAccount, Guid Registration, long RegistrationVersion);
+        Hire To, Guid Former, Guid Contract, long ContractVersion, long ProbationVersion, Guid BankAccount, Guid Registration, long RegistrationVersion,
+        Guid Punching, Guid Location, string QrCode, string Badge);
 
     /// <summary>Where the probe hires (slice S1.20b): an org unit of a company and that company's branch.</summary>
     private sealed record Hire(Guid Company, Guid OrgUnit, Guid Branch);
@@ -42,7 +43,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Punching, a.Location }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
@@ -174,6 +175,17 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "PUT /api/hrm/statutory-registrations/{id:guid}" => ($"/api/hrm/statutory-registrations/{m.Registration}", Json(new { registrationNo = "PROBE-1", rowVersion = m.RegistrationVersion })),
             "DELETE /api/hrm/statutory-registrations/{id:guid}" => ($"/api/hrm/statutory-registrations/{m.Registration}?rowVersion={m.RegistrationVersion}", null),
             "GET /api/hrm/statutory-registrations/{id:guid}/reveal" => ($"/api/hrm/statutory-registrations/{m.Registration}/reveal", null),
+
+            // S1.27a: punches of the token user's own employment, a kiosk punch for a mapped badge, a QR scan of A's location, A's QR code, the events batch of A's employment.
+            "POST /api/hrm/attendance/events" => ("/api/hrm/attendance/events", Json(new
+            {
+                events = new[] { new { employmentId = m.Employment, eventAt = DateTimeOffset.UtcNow.AddHours(-1), direction = "in", source = "hr_entry", idempotencyKey = "probe-" + Guid.NewGuid().ToString("N") } },
+            })),
+            "POST /api/hrm/attendance/punch" => ("/api/hrm/attendance/punch", Json(new { direction = "in", idempotencyKey = "probe-" + m.Punching, companyId = m.Org.Company })),
+            "POST /api/hrm/attendance/qr-punch" => ("/api/hrm/attendance/qr-punch", Json(new { code = m.QrCode, direction = "in", idempotencyKey = "probe-qr-" + m.Punching })),
+            "POST /api/hrm/attendance/kiosk/punch" => ("/api/hrm/attendance/kiosk/punch", Json(new { companyId = m.Org.Company, badgeNo = m.Badge, direction = "in", idempotencyKey = "probe-kiosk-" + m.Punching })),
+            "GET /api/hrm/attendance/my-day" => ("/api/hrm/attendance/my-day", null),
+            "GET /api/hrm/attendance/qr-code" => ($"/api/hrm/attendance/qr-code?companyId={m.Org.Company}&locationId={m.Location}", null),
             var key => throw new InvalidOperationException($"No probe target for HR endpoint {key}; extend HrmProbe."),
         };
     }
@@ -341,12 +353,56 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         }
 
         var registration = await PostAsync(host, token, $"/api/hrm/employments/{employment}/statutory-registrations", new { scheme = "eobi", isApplicable = true, registrationNo = "EOBI-" + cnic[..7], validFrom = "2024-01-01" }, ct);
+        // S1.27a: a third employment linked to the probe's own token user (web and QR punches), a badge number mapped for all devices (kiosk), A's location and its QR code.
+        var punching = (await PostAsync(host, token, "/api/hrm/employments", HireBody(org, "Punching"), ct)).GetProperty("employment");
+        var badge = "PB" + Guid.NewGuid().ToString("N")[..8];
+        Guid location;
+        await using (var c = await fx.OpenAdminAsync(code, ct))
+        {
+            // The token's own user cannot be linked through the API (a user cannot link themselves, FR-HRM-EMP-17), so the link is written directly.
+            await using (var unlink = new NpgsqlCommand("update hrm.employments set user_ref = null where user_ref = $1", c))
+            {
+                unlink.Parameters.Add(new NpgsqlParameter { Value = BaselineSeed.SystemUserId }); // the material is made again for every endpoint
+                await unlink.ExecuteNonQueryAsync(ct);
+            }
+
+            await using (var link = new NpgsqlCommand("update hrm.employments set user_ref = $1, row_version = row_version + 1 where id = $2", c))
+            {
+                link.Parameters.Add(new NpgsqlParameter { Value = BaselineSeed.SystemUserId });
+                link.Parameters.Add(new NpgsqlParameter { Value = punching.GetProperty("id").GetGuid() });
+                await link.ExecuteNonQueryAsync(ct);
+            }
+
+            await using (var command = new NpgsqlCommand("""
+                insert into hrm.device_user_maps (id, company_id, device_id, device_user_no, employment_id, valid_from, created_at, created_by, updated_at, updated_by)
+                values ($1, $2, null, $3, $4, '2024-01-01', now(), $5, now(), $5)
+                """, c))
+            {
+                command.Parameters.Add(new NpgsqlParameter { Value = Guid.CreateVersion7() });
+                command.Parameters.Add(new NpgsqlParameter { Value = org.Company });
+                command.Parameters.Add(new NpgsqlParameter { Value = badge });
+                command.Parameters.Add(new NpgsqlParameter { Value = punching.GetProperty("id").GetGuid() });
+                command.Parameters.Add(new NpgsqlParameter { Value = BaselineSeed.SystemUserId });
+                await command.ExecuteNonQueryAsync(ct);
+            }
+
+        }
+
+        var seededLocation = await fx.RowAsync(code, IsolationFixture.Table("org.locations"), ct); // the fixture's own location, of the same company as the org unit
+        location = (Guid)seededLocation["id"]!;
+        if ((Guid)seededLocation["company_id"]! != org.Company)
+        {
+            throw new InvalidOperationException("HR probe material: the seeded location and org unit belong to different companies.");
+        }
+
+        var shown = await GetAsync(host, token, $"/api/hrm/attendance/qr-code?companyId={org.Company}&locationId={location}", ct);
         return new Material(person, created.GetProperty("rowVersion").GetInt64(), into, identifier.Id, identifier.Version, contact.Id, contact.Version,
             address.Id, address.Version, relation.Id, relation.Version, qualification.Id, qualification.Version,
             match.GetProperty("id").GetGuid(), match.GetProperty("rowVersion").GetInt64(), created.GetProperty("personNo").GetString()!,
             org, employment, linkedVersion, second.GetProperty("id").GetGuid(), second.GetProperty("rowVersion").GetInt64(), freeUser,
             to, former, contract.GetProperty("id").GetGuid(), contract.GetProperty("rowVersion").GetInt64(), probation.GetProperty("rowVersion").GetInt64(),
-            account, registration.GetProperty("id").GetGuid(), registration.GetProperty("rowVersion").GetInt64());
+            account, registration.GetProperty("id").GetGuid(), registration.GetProperty("rowVersion").GetInt64(),
+            punching.GetProperty("id").GetGuid(), location, shown.GetProperty("code").GetString()!, badge);
     }
 
     private async Task<JsonElement> PostAsync(string host, string token, string path, object body, CancellationToken ct)

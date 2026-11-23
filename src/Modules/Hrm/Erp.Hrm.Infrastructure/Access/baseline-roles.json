@@ -47,7 +47,8 @@
         "hrm.learning_records.read",
         "hrm.leave_types.read",
         "hrm.shifts.read",
-        "aud.history.view"
+        "aud.history.view",
+        "hrm.attendance.punch"
       ],
       "scopes": {
         "*": "own",
@@ -202,7 +203,10 @@
         "hrm.employment_statutory_registrations.delete",
         "hrm.employment_statutory_registrations.reveal",
         "wf.workflow_tasks.read",
-        "wf.workflow_tasks.update"
+        "wf.workflow_tasks.update",
+        "hrm.attendance_events.create",
+        "hrm.attendance.kiosk",
+        "hrm.attendance.qr_display"
       ],
       "scopes": {
         "*": "all",
