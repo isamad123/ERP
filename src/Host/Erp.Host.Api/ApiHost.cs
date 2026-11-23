@@ -16,6 +16,7 @@ using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Api.ControlPlane.Tenancy;
 using Erp.Kernel.Api.Access;
 using Erp.Kernel.Api.Metadata;
+using Erp.Kernel.Api.Setup;
 using Erp.Kernel.Api.Org;
 using Erp.Kernel.Application.Org;
 using Erp.Kernel.Infrastructure.Org;
@@ -168,6 +169,8 @@ public static class ApiHost
         services.AddScoped<Erp.Kernel.Contracts.Metadata.IOptionListAdministration, Erp.Kernel.Infrastructure.Metadata.OptionListAdministration>();
         services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldAdministration, Erp.Kernel.Infrastructure.Metadata.CustomFieldAdministration>();
         services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldValidator, Erp.Kernel.Infrastructure.Metadata.CustomFieldValidator>();
+        // First-run wizard and readiness checklist (S1.18a): the manifests of the installed modules, the kernel's checks and go-live.
+        Erp.Kernel.Infrastructure.Setup.SetupRegistration.AddSetupReadiness(services);
         // Limits (S1.09b, ruling Q7): one guard; the kernel counts named users, concurrent users and companies.
         services.AddSingleton<ILimitCounter, NamedUserCounter>();
         services.AddSingleton<ILimitCounter, ConcurrentUserCounter>();
@@ -248,6 +251,7 @@ public static class ApiHost
         api.MapSessionContextEndpoints();
         api.MapViewEndpoints();
         api.MapMetadataEndpoints();
+        api.MapSetupEndpoints();
         api.MapWorkflowEndpoints();
         api.MapJobEndpoints();
         api.MapNotificationEndpoints();

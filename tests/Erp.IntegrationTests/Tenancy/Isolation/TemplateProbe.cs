@@ -103,6 +103,7 @@ public sealed class TemplateProbe(IsolationFixture fx, WebApplication app)
             "POST /api/doc/templates/preview" => new Plan("/api/doc/templates/preview", () => Json(new { body = "<p>Probe</p>", outputFormat = "html", language = "en", entityType = "-" }), HttpStatusCode.OK, HttpStatusCode.OK),
             "POST /api/doc/templates/generate" => new Plan("/api/doc/templates/generate", () => Json(new { templateId = m.Active, ownerId = Guid.NewGuid() }), HttpStatusCode.NotFound, HttpStatusCode.BadRequest), // A resolves its own template, then finds no data provider for the probe's record type
             "GET /api/doc/templates/generated" => new Plan("/api/doc/templates/generated?ownerType=wf.workflow_tasks&ownerId=" + m.Admin, () => null, HttpStatusCode.OK, HttpStatusCode.OK),
+            "GET /api/doc/templates/entity-fields" => new Plan("/api/doc/templates/entity-fields", () => null, HttpStatusCode.OK, HttpStatusCode.OK),
             "GET /api/doc/templates/{id:guid}/versions" => new Plan($"/api/doc/templates/{m.Active}/versions", () => null, HttpStatusCode.NotFound, HttpStatusCode.OK),
             "POST /api/doc/templates/{id:guid}/versions" => new Plan($"/api/doc/templates/{m.Active}/versions", () => Json(new { body = "<p>Probe two</p>" }), HttpStatusCode.NotFound, HttpStatusCode.Created),
             "POST /api/doc/templates/{id:guid}/retire" => new Plan($"/api/doc/templates/{m.Active}/retire", () => Json(new { rowVersion = m.ActiveRow }), HttpStatusCode.NotFound, HttpStatusCode.OK),

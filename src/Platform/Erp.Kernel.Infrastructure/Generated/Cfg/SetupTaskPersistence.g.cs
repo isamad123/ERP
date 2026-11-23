@@ -23,6 +23,7 @@ internal sealed class SetupTaskConfiguration : IEntityTypeConfiguration<global::
         builder.Property(e => e.IsRequired).HasColumnName("is_required").HasColumnType("boolean");
         builder.Property(e => e.CompletedBy).HasColumnName("completed_by").HasColumnType("uuid");
         builder.Property(e => e.CompletedAt).HasColumnName("completed_at").HasColumnType("timestamptz");
+        builder.Property(e => e.Note).HasColumnName("note").HasColumnType("text");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");

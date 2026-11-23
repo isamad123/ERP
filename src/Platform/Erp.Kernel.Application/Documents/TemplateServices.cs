@@ -30,6 +30,9 @@ public interface ITemplateService
     Task<GeneratedDocumentInfo> GenerateAsync(GenerateRequest request, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<GeneratedDocumentInfo>> GeneratedAsync(string ownerType, Guid ownerId, CancellationToken cancellationToken);
+
+    /// <summary>The record types modules make printable and the fields each offers a template (the placeholder list of the editor, S1.15d). Names and classes only, never values.</summary>
+    Task<IReadOnlyList<TemplateEntityFields>> EntityFieldsAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>Prints HTML to PDF with the server's headless Chromium (ruling Q17).</summary>

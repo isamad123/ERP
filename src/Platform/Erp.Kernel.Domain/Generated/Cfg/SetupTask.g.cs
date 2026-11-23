@@ -33,6 +33,9 @@ public sealed partial class SetupTask : global::Erp.BuildingBlocks.Domain.Entiti
     /// <summary>completed_at</summary>
     public global::System.DateTimeOffset? CompletedAt { get; set; }
 
+    /// <summary>note: S1.18a (CR-074): why a step was skipped or why go-live was overridden (a reason is required for an override)</summary>
+    public string? Note { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 
