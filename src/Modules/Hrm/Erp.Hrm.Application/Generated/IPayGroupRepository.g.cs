@@ -53,7 +53,7 @@ public static class PayGroupAccess
         new("cut_off_day", "CutOffDay", null),
         new("payment_day", "PaymentDay", null),
         new("company_bank_account_id", "CompanyBankAccountId", null),
-        new("approval_threshold", "ApprovalThreshold", null),
+        new("approval_threshold", "ApprovalThreshold", "salary"),
         new("is_active", "IsActive", null),
         new("is_deleted", "IsDeleted", null),
         new("deleted_at", "DeletedAt", null),
