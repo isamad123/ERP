@@ -59,8 +59,13 @@ internal sealed record BankOp
     public int Priority { get; init; }
 }
 
-/// <summary>The payload of a held change of payment accounts (kind <c>hrm.employee_bank_accounts.change</c>).</summary>
-internal sealed record BankPlan(Guid EmploymentId, Guid CompanyId, IReadOnlyList<BankOp> Ops);
+/// <summary>
+/// The payload of a held change of payment accounts (kind <c>hrm.employee_bank_accounts.change</c>). <see cref="Matched"/> are the other
+/// persons who had the same account when the change was asked and <see cref="Answer"/> the requester's answer to that warning
+/// (<c>review</c> or <c>distinct</c>): the approver is shown both, the cases are written when the change is approved (review S1.20d
+/// findings 1 and 7), and a person who got the same account after the request voids it.
+/// </summary>
+internal sealed record BankPlan(Guid EmploymentId, Guid CompanyId, IReadOnlyList<BankOp> Ops, IReadOnlyList<Guid>? Matched = null, string? Answer = null);
 
 /// <summary>
 /// The rules of payment accounts shared by the service and the approval of held changes: the result of a set of changes on an
@@ -78,6 +83,7 @@ internal static class BankAccountPlanner
     public const string InUse = "errors.hrm.bank_account.in_use";
     public const string BankUnknown = "errors.hrm.bank_account.bank_unknown";
     public const string SplitRule = "errors.hrm.bank_account.split_rule";
+    public const string DuplicateSince = "errors.hrm.bank_account.duplicate_since";
 
     /// <summary>The form an account number is indexed in: letters and digits in upper case, after the bank, so the same account is found however it was typed.</summary>
     public static byte[] NumberIndex(IFieldEncryptor enc, Guid? bankId, string normalized) =>
@@ -205,6 +211,36 @@ internal static class BankAccountPlanner
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);
             }
 
+            // Rows whose priority changes in place are first parked on priorities no row of the employment uses, so two accounts can
+            // swap priorities in one change (the exclusion constraint is checked row by row; review S1.20d finding 5).
+            var moving = changed.Distinct().Where(r => db.Entry(r).Property(x => x.Priority).IsModified).ToList();
+            if (moving.Count > 1)
+            {
+                var final = moving.ToDictionary(r => r.Id, r => r.Priority);
+                var used = tracked.Select(r => r.Priority).Concat(added.Select(r => r.Priority)).ToHashSet();
+                foreach (var r in moving)
+                {
+                    used.Add(db.Entry(r).Property(x => x.Priority).OriginalValue);
+                }
+
+                var free = Enumerable.Range(1, 99).Where(p => !used.Contains(p)).ToList();
+                if (free.Count < moving.Count)
+                {
+                    return PaySplit.PriorityTaken;
+                }
+
+                foreach (var (row, i) in moving.Select((r, i) => (r, i)))
+                {
+                    row.Priority = free[i];
+                }
+
+                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                foreach (var row in moving)
+                {
+                    row.Priority = final[row.Id];
+                }
+            }
+
             foreach (var row in changed.Distinct())
             {
                 EmploymentApplier.Bump(row, now, by);
@@ -245,6 +281,92 @@ internal static class BankAccountPlanner
         "ck_employee_bank_accounts_split" => SplitRule,
         _ => "errors.data.rule_violated",
     };
+
+    /// <summary>The blind indexes (account number with its bank, IBAN) the ops give an account that it did not have before.</summary>
+    public static List<byte[]> NewIndexes(IReadOnlyList<EmployeeBankAccount> current, IReadOnlyList<BankOp> ops)
+    {
+        var indexes = new List<byte[]>();
+        foreach (var op in ops.Where(o => o.Action is "add" or "change"))
+        {
+            var row = current.FirstOrDefault(r => r.Id == op.Id);
+            if (op.AccountNumberHmac is { } n && (row?.AccountNumberHmac is null || !row.AccountNumberHmac.AsSpan().SequenceEqual(n)))
+            {
+                indexes.Add(n);
+            }
+
+            if (op.IbanHmac is { } b && (row?.IbanHmac is null || !row.IbanHmac.AsSpan().SequenceEqual(b)))
+            {
+                indexes.Add(b);
+            }
+        }
+
+        return indexes;
+    }
+
+    /// <summary>
+    /// Transaction locks on the blind indexes, in a fixed order, so two writes or approvals giving the same account to different persons
+    /// run one after the other and the second sees the first (review S1.20d findings 1 and 8). Also used for registration numbers.
+    /// </summary>
+    public static async Task LockIndexesAsync(DbContext db, IEnumerable<byte[]> indexes, CancellationToken ct)
+    {
+        foreach (var key in indexes.Select(i => BitConverter.ToInt64(i, 0)).Distinct().Order())
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync($"select pg_advisory_xact_lock({key})", ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>The other persons with an account (any date, any employment) carrying one of the blind indexes.</summary>
+    public static async Task<List<Guid>> OtherPersonsAsync(HrmDbContext db, Guid personId, IReadOnlyList<byte[]> indexes, CancellationToken ct)
+    {
+        var persons = new HashSet<Guid>();
+        foreach (var index in indexes)
+        {
+            persons.UnionWith(await (from a in db.Set<EmployeeBankAccount>().AsNoTracking()
+                                     join e in db.Set<Employment>().AsNoTracking() on a.EmploymentId equals e.Id
+                                     where (a.AccountNumberHmac == index || a.IbanHmac == index) && e.PersonId != personId
+                                     select e.PersonId).Distinct().ToListAsync(ct).ConfigureAwait(false));
+        }
+
+        return [.. persons.Order()];
+    }
+
+    /// <summary>
+    /// The review cases of an answered warning (match kind <c>bank_account</c>): open for review, or decided as different people by
+    /// <paramref name="decidedBy"/> (the approver of a held change; the requester only when no approval is configured). Existing pairs are kept.
+    /// </summary>
+    public static async Task<List<PersonDuplicateCase>> CasesAsync(HrmDbContext db, Guid personId, IReadOnlyList<Guid> others, string? answer, Guid decidedBy, DateTimeOffset now, CancellationToken ct)
+    {
+        var cases = new List<PersonDuplicateCase>();
+        if (others.Count == 0)
+        {
+            return cases;
+        }
+
+        var existing = await db.Set<PersonDuplicateCase>().AsNoTracking()
+            .Where(c => c.PersonId == personId && others.Contains(c.OtherPersonId) && c.MatchKind == "bank_account").Select(c => c.OtherPersonId).ToListAsync(ct).ConfigureAwait(false);
+        foreach (var other in others.Where(o => !existing.Contains(o)))
+        {
+            var distinct = answer == "distinct";
+            cases.Add(new PersonDuplicateCase
+            {
+                Id = Guid.CreateVersion7(now),
+                PersonId = personId,
+                OtherPersonId = other,
+                MatchKind = "bank_account",
+                Source = "create",
+                Status = distinct ? "distinct" : "open",
+                DecidedBy = distinct ? decidedBy : null,
+                DecidedAt = distinct ? now : null,
+                CreatedAt = now,
+                CreatedBy = decidedBy,
+                UpdatedAt = now,
+                UpdatedBy = decidedBy,
+                RowVersion = 1,
+            });
+        }
+
+        return cases;
+    }
 
     private static EmployeeBankAccount NewRow(BankOp op, Guid id, DateOnly from, DateOnly? to, Guid companyId, Guid employmentId, DateTimeOffset now, Guid by = default)
     {

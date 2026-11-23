@@ -53,6 +53,8 @@ internal sealed class EmployeeBankAccountService(
     public const string EffectiveFrom = "errors.hrm.bank_account.effective_from";
     public const string RevealMasked = "errors.hrm.bank_account.reveal_masked";
     public const string PossibleDuplicates = "errors.hrm.bank_account.possible_duplicates";
+    public const string DatesOnChange = "errors.hrm.bank_account.dates_on_change";
+    public const string Unreadable = "errors.hrm.bank_account.unreadable";
 
     public const int MaxChanges = 10;
     private const int TitleLength = 200;
@@ -193,8 +195,17 @@ internal sealed class EmployeeBankAccountService(
 
         var enc = await keys.GetAsync(cancellationToken).ConfigureAwait(false);
         string? Plain(byte[]? value, string purpose) => value is null ? null : Encoding.UTF8.GetString(enc.Decrypt(value, purpose));
-        var number = Plain(row.AccountNumber, BankAccountPlanner.NumberPurpose);
-        var iban = Plain(row.Iban, BankAccountPlanner.IbanPurpose);
+        string? number, iban;
+        try
+        {
+            number = Plain(row.AccountNumber, BankAccountPlanner.NumberPurpose);
+            iban = Plain(row.Iban, BankAccountPlanner.IbanPurpose);
+        }
+        catch (System.Security.Cryptography.CryptographicException)
+        {
+            return PeopleResult.Conflict(Unreadable); // not written by this service or under another key (review S1.20d finding 10)
+        }
+
         if (shown.Count > 0)
         {
             await accessLog.RecordAsync(EmployeeBankAccountAccess.Fields.Resource, row.Id, shown, "view", 1, cancellationToken).ConfigureAwait(false); // before the answer (GHR-02)
@@ -310,24 +321,37 @@ internal sealed class EmployeeBankAccountService(
                 return await RollbackAsync(tx, new PeopleResult(PeopleOutcome.Invalid, split.ErrorKey, Extensions: new Dictionary<string, object?> { ["date"] = split.Date }), cancellationToken).ConfigureAwait(false);
             }
 
-            // The same account on another person: a warning HR answers (FR-HRM-EMP-18, the "ghost employee" check).
-            var (others, warning) = await DuplicatesAsync(employment, current, ops!, request.Duplicates, cancellationToken).ConfigureAwait(false);
-            if (warning is not null)
+            // The same account on another person: a warning HR answers (FR-HRM-EMP-18, the "ghost employee" check). The blind indexes are
+            // locked first, so two writes giving one account to two persons run one after the other (review S1.20d findings 1 and 8).
+            var indexes = BankAccountPlanner.NewIndexes(current, ops!);
+            await BankAccountPlanner.LockIndexesAsync(db, indexes, cancellationToken).ConfigureAwait(false);
+            var others = await BankAccountPlanner.OtherPersonsAsync(db, employment.PersonId, indexes, cancellationToken).ConfigureAwait(false);
+            if (others.Count > 0 && request.Duplicates is null)
             {
-                return await RollbackAsync(tx, warning, cancellationToken).ConfigureAwait(false);
+                return await RollbackAsync(tx, await WarningAsync(others, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
             }
 
-            var cases = await CasesAsync(employment.PersonId, others, request.Duplicates, cancellationToken).ConfigureAwait(false);
+            var answer = others.Count > 0 ? request.Duplicates : null;
             if (approval.Value.ValueKind != JsonValueKind.False)
             {
-                // Held for a second person; the kernel refuses the requester as approver (FR-XM-32).
-                var payload = JsonSerializer.Serialize(new BankPlan(employment.Id, employment.CompanyId, ops!), JsonSerializerOptions.Web);
-                db.AddRange(cases);
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                // The change is tried against the database rules (bank, bank fields, priorities, split) and rolled back, so a request that
+                // could never be approved is refused now (review S1.20d finding 3).
+                await tx.CreateSavepointAsync("bank_trial", cancellationToken).ConfigureAwait(false);
+                var trial = await BankAccountPlanner.ApplyAsync(db, employment.CompanyId, employment.Id, current, ops!, clock.UtcNow, actor.UserId, cancellationToken).ConfigureAwait(false);
+                await tx.RollbackToSavepointAsync("bank_trial", cancellationToken).ConfigureAwait(false);
+                db.ChangeTracker.Clear();
+                if (trial is not null)
+                {
+                    return await RollbackAsync(tx, Answer(trial), cancellationToken).ConfigureAwait(false);
+                }
+
+                // Held for a second person; the kernel refuses the requester as approver (FR-XM-32). The warning and its answer travel
+                // with the change: the approver sees them, and the review cases are written only when the change is approved.
+                var payload = JsonSerializer.Serialize(new BankPlan(employment.Id, employment.CompanyId, ops!, others, answer), JsonSerializerOptions.Web);
                 var requestId = await held.SubmitAsync(new HeldChangeRequest(BankAccountPlanner.Kind, EmploymentAccess.Scope.Resource, employment.Id, payload, string.IsNullOrEmpty(reason) ? null : reason),
                     tx.GetDbTransaction(), cancellationToken).ConfigureAwait(false);
                 await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
-                return new PeopleResult(PeopleOutcome.Pending, Body: new { status = "pending", requestId, duplicateCases = CaseViews(cases) });
+                return new PeopleResult(PeopleOutcome.Pending, Body: new { status = "pending", requestId, sameAccountPersons = others.Count });
             }
 
             if (await BankAccountPlanner.ApplyAsync(db, employment.CompanyId, employment.Id, current, ops!, clock.UtcNow, actor.UserId, cancellationToken).ConfigureAwait(false) is { } refused)
@@ -335,6 +359,8 @@ internal sealed class EmployeeBankAccountService(
                 return await RollbackAsync(tx, Answer(refused), cancellationToken).ConfigureAwait(false);
             }
 
+            // No second person is configured: the requester's own answer decides the cases.
+            var cases = await BankAccountPlanner.CasesAsync(db, employment.PersonId, others, answer, actor.UserId, clock.UtcNow, cancellationToken).ConfigureAwait(false);
             db.AddRange(cases);
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -629,7 +655,13 @@ internal sealed class EmployeeBankAccountService(
                 continue;
             }
 
-            // change: from the row's first day (a correction of the row) or from a later day inside its period.
+            // change: from the row's first day (a correction of the row) or from a later day inside its period. Its dates move only
+            // through effectiveFrom and the end action (review S1.20d finding 6: never silently ignored).
+            if (input.ValidFrom is not null || input.ValidTo is not null)
+            {
+                Fail(i, input.ValidFrom is not null ? "validFrom" : "validTo", DatesOnChange);
+            }
+
             var effective = input.EffectiveFrom ?? row!.ValidFrom;
             if (effective < row!.ValidFrom || (row.ValidTo is { } end && effective >= end))
             {
@@ -681,107 +713,19 @@ internal sealed class EmployeeBankAccountService(
     private static PeopleResult NotEditable(List<string> denied) =>
         new(PeopleOutcome.Invalid, FieldShaping.NotEditable, FieldErrors: denied.Distinct(StringComparer.Ordinal).ToDictionary(f => f, _ => new[] { FieldShaping.NotEditable }, StringComparer.Ordinal));
 
-    /// <summary>
-    /// The other persons with the same account (blind index of the number with its bank, or of the IBAN) on any of their employments,
-    /// for the ops that give an account a new number or IBAN. Without an answer, the warning lists them (named only when the caller may
-    /// read them).
-    /// </summary>
-    private async Task<(List<Person> Others, PeopleResult? Warning)> DuplicatesAsync(Employment employment, List<EmployeeBankAccount> current, List<BankOp> ops, string? answer, CancellationToken ct)
+    /// <summary>The warning listing the other persons with the same account (named only when the caller may read them).</summary>
+    private async Task<PeopleResult> WarningAsync(List<Guid> others, CancellationToken ct)
     {
-        var numbers = new List<byte[]>();
-        var ibans = new List<byte[]>();
-        foreach (var op in ops.Where(o => o.Action is "add" or "change"))
-        {
-            var row = current.FirstOrDefault(r => r.Id == op.Id);
-            if (op.AccountNumberHmac is { } n && (row?.AccountNumberHmac is null || !row.AccountNumberHmac.AsSpan().SequenceEqual(n)))
-            {
-                numbers.Add(n);
-            }
-
-            if (op.IbanHmac is { } b && (row?.IbanHmac is null || !row.IbanHmac.AsSpan().SequenceEqual(b)))
-            {
-                ibans.Add(b);
-            }
-        }
-
-        if (numbers.Count == 0 && ibans.Count == 0)
-        {
-            return ([], null);
-        }
-
-        var personIds = new HashSet<Guid>();
-        foreach (var hmac in numbers)
-        {
-            personIds.UnionWith(await (from a in db.Set<EmployeeBankAccount>().AsNoTracking()
-                                       join e in db.Set<Employment>().AsNoTracking() on a.EmploymentId equals e.Id
-                                       where a.AccountNumberHmac == hmac && e.PersonId != employment.PersonId
-                                       select e.PersonId).Distinct().ToListAsync(ct).ConfigureAwait(false));
-        }
-
-        foreach (var hmac in ibans)
-        {
-            personIds.UnionWith(await (from a in db.Set<EmployeeBankAccount>().AsNoTracking()
-                                       join e in db.Set<Employment>().AsNoTracking() on a.EmploymentId equals e.Id
-                                       where a.IbanHmac == hmac && e.PersonId != employment.PersonId
-                                       select e.PersonId).Distinct().ToListAsync(ct).ConfigureAwait(false));
-        }
-
-        if (personIds.Count == 0)
-        {
-            return ([], null);
-        }
-
-        var others = await db.Set<Person>().AsNoTracking().Where(p => personIds.Contains(p.Id)).OrderBy(p => p.PersonNo).ToListAsync(ct).ConfigureAwait(false);
-        if (answer is not null)
-        {
-            return (others, null);
-        }
-
+        var persons = await db.Set<Person>().AsNoTracking().Where(p => others.Contains(p.Id)).OrderBy(p => p.PersonNo).ToListAsync(ct).ConfigureAwait(false);
         var matches = new List<AccountMatch>();
-        foreach (var other in others)
+        foreach (var other in persons)
         {
             matches.Add(await scope.AllowsAsync(other, PersonAccess.Scope, "read", Source, ct).ConfigureAwait(false)
                 ? new AccountMatch("bank_account", true, other.Id, other.PersonNo, PersonService.DisplayName(other))
                 : new AccountMatch("bank_account", false, null, null, null));
         }
 
-        return (others, PeopleResult.Conflict(PossibleDuplicates, new Dictionary<string, object?> { ["matches"] = matches }));
-    }
-
-    /// <summary>The review cases of an answered warning: open for review, or decided as different people at once (existing pairs are kept).</summary>
-    private async Task<List<PersonDuplicateCase>> CasesAsync(Guid personId, List<Person> others, string? answer, CancellationToken ct)
-    {
-        var cases = new List<PersonDuplicateCase>();
-        if (others.Count == 0)
-        {
-            return cases;
-        }
-
-        var ids = others.Select(o => o.Id).ToList();
-        var existing = await db.Set<PersonDuplicateCase>().AsNoTracking()
-            .Where(c => c.PersonId == personId && ids.Contains(c.OtherPersonId) && c.MatchKind == "bank_account").Select(c => c.OtherPersonId).ToListAsync(ct).ConfigureAwait(false);
-        var now = clock.UtcNow;
-        foreach (var other in others.Where(o => !existing.Contains(o.Id)))
-        {
-            cases.Add(new PersonDuplicateCase
-            {
-                Id = Guid.CreateVersion7(now),
-                PersonId = personId,
-                OtherPersonId = other.Id,
-                MatchKind = "bank_account",
-                Source = "create",
-                Status = answer == "distinct" ? "distinct" : "open",
-                DecidedBy = answer == "distinct" ? actor.UserId : null,
-                DecidedAt = answer == "distinct" ? now : null,
-                CreatedAt = now,
-                CreatedBy = actor.UserId,
-                UpdatedAt = now,
-                UpdatedBy = actor.UserId,
-                RowVersion = 1,
-            });
-        }
-
-        return cases;
+        return PeopleResult.Conflict(PossibleDuplicates, new Dictionary<string, object?> { ["matches"] = matches });
     }
 
     private static List<object> CaseViews(List<PersonDuplicateCase> cases) => cases.Select(c => (object)new { id = c.Id, matchKind = c.MatchKind, status = c.Status }).ToList();

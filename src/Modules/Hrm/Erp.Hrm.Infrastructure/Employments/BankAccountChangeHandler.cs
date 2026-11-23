@@ -97,14 +97,41 @@ internal sealed class BankAccountChangeHandler(IServiceProvider services, IDataS
             return new HeldChangeProblem(split.ErrorKey);
         }
 
-        if (!apply)
+        // The ghost-employee check again, under the blind-index locks: a person who got the same account after the request (for
+        // example through another request approved first) voids it; the requester must ask again and answer the warning (review S1.20d
+        // finding 1).
+        var indexes = BankAccountPlanner.NewIndexes(tracked, plan.Ops);
+        if (apply)
         {
-            return null;
+            await BankAccountPlanner.LockIndexesAsync(db, indexes, cancellationToken).ConfigureAwait(false);
         }
 
-        return await BankAccountPlanner.ApplyAsync(db, plan.CompanyId, plan.EmploymentId, tracked, plan.Ops, clock.UtcNow, actor.UserId, cancellationToken).ConfigureAwait(false) is { } refused
-            ? new HeldChangeProblem(refused)
-            : null;
+        var others = await BankAccountPlanner.OtherPersonsAsync(db, employment.PersonId, indexes, cancellationToken).ConfigureAwait(false);
+        if (others.Except(plan.Matched ?? []).Any())
+        {
+            return new HeldChangeProblem(BankAccountPlanner.DuplicateSince);
+        }
+
+        var now = clock.UtcNow;
+        if (!apply)
+        {
+            // The inbox's dry run: the full apply against the database rules, undone at once (review S1.20d finding 3).
+            await transaction.SaveAsync("bank_check", cancellationToken).ConfigureAwait(false);
+            var trial = await BankAccountPlanner.ApplyAsync(db, plan.CompanyId, plan.EmploymentId, tracked, plan.Ops, now, actor.UserId, cancellationToken).ConfigureAwait(false);
+            await transaction.RollbackAsync("bank_check", cancellationToken).ConfigureAwait(false);
+            return trial is null ? null : new HeldChangeProblem(trial);
+        }
+
+        if (await BankAccountPlanner.ApplyAsync(db, plan.CompanyId, plan.EmploymentId, tracked, plan.Ops, now, actor.UserId, cancellationToken).ConfigureAwait(false) is { } refused)
+        {
+            return new HeldChangeProblem(refused);
+        }
+
+        // The review cases of the warning, now that the account exists; "different people" is the approver's decision (review S1.20d
+        // findings 1 and 7).
+        db.AddRange(await BankAccountPlanner.CasesAsync(db, employment.PersonId, others, plan.Answer, actor.UserId, now, cancellationToken).ConfigureAwait(false));
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return null;
     }
 
     public async Task<HeldChangeDescription> DescribeAsync(HeldChange change, DbTransaction transaction, CancellationToken cancellationToken)
@@ -134,9 +161,18 @@ internal sealed class BankAccountChangeHandler(IServiceProvider services, IDataS
                 "remove" => "changes.operation.delete",
                 _ => "changes.operation.update",
             }));
-            details.Add(new HeldChangeDetail("changes.detail.bankAccount", "text", Text: op.Action is "add" or "change"
-                ? $"{op.Priority} · {op.PaymentMode} · {PaySplit.Describe(op.SplitKind!, op.SplitValue)}"
-                : op.Priority.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            details.Add(new HeldChangeDetail("hrm.bank_account.detail.priority", "text", Text: op.Priority.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            if (op.Action is "add" or "change")
+            {
+                // Codes as keys of the HR texts, so the approver reads words in their language (review S1.20d finding 9).
+                details.Add(new HeldChangeDetail("hrm.bank_account.detail.payment_mode", "key", Text: "hrm.bank_account.mode." + op.PaymentMode));
+                details.Add(new HeldChangeDetail("hrm.bank_account.detail.split", "key", Text: "hrm.bank_account.split." + op.SplitKind));
+                if (op.SplitValue is { } value)
+                {
+                    details.Add(new HeldChangeDetail("hrm.bank_account.detail.split_value", "text", Text: value.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)));
+                }
+            }
+
             if (op.AccountTitle is not null)
             {
                 details.Add(new HeldChangeDetail("changes.detail.accountTitle", "text", Text: op.AccountTitle));
@@ -144,7 +180,7 @@ internal sealed class BankAccountChangeHandler(IServiceProvider services, IDataS
 
             if (op.AccountNumberLast4 is not null)
             {
-                details.Add(new HeldChangeDetail("changes.detail.accountNumber", "text", Text: op.AccountNumberLast4));
+                details.Add(new HeldChangeDetail("changes.detail.accountNumber", "text", Text: "****" + op.AccountNumberLast4));
             }
 
             if (op.IbanLast4 is not null)
@@ -161,6 +197,25 @@ internal sealed class BankAccountChangeHandler(IServiceProvider services, IDataS
             {
                 details.Add(new HeldChangeDetail(op.Action == "end" ? "changes.detail.endDate" : "changes.detail.to", "date", Date: to));
             }
+        }
+
+        // The ghost-employee warning the requester answered: the other person (named only when the approver may read them) and the
+        // answer, so the approver decides knowing it (review S1.20d finding 1).
+        if (plan.Matched is { Count: > 0 } matched)
+        {
+            var source = new DbContextScopeSource(db);
+            foreach (var other in await db.Set<Person>().AsNoTracking().Where(p => matched.Contains(p.Id)).OrderBy(p => p.PersonNo).ToListAsync(cancellationToken).ConfigureAwait(false))
+            {
+                details.Add(await scope.AllowsAsync(other, PersonAccess.Scope, "read", source, cancellationToken).ConfigureAwait(false)
+                    ? new HeldChangeDetail("hrm.bank_account.detail.same_account", "names", Names: new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        ["en"] = $"{other.PersonNo} {PersonService.DisplayName(other)}",
+                        ["ur"] = $"{other.PersonNo} {other.NameLocal ?? PersonService.DisplayName(other)}",
+                    })
+                    : new HeldChangeDetail("hrm.bank_account.detail.same_account", "key", Text: "hrm.bank_account.detail.person_not_shown"));
+            }
+
+            details.Add(new HeldChangeDetail("hrm.bank_account.detail.answer", "key", Text: "hrm.bank_account.answer." + (plan.Answer ?? "review")));
         }
 
         return new HeldChangeDescription(subject, details);

@@ -77,7 +77,7 @@ public sealed class PayDetailsTests(TenancyFixture fx) : IAsyncLifetime
         return (company, await _h.PlaceAsync(company, Ct));
     }
 
-    private async Task<Guid> HireAsync(Guid user, Guid company, (Guid OrgUnit, Guid Branch) place, Guid? person = null)
+    private async Task<Guid> HireAsync(Guid user, Guid company, (Guid OrgUnit, Guid Branch) place, Guid? person = null, Guid? manager = null)
     {
         var answer = await _h.PostAsync(user, Employments, new
         {
@@ -85,7 +85,7 @@ public sealed class PayDetailsTests(TenancyFixture fx) : IAsyncLifetime
             companyId = company,
             employeeType = "permanent",
             joiningDate = Iso(Today.AddDays(-60)),
-            assignment = new { orgUnitId = place.OrgUnit, branchId = place.Branch, title = "Officer" },
+            assignment = new { orgUnitId = place.OrgUnit, branchId = place.Branch, title = "Officer", managerEmploymentId = manager },
         }, Ct);
         Assert.True(answer.Status == HttpStatusCode.Created, answer.Body);
         return answer.Json.GetProperty("id").GetGuid();
@@ -525,5 +525,172 @@ public sealed class PayDetailsTests(TenancyFixture fx) : IAsyncLifetime
         var full = await _h.GetAsync(hr, $"/api/hrm/statutory-registrations/{id}/reveal", Ct);
         Assert.Equal(Number, full.Text("registrationNo"));
         Assert.Equal(1L, await _h.ScalarAsync<long>("select count(*) from aud.access_log where entity_id = $1 and actor_user_id = $2 and fields = '{registration_no}'", Ct, id, hr));
+    }
+
+    // ------------------------------------------------------------------ review S1.20d findings 1, 3, 4, 5, 6, 7
+
+    [Fact]
+    public async Task FR_HRM_EMP_18_FR_XM_32_review_1_two_waiting_requests_with_one_account_cannot_both_pass_and_the_approver_sees_the_warning()
+    {
+        var maker = await _h.UserAsync(Ct, null, "hr_admin");
+        var checker = await _h.UserAsync(Ct, null, "hr_admin");
+        var (company, place) = await CompanyAsync();
+        var first = await HireAsync(maker, company, place);
+        var second = await HireAsync(maker, company, place);
+        var firstPerson = await _h.ScalarAsync<Guid>("select person_id from hrm.employments where id = $1", Ct, first);
+        var secondPerson = await _h.ScalarAsync<Guid>("select person_id from hrm.employments where id = $1", Ct, second);
+
+        // Both wait at the same time: no warning yet, nothing stored.
+        var a = await ChangeAsync(maker, first, [Add(iban: null, number: Number)]);
+        var b = await ChangeAsync(maker, second, [Add(iban: null, number: Number)]);
+        Assert.Equal(HttpStatusCode.Accepted, a.Status);
+        Assert.Equal(HttpStatusCode.Accepted, b.Status);
+        Assert.Equal(HttpStatusCode.OK, (await ApproveAsync(checker, a.Json.GetProperty("requestId").GetGuid())).Status);
+
+        // The second is checked again at approval: the account now belongs to another person, so the request is void.
+        var inbox = await _h.GetAsync(checker, "/api/iam/maker-checker-requests/pending", Ct);
+        var card = inbox.Json.GetProperty("toDecide").EnumerateArray().Single(r => r.GetProperty("id").GetGuid() == b.Json.GetProperty("requestId").GetGuid());
+        Assert.False(card.GetProperty("canApprove").GetBoolean());
+        var refused = await ApproveAsync(checker, b.Json.GetProperty("requestId").GetGuid());
+        Assert.Equal(HttpStatusCode.BadRequest, refused.Status);
+        Assert.Equal("errors.hrm.bank_account.duplicate_since", refused.Json.GetProperty("title").GetString());
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.employee_bank_accounts where employment_id = $1", Ct, second));
+
+        // Asked again, the warning appears; the maker's "different people" travels with the request and the approver sees it.
+        var warned = await ChangeAsync(maker, second, [Add(iban: null, number: Number)]);
+        Assert.Equal("errors.hrm.bank_account.possible_duplicates", warned.Json.GetProperty("title").GetString());
+        var answered = await ChangeAsync(maker, second, [Add(iban: null, number: Number)], duplicates: "distinct");
+        Assert.True(answered.Status == HttpStatusCode.Accepted, answered.Body);
+        var request = answered.Json.GetProperty("requestId").GetGuid();
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.person_duplicate_cases where person_id = $1 and match_kind = 'bank_account'", Ct, secondPerson)); // not decided by the maker
+        var seen = (await _h.GetAsync(checker, "/api/iam/maker-checker-requests/pending", Ct)).Json.GetProperty("toDecide").EnumerateArray().Single(r => r.GetProperty("id").GetGuid() == request);
+        var details = seen.GetProperty("details").EnumerateArray().ToList();
+        var same = details.Single(d => d.GetProperty("label").GetString() == "hrm.bank_account.detail.same_account");
+        Assert.StartsWith(await _h.ScalarAsync<string>("select person_no from hrm.persons where id = $1", Ct, firstPerson), same.GetProperty("names").GetProperty("en").GetString(), StringComparison.Ordinal);
+        Assert.Equal("hrm.bank_account.answer.distinct", details.Single(d => d.GetProperty("label").GetString() == "hrm.bank_account.detail.answer").GetProperty("text").GetString());
+        Assert.Equal("hrm.bank_account.mode.bank_transfer", details.Single(d => d.GetProperty("label").GetString() == "hrm.bank_account.detail.payment_mode").GetProperty("text").GetString());
+        Assert.Equal("****" + Number[^4..], details.Single(d => d.GetProperty("label").GetString() == "changes.detail.accountNumber").GetProperty("text").GetString());
+
+        // Approved: the case is decided as different people by the approver, not the maker.
+        Assert.Equal(HttpStatusCode.OK, (await ApproveAsync(checker, request)).Status);
+        Assert.Equal(checker, await _h.ScalarAsync<Guid>("select decided_by from hrm.person_duplicate_cases where person_id = $1 and other_person_id = $2 and match_kind = 'bank_account' and status = 'distinct'", Ct, secondPerson, firstPerson));
+    }
+
+    [Fact]
+    public async Task FR_HRM_EMP_18_review_7_a_rejected_request_leaves_no_review_case_and_an_approved_one_opens_it()
+    {
+        var maker = await _h.UserAsync(Ct, null, "hr_admin");
+        var checker = await _h.UserAsync(Ct, null, "hr_admin");
+        var (company, place) = await CompanyAsync();
+        var first = await HireAsync(maker, company, place);
+        var second = await HireAsync(maker, company, place);
+        var secondPerson = await _h.ScalarAsync<Guid>("select person_id from hrm.employments where id = $1", Ct, second);
+        Assert.Equal(HttpStatusCode.OK, (await ApproveAsync(checker, (await ChangeAsync(maker, first, [Add()])).Json.GetProperty("requestId").GetGuid())).Status);
+
+        var held = await ChangeAsync(maker, second, [Add()], duplicates: "review");
+        Assert.Equal(HttpStatusCode.Accepted, held.Status);
+        var rejected = await _h.PostAsync(checker, $"/api/iam/maker-checker-requests/{held.Json.GetProperty("requestId").GetGuid()}/reject", new { reason = "not this account" }, Ct);
+        Assert.Equal(HttpStatusCode.OK, rejected.Status);
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.person_duplicate_cases where person_id = $1", Ct, secondPerson));
+
+        var again = await ChangeAsync(maker, second, [Add()], duplicates: "review");
+        Assert.Equal(HttpStatusCode.OK, (await ApproveAsync(checker, again.Json.GetProperty("requestId").GetGuid())).Status);
+        Assert.Equal("open", await _h.ScalarAsync<string>("select status from hrm.person_duplicate_cases where person_id = $1 and match_kind = 'bank_account'", Ct, secondPerson));
+    }
+
+    [Fact]
+    public async Task FR_HRM_EMP_06_review_3_a_request_naming_an_unknown_bank_is_refused_before_it_is_held()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var (company, place) = await CompanyAsync();
+        var employment = await HireAsync(hr, company, place);
+        var refused = await _h.PostAsync(hr, $"{Employments}/{employment}/bank-accounts", new
+        {
+            changes = new[] { new { action = "add", paymentMode = "bank_transfer", bankId = Guid.CreateVersion7(), accountTitle = "A", iban = ValidIban, splitKind = "remainder" } },
+        }, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.Status);
+        Assert.Equal("errors.hrm.bank_account.bank_unknown", FieldError(refused, "bankId"));
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from iam.maker_checker_requests where action_type = 'hrm.employee_bank_accounts.change' and subject_id = $1", Ct, employment));
+    }
+
+    [Fact]
+    public async Task FR_HRM_EMP_06_review_5_6_two_accounts_swap_priorities_in_one_change_and_dates_on_a_change_are_refused()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var (company, place) = await CompanyAsync(approval: false);
+        var employment = await HireAsync(hr, company, place);
+        Assert.Equal(HttpStatusCode.OK, (await ChangeAsync(hr, employment, [Add(priority: 1), Add(iban: OtherIban, kind: "percent", value: 40, priority: 2)])).Status);
+        var rows = await ListAsync(hr, employment);
+        var one = rows.Single(r => r.GetProperty("priority").GetInt32() == 1);
+        var two = rows.Single(r => r.GetProperty("priority").GetInt32() == 2);
+        var swap = await ChangeAsync(hr, employment,
+        [
+            new { action = "change", id = one.GetProperty("id").GetGuid(), rowVersion = one.GetProperty("rowVersion").GetInt64(), priority = 2 },
+            new { action = "change", id = two.GetProperty("id").GetGuid(), rowVersion = two.GetProperty("rowVersion").GetInt64(), priority = 1 },
+        ]);
+        Assert.True(swap.Status == HttpStatusCode.OK, swap.Body);
+        var after = await ListAsync(hr, employment);
+        Assert.Equal("percent", after.Single(r => r.GetProperty("priority").GetInt32() == 1).GetProperty("splitKind").GetString());
+        Assert.Equal("remainder", after.Single(r => r.GetProperty("priority").GetInt32() == 2).GetProperty("splitKind").GetString());
+
+        var current = after.Single(r => r.GetProperty("priority").GetInt32() == 1);
+        var dated = await ChangeAsync(hr, employment, [new { action = "change", id = current.GetProperty("id").GetGuid(), rowVersion = current.GetProperty("rowVersion").GetInt64(), accountTitle = "X", validTo = Iso(Today.AddDays(30)) }]);
+        Assert.Equal("errors.hrm.bank_account.dates_on_change", FieldError(dated, "changes[0].validTo"));
+    }
+
+    [Fact]
+    public async Task FR_HRM_EMP_06_FR_KRN_IAM_12_review_4_approvers_outside_the_records_neither_see_nor_decide_and_own_and_team_scopes_hold()
+    {
+        var maker = await _h.UserAsync(Ct, null, "hr_admin");
+        var (company, place) = await CompanyAsync();
+        var (other, _) = await CompanyAsync();
+        var managerEmployment = await HireAsync(maker, company, place);
+        var employment = await HireAsync(maker, company, place, manager: managerEmployment);
+        var stranger = await HireAsync(maker, company, place);
+        var held = await ChangeAsync(maker, employment, [Add()]);
+        var request = held.Json.GetProperty("requestId").GetGuid();
+
+        // An approver whose bank-account scope is another company, and one who may read but not update there: neither sees nor decides.
+        string[] approve = ["hrm.employments.read", "hrm.employee_bank_accounts.read", "hrm.employee_bank_accounts.approve", "iam.maker_checker_requests.read"];
+        var elsewhere = await _h.ScopeAsync("companies", new { company_ids = new[] { other } }, Ct);
+        var outside = await UserWithAsync(approve, [("hrm.employments", "all"), ("hrm.employee_bank_accounts", elsewhere)]);
+        var pending = await _h.GetAsync(outside, "/api/iam/maker-checker-requests/pending", Ct);
+        Assert.DoesNotContain(request.ToString(), pending.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.NotFound, (await ApproveAsync(outside, request)).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await _h.PostAsync(outside, $"/api/iam/maker-checker-requests/{request}/reject", new { reason = "no" }, Ct)).Status);
+        // An approver who may read the accounts but holds no update right on them (VisibleAsync asks read and update).
+        var readOnly = await UserWithAsync(approve, [("hrm.employments", "all"), ("hrm.employee_bank_accounts", "all")]);
+        Assert.DoesNotContain(request.ToString(), (await _h.GetAsync(readOnly, "/api/iam/maker-checker-requests/pending", Ct)).Body, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.NotFound, (await ApproveAsync(readOnly, request)).Status);
+        Assert.Equal("pending", await _h.ScalarAsync<string>("select status from iam.maker_checker_requests where id = $1", Ct, request));
+
+        // A remove without the delete permission is refused.
+        var approver = await _h.UserAsync(Ct, null, "hr_admin");
+        Assert.Equal(HttpStatusCode.OK, (await ApproveAsync(approver, request)).Status);
+        var row = Assert.Single(await ListAsync(maker, employment));
+        var noDelete = await UserWithAsync(["hrm.employments.read", "hrm.employee_bank_accounts.read", "hrm.employee_bank_accounts.update"], [("hrm.employments", "all"), ("hrm.employee_bank_accounts", "all")]);
+        Assert.Equal(HttpStatusCode.Forbidden, (await ChangeAsync(noDelete, employment, [new { action = "remove", id = row.GetProperty("id").GetGuid(), rowVersion = row.GetProperty("rowVersion").GetInt64() }])).Status);
+
+        // Own scope: the employee linked to the employment sees their own accounts (masked) and nobody else's.
+        var self = await _h.UserAsync(Ct);
+        Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(maker, $"{Employments}/{employment}/user", new { userId = self, rowVersion = await _h.ScalarAsync<long>("select row_version from hrm.employments where id = $1", Ct, employment) }, Ct)).Status);
+        await _h.AssignAsync(self, await _h.RoleAsync(Ct, ["hrm.employments.read", "hrm.employee_bank_accounts.read"], [("hrm.employments", "own"), ("hrm.employee_bank_accounts", "own")]), null, _h.Today.AddDays(-1), null, Ct);
+        Assert.Equal("****" + ValidIban[^4..], Assert.Single(await ListAsync(self, employment)).GetProperty("iban").GetString());
+        Assert.Equal(HttpStatusCode.NotFound, (await _h.GetAsync(self, $"{Employments}/{stranger}/bank-accounts", Ct)).Status);
+
+        // Team scope: the line manager sees the accounts of their direct report, not of another employee.
+        var boss = await _h.UserAsync(Ct);
+        Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(maker, $"{Employments}/{managerEmployment}/user", new { userId = boss, rowVersion = await _h.ScalarAsync<long>("select row_version from hrm.employments where id = $1", Ct, managerEmployment) }, Ct)).Status);
+        await _h.AssignAsync(boss, await _h.RoleAsync(Ct, ["hrm.employments.read", "hrm.employee_bank_accounts.read"], [("hrm.employments", "direct_team"), ("hrm.employee_bank_accounts", "direct_team")]), null, _h.Today.AddDays(-1), null, Ct);
+        Assert.Single(await ListAsync(boss, employment));
+        Assert.Equal(HttpStatusCode.NotFound, (await _h.GetAsync(boss, $"{Employments}/{stranger}/bank-accounts", Ct)).Status);
+
+        // A registration readable but outside the update scope is refused.
+        var registration = await _h.PostAsync(maker, $"{Employments}/{employment}/statutory-registrations", new { scheme = "eobi", isApplicable = true }, Ct);
+        var readable = await _h.UserAsync(Ct);
+        await _h.AssignAsync(readable, await _h.RoleAsync(Ct, ["hrm.employments.read", "hrm.employment_statutory_registrations.read"],
+            [("hrm.employments", "all"), ("hrm.employment_statutory_registrations", "all")]), null, _h.Today.AddDays(-1), null, Ct);
+        await _h.AssignAsync(readable, await _h.RoleAsync(Ct, ["hrm.employment_statutory_registrations.update"], [("hrm.employment_statutory_registrations", elsewhere)]), null, _h.Today.AddDays(-1), null, Ct);
+        Assert.Equal(HttpStatusCode.Forbidden, (await _h.PutAsync(readable, $"/api/hrm/statutory-registrations/{registration.Json.GetProperty("id").GetGuid()}", new { registrationNo = "1", rowVersion = 1 }, Ct)).Status);
     }
 }

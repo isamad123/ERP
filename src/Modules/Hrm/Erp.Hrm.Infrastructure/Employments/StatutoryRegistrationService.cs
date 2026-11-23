@@ -43,6 +43,7 @@ internal sealed class StatutoryRegistrationService(
     public const string RevealMasked = "errors.hrm.registration.reveal_masked";
     public const string BeforeJoining = "errors.hrm.registration.before_joining";
     public const string EffectiveFrom = "errors.hrm.registration.effective_from";
+    public const string Unreadable = "errors.hrm.registration.unreadable";
 
     private const int SchemeLength = 40;
     private const int NumberLength = 40;
@@ -154,7 +155,15 @@ internal sealed class StatutoryRegistrationService(
         if (row.RegistrationNo is not null)
         {
             var enc = await keys.GetAsync(cancellationToken).ConfigureAwait(false);
-            number = Encoding.UTF8.GetString(enc.Decrypt(row.RegistrationNo, NumberPurpose));
+            try
+            {
+                number = Encoding.UTF8.GetString(enc.Decrypt(row.RegistrationNo, NumberPurpose));
+            }
+            catch (System.Security.Cryptography.CryptographicException)
+            {
+                return PeopleResult.Conflict(Unreadable); // review S1.20d finding 10
+            }
+
             await accessLog.RecordAsync(Catalog.Resource, row.Id, ["registration_no"], "view", 1, cancellationToken).ConfigureAwait(false); // before the answer (GHR-02)
         }
 
@@ -412,7 +421,13 @@ internal sealed class StatutoryRegistrationService(
             await db.Database.ExecuteSqlInterpolatedAsync($"select 1 from hrm.employments where id = {employment.Id} for update", ct).ConfigureAwait(false);
 
             // The same number of the scheme on another person is refused (a registration follows the person, so their own other
-            // employments may carry it: a transfer or a rehire).
+            // employments may carry it: a transfer or a rehire). The blind index is locked first, so two writes for two persons cannot
+            // both pass (review S1.20d finding 8).
+            if (subject.RegistrationNoHmac is { } locked)
+            {
+                await BankAccountPlanner.LockIndexesAsync(db, [locked], ct).ConfigureAwait(false);
+            }
+
             if (subject.RegistrationNoHmac is { } hmac
                 && await (from r in db.Set<EmploymentStatutoryRegistration>().AsNoTracking()
                           join e in db.Set<Employment>().AsNoTracking() on r.EmploymentId equals e.Id

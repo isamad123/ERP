@@ -8,30 +8,36 @@
 create or replace function hrm.tg_employee_bank_accounts_split() returns trigger
 language plpgsql as $fn$
 declare
+    emps uuid[];
     emp uuid;
     d date;
     accounts integer;
     remainders integer;
     percent numeric;
 begin
+    -- The employment of the row; on an update that moves a row, both employments (review S1.20d finding 10).
     if tg_op = 'DELETE' then
-        emp := old.employment_id;
+        emps := array[old.employment_id];
+    elsif tg_op = 'UPDATE' and old.employment_id <> new.employment_id then
+        emps := array[old.employment_id, new.employment_id];
     else
-        emp := new.employment_id;
+        emps := array[new.employment_id];
     end if;
-    for d in
-        select a.valid_from from hrm.employee_bank_accounts a where a.employment_id = emp
-        union
-        select a.valid_to from hrm.employee_bank_accounts a where a.employment_id = emp and a.valid_to is not null
-    loop
-        select count(*), count(*) filter (where a.split_kind = 'remainder'), coalesce(sum(a.split_value) filter (where a.split_kind = 'percent'), 0)
-          into accounts, remainders, percent
-          from hrm.employee_bank_accounts a
-         where a.employment_id = emp and a.valid_from <= d and (a.valid_to is null or a.valid_to > d);
-        if accounts > 0 and (remainders <> 1 or percent > 100) then
-            raise exception 'payment accounts of employment % on % have % remainder accounts and % percent', emp, d, remainders, percent
-                using errcode = '23514', constraint = 'ck_employee_bank_accounts_split';
-        end if;
+    foreach emp in array emps loop
+        for d in
+            select a.valid_from from hrm.employee_bank_accounts a where a.employment_id = emp
+            union
+            select a.valid_to from hrm.employee_bank_accounts a where a.employment_id = emp and a.valid_to is not null
+        loop
+            select count(*), count(*) filter (where a.split_kind = 'remainder'), coalesce(sum(a.split_value) filter (where a.split_kind = 'percent'), 0)
+              into accounts, remainders, percent
+              from hrm.employee_bank_accounts a
+             where a.employment_id = emp and a.valid_from <= d and (a.valid_to is null or a.valid_to > d);
+            if accounts > 0 and (remainders <> 1 or percent > 100) then
+                raise exception 'payment accounts of employment % on % have % remainder accounts and % percent', emp, d, remainders, percent
+                    using errcode = '23514', constraint = 'ck_employee_bank_accounts_split';
+            end if;
+        end loop;
     end loop;
     return null;
 end
