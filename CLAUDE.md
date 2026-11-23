@@ -221,6 +221,10 @@ add/change/end/remove, held for a second person while `hrm.bank_accounts.require
 `Erp.Hrm.Application/Employments/PayDetailsRules.cs`) and statutory registrations `StatutoryRegistrationService.cs` (registrations only, no contribution rule). Numbers are always masked in lists;
 full values only through the `/reveal` endpoints (access-logged). Tests: `tests/Erp.IntegrationTests/Employments/PayDetailsTests.cs` (each test makes its own IBAN: the duplicate account warning spans the tenant).
 
+Attendance capture (S1.27a): all punches go through `IAttendanceEventStore` (`src/Modules/Hrm/Erp.Hrm.Infrastructure/Attendance/`; the generated writes of `hrm.attendance_events` are closed). Web, QR and kiosk punches come from `AttendanceCaptureService`
+(endpoints `Erp.Hrm.Api/Attendance/AttendanceEndpoints.cs` under `/api/hrm/attendance`); the employee of a web or QR punch is the token user's own employment. Settings `hrm.att.*`; purge job `hrm.attendance_purge` (partitions ahead come from `kernel.partitions_ensure`).
+Tests: `tests/Erp.IntegrationTests/Attendance`; web `web/apps/web/src/modules/hrm/attendance-*.tsx`.
+
 Labels, option lists and custom fields (S1.15b): services `src/Platform/Erp.Kernel.Infrastructure/Metadata/` (`LabelAdministration`, `OptionListAdministration`, `CustomFieldAdministration`, `CustomFieldValidator`), endpoints `Erp.Kernel.Api/Metadata/MetadataEndpoints.cs`
 (`/api/cfg/label-overrides`, `/api/cfg/option-lists`, `/api/cfg/custom-fields`, form read `/api/kernel/custom-fields/{table}`), pure value rules `Erp.Kernel.Application/Metadata/CustomFieldRules.cs`. Every write path of a table with the `cust` trait
 must call `ICustomFieldValidator`: the generator does it for generated create and update; a hand-written write (HR person and hire services, later imports and employee screens) calls it itself after `FieldShaping.MergeCustom` and holds the result until the save is done
