@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SetupScreen from './setup';
+import { untouched } from '../../api/setup';
 import type { ModuleReadiness, ReadinessOverview, SetupStatus, SetupTask } from '../../api/setup';
 import { COMPANY, json, shell, show } from './access-test-support';
 
@@ -206,5 +207,14 @@ describe('FR-ADM-ONB-03 the readiness checklist', () => {
     open([...READ, 'cfg.setup_tasks.update'], '/setup?view=checklist');
     await screen.findByRole('table', { name: 'Core platform' });
     expect(screen.queryByRole('button', { name: 'Go live: Core platform' })).toBeNull();
+  });
+});
+
+describe('S1.18 ruling Q1 the first sign-in', () => {
+  it('counts a customer as untouched while no step that a person ticks has been touched, whatever the system found by itself', () => {
+    expect(untouched(STEPS.map((s) => ({ ...s, status: 'pending' as SetupStatus })))).toBe(true);
+    expect(untouched([task('step_company_profile', { manual: false, status: 'done' }), task('step_modules', { level: 'customer' })])).toBe(true);
+    expect(untouched([task('step_modules', { level: 'customer', status: 'skipped' }), task('step_users', { level: 'customer' })])).toBe(false);
+    expect(untouched([])).toBe(false);
   });
 });

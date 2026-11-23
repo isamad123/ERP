@@ -55,5 +55,8 @@ export const setupApi = {
 /** The wizard is "finished" when no step is waiting: every step is done or skipped. */
 export const stepsOpen = (steps: SetupTask[]) => steps.filter((s) => s.status === 'pending').length;
 
-/** Nothing has been touched yet: the first sign-in of a new customer's administrator (ruling Q1). */
-export const untouched = (steps: SetupTask[]) => steps.length > 0 && steps.every((s) => s.status === 'pending');
+/**
+ * Nothing has been touched yet: the first sign-in of a new customer's administrator (ruling Q1). Steps the system decides from data (a company profile
+ * that was filled in by hand, units that were added before the first sign-in) are not the person's doing, so only the steps a person ticks count.
+ */
+export const untouched = (steps: SetupTask[]) => steps.some((s) => s.manual) && steps.filter((s) => s.manual).every((s) => s.status === 'pending');
