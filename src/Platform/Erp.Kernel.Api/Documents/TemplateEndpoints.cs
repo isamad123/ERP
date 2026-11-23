@@ -44,6 +44,8 @@ public static class TemplateEndpoints
             })), "catalog", TemplatePermissions.GeneratedCreate);
         Tag(g.MapGet("/generated", (string? ownerType, Guid ownerId, ITemplateService s, CancellationToken ct) =>
             RunAsync(async () => Results.Ok(await s.GeneratedAsync(ownerType ?? string.Empty, ownerId, ct).ConfigureAwait(false)))), "catalog", TemplatePermissions.GeneratedRead);
+        Tag(g.MapGet("/entity-fields", (ITemplateService s, CancellationToken ct) =>
+            RunAsync(async () => Results.Ok(await s.EntityFieldsAsync(ct).ConfigureAwait(false)))), "catalog", TemplatePermissions.VersionsRead);
         Tag(g.MapGet("/{id:guid}/versions", (Guid id, ITemplateService s, CancellationToken ct) =>
             RunAsync(async () => Results.Ok(await s.VersionsAsync(id, ct).ConfigureAwait(false)))), "record_action", TemplatePermissions.VersionsRead);
         Tag(g.MapPost("/{id:guid}/versions", (Guid id, TemplateVersionEdit body, ITemplateService s, CancellationToken ct) =>

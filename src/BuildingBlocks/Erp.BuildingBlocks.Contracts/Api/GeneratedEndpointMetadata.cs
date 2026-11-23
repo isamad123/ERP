@@ -64,6 +64,13 @@ public sealed record AuditEndpointMetadata(string Kind, string Resource, string 
 public sealed record NumberingEndpointMetadata(string Kind, string Resource, string Permission);
 
 /// <summary>
+/// Marks a readiness checklist endpoint (slice S1.18a) for the tenant-isolation suite: <see cref="Kind"/> is <c>catalog</c> (the
+/// checklist of the bound customer, optionally for one company named in the query string) or <c>action</c> (a tick, skip,
+/// re-open or go-live whose body names a company).
+/// </summary>
+public sealed record SetupEndpointMetadata(string Kind, string Resource, string Permission);
+
+/// <summary>
 /// Marks a settings or feature-flag endpoint (slice S1.09a) for the tenant-isolation suite: <see cref="Kind"/> is
 /// <c>read</c> (a GET whose query string may name companies, roles or users), <c>write</c> (a change whose body or route names
 /// a company, a user group or a history row) or <c>self</c> (a change of the signed-in user's own value).

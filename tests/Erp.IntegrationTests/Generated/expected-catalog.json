@@ -3512,6 +3512,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "note",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
