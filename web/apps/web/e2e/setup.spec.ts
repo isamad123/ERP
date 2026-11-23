@@ -56,12 +56,12 @@ test('FR-ADM-ONB-03 the checklist shows what is missing with a link, and go live
   await page.getByRole('button', { name: 'Readiness checklist' }).click();
   const table = page.getByRole('table', { name: 'Core platform' });
   await expect(table.getByText('The company has no location yet.')).toBeVisible();
-  await expect(table.getByRole('link', { name: 'Fix: At least one location' })).toHaveAttribute('href', '/organization/locations');
+  await expect(table.getByRole('link', { name: 'Fix this: At least one location' })).toHaveAttribute('href', '/organization/locations');
   await expect(page.getByText('Set-up mode')).toBeVisible();
   await accessible(page, 'checklist');
   await shot(page, 'setup-checklist-en-light-1280');
 
-  await page.getByRole('button', { name: 'Take Core platform live' }).click();
+  await page.getByRole('button', { name: 'Go live: Core platform' }).click();
   const dialog = page.getByRole('dialog', { name: 'Take Core platform live' });
   await expect(dialog.getByRole('button', { name: 'Go live' })).toBeDisabled();
   await dialog.getByRole('textbox', { name: /Reason for going live/ }).fill('Pilot with the head office only');
@@ -69,7 +69,7 @@ test('FR-ADM-ONB-03 the checklist shows what is missing with a link, and go live
   await dialog.getByRole('button', { name: 'Go live' }).click();
   await expect(page.getByText('Core platform is now live for this company.')).toBeVisible();
   await expect(page.getByText(/Reason: Pilot with the head office only/)).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Take Core platform live' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Go live: Core platform' })).toHaveCount(0);
   noProblems(page);
   await admin.context.close();
 });

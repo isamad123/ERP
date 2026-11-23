@@ -89,7 +89,7 @@
   "setup.checklist.setupMode": "سیٹ اپ موڈ",
   "setup.checklist.liveOverride": "لازمی آئٹم کھلے ہونے کے باوجود چالو کیا گیا۔ وجہ: {reason}",
   "setup.checklist.goLive": "چالو کریں",
-  "setup.checklist.goLive.aria": "{name} کو چالو کریں",
+  "setup.checklist.goLive.aria": "چالو کریں: {name}",
   "setup.checklist.actions": "چالو ہونا ضروری ہے: {actions}",
   "setup.goLive.title": "{name} کو چالو کریں",
   "setup.goLive.ready": "تمام لازمی آئٹم مکمل ہیں۔ ماڈیول کو چالو کرنا آپ کے نام اور وقت کے ساتھ درج ہوتا ہے۔",

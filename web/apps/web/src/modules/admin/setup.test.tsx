@@ -139,7 +139,7 @@ describe('FR-ADM-ONB-03 the readiness checklist', () => {
     open(WRITE, '/setup?view=checklist');
     const table = await screen.findByRole('table', { name: 'Core platform' });
     expect(within(table).getByText('The company has no location yet.')).toBeTruthy();
-    expect(within(table).getByRole('link', { name: 'Fix: At least one location' }).getAttribute('href')).toBe('/organization/locations');
+    expect(within(table).getByRole('link', { name: 'Fix this: At least one location' }).getAttribute('href')).toBe('/organization/locations');
     expect(screen.getByText('1 of 2 required items done')).toBeTruthy();
     expect(screen.getByText('Set-up mode')).toBeTruthy();
   });
@@ -149,7 +149,7 @@ describe('FR-ADM-ONB-03 the readiness checklist', () => {
     serve(s);
     open(WRITE, '/setup?view=checklist');
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Take Core platform live' }));
+    await user.click(await screen.findByRole('button', { name: 'Go live: Core platform' }));
     const dialog = await screen.findByRole('dialog', { name: 'Take Core platform live' });
     expect(within(dialog).getByText(/1 required items are still open/)).toBeTruthy();
     const confirm = within(dialog).getByRole('button', { name: 'Go live' });
@@ -166,7 +166,7 @@ describe('FR-ADM-ONB-03 the readiness checklist', () => {
     serve(s);
     open(WRITE, '/setup?view=checklist');
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Take Core platform live' }));
+    await user.click(await screen.findByRole('button', { name: 'Go live: Core platform' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).queryByRole('textbox')).toBeNull();
     await user.click(within(dialog).getByRole('button', { name: 'Go live' }));
@@ -178,7 +178,7 @@ describe('FR-ADM-ONB-03 the readiness checklist', () => {
     serve(s);
     open(WRITE, '/setup?view=checklist');
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: 'Take Core platform live' }));
+    await user.click(await screen.findByRole('button', { name: 'Go live: Core platform' }));
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByRole('textbox'), 'x');
     await user.click(within(dialog).getByRole('button', { name: 'Go live' }));
@@ -190,7 +190,7 @@ describe('FR-ADM-ONB-03 the readiness checklist', () => {
     serve({ sent: [], overview: overview(STEPS, [live]) });
     open(WRITE, '/setup?view=checklist');
     expect(await screen.findByText(/Reason: Pilot only/)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Take Core platform live' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Go live: Core platform' })).toBeNull();
   });
 
   it('ticks a manual item through the readiness API without a company (a customer-level item)', async () => {
@@ -205,6 +205,6 @@ describe('FR-ADM-ONB-03 the readiness checklist', () => {
     serve({ sent: [], overview: overview(STEPS, [kernelModule(items)]) });
     open([...READ, 'cfg.setup_tasks.update'], '/setup?view=checklist');
     await screen.findByRole('table', { name: 'Core platform' });
-    expect(screen.queryByRole('button', { name: 'Take Core platform live' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Go live: Core platform' })).toBeNull();
   });
 });
