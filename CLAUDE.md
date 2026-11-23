@@ -216,6 +216,10 @@ Employments (S1.20b): HR employment services `src/Modules/Hrm/Erp.Hrm.Infrastruc
 assignments and events are closed. A later module answers the backdated change check by registering `IEmploymentChangeImpact` (Hrm.Contracts) and recalculates on
 `hrm.employee_changed` from its `earliestDate`. Rule and function entries of rules.yaml for HR schemas are written to the HR migrations; generated lists of effective-dated
 tables take `asOf`. Tests: `tests/Erp.IntegrationTests/Employments` (`EmploymentTestSupport.PlaceAsync`, `HireBody`).
+Pay details (S1.20d): payment accounts `Erp.Hrm.Infrastructure/Employments/EmployeeBankAccountService.cs` (one write endpoint `POST /api/hrm/employments/{id}/bank-accounts` with a list of
+add/change/end/remove, held for a second person while `hrm.bank_accounts.requires_approval` is on; handler `BankAccountChangeHandler`, rules `BankAccountPlanner`, pure IBAN and split rules
+`Erp.Hrm.Application/Employments/PayDetailsRules.cs`) and statutory registrations `StatutoryRegistrationService.cs` (registrations only, no contribution rule). Numbers are always masked in lists;
+full values only through the `/reveal` endpoints (access-logged). Tests: `tests/Erp.IntegrationTests/Employments/PayDetailsTests.cs` (each test makes its own IBAN: the duplicate account warning spans the tenant).
 
 Labels, option lists and custom fields (S1.15b): services `src/Platform/Erp.Kernel.Infrastructure/Metadata/` (`LabelAdministration`, `OptionListAdministration`, `CustomFieldAdministration`, `CustomFieldValidator`), endpoints `Erp.Kernel.Api/Metadata/MetadataEndpoints.cs`
 (`/api/cfg/label-overrides`, `/api/cfg/option-lists`, `/api/cfg/custom-fields`, form read `/api/kernel/custom-fields/{table}`), pure value rules `Erp.Kernel.Application/Metadata/CustomFieldRules.cs`. Every write path of a table with the `cust` trait
