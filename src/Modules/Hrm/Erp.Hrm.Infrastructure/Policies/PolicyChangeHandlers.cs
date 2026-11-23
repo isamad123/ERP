@@ -199,7 +199,7 @@ internal sealed class PolicyAssignmentChangeHandler(IServiceProvider services, I
         }
 
         var today = await TodayAsync(db, plan.CompanyId, ct).ConfigureAwait(false);
-        var (set, _, refused) = await PolicyService.SetCheckAsync(writer, type, plan.CompanyId, plan.EffectiveFrom, plan.BasedOn, plan.Assignments, today, ct).ConfigureAwait(false);
+        var (set, _, refused) = await PolicyService.SetCheckAsync(writer, type, plan.CompanyId, plan.EffectiveFrom, plan.BasedOn, plan.Assignments, today, null, ct).ConfigureAwait(false);
         if (refused is not null)
         {
             return refused;
@@ -232,6 +232,14 @@ internal sealed class PolicyAssignmentChangeHandler(IServiceProvider services, I
             new("hrm.policy.detail.effective_from", "date", Date: plan.EffectiveFrom),
             new("hrm.policy.detail.assignments", "items", Items: items),
         };
+
+        // The warning the maker saw: how many current employees the set would leave without a policy (review S1.23a finding 5).
+        var today = await TodayAsync(db, plan.CompanyId, cancellationToken).ConfigureAwait(false);
+        var (_, unmatched, _) = await PolicyService.SetCheckAsync(Writer(db), type, plan.CompanyId, plan.EffectiveFrom, plan.BasedOn, plan.Assignments, today, null, cancellationToken).ConfigureAwait(false);
+        if (unmatched is { Count: > 0 } warning)
+        {
+            details.Add(new HeldChangeDetail("hrm.policy.detail.unmatched", "text", Text: warning.Count.ToString(CultureInfo.InvariantCulture)));
+        }
         return new HeldChangeDescription(new Dictionary<string, string>(type.Name, StringComparer.Ordinal), details);
     }
 }

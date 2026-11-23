@@ -211,5 +211,8 @@
   "pol.res.col.employee": "Employee's value",
   "pol.res.col.met": "Result",
   "pol.res.met": "Met",
-  "pol.res.notMet": "Not met"
+  "pol.res.notMet": "Not met",
+  "pol.value.hidden": "hidden",
+  "pol.res.currentValues": "The job details are as on this date; the employee type and custom fields are as they are today.",
+  "pol.check.unmatched.notShown": "{count, plural, one {# of them is} other {# of them are}} outside the employees you may see."
 }

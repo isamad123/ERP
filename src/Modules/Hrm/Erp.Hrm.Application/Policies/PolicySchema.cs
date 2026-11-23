@@ -54,6 +54,44 @@ public static class PolicySchema
             throw new InvalidOperationException($"{where}: additionalProperties must be true or false.");
         }
 
+        // Keyword values are checked too, so a manifest mistake stops the host instead of failing the first check (review S1.23a finding 10).
+        foreach (var name in new[] { "minimum", "maximum" })
+        {
+            if (schema.TryGetProperty(name, out var v) && (v.ValueKind != JsonValueKind.Number || !v.TryGetDecimal(out _)))
+            {
+                throw new InvalidOperationException($"{where}: {name} must be a number.");
+            }
+        }
+
+        foreach (var name in new[] { "minLength", "maxLength", "minItems", "maxItems" })
+        {
+            if (schema.TryGetProperty(name, out var v) && (v.ValueKind != JsonValueKind.Number || !v.TryGetInt32(out var n) || n < 0))
+            {
+                throw new InvalidOperationException($"{where}: {name} must be a whole number of at least 0.");
+            }
+        }
+
+        foreach (var name in new[] { "enum", "required" })
+        {
+            if (schema.TryGetProperty(name, out var v) && (v.ValueKind != JsonValueKind.Array || v.GetArrayLength() == 0))
+            {
+                throw new InvalidOperationException($"{where}: {name} must be a list with at least one entry.");
+            }
+        }
+
+        foreach (var name in new[] { "title", "description" })
+        {
+            if (schema.TryGetProperty(name, out var v) && v.ValueKind != JsonValueKind.String)
+            {
+                throw new InvalidOperationException($"{where}: {name} must be text.");
+            }
+        }
+
+        if (schema.TryGetProperty("properties", out var declared) && declared.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidOperationException($"{where}: properties must be an object.");
+        }
+
         if (schema.TryGetProperty("properties", out var props))
         {
             foreach (var p in props.EnumerateObject())
@@ -121,10 +159,8 @@ public static class PolicySchema
                 {
                     if (props.ValueKind == JsonValueKind.Object && props.TryGetProperty(member.Name, out var sub))
                     {
-                        if (member.Value.ValueKind != JsonValueKind.Null)
-                        {
-                            Walk(sub, member.Value, Join(path, member.Name), errors);
-                        }
+                        // null is not a value of any type the subset knows: leave an optional parameter out instead (review S1.23a finding 10).
+                        Walk(sub, member.Value, Join(path, member.Name), errors);
                     }
                     else if (closed)
                     {

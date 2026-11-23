@@ -1379,6 +1379,9 @@ functions:
                   using errcode = '23514', constraint = 'ck_policy_assignments_fixed';
           end if;
           select p.policy_type into kind from hrm.policies p where p.id = new.policy_id;
+          -- The same lock as the service's set activation (PolicyWriter.LockSetAsync), so two writers of one type and company never
+          -- pass this check at the same time (review S1.23a finding 7).
+          perform pg_advisory_xact_lock(hashtextextended('hrm.policy_assignments:' || new.company_id::text || ':' || kind, 0));
           if exists (
               select 1 from hrm.policy_assignments a
                 join hrm.policies p on p.id = a.policy_id

@@ -98,5 +98,5 @@
 }
 
 .erp-pol-name {
-  font-weight: 600;
+  font-weight: var(--font-weight-strong);
 }

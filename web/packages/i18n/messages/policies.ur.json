@@ -211,5 +211,8 @@
   "pol.res.col.employee": "ملازم کی قدر",
   "pol.res.col.met": "نتیجہ",
   "pol.res.met": "پوری",
-  "pol.res.notMet": "پوری نہیں"
+  "pol.res.notMet": "پوری نہیں",
+  "pol.value.hidden": "پوشیدہ",
+  "pol.res.currentValues": "ملازمت کی تفصیلات اس تاریخ کے مطابق ہیں؛ ملازم کی قسم اور حسبِ ضرورت خانے آج کے مطابق ہیں۔",
+  "pol.check.unmatched.notShown": "{count, plural, one {ان میں سے # ملازم} other {ان میں سے # ملازمین}} آپ کو دکھائی دینے والے ملازمین سے باہر ہیں۔"
 }

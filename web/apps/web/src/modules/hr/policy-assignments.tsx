@@ -215,7 +215,8 @@ function CheckResult({ check }: { check: SetCheck }) {
           <ul className="erp-config-list" aria-label={t('pol.check.unmatched.list')}>
             {check.unmatched.items.map((u) => <li key={u.employmentId} className="erp-small"><bdi className="erp-code">{u.employeeNo}</bdi> <bdi>{u.name}</bdi> · {t(`pol.res.reason.${u.reason}` as MessageKey)}</li>)}
           </ul>
-          {check.unmatched.count > check.unmatched.items.length && <p className="erp-small">{t('pol.check.unmatched.more', { count: check.unmatched.count - check.unmatched.items.length })}</p>}
+          {check.unmatched.count - (check.unmatched.notShown ?? 0) > check.unmatched.items.length && <p className="erp-small">{t('pol.check.unmatched.more', { count: check.unmatched.count - (check.unmatched.notShown ?? 0) - check.unmatched.items.length })}</p>}
+          {(check.unmatched.notShown ?? 0) > 0 && <p className="erp-small">{t('pol.check.unmatched.notShown', { count: check.unmatched.notShown ?? 0 })}</p>}
         </Banner>
       )}
       {check.unmatched && check.unmatched.count === 0 && <p className="erp-small erp-muted">{t('pol.check.allCovered')}</p>}

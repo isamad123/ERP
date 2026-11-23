@@ -44,6 +44,7 @@
   "hrm.policy.detail.effective_from": "نفاذ کی تاریخ",
   "hrm.policy.detail.parameters": "قدریں",
   "hrm.policy.detail.type": "پالیسی کی قسم",
+  "hrm.policy.detail.unmatched": "موجودہ ملازمین جن پر کوئی اصول لاگو نہیں",
   "hrm.policy.detail.version": "ورژن",
   "hrm.policy.param.notice_period.bands": "ملازمت کی مدت کے لحاظ سے نوٹس",
   "hrm.policy.param.notice_period.days": "نوٹس (دن)",

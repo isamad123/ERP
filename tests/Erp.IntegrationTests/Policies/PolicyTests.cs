@@ -432,6 +432,16 @@ public sealed class PolicyTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.policy_assignments where policy_id = $1", Ct, policy));
         Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(otherHr, $"/api/iam/maker-checker-requests/{set.Json.GetProperty("requestId").GetGuid()}/approve", new { reason = "checked" }, Ct)).Status);
         Assert.Equal(policy, Matched(await ExplainAsync(await HireAsync(company, place), "test_leave", Today)));
+
+        // The approver sees the coverage warning the maker saw: a set for grade 7 only leaves that employee without a policy (review finding 5).
+        var g7 = await GradeAsync(company, "G7", 7);
+        var narrow = await _h.ActivateSetAsync(_hr, company, "test_leave", Today.AddDays(1), Ct, (policy, 1, [Cond("grade", "in", [g7])]));
+        Assert.True(narrow.Status == HttpStatusCode.Accepted, narrow.Body);
+        var inbox = await _h.GetAsync(otherHr, "/api/iam/maker-checker-requests/pending", Ct);
+        Assert.True(inbox.Status == HttpStatusCode.OK, inbox.Body);
+        var card = inbox.Json.GetProperty("toDecide").EnumerateArray().Single(r => r.GetProperty("id").GetGuid() == narrow.Json.GetProperty("requestId").GetGuid());
+        var warning = card.GetProperty("details").EnumerateArray().Single(d => d.GetProperty("label").GetString() == "hrm.policy.detail.unmatched");
+        Assert.Equal("1", warning.GetProperty("text").GetString());
     }
 
     [Fact]
@@ -467,6 +477,113 @@ public sealed class PolicyTests(TenancyFixture fx) : IAsyncLifetime
         // The generated writes of the three tables are closed.
         Assert.Contains((await _h.PostAsync(_hr, "/api/hrm/policy-assignments", new { companyId = company, policyId = policy, precedence = 9, rule = new { }, validFrom = Iso(Today) }, Ct)).Status,
             new[] { HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed });
+    }
+
+    // ------------------------------------------------------------------ review S1.23a findings 1, 2 and 6
+
+    [Fact]
+    public async Task FR_HRM_POL_03_FR_KRN_MET_02_the_resolution_view_keeps_to_the_field_rules_of_custom_fields()
+    {
+        var (company, place) = await CompanyAsync();
+        var admin = await _h.UserAsync(Ct, null, "tenant_admin");
+        var hiddenKey = "rel_" + Guid.NewGuid().ToString("N")[..8];
+        var maskedKey = "pin_" + Guid.NewGuid().ToString("N")[..8];
+        foreach (var key in new[] { hiddenKey, maskedKey })
+        {
+            var field = await _h.PostAsync(admin, "/api/cfg/custom-fields", new { entityType = "hrm.employments", fieldKey = key, dataType = "text", label = new { en = "Field " + key, ur = "خانہ " + key } }, Ct);
+            Assert.True(field.Status == HttpStatusCode.Created, field.Body);
+        }
+
+        var from = Today.AddYears(-1);
+        var (policy, _) = await _h.ActivePolicyAsync(_hr, company, "test_leave", new { days = 9 }, from, Ct);
+        Assert.Equal(HttpStatusCode.OK, (await _h.ActivateSetAsync(_hr, company, "test_leave", from, Ct,
+            (policy, 1, [Cond("custom", "equals", ["VALUE-HIDDEN-42"], field: hiddenKey), Cond("custom", "equals", ["SECRET-PIN-7788"], field: maskedKey)]))).Status);
+        var employee = await HireAsync(company, place, custom: new Dictionary<string, object> { [hiddenKey] = "VALUE-HIDDEN-42", [maskedKey] = "SECRET-PIN-7788" });
+
+        var reader = await _h.UserAsync(Ct);
+        var role = await _h.RoleAsync(Ct, ["hrm.policies.read", "hrm.employments.read"], [("hrm.policies", "all"), ("hrm.employments", "all")],
+            [("hrm.employments", "custom." + hiddenKey, "hidden"), ("hrm.employments", "custom." + maskedKey, "masked")]);
+        await _h.AssignAsync(reader, role, null, Today.AddDays(-1), null, Ct);
+        var answer = await _h.GetAsync(reader, $"/api/hrm/policy-resolution?employmentId={employee}&policyType=test_leave&date={Iso(Today)}", Ct);
+        Assert.True(answer.Status == HttpStatusCode.OK, answer.Body);
+        Assert.DoesNotContain("VALUE-HIDDEN-42\"", answer.Body.Replace("\"values\":[\"VALUE-HIDDEN-42\"]", string.Empty, StringComparison.Ordinal), StringComparison.Ordinal); // only the rule's own value remains
+        Assert.DoesNotContain("SECRET-PIN-7788\"", answer.Body.Replace("\"values\":[\"SECRET-PIN-7788\"]", string.Empty, StringComparison.Ordinal), StringComparison.Ordinal);
+        Assert.Equal(policy, Matched(answer.Json)); // the explanation still says the rule matched
+        var conditions = answer.Json.GetProperty("evaluations")[0].GetProperty("conditions");
+        Assert.True(conditions[0].GetProperty("hidden").GetBoolean());
+        Assert.Empty(conditions[0].GetProperty("actual").EnumerateArray());
+        Assert.True(conditions[0].GetProperty("met").GetBoolean());
+        Assert.False(conditions[1].GetProperty("hidden").GetBoolean());
+        Assert.NotEqual("SECRET-PIN-7788", conditions[1].GetProperty("actual")[0].GetString());
+        var custom = answer.Json.GetProperty("attributes").GetProperty("custom");
+        Assert.False(custom.TryGetProperty(hiddenKey, out _));
+        Assert.NotEqual("SECRET-PIN-7788", custom.GetProperty(maskedKey).GetString());
+        Assert.Equal(["employee_type", "custom"], answer.Json.GetProperty("currentValues").EnumerateArray().Select(v => v.GetString()).ToArray());
+
+        // HR administrators (no field rule) see the values.
+        Assert.Contains("SECRET-PIN-7788", (await _h.GetAsync(_hr, $"/api/hrm/policy-resolution?employmentId={employee}&policyType=test_leave", Ct)).Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FR_HRM_POL_02_FR_KRN_IAM_12_the_coverage_warning_names_only_employees_the_caller_may_read()
+    {
+        var (company, place) = await CompanyAsync();
+        var g5 = await GradeAsync(company, "G5", 5);
+        var from = Today.AddYears(-1);
+        var (policy, _) = await _h.ActivePolicyAsync(_hr, company, "test_leave", new { days = 5 }, from, Ct);
+        var uncovered = await HireAsync(company, place);
+        await HireAsync(company, place, g5, joining: Today.AddDays(40)); // joins after the date in grade 5: checked on the joining date, covered (finding 8)
+        object Body() => new
+        {
+            companyId = company, policyType = "test_leave", effectiveFrom = Iso(Today),
+            assignments = new[] { new { policyId = policy, precedence = 1, rule = new { conditions = new[] { Cond("grade", "in", [g5]) } } } },
+        };
+
+        var manager = await _h.UserAsync(Ct);
+        var role = await _h.RoleAsync(Ct, ["hrm.policies.read", "hrm.policies.manage"], [("hrm.policies", "all")]);
+        await _h.AssignAsync(manager, role, null, Today.AddDays(-1), null, Ct);
+        var limited = await _h.PostAsync(manager, $"{Sets}/check", Body(), Ct);
+        Assert.True(limited.Status == HttpStatusCode.OK, limited.Body);
+        var warning = limited.Json.GetProperty("unmatched");
+        Assert.Equal(1, warning.GetProperty("count").GetInt32());
+        Assert.Empty(warning.GetProperty("items").EnumerateArray());
+        Assert.Equal(1, warning.GetProperty("notShown").GetInt32());
+        Assert.DoesNotContain(uncovered.ToString(), limited.Body, StringComparison.OrdinalIgnoreCase);
+
+        var full = (await _h.PostAsync(_hr, $"{Sets}/check", Body(), Ct)).Json.GetProperty("unmatched");
+        Assert.Equal(uncovered, full.GetProperty("items")[0].GetProperty("employmentId").GetGuid());
+        Assert.Equal(0, full.GetProperty("notShown").GetInt32());
+    }
+
+    [Fact]
+    public async Task FR_XM_32_an_approval_checks_again_a_draft_edited_after_the_request_is_refused_and_an_approver_needs_the_approve_permission()
+    {
+        var (company, _) = await CompanyAsync();
+        var admin = await _h.UserAsync(Ct, null, "tenant_admin");
+        var second = await _h.UserAsync(Ct, null, "tenant_admin");
+        var on = await _h.PutAsync(admin, "/api/cfg/settings/hrm.policies.requires_approval", new { layer = "company", scopeId = company, value = true, reason = "test" }, Ct);
+        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(second, $"/api/iam/maker-checker-requests/{on.Json.GetProperty("requestId").GetGuid()}/approve", new { reason = "agreed" }, Ct)).Status);
+        var created = await _h.PostAsync(_hr, PolicyTestSupport.Policies, new { companyId = company, policyType = "test_leave", code = "RE" + Guid.NewGuid().ToString("N")[..6], name = new { en = "Recheck" }, parameters = new { days = 3 } }, Ct);
+        var draft = created.Json.GetProperty("versions")[0];
+        var draftId = draft.GetProperty("id").GetGuid();
+        var held = await _h.PostAsync(_hr, $"/api/hrm/policy-versions/{draftId}/activate", new { effectiveFrom = Iso(Today.AddYears(-1)), rowVersion = draft.GetProperty("rowVersion").GetInt64() }, Ct);
+        Assert.True(held.Status == HttpStatusCode.Accepted, held.Body);
+        var request = held.Json.GetProperty("requestId").GetGuid();
+
+        // An approver without hrm.policies.approve may neither approve nor reject it.
+        var noRight = await _h.UserAsync(Ct);
+        var readOnly = await _h.RoleAsync(Ct, ["hrm.policies.read", "iam.maker_checker.approve"], [("hrm.policies", "all")]);
+        await _h.AssignAsync(noRight, readOnly, null, Today.AddDays(-1), null, Ct);
+        Assert.NotEqual(HttpStatusCode.OK, (await _h.PostAsync(noRight, $"/api/iam/maker-checker-requests/{request}/approve", new { reason = "no" }, Ct)).Status);
+
+        // The draft is edited after the request: the approver would approve values they never saw, so the approval is refused.
+        var edited = await _h.PutAsync(_hr, $"/api/hrm/policy-versions/{draftId}/parameters", new { parameters = new { days = 300 }, rowVersion = draft.GetProperty("rowVersion").GetInt64() }, Ct);
+        Assert.True(edited.Status == HttpStatusCode.OK, edited.Body);
+        var otherHr = await _h.UserAsync(Ct, null, "hr_admin");
+        var refused = await _h.PostAsync(otherHr, $"/api/iam/maker-checker-requests/{request}/approve", new { reason = "checked" }, Ct);
+        Assert.NotEqual(HttpStatusCode.OK, refused.Status);
+        Assert.Contains("errors.data.concurrency_conflict", refused.Body, StringComparison.Ordinal);
+        Assert.Equal("draft", await _h.ScalarAsync<string>("select status from hrm.policy_versions where id = $1", Ct, draftId));
     }
 
     // ------------------------------------------------------------------ FR-HRM-EMP-10: probation by policy (ruling Q3)

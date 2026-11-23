@@ -44,6 +44,7 @@
   "hrm.policy.detail.effective_from": "In force from",
   "hrm.policy.detail.parameters": "Values",
   "hrm.policy.detail.type": "Policy type",
+  "hrm.policy.detail.unmatched": "Current employees no rule covers",
   "hrm.policy.detail.version": "Version",
   "hrm.policy.param.notice_period.bands": "Notice by length of service",
   "hrm.policy.param.notice_period.days": "Notice (days)",

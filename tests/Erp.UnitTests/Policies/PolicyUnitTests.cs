@@ -42,6 +42,7 @@ public sealed partial class PolicyUnitTests
     [InlineData("""{"days":1,"bands":[]}""", "parameters.bands", PolicySchema.TooFew)]
     [InlineData("""{"days":1,"bands":[{"d":1},{"d":2},{"d":3}]}""", "parameters.bands", PolicySchema.TooMany)]
     [InlineData("""{"days":1,"bands":[{"d":1},{}]}""", "parameters.bands[1].d", PolicySchema.Required)]
+    [InlineData("""{"days":1,"kind":null}""", "parameters.kind", PolicySchema.WrongType)]
     public void FR_HRM_POL_04_parameters_are_checked_against_the_schema_subset(string value, string? path, string? key)
     {
         var errors = PolicySchema.Check(Schema, J(value));
@@ -61,6 +62,11 @@ public sealed partial class PolicyUnitTests
     [InlineData("""{"type":"object","additionalProperties":{"type":"string"}}""")]
     [InlineData("""{"type":"object","required":["a"]}""")]
     [InlineData("""{"type":"object","properties":{"a":{"type":"date"}}}""")]
+    [InlineData("""{"type":"integer","minimum":"3"}""")]
+    [InlineData("""{"type":"string","maxLength":-1}""")]
+    [InlineData("""{"type":"string","enum":"paid"}""")]
+    [InlineData("""{"type":"string","enum":[]}""")]
+    [InlineData("""{"type":"string","title":1}""")]
     public void FR_HRM_POL_04_a_schema_using_anything_the_checker_does_not_check_is_refused_at_load(string schema) =>
         Assert.Throws<InvalidOperationException>(() => PolicySchema.EnsureSupported(J(schema), "test"));
 

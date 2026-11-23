@@ -101,6 +101,7 @@ export function useActualText() {
   const { t } = useText();
   const { locale } = useLocaleSettings();
   return (c: ConditionEvaluation, names: RuleNames) => {
+    if (c.hidden) return t('pol.value.hidden');
     if (c.actual.length === 0) return t('pol.value.none');
     const ctx: WordContext = { names, locale, yes: t('pol.value.yes'), no: t('pol.value.no') };
     return conditionWords({ attribute: c.attribute, field: c.field ?? undefined, operator: 'equals', values: c.actual, subUnits: false } as Condition, ctx).values;

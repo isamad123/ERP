@@ -37,8 +37,11 @@ internal static class PolicyErrors
     public const string CustomValue = "errors.hrm.policy.rule.custom_value";
 }
 
-/// <summary>Employees an activated set would leave without a policy (a warning, slice S1.23a Build item 5).</summary>
-internal sealed record Unmatched(int Count, IReadOnlyList<UnmatchedEmployee> Items);
+/// <summary>
+/// Employees an activated set would leave without a policy (a warning, slice S1.23a Build item 5): the count over the whole company, the
+/// first of them the caller may read (by name), and how many of the count the caller may not see (review S1.23a finding 2).
+/// </summary>
+internal sealed record Unmatched(int Count, IReadOnlyList<UnmatchedEmployee> Items, int NotShown);
 
 internal sealed record UnmatchedEmployee(Guid EmploymentId, string EmployeeNo, string Name, string Reason);
 
@@ -211,23 +214,42 @@ internal sealed class PolicyWriter(HrmDbContext db, PolicyTypeCatalog types, IOr
     /// The current employees (on the date) a set would leave without a policy: for a required type every one, otherwise none (the check
     /// is a warning; a type that applies to some employees only is not required).
     /// </summary>
-    public async Task<Unmatched> UnmatchedAsync(PolicyType type, Guid companyId, DateOnly from, IReadOnlyList<LoadedAssignment> set, CancellationToken ct)
+    /// <remarks>
+    /// <paramref name="readable"/> answers which of the given employments the caller may read (permission and data scope); without it only
+    /// the count is given. An employment that joins after the date is checked on its joining date, with the job details it starts with
+    /// (review S1.23a finding 8).
+    /// </remarks>
+    public async Task<Unmatched> UnmatchedAsync(PolicyType type, Guid companyId, DateOnly from, IReadOnlyList<LoadedAssignment> set,
+        Func<IReadOnlyList<Guid>, CancellationToken, Task<IReadOnlySet<Guid>>>? readable, CancellationToken ct)
     {
         if (!type.Required)
         {
-            return new Unmatched(0, []);
+            return new Unmatched(0, [], 0);
         }
 
         var resolver = new PolicyResolver(db, types, org);
         var loaded = await resolver.CompleteAsync(set, from, ct).ConfigureAwait(false);
         // The versions of a set being prepared: every policy has an active version, but maybe not yet on this date.
         var people = await PolicyAttributeReader.CompanyAsync(db, companyId, CurrentStatuses, from, ct).ConfigureAwait(false);
-        var missing = people.Select(p => (p.Employment, Decision: PolicyResolver.Decide(type, p.Attributes, from, loaded)))
-            .Where(p => p.Decision.Outcome == Contracts.Policies.PolicyResolution.NoPolicy).ToList();
-        var shown = missing.Take(UnmatchedShown).ToList();
+        var decided = people.Where(p => p.Employment.JoiningDate <= from)
+            .Select(p => (p.Employment, Decision: PolicyResolver.Decide(type, p.Attributes, from, loaded))).ToList();
+        // A later joiner is checked on their joining date: the job details they start with, the versions in force then.
+        foreach (var joining in people.Where(p => p.Employment.JoiningDate > from).Select(p => p.Employment.JoiningDate).Distinct().Order())
+        {
+            var on = await resolver.CompleteAsync(set, joining, ct).ConfigureAwait(false);
+            var joiners = people.Where(p => p.Employment.JoiningDate == joining).Select(p => p.Employment.Id).ToHashSet();
+            decided.AddRange((await PolicyAttributeReader.CompanyAsync(db, companyId, CurrentStatuses, joining, ct).ConfigureAwait(false))
+                .Where(p => joiners.Contains(p.Employment.Id)).Select(p => (p.Employment, Decision: PolicyResolver.Decide(type, p.Attributes, joining, on))));
+        }
+
+        var missing = decided.Where(p => p.Decision.Outcome == Contracts.Policies.PolicyResolution.NoPolicy).OrderBy(p => p.Employment.EmployeeNo, StringComparer.Ordinal).ToList();
+        var visible = readable is null ? new HashSet<Guid>() : await readable([.. missing.Select(m => m.Employment.Id)], ct).ConfigureAwait(false);
+        var seen = missing.Where(m => visible.Contains(m.Employment.Id)).ToList();
+        var shown = seen.Take(UnmatchedShown).ToList();
         var personIds = shown.Select(s => s.Employment.PersonId).Distinct().ToList();
         var names = await db.Set<Person>().AsNoTracking().Where(p => personIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => string.Join(' ', new[] { p.FirstName, p.LastName }.Where(n => !string.IsNullOrEmpty(n))), ct).ConfigureAwait(false);
-        return new Unmatched(missing.Count, [.. shown.Select(s => new UnmatchedEmployee(s.Employment.Id, s.Employment.EmployeeNo, names.GetValueOrDefault(s.Employment.PersonId) ?? string.Empty, s.Decision.Reason!))]);
+        return new Unmatched(missing.Count, [.. shown.Select(s => new UnmatchedEmployee(s.Employment.Id, s.Employment.EmployeeNo, names.GetValueOrDefault(s.Employment.PersonId) ?? string.Empty, s.Decision.Reason!))],
+            missing.Count - seen.Count);
     }
 
     /// <summary>Replaces the set in force from the date with the prepared one; returns the new assignment ids.</summary>

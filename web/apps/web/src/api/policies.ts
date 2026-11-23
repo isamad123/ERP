@@ -106,12 +106,12 @@ export interface AssignmentInput { policyId: string; precedence: number; rule: R
 export interface SetRequest { companyId: string; policyType: string; effectiveFrom: string | null; basedOn: string | null; assignments: AssignmentInput[]; reason?: string }
 
 export interface UnmatchedEmployee { employmentId: string; employeeNo: string; name: string; reason: string }
-export interface Unmatched { count: number; items: UnmatchedEmployee[] }
+export interface Unmatched { count: number; items: UnmatchedEmployee[]; notShown?: number }
 export interface SetCheck { valid: boolean; errors: Record<string, string[]>; latestFrom: string | null; unmatched: Unmatched | null }
 export type SetAnswer = { status: 'applied'; effectiveFrom: string; assignments: string[]; unmatched: Unmatched | null } | { status: 'pending'; requestId: string; unmatched: Unmatched | null };
 export type ActivateAnswer = { status: 'applied'; policy: PolicyView } | { status: 'pending'; requestId: string };
 
-export interface ConditionEvaluation { attribute: Attribute; field: string | null; operator: Operator; values: Json[]; subUnits: boolean; actual: Json[]; met: boolean }
+export interface ConditionEvaluation { attribute: Attribute; field: string | null; operator: Operator; values: Json[]; subUnits: boolean; actual: Json[]; met: boolean; hidden?: boolean }
 export type EvaluationOutcome = 'matched' | 'not_matched' | 'not_reached' | 'no_version';
 export interface AssignmentEvaluation { assignmentId: string; policyId: string; policyCode: string; policyName: Names | null; precedence: number; outcome: EvaluationOutcome; conditions: ConditionEvaluation[] }
 export interface PolicyMatch {
@@ -129,9 +129,11 @@ export interface Resolution {
   matches: PolicyMatch[];
   evaluations: AssignmentEvaluation[];
   attributes: {
-    employeeType: string; status: string; hasAssignment: boolean; orgUnitId: string | null; branchId: string | null; locationId: string | null; gradeId: string | null;
+    employeeType: string | null; status: string; hasAssignment: boolean; orgUnitId: string | null; branchId: string | null; locationId: string | null; gradeId: string | null;
     custom: JsonObject | null; gradeDefaults: Json;
   };
+  /** Attributes read as they are today, not as on the date (CR-079 S1.23a detail p). */
+  currentValues?: string[];
   names: RuleNames;
 }
 

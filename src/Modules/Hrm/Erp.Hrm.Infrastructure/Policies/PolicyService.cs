@@ -37,6 +37,7 @@ internal sealed partial class PolicyService(
     ICurrentActor actor,
     IPermissionChecker permissions,
     IDataScopeFilter scope,
+    IFieldAccess fields,
     ISettings settings,
     IHeldChanges held,
     EmploymentApplier applier,
@@ -454,7 +455,7 @@ internal sealed partial class PolicyService(
             errors[k] = v;
         }
 
-        var unmatched = set is null ? null : await Writer.UnmatchedAsync(type, company, from, set, cancellationToken).ConfigureAwait(false);
+        var unmatched = set is null ? null : await Writer.UnmatchedAsync(type, company, from, set, ReadableAsync, cancellationToken).ConfigureAwait(false);
         return new PeopleResult(PeopleOutcome.Done, Body: new { valid = errors.Count == 0, errors, latestFrom = latest, unmatched });
     }
 
@@ -489,7 +490,7 @@ internal sealed partial class PolicyService(
             await using var tx = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
             var writer = Writer;
             await writer.LockSetAsync(company, type!.Code, cancellationToken).ConfigureAwait(false);
-            var (set, unmatched, refused) = await SetCheckAsync(writer, type, company, from, request.BasedOn, request.Assignments ?? [], today, cancellationToken).ConfigureAwait(false);
+            var (set, unmatched, refused) = await SetCheckAsync(writer, type, company, from, request.BasedOn, request.Assignments ?? [], today, ReadableAsync, cancellationToken).ConfigureAwait(false);
             if (refused is not null)
             {
                 return refused;
@@ -514,7 +515,8 @@ internal sealed partial class PolicyService(
     /// still the newest, the date fits, the set is valid. Returns the prepared set and the warning, or the refusal.
     /// </summary>
     internal static async Task<(List<LoadedAssignment>? Set, Unmatched? Unmatched, PeopleResult? Refused)> SetCheckAsync(
-        PolicyWriter writer, PolicyType type, Guid company, DateOnly from, DateOnly? basedOn, IReadOnlyList<PolicyAssignmentInput> inputs, DateOnly today, CancellationToken ct)
+        PolicyWriter writer, PolicyType type, Guid company, DateOnly from, DateOnly? basedOn, IReadOnlyList<PolicyAssignmentInput> inputs, DateOnly today,
+        Func<IReadOnlyList<Guid>, CancellationToken, Task<IReadOnlySet<Guid>>>? readable, CancellationToken ct)
     {
         var latest = await writer.LatestSetAsync(company, type.Code, ct).ConfigureAwait(false);
         if (latest != basedOn)
@@ -534,7 +536,7 @@ internal sealed partial class PolicyService(
             return (null, null, PeopleResult.Fields(errors));
         }
 
-        return (set, await writer.UnmatchedAsync(type, company, from, set!, ct).ConfigureAwait(false), null);
+        return (set, await writer.UnmatchedAsync(type, company, from, set!, readable, ct).ConfigureAwait(false), null);
     }
 
     // ================================================================== resolution view (FR-HRM-POL-03)
@@ -577,6 +579,19 @@ internal sealed partial class PolicyService(
         var names = await Writer.NamesAsync(employment.CompanyId, rules, new PolicyAttributesView(who.GradeId, who.OrgUnitId, who.BranchId, who.LocationId), cancellationToken).ConfigureAwait(false);
         var policyNames = await db.Set<Policy>().AsNoTracking().Where(p => resolution.Evaluations.Select(e => e.PolicyId).Contains(p.Id))
             .ToDictionaryAsync(p => p.Id, p => PolicyAttributeReader.Names(p.NameI18n), cancellationToken).ConfigureAwait(false);
+
+        // The employee's values are shown under the caller's field rules of the employment (review S1.23a finding 1): a hidden custom
+        // field or employee type is left out (a condition keeps whether it was met, its value reads "hidden"), a masked one is masked.
+        var plan = await fields.PlanAsync(EmploymentAccess.Fields, EmploymentAccess.Scope, "read", Source, cancellationToken).ConfigureAwait(false);
+        var access = (await plan.ResolveAsync([employment], Source, cancellationToken).ConfigureAwait(false))[0];
+        var custom = System.Text.Json.Nodes.JsonNode.Parse(who.Custom.GetRawText()) as System.Text.Json.Nodes.JsonObject ?? [];
+        FieldShaping.ShapeCustom(custom, access);
+        var typeLevel = access.Of("employee_type");
+        var evaluations = resolution.Evaluations.Select(e => new
+        {
+            e.AssignmentId, e.PolicyId, e.PolicyCode, policyName = policyNames.GetValueOrDefault(e.PolicyId), e.Precedence, e.Outcome,
+            conditions = e.Conditions.Select(c => Shown(c, access)),
+        });
         return new PeopleResult(PeopleOutcome.Done, Body: new
         {
             employee = new { employmentId = employment.Id, employeeNo = employment.EmployeeNo, name = person is null ? string.Empty : PersonService.DisplayName(person), companyId = employment.CompanyId },
@@ -586,13 +601,50 @@ internal sealed partial class PolicyService(
             resolution.Outcome,
             resolution.Reason,
             resolution.Matches,
-            evaluations = resolution.Evaluations.Select(e => new { e.AssignmentId, e.PolicyId, e.PolicyCode, policyName = policyNames.GetValueOrDefault(e.PolicyId), e.Precedence, e.Outcome, e.Conditions }),
-            attributes = new { who.EmployeeType, who.Status, who.HasAssignment, who.OrgUnitId, who.BranchId, who.LocationId, who.GradeId, who.Custom, who.GradeDefaults },
+            evaluations,
+            attributes = new
+            {
+                employeeType = typeLevel == FieldAccessLevel.Hidden ? null : typeLevel == FieldAccessLevel.Masked ? FieldShaping.Mask(who.EmployeeType)?.ToString() : who.EmployeeType,
+                who.Status, who.HasAssignment, who.OrgUnitId, who.BranchId, who.LocationId, who.GradeId, custom, who.GradeDefaults,
+            },
+            // The job details (unit, branch, location, grade) are read as valid on the date; the employee type and custom fields as they are
+            // today (CR-079 S1.23a detail p, R-260).
+            currentValues = new[] { PolicyRules.EmployeeType, PolicyRules.Custom },
             names,
         });
     }
 
     // ================================================================== helpers
+
+    /// <summary>The employments of the list the caller may read: <c>hrm.employments.read</c> and the employment data scope (review S1.23a finding 2).</summary>
+    private async Task<IReadOnlySet<Guid>> ReadableAsync(IReadOnlyList<Guid> ids, CancellationToken ct)
+    {
+        if (ids.Count == 0 || !await permissions.HasPermissionAsync(EmploymentAccess.Scope.Resource + ".read", ct).ConfigureAwait(false))
+        {
+            return new HashSet<Guid>();
+        }
+
+        var query = await scope.ApplyAsync(db.Set<Employment>().AsNoTracking().Where(e => ids.Contains(e.Id)), EmploymentAccess.Scope, "read", Source, ct).ConfigureAwait(false);
+        return (await query.Select(e => e.Id).ToListAsync(ct).ConfigureAwait(false)).ToHashSet();
+    }
+
+    /// <summary>A condition as the caller may see it: the employee's value of a hidden field is left out (<c>hidden</c> true), a masked one masked.</summary>
+    private static object Shown(ConditionEvaluation c, FieldAccessMap access)
+    {
+        var level = c.Attribute switch
+        {
+            PolicyRules.Custom => access.Of(FieldAccessMap.CustomPrefix + c.Field),
+            PolicyRules.EmployeeType => access.Of("employee_type"),
+            _ => FieldAccessLevel.ReadOnly,
+        };
+        IReadOnlyList<JsonElement> actual = level switch
+        {
+            FieldAccessLevel.Hidden => [],
+            FieldAccessLevel.Masked => [.. c.Actual.Select(v => JsonSerializer.SerializeToElement(FieldShaping.Mask(System.Text.Json.Nodes.JsonNode.Parse(v.GetRawText()))))],
+            _ => c.Actual,
+        };
+        return new { c.Attribute, c.Field, c.Operator, c.Values, c.SubUnits, actual, c.Met, hidden = level == FieldAccessLevel.Hidden };
+    }
 
     private PeopleResult? Check(Policy policy, JsonElement parameters)
     {
@@ -749,6 +801,12 @@ internal sealed partial class PolicyService(
         try
         {
             return await work().ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Changed by someone else since it was read (row_version): "reload", as the other HR services answer (review S1.23a finding 4).
+            db.ChangeTracker.Clear();
+            return PeopleResult.Conflict(PersonService.Concurrency);
         }
         catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException pg)
         {

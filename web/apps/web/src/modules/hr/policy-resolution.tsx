@@ -136,7 +136,7 @@ function Attributes({ resolution }: { resolution: Resolution }) {
   };
   const type = resolution.names.employeeTypes.find((e) => e.code === a.employeeType);
   const rows = useMemo(() => [
-    ['employee_type', type ? nameOf(type.name, locale) || a.employeeType : a.employeeType],
+    ['employee_type', a.employeeType === null ? t('pol.value.hidden') : type ? nameOf(type.name, locale) || a.employeeType : a.employeeType],
     ['unit', record(a.orgUnitId)], ['branch', record(a.branchId)], ['location', record(a.locationId)], ['grade', record(a.gradeId)],
   ] as const, [a, type, locale]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
@@ -146,6 +146,7 @@ function Attributes({ resolution }: { resolution: Resolution }) {
       <dl className="erp-num-facts">
         {rows.map(([attribute, value]) => <div key={attribute}><dt>{t(attributeKey(attribute))}</dt><dd><bdi>{value}</bdi></dd></div>)}
       </dl>
+      {(resolution.currentValues?.length ?? 0) > 0 && <p className="erp-small erp-muted">{t('pol.res.currentValues')}</p>}
     </details>
   );
 }
