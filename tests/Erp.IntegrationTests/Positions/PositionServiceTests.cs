@@ -33,17 +33,29 @@ public sealed class PositionServiceTests(TenancyFixture fx) : IAsyncLifetime
         _h.Clock.Reset();
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         _h.Clock.Reset();
-        return ValueTask.CompletedTask;
+
+        // The events of this test's hires are marked published: the event dispatcher takes the oldest 100 unpublished events of the
+        // customer per pass, and other test classes (the contract reminders of S1.20c) dispatch once and look for their own event.
+        if (_companies.Count > 0)
+        {
+            await _h.ExecAsync("""
+                update hrm.outbox_messages set published_at = now()
+                where published_at is null and aggregate_id in (select id from hrm.employments where company_id = any($1))
+                """, CancellationToken.None, _companies.ToArray());
+        }
     }
+
+    private readonly List<Guid> _companies = [];
 
     private async Task<Guid> PersonAsync() => (Guid)(await _h.RowAsync("hrm.persons", Guid.Empty, null, Ct))["id"]!;
 
     private async Task<(Guid Company, (Guid OrgUnit, Guid Branch) Place)> CompanyAsync(string? model = null)
     {
         var company = await _h.CompanyAsync(Ct);
+        _companies.Add(company);
         if (model is not null)
         {
             await ModelAsync(company, model);
