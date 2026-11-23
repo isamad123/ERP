@@ -62,26 +62,9 @@ settings:
     name: {en: "Loans on transfer", ur: "تبادلے پر قرضے"}
     description: {en: "Whether loan and advance balances move to the new company or are settled on a transfer", ur: "تبادلے پر قرض اور پیشگی کا بقایا نئی کمپنی میں منتقل ہوتا ہے یا طے کیا جاتا ہے"}
     help: {en: "The choice offered first on a transfer between companies. The loans module applies the recorded choice.", ur: "کمپنیوں کے درمیان تبادلے پر پہلے پیش کیا جانے والا انتخاب۔ قرضوں کا ماڈیول درج شدہ انتخاب لاگو کرتا ہے۔"}
-  # S1.20c (CR-076 S1.20c detail; slice S1.20 ruling Q10): probation until the policy type `probation` of S1.23 replaces these.
-  # No statutory meaning is claimed.
-  - key: hrm.probation.default_months
-    type: int
-    default: 3
-    validation: {min: 1, max: 24}
-    layers: [tenant, company]
-    area: hr.employment
-    name: {en: "Probation period (months)", ur: "آزمائشی مدت (مہینے)"}
-    description: {en: "Length of the probation opened at hire for the employee types listed", ur: "فہرست شدہ ملازمین کی اقسام کے لیے بھرتی پر شروع ہونے والی آزمائشی مدت"}
-    help: {en: "A probation of this many months starts on the joining date. It is replaced by the probation policy when policies arrive.", ur: "اتنے مہینوں کی آزمائشی مدت شمولیت کی تاریخ سے شروع ہوتی ہے۔ پالیسیاں آنے پر اس کی جگہ آزمائشی پالیسی لے لیتی ہے۔"}
-  - key: hrm.probation.employee_types
-    type: list
-    default: ["probation", "permanent"]
-    validation: {choices: [permanent, contract, probation, intern, daily_wage, consultant, part_time], max_items: 7}
-    layers: [tenant, company]
-    area: hr.employment
-    name: {en: "Employee types on probation", ur: "آزمائش والی ملازمین کی اقسام"}
-    description: {en: "The employee types that start with a probation when hired", ur: "ملازمین کی وہ اقسام جو بھرتی پر آزمائشی مدت سے شروع ہوتی ہیں"}
-    help: {en: "A hire or rehire of a listed type opens a probation record. Other types have none.", ur: "فہرست شدہ قسم کی بھرتی یا دوبارہ بھرتی پر آزمائشی ریکارڈ کھلتا ہے۔ باقی اقسام کا کوئی نہیں۔"}
+  # S1.20c (CR-076 S1.20c detail; slice S1.20 ruling Q10). S1.23a (slice S1.23 ruling Q3): the settings hrm.probation.default_months and
+  # hrm.probation.employee_types are replaced by the policy type `probation` (months, extension limit, reviewer; assignment rules choose the
+  # employee types); migrate hides their definitions and keeps any stored values. The reminder lead time stays a setting.
   - key: hrm.probation.reminder_days
     type: int
     default: 14
@@ -113,6 +96,18 @@ settings:
     name: {en: "Approval of employee bank accounts", ur: "ملازمین کے بینک اکاؤنٹس کی منظوری"}
     description: {en: "A new or changed payment account of an employee needs a second person's approval", ur: "ملازم کے نئے یا تبدیل شدہ ادائیگی اکاؤنٹ کے لیے دوسرے شخص کی منظوری درکار"}
     help: {en: "Adding, changing, ending or removing an employee's payment account waits until another person with the approval permission approves it. The person who asked can never approve it.", ur: "ملازم کا ادائیگی اکاؤنٹ شامل کرنا، تبدیل کرنا، ختم کرنا یا ہٹانا اس وقت تک رکا رہتا ہے جب تک منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور نہ کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔"}
+  # S1.23a (CR-079 S1.23a detail; slice S1.23 ruling Q1): activating a policy version or a set of policy assignments waits for a second
+  # person holding hrm.policies.approve while this is on (the customer's maker-checker choice for policies). Changing the setting waits
+  # for a second person too, so nobody can switch it off and then activate alone (FR-XM-32).
+  - key: hrm.policies.requires_approval
+    type: bool
+    default: false
+    layers: [tenant, company]
+    requires_approval: true
+    area: hr.policies
+    name: {en: "Approval of policy activations", ur: "پالیسیوں کے نفاذ کی منظوری"}
+    description: {en: "Activating a policy version or policy assignments needs a second person's approval", ur: "پالیسی کے ورژن یا پالیسی تفویضات کے نفاذ کے لیے دوسرے شخص کی منظوری درکار"}
+    help: {en: "A version or a set of assignments is put into force only after another person with the approval permission approves it. The person who asked can never approve it.", ur: "ورژن یا تفویضات کا مجموعہ اسی وقت نافذ ہوتا ہے جب منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔"}
   # S1.27a (CR-088; slice S1.27 Build items 1 to 5; FR-HRM-ATT-01, ATT-03, DAT-02, DAT-04). Urdu texts to be reviewed by a native speaker (R-062).
   - key: hrm.att.duplicate_window_seconds
     type: int

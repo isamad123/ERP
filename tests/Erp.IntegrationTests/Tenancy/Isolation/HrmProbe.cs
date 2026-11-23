@@ -14,7 +14,9 @@ namespace Erp.IntegrationTests.Tenancy.Isolation;
 /// gets fresh material made through its own API: a person with an identifier, contact, address, relation and qualification, a
 /// second person, and a third with the first one's name and birth date sent to the duplicate review; from S1.20b two hired
 /// employments, the first linked to a user; from S1.20c a second company, a former employment, a contract and a probation; from S1.20d a
-/// payment account and a statutory registration of the first employment; from S1.34a a pay group with the periods of a tax year. Then, as for
+/// payment account and a statutory registration of the first employment; from S1.23a a probation policy assigned to permanent employees
+/// (made before the hires, so the first employment's probation comes from it) and a second policy with a draft; from S1.34a a pay group
+/// with the periods of a tax year. Then, as for
 /// the other probes:
 /// <list type="number">
 /// <item>B's host and token aimed at A's ids, with and without headers naming A: actions on A's records are 404; creates and lists
@@ -30,6 +32,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         Guid Relation, long RelationVersion, Guid Qualification, long QualificationVersion, Guid Case, long CaseVersion, string PersonNo,
         Hire Org, Guid Employment, long EmploymentVersion, Guid Unlinked, long UnlinkedVersion, Guid FreeUser,
         Hire To, Guid Former, Guid Contract, long ContractVersion, long ProbationVersion, Guid BankAccount, Guid Registration, long RegistrationVersion,
+        Guid Policy, long PolicyVersion, Guid DraftPolicy, long DraftPolicyVersion, Guid Draft, long DraftVersion, DateOnly SetFrom,
         Guid Punching, Guid Location, string QrCode, string Badge,
         Guid PayGroup, long PayGroupVersion, Guid Period, long PeriodVersion, string PeriodCutOff);
 
@@ -44,7 +47,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.PayGroup, a.Period, a.Punching, a.Location }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
@@ -179,6 +182,20 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "DELETE /api/hrm/statutory-registrations/{id:guid}" => ($"/api/hrm/statutory-registrations/{m.Registration}?rowVersion={m.RegistrationVersion}", null),
             "GET /api/hrm/statutory-registrations/{id:guid}/reveal" => ($"/api/hrm/statutory-registrations/{m.Registration}/reveal", null),
 
+            // S1.23a: the policy framework (A's policy, draft, company and employment).
+            "GET /api/hrm/policy-types" => ("/api/hrm/policy-types", null),
+            "POST /api/hrm/policies" => ("/api/hrm/policies", Json(new { companyId = m.Org.Company, policyType = "probation", code = "PB" + Guid.NewGuid().ToString("N")[..8], name = new { en = "Probe" }, parameters = new { months = 2 } })),
+            "GET /api/hrm/policies/{id:guid}/detail" => ($"/api/hrm/policies/{m.Policy}/detail", null),
+            "PUT /api/hrm/policies/{id:guid}/name" => ($"/api/hrm/policies/{m.Policy}/name", Json(new { name = new { en = "Renamed" }, rowVersion = m.PolicyVersion })),
+            "POST /api/hrm/policies/{id:guid}/versions" => ($"/api/hrm/policies/{m.Policy}/versions", Json(new { parameters = new { months = 4 } })),
+            "POST /api/hrm/policies/{id:guid}/retire" => ($"/api/hrm/policies/{m.DraftPolicy}/retire", Json(new { effectiveFrom = "2025-01-01", rowVersion = m.DraftPolicyVersion })),
+            "PUT /api/hrm/policy-versions/{id:guid}/parameters" => ($"/api/hrm/policy-versions/{m.Draft}/parameters", Json(new { parameters = new { bands = new[] { new { serviceMonthsFrom = 0, days = 60 } } }, rowVersion = m.DraftVersion })),
+            "DELETE /api/hrm/policy-versions/{id:guid}/draft" => ($"/api/hrm/policy-versions/{m.Draft}/draft?rowVersion={m.DraftVersion}", null),
+            "POST /api/hrm/policy-versions/{id:guid}/activate" => ($"/api/hrm/policy-versions/{m.Draft}/activate", Json(new { effectiveFrom = "2024-01-01", rowVersion = m.DraftVersion })),
+            "GET /api/hrm/policy-assignment-sets" => ($"/api/hrm/policy-assignment-sets?companyId={m.Org.Company}&policyType=probation", null),
+            "POST /api/hrm/policy-assignment-sets/check" => ("/api/hrm/policy-assignment-sets/check", Json(SetBody(m))),
+            "POST /api/hrm/policy-assignment-sets/activate" => ("/api/hrm/policy-assignment-sets/activate", Json(SetBody(m))),
+            "GET /api/hrm/policy-resolution" => ($"/api/hrm/policy-resolution?employmentId={m.Employment}&policyType=probation", null),
             // S1.27a: punches of the token user's own employment, a kiosk punch for a mapped badge, a QR scan of A's location, A's QR code, the events batch of A's employment.
             "POST /api/hrm/attendance/events" => ("/api/hrm/attendance/events", Json(new
             {
@@ -202,6 +219,15 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             var key => throw new InvalidOperationException($"No probe target for HR endpoint {key}; extend HrmProbe."),
         };
     }
+
+    /// <summary>A new set of A's probation assignments (S1.23a), on top of the material's set of 2020.</summary>
+    private static readonly string[] Permanent = ["permanent"];
+
+    private static object SetBody(Material m) => new
+    {
+        companyId = m.Org.Company, policyType = "probation", effectiveFrom = m.SetFrom.AddDays(1), basedOn = m.SetFrom,
+        assignments = new[] { new { policyId = m.Policy, precedence = 1, rule = new { conditions = Array.Empty<object>() } } },
+    };
 
     /// <summary>A hire of a new person (S1.20b) into the org unit and branch.</summary>
     private static object HireBody(Hire org, string name) => new
@@ -329,6 +355,24 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
 
         // S1.20b: two employments of new persons, the first linked to a user of this customer.
         var (org, linkedUser, freeUser) = await HireSetupAsync(host == fx.HostA ? fx.CodeA : fx.CodeB, ct);
+
+        // S1.23a: a probation policy (version 1 active, assigned to permanent employees from 2020) and a second policy left as a draft.
+        var policy = await PostAsync(host, token, "/api/hrm/policies", new { companyId = org.Company, policyType = "probation", code = "PR" + Guid.NewGuid().ToString("N")[..8], name = new { en = "Probe probation" }, parameters = new { months = 3 } }, ct);
+        var policyId = policy.GetProperty("id").GetGuid();
+        var v1 = policy.GetProperty("versions")[0];
+        await OkAsync(host, token, $"/api/hrm/policy-versions/{v1.GetProperty("id").GetGuid()}/activate", new { effectiveFrom = "2020-01-01", rowVersion = v1.GetProperty("rowVersion").GetInt64() }, ct);
+        // The company is shared by every material of this customer: the new set starts a day after the newest one.
+        var sets = await GetAsync(host, token, $"/api/hrm/policy-assignment-sets?companyId={org.Company}&policyType=probation", ct);
+        DateOnly? latest = sets.GetProperty("latestFrom").ValueKind == JsonValueKind.String ? DateOnly.Parse(sets.GetProperty("latestFrom").GetString()!, System.Globalization.CultureInfo.InvariantCulture) : null;
+        var setFrom = (latest ?? new DateOnly(2019, 12, 31)).AddDays(1);
+        await OkAsync(host, token, "/api/hrm/policy-assignment-sets/activate", new
+        {
+            companyId = org.Company, policyType = "probation", effectiveFrom = setFrom, basedOn = latest,
+            assignments = new[] { new { policyId, precedence = 1, rule = new { conditions = new[] { new { attribute = "employee_type", @operator = "in", values = Permanent } } } } },
+        }, ct);
+        var policyVersion = (await GetAsync(host, token, $"/api/hrm/policies/{policyId}/detail", ct)).GetProperty("rowVersion").GetInt64();
+        var draftPolicy = await PostAsync(host, token, "/api/hrm/policies", new { companyId = org.Company, policyType = "notice_period", code = "NP" + Guid.NewGuid().ToString("N")[..8], name = new { en = "Probe notice" }, parameters = new { bands = new[] { new { serviceMonthsFrom = 0, days = 30 } } } }, ct);
+        var draft = draftPolicy.GetProperty("versions")[0];
         var hired = (await PostAsync(host, token, "/api/hrm/employments", HireBody(org, "Employed"), ct)).GetProperty("employment");
         var employment = hired.GetProperty("id").GetGuid();
         var linked = await SendAsync(host, token, HttpMethod.Put, $"/api/hrm/employments/{employment}/user", Json(new { userId = linkedUser, rowVersion = hired.GetProperty("rowVersion").GetInt64() }), hints: false, ct);
@@ -420,8 +464,18 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             org, employment, linkedVersion, second.GetProperty("id").GetGuid(), second.GetProperty("rowVersion").GetInt64(), freeUser,
             to, former, contract.GetProperty("id").GetGuid(), contract.GetProperty("rowVersion").GetInt64(), probation.GetProperty("rowVersion").GetInt64(),
             account, registration.GetProperty("id").GetGuid(), registration.GetProperty("rowVersion").GetInt64(),
+            policyId, policyVersion, draftPolicy.GetProperty("id").GetGuid(), draftPolicy.GetProperty("rowVersion").GetInt64(), draft.GetProperty("id").GetGuid(), draft.GetProperty("rowVersion").GetInt64(), setFrom,
             punching.GetProperty("id").GetGuid(), location, shown.GetProperty("code").GetString()!, badge,
             groupId, group.GetProperty("rowVersion").GetInt64(), period.GetProperty("id").GetGuid(), period.GetProperty("rowVersion").GetInt64(), period.GetProperty("cutOffDate").GetString()!);
+    }
+
+    private async Task OkAsync(string host, string token, string path, object body, CancellationToken ct)
+    {
+        var reply = await SendAsync(host, token, HttpMethod.Post, path, Json(body), hints: false, ct);
+        if (reply.Status != HttpStatusCode.OK)
+        {
+            throw new InvalidOperationException($"HR probe material {path}: {(int)reply.Status} {Short(reply.Body)}");
+        }
     }
 
     private async Task<JsonElement> PostAsync(string host, string token, string path, object body, CancellationToken ct)

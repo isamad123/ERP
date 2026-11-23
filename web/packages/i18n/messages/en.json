@@ -1448,5 +1448,9 @@
   "nav.payGroups": "Pay groups",
   "nav.payCalendar": "Payroll calendar",
   "nav.notificationTexts": "Notification texts",
-  "nav.documentTemplates": "Document templates"
+  "nav.documentTemplates": "Document templates",
+  "nav.policies": "Policies",
+  "nav.policyResolution": "Which policy applies?",
+  "approvals.changes.kind.hrm.policy.version_activation": "Put a new version of the policy {subject} in force",
+  "approvals.changes.kind.hrm.policy.assignment_activation": "Put new assignments of {subject} policies in force"
 }

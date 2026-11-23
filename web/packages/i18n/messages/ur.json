@@ -1449,5 +1449,9 @@
   "nav.payGroups": "تنخواہ گروپ",
   "nav.payCalendar": "پے رول کیلنڈر",
   "nav.notificationTexts": "اطلاعات کے متن",
-  "nav.documentTemplates": "دستاویزی سانچے"
+  "nav.documentTemplates": "دستاویزی سانچے",
+  "nav.policies": "پالیسیاں",
+  "nav.policyResolution": "کون سی پالیسی لاگو ہے؟",
+  "approvals.changes.kind.hrm.policy.version_activation": "پالیسی {subject} کا نیا ورژن نافذ کریں",
+  "approvals.changes.kind.hrm.policy.assignment_activation": "{subject} پالیسیوں کی نئی تفویضات نافذ کریں"
 }

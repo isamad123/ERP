@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.policy_assignments.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.policy_assignments.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.policy_assignments.update"
     }
   ],
   "companyScoped": true,
@@ -38,6 +30,8 @@
   ],
   "search": [],
   "constraints": {
+    "ck_policy_assignments_precedence": "precedence",
+    "ck_policy_assignments_rule_object": "rule",
     "fk_policy_assignments_company_id": "companyId",
     "fk_policy_assignments_policy_id": "policyId"
   },

@@ -71,6 +71,7 @@
   "errors.hrm.pay.group_open_run": "The employee's current pay group has a payroll run that is not finished. Finish or cancel the run before moving the employee.",
   "errors.hrm.probation.decision_before_start": "The decision cannot be dated before the probation starts.",
   "errors.hrm.probation.extend_not_later": "An extension must end after the current last day of the probation.",
+  "errors.hrm.probation.extension_limit": "The extension is longer than the probation policy allows.",
   "errors.hrm.probation.none_open": "This employment has no open probation.",
   "errors.hrm.registration.before_joining": "A registration cannot start before the joining date.",
   "errors.hrm.registration.duplicate": "This registration number of the scheme belongs to another person.",

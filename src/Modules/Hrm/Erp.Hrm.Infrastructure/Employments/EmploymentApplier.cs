@@ -1,7 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Erp.BuildingBlocks.Domain.Entities;
+using Erp.Hrm.Application.Policies;
 using Erp.Hrm.Contracts.Employments;
+using Erp.Hrm.Contracts.Policies;
 using Erp.Hrm.Domain.Generated;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Contracts.Settings;
@@ -15,7 +17,7 @@ namespace Erp.Hrm.Infrastructure.Employments;
 /// line with the events (<see cref="EmploymentTimeline"/>), the employment fields an event corrects are set, the event's status
 /// moves on (effective from its date, approved before it) and <c>hrm.employee_changed</c> is raised once, when the event takes effect.
 /// </summary>
-public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
+public sealed class EmploymentApplier(HrmDbContext db, ISettings settings, IPolicyResolver policies)
 {
     private static readonly TimeZoneInfo Fallback = TimeZoneInfo.Utc;
 
@@ -283,23 +285,23 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
     }
 
     /// <summary>
-    /// The probation of a hire or rehire (FR-HRM-EMP-10, ruling Q10): opened when the company's setting
-    /// <c>hrm.probation.employee_types</c> lists the employee type, from the joining date for <c>hrm.probation.default_months</c>
-    /// months (the last day is the day before the same date that many months later). Until the probation policy of S1.23 replaces
-    /// the settings; no statutory meaning is claimed. Returns the record added (tracked, saved by the caller), or null.
+    /// The probation of a hire or rehire (FR-HRM-EMP-10; slice S1.23 ruling Q3, replacing the S1.20 settings): the employment's
+    /// <c>probation</c> policy on the joining date (assignment rules choose the employee types, units, grades) gives the months; the
+    /// probation runs from the joining date to the day before the same date that many months later. No policy, no probation (ruling
+    /// Q5: the resolver never answers a default). Pending changes are saved first so the resolver reads the new assignment row in this
+    /// transaction. Returns the record added (tracked, saved by the caller), or null.
     /// </summary>
     public async Task<ProbationRecord?> OpenProbationAsync(Employment employment, DateTimeOffset now, Guid actor, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(employment);
-        var context = new SettingContext(employment.CompanyId, null);
-        var types = (await settings.GetAsync("hrm.probation.employee_types", context, ct).ConfigureAwait(false)).Value;
-        if (types.ValueKind != JsonValueKind.Array || !types.EnumerateArray().Any(t => t.ValueKind == JsonValueKind.String && t.GetString() == employment.EmployeeType))
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        var resolution = await policies.ResolveAsync(employment.Id, ProbationPolicy.Type, employment.JoiningDate, ct).ConfigureAwait(false);
+        if (ProbationPolicy.Months(resolution?.Policy) is not { } months)
         {
             return null;
         }
 
-        var months = (await settings.GetAsync("hrm.probation.default_months", context, ct).ConfigureAwait(false)).Value;
-        var record = NewProbation(employment, employment.JoiningDate, employment.JoiningDate.AddMonths(months.ValueKind == JsonValueKind.Number ? months.GetInt32() : 3).AddDays(-1), now, actor);
+        var record = NewProbation(employment, employment.JoiningDate, employment.JoiningDate.AddMonths(months).AddDays(-1), now, actor);
         db.Add(record);
         return record;
     }

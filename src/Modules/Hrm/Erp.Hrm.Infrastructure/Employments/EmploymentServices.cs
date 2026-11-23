@@ -1,4 +1,5 @@
 using Erp.Hrm.Application.Employments;
+using Erp.Hrm.Infrastructure.Policies;
 using Erp.Hrm.Infrastructure.Payroll;
 using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Contracts.Jobs;
@@ -29,6 +30,7 @@ public static class EmploymentServices
     /// </summary>
     public static IServiceCollection AddHrmEmployment(this IServiceCollection services)
     {
+        services.AddHrmPolicyCore(); // S1.23a: the applier opens probations through the policy resolver
         services.AddScoped<EmploymentApplier>();
         services.AddScoped<EmploymentChangeCheck>();
         services.AddScoped<IWorkflowOutcomeHandler, EmploymentEventHandler>();

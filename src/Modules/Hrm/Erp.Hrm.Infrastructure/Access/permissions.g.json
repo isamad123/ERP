@@ -1263,24 +1263,6 @@
       "sensitive": false
     },
     {
-      "code": "hrm.policies.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policies.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.policies.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policies.update",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.policies.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policies.delete",
-      "sensitive": false
-    },
-    {
       "code": "hrm.policy_acknowledgements.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.policy_acknowledgements.read",
@@ -1296,18 +1278,6 @@
       "code": "hrm.policy_assignments.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.policy_assignments.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.policy_assignments.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policy_assignments.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.policy_assignments.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policy_assignments.update",
       "sensitive": false
     },
     {
@@ -1332,18 +1302,6 @@
       "code": "hrm.policy_versions.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.policy_versions.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.policy_versions.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policy_versions.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.policy_versions.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policy_versions.update",
       "sensitive": false
     },
     {

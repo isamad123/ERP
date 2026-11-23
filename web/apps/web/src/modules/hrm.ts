@@ -2,8 +2,12 @@
 // ruling 2026-11-21: People, Time and Payroll show now and open "not available yet" until their slices build them).
 // Features are D-24 keys of the licence; permissions are the read permission of each area's main table.
 import { lazy } from 'react';
-import { CalendarDays, CalendarRange, Clock, MonitorSmartphone, QrCode, Users, UsersRound, Wallet } from 'lucide-react';
+import { CalendarDays, CalendarRange, Clock, FileSearch, MonitorSmartphone, QrCode, ScrollText, Users, UsersRound, Wallet } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
+
+// S1.23a: the policy framework's screens (policies with versions and assignments; "Which policy applies?"), loaded with their routes.
+const PoliciesScreen = lazy(() => import('./hr/policies'));
+const ResolutionScreen = lazy(() => import('./hr/policy-resolution'));
 
 // S1.27a: attendance capture screens, loaded with their routes.
 const PunchScreen = lazy(() => import('./hrm/attendance-punch'));
@@ -20,6 +24,9 @@ export const hrmScreens: ScreenDeclaration[] = [
   { id: 'kiosk', path: '/time/kiosk', labelKey: 'nav.kiosk', icon: MonitorSmartphone, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance.kiosk', component: KioskScreen },
   { id: 'qr', path: '/time/qr', labelKey: 'nav.qr', icon: QrCode, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance.qr_display', component: QrScreen },
   { id: 'leave', path: '/time/leave/*', labelKey: 'nav.leave', icon: CalendarDays, group: 'time', feature: 'hrm.core', permission: 'hrm.leave_requests.read', comesWith: 'S1.33' },
+  // S1.23a (FR-HRM-POL-02, -03; ruling Q1): HR administrators manage policies; both entries need the permission to read policies.
+  { id: 'policies', path: '/hr/policies/*', labelKey: 'nav.policies', icon: ScrollText, group: 'people', feature: 'hrm.core', permission: 'hrm.policies.read', component: PoliciesScreen },
+  { id: 'policy-resolution', path: '/hr/policy-resolution', labelKey: 'nav.policyResolution', icon: FileSearch, group: 'people', feature: 'hrm.core', permission: 'hrm.policies.read', component: ResolutionScreen },
   // S1.34a (FR-HRM-PAY-01, FR-HRM-PAY-38): the more specific routes win over the placeholder below, which S1.35 replaces.
   { id: 'pay-groups', path: '/payroll/pay-groups/*', labelKey: 'nav.payGroups', icon: UsersRound, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.pay_groups.read', component: PayGroupsScreen, tables: ['hrm.pay_groups'] },
   { id: 'pay-calendar', path: '/payroll/calendar', labelKey: 'nav.payCalendar', icon: CalendarRange, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.pay_periods.read', component: PayCalendarScreen },
