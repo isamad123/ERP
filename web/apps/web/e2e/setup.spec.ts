@@ -56,8 +56,12 @@ test('FR-ADM-ONB-03 the checklist shows what is missing with a link, and go live
   await menu(page).getByRole('link', { name: 'Set-up guide' }).click();
   await page.getByRole('button', { name: 'Readiness checklist' }).click();
   const table = page.getByRole('table', { name: 'Core platform' });
-  await expect(table.getByText('The company has no location yet.')).toBeVisible();
-  await expect(table.getByRole('link', { name: 'Fix this: At least one location' })).toHaveAttribute('href', '/organization/locations');
+  // The customer is shared, so what is already set up varies: the items are always listed, and the manual one nobody has ticked is open with its link.
+  await expect(table.getByRole('row').filter({ hasText: 'At least one location' })).toBeVisible();
+  await expect(table.getByRole('row').filter({ hasText: 'Document numbers are set' })).toBeVisible();
+  const rules = table.getByRole('row').filter({ hasText: 'Notification rules are reviewed' });
+  await expect(rules.getByText('To do')).toBeVisible();
+  await expect(rules.getByRole('link', { name: 'Fix this: Notification rules are reviewed' })).toHaveAttribute('href', '/settings');
   await expect(page.getByText('Set-up mode')).toBeVisible();
   await accessible(page, 'checklist');
   await shot(page, 'setup-checklist-en-light-1280');
