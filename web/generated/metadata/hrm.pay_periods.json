@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.pay_periods.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.pay_periods.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.pay_periods.update"
     }
   ],
   "companyScoped": true,

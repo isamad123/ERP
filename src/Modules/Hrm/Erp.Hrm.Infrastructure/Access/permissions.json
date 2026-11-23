@@ -1,5 +1,5 @@
 {
-  "_comment": "Hand-written permissions of the HR module's purpose-built services (slice S1.20a, CR-076): the generated writes of these tables are closed (ruling Q1; S1.20a closes the person tables, S1.20b to d the employment tables), so their actions are declared here. Registered with permissions.g.json by migrate and provisioning (AccessSetup). Keep in step with Erp.Hrm.Contracts.People.PeoplePermissions and (S1.20b) Erp.Hrm.Contracts.Employment.EmploymentPermissions. S1.20c adds transfers between companies, contracts and probation. S1.20d adds removal, reveal and approval of payment accounts and removal and reveal of statutory registrations (create and update are generated with the field view of their encrypted columns).",
+  "_comment": "Hand-written permissions of the HR module's purpose-built services (slice S1.20a, CR-076): the generated writes of these tables are closed (ruling Q1; S1.20a closes the person tables, S1.20b to d the employment tables), so their actions are declared here. Registered with permissions.g.json by migrate and provisioning (AccessSetup). Keep in step with Erp.Hrm.Contracts.People.PeoplePermissions and (S1.20b) Erp.Hrm.Contracts.Employment.EmploymentPermissions. S1.20c adds transfers between companies, contracts and probation. S1.20d adds removal, reveal and approval of payment accounts and removal and reveal of statutory registrations (create and update are generated with the field view of their encrypted columns). S1.34a (CR-087) adds the pay set-up services: pay groups (create and update keep the codes the generated ones had), generating and changing pay periods, and the readiness checklist. S1.27a (CR-088) adds appending punches for others (hrm.attendance_events.create, generated create closed), the employee's own web and QR punch (hrm.attendance.punch), the kiosk station (hrm.attendance.kiosk) and showing a location's QR code (hrm.attendance.qr_display). S1.23a adds the policy framework's manage and approve (the generated writes of hrm.policies, hrm.policy_versions and hrm.policy_assignments are closed).",
   "module": "hrm",
   "permissions": [
     {
@@ -217,6 +217,72 @@
       "module": "hrm",
       "descriptionKey": "permissions.hrm.employment_statutory_registrations.reveal",
       "sensitive": true
+    },
+    {
+      "code": "hrm.policies.manage",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.policies.manage",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.policies.approve",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.policies.approve",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.pay_groups.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.pay_groups.create",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.pay_groups.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.pay_groups.update",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.pay_periods.generate",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.pay_periods.generate",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.pay_periods.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.pay_periods.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.pay_readiness.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.pay_readiness.read",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.attendance_events.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.attendance_events.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.attendance.punch",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.attendance.punch",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.attendance.kiosk",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.attendance.kiosk",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.attendance.qr_display",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.attendance.qr_display",
+      "sensitive": false
     }
   ]
 }

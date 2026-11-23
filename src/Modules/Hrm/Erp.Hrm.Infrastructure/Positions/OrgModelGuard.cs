@@ -67,7 +67,7 @@ public static class OrgModelGuard
 /// Refuses a change of <c>hrm.org.model</c> that <see cref="OrgModelGuard"/> forbids (slice S1.22 Build item 1). A change of the tenant
 /// layer reaches every company, so each company is checked; a reset (no value) is checked as a change to the default, headcount.
 /// </summary>
-internal sealed class OrgModelChangeGuard(HrmDbContext db, ISettings settings, Erp.BuildingBlocks.Domain.Time.IClock clock) : ISettingChangeGuard
+internal sealed class OrgModelChangeGuard(HrmDbContext db, ISettings settings, Erp.BuildingBlocks.Domain.Time.IClock clock, Employments.EmploymentApplier applier) : ISettingChangeGuard
 {
     public string Key => OrgModels.SettingKey;
 
@@ -77,7 +77,6 @@ internal sealed class OrgModelChangeGuard(HrmDbContext db, ISettings settings, E
         var companies = companyId is { } one
             ? [one]
             : await db.Database.SqlQuery<Guid>($"select id as \"Value\" from org.companies where not is_deleted").ToListAsync(cancellationToken).ConfigureAwait(false);
-        var applier = new Employments.EmploymentApplier(db, settings);
         foreach (var company in companies)
         {
             var today = await applier.TodayAsync(company, clock.UtcNow, cancellationToken).ConfigureAwait(false);

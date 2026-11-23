@@ -74,7 +74,7 @@ public static class HrmAuditCatalog
         new(typeof(global::Erp.Hrm.Domain.Generated.ParallelRun), "hrm.parallel_runs", true, null, "id", "company_id", null, null, null),
         new(typeof(global::Erp.Hrm.Domain.Generated.PayComponentVersion), "hrm.pay_component_versions", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Hrm.Domain.Generated.PayComponent), "hrm.pay_components", true, null, "id", "company_id", null, null, null),
-        new(typeof(global::Erp.Hrm.Domain.Generated.PayGroup), "hrm.pay_groups", true, null, "id", "company_id", null, null, null),
+        new(typeof(global::Erp.Hrm.Domain.Generated.PayGroup), "hrm.pay_groups", true, null, "id", "company_id", null, null, new global::System.Collections.Generic.Dictionary<string, string>(global::System.StringComparer.Ordinal) { ["approval_threshold"] = "salary" }),
         new(typeof(global::Erp.Hrm.Domain.Generated.PayInput), "hrm.pay_inputs", true, null, "id", "company_id", null, "employment_id", new global::System.Collections.Generic.Dictionary<string, string>(global::System.StringComparer.Ordinal) { ["amount"] = "salary" }),
         new(typeof(global::Erp.Hrm.Domain.Generated.PayPeriod), "hrm.pay_periods", true, null, "id", "company_id", null, null, null),
         new(typeof(global::Erp.Hrm.Domain.Generated.PayResultLine), "hrm.pay_result_lines", true, null, "id", "company_id", null, "employment_id", new global::System.Collections.Generic.Dictionary<string, string>(global::System.StringComparer.Ordinal) { ["amount"] = "salary" }),

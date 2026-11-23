@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Domain.Time;
+using Erp.Hrm.Application.Policies;
 using Erp.Hrm.Contracts.Employments;
 using Erp.Hrm.Domain.Generated;
 using Erp.Hrm.Infrastructure.Generated;
@@ -103,6 +104,7 @@ internal sealed class EmploymentTermsDueJob(IClock clock) : IJobHandler
             {
                 p1 = 0;
                 var (db, applier) = Open(job, settings, connection);
+                var policies = Policies.PolicyResolver.For(db, job.Services);
                 await using var _ = db;
                 await db.Database.UseTransactionAsync(transaction, ct).ConfigureAwait(false);
                 var query = db.Set<ProbationRecord>().AsNoTracking().Where(p => p.Status == "in_progress" || p.Status == "extended");
@@ -120,7 +122,8 @@ internal sealed class EmploymentTermsDueJob(IClock clock) : IJobHandler
                     var last = p.ExtendedTo ?? p.EndDate;
                     var lead = await DaysAsync(settings, days, "hrm.probation.reminder_days", p.CompanyId, 14, ct).ConfigureAwait(false);
                     if (today <= last && today >= last.AddDays(-lead)
-                        && await RemindAsync(db, applier, EmploymentEvents.ProbationEnding, "hrm.probation_record", p.Id, p.EmploymentId, p.CompanyId, last, today, now, actor.UserId, ct).ConfigureAwait(false))
+                        && await RemindAsync(db, applier, EmploymentEvents.ProbationEnding, "hrm.probation_record", p.Id, p.EmploymentId, p.CompanyId, last, today, now, actor.UserId, ct,
+                            notifyManager: ProbationPolicy.Reviewer((await policies.ResolveAsync(p.EmploymentId, ProbationPolicy.Type, p.StartDate, ct).ConfigureAwait(false))?.Policy) != ProbationPolicy.ReviewerHr).ConfigureAwait(false))
                     {
                         p1++;
                     }
@@ -142,7 +145,7 @@ internal sealed class EmploymentTermsDueJob(IClock clock) : IJobHandler
     {
         var db = new HrmDbContext(job.Services.GetRequiredService<DbContextOptions<HrmDbContext>>());
         db.Database.SetDbConnection(connection, contextOwnsConnection: false);
-        return (db, new EmploymentApplier(db, settings));
+        return (db, new EmploymentApplier(db, settings, Policies.PolicyResolver.For(db, job.Services)));
     }
 
     /// <summary>The company's business date, read once per company and run.</summary>
@@ -174,7 +177,7 @@ internal sealed class EmploymentTermsDueJob(IClock clock) : IJobHandler
     /// ids, codes and dates only: the notification texts and the deep link come from the HR catalogue.
     /// </summary>
     private static async Task<bool> RemindAsync(HrmDbContext db, EmploymentApplier applier, string type, string aggregate, Guid id, Guid employmentId, Guid companyId, DateOnly end,
-        DateOnly today, DateTimeOffset now, Guid actor, CancellationToken ct)
+        DateOnly today, DateTimeOffset now, Guid actor, CancellationToken ct, bool notifyManager = true)
     {
         var endText = end.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         var already = await db.Database.SqlQuery<bool>($"select exists (select 1 from hrm.outbox_messages where event_type = {type} and aggregate_id = {id} and payload->>'end_date' = {endText}) as \"Value\"").SingleAsync(ct).ConfigureAwait(false);
@@ -190,7 +193,8 @@ internal sealed class EmploymentTermsDueJob(IClock clock) : IJobHandler
         }
 
         // The line manager on the day, through the manager's user link (R-220: without a link only HR is reminded).
-        var manager = await db.Set<EmploymentAssignment>().AsNoTracking()
+        // A probation whose policy names HR alone as reviewer (S1.23 ruling Q3) leaves the manager out.
+        var manager = !notifyManager ? null : await db.Set<EmploymentAssignment>().AsNoTracking()
             .Where(a => a.EmploymentId == employmentId && a.ValidFrom <= today && (a.ValidTo == null || a.ValidTo > today))
             .Select(a => a.ManagerEmploymentId).FirstOrDefaultAsync(ct).ConfigureAwait(false);
         var managerUser = manager is { } m

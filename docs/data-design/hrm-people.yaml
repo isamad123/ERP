@@ -500,6 +500,12 @@
   unique: [[company_id, policy_type, lower(code)]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.23a (CR-079 S1.23a detail; slice S1.23 Build items 1 and 2, ruling Q1): generated writes closed; the HR policy service writes
+  # (type from a registered manifest, parameters checked against its schema, versions activated from a date).
+  checks_added_in:
+    S1.23a:
+      - "a policy type is lower-case letters, digits and underscores and starts with a letter"
+  api_actions: [read]
   reqs: [POL-02, POL-04]
 
 - table: hrm.policy_versions
@@ -512,6 +518,14 @@
     - [parameters, json, req, validated against the policy type schema]
     - [is_overridden, bool, req, tenant changed a pack value]
   unique: [[policy_id, version]]
+  # S1.23a (CR-079 S1.23a detail; slice S1.23 Build item 2): one draft per policy at a time; a version in force is never edited
+  # (rules.yaml function hrm.tg_policy_versions_fixed); generated writes closed.
+  uniques_added_in: {S1.23a: [[policy_id, "where status = 'draft'"]]}
+  checks_added_in:
+    S1.23a:
+      - "parameters are a JSON object"
+      - "version numbers start at 1"
+  api_actions: [read]
   reqs: [POL-04, POL-06]
   notes: "Exclusion on policy_id applies where status <> 'draft'; dates assigned on activation."
 
@@ -525,6 +539,14 @@
   indexes: [[policy_id], [company_id, precedence]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.23a (CR-079 S1.23a detail; slice S1.23 Build items 3 and 5, ruling Q4): assignments of one policy type in one company are
+  # replaced as a set from a date; precedence is unique per type and company on every date (rules.yaml function
+  # hrm.tg_policy_assignments_precedence); generated writes closed.
+  checks_added_in:
+    S1.23a:
+      - "a rule is a JSON object"
+      - "precedence is between 1 and 9999"
+  api_actions: [read]
   reqs: [POL-02, POL-03]
   eff_key: [policy_id, precedence]
 

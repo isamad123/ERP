@@ -29,7 +29,8 @@ internal sealed class PositionService(
     IDataScopeFilter scope,
     ISettings settings,
     IFieldAccess fields,
-    ICustomFieldValidator customFields) : IPositionService
+    ICustomFieldValidator customFields,
+    Employments.EmploymentApplier applier) : IPositionService
 {
     public const string CodeTaken = "errors.hrm.position.code_taken";
     public const string NotLatest = "errors.hrm.position.not_latest";
@@ -478,7 +479,7 @@ internal sealed class PositionService(
     private Task<List<Guid>> IdsOfCodeAsync(Guid company, string codeLower, CancellationToken ct) =>
         db.Set<Position>().AsNoTracking().Where(p => p.CompanyId == company && p.PositionCodeLower == codeLower).Select(p => p.Id).ToListAsync(ct);
 
-    private Task<DateOnly> TodayAsync(Guid companyId, DateTimeOffset now, CancellationToken ct) => new Employments.EmploymentApplier(db, settings).TodayAsync(companyId, now, ct);
+    private Task<DateOnly> TodayAsync(Guid companyId, DateTimeOffset now, CancellationToken ct) => applier.TodayAsync(companyId, now, ct);
 
     private async Task<PeopleResult> InTransactionAsync(Func<Task<PeopleResult>> work, CancellationToken ct)
     {

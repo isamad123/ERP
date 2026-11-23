@@ -10,6 +10,12 @@ import { accessible, display, field, fitsWidth, menu, noProblems, person, server
 
 test.describe.configure({ mode: 'serial' });
 
+// The one customer-wide text the first scenario renames goes back to the product text after every scenario, passed or failed, so a
+// failure half-way cannot leave "Wings" in the menu of later scenarios (everything else here carries this run's own suffix).
+test.afterEach(async () => {
+  for (const language of ['en', 'ur'] as const) await server.label('nav.organizationUnits', language, null);
+});
+
 const run = Math.random().toString(36).slice(2, 6);
 const CODE = run.toUpperCase();
 const WIDTHS = [360, 768, 1280] as const;

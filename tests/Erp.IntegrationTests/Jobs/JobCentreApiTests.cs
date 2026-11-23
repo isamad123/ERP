@@ -16,12 +16,15 @@ public sealed class JobCentreApiTests(TenancyFixture fx) : IAsyncLifetime
     private AccessHarness _h = null!;
     private string _code = null!;
 
+    /// <summary>One customer per test: two random characters could repeat in a run, and a second test would then share the first one's customer.</summary>
+    private static int _next;
+
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     public async ValueTask InitializeAsync()
     {
         _h = await AccessHarness.ForAsync(fx);
-        _code = await _h.ProvisionAsync("jc" + Guid.NewGuid().ToString("N")[..2], Ct);
+        _code = await _h.ProvisionAsync("jc" + (Interlocked.Increment(ref _next) & 0xff).ToString("x2", System.Globalization.CultureInfo.InvariantCulture), Ct);
     }
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;

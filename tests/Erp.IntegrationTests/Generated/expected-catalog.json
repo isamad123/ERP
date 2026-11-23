@@ -8093,7 +8093,8 @@
             "biometric",
             "kiosk",
             "hr_entry",
-            "import"
+            "import",
+            "qr"
           ]
         },
         {
@@ -22507,7 +22508,9 @@
         "ix_pay_groups_currency_code",
         "ix_pay_groups_company_id_company_bank_account_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_pay_groups_rules"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.pay_groups"
@@ -23021,7 +23024,9 @@
       "indexes": [
         "ix_pay_periods_company_id_pay_group_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_pay_periods_fixed"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.pay_periods"
@@ -26764,7 +26769,8 @@
         "ck_policies_code_code",
         "ck_policies_name_i18n_object",
         "ck_policies_policy_type_code",
-        "ck_policies_source"
+        "ck_policies_source",
+        "ck_policies_policy_type_format"
       ],
       "exclusions": [],
       "foreign_keys": [
@@ -27069,7 +27075,9 @@
       ],
       "uniques": [],
       "checks": [
-        "ck_policy_assignments_valid_to"
+        "ck_policy_assignments_valid_to",
+        "ck_policy_assignments_rule_object",
+        "ck_policy_assignments_precedence"
       ],
       "exclusions": [
         "ex_policy_assignments_policy_id_precedence"
@@ -27103,7 +27111,9 @@
         "ix_policy_assignments_company_id_precedence",
         "ix_policy_assignments_company_id_policy_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_policy_assignments_checks"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.policy_assignments"
@@ -27464,11 +27474,14 @@
         }
       ],
       "uniques": [
-        "uq_policy_versions_policy_id_version"
+        "uq_policy_versions_policy_id_version",
+        "uq_policy_versions_policy_id"
       ],
       "checks": [
         "ck_policy_versions_status",
-        "ck_policy_versions_valid_to"
+        "ck_policy_versions_valid_to",
+        "ck_policy_versions_parameters_object",
+        "ck_policy_versions_version"
       ],
       "exclusions": [
         "ex_policy_versions_policy_id"
@@ -27486,7 +27499,9 @@
         }
       ],
       "indexes": [],
-      "triggers": [],
+      "triggers": [
+        "tg_policy_versions_fixed"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.policy_versions"

@@ -218,83 +218,6 @@
       }
     },
     {
-      "key": "hrm.probation.default_months",
-      "module": "hrm",
-      "type": "int",
-      "default": 3,
-      "validation": {
-        "min": 1,
-        "max": 24
-      },
-      "layers": [
-        "tenant",
-        "company"
-      ],
-      "roleRule": null,
-      "tightenOnly": false,
-      "selfService": false,
-      "visible": true,
-      "requiresApproval": false,
-      "area": "hr.employment",
-      "unit": null,
-      "name": {
-        "en": "Probation period (months)",
-        "ur": "آزمائشی مدت (مہینے)"
-      },
-      "description": {
-        "en": "Length of the probation opened at hire for the employee types listed",
-        "ur": "فہرست شدہ ملازمین کی اقسام کے لیے بھرتی پر شروع ہونے والی آزمائشی مدت"
-      },
-      "help": {
-        "en": "A probation of this many months starts on the joining date. It is replaced by the probation policy when policies arrive.",
-        "ur": "اتنے مہینوں کی آزمائشی مدت شمولیت کی تاریخ سے شروع ہوتی ہے۔ پالیسیاں آنے پر اس کی جگہ آزمائشی پالیسی لے لیتی ہے۔"
-      }
-    },
-    {
-      "key": "hrm.probation.employee_types",
-      "module": "hrm",
-      "type": "list",
-      "default": [
-        "probation",
-        "permanent"
-      ],
-      "validation": {
-        "choices": [
-          "permanent",
-          "contract",
-          "probation",
-          "intern",
-          "daily_wage",
-          "consultant",
-          "part_time"
-        ],
-        "max_items": 7
-      },
-      "layers": [
-        "tenant",
-        "company"
-      ],
-      "roleRule": null,
-      "tightenOnly": false,
-      "selfService": false,
-      "visible": true,
-      "requiresApproval": false,
-      "area": "hr.employment",
-      "unit": null,
-      "name": {
-        "en": "Employee types on probation",
-        "ur": "آزمائش والی ملازمین کی اقسام"
-      },
-      "description": {
-        "en": "The employee types that start with a probation when hired",
-        "ur": "ملازمین کی وہ اقسام جو بھرتی پر آزمائشی مدت سے شروع ہوتی ہیں"
-      },
-      "help": {
-        "en": "A hire or rehire of a listed type opens a probation record. Other types have none.",
-        "ur": "فہرست شدہ قسم کی بھرتی یا دوبارہ بھرتی پر آزمائشی ریکارڈ کھلتا ہے۔ باقی اقسام کا کوئی نہیں۔"
-      }
-    },
-    {
       "key": "hrm.probation.reminder_days",
       "module": "hrm",
       "type": "int",
@@ -423,6 +346,232 @@
       "help": {
         "en": "Adding, changing, ending or removing an employee's payment account waits until another person with the approval permission approves it. The person who asked can never approve it.",
         "ur": "ملازم کا ادائیگی اکاؤنٹ شامل کرنا، تبدیل کرنا، ختم کرنا یا ہٹانا اس وقت تک رکا رہتا ہے جب تک منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور نہ کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔"
+      }
+    },
+    {
+      "key": "hrm.policies.requires_approval",
+      "module": "hrm",
+      "type": "bool",
+      "default": false,
+      "validation": {},
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": true,
+      "area": "hr.policies",
+      "unit": null,
+      "name": {
+        "en": "Approval of policy activations",
+        "ur": "پالیسیوں کے نفاذ کی منظوری"
+      },
+      "description": {
+        "en": "Activating a policy version or policy assignments needs a second person's approval",
+        "ur": "پالیسی کے ورژن یا پالیسی تفویضات کے نفاذ کے لیے دوسرے شخص کی منظوری درکار"
+      },
+      "help": {
+        "en": "A version or a set of assignments is put into force only after another person with the approval permission approves it. The person who asked can never approve it.",
+        "ur": "ورژن یا تفویضات کا مجموعہ اسی وقت نافذ ہوتا ہے جب منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔"
+      }
+    },
+    {
+      "key": "hrm.att.duplicate_window_seconds",
+      "module": "hrm",
+      "type": "int",
+      "default": 60,
+      "validation": {
+        "min": 0,
+        "max": 3600
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.attendance",
+      "unit": null,
+      "name": {
+        "en": "Duplicate punch window (seconds)",
+        "ur": "دہرے اندراج کا وقفہ (سیکنڈ)"
+      },
+      "description": {
+        "en": "Punches of one person in the same direction within this many seconds count once",
+        "ur": "ایک شخص کے ایک ہی سمت میں اتنے سیکنڈ کے اندر اندراج ایک بار شمار ہوتے ہیں"
+      },
+      "help": {
+        "en": "A later punch of the same person and direction within this window of an earlier counted punch is kept but marked as a duplicate and never counted. 0 switches duplicate marking off.",
+        "ur": "ایک ہی شخص اور سمت کا کوئی بعد کا اندراج، پہلے شمار ہونے والے اندراج کے اس وقفے کے اندر ہو تو محفوظ رہتا ہے مگر دہرا نشان زد ہوتا ہے اور کبھی شمار نہیں ہوتا۔ 0 سے دہرے اندراج کی نشاندہی بند ہو جاتی ہے۔"
+      }
+    },
+    {
+      "key": "hrm.att.future_tolerance_minutes",
+      "module": "hrm",
+      "type": "int",
+      "default": 5,
+      "validation": {
+        "min": 0,
+        "max": 1440
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.attendance",
+      "unit": null,
+      "name": {
+        "en": "Future punch tolerance (minutes)",
+        "ur": "مستقبل کے اندراج کی گنجائش (منٹ)"
+      },
+      "description": {
+        "en": "A punch time later than the server clock by more than this is refused",
+        "ur": "سرور کی گھڑی سے اتنے منٹ سے زیادہ آگے کا اندراج مسترد ہوتا ہے"
+      },
+      "help": {
+        "en": "Device clocks drift. A punch dated further ahead of the server's time than this many minutes is refused, so nobody can punch for a time that has not come.",
+        "ur": "آلات کی گھڑیاں آگے پیچھے ہو جاتی ہیں۔ سرور کے وقت سے اتنے منٹ سے زیادہ آگے کی تاریخ والا اندراج مسترد ہوتا ہے، تاکہ کوئی ایسے وقت کا اندراج نہ کر سکے جو آیا ہی نہیں۔"
+      }
+    },
+    {
+      "key": "hrm.att.event_retention_years",
+      "module": "hrm",
+      "type": "int",
+      "default": 7,
+      "validation": {
+        "min": 1,
+        "max": 50
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.attendance",
+      "unit": null,
+      "name": {
+        "en": "Punch retention (years)",
+        "ur": "اندراجات کی مدتِ حفاظت (سال)"
+      },
+      "description": {
+        "en": "How many years attendance punches are kept before their month is removed",
+        "ur": "حاضری کے اندراجات کتنے سال محفوظ رہتے ہیں، پھر ان کا مہینہ ہٹا دیا جاتا ہے"
+      },
+      "help": {
+        "en": "The purge job removes a whole month of punches only when that month ended more than this many years ago. Individual punches are never deleted. Check the legal retention period of your country before shortening it.",
+        "ur": "صفائی کا کام پورے مہینے کے اندراجات تبھی ہٹاتا ہے جب وہ مہینہ اتنے سال سے زیادہ پہلے ختم ہوا ہو۔ انفرادی اندراج کبھی نہیں مٹائے جاتے۔ مدت گھٹانے سے پہلے اپنے ملک میں قانونی مدتِ حفاظت دیکھ لیں۔"
+      }
+    },
+    {
+      "key": "hrm.att.qr_window_seconds",
+      "module": "hrm",
+      "type": "int",
+      "default": 60,
+      "validation": {
+        "min": 15,
+        "max": 3600
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.attendance",
+      "unit": null,
+      "name": {
+        "en": "QR code lifetime (seconds)",
+        "ur": "کیو آر کوڈ کی مدت (سیکنڈ)"
+      },
+      "description": {
+        "en": "How often the QR code of a gate changes",
+        "ur": "گیٹ کا کیو آر کوڈ کتنی دیر بعد بدلتا ہے"
+      },
+      "help": {
+        "en": "The code shown at a location changes every this many seconds; a scanned code is accepted in its own period and the one before. A photograph of the code is useless, and the punch also needs the employee's own signed-in session.",
+        "ur": "کسی مقام پر دکھایا جانے والا کوڈ ہر اتنے سیکنڈ بعد بدلتا ہے؛ اسکین کیا گیا کوڈ اپنی مدت اور اس سے پہلی مدت میں قبول ہوتا ہے۔ کوڈ کی تصویر بے کار ہے، اور اندراج کے لیے ملازم کا اپنا سائن ان سیشن بھی لازمی ہے۔"
+      }
+    },
+    {
+      "key": "hrm.att.allowed_networks",
+      "module": "hrm",
+      "type": "list",
+      "default": [],
+      "validation": {
+        "max_items": 50
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.attendance",
+      "unit": null,
+      "name": {
+        "en": "Allowed networks for web punches",
+        "ur": "ویب اندراج کے لیے اجازت یافتہ نیٹ ورک"
+      },
+      "description": {
+        "en": "Network ranges (for example 203.0.113.0/24) from which web and QR punches are accepted; empty means anywhere",
+        "ur": "وہ نیٹ ورک رینجز (مثلاً 203.0.113.0/24) جہاں سے ویب اور کیو آر اندراج قبول ہوتے ہیں؛ خالی کا مطلب کہیں سے بھی"
+      },
+      "help": {
+        "en": "Leave empty to accept web punches from any network. With ranges listed, a web or QR punch from outside them is refused. Kiosk punches are not affected: the kiosk screen is a signed-in station.",
+        "ur": "خالی چھوڑیں تو ویب اندراج کسی بھی نیٹ ورک سے قبول ہوتا ہے۔ رینجز درج ہوں تو ان سے باہر سے ویب یا کیو آر اندراج مسترد ہوتا ہے۔ کیوسک اندراج پر اس کا اثر نہیں: کیوسک اسکرین سائن ان شدہ اسٹیشن ہے۔"
+      }
+    },
+    {
+      "key": "hrm.pay.cutoff_reminder_days",
+      "module": "hrm",
+      "type": "int",
+      "default": 3,
+      "validation": {
+        "min": 0,
+        "max": 31
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.payroll",
+      "unit": null,
+      "name": {
+        "en": "Payroll cut-off reminder (days before)",
+        "ur": "پے رول کٹ آف کی یاد دہانی (دن پہلے)"
+      },
+      "description": {
+        "en": "How many days before a pay period's cut-off the payroll officers are reminded",
+        "ur": "تنخواہی دور کی کٹ آف سے کتنے دن پہلے پے رول افسران کو یاد دلایا جائے"
+      },
+      "help": {
+        "en": "The payroll officers get a reminder this many days before the cut-off date of each pay period that has not closed, once for each cut-off date. Zero reminds only on the cut-off day itself.",
+        "ur": "ہر اس تنخواہی دور کی کٹ آف تاریخ سے اتنے دن پہلے پے رول افسران کو یاد دہانی ملتی ہے جو ابھی بند نہیں ہوا، ہر کٹ آف تاریخ کے لیے ایک بار۔ صفر ہو تو صرف کٹ آف کے دن یاد دلایا جاتا ہے۔"
       }
     }
   ],

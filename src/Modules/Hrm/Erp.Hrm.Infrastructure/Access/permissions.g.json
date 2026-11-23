@@ -51,12 +51,6 @@
       "sensitive": false
     },
     {
-      "code": "hrm.attendance_events.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.attendance_events.create",
-      "sensitive": false
-    },
-    {
       "code": "hrm.attendance_exceptions.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.attendance_exceptions.read",
@@ -1077,24 +1071,6 @@
       "sensitive": true
     },
     {
-      "code": "hrm.pay_groups.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_groups.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.pay_groups.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_groups.update",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.pay_groups.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_groups.delete",
-      "sensitive": true
-    },
-    {
       "code": "hrm.pay_inputs.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay_inputs.read",
@@ -1116,18 +1092,6 @@
       "code": "hrm.pay_periods.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay_periods.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.pay_periods.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_periods.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.pay_periods.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_periods.update",
       "sensitive": false
     },
     {
@@ -1299,24 +1263,6 @@
       "sensitive": false
     },
     {
-      "code": "hrm.policies.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policies.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.policies.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policies.update",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.policies.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policies.delete",
-      "sensitive": false
-    },
-    {
       "code": "hrm.policy_acknowledgements.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.policy_acknowledgements.read",
@@ -1332,18 +1278,6 @@
       "code": "hrm.policy_assignments.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.policy_assignments.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.policy_assignments.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policy_assignments.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.policy_assignments.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policy_assignments.update",
       "sensitive": false
     },
     {
@@ -1368,18 +1302,6 @@
       "code": "hrm.policy_versions.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.policy_versions.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.policy_versions.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policy_versions.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.policy_versions.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.policy_versions.update",
       "sensitive": false
     },
     {

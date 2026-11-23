@@ -194,6 +194,11 @@ internal sealed partial class EmploymentService(
             return PeopleResult.Fields(errors.ToDictionary());
         }
 
+        if (await PayGroupProblemAsync(company, delta, cancellationToken).ConfigureAwait(false) is { } payGroupProblem)
+        {
+            return payGroupProblem;
+        }
+
         Stamp(employment);
         var hire = Stamp(new EmploymentEvent
         {
@@ -437,6 +442,7 @@ internal sealed partial class EmploymentService(
         Id(a.PositionId, AssignmentKeys.Position, required: false);
         Id(a.GradeId, AssignmentKeys.Grade, required: false);
         Id(a.ManagerEmploymentId, AssignmentKeys.Manager, required: false);
+        Id(a.PayGroupId, AssignmentKeys.PayGroup, required: false);
         if (a.Title is not null || hire)
         {
             if (Text(a.Title, "assignment.title", TitleLength, errors) is { } title)
@@ -650,6 +656,7 @@ internal sealed partial class EmploymentService(
         "fk_employment_assignments_position_id" => Field("assignment.positionId", NotInCompany),
         "fk_employment_assignments_grade_id" => Field("assignment.gradeId", NotInCompany),
         "fk_employment_assignments_manager_employment_id" => Field("assignment.managerEmploymentId", NotInCompany),
+        "fk_employment_assignments_pay_group_id" => Field("assignment.payGroupId", "errors.hrm.pay.group_not_found"),
         "fk_employments_company_id" => Field("companyId", "errors.data.not_found"),
         "uq_employments_company_id_employee_no" => Field("employeeNo", "errors.hrm.employment.employee_no_taken"),
         "uq_employments_person_id" => PeopleResult.Conflict(AlreadyEmployed),

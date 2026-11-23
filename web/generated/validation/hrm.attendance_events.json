@@ -47,7 +47,8 @@
         "biometric",
         "kiosk",
         "hr_entry",
-        "import"
+        "import",
+        "qr"
       ]
     },
     "deviceId": {

@@ -471,6 +471,13 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
                 ? Results.Ok(new { key, requestId = System.Text.Json.JsonDocument.Parse(text).RootElement.GetProperty("requestId").GetGuid() })
                 : Results.Problem($"setting {(int)held.StatusCode} {text}");
         });
+        // Removes the customer-level value of a setting (back to the inherited or standard value); scenarios call it to restore what they changed.
+        app.MapDelete("/settings", async (string key) =>
+        {
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            await IdentityHarness.ExecAsync(owner, "delete from cfg.setting_values where setting_key = $1 and layer = 'tenant'", Ct, key);
+            return Results.NoContent();
+        });
         app.MapGet("/settings/value", async (string key) =>
         {
             await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
