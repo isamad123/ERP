@@ -26,20 +26,35 @@ public static class HrmSettingKeys
     /// <summary>Whether loan and advance balances move to the new company or are settled on a transfer.</summary>
     public const string HrmTransferCarryOverLoans = "hrm.transfer.carry_over.loans";
 
-    /// <summary>Length of the probation opened at hire for the employee types listed.</summary>
-    public const string HrmProbationDefaultMonths = "hrm.probation.default_months";
-
-    /// <summary>The employee types that start with a probation when hired.</summary>
-    public const string HrmProbationEmployeeTypes = "hrm.probation.employee_types";
-
     /// <summary>How many days before a probation ends the manager and HR are reminded.</summary>
     public const string HrmProbationReminderDays = "hrm.probation.reminder_days";
 
     /// <summary>How many days before a contract ends the manager and HR are reminded, when the contract gives no number.</summary>
     public const string HrmContractsRenewalNoticeDays = "hrm.contracts.renewal_notice_days";
 
+    /// <summary>Whether the company plans by positions or by headcount per unit and grade.</summary>
+    public const string HrmOrgModel = "hrm.org.model";
+
     /// <summary>A new or changed payment account of an employee needs a second person's approval.</summary>
     public const string HrmBankAccountsRequiresApproval = "hrm.bank_accounts.requires_approval";
+
+    /// <summary>Activating a policy version or policy assignments needs a second person's approval.</summary>
+    public const string HrmPoliciesRequiresApproval = "hrm.policies.requires_approval";
+
+    /// <summary>Punches of one person in the same direction within this many seconds count once.</summary>
+    public const string HrmAttDuplicateWindowSeconds = "hrm.att.duplicate_window_seconds";
+
+    /// <summary>A punch time later than the server clock by more than this is refused.</summary>
+    public const string HrmAttFutureToleranceMinutes = "hrm.att.future_tolerance_minutes";
+
+    /// <summary>How many years attendance punches are kept before their month is removed.</summary>
+    public const string HrmAttEventRetentionYears = "hrm.att.event_retention_years";
+
+    /// <summary>How often the QR code of a gate changes.</summary>
+    public const string HrmAttQrWindowSeconds = "hrm.att.qr_window_seconds";
+
+    /// <summary>Network ranges (for example 203.0.113.0/24) from which web and QR punches are accepted; empty means anywhere.</summary>
+    public const string HrmAttAllowedNetworks = "hrm.att.allowed_networks";
 
     /// <summary>How many days before a pay period's cut-off the payroll officers are reminded.</summary>
     public const string HrmPayCutoffReminderDays = "hrm.pay.cutoff_reminder_days";

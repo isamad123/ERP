@@ -12,18 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.policies.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.policies.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.policies.update"
-    },
-    {
-      "action": "delete",
-      "permission": "hrm.policies.delete"
     }
   ],
   "companyScoped": true,
@@ -49,6 +37,7 @@
     "ck_policies_code_code": "code",
     "ck_policies_name_i18n_object": "nameI18n",
     "ck_policies_policy_type_code": "policyType",
+    "ck_policies_policy_type_format": "policyType",
     "ck_policies_source": "source",
     "fk_policies_company_id": "companyId",
     "uq_policies_company_id_id": "id"

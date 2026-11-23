@@ -8093,7 +8093,8 @@
             "biometric",
             "kiosk",
             "hr_entry",
-            "import"
+            "import",
+            "qr"
           ]
         },
         {
@@ -17055,7 +17056,9 @@
         }
       ],
       "indexes": [],
-      "triggers": [],
+      "triggers": [
+        "tg_grades_value_checks"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.grades"
@@ -17248,7 +17251,9 @@
         "ix_headcount_budgets_company_id_org_unit_id",
         "ix_headcount_budgets_company_id_grade_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_headcount_budgets_value_checks"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.headcount_budgets"
@@ -26764,7 +26769,8 @@
         "ck_policies_code_code",
         "ck_policies_name_i18n_object",
         "ck_policies_policy_type_code",
-        "ck_policies_source"
+        "ck_policies_source",
+        "ck_policies_policy_type_format"
       ],
       "exclusions": [],
       "foreign_keys": [
@@ -27069,7 +27075,9 @@
       ],
       "uniques": [],
       "checks": [
-        "ck_policy_assignments_valid_to"
+        "ck_policy_assignments_valid_to",
+        "ck_policy_assignments_rule_object",
+        "ck_policy_assignments_precedence"
       ],
       "exclusions": [
         "ex_policy_assignments_policy_id_precedence"
@@ -27103,7 +27111,9 @@
         "ix_policy_assignments_company_id_precedence",
         "ix_policy_assignments_company_id_policy_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_policy_assignments_checks"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.policy_assignments"
@@ -27464,11 +27474,14 @@
         }
       ],
       "uniques": [
-        "uq_policy_versions_policy_id_version"
+        "uq_policy_versions_policy_id_version",
+        "uq_policy_versions_policy_id"
       ],
       "checks": [
         "ck_policy_versions_status",
-        "ck_policy_versions_valid_to"
+        "ck_policy_versions_valid_to",
+        "ck_policy_versions_parameters_object",
+        "ck_policy_versions_version"
       ],
       "exclusions": [
         "ex_policy_versions_policy_id"
@@ -27486,7 +27499,9 @@
         }
       ],
       "indexes": [],
-      "triggers": [],
+      "triggers": [
+        "tg_policy_versions_fixed"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.policy_versions"
@@ -27799,7 +27814,10 @@
         "ix_positions_company_id_reports_to_position_id",
         "ix_positions_company_id_location_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_positions_reporting_cycle",
+        "tg_positions_value_checks"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.positions"
@@ -32697,6 +32715,295 @@
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.statutory_tables"
+    },
+    {
+      "database": "tenant",
+      "schema": "hrm",
+      "name": "strength_exceptions",
+      "module": "hrm",
+      "traits": [
+        "std",
+        "co"
+      ],
+      "requirements": [
+        "POS-01",
+        "POS-02"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "company_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "employment_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "org_unit_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "grade_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "position_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "effective_date",
+          "kind": "Date",
+          "type": "date",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "reason",
+          "kind": "Text",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "workflow_instance_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "used_event_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "status",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "pending_approval",
+            "approved",
+            "rejected",
+            "cancelled",
+            "used"
+          ]
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [],
+      "checks": [
+        "ck_strength_exceptions_status"
+      ],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_strength_exceptions_company_id",
+          "columns": [
+            "company_id"
+          ],
+          "target": "org.companies",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "fk_strength_exceptions_employment_id",
+          "columns": [
+            "company_id",
+            "employment_id"
+          ],
+          "target": "hrm.employments",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_strength_exceptions_org_unit_id",
+          "columns": [
+            "company_id",
+            "org_unit_id"
+          ],
+          "target": "org.org_units",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_strength_exceptions_grade_id",
+          "columns": [
+            "company_id",
+            "grade_id"
+          ],
+          "target": "hrm.grades",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_strength_exceptions_position_id",
+          "columns": [
+            "company_id",
+            "position_id"
+          ],
+          "target": "hrm.positions",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_strength_exceptions_workflow_instance_id",
+          "columns": [
+            "company_id",
+            "workflow_instance_id"
+          ],
+          "target": "wf.workflow_instances",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_strength_exceptions_used_event_id",
+          "columns": [
+            "company_id",
+            "used_event_id"
+          ],
+          "target": "hrm.employment_events",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_strength_exceptions_employment_id_status",
+        "ix_strength_exceptions_company_id",
+        "ix_strength_exceptions_company_id_employment_id",
+        "ix_strength_exceptions_company_id_org_unit_id",
+        "ix_strength_exceptions_company_id_grade_id",
+        "ix_strength_exceptions_company_id_position_id",
+        "ix_strength_exceptions_company_id_workflow_instance_id",
+        "ix_strength_exceptions_company_id_used_event_id"
+      ],
+      "triggers": [],
+      "append_only_updatable": [],
+      "has_api": true,
+      "full_name": "hrm.strength_exceptions"
     },
     {
       "database": "tenant",
@@ -45328,13 +45635,6 @@
       "table": "hrm.payment_lines",
       "owner": "S1.40",
       "rule": "deferred: sum of active lines per result equals pay_results.net"
-    },
-    {
-      "schema": "hrm",
-      "function": "todo_positions_reporting_cycle",
-      "table": "hrm.positions",
-      "owner": "S1.22",
-      "rule": "Cycle check trigger on reports_to_position_id."
     },
     {
       "schema": "hrm",
