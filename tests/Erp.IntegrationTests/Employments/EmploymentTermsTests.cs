@@ -550,10 +550,16 @@ public sealed class EmploymentTermsTests(TenancyFixture fx) : IAsyncLifetime
         await rig.RunUntilIdleAsync(worker, Ct);
         Assert.Equal(1L, await OutboxAsync("hrm.contract_ending", contract));
         Assert.Equal(managerUser.ToString(), await _h.ScalarAsync<string>("select payload->>'manager_user_id' from hrm.outbox_messages where event_type = 'hrm.contract_ending' and aggregate_id = $1", Ct, contract));
+        // The dispatcher handles 100 events per pass, oldest first; the shared customer holds other tests' events too, so pass until idle.
         var dispatcher = rig.Provider().GetRequiredService<EventDispatcher>();
-        foreach (var outcome in await dispatcher.DispatchOnceAsync(_h.Code, Ct))
+        for (var pass = 0; pass < 100; pass++)
         {
-            Assert.True(outcome.Error is null, outcome.Error);
+            var outcomes = await dispatcher.DispatchOnceAsync(_h.Code, Ct);
+            Assert.All(outcomes, outcome => Assert.True(outcome.Error is null, outcome.Error));
+            if (outcomes.Sum(o => o.Delivered + o.Failed) == 0)
+            {
+                break;
+            }
         }
 
         Assert.Equal(1L, await _h.ScalarAsync<long>("select count(*) from ntf.in_app_items where user_id = $1 and event_code = 'hrm.contract_ending'", Ct, managerUser));
