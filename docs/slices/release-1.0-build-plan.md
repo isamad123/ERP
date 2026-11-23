@@ -59,10 +59,10 @@ Each slice is one fresh session (or one fresh session per part where its slice f
 | --- | --- | --- | --- |
 | S1.34 | Pay set-up: groups, periods, components, structures, compensation assignments (two parts, fresh Opus review of part b; slice file approved, CR-087) | C | Sonnet |
 | S1.35 | Payroll engine: snapshot, calculation, trace, chunked job, determinism tests (two parts, fresh Opus review of each; slice file approved, CR-093) | B | Opus |
-| S1.36 | Pakistan income tax (salaried slabs, irregular income, declarations, previous employer) | B | Opus |
-| S1.37 | Statutory contributions: EOBI, provincial social security, WWF, provident fund, gratuity accrual | B | Opus |
-| S1.38 | Run stages, validation flags, variance report, maker-checker approval, lock and reopen | B | Opus |
-| S1.39 | Arrears and retro corrections, off-cycle runs, salary hold | B | Opus |
+| S1.36 | Pakistan income tax (salaried slabs, irregular income, declarations, previous employer) (parts S1.36a tax rule and calculator, S1.36b irregular payments, declarations, previous employer, preview; fresh Opus review of each; statutory content open for the professional; slice file approved, CR-109) | B | Opus |
+| S1.37 | Statutory contributions: EOBI, provincial social security, WWF, provident fund, gratuity accrual (parts S1.37a contribution schemes, S1.37b gratuity and company-level contributions; fresh Opus review of each; statutory content and WWF/WPPF open for the professional; slice file approved, CR-110) | B | Opus |
+| S1.38 | Run stages, validation flags, variance report, maker-checker approval, lock and reopen (parts S1.38a validation and approval, S1.38b lock, reopen and close, both Opus with fresh reviews; S1.38c screens on Sonnet; slice file approved, CR-111) | B | Opus (S1.38c Sonnet) |
+| S1.39 | Arrears and retro corrections, off-cycle runs, salary hold (parts S1.39a retro and arrears, S1.39b off-cycle, bonus, hold, reversal; fresh Opus review of each; slice file approved, CR-112) | B | Opus |
 | S1.40 | Payslips (bilingual PDF), bank salary files, payment status import (two parts, fresh Opus review of part a; slice file approved, CR-094) | C | Sonnet |
 | S1.41 | Loans and advances with payroll recovery (slice file approved, CR-097) | C | Sonnet |
 | S1.42 | Expense claims with policy checks and reimbursement (slice file approved, CR-098) | C | Sonnet |
