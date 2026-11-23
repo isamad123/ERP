@@ -9,6 +9,8 @@ import { accessible, display, fitsWidth, menu, noProblems, person, server, shot 
 test.describe.configure({ mode: 'serial' });
 
 const WIDTHS = [360, 768, 1280] as const;
+const run = Math.random().toString(36).slice(2, 7);
+const MANAGER = `Wanda Approver ${run}`;
 const NUMBERING = ['cfg.numbering_schemes.read', 'cfg.numbering_schemes.create', 'cfg.numbering_schemes.update', 'cfg.numbering_schemes.retire', 'cfg.numbering.void_report',
   'cfg.setting_values.read', 'org.branches.read'];
 const ROUTES = ['wf.workflow_definitions.read', 'wf.workflow_definitions.update', 'iam.roles.read', 'iam.users.read', 'wf.workflow_instances.read'];
@@ -80,7 +82,7 @@ test('FR-KRN-NUM-01 FR-KRN-NUM-02 an administrator sets, changes and retires the
 });
 
 test('FR-KRN-WFL-01 FR-KRN-WFL-02 FR-KRN-WFL-03 FR-KRN-WFL-10 a draft route with a conditional second step is checked and activated while a running request keeps its version', async ({ browser }) => {
-  const manager = await person(browser, { displayName: 'Imran Manager' });
+  const manager = await person(browser, { displayName: MANAGER });
   const requester = await person(browser, { displayName: 'Amna Requester' });
   const admin = await person(browser, { permissions: ROUTES, displayName: 'Rita Routes' });
   await server.route(manager.username, false);
@@ -106,8 +108,8 @@ test('FR-KRN-WFL-01 FR-KRN-WFL-02 FR-KRN-WFL-03 FR-KRN-WFL-10 a draft route with
   await second.getByRole('textbox', { name: /^Step name in English/ }).fill('Director');
   await second.getByRole('textbox', { name: /^Step name in Urdu/ }).fill('ڈائریکٹر');
   await choose(second, /Who decides/, 'A named person', page);
-  await second.getByRole('combobox', { name: /^Person/ }).fill('Imran');
-  await page.getByRole('option', { name: /Imran Manager/ }).click();
+  await second.getByRole('combobox', { name: /^Person/ }).fill(`Wanda Approver ${run}`);
+  await page.getByRole('option', { name: new RegExp(MANAGER) }).click();
   await second.getByRole('button', { name: 'Add a condition' }).click();
   await choose(second, /Field/, /^Amount/, page);
   await choose(second, /Comparison/, 'is more than', page);
