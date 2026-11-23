@@ -87,18 +87,6 @@
       "sensitive": false
     },
     {
-      "code": "cfg.setup_tasks.create",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.setup_tasks.create",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.setup_tasks.update",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.setup_tasks.update",
-      "sensitive": false
-    },
-    {
       "code": "doc.generated_documents.read",
       "module": "doc",
       "descriptionKey": "permissions.doc.generated_documents.read",

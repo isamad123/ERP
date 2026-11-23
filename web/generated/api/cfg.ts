@@ -317,23 +317,13 @@ export interface SetupTask
     isRequired: boolean;
     completedBy: string | null;
     completedAt: string | null;
+    note: string | null;
     status: 'pending' | 'done' | 'skipped';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface SetupTaskWrite
-{
-    moduleId: string;
-    taskKey: string;
-    companyId?: string | null;
-    isRequired?: boolean;
-    completedBy?: string | null;
-    completedAt?: string | null;
-    status: 'pending' | 'done' | 'skipped';
 }
 
 export interface SetupTaskListQuery
@@ -350,6 +340,4 @@ export const setupTasks =
 {
     list: (query: SetupTaskListQuery = {}) => request<PagedResult<SetupTask>>('GET', '/api/cfg/setup-tasks', { query }),
     get: (id: string) => request<SetupTask>('GET', `/api/cfg/setup-tasks/${id}`),
-    create: (body: SetupTaskWrite) => request<SetupTask>('POST', '/api/cfg/setup-tasks', { body }),
-    update: (id: string, body: SetupTaskWrite & { rowVersion: number }) => request<SetupTask>('PUT', `/api/cfg/setup-tasks/${id}`, { body }),
 };

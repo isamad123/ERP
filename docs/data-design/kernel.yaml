@@ -793,7 +793,11 @@
     - [is_required, bool, req]
     - [completed_by, uuid, opt]
     - [completed_at, ts, opt]
+    - [note, text, opt, "S1.18a (CR-074): why a step was skipped or why go-live was overridden (a reason is required for an override)"]
   unique: [[module_id, task_key, company_id]]
+  # S1.18a (CR-074): ticks, skips and go-live are written only through /api/cfg/readiness (the service audits each change).
+  added_in: {S1.18a: [note]}
+  api_actions: [read]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
   reqs: [ADM-ONB-01, ADM-ONB-02, ADM-ONB-03]

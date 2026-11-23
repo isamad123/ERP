@@ -741,6 +741,7 @@ First-run wizard progress and readiness checklist per module (ADM-ONB-01 to 03).
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| note | text | yes |  | S1.18a (CR-074): why a step was skipped or why go-live was overridden (a reason is required for an override) |
 
 Constraints:
 

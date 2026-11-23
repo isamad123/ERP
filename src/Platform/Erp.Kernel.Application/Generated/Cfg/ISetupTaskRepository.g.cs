@@ -44,6 +44,7 @@ public static class SetupTaskAccess
         new("is_required", "IsRequired", null),
         new("completed_by", "CompletedBy", null),
         new("completed_at", "CompletedAt", null),
+        new("note", "Note", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
