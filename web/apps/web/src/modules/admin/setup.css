@@ -1,0 +1,9 @@
+/* The set-up guide and readiness checklist (slice S1.18b): design tokens and logical properties only. */
+.erp-setup-layout { display: grid; gap: var(--space-4); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 48rem) { .erp-setup-layout { grid-template-columns: minmax(14rem, 1fr) minmax(0, 2fr); } }
+.erp-setup-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.erp-setup-step { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; padding-block: var(--space-2); padding-inline: var(--space-3); border: var(--border-width) solid var(--color-border-subtle); border-radius: var(--radius-card); }
+.erp-setup-step[aria-current='step'] { border-color: var(--color-primary); }
+.erp-setup-pane { display: grid; gap: var(--space-3); align-content: start; min-inline-size: 0; }
+.erp-setup-progress { inline-size: 100%; block-size: var(--space-2); }
+.erp-end { align-items: end; }
