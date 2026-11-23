@@ -359,6 +359,36 @@
         "en": "A contract's own renewal notice days come first. Without them, the line manager and HR administrators are reminded this many days before the end date.",
         "ur": "معاہدے کے اپنے تجدیدی نوٹس کے دن پہلے آتے ہیں۔ ان کے بغیر لائن مینیجر اور ایچ آر منتظمین کو اختتامی تاریخ سے اتنے دن پہلے یاد دلایا جاتا ہے۔"
       }
+    },
+    {
+      "key": "hrm.bank_accounts.requires_approval",
+      "module": "hrm",
+      "type": "bool",
+      "default": true,
+      "validation": {},
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": true,
+      "area": "hr.employment",
+      "unit": null,
+      "name": {
+        "en": "Approval of employee bank accounts",
+        "ur": "ملازمین کے بینک اکاؤنٹس کی منظوری"
+      },
+      "description": {
+        "en": "A new or changed payment account of an employee needs a second person's approval",
+        "ur": "ملازم کے نئے یا تبدیل شدہ ادائیگی اکاؤنٹ کے لیے دوسرے شخص کی منظوری درکار"
+      },
+      "help": {
+        "en": "Adding, changing, ending or removing an employee's payment account waits until another person with the approval permission approves it. The person who asked can never approve it.",
+        "ur": "ملازم کا ادائیگی اکاؤنٹ شامل کرنا، تبدیل کرنا، ختم کرنا یا ہٹانا اس وقت تک رکا رہتا ہے جب تک منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور نہ کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔"
+      }
     }
   ],
   "flags": []

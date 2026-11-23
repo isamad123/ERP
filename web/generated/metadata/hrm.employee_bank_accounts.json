@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.employee_bank_accounts.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.employee_bank_accounts.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.employee_bank_accounts.update"
     }
   ],
   "companyScoped": true,
@@ -43,6 +35,7 @@
   "search": [],
   "constraints": {
     "ck_employee_bank_accounts_payment_mode": "paymentMode",
+    "ck_employee_bank_accounts_priority": "priority",
     "ck_employee_bank_accounts_split_kind": "splitKind",
     "fk_employee_bank_accounts_bank_id": "bankId",
     "fk_employee_bank_accounts_company_id": "companyId",
