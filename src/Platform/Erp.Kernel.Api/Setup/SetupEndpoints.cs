@@ -60,5 +60,5 @@ public static class SetupEndpoints
     }
 
     private static void Tag(RouteHandlerBuilder endpoint, string kind, string permission) =>
-        endpoint.WithMetadata(new AccessEndpointMetadata(kind, Resource, permission));
+        endpoint.WithMetadata(new SetupEndpointMetadata(kind == "catalog" ? kind : "action", Resource, permission));
 }
