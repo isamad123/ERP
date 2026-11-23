@@ -925,19 +925,6 @@ export interface Contract
     rowVersion: number;
 }
 
-export interface ContractWrite
-{
-    companyId: string;
-    employmentId: string;
-    startDate: string;
-    endDate?: string | null;
-    renewalNoticeDays?: number | null;
-    terms: unknown;
-    fileId?: string | null;
-    renewsContractId?: string | null;
-    status: 'draft' | 'active' | 'expired' | 'renewed' | 'terminated';
-}
-
 export interface ContractListQuery
 {
     after?: string;
@@ -955,8 +942,6 @@ export const contracts =
 {
     list: (query: ContractListQuery = {}) => request<PagedResult<Contract>>('GET', '/api/hrm/contracts', { query }),
     get: (id: string) => request<Contract>('GET', `/api/hrm/contracts/${id}`),
-    create: (body: ContractWrite) => request<Contract>('POST', '/api/hrm/contracts', { body }),
-    update: (id: string, body: ContractWrite & { rowVersion: number }) => request<Contract>('PUT', `/api/hrm/contracts/${id}`, { body }),
 };
 
 /** hrm.course_sessions: CourseSession. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4393,24 +4378,12 @@ export interface ProbationRecord
     extendedTo: string | null;
     reviewFormResponseId: string | null;
     decisionDate: string | null;
-    status: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed';
+    status: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed' | 'transferred';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface ProbationRecordWrite
-{
-    companyId: string;
-    employmentId: string;
-    startDate: string;
-    endDate: string;
-    extendedTo?: string | null;
-    reviewFormResponseId?: string | null;
-    decisionDate?: string | null;
-    status: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed';
 }
 
 export interface ProbationRecordListQuery
@@ -4420,15 +4393,13 @@ export interface ProbationRecordListQuery
     companyId?: string;
     employmentId?: string;
     reviewFormResponseId?: string;
-    status?: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed';
+    status?: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed' | 'transferred';
 }
 
 export const probationRecords =
 {
     list: (query: ProbationRecordListQuery = {}) => request<PagedResult<ProbationRecord>>('GET', '/api/hrm/probation-records', { query }),
     get: (id: string) => request<ProbationRecord>('GET', `/api/hrm/probation-records/${id}`),
-    create: (body: ProbationRecordWrite) => request<ProbationRecord>('POST', '/api/hrm/probation-records', { body }),
-    update: (id: string, body: ProbationRecordWrite & { rowVersion: number }) => request<ProbationRecord>('PUT', `/api/hrm/probation-records/${id}`, { body }),
 };
 
 /** hrm.provident_fund_accounts: ProvidentFundAccount. Field rules (S1.06) may leave a field out or mask it as text. */

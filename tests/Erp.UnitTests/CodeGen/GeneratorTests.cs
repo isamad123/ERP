@@ -413,14 +413,62 @@ public sealed class GeneratorTests
     }
 
     [Fact]
+    public void S120c_FR_XM_30_fks_replaced_in_keeps_the_frozen_pair_and_replaces_it_with_the_plain_key_in_the_slice_file()
+    {
+        var files = Generator.Generate(Root).Files;
+        var frozen = files["src/Modules/Hrm/Erp.Hrm.Infrastructure/Migrations/V202611150100__hrm__hrm.sql"];
+        Assert.Contains("add constraint fk_employments_previous_employment_id foreign key (company_id, previous_employment_id) references hrm.employments (company_id, id);", frozen, StringComparison.Ordinal);
+        Assert.Contains("create index if not exists ix_employments_company_id_previous_employment_id on hrm.employments (company_id, previous_employment_id);", frozen, StringComparison.Ordinal);
+        var slice = files["src/Modules/Hrm/Erp.Hrm.Infrastructure/Migrations/V202611152317__hrm__design_s1_20c.sql"];
+        var drop = slice.IndexOf("alter table hrm.employments drop constraint if exists fk_employments_previous_employment_id;", StringComparison.Ordinal);
+        var add = slice.IndexOf("add constraint fk_employments_previous_employment_id foreign key (previous_employment_id) references hrm.employments (id);", StringComparison.Ordinal);
+        Assert.True(drop >= 0 && add > drop, slice);
+        Assert.Contains("create index if not exists ix_employments_previous_employment_id on hrm.employments (previous_employment_id);", slice, StringComparison.Ordinal);
+        var key = Model.Value.Table("hrm.employments").ForeignKeys.Single(f => f.Name == "fk_employments_previous_employment_id");
+        Assert.Equal(["previous_employment_id"], key.Columns);
+        Assert.Equal("S1.20c", key.ReplacedIn);
+    }
+
+    [Theory]
+    [InlineData("[person_id]", "is the company-scoped pair")]
+    [InlineData("[employee_type]", "without a foreign key")]
+    public void S120c_fks_replaced_in_refuses_a_column_without_a_same_company_foreign_key(string columns, string problem)
+    {
+        var folder = Directory.CreateTempSubdirectory("erp-s120c-design-").FullName;
+        try
+        {
+            foreach (var file in Directory.GetFiles(Path.Combine(Root, "docs", "data-design"), "*.yaml"))
+            {
+                File.Copy(file, Path.Combine(folder, Path.GetFileName(file)));
+            }
+
+            var people = Path.Combine(folder, "hrm-people.yaml");
+            File.WriteAllText(people, File.ReadAllText(people).Replace("fks_replaced_in: {S1.20c: [previous_employment_id]}", "fks_replaced_in: {S1.20c: " + columns + "}", StringComparison.Ordinal));
+            var error = Assert.Throws<DesignException>(() => DesignLoader.Load(folder, Path.Combine(Root, "tools", "Erp.CodeGen")));
+            Assert.Contains(problem, error.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    [Fact]
     public void S108_FR_KRN_NUM_03_numbered_columns_are_filled_by_the_numbering_service_and_never_accepted_from_the_caller()
     {
         var files = Generator.Generate(Root).Files;
+        var leave = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/LeaveRequestEndpoints.g.cs"];
+        var request = leave[leave.IndexOf("public sealed class LeaveRequestWriteRequest", StringComparison.Ordinal)..leave.IndexOf("public sealed class LeaveRequestListQuery", StringComparison.Ordinal)];
+        Assert.DoesNotContain("RequestNo", request, StringComparison.Ordinal);
+        Assert.Contains("NumberRequest(\"hrm.leave_request_no\", row.CompanyId, row.BranchId, row.StartDate)", leave, StringComparison.Ordinal);
+
+        // Slice S1.20c (R-113): contracts have no generated create; the contract service takes the number from the numbering
+        // service, dated by the start date, and the request has no number to type.
         var contracts = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/ContractEndpoints.g.cs"];
-        var request = contracts[contracts.IndexOf("public sealed class ContractWriteRequest", StringComparison.Ordinal)..contracts.IndexOf("public sealed class ContractListQuery", StringComparison.Ordinal)];
-        Assert.DoesNotContain("ContractNo", request, StringComparison.Ordinal);
-        Assert.Contains("NumberRequest(\"hrm.contract_no\", row.CompanyId, null, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/ContractEndpoints.g.cs"], StringComparison.Ordinal);
-        Assert.Contains("NumberRequest(\"hrm.leave_request_no\", row.CompanyId, row.BranchId, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/LeaveRequestEndpoints.g.cs"], StringComparison.Ordinal);
+        Assert.DoesNotContain("WriteRequest", contracts, StringComparison.Ordinal);
+        Assert.DoesNotContain("AssignOnCreateAsync", contracts, StringComparison.Ordinal);
+        Assert.Contains("numbers.AssignOnCreateAsync(new NumberRequest(\"hrm.contract_no\", contract.CompanyId, null, contract.StartDate)", File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Infrastructure/Employments/EmploymentTermsService.cs")), StringComparison.Ordinal);
+        Assert.DoesNotContain("ContractNo", File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Application/Employments/EmploymentTermsContracts.cs")), StringComparison.Ordinal);
 
         // Slice S1.20a (ruling Q1): persons have no generated create, so nobody can type a person number; the person service
         // takes it from the kernel numbering service.

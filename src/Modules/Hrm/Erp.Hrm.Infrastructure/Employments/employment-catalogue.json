@@ -1,5 +1,5 @@
 {
-  "_comment": "Provisional employment catalogue of slice S1.20b (CR-076 S1.20b detail; FR-HRM-EMP-02, -03): employee types (spec 06a FR-HRM-EMP-02 and the data design list) and the reason codes of each event kind the employment services record. Customer option lists (S1.15b) replace these lists; no statutory meaning is claimed. Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "Provisional employment catalogue of slice S1.20b (CR-076 S1.20b detail; S1.20c adds the rehire reasons, the transfer-in hire reason and the separation reason transfer, the other separation reasons come with S1.25; FR-HRM-EMP-02, -03): employee types (spec 06a FR-HRM-EMP-02 and the data design list) and the reason codes of each event kind the employment services record. Customer option lists (S1.15b) replace these lists; no statutory meaning is claimed. Urdu texts to be reviewed by a native speaker (R-062).",
   "status": "provisional",
   "employee_types": [
     {"code": "permanent", "name": {"en": "Permanent", "ur": "مستقل"}},
@@ -13,7 +13,11 @@
   "kinds": [
     {"code": "hire", "name": {"en": "Hire", "ur": "بھرتی"}, "reasons": [
       {"code": "new_hire", "name": {"en": "New hire", "ur": "نئی بھرتی"}},
-      {"code": "replacement", "name": {"en": "Replacement", "ur": "متبادل"}}]},
+      {"code": "replacement", "name": {"en": "Replacement", "ur": "متبادل"}},
+      {"code": "transfer_in", "name": {"en": "Transfer from a sister company", "ur": "ذیلی کمپنی سے تبادلہ"}}]},
+    {"code": "rehire", "name": {"en": "Rehire", "ur": "دوبارہ بھرتی"}, "reasons": [
+      {"code": "rejoining", "name": {"en": "Former employee rejoining", "ur": "سابق ملازم کی دوبارہ شمولیت"}},
+      {"code": "seasonal_return", "name": {"en": "Seasonal or project return", "ur": "موسمی یا منصوبے پر واپسی"}}]},
     {"code": "promotion", "name": {"en": "Promotion", "ur": "ترقی"}, "reasons": [
       {"code": "merit", "name": {"en": "Merit", "ur": "قابلیت"}},
       {"code": "vacancy", "name": {"en": "Filling a vacancy", "ur": "خالی آسامی پر تقرری"}}]},
@@ -37,6 +41,8 @@
       {"code": "early_confirmation", "name": {"en": "Early confirmation", "ur": "قبل از وقت تصدیق"}}]},
     {"code": "data_correction", "name": {"en": "Data correction", "ur": "ڈیٹا کی درستی"}, "reasons": [
       {"code": "entry_error", "name": {"en": "Entry error", "ur": "اندراج کی غلطی"}},
-      {"code": "late_information", "name": {"en": "Information received late", "ur": "تاخیر سے موصول معلومات"}}]}
+      {"code": "late_information", "name": {"en": "Information received late", "ur": "تاخیر سے موصول معلومات"}}]},
+    {"code": "separation", "name": {"en": "Separation", "ur": "علیحدگی"}, "reasons": [
+      {"code": "transfer", "name": {"en": "Transfer to a sister company", "ur": "ذیلی کمپنی میں تبادلہ"}}]}
   ]
 }

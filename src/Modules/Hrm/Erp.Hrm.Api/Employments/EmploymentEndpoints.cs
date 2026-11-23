@@ -12,12 +12,13 @@ namespace Erp.Hrm.Api.Employments;
 
 /// <summary>
 /// The HR employment endpoints (slice S1.20b, ruling Q1): hire, record and check a change, the as-of record and the timeline, the
-/// user link, and the catalogue. Reads of the rows stay the generated <c>/api/hrm/employments</c>, <c>/api/hrm/employment-assignments</c>
+/// user link, the catalogue, and (S1.20c) transfers between companies, rehire, contracts and probation. Reads of the rows stay the generated <c>/api/hrm/employments</c>, <c>/api/hrm/employment-assignments</c>
 /// (with <c>asOf</c>) and <c>/api/hrm/employment-events</c>; their generated writes are closed. Answers are as for the person endpoints.
 /// </summary>
 public static class EmploymentEndpoints
 {
     private const string Employments = "hrm.employments";
+    private const string Contracts = "hrm.contracts";
     private static readonly EntitlementMetadata Core = new("hrm.core", "hrm");
 
     public static IEndpointRouteBuilder MapHrmEmploymentEndpoints(this IEndpointRouteBuilder app)
@@ -38,6 +39,23 @@ public static class EmploymentEndpoints
             PersonEndpoints.Answer(await s.LinkUserAsync(id, body, ct).ConfigureAwait(false))), "record_action", Employments, EmploymentPermissions.UserLink);
         Tag(app.MapDelete("/api/hrm/employments/{id:guid}/user", async (Guid id, [FromQuery] long? rowVersion, IEmploymentService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.UnlinkUserAsync(id, rowVersion, ct).ConfigureAwait(false))), "record_action", Employments, EmploymentPermissions.UserLink);
+        // S1.20c: transfers between companies, rehire, contracts and probation (Build items 11 to 13).
+        Tag(app.MapPost("/api/hrm/employments/{id:guid}/transfer", async (Guid id, TransferRequest body, IEmploymentMoves s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.TransferAsync(id, body, ct).ConfigureAwait(false))), "record_action", Employments, EmploymentPermissions.Transfer);
+        Tag(app.MapPost("/api/hrm/employments/{id:guid}/transfer/check", async (Guid id, TransferRequest body, IEmploymentMoves s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.CheckTransferAsync(id, body, ct).ConfigureAwait(false))), "record_action", Employments, EmploymentPermissions.Transfer);
+        Tag(app.MapPost("/api/hrm/employments/{id:guid}/rehire", async (Guid id, RehireRequest body, IEmploymentMoves s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.RehireAsync(id, body, ct).ConfigureAwait(false))), "record_action", Employments, EmploymentPermissions.EmploymentsCreate);
+        Tag(app.MapPost("/api/hrm/employments/{id:guid}/contracts", async (Guid id, ContractRequest body, IEmploymentTermsService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.CreateContractAsync(id, body, ct).ConfigureAwait(false))), "record_action", Employments, EmploymentPermissions.ContractsCreate);
+        Tag(app.MapPost("/api/hrm/contracts/{id:guid}/renew", async (Guid id, ContractRequest body, IEmploymentTermsService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.RenewContractAsync(id, body, ct).ConfigureAwait(false))), "record_action", Contracts, EmploymentPermissions.ContractsCreate);
+        Tag(app.MapPost("/api/hrm/employments/{id:guid}/probation/extend", async (Guid id, ProbationDecisionRequest body, IEmploymentTermsService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.ExtendProbationAsync(id, body, ct).ConfigureAwait(false))), "record_action", Employments, EmploymentPermissions.ProbationUpdate);
+        Tag(app.MapPost("/api/hrm/employments/{id:guid}/probation/confirm", async (Guid id, ProbationDecisionRequest body, IEmploymentTermsService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.ConfirmProbationAsync(id, body, ct).ConfigureAwait(false))), "record_action", Employments, EmploymentPermissions.ProbationUpdate);
+        Tag(app.MapPost("/api/hrm/employments/{id:guid}/probation/not-confirm", async (Guid id, ProbationDecisionRequest body, IEmploymentTermsService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.NotConfirmProbationAsync(id, body, ct).ConfigureAwait(false))), "record_action", Employments, EmploymentPermissions.ProbationUpdate);
         Tag(app.MapGet("/api/hrm/employment-catalogue", async (IEmploymentService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.CatalogueAsync(ct).ConfigureAwait(false))), "catalog", Employments, EmploymentPermissions.EmploymentsRead);
         return app;

@@ -2280,6 +2280,7 @@
   "options.hrm.probation_records.status.extended": "Extended",
   "options.hrm.probation_records.status.in_progress": "In progress",
   "options.hrm.probation_records.status.not_confirmed": "Not confirmed",
+  "options.hrm.probation_records.status.transferred": "Transferred",
   "options.hrm.provident_fund_accounts.status.active": "Active",
   "options.hrm.provident_fund_accounts.status.closed": "Closed",
   "options.hrm.provident_fund_ledger.kind.adjustment": "Adjustment",

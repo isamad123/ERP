@@ -8,13 +8,15 @@ namespace Erp.Hrm.Infrastructure.Employments;
 /// <summary>
 /// What the active employee limit counts (slice S1.20 Build items 5 and 9; FR-KRN-ENT-05, S1.09b ruling Q8). The monthly meter
 /// counts employments that are active or on notice. The limit guard at hire also counts employments waiting for their joining
-/// date, so hiring ahead of time cannot pass the limit and then exceed it when the daily job makes them active.
+/// date, so hiring ahead of time cannot pass the limit and then exceed it when the daily job makes them active. Both count persons
+/// (S1.20c): a transfer between companies or a future-dated transfer has two employments of one employee for a while, and they
+/// take one seat.
 /// </summary>
 public static class ActiveEmployeeSql
 {
-    public const string Active = "select count(*) from hrm.employments where status in ('active', 'on_notice')";
+    public const string Active = "select count(distinct person_id) from hrm.employments where status in ('active', 'on_notice')";
 
-    public const string Seats = "select count(*) from hrm.employments where status in ('pre_joining', 'active', 'on_notice')";
+    public const string Seats = "select count(distinct person_id) from hrm.employments where status in ('pre_joining', 'active', 'on_notice')";
 
     internal static async Task<long> CountAsync(DbConnection connection, DbTransaction? transaction, string sql, CancellationToken ct)
     {

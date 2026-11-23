@@ -14,7 +14,7 @@ public static partial class DesignLoader
     private static readonly string[] KnownKeys =
         ["table", "purpose", "traits", "status", "columns", "unique", "indexes", "eff_key", "key", "checks", "notes", "partition", "reqs",
          "added_in", "updatable_added_in", "api_read_only", "api_create_only", "scope", "field_class", "field_view", "api_actions", "audit", "audit_reason", "indexes_added_in",
-         "numbering", "optional_added_in", "enum_added_in", "checks_added_in", "uniques_added_in", "uniques_replaced_in", "entitlement"];
+         "numbering", "optional_added_in", "enum_added_in", "checks_added_in", "uniques_added_in", "uniques_replaced_in", "entitlement", "fks_replaced_in"];
 
     /// <summary>Keys of a design file's <c>defaults</c> entry (slice S1.09b): values every table of the file takes unless it overrides them.</summary>
     private static readonly string[] DefaultKeys = ["defaults", "entitlement"];
@@ -309,6 +309,16 @@ public static partial class DesignLoader
 
                 var old = table.Uniques[index];
                 table.Uniques[index] = old with { Where = AndNotDeleted(table, where), BaseWhere = old.Where, ReplacedIn = SliceId(slice, table.FullName) };
+            }
+        }
+
+        // fks_replaced_in: {S1.20c: [column, ...]} (S1.20c, CR-076 S1.20c detail): the company-scoped foreign key on the column (README
+        // rule 12) becomes the plain one in the slice's design migration, for a reference that crosses companies by design (FR-XM-30).
+        foreach (var (slice, raw) in YamlNode.Map(map.GetValueOrDefault("fks_replaced_in"), table.FullName + ".fks_replaced_in"))
+        {
+            foreach (var column in YamlNode.Texts(raw, table.FullName + ".fks_replaced_in"))
+            {
+                table.ForeignKeysReplacedIn.Add((column, SliceId(slice, table.FullName)));
             }
         }
 
@@ -1203,7 +1213,26 @@ public static partial class DesignLoader
                 continue;
             }
 
-            table.ForeignKeys.Add(BuildForeignKey(table, fk.Column, target));
+            var built = BuildForeignKey(table, fk.Column, target);
+            if (table.ForeignKeysReplacedIn.Find(r => r.Column == fk.Column) is { Column: not null } replaced)
+            {
+                if (built.Columns.Count != 2 || built.Columns[0] != "company_id")
+                {
+                    throw new DesignException($"{table.FullName}.{fk.Column}", "fks_replaced_in names a column whose foreign key is the company-scoped pair");
+                }
+
+                built = built with { Columns = [fk.Column], TargetColumns = [built.TargetColumns[1]], BaseColumns = built.Columns, BaseTargetColumns = built.TargetColumns, ReplacedIn = replaced.Slice };
+            }
+
+            table.ForeignKeys.Add(built);
+        }
+
+        foreach (var table in model.Tables)
+        {
+            foreach (var (column, _) in table.ForeignKeysReplacedIn.Where(r => !table.ForeignKeys.Exists(f => f.ReplacedIn is not null && f.Columns.SequenceEqual([r.Column]))))
+            {
+                throw new DesignException($"{table.FullName}.{column}", "fks_replaced_in names a column without a foreign key");
+            }
         }
     }
 
@@ -1302,11 +1331,19 @@ public static partial class DesignLoader
         {
             foreach (var fk in table.ForeignKeys)
             {
-                if (!IsCovered(table, fk.Columns))
+                // A replaced key (S1.20c) keeps the index the frozen file made for its first form; its new form gets its own index
+                // in the slice's design file.
+                var first = fk.AsFirstCreated;
+                if (!IsCovered(table, first.Columns))
                 {
                     // A foreign key on a column added later (S1.11a) gets its index in that slice's design file.
                     var addedIn = table.ForeignKeyAddedIn(fk);
-                    table.Indexes.Add(new IndexDef(Naming.DbName("ix", table.Name, fk.Columns), fk.Columns, null, "foreign key " + fk.Name, addedIn));
+                    table.Indexes.Add(new IndexDef(Naming.DbName("ix", table.Name, first.Columns), first.Columns, null, "foreign key " + fk.Name, addedIn));
+                }
+
+                if (fk.ReplacedIn is not null && !IsCovered(table, fk.Columns))
+                {
+                    table.Indexes.Add(new IndexDef(Naming.DbName("ix", table.Name, fk.Columns), fk.Columns, null, "foreign key " + fk.Name, fk.ReplacedIn));
                 }
             }
         }

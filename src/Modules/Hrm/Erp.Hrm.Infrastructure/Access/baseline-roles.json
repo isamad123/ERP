@@ -189,6 +189,9 @@
         "hrm.employments.number_override",
         "hrm.employments.link_user",
         "hrm.employment_events.create",
+        "hrm.employments.transfer",
+        "hrm.contracts.create",
+        "hrm.probation_records.update",
         "wf.workflow_tasks.read",
         "wf.workflow_tasks.update"
       ],

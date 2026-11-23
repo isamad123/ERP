@@ -23,6 +23,8 @@ internal sealed partial class EmploymentService
     public const string CorrectionNeedsTargetForJob = "errors.hrm.employment_event.job_details_need_target";
     public const string ConfirmationBeforeJoiningAfter = "errors.hrm.employment.confirmation_before_new_joining";
     public const string ServiceStartAfterJoining = "errors.hrm.employment.service_start_after_joining";
+    public const string AfterEnd = "errors.hrm.employment.after_end";
+    public const string TransferStartCorrection = "errors.hrm.employment_event.transfer_start";
 
     public Task<PeopleResult> CheckChangeAsync(Guid employmentId, EmploymentChangeRequest request, CancellationToken cancellationToken) =>
         ChangeAsync(employmentId, request, save: false, cancellationToken);
@@ -130,6 +132,32 @@ internal sealed partial class EmploymentService
             }
         }
 
+        // Nothing changes on or after a recorded end (a transfer's separation, S1.20c), and an end is not corrected here: it is
+        // withdrawn or reversed by the separation services (S1.25).
+        if (events.Any(x => x.Kind == EmploymentApplier.SeparationKind && x.Status is "pending_approval" or "approved" or "effective" && x.EffectiveDate <= date))
+        {
+            errors.Add("effectiveDate", AfterEnd);
+        }
+
+        if (target?.Kind == EmploymentApplier.SeparationKind)
+        {
+            errors.Add("correctsEventId", CorrectionTarget);
+        }
+
+        // The start of a transfer is not corrected alone either (review S1.20c finding 1, FR-XM-30, FR-XM-32): moving it would leave
+        // the first company's end where it was, without the transfer permission or its approval. A wrong transfer date is put right
+        // by withdrawing and recording the transfer again (S1.25); its service start follows the recorded carry-over choice.
+        var transferStart = events.FirstOrDefault(x => x.Kind == "hire" && x.ReasonCode == TransferApplier.TransferInReason);
+        if (target is not null && transferStart is not null && RootEvent(target, events)?.Id == transferStart.Id)
+        {
+            errors.Add("correctsEventId", TransferStartCorrection);
+        }
+
+        if (transferStart is not null && r.Employment?.ServiceStartDate is not null)
+        {
+            errors.Add("employment.serviceStartDate", TransferStartCorrection);
+        }
+
         var delta = r.Assignment is { } input ? AssignmentDelta(input, errors, hire: false) : [];
         if (kind == "acting" && !delta.ContainsKey(AssignmentKeys.IsActing))
         {
@@ -178,7 +206,7 @@ internal sealed partial class EmploymentService
                 employmentDelta["confirmation_date"] = Iso(date);
             }
         }
-        else if (rootKind != "hire" && date < employment.JoiningDate)
+        else if (!StartsEmployment(rootKind) && date < employment.JoiningDate)
         {
             errors.Add("effectiveDate", BeforeJoining);
         }
@@ -239,9 +267,17 @@ internal sealed partial class EmploymentService
             return Field("effectiveDate", BeforeJoining);
         }
 
-        if (rootKind == "hire" && planned.Count > 0 && planned[0].ValidFrom > today && employment.Status != "pre_joining")
+        if (StartsEmployment(rootKind) && planned.Count > 0 && planned[0].ValidFrom > today && employment.Status != "pre_joining")
         {
             return Field("effectiveDate", JoiningAfterToday);
+        }
+
+        // A corrected rehire still joins after the former employment ended (BR-01; review S1.20c finding 7).
+        if (rootKind == "rehire" && planned.Count > 0 && employment.PreviousEmploymentId is { } former
+            && await db.Set<Employment>().AsNoTracking().Where(x => x.Id == former).Select(x => x.SeparationDate).FirstOrDefaultAsync(ct).ConfigureAwait(false) is { } ended
+            && planned[0].ValidFrom <= ended)
+        {
+            return Field("effectiveDate", RehireBeforeSeparation);
         }
 
         if (await PlannedProblemAsync(employment, planned, assignment, ct).ConfigureAwait(false) is { } invalid)
@@ -372,6 +408,22 @@ internal sealed partial class EmploymentService
             : null;
     }
 
+    /// <summary>Whether a kind starts an employment: a hire or a rehire (review S1.20c finding 7).</summary>
+    private static bool StartsEmployment(string? kind) => kind is "hire" or "rehire";
+
+    /// <summary>The event a correction finally replaces, following the chain of corrections; null when the chain is broken.</summary>
+    private static EmploymentEvent? RootEvent(EmploymentEvent target, List<EmploymentEvent> events)
+    {
+        var current = target;
+        for (var i = 0; current is not null && current.Kind == "data_correction" && i < events.Count; i++)
+        {
+            var next = current.CorrectsEventId;
+            current = next is null ? null : events.FirstOrDefault(x => x.Id == next);
+        }
+
+        return current;
+    }
+
     /// <summary>The kind a correction finally replaces (a correction of a correction replaces what the first one replaced).</summary>
     private static string RootKind(EmploymentEvent target) =>
         target.Kind != "data_correction" ? target.Kind
@@ -430,6 +482,14 @@ internal sealed partial class EmploymentService
         if (changed[AssignmentKeys.Manager] is { } node)
         {
             var manager = Guid.Parse(node.GetValue<string>());
+
+            // The manager's employment is held until commit (review S1.20b finding 7): two opposite manager changes made at the same
+            // moment wait for each other, so the reporting-cycle trigger of the second sees the first (or one is stopped as a deadlock).
+            if (db.Database.CurrentTransaction is not null)
+            {
+                await db.Database.ExecuteSqlInterpolatedAsync($"select 1 from hrm.employments where id = {manager} for share", ct).ConfigureAwait(false);
+            }
+
             if (!await db.Set<Employment>().AsNoTracking().AnyAsync(m => m.Id == manager && m.CompanyId == employment.CompanyId && CurrentStatuses.Contains(m.Status), ct).ConfigureAwait(false))
             {
                 return Field("assignment.managerEmploymentId", ManagerNotCurrent);

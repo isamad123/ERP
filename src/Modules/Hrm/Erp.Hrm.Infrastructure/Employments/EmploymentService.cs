@@ -108,7 +108,10 @@ internal sealed partial class EmploymentService(
 
     // ================================================================== hire
 
-    public async Task<PeopleResult> HireAsync(HireRequest request, CancellationToken cancellationToken)
+    public Task<PeopleResult> HireAsync(HireRequest request, CancellationToken cancellationToken) => HireAsync(request, previous: null, cancellationToken);
+
+    /// <summary>A hire, or a rehire linked to the person's former employment <paramref name="previous"/> (S1.20c, BR-01).</summary>
+    private async Task<PeopleResult> HireAsync(HireRequest request, Guid? previous, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         if (!await HasAsync(EmploymentPermissions.EmploymentsCreate, cancellationToken).ConfigureAwait(false))
@@ -141,6 +144,7 @@ internal sealed partial class EmploymentService(
             EmployeeType = string.Empty,
             Status = "pre_joining",
             IsPrimary = true,
+            PreviousEmploymentId = previous,
         };
         if (!Catalogue.IsEmployeeType(request.EmployeeType))
         {
@@ -174,8 +178,10 @@ internal sealed partial class EmploymentService(
             employment.Status = joining <= today ? "active" : "pre_joining";
         }
 
+        // A rehire has its own kind and reasons; the transfer-in reason belongs to transfers only (S1.20c).
+        var kind = previous is null ? "hire" : "rehire";
         var reason = request.ReasonCode ?? "new_hire";
-        if (!Catalogue.IsReason("hire", reason))
+        if (!Catalogue.IsReason(kind, reason) || reason == TransferApplier.TransferInReason)
         {
             errors.Add("reasonCode", UnknownCode);
         }
@@ -192,7 +198,7 @@ internal sealed partial class EmploymentService(
         {
             CompanyId = company,
             EmploymentId = employment.Id,
-            Kind = "hire",
+            Kind = kind,
             ReasonCode = reason,
             EffectiveDate = employment.JoiningDate,
             Notes = notes,
@@ -331,15 +337,23 @@ internal sealed partial class EmploymentService(
             return PeopleResult.Invalid(problem);
         }
 
-        applier.Raise(EmploymentEvents.EmployeeHired, employment, clock.UtcNow, actor.UserId, new
+        // The probation of the employee types the company lists (S1.20c, ruling Q10).
+        await applier.OpenProbationAsync(employment, clock.UtcNow, actor.UserId, ct).ConfigureAwait(false);
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
-            employmentId = employment.Id,
-            personId = employment.PersonId,
-            companyId = employment.CompanyId,
-            eventId = hire.Id,
-            joiningDate = employment.JoiningDate,
-            status = employment.Status,
-        });
+            ["employmentId"] = employment.Id,
+            ["personId"] = employment.PersonId,
+            ["companyId"] = employment.CompanyId,
+            ["eventId"] = hire.Id,
+            ["joiningDate"] = employment.JoiningDate,
+            ["status"] = employment.Status,
+        };
+        if (employment.PreviousEmploymentId is { } earlier)
+        {
+            payload["previousEmploymentId"] = earlier; // a rehire (S1.20c)
+        }
+
+        applier.Raise(EmploymentEvents.EmployeeHired, employment, clock.UtcNow, actor.UserId, payload);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         // Data scope after the save (the employment now locates its person).
@@ -604,6 +618,13 @@ internal sealed partial class EmploymentService(
         {
             db.ChangeTracker.Clear();
             return PeopleResult.Conflict(ex.ErrorKey, ex.Details.Count == 0 ? null : new Dictionary<string, object?> { ["details"] = ex.Details });
+        }
+        catch (PostgresException pg) when (pg.SqlState is "40P01" or "40001")
+        {
+            // Two changes waiting for each other's rows (for example opposite manager changes, review S1.20c finding 6): the
+            // database stops one; its caller is told to read again and retry.
+            db.ChangeTracker.Clear();
+            return PeopleResult.Conflict(Concurrency);
         }
     }
 

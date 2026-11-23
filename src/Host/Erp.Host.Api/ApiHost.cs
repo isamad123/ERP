@@ -108,6 +108,7 @@ public static class ApiHost
         // the active employee counters. The kernel's user directory answers whether a user may be linked (D-10).
         services.AddHrmEmployment().AddHrmEmploymentApi();
         services.AddSingleton<Erp.Kernel.Contracts.Workflow.IWorkflowDocumentTypeSource>(new WorkflowManifestSource(EmploymentServices.WorkflowManifest));
+        services.AddSingleton(new NotificationManifestSource(EmploymentServices.NotificationManifest)); // S1.20c reminders
         services.AddScoped<Erp.Kernel.Contracts.Identity.IUserDirectory, Erp.Kernel.Infrastructure.Identity.UserDirectory>();
         services.AddSingleton(new ResourceCatalog([.. KernelResourceCatalog.All, .. HrmResourceCatalog.All]));
         services.AddScoped<AccessAdministrationService>();
