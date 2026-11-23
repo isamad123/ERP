@@ -35,6 +35,12 @@ public sealed class AssignmentInput
 
     public string? Title { get; init; }
 
+    /// <summary>
+    /// The pay group the employee is paid in (slice S1.34a, FR-HRM-PAY-01): one at a time, changed only through an employment event
+    /// (or given at hire). A group with an unfinished payroll run cannot be left. Cannot be emptied.
+    /// </summary>
+    public Guid? PayGroupId { get; init; }
+
     /// <summary>The line manager: another employment of the same company.</summary>
     public Guid? ManagerEmploymentId { get; init; }
 

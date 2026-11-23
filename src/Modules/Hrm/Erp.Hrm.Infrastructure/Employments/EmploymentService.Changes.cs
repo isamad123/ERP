@@ -235,6 +235,11 @@ internal sealed partial class EmploymentService
             return PeopleResult.Fields(errors.ToDictionary());
         }
 
+        if (await PayGroupProblemAsync(employment.CompanyId, delta, ct).ConfigureAwait(false) is { } payGroupProblem)
+        {
+            return payGroupProblem;
+        }
+
         // A correction carries the changes of the event it replaces, overridden by its own (FR-XM-05: never edited in place).
         var targetAssignment = target is null ? null : EmploymentApplier.Section(target.Changes, "assignment");
         var assignment = targetAssignment is null ? delta : EmploymentTimeline.Apply(targetAssignment, delta);
@@ -297,6 +302,11 @@ internal sealed partial class EmploymentService
         // changes must be in the caller's records, with the changed fields editable; each row it puts in force must be too.
         var earliest = EmploymentApplier.EarliestAffected(date, target?.Id, events); // along the whole chain (follow-up B)
         var stored = await db.Set<EmploymentAssignment>().AsNoTracking().Where(a => a.EmploymentId == employment.Id).ToListAsync(ct).ConfigureAwait(false);
+        if (await OpenRunProblemAsync(stored, planned, ct).ConfigureAwait(false) is { } openRun)
+        {
+            return openRun;
+        }
+
         var denied = new List<string>();
         foreach (var row in stored)
         {
@@ -477,6 +487,49 @@ internal sealed partial class EmploymentService
         {
             delta["expected_end_date"] = null;
         }
+    }
+
+    /// <summary>
+    /// The pay group an event or a hire sets (slice S1.34a, FR-HRM-PAY-01): it must be a switched-on group of the employment's company.
+    /// (The composite foreign key refuses another company's group; this adds the switched-off case with a clear answer.)
+    /// </summary>
+    private async Task<PeopleResult?> PayGroupProblemAsync(Guid company, JsonObject delta, CancellationToken ct)
+    {
+        if (delta[AssignmentKeys.PayGroup] is not { } node)
+        {
+            return null;
+        }
+
+        var group = Guid.Parse(node.GetValue<string>());
+        return await db.Set<PayGroup>().AsNoTracking().AnyAsync(g => g.Id == group && g.CompanyId == company && g.IsActive && !g.IsDeleted, ct).ConfigureAwait(false)
+            ? null
+            : Field("assignment.payGroupId", "errors.hrm.pay.group_not_found");
+    }
+
+    /// <summary>
+    /// A move out of a pay group is refused while the group has a payroll run that has not finished (slice S1.34a, FR-HRM-PAY-01): a
+    /// stored row whose group the planned rows change names the old group; a run of it in any status but closed or cancelled blocks.
+    /// </summary>
+    private async Task<PeopleResult?> OpenRunProblemAsync(IReadOnlyList<EmploymentAssignment> stored, IReadOnlyList<PlannedRow> planned, CancellationToken ct)
+    {
+        var leaving = new HashSet<Guid>();
+        foreach (var plan in planned)
+        {
+            // The stored row in force on the planned row's first day names the group the employee is in then.
+            var covering = stored.LastOrDefault(a => a.ValidFrom <= plan.ValidFrom && (a.ValidTo == null || a.ValidTo > plan.ValidFrom));
+            if (covering?.PayGroupId is { } old && plan.Values[AssignmentKeys.PayGroup]?.GetValue<string>() != old.ToString())
+            {
+                leaving.Add(old);
+            }
+        }
+
+        if (leaving.Count > 0
+            && await db.Set<PayRun>().AsNoTracking().AnyAsync(r => leaving.Contains(r.PayGroupId) && r.Status != "closed" && r.Status != "cancelled", ct).ConfigureAwait(false))
+        {
+            return Field("assignment.payGroupId", "errors.hrm.pay.group_open_run");
+        }
+
+        return null;
     }
 
     /// <summary>

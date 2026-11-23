@@ -113,3 +113,13 @@ settings:
     name: {en: "Approval of employee bank accounts", ur: "ملازمین کے بینک اکاؤنٹس کی منظوری"}
     description: {en: "A new or changed payment account of an employee needs a second person's approval", ur: "ملازم کے نئے یا تبدیل شدہ ادائیگی اکاؤنٹ کے لیے دوسرے شخص کی منظوری درکار"}
     help: {en: "Adding, changing, ending or removing an employee's payment account waits until another person with the approval permission approves it. The person who asked can never approve it.", ur: "ملازم کا ادائیگی اکاؤنٹ شامل کرنا، تبدیل کرنا، ختم کرنا یا ہٹانا اس وقت تک رکا رہتا ہے جب تک منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور نہ کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔"}
+  # S1.34a (CR-087; slice S1.34 Build item 3, FR-HRM-PAY-38): read by the daily job hrm.pay_cutoff_reminders.
+  - key: hrm.pay.cutoff_reminder_days
+    type: int
+    default: 3
+    validation: {min: 0, max: 31}
+    layers: [tenant, company]
+    area: hr.payroll
+    name: {en: "Payroll cut-off reminder (days before)", ur: "پے رول کٹ آف کی یاد دہانی (دن پہلے)"}
+    description: {en: "How many days before a pay period's cut-off the payroll officers are reminded", ur: "تنخواہی دور کی کٹ آف سے کتنے دن پہلے پے رول افسران کو یاد دلایا جائے"}
+    help: {en: "The payroll officers get a reminder this many days before the cut-off date of each pay period that has not closed, once for each cut-off date. Zero reminds only on the cut-off day itself.", ur: "ہر اس تنخواہی دور کی کٹ آف تاریخ سے اتنے دن پہلے پے رول افسران کو یاد دہانی ملتی ہے جو ابھی بند نہیں ہوا، ہر کٹ آف تاریخ کے لیے ایک بار۔ صفر ہو تو صرف کٹ آف کے دن یاد دلایا جاتا ہے۔"}

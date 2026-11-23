@@ -110,6 +110,10 @@ public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction tr
         ["hrm.employee_bank_accounts.priority"] = n => (n % 99) + 1,
         ["hrm.employment_statutory_registrations.scheme"] = n => "scheme_" + n.ToString(CultureInfo.InvariantCulture),
         ["hrm.employment_statutory_registrations.is_applicable"] = _ => true,
+        // S1.34a: a pay group's tax-year start month is 1 to 12 and its cut-off and payment offsets 0 to 31 days (tg_pay_groups_rules).
+        ["hrm.pay_groups.tax_year_start_month"] = _ => 7,
+        ["hrm.pay_groups.cut_off_day"] = _ => 3,
+        ["hrm.pay_groups.payment_day"] = _ => 5,
     };
 
     private int _formatted;

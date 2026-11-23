@@ -1,0 +1,11 @@
+{
+  "_comment": "Registry of the payroll readiness checklist (slice S1.34a, CR-087; FR-HRM-PAY-38). Each item names its code, the text key of its label, the slice that owns its check and the requirement it serves. A check is a class implementing IPayReadinessCheck with the same code, registered in the host: an item listed here without a registered check shows as 'not available' and is never counted as passed. A later slice adds its item here and registers its check (attendance locked: S1.31, FR-XM-26; loans: S1.41; claims: S1.42). The order of this list is the order of the checklist.",
+  "module": "hrm",
+  "items": [
+    {"code": "attendance_locked", "labelKey": "hrm.pay.readiness.attendance_locked", "slice": "S1.31", "requirement": "FR-XM-26"},
+    {"code": "loans_updated", "labelKey": "hrm.pay.readiness.loans_updated", "slice": "S1.41", "requirement": "FR-HRM-LON-01"},
+    {"code": "claims_approved", "labelKey": "hrm.pay.readiness.claims_approved", "slice": "S1.42", "requirement": "FR-HRM-EXP-01"},
+    {"code": "bank_data_complete", "labelKey": "hrm.pay.readiness.bank_data_complete", "slice": "S1.34a", "requirement": "FR-HRM-PAY-38"},
+    {"code": "structures_assigned", "labelKey": "hrm.pay.readiness.structures_assigned", "slice": "S1.34a", "requirement": "FR-HRM-PAY-04"}
+  ]
+}

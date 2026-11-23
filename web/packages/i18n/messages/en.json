@@ -1438,6 +1438,8 @@
   "nav.customFields": "Custom fields",
   "nav.numbering": "Numbering",
   "nav.approvalRoutes": "Approval routes",
+  "nav.payGroups": "Pay groups",
+  "nav.payCalendar": "Payroll calendar",
   "nav.notificationTexts": "Notification texts",
   "nav.documentTemplates": "Document templates"
 }

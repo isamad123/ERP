@@ -1300,3 +1300,70 @@ functions:
       drop trigger if exists tg_employee_bank_accounts_split on hrm.employee_bank_accounts;
       create constraint trigger tg_employee_bank_accounts_split after insert or update or delete on hrm.employee_bank_accounts
           deferrable initially deferred for each row execute function hrm.tg_employee_bank_accounts_split();
+
+  # S1.34a (CR-087; FR-HRM-PAY-01): the numbers of a pay group are in range, and its frequency and tax-year start cannot change once
+  # periods exist (the periods were generated from them). Statutory values are never here (AS-4): the tax-year start month and the
+  # cut-off and payment offsets are the customer's own settings of the group.
+  - slice: S1.34a
+    name: hrm.tg_pay_groups_rules
+    purpose: "A pay group's tax-year start month is 1 to 12 and its cut-off and payment offsets are 0 to 31 days; its frequency and tax-year start month do not change once periods exist (FR-HRM-PAY-01); refused with constraint ck_pay_groups_rules."
+    triggers:
+      - [hrm.pay_groups, tg_pay_groups_rules]
+    sql: |
+      create or replace function hrm.tg_pay_groups_rules() returns trigger
+      language plpgsql as $fn$
+      begin
+          if new.tax_year_start_month < 1 or new.tax_year_start_month > 12
+             or (new.cut_off_day is not null and (new.cut_off_day < 0 or new.cut_off_day > 31))
+             or (new.payment_day is not null and (new.payment_day < 0 or new.payment_day > 31)) then
+              raise exception 'pay group %: tax-year start month must be 1 to 12 and cut-off and payment offsets 0 to 31', new.code
+                  using errcode = '23514', constraint = 'ck_pay_groups_rules';
+          end if;
+          if tg_op = 'UPDATE'
+             and (new.frequency is distinct from old.frequency or new.tax_year_start_month is distinct from old.tax_year_start_month)
+             and exists (select 1 from hrm.pay_periods p where p.pay_group_id = old.id) then
+              raise exception 'pay group %: frequency and tax-year start cannot change once periods exist', old.code
+                  using errcode = '23514', constraint = 'ck_pay_groups_rules';
+          end if;
+          return new;
+      end
+      $fn$;
+      drop trigger if exists tg_pay_groups_rules on hrm.pay_groups;
+      create trigger tg_pay_groups_rules before insert or update on hrm.pay_groups
+          for each row execute function hrm.tg_pay_groups_rules();
+
+  # S1.34a (CR-087; FR-HRM-PAY-01, FR-HRM-PAY-38): the dates of a period change only while it is in the future (before it opens); a
+  # closed period never changes at all; only a future period can be deleted. The status itself is advanced by the pay run (S1.38).
+  - slice: S1.34a
+    name: hrm.tg_pay_periods_fixed
+    purpose: "Dates, number and tax year of a period change only while it is future; a closed period never changes; only a future period is deleted (FR-HRM-PAY-01); refused with constraint ck_pay_periods_fixed."
+    triggers:
+      - [hrm.pay_periods, tg_pay_periods_fixed]
+    sql: |
+      create or replace function hrm.tg_pay_periods_fixed() returns trigger
+      language plpgsql as $fn$
+      begin
+          if tg_op = 'DELETE' then
+              if old.status <> 'future' then
+                  raise exception 'pay period % is % and cannot be deleted', old.id, old.status
+                      using errcode = '23514', constraint = 'ck_pay_periods_fixed';
+              end if;
+              return old;
+          end if;
+          if old.status = 'closed' then
+              raise exception 'pay period % is closed and cannot change', old.id
+                  using errcode = '23514', constraint = 'ck_pay_periods_fixed';
+          end if;
+          if old.status <> 'future'
+             and (new.pay_group_id, new.period_no, new.tax_year, new.start_date, new.end_date, new.cut_off_date, new.payment_date)
+                 is distinct from
+                 (old.pay_group_id, old.period_no, old.tax_year, old.start_date, old.end_date, old.cut_off_date, old.payment_date) then
+              raise exception 'pay period % is % and its dates cannot change', old.id, old.status
+                  using errcode = '23514', constraint = 'ck_pay_periods_fixed';
+          end if;
+          return new;
+      end
+      $fn$;
+      drop trigger if exists tg_pay_periods_fixed on hrm.pay_periods;
+      create trigger tg_pay_periods_fixed before update or delete on hrm.pay_periods
+          for each row execute function hrm.tg_pay_periods_fixed();
