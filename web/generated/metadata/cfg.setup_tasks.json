@@ -13,14 +13,6 @@
     {
       "action": "read",
       "permission": "cfg.setup_tasks.read"
-    },
-    {
-      "action": "create",
-      "permission": "cfg.setup_tasks.create"
-    },
-    {
-      "action": "update",
-      "permission": "cfg.setup_tasks.update"
     }
   ],
   "companyScoped": false,
@@ -37,6 +29,7 @@
     "isRequired",
     "completedBy",
     "completedAt",
+    "note",
     "status"
   ],
   "search": [],
@@ -121,6 +114,16 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.cfg.setup_tasks.completed_at"
+    },
+    {
+      "column": "note",
+      "field": "note",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.cfg.setup_tasks.note"
     },
     {
       "column": "status",
