@@ -18,6 +18,10 @@
   unique: [[company_id, lower(code)]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.34a (CR-087, slice S1.34 Q5): the approval threshold is an amount, so it is salary-class data (GHR-06); generated writes are
+  # closed because the pay group service checks the frequency, the cut-off and payment offsets and the periods already generated.
+  field_class: {approval_threshold: salary}
+  api_actions: [read]
   reqs: [PAY-01, PAY-13]
 
 - table: hrm.pay_periods
@@ -35,6 +39,8 @@
   unique: [[pay_group_id, start_date], [pay_group_id, tax_year, period_no]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.34a (CR-087): periods are generated and their dates changed by the pay calendar service only (a closed period never changes).
+  api_actions: [read]
   reqs: [PAY-01, PAY-38]
   checks: ["exclusion: (pay_group_id with =, daterange(start_date, end_date, '[]') with &&)", start_date <= cut_off_date and start_date <= end_date]
   notes: "Trigger refuses new pay_inputs, retro_adjustments or installments targeting a closed period."

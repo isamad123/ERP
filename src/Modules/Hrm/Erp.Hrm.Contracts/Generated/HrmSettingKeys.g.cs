@@ -40,6 +40,9 @@ public static class HrmSettingKeys
 
     /// <summary>A new or changed payment account of an employee needs a second person's approval.</summary>
     public const string HrmBankAccountsRequiresApproval = "hrm.bank_accounts.requires_approval";
+
+    /// <summary>How many days before a pay period's cut-off the payroll officers are reminded.</summary>
+    public const string HrmPayCutoffReminderDays = "hrm.pay.cutoff_reminder_days";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>
