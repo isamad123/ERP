@@ -16,6 +16,7 @@ using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Api.ControlPlane.Tenancy;
 using Erp.Kernel.Api.Access;
 using Erp.Kernel.Api.Metadata;
+using Erp.Kernel.Api.Setup;
 using Erp.Kernel.Api.Org;
 using Erp.Kernel.Application.Org;
 using Erp.Kernel.Infrastructure.Org;
@@ -32,6 +33,7 @@ using Erp.Kernel.Api.Jobs;
 using Erp.Kernel.Api.Documents;
 using Erp.Kernel.Api.Notifications;
 using Erp.Kernel.Infrastructure.Documents;
+using Erp.Kernel.Api.Drafts;
 using Erp.Kernel.Api.Views;
 using Erp.Kernel.Api.Workflow;
 using Erp.Kernel.Infrastructure.Jobs;
@@ -165,12 +167,15 @@ public static class ApiHost
         services.AddScoped<ISessionContextService, SessionContextService>();
         // Saved list views and label overrides of the web lists and forms (S1.12c, S1.12 rulings Q11 and Q12).
         services.AddScoped<Erp.Kernel.Contracts.Views.ISavedViewService, Erp.Kernel.Infrastructure.Views.SavedViewService>();
+        services.AddScoped<Erp.Kernel.Contracts.Drafts.IFormDraftService, Erp.Kernel.Infrastructure.Drafts.FormDraftService>(); // S1.21a
         services.AddScoped<Erp.Kernel.Contracts.Views.ILabelOverrideService, Erp.Kernel.Infrastructure.Views.LabelOverrideService>();
         // Labels, option lists and custom fields (S1.15b): the services behind the editors and the check of custom values on every write.
         services.AddScoped<Erp.Kernel.Contracts.Metadata.ILabelAdministration, Erp.Kernel.Infrastructure.Metadata.LabelAdministration>();
         services.AddScoped<Erp.Kernel.Contracts.Metadata.IOptionListAdministration, Erp.Kernel.Infrastructure.Metadata.OptionListAdministration>();
         services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldAdministration, Erp.Kernel.Infrastructure.Metadata.CustomFieldAdministration>();
         services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldValidator, Erp.Kernel.Infrastructure.Metadata.CustomFieldValidator>();
+        // First-run wizard and readiness checklist (S1.18a): the manifests of the installed modules, the kernel's checks and go-live.
+        Erp.Kernel.Infrastructure.Setup.SetupRegistration.AddSetupReadiness(services);
         // Limits (S1.09b, ruling Q7): one guard; the kernel counts named users, concurrent users and companies.
         services.AddSingleton<ILimitCounter, NamedUserCounter>();
         services.AddSingleton<ILimitCounter, ConcurrentUserCounter>();
@@ -250,7 +255,9 @@ public static class ApiHost
         api.MapLicenceEndpoints();
         api.MapSessionContextEndpoints();
         api.MapViewEndpoints();
+        api.MapDraftEndpoints();
         api.MapMetadataEndpoints();
+        api.MapSetupEndpoints();
         api.MapWorkflowEndpoints();
         api.MapJobEndpoints();
         api.MapNotificationEndpoints();

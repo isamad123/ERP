@@ -74,6 +74,36 @@ export const featureFlagOverrides =
     get: (id: string) => request<FeatureFlagOverride>('GET', `/api/cfg/feature-flag-overrides/${id}`),
 };
 
+/** cfg.form_drafts: Autosaved drafts of long forms (the hire form first), kept for the person who started them and removed after cfg.drafts.keep_days. Field rules (S1.06) may leave a field out or mask it as text. */
+export interface FormDraft
+{
+    id: string;
+    userId: string;
+    formKey: string;
+    recordId: string | null;
+    expiresAt: string;
+    createdAt: string;
+    createdBy: string;
+    updatedAt: string;
+    updatedBy: string;
+    rowVersion: number;
+}
+
+export interface FormDraftListQuery
+{
+    after?: string;
+    limit?: number;
+    userId?: string;
+    /** formKey, expiresAt; a leading minus sorts descending. */
+    sort?: 'formKey' | '-formKey' | 'expiresAt' | '-expiresAt';
+}
+
+export const formDrafts =
+{
+    list: (query: FormDraftListQuery = {}) => request<PagedResult<FormDraft>>('GET', '/api/cfg/form-drafts', { query }),
+    get: (id: string) => request<FormDraft>('GET', `/api/cfg/form-drafts/${id}`),
+};
+
 /** cfg.installed_packs: InstalledPack. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface InstalledPack
 {
@@ -287,23 +317,13 @@ export interface SetupTask
     isRequired: boolean;
     completedBy: string | null;
     completedAt: string | null;
+    note: string | null;
     status: 'pending' | 'done' | 'skipped';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface SetupTaskWrite
-{
-    moduleId: string;
-    taskKey: string;
-    companyId?: string | null;
-    isRequired?: boolean;
-    completedBy?: string | null;
-    completedAt?: string | null;
-    status: 'pending' | 'done' | 'skipped';
 }
 
 export interface SetupTaskListQuery
@@ -320,6 +340,4 @@ export const setupTasks =
 {
     list: (query: SetupTaskListQuery = {}) => request<PagedResult<SetupTask>>('GET', '/api/cfg/setup-tasks', { query }),
     get: (id: string) => request<SetupTask>('GET', `/api/cfg/setup-tasks/${id}`),
-    create: (body: SetupTaskWrite) => request<SetupTask>('POST', '/api/cfg/setup-tasks', { body }),
-    update: (id: string, body: SetupTaskWrite & { rowVersion: number }) => request<SetupTask>('PUT', `/api/cfg/setup-tasks/${id}`, { body }),
 };
