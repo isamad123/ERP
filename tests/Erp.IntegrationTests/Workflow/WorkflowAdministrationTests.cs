@@ -60,6 +60,30 @@ public sealed class WorkflowAdministrationTests(TenancyFixture fx) : IAsyncLifet
     }
 
     [Fact]
+    public async Task FR_KRN_WFL_10_the_definition_detail_counts_the_requests_still_running_on_each_version_S1_15c()
+    {
+        var admin = await _w.AdminAsync(Ct);
+        var (requester, approver) = (await _w.UserAsync(Ct, "business_user"), await _w.UserAsync(Ct, "approver"));
+        var company = await _w.H.DefaultCompanyAsync(Ct);
+        var v1 = await _w.ActivateRouteAsync(admin, Expense, Route(Step("a", UserApprover(approver))), Ct);
+        var running = InstanceOf(await _w.StartAsync(requester, Expense, company, new { amount = "10" }, ct: Ct));
+        var v2 = await _w.ActivateRouteAsync(admin, Expense, Route(Step("a", UserApprover(approver))), Ct);
+        var definition = await _w.DefinitionIdAsync(Expense, Ct);
+
+        var detail = await _w.GetAsync(admin, $"/api/wf/definitions/{definition}", Ct);
+        Assert.Equal(HttpStatusCode.OK, detail.Status);
+        var counts = detail.Json.GetProperty("versions").EnumerateArray().ToDictionary(v => v.GetProperty("id").GetGuid(), v => v.GetProperty("runningInstances").GetInt32());
+        Assert.Equal(1, counts[v1]); // the request raised before the new version stays on the old one
+        Assert.Equal(0, counts[v2]);
+
+        // Once the request ends it no longer counts.
+        var task = Assert.Single(await _w.OpenTasksAsync(running, Ct));
+        Assert.Equal(HttpStatusCode.OK, (await _w.PostAsync(approver, $"/api/wf/tasks/{task}/approve", new { }, Ct)).Status);
+        var after = await _w.GetAsync(admin, $"/api/wf/definitions/{definition}", Ct);
+        Assert.All(after.Json.GetProperty("versions").EnumerateArray(), v => Assert.Equal(0, v.GetProperty("runningInstances").GetInt32()));
+    }
+
+    [Fact]
     public async Task FR_KRN_WFL_01_a_draft_is_copied_edited_with_its_row_version_checked_and_stored_in_the_canonical_shape()
     {
         var admin = await _w.AdminAsync(Ct);

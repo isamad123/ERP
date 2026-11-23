@@ -22,6 +22,8 @@ export class ApiProblem extends Error {
     readonly reference: string | null,
     /** `detail`: for a refused save, the database rule (constraint) that refused it, e.g. `ck_branches_one_per_company` (S1.12c). */
     readonly detail: string | null = null,
+    /** `details`: the route problems of a refused approval route, each `path: key` (S1.15c). */
+    readonly details: readonly string[] = [],
   ) {
     super(key);
     this.name = 'ApiProblem';
@@ -48,7 +50,7 @@ const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve
 /** Reads a problem answer into an ApiProblem (never throws while reading). */
 export async function problemOf(response: Response): Promise<ApiProblem> {
   const reference = response.headers.get('X-Correlation-Id');
-  let body: { title?: unknown; errors?: unknown; detail?: unknown } = {};
+  let body: { title?: unknown; errors?: unknown; detail?: unknown; details?: unknown } = {};
   try {
     body = (await response.json()) as typeof body;
   } catch {
@@ -59,7 +61,8 @@ export async function problemOf(response: Response): Promise<ApiProblem> {
   const fieldErrors = body.errors && typeof body.errors === 'object' && !Array.isArray(body.errors)
     ? Object.fromEntries(Object.entries(body.errors as Record<string, unknown>).map(([k, v]) => [k, Array.isArray(v) ? v.map(String) : [String(v)]]))
     : {};
-  return new ApiProblem(response.status, title, errors, fieldErrors, reference, typeof body.detail === 'string' ? body.detail : null);
+  return new ApiProblem(response.status, title, errors, fieldErrors, reference, typeof body.detail === 'string' ? body.detail : null,
+    Array.isArray(body.details) ? body.details.filter((d): d is string => typeof d === 'string') : []);
 }
 
 export interface SendOptions {
