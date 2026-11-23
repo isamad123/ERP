@@ -211,6 +211,7 @@
   "fields.cfg.setup_tasks.id": "ID",
   "fields.cfg.setup_tasks.is_required": "Required",
   "fields.cfg.setup_tasks.module_id": "Module",
+  "fields.cfg.setup_tasks.note": "Note",
   "fields.cfg.setup_tasks.row_version": "Row version",
   "fields.cfg.setup_tasks.status": "Status",
   "fields.cfg.setup_tasks.task_key": "Task key",
