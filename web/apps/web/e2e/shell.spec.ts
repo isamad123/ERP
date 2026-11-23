@@ -250,6 +250,32 @@ test('spec 13 A11Y-01 the shell works by keyboard: skip link, menu, bell and use
   await basic.context.close();
 });
 
+test('FR-KRN-IAM-04 R-071 sign-out that cannot reach the server keeps the person signed in and says so; "Try again" then signs out', async ({ browser }) => {
+  const basic = await person(browser);
+  const page = basic.page;
+  await page.route('**/api/iam/auth/sign-out', (route) => route.abort('failed'));
+  await page.getByRole('button', { name: /^Account menu of / }).click();
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  const alert = page.getByRole('alertdialog', { name: 'Sign-out did not work' });
+  await expect(alert).toBeVisible();
+  await expect(alert).toContainText('If it keeps failing, close the browser.');
+  await expect(page.getByText('You are signed out.')).toHaveCount(0);
+  await accessible(page, 'sign-out failure');
+  await shot(page, 'r071-sign-out-failed');
+  await page.reload(); // the server session and its cookie remain, so the person is still signed in
+  await landHome(page);
+  await page.getByRole('button', { name: /^Account menu of / }).click();
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(alert).toBeVisible();
+  await page.unroute('**/api/iam/auth/sign-out');
+  await alert.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByText('You are signed out.')).toBeVisible();
+  await page.reload(); // really ended at the server: no way back in without signing in
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  noProblems(page);
+  await basic.context.close();
+});
+
 test('FR-KRN-LOC-01 NFR-11 the shell in English and Urdu, light and dark, at 360, 768 and 1280 pixels', async ({ browser }) => {
   // Without job.runs.read, so the job screens show "permission denied".
   const admin = await person(browser, { permissions: ADMIN_PERMISSIONS.filter((p) => p !== 'job.runs.read'), displayName: 'Ayesha Khan' });
