@@ -145,6 +145,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "PUT /api/hrm/employments/{id:guid}/user" => ($"/api/hrm/employments/{m.Unlinked}/user", Json(new { userId = m.FreeUser, rowVersion = m.UnlinkedVersion })),
             "DELETE /api/hrm/employments/{id:guid}/user" => ($"/api/hrm/employments/{m.Employment}/user?rowVersion={m.EmploymentVersion}", null),
             "GET /api/hrm/employment-catalogue" => ("/api/hrm/employment-catalogue", null),
+            // S1.21a: B's own employee list is served and never shows A's employees (the search names A's probe person).
+            "GET /api/hrm/employee-list" => ("/api/hrm/employee-list?limit=50", null),
 
             // S1.20c: a transfer of A's employment to A's second company, a rehire from A's former employment, contracts and probation.
             "POST /api/hrm/employments/{id:guid}/transfer" => ($"/api/hrm/employments/{m.Employment}/transfer", Json(Transfer(m))),

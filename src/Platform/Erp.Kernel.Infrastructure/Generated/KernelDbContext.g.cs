@@ -26,6 +26,7 @@ public sealed partial class KernelDbContext(DbContextOptions<KernelDbContext> op
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.CustomFieldDefConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.FeatureFlagOverrideConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.FeatureFlagConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.FormDraftConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.InboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.InstalledPackConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Cfg.LabelConfiguration());
@@ -137,6 +138,7 @@ public static class KernelGeneratedServices
         services.AddScoped<global::Erp.Kernel.Application.Generated.Aud.ISecurityEventRepository, global::Erp.Kernel.Infrastructure.Generated.Aud.SecurityEventRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Cfg.ICustomFieldDefRepository, global::Erp.Kernel.Infrastructure.Generated.Cfg.CustomFieldDefRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Cfg.IFeatureFlagOverrideRepository, global::Erp.Kernel.Infrastructure.Generated.Cfg.FeatureFlagOverrideRepository>();
+        services.AddScoped<global::Erp.Kernel.Application.Generated.Cfg.IFormDraftRepository, global::Erp.Kernel.Infrastructure.Generated.Cfg.FormDraftRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Cfg.IInstalledPackRepository, global::Erp.Kernel.Infrastructure.Generated.Cfg.InstalledPackRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Cfg.ILabelRepository, global::Erp.Kernel.Infrastructure.Generated.Cfg.LabelRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Cfg.INumberingSchemeRepository, global::Erp.Kernel.Infrastructure.Generated.Cfg.NumberingSchemeRepository>();
