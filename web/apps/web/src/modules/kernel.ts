@@ -36,6 +36,9 @@ const BrandingScreen = lazy(() => import('./admin/branding'));
 const LabelsScreen = lazy(() => import('./admin/labels'));
 const OptionListsScreen = lazy(() => import('./admin/option-lists'));
 const CustomFieldsScreen = lazy(() => import('./admin/custom-fields'));
+// S1.15c: numbering schemes and the approval route editor.
+const NumberingScreen = lazy(() => import('./admin/numbering'));
+const RoutesScreen = lazy(() => import('./admin/routes'));
 
 export const kernelScreens: ScreenDeclaration[] = [
   { id: 'home', path: '/', labelKey: 'nav.home', icon: House, group: 'home', allowedWhenLocked: false, component: HomePage },
@@ -68,6 +71,9 @@ export const kernelScreens: ScreenDeclaration[] = [
   { id: 'labels', path: '/settings/labels', labelKey: 'nav.labels', icon: FileText, group: 'administration', permission: 'cfg.labels.read', component: LabelsScreen },
   { id: 'option-lists', path: '/settings/option-lists', labelKey: 'nav.optionLists', icon: ClipboardCheck, group: 'administration', permission: 'cfg.option_lists.read', component: OptionListsScreen },
   { id: 'custom-fields', path: '/settings/custom-fields', labelKey: 'nav.customFields', icon: Filter, group: 'administration', permission: 'cfg.custom_field_defs.read', component: CustomFieldsScreen },
+  // S1.15c (ruling Q1): "Numbering" and "Approval routes" after "Custom fields".
+  { id: 'numbering', path: '/settings/numbering', labelKey: 'nav.numbering', icon: ClipboardCheck, group: 'administration', permission: 'cfg.numbering_schemes.read', component: NumberingScreen },
+  { id: 'approval-routes', path: '/settings/approval-routes', labelKey: 'nav.approvalRoutes', icon: Workflow, group: 'administration', permission: 'wf.workflow_definitions.read', component: RoutesScreen },
   { id: 'licence', path: '/settings/licence', labelKey: 'nav.licence', icon: KeyRound, group: 'administration', permission: 'cfg.licence.read', allowedWhenLocked: true, comesWith: 'S1.16' },
   { id: 'jobs', path: '/admin/jobs/*', labelKey: 'nav.jobs', icon: Activity, group: 'administration', permission: 'job.runs.read', comesWith: 'S1.16' },
   { id: 'audit', path: '/admin/audit/*', labelKey: 'nav.audit', icon: ScrollText, group: 'administration', permission: 'aud.changes.view', component: AuditScreen },

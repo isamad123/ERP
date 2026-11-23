@@ -226,6 +226,8 @@ Labels, option lists and custom fields (S1.15b): services `src/Platform/Erp.Kern
 must call `ICustomFieldValidator`: the generator does it for generated create and update; a hand-written write (HR person and hire services, later imports and employee screens) calls it itself after `FieldShaping.MergeCustom` and holds the result until the save is done
 (it holds the lock of unique fields). Tests: `tests/Erp.IntegrationTests/Metadata`, `tests/Erp.UnitTests/Metadata`; web `web/packages/engine/src/custom.tsx` and `web/apps/web/src/modules/admin/{labels,option-lists,custom-fields}.tsx`.
 
+Numbering and approval routes (S1.15c): screens `web/apps/web/src/modules/admin/numbering*.ts(x)` (`/settings/numbering`: per company the scheme of each numbered document, the next number worked out in the screen by `numbering-model.ts`, change before first use, "retire and replace" after it, void report) and `routes*.ts(x)` (`/settings/approval-routes`: versions with the requests running on each, step-list editor with condition builder, check, activate); clients `web/apps/web/src/api/numbering.ts` and `routes.ts`; screen texts in `packages/i18n/messages/{numbering,routes}.{en,ur}.json` (lazy, R-213). The only server change is `runningInstances` on the versions of `GET /api/wf/definitions/{id}`. Tests: `numbering*.test.ts(x)`, `routes*.test.ts(x)`, browser scenarios `e2e/numbering-routes.spec.ts`, `WorkflowAdministrationTests` (running count).
+
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.
 Slices: `docs/slices`. Handoff notes: `docs/handoff`.
