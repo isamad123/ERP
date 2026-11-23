@@ -96,7 +96,10 @@ internal sealed class EmployeeBankAccountService(
         var maps = await plan.ResolveAsync(rows, Source, cancellationToken).ConfigureAwait(false);
         var enc = await keys.GetAsync(cancellationToken).ConfigureAwait(false);
         var items = rows.Select((r, i) => View(r, maps[i], enc)).ToList();
-        return new PeopleResult(PeopleOutcome.Done, Body: new { items });
+        // Changes still waiting for their second person (R-233): said, not shown: no content, so no new number or IBAN is given away.
+        var waiting = (await held.PendingAsync(BankAccountPlanner.Kind, employmentId, cancellationToken).ConfigureAwait(false))
+            .Select(p => new { requestId = p.RequestId, requestedAt = p.RequestedAt, mine = p.Mine }).ToList();
+        return new PeopleResult(PeopleOutcome.Done, Body: new { items, pending = waiting });
     }
 
     /// <summary>

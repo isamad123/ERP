@@ -29,9 +29,18 @@ public sealed record HeldChangeDetail(string Label, string Type, string? Text = 
 /// <summary>What a held change is about (by name in each language) and what it changes.</summary>
 public sealed record HeldChangeDescription(IReadOnlyDictionary<string, string>? Subject, IReadOnlyList<HeldChangeDetail> Details);
 
+/// <summary>A change of one record that still waits for its second person: the request, when it was asked for and whether the signed-in person asked for it. No content (S1.21a, R-233).</summary>
+public sealed record PendingHeldChange(Guid RequestId, DateTimeOffset RequestedAt, bool Mine);
+
 /// <summary>Holds a module's change for a second person (the kernel's maker-checker requests).</summary>
 public interface IHeldChanges
 {
+    /// <summary>
+    /// The changes of <paramref name="kind"/> still waiting for a decision on one record, oldest first, without their content (so a screen can say
+    /// "a change is waiting for approval", R-233). The caller has already checked that the signed-in person may read the record.
+    /// </summary>
+    Task<IReadOnlyList<PendingHeldChange>> PendingAsync(string kind, Guid subjectId, CancellationToken cancellationToken);
+
     /// <summary>
     /// Stores the change as a pending request in the caller's open transaction (so it is held only if the caller commits) and
     /// raises <c>iam.maker_checker_requested</c>. Returns the request id. A handler for the kind must be registered.
