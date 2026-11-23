@@ -116,12 +116,12 @@ public sealed class ImportProbe(IsolationFixture fx, WebApplication app)
 
     private static StringContent Json(object body) => new(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
-    private static MultipartFormDataContent Form(Guid? template)
+    private static MultipartFormDataContent Form(Guid? template, string name = "probe-import.csv")
     {
         var form = new MultipartFormDataContent();
         var file = new ByteArrayContent(Encoding.UTF8.GetBytes(Csv));
         file.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-        form.Add(file, "File", "probe-import.csv");
+        form.Add(file, "File", name);
         if (template is { } t)
         {
             form.Add(new StringContent(t.ToString()), "TemplateId");
@@ -145,9 +145,10 @@ public sealed class ImportProbe(IsolationFixture fx, WebApplication app)
             template = await ScalarAsync<Guid>(c, "select id from itg.import_templates where code = 'default.users'", ct);
         }
 
+        var fileName = $"probe-{admin:N}.csv"; // unique to this customer's material, so it can be told from B's own
         var token = fx.Tenancy.Token(code, user: admin);
         using var client = TenancyFixture.Client(app, TenancyFixture.HostOf(code), token);
-        using var response = await client.PostAsync("/api/itg/imports/batches", Form(template), ct);
+        using var response = await client.PostAsync("/api/itg/imports/batches", Form(template, fileName), ct);
         var body = await response.Content.ReadAsStringAsync(ct);
         if (response.StatusCode != HttpStatusCode.Created)
         {
@@ -165,7 +166,7 @@ public sealed class ImportProbe(IsolationFixture fx, WebApplication app)
             select $2, company_id, template_id, file_id, 1, 1, 0, 'committed', file_name, mode, 1, 0, now(), now(), now(), created_by, now(), created_by from itg.import_batches where id = $3
             """, ct, validated, committed, uploaded);
         await ExecAsync(d, "insert into itg.import_batch_rows (id, batch_id, row_no, table_name, record_id, action, record_version, created_at, created_by) values ($1, $2, 2, 'ref.calendars', $3, 'created', 1, now(), $4)", ct, Guid.CreateVersion7(), committed, calendar, system);
-        return new Material(admin, template, uploaded, validated, committed, "probe-import.csv");
+        return new Material(admin, template, uploaded, validated, committed, fileName);
     }
 
     private async Task<(HttpStatusCode Status, string Body)> SendAsync(string host, string? token, HttpMethod method, string pathAndQuery, HttpContent? content, bool hints, CancellationToken ct)
