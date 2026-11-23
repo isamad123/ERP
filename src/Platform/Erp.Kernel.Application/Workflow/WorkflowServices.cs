@@ -36,7 +36,10 @@ public sealed record WorkflowDefinitionView(
     bool Ready,
     IReadOnlyList<RouteProblemView> Problems);
 
-/// <summary>One version of a route: draft (editable), active (frozen) or retired.</summary>
+/// <summary>
+/// One version of a route: draft (editable), active (frozen) or retired. <see cref="RunningInstances"/> counts the requests
+/// still running or returned on this version; they finish on it (slice S1.15c, FR-KRN-WFL-10; set by the detail read only).
+/// </summary>
 public sealed record WorkflowVersionView(
     Guid Id,
     Guid DefinitionId,
@@ -45,7 +48,8 @@ public sealed record WorkflowVersionView(
     JsonElement Route,
     DateTimeOffset? ActivatedAt,
     Guid? ActivatedBy,
-    long RowVersion);
+    long RowVersion,
+    int RunningInstances = 0);
 
 public sealed record WorkflowDefinitionDetail(WorkflowDefinitionView Definition, IReadOnlyList<WorkflowVersionView> Versions);
 

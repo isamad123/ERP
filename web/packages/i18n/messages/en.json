@@ -1432,5 +1432,7 @@
   "nav.signInPage": "Sign-in page",
   "nav.labels": "Labels",
   "nav.optionLists": "Option lists",
-  "nav.customFields": "Custom fields"
+  "nav.customFields": "Custom fields",
+  "nav.numbering": "Numbering",
+  "nav.approvalRoutes": "Approval routes"
 }
