@@ -1925,6 +1925,7 @@
   "options.hrm.attendance_events.source.hr_entry": "Hr entry",
   "options.hrm.attendance_events.source.import": "Import",
   "options.hrm.attendance_events.source.kiosk": "Kiosk",
+  "options.hrm.attendance_events.source.qr": "Qr",
   "options.hrm.attendance_events.source.web": "Web",
   "options.hrm.attendance_exceptions.kind.absent": "Absent",
   "options.hrm.attendance_exceptions.kind.early": "Early",
