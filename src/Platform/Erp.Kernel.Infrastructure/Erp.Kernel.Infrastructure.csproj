@@ -9,6 +9,8 @@
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
     <PackageReference Include="MailKit" />
     <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="Sylvan.Data.Csv" />
+    <PackageReference Include="Sylvan.Data.Excel" />
     <PackageReference Include="Scriban" />
     <PackageReference Include="PuppeteerSharp" />
     <PackageReference Include="QRCoder" />

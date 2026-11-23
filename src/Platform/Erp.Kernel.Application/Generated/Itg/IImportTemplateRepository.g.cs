@@ -42,6 +42,8 @@ public static class ImportTemplateAccess
         new("format", "Format", null),
         new("mapping", "Mapping", null),
         new("version", "Version", null),
+        new("mode", "Mode", null),
+        new("is_default", "IsDefault", null),
         new("is_active", "IsActive", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

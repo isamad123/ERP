@@ -21,6 +21,13 @@ public sealed class ImportBatchResponse
     public int? OkRows { get; init; }
     public int? ErrorRows { get; init; }
     public global::System.Guid? JobRunId { get; init; }
+    public string? FileName { get; init; }
+    public string Mode { get; init; } = null!;
+    public int? CreatedRows { get; init; }
+    public int? UpdatedRows { get; init; }
+    public global::System.DateTimeOffset? ValidatedAt { get; init; }
+    public global::System.DateTimeOffset? CommittedAt { get; init; }
+    public global::System.DateTimeOffset? RolledBackAt { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
@@ -39,6 +46,13 @@ public sealed class ImportBatchWriteRequest
     public int? OkRows { get; init; }
     public int? ErrorRows { get; init; }
     public global::System.Guid? JobRunId { get; init; }
+    public string? FileName { get; init; }
+    public string? Mode { get; init; }
+    public int? CreatedRows { get; init; }
+    public int? UpdatedRows { get; init; }
+    public global::System.DateTimeOffset? ValidatedAt { get; init; }
+    public global::System.DateTimeOffset? CommittedAt { get; init; }
+    public global::System.DateTimeOffset? RolledBackAt { get; init; }
     public string? Status { get; init; }
 
     /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
@@ -150,6 +164,13 @@ internal static class ImportBatchEndpoints
         OkRows = row.OkRows,
         ErrorRows = row.ErrorRows,
         JobRunId = row.JobRunId,
+        FileName = row.FileName,
+        Mode = row.Mode,
+        CreatedRows = row.CreatedRows,
+        UpdatedRows = row.UpdatedRows,
+        ValidatedAt = row.ValidatedAt,
+        CommittedAt = row.CommittedAt,
+        RolledBackAt = row.RolledBackAt,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -247,6 +268,65 @@ internal static class ImportBatchEndpoints
         else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.JobRunId, row.JobRunId, update))
         {
             denied.Add("jobRunId");
+        }
+        if (access.CanEdit("file_name"))
+        {
+            row.FileName = request.FileName;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileName, row.FileName, update))
+        {
+            denied.Add("fileName");
+        }
+        if (access.CanEdit("mode"))
+        {
+            if (request.Mode is not null)
+            {
+                row.Mode = request.Mode!;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Mode, row.Mode, update))
+        {
+            denied.Add("mode");
+        }
+        if (access.CanEdit("created_rows"))
+        {
+            row.CreatedRows = request.CreatedRows;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CreatedRows, row.CreatedRows, update))
+        {
+            denied.Add("createdRows");
+        }
+        if (access.CanEdit("updated_rows"))
+        {
+            row.UpdatedRows = request.UpdatedRows;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.UpdatedRows, row.UpdatedRows, update))
+        {
+            denied.Add("updatedRows");
+        }
+        if (access.CanEdit("validated_at"))
+        {
+            row.ValidatedAt = request.ValidatedAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidatedAt, row.ValidatedAt, update))
+        {
+            denied.Add("validatedAt");
+        }
+        if (access.CanEdit("committed_at"))
+        {
+            row.CommittedAt = request.CommittedAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CommittedAt, row.CommittedAt, update))
+        {
+            denied.Add("committedAt");
+        }
+        if (access.CanEdit("rolled_back_at"))
+        {
+            row.RolledBackAt = request.RolledBackAt;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RolledBackAt, row.RolledBackAt, update))
+        {
+            denied.Add("rolledBackAt");
         }
         if (access.CanEdit("status"))
         {

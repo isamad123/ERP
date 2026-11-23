@@ -279,6 +279,18 @@
       "sensitive": false
     },
     {
+      "code": "itg.import_batch_rows.read",
+      "module": "itg",
+      "descriptionKey": "permissions.itg.import_batch_rows.read",
+      "sensitive": false
+    },
+    {
+      "code": "itg.import_batch_rows.create",
+      "module": "itg",
+      "descriptionKey": "permissions.itg.import_batch_rows.create",
+      "sensitive": false
+    },
+    {
       "code": "itg.import_batches.read",
       "module": "itg",
       "descriptionKey": "permissions.itg.import_batches.read",

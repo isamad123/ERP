@@ -18,6 +18,7 @@ public sealed class ImportBatchErrorResponse
     public int RowNo { get; init; }
     public string? Field { get; init; }
     public string Message { get; init; } = null!;
+    public string Phase { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
 }
@@ -29,6 +30,7 @@ public sealed class ImportBatchErrorWriteRequest
     public int? RowNo { get; init; }
     public string? Field { get; init; }
     public string? Message { get; init; }
+    public string? Phase { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for itg.import_batch_errors.</summary>
@@ -101,6 +103,7 @@ internal static class ImportBatchErrorEndpoints
         RowNo = row.RowNo,
         Field = row.Field,
         Message = row.Message,
+        Phase = row.Phase,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
     };
@@ -159,6 +162,17 @@ internal static class ImportBatchErrorEndpoints
         else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Message, row.Message, update))
         {
             denied.Add("message");
+        }
+        if (access.CanEdit("phase"))
+        {
+            if (request.Phase is not null)
+            {
+                row.Phase = request.Phase!;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Phase, row.Phase, update))
+        {
+            denied.Add("phase");
         }
         return denied;
     }

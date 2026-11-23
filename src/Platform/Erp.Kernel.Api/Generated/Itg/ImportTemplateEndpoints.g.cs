@@ -20,6 +20,8 @@ public sealed class ImportTemplateResponse
     public string Format { get; init; } = null!;
     public global::System.Text.Json.JsonElement Mapping { get; init; }
     public int Version { get; init; }
+    public string Mode { get; init; } = null!;
+    public bool IsDefault { get; init; }
     public bool IsActive { get; init; }
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
@@ -37,6 +39,8 @@ public sealed class ImportTemplateWriteRequest
     public string? Format { get; init; }
     public global::System.Text.Json.JsonElement? Mapping { get; init; }
     public int? Version { get; init; }
+    public string? Mode { get; init; }
+    public bool? IsDefault { get; init; }
     public bool? IsActive { get; init; }
 
     /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
@@ -145,6 +149,8 @@ internal static class ImportTemplateEndpoints
         Format = row.Format,
         Mapping = row.Mapping.RootElement.Clone(),
         Version = row.Version,
+        Mode = row.Mode,
+        IsDefault = row.IsDefault,
         IsActive = row.IsActive,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -239,6 +245,28 @@ internal static class ImportTemplateEndpoints
         else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Version, row.Version, update))
         {
             denied.Add("version");
+        }
+        if (access.CanEdit("mode"))
+        {
+            if (request.Mode is not null)
+            {
+                row.Mode = request.Mode!;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Mode, row.Mode, update))
+        {
+            denied.Add("mode");
+        }
+        if (access.CanEdit("is_default"))
+        {
+            if (request.IsDefault is not null)
+            {
+                row.IsDefault = request.IsDefault!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsDefault, row.IsDefault, update))
+        {
+            denied.Add("isDefault");
         }
         if (access.CanEdit("is_active"))
         {

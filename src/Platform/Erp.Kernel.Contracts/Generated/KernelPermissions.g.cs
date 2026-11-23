@@ -57,6 +57,8 @@ public static class KernelPermissions
         new("itg.export_jobs.update", "itg", "permissions.itg.export_jobs.update", false),
         new("itg.import_batch_errors.read", "itg", "permissions.itg.import_batch_errors.read", false),
         new("itg.import_batch_errors.create", "itg", "permissions.itg.import_batch_errors.create", false),
+        new("itg.import_batch_rows.read", "itg", "permissions.itg.import_batch_rows.read", false),
+        new("itg.import_batch_rows.create", "itg", "permissions.itg.import_batch_rows.create", false),
         new("itg.import_batches.read", "itg", "permissions.itg.import_batches.read", false),
         new("itg.import_batches.create", "itg", "permissions.itg.import_batches.create", false),
         new("itg.import_batches.update", "itg", "permissions.itg.import_batches.update", false),

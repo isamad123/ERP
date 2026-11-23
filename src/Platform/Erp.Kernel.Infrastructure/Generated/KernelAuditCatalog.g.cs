@@ -74,6 +74,7 @@ public static class KernelAuditCatalog
         new(typeof(global::Erp.Kernel.Domain.Generated.Itg.Connector), "itg.connectors", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Itg.ExportJob), "itg.export_jobs", true, null, "id", "company_id", null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Itg.ImportBatchError), "itg.import_batch_errors", false, "append-only: the row itself is the record and is never changed (S1.07 Q4)", "id", null, null, null, null),
+        new(typeof(global::Erp.Kernel.Domain.Generated.Itg.ImportBatchRow), "itg.import_batch_rows", false, "append-only: the row itself is the record and is never changed (S1.07 Q4)", "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Itg.ImportBatch), "itg.import_batches", true, null, "id", "company_id", null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Itg.ImportTemplate), "itg.import_templates", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Itg.InboxMessage), "itg.inbox_messages", false, "machinery: transactional outbox and inbox (S1.07 Q4)", "message_id", null, null, null, null),

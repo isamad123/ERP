@@ -37,10 +37,11 @@
     "okRows",
     "errorRows",
     "jobRunId",
-    "status"
+    "fileName"
   ],
   "search": [],
   "constraints": {
+    "ck_import_batches_mode": "mode",
     "ck_import_batches_status": "status",
     "fk_import_batches_company_id": "companyId",
     "fk_import_batches_file_id": "fileId",
@@ -132,6 +133,86 @@
       "filter": true,
       "labelKey": "fields.itg.import_batches.job_run_id",
       "references": "job.runs"
+    },
+    {
+      "column": "file_name",
+      "field": "fileName",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.import_batches.file_name"
+    },
+    {
+      "column": "mode",
+      "field": "mode",
+      "kind": "Enum",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.import_batches.mode",
+      "options": [
+        {
+          "value": "create",
+          "labelKey": "options.itg.import_batches.mode.create"
+        },
+        {
+          "value": "create_or_update",
+          "labelKey": "options.itg.import_batches.mode.create_or_update"
+        }
+      ]
+    },
+    {
+      "column": "created_rows",
+      "field": "createdRows",
+      "kind": "Int4",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.import_batches.created_rows"
+    },
+    {
+      "column": "updated_rows",
+      "field": "updatedRows",
+      "kind": "Int4",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.import_batches.updated_rows"
+    },
+    {
+      "column": "validated_at",
+      "field": "validatedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.import_batches.validated_at"
+    },
+    {
+      "column": "committed_at",
+      "field": "committedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.import_batches.committed_at"
+    },
+    {
+      "column": "rolled_back_at",
+      "field": "rolledBackAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.import_batches.rolled_back_at"
     },
     {
       "column": "status",

@@ -203,6 +203,7 @@ export interface ImportBatchError
     rowNo: number;
     field: string | null;
     message: string;
+    phase: 'validate' | 'commit';
     createdAt: string;
     createdBy: string;
 }
@@ -213,6 +214,7 @@ export interface ImportBatchErrorWrite
     rowNo: number;
     field?: string | null;
     message: string;
+    phase?: 'validate' | 'commit';
 }
 
 export interface ImportBatchErrorListQuery
@@ -231,6 +233,46 @@ export const importBatchErrors =
     create: (body: ImportBatchErrorWrite) => request<ImportBatchError>('POST', '/api/itg/import-batch-errors', { body }),
 };
 
+/** itg.import_batch_rows: Records created or updated by each row of an import batch (rollback check, FR-KRN-INT-03). Field rules (S1.06) may leave a field out or mask it as text. */
+export interface ImportBatchRow
+{
+    id: string;
+    batchId: string;
+    rowNo: number;
+    tableName: string;
+    recordId: string;
+    action: 'created' | 'updated';
+    recordVersion: number | null;
+    createdAt: string;
+    createdBy: string;
+}
+
+export interface ImportBatchRowWrite
+{
+    batchId: string;
+    rowNo: number;
+    tableName: string;
+    recordId: string;
+    action: 'created' | 'updated';
+    recordVersion?: number | null;
+}
+
+export interface ImportBatchRowListQuery
+{
+    after?: string;
+    limit?: number;
+    batchId?: string;
+    /** rowNo, tableName; a leading minus sorts descending. */
+    sort?: 'rowNo' | '-rowNo' | 'tableName' | '-tableName';
+}
+
+export const importBatchRows =
+{
+    list: (query: ImportBatchRowListQuery = {}) => request<PagedResult<ImportBatchRow>>('GET', '/api/itg/import-batch-rows', { query }),
+    get: (id: string) => request<ImportBatchRow>('GET', `/api/itg/import-batch-rows/${id}`),
+    create: (body: ImportBatchRowWrite) => request<ImportBatchRow>('POST', '/api/itg/import-batch-rows', { body }),
+};
+
 /** itg.import_batches: ImportBatch. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ImportBatch
 {
@@ -242,6 +284,13 @@ export interface ImportBatch
     okRows: number | null;
     errorRows: number | null;
     jobRunId: string | null;
+    fileName: string | null;
+    mode: 'create' | 'create_or_update';
+    createdRows: number | null;
+    updatedRows: number | null;
+    validatedAt: string | null;
+    committedAt: string | null;
+    rolledBackAt: string | null;
     status: 'uploaded' | 'validating' | 'validated' | 'committing' | 'committed' | 'failed' | 'rolled_back';
     createdAt: string;
     createdBy: string;
@@ -259,6 +308,13 @@ export interface ImportBatchWrite
     okRows?: number | null;
     errorRows?: number | null;
     jobRunId?: string | null;
+    fileName?: string | null;
+    mode?: 'create' | 'create_or_update';
+    createdRows?: number | null;
+    updatedRows?: number | null;
+    validatedAt?: string | null;
+    committedAt?: string | null;
+    rolledBackAt?: string | null;
     status: 'uploaded' | 'validating' | 'validated' | 'committing' | 'committed' | 'failed' | 'rolled_back';
 }
 
@@ -291,6 +347,8 @@ export interface ImportTemplate
     format: 'csv' | 'xlsx';
     mapping: unknown;
     version: number;
+    mode: 'create' | 'create_or_update';
+    isDefault: boolean;
     isActive: boolean;
     createdAt: string;
     createdBy: string;
@@ -307,6 +365,8 @@ export interface ImportTemplateWrite
     format: 'csv' | 'xlsx';
     mapping: unknown;
     version: number;
+    mode?: 'create' | 'create_or_update';
+    isDefault?: boolean;
     isActive?: boolean;
 }
 

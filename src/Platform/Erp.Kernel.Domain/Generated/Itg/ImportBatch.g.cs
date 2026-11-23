@@ -36,6 +36,27 @@ public sealed partial class ImportBatch : global::Erp.BuildingBlocks.Domain.Enti
     /// <summary>job_run_id: fk job.runs</summary>
     public global::System.Guid? JobRunId { get; set; }
 
+    /// <summary>file_name: S1.16a (CR-072 addendum): the uploaded file's name, shown in the import centre</summary>
+    public string? FileName { get; set; }
+
+    /// <summary>mode: default create; S1.16a: copied from the template at upload (a later template change does not alter a running batch)</summary>
+    public string Mode { get; set; } = "create";
+
+    /// <summary>created_rows: S1.16a: rows created by the commit</summary>
+    public int? CreatedRows { get; set; }
+
+    /// <summary>updated_rows: S1.16a: rows updated by the commit (a batch with updates cannot be rolled back)</summary>
+    public int? UpdatedRows { get; set; }
+
+    /// <summary>validated_at</summary>
+    public global::System.DateTimeOffset? ValidatedAt { get; set; }
+
+    /// <summary>committed_at</summary>
+    public global::System.DateTimeOffset? CommittedAt { get; set; }
+
+    /// <summary>rolled_back_at</summary>
+    public global::System.DateTimeOffset? RolledBackAt { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

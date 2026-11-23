@@ -78,6 +78,7 @@ public sealed partial class KernelDbContext(DbContextOptions<KernelDbContext> op
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Itg.ConnectorConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Itg.ExportJobConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Itg.ImportBatchErrorConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Itg.ImportBatchRowConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Itg.ImportBatchConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Itg.ImportTemplateConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Itg.InboxMessageConfiguration());
@@ -176,6 +177,7 @@ public static class KernelGeneratedServices
         services.AddScoped<global::Erp.Kernel.Application.Generated.Itg.IConnectorRepository, global::Erp.Kernel.Infrastructure.Generated.Itg.ConnectorRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Itg.IExportJobRepository, global::Erp.Kernel.Infrastructure.Generated.Itg.ExportJobRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Itg.IImportBatchErrorRepository, global::Erp.Kernel.Infrastructure.Generated.Itg.ImportBatchErrorRepository>();
+        services.AddScoped<global::Erp.Kernel.Application.Generated.Itg.IImportBatchRowRepository, global::Erp.Kernel.Infrastructure.Generated.Itg.ImportBatchRowRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Itg.IImportBatchRepository, global::Erp.Kernel.Infrastructure.Generated.Itg.ImportBatchRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Itg.IImportTemplateRepository, global::Erp.Kernel.Infrastructure.Generated.Itg.ImportTemplateRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Itg.IJournalExportRepository, global::Erp.Kernel.Infrastructure.Generated.Itg.JournalExportRepository>();

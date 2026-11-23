@@ -42,6 +42,7 @@ public static class KernelGeneratedEndpoints
         global::Erp.Kernel.Api.Generated.Itg.ConnectorEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Itg.ExportJobEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Itg.ImportBatchErrorEndpoints.Map(app);
+        global::Erp.Kernel.Api.Generated.Itg.ImportBatchRowEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Itg.ImportBatchEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Itg.ImportTemplateEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Itg.JournalExportEndpoints.Map(app);

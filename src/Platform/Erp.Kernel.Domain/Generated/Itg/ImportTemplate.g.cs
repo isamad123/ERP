@@ -33,6 +33,12 @@ public sealed partial class ImportTemplate : global::Erp.BuildingBlocks.Domain.E
     /// <summary>version</summary>
     public int Version { get; set; }
 
+    /// <summary>mode: default create; S1.16a (CR-072 addendum): what a row whose key exists means; update batches cannot be rolled back (Q5)</summary>
+    public string Mode { get; set; } = "create";
+
+    /// <summary>is_default: default false; S1.16a: the shipped template of an import type (one per type)</summary>
+    public bool IsDefault { get; set; }
+
     /// <summary>is_active</summary>
     public bool IsActive { get; set; } = true;
 
