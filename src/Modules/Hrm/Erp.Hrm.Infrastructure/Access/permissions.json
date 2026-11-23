@@ -147,6 +147,30 @@
       "sensitive": false
     },
     {
+      "code": "hrm.positions.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.positions.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.positions.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.positions.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.positions.close",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.positions.close",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.strength_exceptions.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.strength_exceptions.create",
+      "sensitive": false
+    },
+    {
       "code": "hrm.employments.transfer",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.employments.transfer",

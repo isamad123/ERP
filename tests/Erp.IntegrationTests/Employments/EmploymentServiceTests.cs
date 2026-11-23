@@ -524,7 +524,7 @@ public sealed class EmploymentServiceTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Empty(await directory.ManagersAsync(topUser, 1, Today, Ct)); // no manager: the engine's "cannot resolve"
         Assert.Empty(await directory.ManagersAsync(staffUser, 1, Today.AddDays(-500), Ct)); // before the employment
         Assert.True(directory.Supports("manager"));
-        Assert.False(directory.Supports("department_head")); // S1.22 (ruling Q7)
+        Assert.True(directory.Supports("department_head")); // answered since S1.22a (ruling Q3; CR-078): heads and positions are tested in PositionServiceTests
 
         // A manager change dated in the past moves the answer on that date only; a reporting circle is refused.
         await ApprovalKindsAsync(company);

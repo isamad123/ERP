@@ -32,6 +32,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         Guid Relation, long RelationVersion, Guid Qualification, long QualificationVersion, Guid Case, long CaseVersion, string PersonNo,
         Hire Org, Guid Employment, long EmploymentVersion, Guid Unlinked, long UnlinkedVersion, Guid FreeUser,
         Hire To, Guid Former, Guid Contract, long ContractVersion, long ProbationVersion, Guid BankAccount, Guid Registration, long RegistrationVersion,
+        Guid Position, long PositionVersion,
         Guid Policy, long PolicyVersion, Guid DraftPolicy, long DraftPolicyVersion, Guid Draft, long DraftVersion, DateOnly SetFrom,
         Guid Punching, Guid Location, string QrCode, string Badge,
         Guid PayGroup, long PayGroupVersion, Guid Period, long PeriodVersion, string PeriodCutOff);
@@ -47,7 +48,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
@@ -152,6 +153,13 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             // S1.21a: B's own employee list is served and never shows A's employees (the search names A's probe person).
             "GET /api/hrm/employee-list" => ("/api/hrm/employee-list?limit=50", null),
 
+            // S1.22a positions: a position in A's company and unit, actions on A's position, the strength exception of A's employment.
+            "POST /api/hrm/positions" => ("/api/hrm/positions", Json(new { companyId = m.Org.Company, positionCode = "POS-" + Guid.NewGuid().ToString("N")[..10], title = "Probe post", orgUnitId = m.Org.OrgUnit, validFrom = "2020-01-01" })),
+            "POST /api/hrm/positions/{id:guid}/changes" => ($"/api/hrm/positions/{m.Position}/changes", Json(new { effectiveDate = "2024-01-01", title = "Changed post", rowVersion = m.PositionVersion })),
+            "POST /api/hrm/positions/{id:guid}/close" => ($"/api/hrm/positions/{m.Position}/close", Json(new { effectiveDate = "2030-01-01", rowVersion = m.PositionVersion })),
+            "GET /api/hrm/positions/{id:guid}/holders" => ($"/api/hrm/positions/{m.Position}/holders", null),
+            "GET /api/hrm/org-model" => ("/api/hrm/org-model", null),
+            "POST /api/hrm/strength-exceptions" => ("/api/hrm/strength-exceptions", Json(new { employmentId = m.Employment, orgUnitId = m.Org.OrgUnit, effectiveDate = "2025-06-01", reason = "Probe cover" })),
             // S1.20c: a transfer of A's employment to A's second company, a rehire from A's former employment, contracts and probation.
             "POST /api/hrm/employments/{id:guid}/transfer" => ($"/api/hrm/employments/{m.Employment}/transfer", Json(Transfer(m))),
             "POST /api/hrm/employments/{id:guid}/transfer/check" => ($"/api/hrm/employments/{m.Employment}/transfer/check", Json(Transfer(m))),
@@ -379,6 +387,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var linkedVersion = linked.Status == HttpStatusCode.OK ? JsonDocument.Parse(linked.Body).RootElement.GetProperty("rowVersion").GetInt64()
             : throw new InvalidOperationException($"HR probe material user link: {(int)linked.Status} {Short(linked.Body)}");
         var second = (await PostAsync(host, token, "/api/hrm/employments", HireBody(org, "Unlinked"), ct)).GetProperty("employment");
+        var position = await PostAsync(host, token, "/api/hrm/positions", new { companyId = org.Company, positionCode = "ISO-" + Guid.NewGuid().ToString("N")[..10], title = "Probe post", orgUnitId = org.OrgUnit, validFrom = "2020-01-01" }, ct);
 
         // S1.20c: a second company to transfer to; a former employment (its separation written directly: separations are S1.25's);
         // a contract of the first employment; its probation (permanent employees start with one by default).
@@ -464,6 +473,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             org, employment, linkedVersion, second.GetProperty("id").GetGuid(), second.GetProperty("rowVersion").GetInt64(), freeUser,
             to, former, contract.GetProperty("id").GetGuid(), contract.GetProperty("rowVersion").GetInt64(), probation.GetProperty("rowVersion").GetInt64(),
             account, registration.GetProperty("id").GetGuid(), registration.GetProperty("rowVersion").GetInt64(),
+            position.GetProperty("id").GetGuid(), position.GetProperty("rowVersion").GetInt64(),
             policyId, policyVersion, draftPolicy.GetProperty("id").GetGuid(), draftPolicy.GetProperty("rowVersion").GetInt64(), draft.GetProperty("id").GetGuid(), draft.GetProperty("rowVersion").GetInt64(), setFrom,
             punching.GetProperty("id").GetGuid(), location, shown.GetProperty("code").GetString()!, badge,
             groupId, group.GetProperty("rowVersion").GetInt64(), period.GetProperty("id").GetGuid(), period.GetProperty("rowVersion").GetInt64(), period.GetProperty("cutOffDate").GetString()!);

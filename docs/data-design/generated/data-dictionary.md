@@ -2,14 +2,14 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 223 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 224 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
 | customer | aud | 7 |
 | customer | cfg | 20 |
 | customer | doc | 7 |
-| customer | hrm | 113 |
+| customer | hrm | 114 |
 | customer | iam | 24 |
 | customer | itg | 11 |
 | customer | job | 5 |
@@ -2592,6 +2592,10 @@ Indexes:
 
 - `uq_grades_company_id_code` CREATE UNIQUE INDEX uq_grades_company_id_code ON hrm.grades USING btree (company_id, lower(code)) WHERE (NOT is_deleted)
 
+Triggers:
+
+- `tg_grades_value_checks` CREATE TRIGGER tg_grades_value_checks BEFORE INSERT OR UPDATE OF rank, defaults ON hrm.grades FOR EACH ROW EXECUTE FUNCTION hrm.tg_grades_value_checks()
+
 ### hrm.headcount_budgets
 
 Headcount-based model (POS-01) — sanctioned strength per unit and grade. Requirements: POS-01, POS-03. Source: hrm-people.yaml.
@@ -2625,6 +2629,10 @@ Indexes:
 - `ix_headcount_budgets_company_id` CREATE INDEX ix_headcount_budgets_company_id ON hrm.headcount_budgets USING btree (company_id)
 - `ix_headcount_budgets_company_id_grade_id` CREATE INDEX ix_headcount_budgets_company_id_grade_id ON hrm.headcount_budgets USING btree (company_id, grade_id)
 - `ix_headcount_budgets_company_id_org_unit_id` CREATE INDEX ix_headcount_budgets_company_id_org_unit_id ON hrm.headcount_budgets USING btree (company_id, org_unit_id)
+
+Triggers:
+
+- `tg_headcount_budgets_value_checks` CREATE TRIGGER tg_headcount_budgets_value_checks BEFORE INSERT OR UPDATE OF sanctioned_count ON hrm.headcount_budgets FOR EACH ROW EXECUTE FUNCTION hrm.tg_headcount_budgets_value_checks()
 
 ### hrm.inbox_messages
 
@@ -4367,7 +4375,7 @@ Triggers:
 
 ### hrm.positions
 
-Requirements: POS-01, POS-02, POS-03, POS-04, POS-08. Pending rule (S1.22, placeholder hrm.todo_positions_reporting_cycle): Cycle check trigger on reports_to_position_id. Source: hrm-people.yaml.
+Requirements: POS-01, POS-02, POS-03, POS-04, POS-08. Rule (implemented in S1.22a): Cycle check trigger on reports_to_position_id. Source: hrm-people.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -4413,6 +4421,11 @@ Indexes:
 - `ix_positions_company_id_reports_to_position_id` CREATE INDEX ix_positions_company_id_reports_to_position_id ON hrm.positions USING btree (company_id, reports_to_position_id)
 - `ix_positions_org_unit_id` CREATE INDEX ix_positions_org_unit_id ON hrm.positions USING btree (org_unit_id)
 - `ix_positions_reports_to_position_id` CREATE INDEX ix_positions_reports_to_position_id ON hrm.positions USING btree (reports_to_position_id)
+
+Triggers:
+
+- `tg_positions_reporting_cycle` CREATE TRIGGER tg_positions_reporting_cycle AFTER INSERT OR UPDATE OF reports_to_position_id, position_code, valid_from, valid_to ON hrm.positions FOR EACH ROW EXECUTE FUNCTION hrm.tg_positions_reporting_cycle()
+- `tg_positions_value_checks` CREATE TRIGGER tg_positions_value_checks BEFORE INSERT OR UPDATE OF budgeted_fte ON hrm.positions FOR EACH ROW EXECUTE FUNCTION hrm.tg_positions_value_checks()
 
 ### hrm.previous_employer_income
 
@@ -5233,6 +5246,52 @@ Constraints:
 Indexes:
 
 - `ix_statutory_tables_company_id` CREATE INDEX ix_statutory_tables_company_id ON hrm.statutory_tables USING btree (company_id)
+
+### hrm.strength_exceptions
+
+Approved exception to the position budget or sanctioned count for one placement (BR-04). Requirements: POS-01, POS-02. Source: hrm-people.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| company_id | uuid | no |  |  |
+| employment_id | uuid | no |  | fk hrm.employments; the person to place |
+| org_unit_id | uuid | no |  | fk org.org_units; the unit of the placement |
+| grade_id | uuid | yes |  | fk hrm.grades; the grade of the placement |
+| position_id | uuid | yes |  | fk hrm.positions; the position of the placement (a row of it; positions are matched by code) |
+| effective_date | date | no |  | the day the placement starts |
+| reason | text | no |  |  |
+| workflow_instance_id | uuid | yes |  | fk wf.workflow_instances |
+| used_event_id | uuid | yes |  | fk hrm.employment_events; the event that used the exception |
+| status | text | no |  |  |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `ck_strength_exceptions_status` CHECK ((status = ANY (ARRAY['pending_approval'::text, 'approved'::text, 'rejected'::text, 'cancelled'::text, 'used'::text])))
+- `fk_strength_exceptions_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
+- `fk_strength_exceptions_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
+- `fk_strength_exceptions_grade_id` FOREIGN KEY (company_id, grade_id) REFERENCES hrm.grades(company_id, id)
+- `fk_strength_exceptions_org_unit_id` FOREIGN KEY (company_id, org_unit_id) REFERENCES org.org_units(company_id, id)
+- `fk_strength_exceptions_position_id` FOREIGN KEY (company_id, position_id) REFERENCES hrm.positions(company_id, id)
+- `fk_strength_exceptions_used_event_id` FOREIGN KEY (company_id, used_event_id) REFERENCES hrm.employment_events(company_id, id)
+- `fk_strength_exceptions_workflow_instance_id` FOREIGN KEY (company_id, workflow_instance_id) REFERENCES wf.workflow_instances(company_id, id)
+- `pk_strength_exceptions` PRIMARY KEY (id)
+
+Indexes:
+
+- `ix_strength_exceptions_company_id` CREATE INDEX ix_strength_exceptions_company_id ON hrm.strength_exceptions USING btree (company_id)
+- `ix_strength_exceptions_company_id_employment_id` CREATE INDEX ix_strength_exceptions_company_id_employment_id ON hrm.strength_exceptions USING btree (company_id, employment_id)
+- `ix_strength_exceptions_company_id_grade_id` CREATE INDEX ix_strength_exceptions_company_id_grade_id ON hrm.strength_exceptions USING btree (company_id, grade_id)
+- `ix_strength_exceptions_company_id_org_unit_id` CREATE INDEX ix_strength_exceptions_company_id_org_unit_id ON hrm.strength_exceptions USING btree (company_id, org_unit_id)
+- `ix_strength_exceptions_company_id_position_id` CREATE INDEX ix_strength_exceptions_company_id_position_id ON hrm.strength_exceptions USING btree (company_id, position_id)
+- `ix_strength_exceptions_company_id_used_event_id` CREATE INDEX ix_strength_exceptions_company_id_used_event_id ON hrm.strength_exceptions USING btree (company_id, used_event_id)
+- `ix_strength_exceptions_company_id_workflow_instance_id` CREATE INDEX ix_strength_exceptions_company_id_workflow_instance_id ON hrm.strength_exceptions USING btree (company_id, workflow_instance_id)
+- `ix_strength_exceptions_employment_id_status` CREATE INDEX ix_strength_exceptions_employment_id_status ON hrm.strength_exceptions USING btree (employment_id, status)
 
 ### hrm.tax_declaration_lines
 
@@ -7583,10 +7642,14 @@ Constraints:
 - `hrm.tg_employment_assignments_cost_allocation_sum` 
 - `hrm.tg_employment_assignments_manager_cycle` 
 - `hrm.tg_employment_events_fixed` 
+- `hrm.tg_grades_value_checks` 
+- `hrm.tg_headcount_budgets_value_checks` 
 - `hrm.tg_pay_groups_rules` 
 - `hrm.tg_pay_periods_fixed` 
 - `hrm.tg_policy_assignments_checks` 
 - `hrm.tg_policy_versions_fixed` 
+- `hrm.tg_positions_reporting_cycle` 
+- `hrm.tg_positions_value_checks` 
 - `hrm.tg_refuse_change` 
 - `hrm.todo_attendance_days_lock` Pending rule for hrm.attendance_days, owned by S1.31: Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26).
 - `hrm.todo_attendance_periods_lock` Pending rule for hrm.attendance_periods, owned by S1.31: A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments.
@@ -7607,7 +7670,6 @@ Constraints:
 - `hrm.todo_pay_runs_lock` Pending rule for hrm.pay_runs, owned by S1.38: Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33); status column may still advance (paid, posted, closed) through the run service only.
 - `hrm.todo_pay_traces_lock` Pending rule for hrm.pay_traces, owned by S1.38: Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33).
 - `hrm.todo_payment_lines_sum_equals_net` Pending rule for hrm.payment_lines, owned by S1.40: deferred: sum of active lines per result equals pay_results.net
-- `hrm.todo_positions_reporting_cycle` Pending rule for hrm.positions, owned by S1.22: Cycle check trigger on reports_to_position_id.
 - `hrm.todo_provident_fund_accounts_transfer` Pending rule for hrm.provident_fund_accounts, owned by S1.44: On intra-group transfer the old account closes with a transfer entry and the new account opens with the balance (employment_events.carry_over).
 - `hrm.todo_retro_adjustments_apply_once` Pending rule for hrm.retro_adjustments, owned by S1.39: applied_in_run_id may be set once (trigger); status pending -> applied is one-way.
 - `hrm.todo_statutory_table_rows_lock` Pending rule for hrm.statutory_table_rows, owned by S1.36: Immutable by trigger once the parent version is effective or referenced by any run; change by a new table version.

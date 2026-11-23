@@ -6,6 +6,7 @@ using Erp.Hrm.Infrastructure.Access;
 using Erp.Hrm.Infrastructure.Employments;
 using Erp.Hrm.Infrastructure.Attendance;
 using Erp.Hrm.Infrastructure.Generated;
+using Erp.Hrm.Infrastructure.Positions;
 using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Contracts.Settings;
@@ -88,6 +89,7 @@ public static class WorkerHost
         // Employments (S1.20b): the document type hrm.employment_event with its handler, the line-manager directory, the active
         // employee counters and the daily job hrm.employment_events_due.
         services.AddHrmEmployment().AddHrmEmploymentWorker();
+        services.AddHrmPositions(); // the outcome handler of strength exceptions (S1.22a)
         // Policies (S1.23a): the transfer job and the probation reminders resolve the probation policy (the kernel answers unit subtrees).
         services.AddScoped<Erp.Kernel.Contracts.Org.IOrgStructure, Erp.Kernel.Infrastructure.Org.OrgStructure>();
         services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldCatalog, Erp.Kernel.Infrastructure.Metadata.CustomFieldCatalog>();

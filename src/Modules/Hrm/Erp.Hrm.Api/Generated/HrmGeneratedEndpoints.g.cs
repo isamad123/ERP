@@ -120,6 +120,7 @@ public static class HrmGeneratedEndpoints
         global::Erp.Hrm.Api.Generated.StatutoryReturnEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.StatutoryTableRowEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.StatutoryTableEndpoints.Map(app);
+        global::Erp.Hrm.Api.Generated.StrengthExceptionEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.TaxDeclarationLineEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.TaxDeclarationEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.TrainingBondEndpoints.Map(app);

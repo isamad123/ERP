@@ -32,6 +32,9 @@ public static class HrmSettingKeys
     /// <summary>How many days before a contract ends the manager and HR are reminded, when the contract gives no number.</summary>
     public const string HrmContractsRenewalNoticeDays = "hrm.contracts.renewal_notice_days";
 
+    /// <summary>Whether the company plans by positions or by headcount per unit and grade.</summary>
+    public const string HrmOrgModel = "hrm.org.model";
+
     /// <summary>A new or changed payment account of an employee needs a second person's approval.</summary>
     public const string HrmBankAccountsRequiresApproval = "hrm.bank_accounts.requires_approval";
 
