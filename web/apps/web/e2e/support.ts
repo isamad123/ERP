@@ -57,6 +57,8 @@ export const server = {
   heldSetting: (value: number, reason: string) => call<{ key: string; requestId: string }>('POST', '/changes/setting', { value, reason }),
   /** S1.15b: a field rule for every role of the named person: access `hidden`, `masked`, `read_only` or `editable` for a field (a custom field is `custom.<key>`); the field matrix of S1.13b does the same by screen. */
   fieldAccess: (username: string, resource: string, field: string, access: 'hidden' | 'masked' | 'read_only' | 'editable') => call<undefined>('POST', '/field-policy', { username, resource, field, access }),
+  /** Removes the customer-level value of a setting (restores the inherited or standard value); for `finally` blocks. */
+  clearSetting: (key: string) => call<undefined>('DELETE', `/settings?key=${encodeURIComponent(key)}`),
   settingValue: async (key: string) => (await call<{ value: string | null }>('GET', `/settings/value?key=${encodeURIComponent(key)}`)).value,
   facts: (username: string) => call<{ liveSessions: number; reusedSessions: number; trustedDevices: number }>('GET', `/facts?username=${encodeURIComponent(username)}`),
 };
