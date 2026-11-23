@@ -12,6 +12,9 @@ using Erp.Hrm.Infrastructure.People;
 using Erp.Hrm.Infrastructure.Access;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Api.ControlPlane.Tenancy;
+using Erp.Kernel.Api.Generated;
+using Erp.Kernel.Api.Itg;
+using Erp.Kernel.Infrastructure.Itg;
 using Erp.Kernel.Api.Access;
 using Erp.Kernel.Api.Metadata;
 using Erp.Kernel.Api.Org;
@@ -43,7 +46,6 @@ using Erp.Kernel.Infrastructure.Settings;
 using Erp.Kernel.Application.Access;
 using Erp.Kernel.Application.Audit;
 using Erp.Kernel.Application.Identity;
-using Erp.Kernel.Api.Generated;
 using Erp.Kernel.Infrastructure.Access;
 using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
@@ -97,6 +99,7 @@ public static class ApiHost
             .AddInterceptors(sp.GetRequiredService<CompanyLimitInterceptor>())); // the company limit, after the audit interceptor (S1.09b)
         services.AddDbContext<HrmDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp));
         services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
+        services.AddKernelImportEngine().AddKernelImportWriters();
         services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 
         // Access control (S1.06): one engine decides permissions, data scopes and field access for every endpoint. The HR
@@ -248,6 +251,7 @@ public static class ApiHost
         api.MapJobEndpoints();
         api.MapNotificationEndpoints();
         api.MapDocumentEndpoints();
+        api.MapImportEndpoints();
         api.MapTemplateEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();

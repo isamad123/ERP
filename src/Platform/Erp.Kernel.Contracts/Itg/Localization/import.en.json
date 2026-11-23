@@ -32,5 +32,7 @@
   "errors.import.not_an_option": "This is not one of the allowed values.",
   "errors.import.parent_unknown": "The parent unit does not exist.",
   "errors.import.duplicate_in_file": "This key appears twice in the file.",
-  "errors.import.row_failed": "The row could not be saved."
+  "errors.import.row_failed": "The row could not be saved.",
+  "errors.import.parent_change_not_supported": "Moving an existing unit to another parent is done on the move screen.",
+  "errors.import.company_forbidden": "You may not import data for this company."
 }

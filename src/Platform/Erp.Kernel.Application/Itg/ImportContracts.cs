@@ -64,3 +64,90 @@ public interface IImportRowWriter
     /// <summary>Applies the row. <paramref name="existingId"/> is the record the row's key found when the template allows updates; null creates. A row marked <see cref="ImportRow.DryRun"/> must have no effect outside the open transaction (no e-mails, no other connections).</summary>
     Task<ImportRowOutcome> WriteAsync(ImportRow row, Guid? existingId, CancellationToken cancellationToken);
 }
+
+/// <summary>A refusal of the import centre with the HTTP status of its answer; <see cref="ErrorKey"/> is a localization key (<c>errors.import.*</c>).</summary>
+public sealed class ImportException(string errorKey, int status = 400, string? detail = null) : Exception(errorKey)
+{
+    public string ErrorKey { get; } = errorKey;
+
+    public int Status { get; } = status;
+
+    public string? Detail { get; } = detail;
+}
+
+public sealed record ImportColumnView(string Name, string Field, string Type, bool Required, IReadOnlyDictionary<string, string> Label, string? Lookup, IReadOnlyList<string>? Options, string? Example);
+
+/// <summary>An import type as the centre shows it; <see cref="CanRun"/> says whether the caller holds the permission the type needs.</summary>
+public sealed record ImportTypeView(string Code, string Module, IReadOnlyDictionary<string, string> Name, string Permission, bool CanUpdate, bool CanRun, IReadOnlyList<ImportColumnView> Columns);
+
+public sealed record ImportTemplateView(Guid Id, string Code, IReadOnlyDictionary<string, string> Name, string EntityType, string Format, string Mode, bool IsDefault, int Version, bool IsActive, long RowVersion, JsonNode? Mapping);
+
+/// <summary>The body of a template create (code, name, entity type, format, mode, mapping) or update (name, mode, mapping and the row version read).</summary>
+public sealed record ImportTemplateWrite(string? Code, Dictionary<string, string>? Name, string? EntityType, string? Format, string? Mode, JsonNode? Mapping, long? RowVersion);
+
+public sealed record ImportBatchView(
+    Guid Id,
+    Guid TemplateId,
+    IReadOnlyDictionary<string, string> TemplateName,
+    string EntityType,
+    string FileName,
+    string Status,
+    string Mode,
+    int? TotalRows,
+    int? OkRows,
+    int? ErrorRows,
+    int? CreatedRows,
+    int? UpdatedRows,
+    decimal? ProgressPct,
+    Guid? JobRunId,
+    DateTimeOffset CreatedAt,
+    Guid CreatedBy,
+    DateTimeOffset? ValidatedAt,
+    DateTimeOffset? CommittedAt,
+    DateTimeOffset? RolledBackAt,
+    bool CanCommit,
+    bool CanRollback,
+    string? RollbackBlockedKey);
+
+public sealed record ImportErrorView(int RowNo, string? Field, string Message, string Phase);
+
+public sealed record ImportPage<T>(IReadOnlyList<T> Items, string? Next);
+
+public sealed record ImportSampleRow(int RowNo, JsonNode? Values);
+
+public sealed record ImportTestResult(int TotalRows, int ErrorRows, IReadOnlyList<ImportErrorView> Errors, IReadOnlyList<ImportSampleRow> Sample);
+
+/// <summary>A file the centre hands back (a template or the error file).</summary>
+public sealed record ImportFileContent(string FileName, string ContentType, byte[] Content);
+
+/// <summary>The import centre (slice S1.16a, FR-ADM-DAT-01, FR-ADM-INT-04): types, templates, batches (upload, check, commit, roll back) and their problems.</summary>
+public interface IImportService
+{
+    Task<IReadOnlyList<ImportTypeView>> TypesAsync(CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ImportTemplateView>> TemplatesAsync(string? type, CancellationToken cancellationToken);
+
+    Task<ImportTemplateView> CreateTemplateAsync(ImportTemplateWrite request, CancellationToken cancellationToken);
+
+    Task<ImportTemplateView> UpdateTemplateAsync(Guid id, ImportTemplateWrite request, CancellationToken cancellationToken);
+
+    Task<ImportFileContent> TemplateFileAsync(Guid id, string? format, CancellationToken cancellationToken);
+
+    Task<ImportTestResult> TestTemplateAsync(Guid id, string fileName, byte[] content, CancellationToken cancellationToken);
+
+    Task<ImportBatchView> UploadAsync(Guid templateId, string fileName, byte[] content, CancellationToken cancellationToken);
+
+    Task<ImportBatchView> ValidateAsync(Guid batchId, CancellationToken cancellationToken);
+
+    Task<ImportBatchView> CommitAsync(Guid batchId, bool skipErrors, CancellationToken cancellationToken);
+
+    Task<ImportBatchView> RollbackAsync(Guid batchId, string? reason, CancellationToken cancellationToken);
+
+    Task<ImportBatchView> GetAsync(Guid batchId, CancellationToken cancellationToken);
+
+    Task<ImportPage<ImportBatchView>> ListAsync(string? type, string? status, string? cursor, int limit, CancellationToken cancellationToken);
+
+    Task<ImportPage<ImportErrorView>> ErrorsAsync(Guid batchId, int limit, string? cursor, CancellationToken cancellationToken);
+
+    Task<ImportFileContent> ErrorFileAsync(Guid batchId, CancellationToken cancellationToken);
+}

@@ -1,0 +1,756 @@
+using System.Data;
+using System.Globalization;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Erp.BuildingBlocks.Application.Audit;
+using Erp.BuildingBlocks.Application.Security;
+using Erp.BuildingBlocks.Application.Tenancy;
+using Erp.BuildingBlocks.Domain.Time;
+using Erp.Kernel.Application.Itg;
+using Erp.Kernel.Contracts.Generated;
+using Erp.Kernel.Contracts.Itg;
+using Erp.Kernel.Contracts.Jobs;
+using Erp.Kernel.Infrastructure.Audit;
+using Erp.Kernel.Infrastructure.Generated;
+using Erp.Kernel.Infrastructure.Identity;
+using Erp.Kernel.Infrastructure.Jobs;
+using Erp.Kernel.Infrastructure.Settings;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
+using Sylvan.Data.Excel;
+
+namespace Erp.Kernel.Infrastructure.Itg;
+
+/// <summary>
+/// The import centre (slice S1.16a, FR-ADM-DAT-01, FR-KRN-INT-03, -04, FR-ADM-INT-04): templates, upload, the validation run and
+/// the commit (both background jobs that act as the person who asked), rollback and the problem lists. Everything a row does goes
+/// through the type's writer, so the rules are those of manual entry; this service only decides who may start what and in which state.
+/// </summary>
+public sealed class ImportService(
+    ITenantConnectionProvider tenant,
+    IClock clock,
+    ICurrentActor actor,
+    IAuditContext audit,
+    IPermissionChecker permissions,
+    ImportCatalog catalog,
+    ImportFiles files,
+    IServiceProvider services) : IImportService
+{
+    private const int MaxTestRows = 200;
+    private const string BatchSelect = """
+        select b.id, b.template_id, t.name_i18n::text, t.entity_type, coalesce(b.file_name, ''), b.status, b.mode, b.total_rows, b.ok_rows, b.error_rows, b.created_rows, b.updated_rows,
+               r.progress_pct, b.job_run_id, b.created_at, b.created_by, b.validated_at, b.committed_at, b.rolled_back_at, b.company_id
+        from itg.import_batches b
+        join itg.import_templates t on t.id = b.template_id
+        left join job.runs r on r.id = b.job_run_id
+        """;
+
+    // ------------------------------------------------------------------ types and templates
+
+    public async Task<IReadOnlyList<ImportTypeView>> TypesAsync(CancellationToken cancellationToken)
+    {
+        await RequireAsync(ImportPermissions.Manage, cancellationToken).ConfigureAwait(false);
+        var views = new List<ImportTypeView>();
+        foreach (var type in catalog.All.OrderBy(t => t.Code, StringComparer.Ordinal))
+        {
+            views.Add(new ImportTypeView(type.Code, type.Module, type.Name, type.Permission, type.CanUpdate,
+                await permissions.HasPermissionAsync(type.Permission, cancellationToken).ConfigureAwait(false),
+                [.. type.Columns.Select(c => new ImportColumnView(c.Name, c.Field, c.Type, c.Required, c.Label, c.Lookup, c.Options, c.Example))]));
+        }
+
+        return views;
+    }
+
+    public async Task<IReadOnlyList<ImportTemplateView>> TemplatesAsync(string? type, CancellationToken cancellationToken)
+    {
+        await RequireAnyAsync([ImportPermissions.Manage, ImportPermissions.Design], cancellationToken).ConfigureAwait(false);
+        await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await OpsAlerts.ReadAsync(c, TemplateSelect + " where ($1::text is null or t.entity_type = $1) order by t.is_default desc, t.code", ReadTemplate, cancellationToken, type).ConfigureAwait(false);
+    }
+
+    public async Task<ImportTemplateView> CreateTemplateAsync(ImportTemplateWrite request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        await RequireAsync(ImportPermissions.Design, cancellationToken).ConfigureAwait(false);
+        var type = catalog.Find(request.EntityType ?? string.Empty) ?? throw new ImportException("errors.import.type_unknown", 400);
+        var code = request.Code?.Trim();
+        if (string.IsNullOrEmpty(code) || code.Length > 40 || !code.All(ch => ch is >= 'a' and <= 'z' or >= '0' and <= '9' or '_' or '.' or '-'))
+        {
+            throw new ImportException("errors.import.template_invalid", 400, "code");
+        }
+
+        var (format, mode, name, mapping) = Checked(request, type, null);
+        var now = clock.UtcNow;
+        var id = Guid.CreateVersion7(now);
+        await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await IdentityDb.ExecuteAsync(c, tx, """
+                insert into itg.import_templates (id, code, name_i18n, entity_type, format, mapping, version, mode, is_default, is_active, created_at, created_by, updated_at, updated_by, row_version)
+                values ($1, $2, $3, $4, $5, $6, 1, $7, false, true, $8, $9, $8, $9, 1)
+                """, cancellationToken, id, code, new JsonPayload(name), type.Code, format, new JsonPayload(mapping), mode, now, actor.UserId).ConfigureAwait(false);
+        }
+        catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            throw new ImportException("errors.import.template_exists", 409);
+        }
+
+        await LogTemplateAsync(c, tx, id, "create", [("code", null, code), ("entity_type", null, type.Code), ("mode", null, mode), ("version", null, 1)], now, cancellationToken).ConfigureAwait(false);
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return (await OpsAlerts.ReadAsync(c, TemplateSelect + " where t.id = $1", ReadTemplate, cancellationToken, id).ConfigureAwait(false)).Single();
+    }
+
+    public async Task<ImportTemplateView> UpdateTemplateAsync(Guid id, ImportTemplateWrite request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        await RequireAsync(ImportPermissions.Design, cancellationToken).ConfigureAwait(false);
+        await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var current = (await OpsAlerts.ReadAsync(c, TemplateSelect + " where t.id = $1", ReadTemplate, cancellationToken, id).ConfigureAwait(false)).SingleOrDefault() ?? throw new ImportException("errors.import.not_found", 404);
+        var type = catalog.Find(current.EntityType) ?? throw new ImportException("errors.import.type_unknown", 400);
+        if (request.RowVersion is null)
+        {
+            throw new ImportException("errors.import.template_invalid", 400, "rowVersion");
+        }
+
+        var (format, mode, name, mapping) = Checked(request, type, current);
+        var now = clock.UtcNow;
+        await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        var changed = await IdentityDb.ExecuteAsync(c, tx, """
+            update itg.import_templates set name_i18n = $2, format = $3, mapping = $4, mode = $5, version = version + 1, updated_at = $6, updated_by = $7, row_version = row_version + 1
+            where id = $1 and row_version = $8
+            """, cancellationToken, id, new JsonPayload(name), format, new JsonPayload(mapping), mode, now, actor.UserId, request.RowVersion.Value).ConfigureAwait(false);
+        if (changed == 0)
+        {
+            throw new ImportException("errors.data.conflict", 409);
+        }
+
+        await LogTemplateAsync(c, tx, id, "update", [("mode", current.Mode, mode), ("version", current.Version, current.Version + 1), ("mapping", null, "changed")], now, cancellationToken).ConfigureAwait(false);
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return (await OpsAlerts.ReadAsync(c, TemplateSelect + " where t.id = $1", ReadTemplate, cancellationToken, id).ConfigureAwait(false)).Single();
+    }
+
+    public async Task<ImportFileContent> TemplateFileAsync(Guid id, string? format, CancellationToken cancellationToken)
+    {
+        await RequireAnyAsync([ImportPermissions.Manage, ImportPermissions.Design], cancellationToken).ConfigureAwait(false);
+        await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var template = (await OpsAlerts.ReadAsync(c, TemplateSelect + " where t.id = $1", ReadTemplate, cancellationToken, id).ConfigureAwait(false)).SingleOrDefault() ?? throw new ImportException("errors.import.not_found", 404);
+        var type = catalog.Find(template.EntityType) ?? throw new ImportException("errors.import.type_unknown", 400);
+        var mapping = TemplateMapping.Parse(JsonSerializer.SerializeToElement(template.Mapping));
+        var chosen = string.IsNullOrWhiteSpace(format) ? template.Format : format.Trim().ToLowerInvariant();
+        if (chosen is not (ImportFileReader.Csv or ImportFileReader.Xlsx))
+        {
+            throw new ImportException("errors.import.unsupported_file", 400);
+        }
+
+        var headers = new List<string>();
+        var example = new List<string>();
+        foreach (var column in type.Columns)
+        {
+            var m = mapping.Columns.FirstOrDefault(x => string.Equals(x.Field, column.Name, StringComparison.OrdinalIgnoreCase) || string.Equals(x.Field, column.Field, StringComparison.OrdinalIgnoreCase));
+            if (m is null || string.IsNullOrWhiteSpace(m.Source))
+            {
+                continue;
+            }
+
+            headers.Add(m.Source);
+            example.Add(column.Example ?? string.Empty);
+        }
+
+        var baseName = template.Code.Replace('.', '-');
+        if (chosen == ImportFileReader.Csv)
+        {
+            var delimiter = mapping.Delimiter ?? ',';
+            var text = new StringBuilder().Append(string.Join(delimiter, headers.Select(h => CsvCell(h, delimiter)))).Append("\r\n").Append(string.Join(delimiter, example.Select(e => CsvCell(e, delimiter)))).Append("\r\n").ToString();
+            return new ImportFileContent(baseName + ".csv", "text/csv; charset=utf-8", new UTF8Encoding(true).GetPreamble().Concat(Encoding.UTF8.GetBytes(text)).ToArray());
+        }
+
+        using var sheet = new DataTable("Template");
+        foreach (var h in headers)
+        {
+            sheet.Columns.Add(h, typeof(string));
+        }
+
+        sheet.Rows.Add([.. example.Cast<object>()]);
+        using var allowed = new DataTable("Allowed values");
+        allowed.Columns.Add("Column", typeof(string));
+        allowed.Columns.Add("Allowed values", typeof(string));
+        foreach (var column in type.Columns.Where(col => col.Options is { Count: > 0 } || col.Type == "bool" || col.Type == "date" || col.Lookup is not null))
+        {
+            allowed.Rows.Add(column.Name, column.Options is { Count: > 0 } ? string.Join(", ", column.Options) : column.Type == "bool" ? "yes, no" : column.Type == "date" ? "yyyy-mm-dd" : "a code of " + column.Lookup);
+        }
+
+        using var stream = new MemoryStream();
+        using (var writer = ExcelDataWriter.Create(stream, ExcelWorkbookType.ExcelXml))
+        {
+            using (var reader = sheet.CreateDataReader())
+            {
+                writer.Write(reader, "Template");
+            }
+
+            using var allowedReader = allowed.CreateDataReader();
+            writer.Write(allowedReader, "Allowed values");
+        }
+
+        return new ImportFileContent(baseName + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", stream.ToArray());
+    }
+
+    public async Task<ImportTestResult> TestTemplateAsync(Guid id, string fileName, byte[] content, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        await RequireAnyAsync([ImportPermissions.Manage, ImportPermissions.Design], cancellationToken).ConfigureAwait(false);
+        ImportTemplateView template;
+        await using (var c = await OpenAsync(cancellationToken).ConfigureAwait(false))
+        {
+            template = (await OpsAlerts.ReadAsync(c, TemplateSelect + " where t.id = $1", ReadTemplate, cancellationToken, id).ConfigureAwait(false)).SingleOrDefault() ?? throw new ImportException("errors.import.not_found", 404);
+        }
+
+        var type = catalog.Find(template.EntityType) ?? throw new ImportException("errors.import.type_unknown", 400);
+        await RequireTypeAsync(type, cancellationToken).ConfigureAwait(false);
+        if (content.Length == 0)
+        {
+            throw new ImportException("errors.import.empty_file", 400);
+        }
+
+        var format = ImportFileReader.Detect(content, fileName) ?? throw new ImportException("errors.import.unsupported_file", 415);
+        var mapping = TemplateMapping.Parse(JsonSerializer.SerializeToElement(template.Mapping));
+        var errors = new List<ImportErrorView>();
+        var sample = new List<ImportSampleRow>();
+        var total = 0;
+        var bad = 0;
+        try
+        {
+            using var sheet = ImportFileReader.Open(content, format, mapping);
+            foreach (var missing in ImportRowPipeline.MissingHeaders(type, mapping, sheet.Headers))
+            {
+                errors.Add(new ImportErrorView(1, missing, "errors.import.header_missing", "validate"));
+            }
+
+            if (errors.Count > 0)
+            {
+                return new ImportTestResult(0, 0, errors, []);
+            }
+
+            var db = services.GetRequiredService<KernelDbContext>();
+            await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            await using var tx = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var pipeline = new ImportRowPipeline(type, mapping, template.Mode, sheet.Headers, ImportWriterFor(type), db, services.GetRequiredService<ICallerAccess>());
+                foreach (var (rowNo, cells) in sheet.Rows())
+                {
+                    total++;
+                    if (total > MaxTestRows)
+                    {
+                        continue;
+                    }
+
+                    var result = await pipeline.ProcessAsync(rowNo, cells, dryRun: true, mapOnly: false, cancellationToken).ConfigureAwait(false);
+                    if (sample.Count < 5)
+                    {
+                        sample.Add(new ImportSampleRow(rowNo, result.Values));
+                    }
+
+                    if (!result.Ok)
+                    {
+                        bad++;
+                        errors.AddRange(result.Errors.Take(3).Select(e => new ImportErrorView(rowNo, e.Field, e.Message, "validate")));
+                    }
+                }
+            }
+            finally
+            {
+                await tx.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+        }
+        catch (ImportFileException e)
+        {
+            throw new ImportException(e.Message, 400);
+        }
+
+        return new ImportTestResult(total, bad, [.. errors.Take(100)], sample);
+    }
+
+    // ------------------------------------------------------------------ batches
+
+    public async Task<ImportBatchView> UploadAsync(Guid templateId, string fileName, byte[] content, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        await RequireAsync(ImportPermissions.Manage, cancellationToken).ConfigureAwait(false);
+        ImportTemplateView template;
+        await using (var c0 = await OpenAsync(cancellationToken).ConfigureAwait(false))
+        {
+            template = (await OpsAlerts.ReadAsync(c0, TemplateSelect + " where t.id = $1 and t.is_active", ReadTemplate, cancellationToken, templateId).ConfigureAwait(false)).SingleOrDefault() ?? throw new ImportException("errors.import.not_found", 404);
+        }
+
+        var type = catalog.Find(template.EntityType) ?? throw new ImportException("errors.import.type_unknown", 400);
+        await RequireTypeAsync(type, cancellationToken).ConfigureAwait(false);
+        var mapping = TemplateMapping.Parse(JsonSerializer.SerializeToElement(template.Mapping));
+        var now = clock.UtcNow;
+        await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var company = await IdentityDb.ScalarAsync<Guid?>(c, null, """
+            select coalesce((select default_company_id from iam.users where id = $1), (select id from org.companies where not is_deleted order by created_at limit 1))
+            """, cancellationToken, actor.UserId).ConfigureAwait(false) ?? throw new ImportException("errors.import.not_found", 404);
+        var batchId = Guid.CreateVersion7(now);
+        Guid fileId;
+        string format;
+        try
+        {
+            (fileId, format) = await files.StoreAsync(content, fileName, company, batchId, cancellationToken).ConfigureAwait(false);
+        }
+        catch (ImportRefusedException e)
+        {
+            throw new ImportException(e.Message, e.Status);
+        }
+
+        var total = 0;
+        try
+        {
+            var maxRows = await MaxRowsAsync(c, company, now, cancellationToken).ConfigureAwait(false);
+            using (var sheet = ImportFileReader.Open(content, format, mapping))
+            {
+                var missing = ImportRowPipeline.MissingHeaders(type, mapping, sheet.Headers);
+                if (missing.Count > 0)
+                {
+                    throw new ImportException("errors.import.header_missing", 400, string.Join(", ", missing));
+                }
+            }
+
+            total = ImportFileReader.CountRows(content, format, mapping, maxRows);
+            if (total > maxRows)
+            {
+                throw new ImportException("errors.import.too_many_rows", 413);
+            }
+
+            if (total == 0)
+            {
+                throw new ImportException("errors.import.empty_file", 400);
+            }
+        }
+        catch (Exception e) when (e is ImportException or ImportFileException)
+        {
+            await DiscardFileAsync(c, fileId, cancellationToken).ConfigureAwait(false);
+            throw e as ImportException ?? new ImportException(e.Message, 400);
+        }
+
+        await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await IdentityDb.ExecuteAsync(c, tx, """
+            insert into itg.import_batches (id, company_id, template_id, file_id, total_rows, status, file_name, mode, created_at, created_by, updated_at, updated_by, row_version)
+            values ($1, $2, $3, $4, $5, 'uploaded', $6, $7, $8, $9, $8, $9, 1)
+            """, cancellationToken, batchId, company, templateId, fileId, total, fileName.Trim(), template.Mode, now, actor.UserId).ConfigureAwait(false);
+        await LogBatchAsync(c, tx, batchId, company, "create", [("template_id", null, templateId), ("file_name", null, fileName.Trim()), ("total_rows", null, total), ("status", null, "uploaded")], now, cancellationToken).ConfigureAwait(false);
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return await GetAsync(batchId, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ImportBatchView> ValidateAsync(Guid batchId, CancellationToken cancellationToken)
+    {
+        var batch = await StartableAsync(batchId, cancellationToken).ConfigureAwait(false);
+        if (batch.Status != "uploaded")
+        {
+            throw new ImportException("errors.import.wrong_state", 409);
+        }
+
+        await QueueAsync(batchId, ImportJobCodes.Validate, "validating", "uploaded", cancellationToken).ConfigureAwait(false);
+        return await GetAsync(batchId, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ImportBatchView> CommitAsync(Guid batchId, bool skipErrors, CancellationToken cancellationToken)
+    {
+        var batch = await StartableAsync(batchId, cancellationToken).ConfigureAwait(false);
+        if (batch.Status != "validated")
+        {
+            throw new ImportException("errors.import.wrong_state", 409);
+        }
+
+        if ((batch.OkRows ?? 0) == 0)
+        {
+            throw new ImportException("errors.import.nothing_to_commit", 409);
+        }
+
+        if ((batch.ErrorRows ?? 0) > 0 && !skipErrors)
+        {
+            throw new ImportException("errors.import.has_errors", 409);
+        }
+
+        await QueueAsync(batchId, ImportJobCodes.Commit, "committing", "validated", cancellationToken).ConfigureAwait(false);
+        return await GetAsync(batchId, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ImportBatchView> RollbackAsync(Guid batchId, string? reason, CancellationToken cancellationToken)
+    {
+        var batch = await StartableAsync(batchId, cancellationToken).ConfigureAwait(false);
+        var now = clock.UtcNow;
+        await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        var locked = await IdentityDb.ScalarAsync<string?>(c, tx, "select status from itg.import_batches where id = $1 for update", cancellationToken, batchId).ConfigureAwait(false);
+        if (locked != "committed")
+        {
+            throw new ImportException("errors.import.rollback_not_allowed", 409);
+        }
+
+        var blocked = await RollbackBlockedAsync(c, tx, batchId, batch.CommittedAt, batch.UpdatedRows ?? 0, now, cancellationToken).ConfigureAwait(false);
+        if (blocked is not null)
+        {
+            throw new ImportException(blocked, 409);
+        }
+
+        var rows = await OpsAlerts.ReadAsync(c, "select table_name, record_id from itg.import_batch_rows where batch_id = $1 and action = 'created' order by row_no desc, created_at desc", r => (Table: r.GetString(0), Id: r.GetGuid(1)), cancellationToken, batchId).ConfigureAwait(false);
+        foreach (var (table, id) in rows)
+        {
+            var soft = await IdentityDb.ScalarAsync<bool>(c, tx, "select exists (select 1 from information_schema.columns where table_schema = $1 and table_name = $2 and column_name = 'is_deleted')", cancellationToken, SchemaOf(table), NameOf(table)).ConfigureAwait(false);
+            var company = await TryCompanyAsync(c, tx, table, id, cancellationToken).ConfigureAwait(false);
+            await IdentityDb.ExecuteAsync(c, tx, soft
+                ? $"update {Safe(table)} set is_deleted = true, updated_at = $2, updated_by = $3, row_version = row_version + 1 where id = $1"
+                : $"delete from {Safe(table)} where id = $1", cancellationToken, [.. soft ? new object?[] { id, now, actor.UserId } : [id]]).ConfigureAwait(false);
+            await AuditDb.AppendChangesAsync(c, tx, [new ChangeEntry(Guid.CreateVersion7(now), now, actor.UserId, audit.ActorKind, table, id, company, "delete",
+                new JsonArray(new JsonObject { ["field"] = "import_batch", ["after"] = batchId.ToString() }), null, batchId, audit.IpAddress, AuditSources.Import, actor.UserId)], cancellationToken).ConfigureAwait(false);
+        }
+
+        await IdentityDb.ExecuteAsync(c, tx, "update itg.import_batches set status = 'rolled_back', rolled_back_at = $2, updated_at = $2, updated_by = $3, row_version = row_version + 1 where id = $1", cancellationToken, batchId, now, actor.UserId).ConfigureAwait(false);
+        await LogBatchAsync(c, tx, batchId, batch.CompanyId, "status", [("status", "committed", "rolled_back"), ("reason", null, reason?.Trim())], now, cancellationToken).ConfigureAwait(false);
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return await GetAsync(batchId, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ImportBatchView> GetAsync(Guid batchId, CancellationToken cancellationToken)
+    {
+        await RequireAsync(ImportPermissions.Manage, cancellationToken).ConfigureAwait(false);
+        await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var batch = (await OpsAlerts.ReadAsync(c, BatchSelect + " where b.id = $1", ReadBatch, cancellationToken, batchId).ConfigureAwait(false)).SingleOrDefault();
+        if (batch is null || !await MayReadAsync(batch, cancellationToken).ConfigureAwait(false))
+        {
+            throw new ImportException("errors.import.not_found", 404);
+        }
+
+        return await ViewAsync(c, batch, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ImportPage<ImportBatchView>> ListAsync(string? type, string? status, string? cursor, int limit, CancellationToken cancellationToken)
+    {
+        await RequireAsync(ImportPermissions.Manage, cancellationToken).ConfigureAwait(false);
+        var page = Math.Clamp(limit <= 0 ? 50 : limit, 1, 200);
+        var all = await permissions.HasPermissionAsync("itg.import_batches.read", cancellationToken).ConfigureAwait(false);
+        (DateTimeOffset At, Guid Id)? after = null;
+        if (!string.IsNullOrEmpty(cursor))
+        {
+            var parts = cursor.Split('|');
+            if (parts.Length != 2 || !long.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var ticks) || !Guid.TryParse(parts[1], out var cid))
+            {
+                throw new ImportException("errors.data.invalid_request", 400);
+            }
+
+            after = (new DateTimeOffset(ticks, TimeSpan.Zero), cid);
+        }
+
+        await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var rows = await OpsAlerts.ReadAsync(c, BatchSelect + """
+             where ($1::text is null or t.entity_type = $1) and ($2::text is null or b.status = $2) and ($3 or b.created_by = $4)
+               and ($5::timestamptz is null or (b.created_at, b.id) < ($5, $6))
+             order by b.created_at desc, b.id desc limit $7
+            """, ReadBatch, cancellationToken, type, status, all, actor.UserId, after?.At, after?.Id, page + 1).ConfigureAwait(false);
+        var items = new List<ImportBatchView>();
+        foreach (var row in rows.Take(page))
+        {
+            items.Add(await ViewAsync(c, row, cancellationToken).ConfigureAwait(false));
+        }
+
+        var next = rows.Count > page ? rows[page - 1].CreatedAt.UtcTicks.ToString(CultureInfo.InvariantCulture) + "|" + rows[page - 1].Id : null;
+        return new ImportPage<ImportBatchView>(items, next);
+    }
+
+    public async Task<ImportPage<ImportErrorView>> ErrorsAsync(Guid batchId, int limit, string? cursor, CancellationToken cancellationToken)
+    {
+        await GetAsync(batchId, cancellationToken).ConfigureAwait(false);
+        var page = Math.Clamp(limit <= 0 ? 100 : limit, 1, 1000);
+        var after = 0;
+        if (!string.IsNullOrEmpty(cursor) && !int.TryParse(cursor, NumberStyles.Integer, CultureInfo.InvariantCulture, out after))
+        {
+            throw new ImportException("errors.data.invalid_request", 400);
+        }
+
+        await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var rows = await OpsAlerts.ReadAsync(c, """
+            select row_no, field, message, phase, created_at, id from itg.import_batch_errors where batch_id = $1 and row_no > $2 order by row_no, created_at, id limit $3
+            """, r => new ImportErrorView(r.GetInt32(0), r.IsDBNull(1) ? null : r.GetString(1), r.GetString(2), r.GetString(3)), cancellationToken, batchId, after, page + 1).ConfigureAwait(false);
+        return new ImportPage<ImportErrorView>(rows.Take(page).ToList(), rows.Count > page ? rows[page - 1].RowNo.ToString(CultureInfo.InvariantCulture) : null);
+    }
+
+    public async Task<ImportFileContent> ErrorFileAsync(Guid batchId, CancellationToken cancellationToken)
+    {
+        var batch = await GetAsync(batchId, cancellationToken).ConfigureAwait(false);
+        await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var fileId = await IdentityDb.ScalarAsync<Guid>(c, null, "select file_id from itg.import_batches where id = $1", cancellationToken, batchId).ConfigureAwait(false);
+        var template = (await OpsAlerts.ReadAsync(c, TemplateSelect + " where t.id = $1", ReadTemplate, cancellationToken, batch.TemplateId).ConfigureAwait(false)).Single();
+        var mapping = TemplateMapping.Parse(JsonSerializer.SerializeToElement(template.Mapping));
+        var errors = (await OpsAlerts.ReadAsync(c, "select row_no, coalesce(field, ''), message from itg.import_batch_errors where batch_id = $1 order by row_no, created_at", r => (Row: r.GetInt32(0), Field: r.GetString(1), Message: r.GetString(2)), cancellationToken, batchId).ConfigureAwait(false))
+            .GroupBy(e => e.Row).ToDictionary(g => g.Key, g => string.Join("; ", g.Select(e => (e.Field.Length > 0 ? e.Field + ": " : string.Empty) + e.Message)));
+        byte[] content;
+        try
+        {
+            content = await files.ReadAsync(fileId, cancellationToken).ConfigureAwait(false);
+        }
+        catch (ImportRefusedException e)
+        {
+            throw new ImportException(e.Message, e.Status);
+        }
+
+        var format = ImportFileReader.Detect(content, batch.FileName) ?? template.Format;
+        var text = new StringBuilder();
+        using var sheet = ImportFileReader.Open(content, format, mapping);
+        text.Append(string.Join(',', sheet.Headers.Select(h => CsvCell(h, ',')))).Append(",message\r\n");
+        foreach (var (rowNo, cells) in sheet.Rows())
+        {
+            if (errors.TryGetValue(rowNo, out var message))
+            {
+                text.Append(string.Join(',', cells.Select(x => CsvCell(x ?? string.Empty, ',')))).Append(',').Append(CsvCell(message, ',')).Append("\r\n");
+            }
+        }
+
+        return new ImportFileContent("errors-" + batch.FileName.Replace('.', '-') + ".csv", "text/csv; charset=utf-8", new UTF8Encoding(true).GetPreamble().Concat(Encoding.UTF8.GetBytes(text.ToString())).ToArray());
+    }
+
+    // ------------------------------------------------------------------ helpers
+
+    internal static string CsvCell(string value, char delimiter)
+    {
+        var safe = value.Length > 0 && value[0] is '=' or '+' or '-' or '@' ? "'" + value : value;
+        return safe.Contains(delimiter, StringComparison.Ordinal) || safe.Contains('"', StringComparison.Ordinal) || safe.Contains('\n', StringComparison.Ordinal) || safe.Contains('\r', StringComparison.Ordinal)
+            ? "\"" + safe.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"" : safe;
+    }
+
+    private IImportRowWriter ImportWriterFor(ImportTypeDefinition type) => ImportWriters.Generated(services, type.Writer ?? type.Table);
+
+    private async Task<BatchRead> StartableAsync(Guid batchId, CancellationToken cancellationToken)
+    {
+        await RequireAsync(ImportPermissions.Manage, cancellationToken).ConfigureAwait(false);
+        await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var batch = (await OpsAlerts.ReadAsync(c, BatchSelect + " where b.id = $1", ReadBatch, cancellationToken, batchId).ConfigureAwait(false)).SingleOrDefault();
+        if (batch is null || !await MayReadAsync(batch, cancellationToken).ConfigureAwait(false))
+        {
+            throw new ImportException("errors.import.not_found", 404);
+        }
+
+        await RequireTypeAsync(catalog.Find(batch.EntityType) ?? throw new ImportException("errors.import.type_unknown", 400), cancellationToken).ConfigureAwait(false);
+        return batch;
+    }
+
+    private async Task<bool> MayReadAsync(BatchRead batch, CancellationToken ct) =>
+        batch.CreatedBy == actor.UserId || await permissions.HasPermissionAsync("itg.import_batches.read", ct).ConfigureAwait(false);
+
+    private async Task RequireTypeAsync(ImportTypeDefinition type, CancellationToken ct)
+    {
+        if (!await permissions.HasPermissionAsync(type.Permission, ct).ConfigureAwait(false))
+        {
+            throw new ImportException("errors.import.type_forbidden", 403);
+        }
+    }
+
+    private async Task RequireAsync(string permission, CancellationToken ct)
+    {
+        if (!await permissions.HasPermissionAsync(permission, ct).ConfigureAwait(false))
+        {
+            throw new ImportException("errors.access.forbidden", 403);
+        }
+    }
+
+    private async Task RequireAnyAsync(string[] any, CancellationToken ct)
+    {
+        foreach (var p in any)
+        {
+            if (await permissions.HasPermissionAsync(p, ct).ConfigureAwait(false))
+            {
+                return;
+            }
+        }
+
+        throw new ImportException("errors.access.forbidden", 403);
+    }
+
+    private Task<NpgsqlConnection> OpenAsync(CancellationToken ct) => IdentityDb.OpenAsync(tenant.DataSource, ct);
+
+    private async Task QueueAsync(Guid batchId, string jobCode, string toStatus, string fromStatus, CancellationToken ct)
+    {
+        var now = clock.UtcNow;
+        await using var c = await OpenAsync(ct).ConfigureAwait(false);
+        await using var tx = await c.BeginTransactionAsync(ct).ConfigureAwait(false);
+        var runId = Guid.CreateVersion7(now);
+        var inserted = await IdentityDb.ExecuteAsync(c, tx, """
+            insert into job.runs (id, definition_id, company_id, status, priority, attempt, parameters, requested_by, actor_user_id, created_at, created_by, updated_at, updated_by, row_version)
+            select $1, d.id, null, 'queued', d.priority, 0, $2, $3, $3, $4, $3, $4, $3, 1 from job.definitions d where d.code = $5
+            """, ct, runId, new JsonPayload(new JsonObject { ["batchId"] = batchId.ToString() }.ToJsonString()), actor.UserId, now, jobCode).ConfigureAwait(false);
+        if (inserted == 0)
+        {
+            throw new ImportException("errors.job.not_found", 500);
+        }
+
+        var queued = await IdentityDb.ExecuteAsync(c, tx, """
+            update itg.import_batches set status = $2, job_run_id = $3, updated_at = $4, updated_by = $5, row_version = row_version + 1 where id = $1 and status = $6
+            """, ct, batchId, toStatus, runId, now, actor.UserId, fromStatus).ConfigureAwait(false);
+        if (queued == 0)
+        {
+            throw new ImportException("errors.import.wrong_state", 409);
+        }
+
+        await JobStore.LogAsync(c, tx, runId, "info", "queued by " + actor.UserId.ToString(), now, ct).ConfigureAwait(false);
+        await JobStore.RaiseAsync(c, tx, JobEvents.RunRequested, "job.run", runId, now, new { run_id = runId, code = jobCode, company_id = (Guid?)null, by = actor.UserId }, ct).ConfigureAwait(false);
+        var company = await IdentityDb.ScalarAsync<Guid>(c, tx, "select company_id from itg.import_batches where id = $1", ct, batchId).ConfigureAwait(false);
+        await LogBatchAsync(c, tx, batchId, company, "status", [("status", fromStatus, toStatus)], now, ct).ConfigureAwait(false);
+        await tx.CommitAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>The key of the reason a committed batch cannot be rolled back, or null when it can (Q5).</summary>
+    internal static async Task<string?> RollbackBlockedAsync(NpgsqlConnection c, NpgsqlTransaction? tx, Guid batchId, DateTimeOffset? committedAt, int updatedRows, DateTimeOffset now, CancellationToken ct)
+    {
+        if (updatedRows > 0)
+        {
+            return "errors.import.rollback_has_updates";
+        }
+
+        var days = await RollbackDaysAsync(c, now, ct).ConfigureAwait(false);
+        if (committedAt is null || now > committedAt.Value.AddDays(days))
+        {
+            return "errors.import.rollback_expired";
+        }
+
+        var rows = await OpsAlerts.ReadAsync(c, "select table_name, record_id, record_version from itg.import_batch_rows where batch_id = $1 and action = 'created'", r => (Table: r.GetString(0), Id: r.GetGuid(1), Version: r.IsDBNull(2) ? (int?)null : r.GetInt32(2)), ct, batchId).ConfigureAwait(false);
+        if (rows.Count == 0)
+        {
+            return "errors.import.rollback_not_allowed";
+        }
+
+        foreach (var group in rows.GroupBy(r => r.Table))
+        {
+            var current = await OpsAlerts.ReadAsync(c, $"select id, row_version from {Safe(group.Key)} where id = any($1)" + (await HasColumnAsync(c, group.Key, "is_deleted", ct).ConfigureAwait(false) ? " and not is_deleted" : string.Empty),
+                r => (Id: r.GetGuid(0), Version: r.GetInt64(1)), ct, group.Select(g => g.Id).ToArray()).ConfigureAwait(false);
+            var map = current.ToDictionary(x => x.Id, x => x.Version);
+            foreach (var row in group)
+            {
+                if (!map.TryGetValue(row.Id, out var version) || (row.Version is { } recorded && version != recorded))
+                {
+                    return "errors.import.rollback_changed";
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task<bool> HasColumnAsync(NpgsqlConnection c, string table, string column, CancellationToken ct) =>
+        await IdentityDb.ScalarAsync<bool>(c, null, "select exists (select 1 from information_schema.columns where table_schema = $1 and table_name = $2 and column_name = $3)", ct, SchemaOf(table), NameOf(table), column).ConfigureAwait(false);
+
+    private async Task<ImportBatchView> ViewAsync(NpgsqlConnection c, BatchRead b, CancellationToken ct)
+    {
+        string? blocked = null;
+        var canRollback = false;
+        if (b.Status == "committed")
+        {
+            blocked = await RollbackBlockedAsync(c, null, b.Id, b.CommittedAt, b.UpdatedRows ?? 0, clock.UtcNow, ct).ConfigureAwait(false);
+            canRollback = blocked is null;
+        }
+
+        return new ImportBatchView(b.Id, b.TemplateId, b.TemplateName, b.EntityType, b.FileName, b.Status, b.Mode, b.TotalRows, b.OkRows, b.ErrorRows, b.CreatedRows, b.UpdatedRows, b.Progress, b.JobRunId,
+            b.CreatedAt, b.CreatedBy, b.ValidatedAt, b.CommittedAt, b.RolledBackAt, b.Status == "validated" && (b.OkRows ?? 0) > 0, canRollback, blocked);
+    }
+
+    private static async Task<int> RollbackDaysAsync(NpgsqlConnection c, DateTimeOffset now, CancellationToken ct)
+    {
+        var values = await SettingsStore.ResolveAsync(c, null, [KernelSettingKeys.ItgImportRollbackDays], null, null, DateOnly.FromDateTime(now.UtcDateTime), ct).ConfigureAwait(false);
+        return values.TryGetValue(KernelSettingKeys.ItgImportRollbackDays, out var v) && v.Value.TryGetInt32(out var n) && n > 0 ? n : 7;
+    }
+
+    private static async Task<int> MaxRowsAsync(NpgsqlConnection c, Guid company, DateTimeOffset now, CancellationToken ct)
+    {
+        var values = await SettingsStore.ResolveAsync(c, null, [KernelSettingKeys.ItgImportMaxRows], company, null, DateOnly.FromDateTime(now.UtcDateTime), ct).ConfigureAwait(false);
+        return values.TryGetValue(KernelSettingKeys.ItgImportMaxRows, out var v) && v.Value.TryGetInt32(out var n) && n > 0 ? Math.Min(n, 50_000) : 50_000;
+    }
+
+    private async Task DiscardFileAsync(NpgsqlConnection c, Guid fileId, CancellationToken ct) =>
+        await IdentityDb.ExecuteAsync(c, null, "update doc.files set status = 'deleted', updated_at = $2, updated_by = $3, row_version = row_version + 1 where id = $1", ct, fileId, clock.UtcNow, actor.UserId).ConfigureAwait(false);
+
+    private static (string Format, string Mode, string Name, string Mapping) Checked(ImportTemplateWrite request, ImportTypeDefinition type, ImportTemplateView? current)
+    {
+        var format = (request.Format ?? current?.Format ?? "csv").Trim().ToLowerInvariant();
+        var mode = (request.Mode ?? current?.Mode ?? "create").Trim().ToLowerInvariant();
+        if (format is not ("csv" or "xlsx") || mode is not ("create" or "create_or_update") || (mode == "create_or_update" && !type.CanUpdate))
+        {
+            throw new ImportException("errors.import.template_invalid", 400, mode == "create_or_update" && !type.CanUpdate ? "mode" : "format");
+        }
+
+        var names = request.Name ?? (current?.Name.ToDictionary(p => p.Key, p => p.Value));
+        if (names is null || !names.TryGetValue("en", out var en) || string.IsNullOrWhiteSpace(en) || names.Values.Any(v => v.Length > 200))
+        {
+            throw new ImportException("errors.import.template_invalid", 400, "name");
+        }
+
+        var node = request.Mapping ?? current?.Mapping ?? throw new ImportException("errors.import.template_invalid", 400, "mapping");
+        TemplateMapping mapping;
+        try
+        {
+            mapping = TemplateMapping.Parse(JsonSerializer.SerializeToElement(node));
+        }
+        catch (InvalidDataException)
+        {
+            throw new ImportException("errors.import.template_invalid", 400, "mapping");
+        }
+
+        var problems = mapping.Check(type);
+        if (problems.Count > 0)
+        {
+            throw new ImportException("errors.import.template_invalid", 400, string.Join("; ", problems.Take(5)));
+        }
+
+        return (format, mode, JsonSerializer.Serialize(names), node.ToJsonString());
+    }
+
+    private Task<int> LogTemplateAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid id, string action, IReadOnlyList<(string Field, object? Before, object? After)> changes, DateTimeOffset now, CancellationToken ct) =>
+        LogAsync(c, tx, "itg.import_templates", id, null, action, changes, now, ct);
+
+    private Task<int> LogBatchAsync(NpgsqlConnection c, NpgsqlTransaction tx, Guid id, Guid company, string action, IReadOnlyList<(string Field, object? Before, object? After)> changes, DateTimeOffset now, CancellationToken ct) =>
+        LogAsync(c, tx, "itg.import_batches", id, company, action, changes, now, ct);
+
+    private Task<int> LogAsync(NpgsqlConnection c, NpgsqlTransaction tx, string entity, Guid id, Guid? company, string action, IReadOnlyList<(string Field, object? Before, object? After)> changes, DateTimeOffset now, CancellationToken ct)
+    {
+        var array = new JsonArray();
+        foreach (var (field, before, after) in changes)
+        {
+            var node = new JsonObject { ["field"] = field };
+            if (before is not null)
+            {
+                node["before"] = JsonSerializer.SerializeToNode(before);
+            }
+
+            node["after"] = after is null ? null : JsonSerializer.SerializeToNode(after);
+            array.Add(node);
+        }
+
+        return AuditDb.AppendChangesAsync(c, tx, [new ChangeEntry(Guid.CreateVersion7(now), now, actor.UserId, audit.ActorKind, entity, id, company, action, array, null, audit.CorrelationId, audit.IpAddress, audit.Source, actor.UserId)], ct);
+    }
+
+    private static async Task<Guid?> TryCompanyAsync(NpgsqlConnection c, NpgsqlTransaction tx, string table, Guid id, CancellationToken ct) =>
+        await HasColumnAsync(c, table, "company_id", ct).ConfigureAwait(false) ? await IdentityDb.ScalarAsync<Guid?>(c, tx, $"select company_id from {Safe(table)} where id = $1", ct, id).ConfigureAwait(false) : null;
+
+    internal static string Safe(string table) => table.Split('.') is [var a, var b] && a.All(ch => ch is >= 'a' and <= 'z' or '_') && b.All(ch => ch is >= 'a' and <= 'z' or '_') ? table : throw new InvalidDataException("Not a table name.");
+
+    private static string SchemaOf(string table) => Safe(table).Split('.')[0];
+
+    private static string NameOf(string table) => Safe(table).Split('.')[1];
+
+    private const string TemplateSelect = "select t.id, t.code, t.name_i18n::text, t.entity_type, t.format, t.mode, t.is_default, t.version, t.is_active, t.row_version, t.mapping::text from itg.import_templates t";
+
+    private static ImportTemplateView ReadTemplate(NpgsqlDataReader r) => new(r.GetGuid(0), r.GetString(1), JsonSerializer.Deserialize<Dictionary<string, string>>(r.GetString(2)) ?? [], r.GetString(3), r.GetString(4), r.GetString(5), r.GetBoolean(6), r.GetInt32(7), r.GetBoolean(8), r.GetInt64(9), JsonNode.Parse(r.GetString(10)));
+
+    internal sealed record BatchRead(Guid Id, Guid TemplateId, IReadOnlyDictionary<string, string> TemplateName, string EntityType, string FileName, string Status, string Mode, int? TotalRows, int? OkRows, int? ErrorRows, int? CreatedRows,
+        int? UpdatedRows, decimal? Progress, Guid? JobRunId, DateTimeOffset CreatedAt, Guid CreatedBy, DateTimeOffset? ValidatedAt, DateTimeOffset? CommittedAt, DateTimeOffset? RolledBackAt, Guid CompanyId);
+
+    private static BatchRead ReadBatch(NpgsqlDataReader r) => new(r.GetGuid(0), r.GetGuid(1), JsonSerializer.Deserialize<Dictionary<string, string>>(r.GetString(2)) ?? [], r.GetString(3), r.GetString(4), r.GetString(5), r.GetString(6),
+        Int(r, 7), Int(r, 8), Int(r, 9), Int(r, 10), Int(r, 11), r.IsDBNull(12) ? null : r.GetDecimal(12), r.IsDBNull(13) ? null : r.GetGuid(13), r.GetFieldValue<DateTimeOffset>(14), r.GetGuid(15),
+        Time(r, 16), Time(r, 17), Time(r, 18), r.GetGuid(19));
+
+    private static int? Int(NpgsqlDataReader r, int i) => r.IsDBNull(i) ? null : r.GetInt32(i);
+
+    private static DateTimeOffset? Time(NpgsqlDataReader r, int i) => r.IsDBNull(i) ? null : r.GetFieldValue<DateTimeOffset>(i);
+
+}

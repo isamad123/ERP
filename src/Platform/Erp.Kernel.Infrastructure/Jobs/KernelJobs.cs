@@ -68,6 +68,8 @@ public static class KernelJobs
         services.AddSingleton<IJobHandler, Documents.DocumentRetentionJob>();
         services.AddSingleton<IJobHandler, Documents.DocumentExpiryJob>();
         services.AddSingleton<IJobHandler, Documents.Templates.GenerateBatchJob>();
+        services.AddSingleton<IJobHandler, Itg.ImportValidateJob>();
+        services.AddSingleton<IJobHandler, Itg.ImportCommitJob>();
         return services;
     }
 

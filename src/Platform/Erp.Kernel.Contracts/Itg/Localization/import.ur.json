@@ -32,5 +32,7 @@
   "errors.import.not_an_option": "یہ مقررہ اقدار میں سے نہیں ہے۔",
   "errors.import.parent_unknown": "بالائی یونٹ موجود نہیں۔",
   "errors.import.duplicate_in_file": "یہ کلید فائل میں دو بار آئی ہے۔",
-  "errors.import.row_failed": "قطار محفوظ نہیں ہو سکی۔"
+  "errors.import.row_failed": "قطار محفوظ نہیں ہو سکی۔",
+  "errors.import.parent_change_not_supported": "موجود یونٹ کو کسی اور بالائی یونٹ کے تحت لے جانا منتقلی کی اسکرین سے ہوتا ہے۔",
+  "errors.import.company_forbidden": "آپ کو اس کمپنی کا ڈیٹا درآمد کرنے کی اجازت نہیں۔"
 }
