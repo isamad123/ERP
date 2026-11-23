@@ -13,7 +13,8 @@ namespace Erp.IntegrationTests.Tenancy.Isolation;
 /// The cross-customer probe of the purpose-built HR endpoints (slice S1.20a onward, <c>HrmEndpointMetadata</c>). Each customer
 /// gets fresh material made through its own API: a person with an identifier, contact, address, relation and qualification, a
 /// second person, and a third with the first one's name and birth date sent to the duplicate review; from S1.20b two hired
-/// employments, the first linked to a user; from S1.20c a second company, a former employment, a contract and a probation. Then, as for
+/// employments, the first linked to a user; from S1.20c a second company, a former employment, a contract and a probation; from S1.20d a
+/// payment account and a statutory registration of the first employment. Then, as for
 /// the other probes:
 /// <list type="number">
 /// <item>B's host and token aimed at A's ids, with and without headers naming A: actions on A's records are 404; creates and lists
@@ -28,7 +29,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         Guid Person, long PersonVersion, Guid Into, Guid Identifier, long IdentifierVersion, Guid Contact, long ContactVersion, Guid Address, long AddressVersion,
         Guid Relation, long RelationVersion, Guid Qualification, long QualificationVersion, Guid Case, long CaseVersion, string PersonNo,
         Hire Org, Guid Employment, long EmploymentVersion, Guid Unlinked, long UnlinkedVersion, Guid FreeUser,
-        Hire To, Guid Former, Guid Contract, long ContractVersion, long ProbationVersion, Guid Position, long PositionVersion);
+        Hire To, Guid Former, Guid Contract, long ContractVersion, long ProbationVersion, Guid BankAccount, Guid Registration, long RegistrationVersion,
+        Guid Position, long PositionVersion);
 
     /// <summary>Where the probe hires (slice S1.20b): an org unit of a company and that company's branch.</summary>
     private sealed record Hire(Guid Company, Guid OrgUnit, Guid Branch);
@@ -41,7 +43,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.Position }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
@@ -163,6 +165,23 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "POST /api/hrm/employments/{id:guid}/probation/extend" => ($"/api/hrm/employments/{m.Employment}/probation/extend", Json(new { extendedTo = "2026-12-31", rowVersion = m.ProbationVersion })),
             "POST /api/hrm/employments/{id:guid}/probation/confirm" => ($"/api/hrm/employments/{m.Employment}/probation/confirm", Json(new { rowVersion = m.EmploymentVersion })),
             "POST /api/hrm/employments/{id:guid}/probation/not-confirm" => ($"/api/hrm/employments/{m.Employment}/probation/not-confirm", Json(new { rowVersion = m.ProbationVersion })),
+
+            // S1.20d: payment accounts (a change is held for a second person: 202) and statutory registrations of A's employment.
+            "GET /api/hrm/employments/{id:guid}/bank-accounts" => ($"/api/hrm/employments/{m.Employment}/bank-accounts", null),
+            "POST /api/hrm/employments/{id:guid}/bank-accounts" => ($"/api/hrm/employments/{m.Employment}/bank-accounts", Json(new
+            {
+                changes = new[] { new { action = "add", paymentMode = "cheque", splitKind = "percent", splitValue = 10m, priority = 5 } },
+                reason = "probe",
+            })),
+            "GET /api/hrm/bank-accounts/{id:guid}/reveal" => ($"/api/hrm/bank-accounts/{m.BankAccount}/reveal", null),
+            "GET /api/hrm/employments/{id:guid}/statutory-registrations" => ($"/api/hrm/employments/{m.Employment}/statutory-registrations", null),
+            "POST /api/hrm/employments/{id:guid}/statutory-registrations" => ($"/api/hrm/employments/{m.Employment}/statutory-registrations", Json(new
+            {
+                scheme = "pf" + string.Concat(Enumerable.Range(0, 6).Select(_ => (char)('a' + Random.Shared.Next(26)))), isApplicable = true,
+            })),
+            "PUT /api/hrm/statutory-registrations/{id:guid}" => ($"/api/hrm/statutory-registrations/{m.Registration}", Json(new { registrationNo = "PROBE-1", rowVersion = m.RegistrationVersion })),
+            "DELETE /api/hrm/statutory-registrations/{id:guid}" => ($"/api/hrm/statutory-registrations/{m.Registration}?rowVersion={m.RegistrationVersion}", null),
+            "GET /api/hrm/statutory-registrations/{id:guid}/reveal" => ($"/api/hrm/statutory-registrations/{m.Registration}/reveal", null),
             var key => throw new InvalidOperationException($"No probe target for HR endpoint {key}; extend HrmProbe."),
         };
     }
@@ -315,11 +334,28 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
 
         var contract = await PostAsync(host, token, $"/api/hrm/employments/{employment}/contracts", new { startDate = "2024-01-01", endDate = "2024-12-31", terms = new { hours = "40" } }, ct);
         var probation = (await GetAsync(host, token, $"/api/hrm/probation-records?employmentId={employment}", ct)).GetProperty("items")[0];
+
+        // S1.20d: a cash payment account (written directly: a change through the API waits for a second person) and an EOBI registration.
+        var account = Guid.CreateVersion7();
+        await using (var c = await fx.OpenAdminAsync(code, ct))
+        {
+            await using var command = new NpgsqlCommand("""
+                insert into hrm.employee_bank_accounts (id, company_id, employment_id, payment_mode, split_kind, priority, valid_from, created_at, created_by, updated_at, updated_by)
+                select $1, company_id, id, 'cash', 'remainder', 1, '2024-01-01', now(), $2, now(), $2 from hrm.employments where id = $3
+                """, c);
+            command.Parameters.Add(new NpgsqlParameter { Value = account });
+            command.Parameters.Add(new NpgsqlParameter { Value = BaselineSeed.SystemUserId });
+            command.Parameters.Add(new NpgsqlParameter { Value = employment });
+            await command.ExecuteNonQueryAsync(ct);
+        }
+
+        var registration = await PostAsync(host, token, $"/api/hrm/employments/{employment}/statutory-registrations", new { scheme = "eobi", isApplicable = true, registrationNo = "EOBI-" + cnic[..7], validFrom = "2024-01-01" }, ct);
         return new Material(person, created.GetProperty("rowVersion").GetInt64(), into, identifier.Id, identifier.Version, contact.Id, contact.Version,
             address.Id, address.Version, relation.Id, relation.Version, qualification.Id, qualification.Version,
             match.GetProperty("id").GetGuid(), match.GetProperty("rowVersion").GetInt64(), created.GetProperty("personNo").GetString()!,
             org, employment, linkedVersion, second.GetProperty("id").GetGuid(), second.GetProperty("rowVersion").GetInt64(), freeUser,
             to, former, contract.GetProperty("id").GetGuid(), contract.GetProperty("rowVersion").GetInt64(), probation.GetProperty("rowVersion").GetInt64(),
+            account, registration.GetProperty("id").GetGuid(), registration.GetProperty("rowVersion").GetInt64(),
             position.GetProperty("id").GetGuid(), position.GetProperty("rowVersion").GetInt64());
     }
 

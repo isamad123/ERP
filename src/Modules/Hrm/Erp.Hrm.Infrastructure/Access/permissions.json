@@ -1,5 +1,5 @@
 {
-  "_comment": "Hand-written permissions of the HR module's purpose-built services (slice S1.20a, CR-076): the generated writes of these tables are closed (ruling Q1; S1.20a closes the person tables, S1.20b to d the employment tables), so their actions are declared here. Registered with permissions.g.json by migrate and provisioning (AccessSetup). Keep in step with Erp.Hrm.Contracts.People.PeoplePermissions and (S1.20b) Erp.Hrm.Contracts.Employment.EmploymentPermissions. S1.20c adds transfers between companies, contracts and probation.",
+  "_comment": "Hand-written permissions of the HR module's purpose-built services (slice S1.20a, CR-076): the generated writes of these tables are closed (ruling Q1; S1.20a closes the person tables, S1.20b to d the employment tables), so their actions are declared here. Registered with permissions.g.json by migrate and provisioning (AccessSetup). Keep in step with Erp.Hrm.Contracts.People.PeoplePermissions and (S1.20b) Erp.Hrm.Contracts.Employment.EmploymentPermissions. S1.20c adds transfers between companies, contracts and probation. S1.20d adds removal, reveal and approval of payment accounts and removal and reveal of statutory registrations (create and update are generated with the field view of their encrypted columns).",
   "module": "hrm",
   "permissions": [
     {
@@ -187,6 +187,36 @@
       "module": "hrm",
       "descriptionKey": "permissions.hrm.probation_records.update",
       "sensitive": false
+    },
+    {
+      "code": "hrm.employee_bank_accounts.delete",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.employee_bank_accounts.delete",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.employee_bank_accounts.reveal",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.employee_bank_accounts.reveal",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.employee_bank_accounts.approve",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.employee_bank_accounts.approve",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.employment_statutory_registrations.delete",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.employment_statutory_registrations.delete",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.employment_statutory_registrations.reveal",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.employment_statutory_registrations.reveal",
+      "sensitive": true
     }
   ]
 }

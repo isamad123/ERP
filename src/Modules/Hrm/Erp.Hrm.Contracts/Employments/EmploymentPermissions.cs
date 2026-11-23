@@ -41,8 +41,39 @@ public static class EmploymentPermissions
     /// <summary>Extend a probation, record it as not confirmed, or confirm it (with <see cref="EventsCreate"/>; FR-HRM-EMP-10, slice S1.20c).</summary>
     public const string ProbationUpdate = "hrm.probation_records.update";
 
+    public const string BankAccountsRead = "hrm.employee_bank_accounts.read";
+
+    /// <summary>Add a payment account (FR-HRM-EMP-06, slice S1.20d; generated with the field view of the encrypted columns).</summary>
+    public const string BankAccountsCreate = "hrm.employee_bank_accounts.create";
+
+    /// <summary>Change or end a payment account (slice S1.20d).</summary>
+    public const string BankAccountsUpdate = "hrm.employee_bank_accounts.update";
+
+    /// <summary>Remove a payment account that no payment used (slice S1.20d).</summary>
+    public const string BankAccountsDelete = "hrm.employee_bank_accounts.delete";
+
+    /// <summary>See a payment account's full number and IBAN, access-logged (GHR-02, slice S1.20d). Sensitive.</summary>
+    public const string BankAccountsReveal = "hrm.employee_bank_accounts.reveal";
+
+    /// <summary>Approve or reject a held change of payment accounts made by someone else (FR-HRM-EMP-06, FR-XM-32, slice S1.20d). Sensitive.</summary>
+    public const string BankAccountsApprove = "hrm.employee_bank_accounts.approve";
+
+    public const string RegistrationsRead = "hrm.employment_statutory_registrations.read";
+
+    /// <summary>Record a statutory registration (slice S1.20d; generated with the field view of the encrypted column).</summary>
+    public const string RegistrationsCreate = "hrm.employment_statutory_registrations.create";
+
+    public const string RegistrationsUpdate = "hrm.employment_statutory_registrations.update";
+
+    /// <summary>Remove a registration entered by mistake (slice S1.20d).</summary>
+    public const string RegistrationsDelete = "hrm.employment_statutory_registrations.delete";
+
+    /// <summary>See a full registration number, access-logged (GHR-02, slice S1.20d). Sensitive.</summary>
+    public const string RegistrationsReveal = "hrm.employment_statutory_registrations.reveal";
+
     /// <summary>Every code declared in permissions.json for the employment services (kept in step by a unit test).</summary>
-    public static IReadOnlyList<string> HandWritten { get; } = [EmploymentsCreate, NumberOverride, UserLink, EventsCreate, Transfer, ContractsCreate, ProbationUpdate];
+    public static IReadOnlyList<string> HandWritten { get; } = [EmploymentsCreate, NumberOverride, UserLink, EventsCreate, Transfer, ContractsCreate, ProbationUpdate,
+        BankAccountsDelete, BankAccountsReveal, BankAccountsApprove, RegistrationsDelete, RegistrationsReveal];
 }
 
 /// <summary>The HR events of employments in <c>hrm.outbox_messages</c> (slice S1.20 Build item 9, spec 06a section 30.1). Ids only.</summary>

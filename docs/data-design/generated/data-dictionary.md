@@ -1800,7 +1800,7 @@ Indexes:
 
 ### hrm.employee_bank_accounts
 
-Requirements: EMP-06, PAY-24. Pending rule (S1.20, placeholder hrm.todo_employee_bank_accounts_bank_fields_required): bank fields required when payment_mode = bank_transfer or mobile_wallet Changes go through maker-checker (iam.maker_checker_requests). Source: hrm-people.yaml.
+Requirements: EMP-06, PAY-24. Rule (implemented in S1.20d): bank fields required when payment_mode = bank_transfer or mobile_wallet Changes go through maker-checker (iam.maker_checker_requests). Source: hrm-people.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -1827,8 +1827,11 @@ Requirements: EMP-06, PAY-24. Pending rule (S1.20, placeholder hrm.todo_employee
 
 Constraints:
 
+- `ck_employee_bank_accounts_blind_index` CHECK ((((account_number IS NULL) = (account_number_hmac IS NULL)) AND ((iban IS NULL) = (iban_hmac IS NULL))))
 - `ck_employee_bank_accounts_payment_mode` CHECK ((payment_mode = ANY (ARRAY['bank_transfer'::text, 'cheque'::text, 'cash'::text, 'mobile_wallet'::text])))
+- `ck_employee_bank_accounts_priority` CHECK (((priority >= 1) AND (priority <= 99)))
 - `ck_employee_bank_accounts_split_kind` CHECK ((split_kind = ANY (ARRAY['remainder'::text, 'percent'::text, 'amount'::text])))
+- `ck_employee_bank_accounts_split_value` CHECK ((((split_kind = 'remainder'::text) AND (split_value IS NULL)) OR ((split_kind = 'percent'::text) AND (split_value > (0)::numeric) AND (split_value <= (100)::numeric)) OR ((split_kind = 'amount'::text) AND (split_value > (0)::numeric))))
 - `ck_employee_bank_accounts_valid_to` CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))
 - `ex_employee_bank_accounts_employment_id_priority` EXCLUDE USING gist (employment_id WITH =, priority WITH =, daterange(valid_from, valid_to, '[)'::text) WITH &&)
 - `fk_employee_bank_accounts_bank_id` FOREIGN KEY (bank_id) REFERENCES ref.banks(id)
@@ -1844,6 +1847,11 @@ Indexes:
 - `ix_employee_bank_accounts_company_id_employment_id` CREATE INDEX ix_employee_bank_accounts_company_id_employment_id ON hrm.employee_bank_accounts USING btree (company_id, employment_id)
 - `ix_employee_bank_accounts_employment_id_valid_from` CREATE INDEX ix_employee_bank_accounts_employment_id_valid_from ON hrm.employee_bank_accounts USING btree (employment_id, valid_from)
 - `ix_employee_bank_accounts_iban_hmac` CREATE INDEX ix_employee_bank_accounts_iban_hmac ON hrm.employee_bank_accounts USING btree (iban_hmac)
+
+Triggers:
+
+- `tg_employee_bank_accounts_bank_fields_required` CREATE TRIGGER tg_employee_bank_accounts_bank_fields_required BEFORE INSERT OR UPDATE ON hrm.employee_bank_accounts FOR EACH ROW EXECUTE FUNCTION hrm.tg_employee_bank_accounts_bank_fields_required()
+- `tg_employee_bank_accounts_split` CREATE CONSTRAINT TRIGGER tg_employee_bank_accounts_split AFTER INSERT OR DELETE OR UPDATE ON hrm.employee_bank_accounts DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION hrm.tg_employee_bank_accounts_split()
 
 ### hrm.employee_documents
 
@@ -2074,7 +2082,10 @@ Per-employee applicability and registration for EOBI, provincial social security
 
 Constraints:
 
+- `ck_employment_statutory_registrations_blind_index` CHECK (((registration_no IS NULL) = (registration_no_hmac IS NULL)))
+- `ck_employment_statutory_registrations_exemption` CHECK (((NOT is_applicable) = (exemption_reason IS NOT NULL)))
 - `ck_employment_statutory_registrations_scheme_code` CHECK ((((length(scheme) >= 1) AND (length(scheme) <= 40)) AND (scheme = btrim(scheme))))
+- `ck_employment_statutory_registrations_scheme_format` CHECK ((scheme ~ '^[a-z][a-z0-9_]*$'::text))
 - `ck_employment_statutory_registrations_valid_to` CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))
 - `ex_employment_statutory_registrations_employment_id_scheme` EXCLUDE USING gist (employment_id WITH =, scheme WITH =, daterange(valid_from, valid_to, '[)'::text) WITH &&)
 - `fk_employment_statutory_registrations_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
@@ -7571,6 +7582,8 @@ Constraints:
 - `cfg.tg_config_version` 
 - `cfg.tg_refuse_change` 
 - `doc.tg_refuse_change` 
+- `hrm.tg_employee_bank_accounts_bank_fields_required` 
+- `hrm.tg_employee_bank_accounts_split` 
 - `hrm.tg_employment_assignments_cost_allocation_sum` 
 - `hrm.tg_employment_assignments_manager_cycle` 
 - `hrm.tg_employment_events_fixed` 
@@ -7581,7 +7594,6 @@ Constraints:
 - `hrm.tg_refuse_change` 
 - `hrm.todo_attendance_days_lock` Pending rule for hrm.attendance_days, owned by S1.31: Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26).
 - `hrm.todo_attendance_periods_lock` Pending rule for hrm.attendance_periods, owned by S1.31: A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments.
-- `hrm.todo_employee_bank_accounts_bank_fields_required` Pending rule for hrm.employee_bank_accounts, owned by S1.20: bank fields required when payment_mode = bank_transfer or mobile_wallet
 - `hrm.todo_final_settlements_approval_needs_clearance` Pending rule for hrm.final_settlements, owned by S1.43: status may become approved only when clearance_status in (cleared, waived) (FR-XM-29)
 - `hrm.todo_final_settlements_lock` Pending rule for hrm.final_settlements, owned by S1.43: Header and lines locked by trigger from approved onward; correction by cancel and reissue (FR-XM-05).
 - `hrm.todo_goals_parent_cycle` Pending rule for hrm.goals, owned by S1.49: Cycle check trigger on parent_goal_id.
