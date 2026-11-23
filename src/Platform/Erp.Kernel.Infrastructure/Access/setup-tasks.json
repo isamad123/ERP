@@ -1,0 +1,22 @@
+{
+ "module": "kernel",
+ "name_key": "setup.modules.kernel",
+ "go_live_actions": [],
+ "tasks": [
+  { "key": "step_company_profile", "title_key": "setup.steps.company_profile", "kind": "step", "required": false, "level": "company", "order": 10, "link": "/organization/companies", "check": "kernel.company_profile" },
+  { "key": "step_languages_formats", "title_key": "setup.steps.languages_formats", "kind": "step", "required": false, "level": "company", "order": 20, "link": "/settings" },
+  { "key": "step_modules", "title_key": "setup.steps.modules", "kind": "step", "required": false, "level": "customer", "order": 30, "link": "/settings/flags" },
+  { "key": "step_structure", "title_key": "setup.steps.structure", "kind": "step", "required": false, "level": "company", "order": 40, "link": "/organization/org-units", "check": "kernel.unit_structure" },
+  { "key": "step_users", "title_key": "setup.steps.users", "kind": "step", "required": false, "level": "customer", "order": 50, "link": "/admin/users" },
+  { "key": "step_notifications", "title_key": "setup.steps.notifications", "kind": "step", "required": false, "level": "customer", "order": 60, "link": "/settings" },
+  { "key": "step_summary", "title_key": "setup.steps.summary", "kind": "step", "required": false, "level": "company", "order": 70, "link": "/" },
+  { "key": "company_profile", "title_key": "setup.items.company_profile", "kind": "item", "required": true, "level": "company", "order": 10, "link": "/organization/companies", "check": "kernel.company_profile" },
+  { "key": "location", "title_key": "setup.items.location", "kind": "item", "required": true, "level": "company", "order": 20, "link": "/organization/locations", "check": "kernel.location" },
+  { "key": "unit_structure", "title_key": "setup.items.unit_structure", "kind": "item", "required": false, "level": "company", "order": 30, "link": "/organization/org-units", "check": "kernel.unit_structure" },
+  { "key": "holiday_calendar", "title_key": "setup.items.holiday_calendar", "kind": "item", "required": false, "level": "company", "order": 40, "link": "/organization/holiday-calendars", "check": "kernel.holiday_calendar" },
+  { "key": "numbering", "title_key": "setup.items.numbering", "kind": "item", "required": true, "level": "company", "order": 50, "link": "/settings/numbering", "check": "kernel.numbering" },
+  { "key": "approval_routes", "title_key": "setup.items.approval_routes", "kind": "item", "required": true, "level": "customer", "order": 60, "link": "/settings/approval-routes", "check": "kernel.approval_routes" },
+  { "key": "other_administrator", "title_key": "setup.items.other_administrator", "kind": "item", "required": false, "level": "customer", "order": 70, "link": "/admin/users", "check": "kernel.other_administrator" },
+  { "key": "notification_rules", "title_key": "setup.items.notification_rules", "kind": "item", "required": false, "level": "customer", "order": 80, "link": "/settings" }
+ ]
+}
