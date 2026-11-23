@@ -55,7 +55,7 @@ public sealed partial class PeopleUnitTests
         using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Infrastructure/Access/permissions.json")));
         var codes = manifest.RootElement.GetProperty("permissions").EnumerateArray().Select(p => p.GetProperty("code").GetString()!).ToList();
         // The manifest holds the person codes (S1.20a) and the employment codes (S1.20b, EmploymentUnitTests checks their texts).
-        Assert.Equal(PeoplePermissions.HandWritten.Concat(Erp.Hrm.Contracts.Employments.EmploymentPermissions.HandWritten).Order(StringComparer.Ordinal), codes.Order(StringComparer.Ordinal));
+        Assert.Equal(PeoplePermissions.HandWritten.Concat(Erp.Hrm.Contracts.Employments.EmploymentPermissions.HandWritten).Concat(Erp.Hrm.Contracts.Payroll.PayPermissions.HandWritten).Order(StringComparer.Ordinal), codes.Order(StringComparer.Ordinal));
         codes = [.. PeoplePermissions.HandWritten];
         Assert.True(manifest.RootElement.GetProperty("permissions").EnumerateArray().Single(p => p.GetProperty("code").GetString() == PeoplePermissions.IdentifiersReveal).GetProperty("sensitive").GetBoolean());
 

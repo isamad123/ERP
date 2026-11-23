@@ -1,5 +1,5 @@
 {
-  "_comment": "HR background jobs (slice S1.11a format). S1.20b (CR-076 item 9, slice S1.20 ruling Q12): approved employment events take effect on their date. S1.20c (CR-076 S1.20c detail, Build item 13): contracts past their end expire, and contract and probation reminders go out. Seeded into job.definitions by migrate and provisioning, keyed by code; a customer's schedule and on/off choice are kept on upgrade. Times are in the customer's time zone (org.time_zone). The job writes through the HR module's own code and checks no permissions, so it declares none (R-009). Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "HR background jobs (slice S1.11a format). S1.20b (CR-076 item 9, slice S1.20 ruling Q12): approved employment events take effect on their date. S1.20c (CR-076 S1.20c detail, Build item 13): contracts past their end expire, and contract and probation reminders go out. S1.34a (CR-087, slice S1.34 Build item 3): the cut-off reminder of the payroll calendar (FR-HRM-PAY-38). Seeded into job.definitions by migrate and provisioning, keyed by code; a customer's schedule and on/off choice are kept on upgrade. Times are in the customer's time zone (org.time_zone). The job writes through the HR module's own code and checks no permissions, so it declares none (R-009). Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "jobs": [
     {
@@ -30,6 +30,22 @@
       "concurrency": 1,
       "runs_in": ["full"],
       "entitlement": "hrm.core",
+      "manual": true,
+      "request_permission": "job.runs.create",
+      "schedule_editable": true
+    },
+    {
+      "code": "hrm.pay_cutoff_reminders",
+      "name": {"en": "Payroll cut-off reminders", "ur": "پے رول کٹ آف کی یاد دہانیاں"},
+      "description": {"en": "Reminds the payroll officers a few days before the cut-off of each pay period that has not closed.", "ur": "ہر اس تنخواہی دور کی کٹ آف سے چند دن پہلے پے رول افسران کو یاد دلاتا ہے جو ابھی بند نہیں ہوا۔"},
+      "schedule": {"daily": {"at": "06:20"}},
+      "permissions": [],
+      "retry": {"max_attempts": 3, "backoff_seconds": [60, 300]},
+      "timeout_seconds": 900,
+      "priority": 50,
+      "concurrency": 1,
+      "runs_in": ["full"],
+      "entitlement": "hrm.payroll",
       "manual": true,
       "request_permission": "job.runs.create",
       "schedule_editable": true
