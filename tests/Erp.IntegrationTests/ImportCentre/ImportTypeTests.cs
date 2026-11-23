@@ -75,7 +75,7 @@ public sealed class ImportTypeTests(TenancyFixture fx) : IAsyncLifetime
                 new { field = "kind", source = "Art", transform = new[] { "lower" }, @default = "public" },
             },
         };
-        var create = await _rig.PostJsonAsync("/api/itg/imports/templates", new { code = "hol_" + tag, name = new { en = "German holidays" }, entityType = "holidays", format = "csv", mode = "create_or_update", mapping }, Ct);
+        var create = await _rig.PostJsonAsync("/api/itg/imports/templates", new { code = "hol_" + tag.ToLowerInvariant(), name = new { en = "German holidays" }, entityType = "holidays", format = "csv", mode = "create_or_update", mapping }, Ct);
         Assert.True(create.Status == HttpStatusCode.Created, create.Text);
         var template = create.Json.GetProperty("id").GetGuid();
 

@@ -3,7 +3,6 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Erp.Kernel.Application.Itg;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.Itg;
 using Microsoft.AspNetCore.Builder;
