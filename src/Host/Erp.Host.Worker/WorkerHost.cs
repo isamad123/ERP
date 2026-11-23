@@ -88,6 +88,9 @@ public static class WorkerHost
         // Employments (S1.20b): the document type hrm.employment_event with its handler, the line-manager directory, the active
         // employee counters and the daily job hrm.employment_events_due.
         services.AddHrmEmployment().AddHrmEmploymentWorker();
+        // Policies (S1.23a): the transfer job and the probation reminders resolve the probation policy (the kernel answers unit subtrees).
+        services.AddScoped<Erp.Kernel.Contracts.Org.IOrgStructure, Erp.Kernel.Infrastructure.Org.OrgStructure>();
+        services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldCatalog, Erp.Kernel.Infrastructure.Metadata.CustomFieldCatalog>();
         services.AddHrmAttendanceWorker(); // S1.27a attendance purge
         services.AddSingleton<Erp.Kernel.Contracts.Workflow.IWorkflowDocumentTypeSource>(new WorkflowManifestSource(EmploymentServices.WorkflowManifest));
         services.AddSingleton(new NotificationManifestSource(EmploymentServices.NotificationManifest)); // S1.20c reminders

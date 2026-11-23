@@ -54,7 +54,7 @@ internal sealed class PayCutoffReminderJob(IClock clock) : IJobHandler
                 await using var db = new HrmDbContext(job.Services.GetRequiredService<DbContextOptions<HrmDbContext>>());
                 db.Database.SetDbConnection(connection, contextOwnsConnection: false);
                 await db.Database.UseTransactionAsync(transaction, ct).ConfigureAwait(false);
-                var applier = new EmploymentApplier(db, settings);
+                var applier = new EmploymentApplier(db, settings, Policies.PolicyResolver.For(db, job.Services));
                 var query = db.Set<PayPeriod>().AsNoTracking().Where(p => (p.Status == "future" || p.Status == "open") && p.CutOffDate >= from && p.CutOffDate <= until);
                 if (pageStart is { } cursor)
                 {

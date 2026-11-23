@@ -4210,6 +4210,7 @@ Constraints:
 - `ck_policies_code_code` CHECK ((((length(code) >= 1) AND (length(code) <= 40)) AND (code = btrim(code))))
 - `ck_policies_name_i18n_object` CHECK ((jsonb_typeof(name_i18n) = 'object'::text))
 - `ck_policies_policy_type_code` CHECK ((((length(policy_type) >= 1) AND (length(policy_type) <= 40)) AND (policy_type = btrim(policy_type))))
+- `ck_policies_policy_type_format` CHECK ((policy_type ~ '^[a-z][a-z0-9_]*$'::text))
 - `ck_policies_source` CHECK ((source = ANY (ARRAY['pack'::text, 'tenant'::text])))
 - `fk_policies_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `pk_policies` PRIMARY KEY (id)
@@ -4273,6 +4274,8 @@ Assigns a policy by attribute rule with precedence. Requirements: POL-02, POL-03
 
 Constraints:
 
+- `ck_policy_assignments_precedence` CHECK (((precedence >= 1) AND (precedence <= 9999)))
+- `ck_policy_assignments_rule_object` CHECK ((jsonb_typeof(rule) = 'object'::text))
 - `ck_policy_assignments_valid_to` CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))
 - `ex_policy_assignments_policy_id_precedence` EXCLUDE USING gist (policy_id WITH =, precedence WITH =, daterange(valid_from, valid_to, '[)'::text) WITH &&)
 - `fk_policy_assignments_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
@@ -4284,6 +4287,10 @@ Indexes:
 - `ix_policy_assignments_company_id_policy_id` CREATE INDEX ix_policy_assignments_company_id_policy_id ON hrm.policy_assignments USING btree (company_id, policy_id)
 - `ix_policy_assignments_company_id_precedence` CREATE INDEX ix_policy_assignments_company_id_precedence ON hrm.policy_assignments USING btree (company_id, precedence)
 - `ix_policy_assignments_policy_id` CREATE INDEX ix_policy_assignments_policy_id ON hrm.policy_assignments USING btree (policy_id)
+
+Triggers:
+
+- `tg_policy_assignments_checks` CREATE TRIGGER tg_policy_assignments_checks BEFORE INSERT OR UPDATE ON hrm.policy_assignments FOR EACH ROW EXECUTE FUNCTION hrm.tg_policy_assignments_checks()
 
 ### hrm.policy_publications
 
@@ -4341,12 +4348,22 @@ Requirements: POL-04, POL-06. Source: hrm-people.yaml.
 
 Constraints:
 
+- `ck_policy_versions_parameters_object` CHECK ((jsonb_typeof(parameters) = 'object'::text))
 - `ck_policy_versions_status` CHECK ((status = ANY (ARRAY['draft'::text, 'active'::text, 'retired'::text])))
 - `ck_policy_versions_valid_to` CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))
+- `ck_policy_versions_version` CHECK ((version >= 1))
 - `ex_policy_versions_policy_id` EXCLUDE USING gist (policy_id WITH =, daterange(valid_from, valid_to, '[)'::text) WITH &&) WHERE ((status <> 'draft'::text))
 - `fk_policy_versions_policy_id` FOREIGN KEY (policy_id) REFERENCES hrm.policies(id)
 - `pk_policy_versions` PRIMARY KEY (id)
 - `uq_policy_versions_policy_id_version` UNIQUE (policy_id, version)
+
+Indexes:
+
+- `uq_policy_versions_policy_id` CREATE UNIQUE INDEX uq_policy_versions_policy_id ON hrm.policy_versions USING btree (policy_id) WHERE (status = 'draft'::text)
+
+Triggers:
+
+- `tg_policy_versions_fixed` CREATE TRIGGER tg_policy_versions_fixed BEFORE DELETE OR UPDATE ON hrm.policy_versions FOR EACH ROW EXECUTE FUNCTION hrm.tg_policy_versions_fixed()
 
 ### hrm.positions
 
@@ -7568,6 +7585,8 @@ Constraints:
 - `hrm.tg_employment_events_fixed` 
 - `hrm.tg_pay_groups_rules` 
 - `hrm.tg_pay_periods_fixed` 
+- `hrm.tg_policy_assignments_checks` 
+- `hrm.tg_policy_versions_fixed` 
 - `hrm.tg_refuse_change` 
 - `hrm.todo_attendance_days_lock` Pending rule for hrm.attendance_days, owned by S1.31: Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26).
 - `hrm.todo_attendance_periods_lock` Pending rule for hrm.attendance_periods, owned by S1.31: A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments.
