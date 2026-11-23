@@ -49,7 +49,8 @@ public sealed class EmployeeListTests(TenancyFixture fx) : IAsyncLifetime
         var body = EmploymentTestSupport.HireBody(company, place, newPerson: new { firstName = first, lastName = "Listed", nameLocal = local, gender = "female" }, joining: joining, title: title, manager: manager);
         var answer = await _h.PostAsync(hr, Employments, body, Ct);
         Assert.True(answer.Status == HttpStatusCode.Created, answer.Body);
-        return (answer.Json.GetProperty("id").GetGuid(), answer.Text("employeeNo")!);
+        var employment = answer.Json.GetProperty("employment"); // a hire with a new person answers {person, employment}
+        return (employment.GetProperty("id").GetGuid(), employment.GetProperty("employeeNo").GetString()!);
     }
 
     private static string[] Ids(Answer a) => [.. a.Json.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("id").GetGuid().ToString())];

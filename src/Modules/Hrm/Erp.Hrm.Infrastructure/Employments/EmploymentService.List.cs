@@ -140,7 +140,7 @@ internal sealed partial class EmploymentService
             }
             else
             {
-                rows = rows.Where(r => string.Compare(r.e.EmployeeNo, key, StringComparison.Ordinal) > 0 || (r.e.EmployeeNo == key && r.e.Id.CompareTo(lastId) > 0));
+                rows = rows.Where(r => r.e.EmployeeNo.CompareTo(key) > 0 || (r.e.EmployeeNo == key && r.e.Id.CompareTo(lastId) > 0));
             }
         }
 
