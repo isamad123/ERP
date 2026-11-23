@@ -222,7 +222,7 @@ describe('FR-KRN-INT-03 rollback', () => {
   });
 
   it('explains a rollback that is not available from the batch itself', async () => {
-    serve((path) => (path === '/api/itg/imports/batches/b1' ? json(batch({ status: 'committed', errorRows: 0, canRollback: false, rollbackBlockedKey: 'errors.import.rollback_updated' })) : undefined));
+    serve((path) => (path === '/api/itg/imports/batches/b1' ? json(batch({ status: 'committed', errorRows: 0, canRollback: false, rollbackBlockedKey: 'errors.import.rollback_has_updates' })) : undefined));
     show('/admin/imports/batches/b1');
     expect(await screen.findByText('This import cannot be rolled back because it updated existing records.')).toBeTruthy();
   });
