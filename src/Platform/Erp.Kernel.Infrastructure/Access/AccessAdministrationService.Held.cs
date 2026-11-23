@@ -125,8 +125,17 @@ public sealed partial class AccessAdministrationService
 }
 
 /// <summary>Stores a module's change as a pending maker-checker request in the module's transaction (<see cref="IHeldChanges"/>).</summary>
-internal sealed class HeldChangeService(IClock clock, ICurrentActor actor, IEnumerable<IHeldChangeHandler> handlers) : IHeldChanges
+internal sealed class HeldChangeService(IClock clock, ICurrentActor actor, IEnumerable<IHeldChangeHandler> handlers, Erp.BuildingBlocks.Application.Tenancy.ITenantConnectionProvider tenant) : IHeldChanges
 {
+    public async Task<IReadOnlyList<PendingHeldChange>> PendingAsync(string kind, Guid subjectId, CancellationToken cancellationToken)
+    {
+        await using var c = (NpgsqlConnection)await tenant.DataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        var me = actor.UserId;
+        return await Notifications.NotificationConsumer.ReadAsync(c, null,
+            "select id, created_at, requested_by from iam.maker_checker_requests where action_type = $1 and subject_id = $2 and status = 'pending' order by created_at, id",
+            r => new PendingHeldChange(r.GetGuid(0), r.GetFieldValue<DateTimeOffset>(1), r.GetGuid(2) == me), cancellationToken, kind, subjectId).ConfigureAwait(false);
+    }
+
     public async Task<Guid> SubmitAsync(HeldChangeRequest request, System.Data.Common.DbTransaction transaction, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);

@@ -17,6 +17,8 @@ class FakeWorld {
   previous: string | null = null;
   lastSeen = this.now;
   ended = false;
+  /** What the sign-out request does: answer (204), or fail with an error carrying this status (0 = network). */
+  signOutFails: { status: number } | null = null;
   refreshes = 0;
   idleMinutes = 30;
   /** While set, a refresh waits on its way to the server (it carries the cookie of the moment it left). */
@@ -51,7 +53,10 @@ class FakeWorld {
         if (this.gate) await this.gate;
         return this.serverRefresh(sent);
       },
-      signOut: async () => { this.ended = true; },
+      signOut: async () => {
+        if (this.signOutFails) throw Object.assign(new Error('sign-out'), { status: this.signOutFails.status });
+        this.ended = true;
+      },
       channel: {
         post: (m) => this.tabs.filter((t) => t !== listeners).forEach((t) => t.forEach((h) => queueMicrotask(() => h(structuredClone(m))))),
         listen: (h) => { listeners.push(h); return () => listeners.splice(listeners.indexOf(h), 1); },
@@ -162,7 +167,7 @@ describe('FR-KRN-IAM-04 session in the browser (S1.12a)', () => {
     await world.advance(29 * MINUTE);
     expect(a!.manager.getSnapshot().warningRemainingMs).not.toBeNull();
     expect(await a!.manager.staySignedIn()).toBe(true);
-    expect(a!.manager.getSnapshot()).toEqual({ status: 'signedIn', warningRemainingMs: null });
+    expect(a!.manager.getSnapshot()).toEqual({ status: 'signedIn', warningRemainingMs: null, signOutFailed: false });
     await world.advance(10 * MINUTE);
     expect(a!.manager.getSnapshot().status).toBe('signedIn');
   });
@@ -187,6 +192,61 @@ describe('FR-KRN-IAM-04 session in the browser (S1.12a)', () => {
     expect(a!.manager.getSnapshot().status).toBe('signedOut');
     expect(b!.manager.getSnapshot().status).toBe('signedOut');
     expect(b!.manager.accessToken()).toBeNull();
+  });
+
+  describe('FR-KRN-IAM-04 R-071 sign-out that the server did not confirm', () => {
+    for (const [name, status] of [['a network failure', 0], ['503 busy after the retry', 503], ['a 500 answer', 500]] as const) {
+      it(`FR-KRN-IAM-04 R-071 ${name} keeps the person signed in, in every tab`, async () => {
+        const world = new FakeWorld();
+        const [a, b] = await signedInTabs(world, 2);
+        world.signOutFails = { status };
+        expect(await a!.manager.signOut()).toBe('failed');
+        await flush();
+        expect(world.ended).toBe(false);
+        expect(a!.manager.getSnapshot()).toMatchObject({ status: 'signedIn', signOutFailed: true });
+        expect(a!.manager.accessToken()).not.toBeNull();
+        expect(b!.manager.getSnapshot()).toMatchObject({ status: 'signedIn', signOutFailed: false });
+        expect(b!.manager.accessToken()).not.toBeNull();
+      });
+    }
+
+    it('FR-KRN-IAM-04 R-071 a 204 answer ends the session in every tab', async () => {
+      const world = new FakeWorld();
+      const [a, b] = await signedInTabs(world, 2);
+      expect(await a!.manager.signOut()).toBe('ended');
+      await flush();
+      expect(world.ended).toBe(true);
+      expect(a!.manager.getSnapshot().status).toBe('signedOut');
+      expect(b!.manager.getSnapshot().status).toBe('signedOut');
+    });
+
+    it('FR-KRN-IAM-04 R-071 a 401 answer (the session had already ended at the server) ends the session in every tab', async () => {
+      const world = new FakeWorld();
+      const [a, b] = await signedInTabs(world, 2);
+      world.signOutFails = { status: 401 };
+      expect(await a!.manager.signOut()).toBe('ended');
+      await flush();
+      expect(a!.manager.getSnapshot().status).toBe('signedOut');
+      expect(b!.manager.getSnapshot().status).toBe('signedOut');
+      expect(b!.manager.accessToken()).toBeNull();
+    });
+
+    it('FR-KRN-IAM-04 R-071 trying again after a failure signs out and clears the message; closing the message keeps the session', async () => {
+      const world = new FakeWorld();
+      const [a, b] = await signedInTabs(world, 2);
+      world.signOutFails = { status: 0 };
+      await a!.manager.signOut();
+      a!.manager.dismissSignOutFailure();
+      expect(a!.manager.getSnapshot()).toMatchObject({ status: 'signedIn', signOutFailed: false });
+      await a!.manager.signOut();
+      expect(a!.manager.getSnapshot().signOutFailed).toBe(true);
+      world.signOutFails = null;
+      expect(await a!.manager.signOut()).toBe('ended');
+      await flush();
+      expect(world.ended).toBe(true);
+      expect(a!.manager.getSnapshot()).toMatchObject({ status: 'signedOut', signOutFailed: false });
+      expect(b!.manager.getSnapshot().status).toBe('signedOut');
+    });
   });
 
   it('a background request that meets a 401 does not keep an idle session alive (review S1.12a finding 2)', async () => {
