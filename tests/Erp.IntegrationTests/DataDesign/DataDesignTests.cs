@@ -31,8 +31,9 @@ public sealed partial class DataDesignTests(MigratedDatabases db)
         // control-plane table of CR-027 (slice S1.07), the change counters of CR-036 (slice S1.09a) and the control-plane
         // migration history of CR-054 (slice S1.11f2, CR-006), the remembered browsers of CR-063 (slice S1.12a, data
         // design approved 2026-11-20), the saved list views of CR-063 (slice S1.12c, data design approved 2026-11-22) and the
-        // duplicate-person review queue of CR-076 (slice S1.20a detail b).
-        Assert.Equal(213, design.Count);
+        // duplicate-person review queue of CR-076 (slice S1.20a detail b) and the form drafts of CR-077 (slice S1.21a).
+        Assert.Equal(214, design.Count);
+        Assert.Contains(design, t => t.Schema == "cfg" && t.Name == "form_drafts");
         Assert.Contains(design, t => t.Schema == "hrm" && t.Name == "person_duplicate_cases");
         Assert.Contains(design, t => t.Schema == "cfg" && t.Name == "saved_views");
         Assert.Contains(design, t => t.Schema == "iam" && t.Name == "trusted_devices");
