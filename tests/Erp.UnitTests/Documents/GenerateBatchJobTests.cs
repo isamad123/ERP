@@ -41,6 +41,8 @@ public sealed class GenerateBatchJobTests
         public Task<TemplatePreview> PreviewAsync(TemplatePreviewRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<IReadOnlyList<GeneratedDocumentInfo>> GeneratedAsync(string ownerType, Guid ownerId, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<TemplateEntityFields>> EntityFieldsAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     private sealed class FakeRun(JsonElement parameters, IServiceProvider services) : IJobExecution

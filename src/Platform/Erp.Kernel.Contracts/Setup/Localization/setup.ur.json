@@ -1,0 +1,16 @@
+{
+  "permissions.cfg.setup_tasks.update": "سیٹ اپ کے مراحل اور چیک لسٹ کی اشیا پر نشان لگانا، چھوڑنا اور دوبارہ کھولنا",
+  "permissions.cfg.setup_tasks.go_live": "کسی کمپنی کے لیے ماڈیول کو چالو کرنا",
+  "errors.setup.module_unknown": "یہ ماڈیول نصب نہیں ہے۔",
+  "errors.setup.task_unknown": "یہ سیٹ اپ مرحلہ یا آئٹم موجود نہیں ہے۔",
+  "errors.setup.company_unknown": "یہ کمپنی موجود نہیں ہے۔",
+  "errors.setup.company_required": "وہ کمپنی منتخب کریں جس کے لیے یہ مرحلہ ہے۔",
+  "errors.setup.company_not_allowed": "یہ مرحلہ پورے صارف ادارے کے لیے ہے، کسی ایک کمپنی کے لیے نہیں۔",
+  "errors.setup.note_too_long": "نوٹ زیادہ سے زیادہ 500 حروف کا ہو سکتا ہے۔",
+  "errors.setup.reason_required": "کچھ لازمی اشیا ابھی باقی ہیں۔ پھر بھی چالو کرنے کے لیے وجہ لکھیں۔",
+  "errors.setup.reason_too_long": "وجہ زیادہ سے زیادہ 500 حروف کی ہو سکتی ہے۔",
+  "errors.setup.already_live": "یہ ماڈیول اس کمپنی کے لیے پہلے ہی چالو ہے۔",
+  "errors.setup.decided_by_check": "یہ آئٹم نظام خود طے کرتا ہے؛ وجہ دور کریں اور چیک لسٹ دوبارہ کھولیں۔",
+  "errors.setup.only_steps_skip": "صرف وزرڈ کے مراحل چھوڑے جا سکتے ہیں۔",
+  "errors.setup.already_done": "یہ مرحلہ پہلے ہی مکمل ہے۔"
+}

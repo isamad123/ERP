@@ -124,6 +124,9 @@
   "session.warning.body": "For your security you will be signed out in {seconds, plural, one {# second} other {# seconds}}.",
   "session.warning.stay": "Stay signed in",
   "session.warning.signOut": "Sign out now",
+  "session.signOutFailed.title": "Sign-out did not work",
+  "session.signOutFailed.body": "We could not sign you out, so you are still signed in. Try again. If it keeps failing, close the browser.",
+  "session.signOutFailed.close": "Close",
   "session.expired": "You were signed out because the session ended. Sign in again to continue.",
   "session.signedOut": "You are signed out.",
   "home.title": "Waiting for you",
@@ -1434,5 +1437,7 @@
   "nav.optionLists": "Option lists",
   "nav.customFields": "Custom fields",
   "nav.numbering": "Numbering",
-  "nav.approvalRoutes": "Approval routes"
+  "nav.approvalRoutes": "Approval routes",
+  "nav.notificationTexts": "Notification texts",
+  "nav.documentTemplates": "Document templates"
 }

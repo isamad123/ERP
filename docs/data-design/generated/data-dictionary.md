@@ -2,12 +2,12 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 222 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 223 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
 | customer | aud | 7 |
-| customer | cfg | 19 |
+| customer | cfg | 20 |
 | customer | doc | 7 |
 | customer | hrm | 113 |
 | customer | iam | 24 |
@@ -313,6 +313,34 @@ Constraints:
 Triggers:
 
 - `tg_feature_flags_config_version` CREATE TRIGGER tg_feature_flags_config_version AFTER INSERT OR DELETE OR UPDATE OR TRUNCATE ON cfg.feature_flags FOR EACH STATEMENT EXECUTE FUNCTION cfg.tg_config_version('flags')
+
+### cfg.form_drafts
+
+Autosaved drafts of long forms (the hire form first), kept for the person who started them and removed after cfg.drafts.keep_days. Requirements: ADM-UXA-05. Source: kernel.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| user_id | uuid | no |  | fk iam.users; the person who started the draft and the only one who may read or change it |
+| form_key | text | no |  | the form, e.g. hrm.hire; at most 100 characters |
+| record_id | uuid | yes |  | the record the form edits; empty for a new record |
+| data | bytea | no |  | the form's values and the step reached (json, encrypted: a draft holds personal data); at most 64 KB before encryption |
+| expires_at | timestamp with time zone | no |  | renewed on every save; the daily clean-up removes drafts past it |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `fk_form_drafts_user_id` FOREIGN KEY (user_id) REFERENCES iam.users(id)
+- `pk_form_drafts` PRIMARY KEY (id)
+- `uq_form_drafts_user_id_form_key_record_id` UNIQUE NULLS NOT DISTINCT (user_id, form_key, record_id)
+
+Indexes:
+
+- `ix_form_drafts_expires_at` CREATE INDEX ix_form_drafts_expires_at ON cfg.form_drafts USING btree (expires_at)
 
 ### cfg.inbox_messages
 
@@ -713,6 +741,7 @@ First-run wizard progress and readiness checklist per module (ADM-ONB-01 to 03).
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| note | text | yes |  | S1.18a (CR-074): why a step was skipped or why go-live was overridden (a reason is required for an override) |
 
 Constraints:
 
