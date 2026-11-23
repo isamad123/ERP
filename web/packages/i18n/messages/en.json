@@ -1435,6 +1435,8 @@
   "nav.customFields": "Custom fields",
   "nav.numbering": "Numbering",
   "nav.approvalRoutes": "Approval routes",
+  "nav.notificationTexts": "Notification texts",
+  "nav.documentTemplates": "Document templates",
   "nav.policies": "Policies",
   "nav.policyResolution": "Which policy applies?",
   "approvals.changes.kind.hrm.policy.version_activation": "Put a new version of the policy {subject} in force",
