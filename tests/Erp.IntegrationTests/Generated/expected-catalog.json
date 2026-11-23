@@ -22504,7 +22504,9 @@
         "ix_pay_groups_currency_code",
         "ix_pay_groups_company_id_company_bank_account_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_pay_groups_rules"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.pay_groups"
@@ -23018,7 +23020,9 @@
       "indexes": [
         "ix_pay_periods_company_id_pay_group_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_pay_periods_fixed"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.pay_periods"

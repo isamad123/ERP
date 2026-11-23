@@ -2,7 +2,7 @@
 // catalogue (S1.11b1: /settings/licence, /admin/jobs/runs, /admin/jobs/health, /admin/audit, /admin/documents/quarantine,
 // /documents/{id}); screens of later slices open "not available yet" until their slice adds the component.
 import { lazy } from 'react';
-import { Activity, BarChart3, Bell, Building2, CalendarDays, ClipboardCheck, Download, EyeOff, FileText, Filter, Flag, House, ImagePlus, KeyRound, Landmark, MapPin, Network, ScrollText, Settings, ShieldAlert, ShieldCheck, UserCog, Users, UsersRound, Workflow } from 'lucide-react';
+import { Activity, BarChart3, Bell, Building2, CalendarDays, ClipboardCheck, Download, EyeOff, FileText, Filter, Flag, House, ImagePlus, ListChecks, KeyRound, Landmark, MapPin, Network, ScrollText, Settings, ShieldAlert, ShieldCheck, UserCog, Users, UsersRound, Workflow } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
 import { HomePage } from '../pages/home';
 
@@ -42,9 +42,13 @@ const RoutesScreen = lazy(() => import('./admin/routes'));
 // S1.15d: notification texts and rules, document templates.
 const NotifyScreen = lazy(() => import('./admin/notify'));
 const DocumentTemplatesScreen = lazy(() => import('./admin/doctemplates'));
+// S1.18b: the first-run set-up guide and the readiness checklist.
+const SetupScreen = lazy(() => import('./admin/setup'));
 
 export const kernelScreens: ScreenDeclaration[] = [
   { id: 'home', path: '/', labelKey: 'nav.home', icon: House, group: 'home', allowedWhenLocked: false, component: HomePage },
+  // S1.18b (ruling Q1): the set-up guide is reached from the home page card and the menu; ticking and go-live are checked again by the server.
+  { id: 'setup', path: '/setup', labelKey: 'nav.setup', icon: ListChecks, group: 'home', permission: 'cfg.setup_tasks.read', component: SetupScreen },
   { id: 'notifications', path: '/notifications', labelKey: 'nav.notifications', icon: Bell, group: 'home', permission: 'ntf.in_app_items.read', component: NotificationsPage },
   { id: 'approvals', path: '/approvals/*', labelKey: 'nav.approvals', icon: ClipboardCheck, group: 'approvals', permission: 'wf.workflow_tasks.read', component: ApprovalsScreen },
   // S1.14a (ruling Q1: menu group Administration; each entry needs the permission to read what it shows).

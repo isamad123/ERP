@@ -8,6 +8,7 @@ using Erp.Hrm.Api.Generated;
 using Erp.Hrm.Api.Employments;
 using Erp.Hrm.Api.Attendance;
 using Erp.Hrm.Infrastructure.Attendance;
+using Erp.Hrm.Api.Payroll;
 using Erp.Hrm.Api.People;
 using Erp.Hrm.Infrastructure.Employments;
 using Erp.Hrm.Infrastructure.People;
@@ -264,6 +265,7 @@ public static class ApiHost
         api.MapHrmPeopleEndpoints();
         api.MapHrmEmploymentEndpoints();
         api.MapHrmAttendanceEndpoints(); // S1.27a
+        api.MapHrmPayEndpoints(); // S1.34a pay groups, calendar and readiness
         return app;
     }
 

@@ -552,6 +552,39 @@
         "en": "Leave empty to accept web punches from any network. With ranges listed, a web or QR punch from outside them is refused. Kiosk punches are not affected: the kiosk screen is a signed-in station.",
         "ur": "خالی چھوڑیں تو ویب اندراج کسی بھی نیٹ ورک سے قبول ہوتا ہے۔ رینجز درج ہوں تو ان سے باہر سے ویب یا کیو آر اندراج مسترد ہوتا ہے۔ کیوسک اندراج پر اس کا اثر نہیں: کیوسک اسکرین سائن ان شدہ اسٹیشن ہے۔"
       }
+    },
+    {
+      "key": "hrm.pay.cutoff_reminder_days",
+      "module": "hrm",
+      "type": "int",
+      "default": 3,
+      "validation": {
+        "min": 0,
+        "max": 31
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.payroll",
+      "unit": null,
+      "name": {
+        "en": "Payroll cut-off reminder (days before)",
+        "ur": "پے رول کٹ آف کی یاد دہانی (دن پہلے)"
+      },
+      "description": {
+        "en": "How many days before a pay period's cut-off the payroll officers are reminded",
+        "ur": "تنخواہی دور کی کٹ آف سے کتنے دن پہلے پے رول افسران کو یاد دلایا جائے"
+      },
+      "help": {
+        "en": "The payroll officers get a reminder this many days before the cut-off date of each pay period that has not closed, once for each cut-off date. Zero reminds only on the cut-off day itself.",
+        "ur": "ہر اس تنخواہی دور کی کٹ آف تاریخ سے اتنے دن پہلے پے رول افسران کو یاد دہانی ملتی ہے جو ابھی بند نہیں ہوا، ہر کٹ آف تاریخ کے لیے ایک بار۔ صفر ہو تو صرف کٹ آف کے دن یاد دلایا جاتا ہے۔"
+      }
     }
   ],
   "flags": []

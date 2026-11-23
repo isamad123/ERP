@@ -3508,6 +3508,10 @@ Indexes:
 - `ix_pay_groups_currency_code` CREATE INDEX ix_pay_groups_currency_code ON hrm.pay_groups USING btree (currency_code)
 - `uq_pay_groups_company_id_code` CREATE UNIQUE INDEX uq_pay_groups_company_id_code ON hrm.pay_groups USING btree (company_id, lower(code)) WHERE (NOT is_deleted)
 
+Triggers:
+
+- `tg_pay_groups_rules` CREATE TRIGGER tg_pay_groups_rules BEFORE INSERT OR UPDATE ON hrm.pay_groups FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_groups_rules()
+
 ### hrm.pay_inputs
 
 One-time inputs to a period (bonus, incentive, deduction, adjustment, imported file rows). Requirements: PAY-07, PAY-08. Source: hrm-pay.yaml.
@@ -3592,6 +3596,10 @@ Constraints:
 Indexes:
 
 - `ix_pay_periods_company_id_pay_group_id` CREATE INDEX ix_pay_periods_company_id_pay_group_id ON hrm.pay_periods USING btree (company_id, pay_group_id)
+
+Triggers:
+
+- `tg_pay_periods_fixed` CREATE TRIGGER tg_pay_periods_fixed BEFORE DELETE OR UPDATE ON hrm.pay_periods FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_periods_fixed()
 
 ### hrm.pay_result_lines
 
@@ -7558,6 +7566,8 @@ Constraints:
 - `hrm.tg_employment_assignments_cost_allocation_sum` 
 - `hrm.tg_employment_assignments_manager_cycle` 
 - `hrm.tg_employment_events_fixed` 
+- `hrm.tg_pay_groups_rules` 
+- `hrm.tg_pay_periods_fixed` 
 - `hrm.tg_refuse_change` 
 - `hrm.todo_attendance_days_lock` Pending rule for hrm.attendance_days, owned by S1.31: Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26).
 - `hrm.todo_attendance_periods_lock` Pending rule for hrm.attendance_periods, owned by S1.31: A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments.

@@ -273,7 +273,12 @@
         "hrm.parallel_run_lines.read",
         "aud.history.view",
         "hrm.employee_bank_accounts.read",
-        "hrm.employment_statutory_registrations.read"
+        "hrm.employment_statutory_registrations.read",
+        "hrm.pay_groups.create",
+        "hrm.pay_groups.update",
+        "hrm.pay_periods.generate",
+        "hrm.pay_periods.update",
+        "hrm.pay_readiness.read"
       ],
       "scopes": {
         "*": "all"

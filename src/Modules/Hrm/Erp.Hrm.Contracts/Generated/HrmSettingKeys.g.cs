@@ -55,6 +55,9 @@ public static class HrmSettingKeys
 
     /// <summary>Network ranges (for example 203.0.113.0/24) from which web and QR punches are accepted; empty means anywhere.</summary>
     public const string HrmAttAllowedNetworks = "hrm.att.allowed_networks";
+
+    /// <summary>How many days before a pay period's cut-off the payroll officers are reminded.</summary>
+    public const string HrmPayCutoffReminderDays = "hrm.pay.cutoff_reminder_days";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

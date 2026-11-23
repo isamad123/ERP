@@ -1071,24 +1071,6 @@
       "sensitive": true
     },
     {
-      "code": "hrm.pay_groups.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_groups.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.pay_groups.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_groups.update",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.pay_groups.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_groups.delete",
-      "sensitive": true
-    },
-    {
       "code": "hrm.pay_inputs.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay_inputs.read",
@@ -1110,18 +1092,6 @@
       "code": "hrm.pay_periods.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay_periods.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.pay_periods.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_periods.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.pay_periods.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_periods.update",
       "sensitive": false
     },
     {
