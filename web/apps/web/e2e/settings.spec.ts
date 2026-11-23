@@ -73,7 +73,7 @@ test('FR-ADM-SET-01 FR-ADM-SET-02 FR-ADM-SET-03 FR-ADM-SET-06 an administrator f
   await expect(page.getByText('The setting was saved.').first()).toBeVisible();
   await expect(drawer.getByRole('table', { name: 'Where the value comes from' }).getByText('Customer', { exact: true })).toBeVisible();
   await closeDrawer(page);
-  await expect(row.getByText('45')).toBeVisible();
+  await expect(row.getByText('45', { exact: true })).toBeVisible(); // exact: the row also shows when it changed ("at 03:45 pm")
   await expect(row.getByText('Customer', { exact: true })).toBeVisible();
   await expect(row.getByText(/by Ayesha Admin/)).toBeVisible();
 
@@ -119,7 +119,7 @@ test('FR-ADM-SET-01 FR-ADM-SET-02 FR-ADM-SET-03 FR-ADM-SET-06 an administrator f
   await confirm.getByRole('button', { name: 'Restore the earlier value' }).click();
   await expect(page.getByText('The earlier value was restored.').first()).toBeVisible();
   await closeDrawer(page);
-  await expect(row.getByText('30')).toBeVisible();
+  await expect(row.getByText('30', { exact: true })).toBeVisible(); // exact: the row also shows when it changed ("at 03:30 pm")
   expect(second.id).toBeTruthy();
   noProblems(page);
   await signOut(page);
