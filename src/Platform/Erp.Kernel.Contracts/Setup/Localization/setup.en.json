@@ -1,0 +1,16 @@
+{
+  "permissions.cfg.setup_tasks.update": "Tick, skip and re-open set-up steps and checklist items",
+  "permissions.cfg.setup_tasks.go_live": "Take a module live for a company",
+  "errors.setup.module_unknown": "That module is not installed.",
+  "errors.setup.task_unknown": "That set-up step or item does not exist.",
+  "errors.setup.company_unknown": "That company does not exist.",
+  "errors.setup.company_required": "Choose the company this step is for.",
+  "errors.setup.company_not_allowed": "This step is for the whole customer, not one company.",
+  "errors.setup.note_too_long": "A note has at most 500 characters.",
+  "errors.setup.reason_required": "Some required items are still open. Give a reason to go live anyway.",
+  "errors.setup.reason_too_long": "A reason has at most 500 characters.",
+  "errors.setup.already_live": "This module is already live for this company.",
+  "errors.setup.decided_by_check": "The system decides this item; fix the cause and open the checklist again.",
+  "errors.setup.only_steps_skip": "Only wizard steps can be skipped.",
+  "errors.setup.already_done": "This step is already done."
+}

@@ -22,6 +22,7 @@ public static class KernelAuditCatalog
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.CustomFieldDef), "cfg.custom_field_defs", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlagOverride), "cfg.feature_flag_overrides", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.FeatureFlag), "cfg.feature_flags", false, "flag definitions keyed by code, registered from manifests by migrations (no uuid key, no API) (S1.07 Q4)", null, null, null, null, null),
+        new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.FormDraft), "cfg.form_drafts", false, "machinery: a draft is a transient copy of what the person is typing; the hire or change it leads to is audited (S1.21a, CR-077)", "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.InboxMessage), "cfg.inbox_messages", false, "machinery: transactional outbox and inbox (S1.07 Q4)", "message_id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.InstalledPack), "cfg.installed_packs", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Cfg.Label), "cfg.labels", true, null, "id", null, null, null, null),

@@ -11,6 +11,8 @@ import type configEn from '../messages/config.en.json';
 import type numberingEn from '../messages/numbering.en.json';
 import type routesEn from '../messages/routes.en.json';
 import type importsEn from '../messages/imports.en.json';
+import type notifyEn from '../messages/notify.en.json';
+import type doctemplatesEn from '../messages/doctemplates.en.json';
 import serverEn from './generated/server.en.json';
 import serverUr from './generated/server.ur.json';
 import { pseudoCatalogue, pseudoText } from './pseudo';
@@ -33,7 +35,7 @@ function strip(catalogue: Record<string, string>): Catalogue {
   return Object.fromEntries(Object.entries(catalogue).filter(([key]) => !key.startsWith('_')));
 }
 
-export type MessageKey = keyof typeof en | keyof typeof configEn | keyof typeof numberingEn | keyof typeof routesEn | keyof typeof importsEn;
+export type MessageKey = keyof typeof en | keyof typeof configEn | keyof typeof numberingEn | keyof typeof routesEn | keyof typeof notifyEn | keyof typeof doctemplatesEn | keyof typeof importsEn;
 
 let registryVersion = 0;
 const listeners = new Set<() => void>();

@@ -1,0 +1,5 @@
+{
+  "errors.drafts.invalid_form": "The form name is not valid.",
+  "errors.drafts.invalid_data": "The unfinished form is not valid or is too large to keep.",
+  "errors.drafts.too_many": "You have too many unfinished forms of this kind. Finish or delete one first."
+}

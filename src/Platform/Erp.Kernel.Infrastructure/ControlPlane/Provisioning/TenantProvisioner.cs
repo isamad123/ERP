@@ -366,6 +366,7 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
         await Jobs.JobSetup.EnsureAsync(connection, transaction, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
         await Notifications.NotificationSetup.EnsureAsync(connection, transaction, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
         await Itg.ImportSetup.EnsureAsync(connection, transaction, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
+        await Setup.SetupTaskSetup.EnsureAsync(connection, transaction, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
 
         // First tenant administrator: invited, no password. Invitation e-mail and sign-in are slices S1.05 and S1.11.
         await Sql.ExecuteAsync(connection, transaction, """

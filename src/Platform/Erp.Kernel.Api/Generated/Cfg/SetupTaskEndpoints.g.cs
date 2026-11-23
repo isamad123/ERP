@@ -20,27 +20,13 @@ public sealed class SetupTaskResponse
     public bool IsRequired { get; init; }
     public global::System.Guid? CompletedBy { get; init; }
     public global::System.DateTimeOffset? CompletedAt { get; init; }
+    public string? Note { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for cfg.setup_tasks. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class SetupTaskWriteRequest
-{
-    public string? ModuleId { get; init; }
-    public string? TaskKey { get; init; }
-    public global::System.Guid? CompanyId { get; init; }
-    public bool? IsRequired { get; init; }
-    public global::System.Guid? CompletedBy { get; init; }
-    public global::System.DateTimeOffset? CompletedAt { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for cfg.setup_tasks.</summary>
@@ -58,7 +44,7 @@ public sealed class SetupTaskListQuery
     public string? Sort { get; init; }
 }
 
-/// <summary>Generated endpoints of cfg.setup_tasks: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of cfg.setup_tasks: read. Answers pass through field security (S1.06).</summary>
 internal static class SetupTaskEndpoints
 {
     private const string Resource = "cfg.setup_tasks";
@@ -68,8 +54,6 @@ internal static class SetupTaskEndpoints
         var group = app.MapGroup("/api/cfg/setup-tasks").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("cfg.setup_tasks.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.setup_tasks.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("cfg.setup_tasks.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.setup_tasks.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("cfg.setup_tasks.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "cfg.setup_tasks.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("cfg.setup_tasks.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "cfg.setup_tasks.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] SetupTaskListQuery query, global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -88,53 +72,6 @@ internal static class SetupTaskEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.SetupTaskAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(SetupTaskWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.setup_tasks.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.SetupTaskAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Cfg.SetupTask();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/setup-tasks/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.SetupTaskAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, SetupTaskWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.setup_tasks.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Cfg.SetupTaskAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.SetupTaskAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static SetupTaskResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.SetupTask row) => new()
     {
         Id = row.Id,
@@ -144,6 +81,7 @@ internal static class SetupTaskEndpoints
         IsRequired = row.IsRequired,
         CompletedBy = row.CompletedBy,
         CompletedAt = row.CompletedAt,
+        Note = row.Note,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -151,133 +89,4 @@ internal static class SetupTaskEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(SetupTaskWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.ModuleId is null && (!update || access.CanEdit("module_id")))
-        {
-            errors.Add("moduleId");
-        }
-        if (request.TaskKey is null && (!update || access.CanEdit("task_key")))
-        {
-            errors.Add("taskKey");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(SetupTaskWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.SetupTask row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("module_id"))
-        {
-            row.ModuleId = request.ModuleId!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ModuleId, row.ModuleId, update))
-        {
-            denied.Add("moduleId");
-        }
-        if (access.CanEdit("task_key"))
-        {
-            row.TaskKey = request.TaskKey!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TaskKey, row.TaskKey, update))
-        {
-            denied.Add("taskKey");
-        }
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("is_required"))
-        {
-            if (request.IsRequired is not null)
-            {
-                row.IsRequired = request.IsRequired!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsRequired, row.IsRequired, update))
-        {
-            denied.Add("isRequired");
-        }
-        if (access.CanEdit("completed_by"))
-        {
-            row.CompletedBy = request.CompletedBy;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CompletedBy, row.CompletedBy, update))
-        {
-            denied.Add("completedBy");
-        }
-        if (access.CanEdit("completed_at"))
-        {
-            row.CompletedAt = request.CompletedAt;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CompletedAt, row.CompletedAt, update))
-        {
-            denied.Add("completedAt");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
-
-    /// <summary>Applies imported rows of cfg.setup_tasks (create, or update of an existing record) through the endpoint's own rules (S1.16a).</summary>
-    internal sealed class ImportWriter(global::System.IServiceProvider services) : global::Erp.Kernel.Application.Itg.IImportRowWriter
-    {
-        public string Code => "cfg.setup_tasks";
-
-        public async global::System.Threading.Tasks.Task<global::Erp.Kernel.Application.Itg.ImportRowOutcome> WriteAsync(global::Erp.Kernel.Application.Itg.ImportRow row, global::System.Guid? existingId, global::System.Threading.CancellationToken cancellationToken)
-        {
-            var repository = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.Kernel.Application.Generated.Cfg.ISetupTaskRepository>(services);
-            var permissions = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IPermissionChecker>(services);
-            var fields = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(services);
-            var accessLog = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog>(services);
-            IResult result;
-            if (existingId is null)
-            {
-                var request = global::System.Text.Json.JsonSerializer.Deserialize<SetupTaskWriteRequest>(row.Values.ToJsonString(), global::System.Text.Json.JsonSerializerOptions.Web)!;
-                result = await CreateAsync(request, repository, permissions, fields, accessLog, cancellationToken).ConfigureAwait(false);
-            }
-            else
-            {
-                var current = await repository.GetByIdAsync(existingId.Value, cancellationToken).ConfigureAwait(false);
-                if (current is null)
-                {
-                    return global::Erp.Kernel.Application.Itg.ImportRowOutcome.Failed(new global::Erp.Kernel.Application.Itg.ImportRowError(null, "errors.data.not_found"));
-                }
-                var merged = global::System.Text.Json.JsonSerializer.SerializeToNode(ToResponse(current), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();
-                foreach (var item in row.Values)
-                {
-                    merged[item.Key] = item.Value?.DeepClone();
-                }
-                merged["rowVersion"] = current.RowVersion;
-                var request = global::System.Text.Json.JsonSerializer.Deserialize<SetupTaskWriteRequest>(merged, global::System.Text.Json.JsonSerializerOptions.Web)!;
-                result = await UpdateAsync(existingId.Value, request, repository, permissions, fields, accessLog, cancellationToken).ConfigureAwait(false);
-            }
-            return await GeneratedImportSupport.ReadAsync(result, "cfg.setup_tasks", services, existingId is null ? "created" : "updated").ConfigureAwait(false);
-        }
-    }
 }

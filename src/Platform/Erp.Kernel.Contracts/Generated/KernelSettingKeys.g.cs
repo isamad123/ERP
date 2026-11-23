@@ -128,6 +128,9 @@ public static class KernelSettingKeys
     /// <summary>Days a notification item stays in a person's notification centre.</summary>
     public const string NtfInAppRetentionDays = "ntf.in_app.retention_days";
 
+    /// <summary>Days an unfinished form (for example a hire) is kept for the person who started it.</summary>
+    public const string CfgDraftsKeepDays = "cfg.drafts.keep_days";
+
     /// <summary>Whether uploaded files must be scanned before they can be downloaded.</summary>
     public const string DocScanMode = "doc.scan.mode";
 

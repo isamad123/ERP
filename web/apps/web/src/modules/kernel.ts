@@ -41,6 +41,9 @@ const CustomFieldsScreen = lazy(() => import('./admin/custom-fields'));
 const ImportsScreen = lazy(() => import('./admin/imports'));
 const NumberingScreen = lazy(() => import('./admin/numbering'));
 const RoutesScreen = lazy(() => import('./admin/routes'));
+// S1.15d: notification texts and rules, document templates.
+const NotifyScreen = lazy(() => import('./admin/notify'));
+const DocumentTemplatesScreen = lazy(() => import('./admin/doctemplates'));
 
 export const kernelScreens: ScreenDeclaration[] = [
   { id: 'home', path: '/', labelKey: 'nav.home', icon: House, group: 'home', allowedWhenLocked: false, component: HomePage },
@@ -78,6 +81,9 @@ export const kernelScreens: ScreenDeclaration[] = [
   { id: 'approval-routes', path: '/settings/approval-routes', labelKey: 'nav.approvalRoutes', icon: Workflow, group: 'administration', permission: 'wf.workflow_definitions.read', component: RoutesScreen },
   // S1.16a (ruling Q1): "Imports" in the Administration group; the template designer is a route of it for people who may design templates.
   { id: 'imports', path: '/admin/imports/*', labelKey: 'nav.imports', icon: Upload, group: 'administration', permission: 'itg.imports.manage', component: ImportsScreen },
+  // S1.15d (ruling Q1): "Notification texts" and "Document templates" after "Approval routes".
+  { id: 'notification-texts', path: '/settings/notification-texts', labelKey: 'nav.notificationTexts', icon: Bell, group: 'administration', permission: 'ntf.templates.read', component: NotifyScreen },
+  { id: 'document-templates', path: '/settings/document-templates', labelKey: 'nav.documentTemplates', icon: FileText, group: 'administration', permission: 'doc.templates.read', component: DocumentTemplatesScreen },
   { id: 'licence', path: '/settings/licence', labelKey: 'nav.licence', icon: KeyRound, group: 'administration', permission: 'cfg.licence.read', allowedWhenLocked: true, comesWith: 'S1.16' },
   { id: 'jobs', path: '/admin/jobs/*', labelKey: 'nav.jobs', icon: Activity, group: 'administration', permission: 'job.runs.read', comesWith: 'S1.16' },
   { id: 'audit', path: '/admin/audit/*', labelKey: 'nav.audit', icon: ScrollText, group: 'administration', permission: 'aud.changes.view', component: AuditScreen },

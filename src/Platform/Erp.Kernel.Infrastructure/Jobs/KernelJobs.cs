@@ -277,6 +277,9 @@ internal sealed class PurgeJob(IClock clock) : IJobHandler
         var itemDays = kept.TryGetValue(KernelSettingKeys.NtfInAppRetentionDays, out var k) && k.Value.ValueKind == JsonValueKind.Number && k.Value.TryGetInt32(out var m) && m >= 30 ? m : 180;
         var items = await IdentityDb.ExecuteAsync(c, null, "delete from ntf.in_app_items where created_at < $1", cancellationToken, now.AddDays(-itemDays)).ConfigureAwait(false);
 
+        // Form drafts (S1.21a, CR-077): a draft is kept for cfg.drafts.keep_days after its last save; saving renews expires_at, so only abandoned drafts go.
+        var drafts = await IdentityDb.ExecuteAsync(c, null, "delete from cfg.form_drafts where expires_at < $1", cancellationToken, now).ConfigureAwait(false);
+
         // The e-mail delivery log keeps finished messages 30 days (spec 03 section 8; slice S1.11b2); waiting ones stay.
         var mails = await IdentityDb.ExecuteAsync(c, null, "delete from ntf.outbound_messages where status <> 'queued' and updated_at < $1", cancellationToken,
             now.AddDays(-KernelJobs.EventRetentionDays)).ConfigureAwait(false);
@@ -290,6 +293,6 @@ internal sealed class PurgeJob(IClock clock) : IJobHandler
 #pragma warning restore CA2100
         }
 
-        await job.LogAsync("info", string.Create(CultureInfo.InvariantCulture, $"{runs} finished run(s) older than {days} days, {items} notification item(s) older than {itemDays} days, {mails} finished e-mail(s), {events} delivered event(s) and {inbox} inbox row(s) older than {KernelJobs.EventRetentionDays} days removed"), cancellationToken).ConfigureAwait(false);
+        await job.LogAsync("info", string.Create(CultureInfo.InvariantCulture, $"{runs} finished run(s) older than {days} days, {items} notification item(s) older than {itemDays} days, {drafts} unfinished form draft(s), {mails} finished e-mail(s), {events} delivered event(s) and {inbox} inbox row(s) older than {KernelJobs.EventRetentionDays} days removed"), cancellationToken).ConfigureAwait(false);
     }
 }

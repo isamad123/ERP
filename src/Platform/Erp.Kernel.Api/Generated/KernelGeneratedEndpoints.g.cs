@@ -16,6 +16,7 @@ public static class KernelGeneratedEndpoints
     {
         global::Erp.Kernel.Api.Generated.Cfg.CustomFieldDefEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.FeatureFlagOverrideEndpoints.Map(app);
+        global::Erp.Kernel.Api.Generated.Cfg.FormDraftEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.InstalledPackEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.LabelEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.NumberingSchemeEndpoints.Map(app);
@@ -214,7 +215,6 @@ public static class KernelImportWriters
     {
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Cfg.InstalledPackEndpoints.ImportWriter>());
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Cfg.PackItemEndpoints.ImportWriter>());
-        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Cfg.SetupTaskEndpoints.ImportWriter>());
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Doc.RetentionRuleEndpoints.ImportWriter>());
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Iam.UserEndpoints.ImportWriter>());
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Itg.AccountMappingEndpoints.ImportWriter>());

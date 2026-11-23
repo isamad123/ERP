@@ -1295,6 +1295,38 @@
       }
     },
     {
+      "key": "cfg.drafts.keep_days",
+      "module": "cfg",
+      "type": "int",
+      "default": 30,
+      "validation": {
+        "min": 1,
+        "max": 365
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "general",
+      "unit": "days",
+      "name": {
+        "en": "Keep unfinished forms",
+        "ur": "نامکمل فارم محفوظ رکھنا"
+      },
+      "description": {
+        "en": "Days an unfinished form (for example a hire) is kept for the person who started it",
+        "ur": "دن جن تک نامکمل فارم (مثلاً بھرتی) شروع کرنے والے کے لیے محفوظ رہتا ہے"
+      },
+      "help": {
+        "en": "The daily clean-up removes drafts that were not saved again within this many days. Every save starts the count again.",
+        "ur": "روزانہ کی صفائی ان مسودوں کو ہٹا دیتی ہے جو اتنے دن میں دوبارہ محفوظ نہ ہوئے۔ ہر بار محفوظ کرنے سے گنتی نئے سرے سے شروع ہوتی ہے۔"
+      }
+    },
+    {
       "key": "doc.scan.mode",
       "module": "doc",
       "type": "text",

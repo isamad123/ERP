@@ -46,6 +46,26 @@ public sealed partial class EmploymentUnitTests
     }
 
     [Fact]
+    public void GHR_04_followup_B_the_earliest_affected_day_follows_the_whole_chain_of_corrections()
+    {
+        static Erp.Hrm.Domain.Generated.EmploymentEvent Event(DateOnly date, Guid? corrects = null) => new()
+        {
+            Id = Guid.NewGuid(), Kind = corrects is null ? "promotion" : "data_correction", ReasonCode = "x", Status = "effective", EffectiveDate = date, CorrectsEventId = corrects,
+        };
+
+        var e = Event(new DateOnly(2026, 11, 1));
+        var c1 = Event(new DateOnly(2027, 1, 1), e.Id);
+        var c2 = Event(new DateOnly(2026, 12, 1), c1.Id);
+        List<Erp.Hrm.Domain.Generated.EmploymentEvent> events = [e, c1, c2];
+
+        Assert.Equal(new DateOnly(2026, 11, 1), EmploymentApplier.EarliestAffected(c2.EffectiveDate, c2.CorrectsEventId, events)); // the reviewer's case
+        Assert.Equal(new DateOnly(2026, 11, 1), EmploymentApplier.EarliestAffected(c1.EffectiveDate, c1.CorrectsEventId, events));
+        Assert.Equal(new DateOnly(2026, 10, 1), EmploymentApplier.EarliestAffected(new DateOnly(2026, 10, 1), c2.Id, events));
+        Assert.Equal(e.EffectiveDate, EmploymentApplier.EarliestAffected(e.EffectiveDate, null, events));
+        Assert.Equal(c2.EffectiveDate, EmploymentApplier.EarliestAffected(c2.EffectiveDate, Guid.NewGuid(), events)); // unknown target
+    }
+
+    [Fact]
     public void FR_XM_30_S1_20c_a_separation_ends_the_job_details_on_its_date_and_nothing_after_it_counts()
     {
         var hire = Ev("hire", Jan1, Full("Officer"));

@@ -411,6 +411,18 @@ settings:
     description: {en: "Days a notification item stays in a person's notification centre", ur: "دن جن تک اطلاع کا اندراج کسی شخص کے اطلاعاتی مرکز میں رہتا ہے"}
     help: {en: "The daily clean-up removes notification items older than this many days. Approvals and decisions are always kept in the workflow history.", ur: "روزانہ کی صفائی اتنے دن سے پرانے اطلاعی اندراجات ہٹا دیتی ہے۔ منظوریاں اور فیصلے ورک فلو کی تاریخ میں ہمیشہ محفوظ رہتے ہیں۔"}
 
+  # Slice S1.21a (CR-077, ruling Q7; FR-ADM-UXA-05): how long an unfinished form draft is kept.
+  - key: cfg.drafts.keep_days
+    type: int
+    default: 30
+    validation: {min: 1, max: 365}
+    layers: [tenant]
+    area: general
+    unit: days
+    name: {en: "Keep unfinished forms", ur: "نامکمل فارم محفوظ رکھنا"}
+    description: {en: "Days an unfinished form (for example a hire) is kept for the person who started it", ur: "دن جن تک نامکمل فارم (مثلاً بھرتی) شروع کرنے والے کے لیے محفوظ رہتا ہے"}
+    help: {en: "The daily clean-up removes drafts that were not saved again within this many days. Every save starts the count again.", ur: "روزانہ کی صفائی ان مسودوں کو ہٹا دیتی ہے جو اتنے دن میں دوبارہ محفوظ نہ ہوئے۔ ہر بار محفوظ کرنے سے گنتی نئے سرے سے شروع ہوتی ہے۔"}
+
   # Slice S1.11c1 (KRN-DOC-01, KRN-DOC-02, KRN-DOC-08, rulings Q21, Q22, Q25): file scanning, upload limits and expiry reminders.
   - key: doc.scan.mode
     type: text

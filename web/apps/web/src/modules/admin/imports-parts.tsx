@@ -28,8 +28,8 @@ const REFUSALS: Record<string, MessageKey> = {
   'errors.import.unsupported_file': 'imp.refused.unsupported',
   'errors.import.rollback_changed': 'imp.refused.rollbackChanged',
   'errors.import.rollback_expired': 'imp.refused.rollbackExpired',
-  'errors.import.rollback_updated': 'imp.refused.rollbackUpdated',
-  'errors.import.rollback_not_committed': 'imp.refused.rollbackNotCommitted',
+  'errors.import.rollback_has_updates': 'imp.refused.rollbackUpdated',
+  'errors.import.rollback_not_allowed': 'imp.refused.rollbackNotCommitted',
   'errors.access.forbidden': 'imp.refused.forbidden',
 };
 
