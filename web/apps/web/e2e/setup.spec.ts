@@ -48,9 +48,11 @@ test('FR-ADM-ONB-01 FR-ADM-ONB-02 a new administrator is led to the set-up guide
 });
 
 test('FR-ADM-ONB-03 the checklist shows what is missing with a link, and go live needs a reason while required items are open', async ({ browser }) => {
-  const admin = await person(browser, { permissions: SETUP, displayName: 'Carim Checklist', homeHeading: 'Set up your system' });
+  // The customer is shared by the scenarios: the first one touched steps, so this person lands on the home page with the card, not on the guide.
+  const admin = await person(browser, { permissions: SETUP, displayName: 'Carim Checklist' });
   const page = admin.page;
-  await expect(menu(page).getByRole('link', { name: 'Set-up guide' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Continue the set-up guide' })).toBeVisible();
+  await menu(page).getByRole('link', { name: 'Set-up guide' }).click();
   await page.getByRole('button', { name: 'Readiness checklist' }).click();
   const table = page.getByRole('table', { name: 'Core platform' });
   await expect(table.getByText('The company has no location yet.')).toBeVisible();
@@ -73,7 +75,7 @@ test('FR-ADM-ONB-03 the checklist shows what is missing with a link, and go live
 });
 
 test('FR-KRN-LOC-01 NFR-11 NFR-12 the set-up screens read right to left in Urdu and fit three widths', async ({ browser }) => {
-  const admin = await person(browser, { permissions: SETUP, displayName: 'Uzma Urdu', homeHeading: 'Set up your system' });
+  const admin = await person(browser, { permissions: SETUP, displayName: 'Uzma Urdu' });
   await display(admin.context, { language: 'ur' });
   const page = admin.page;
   for (const width of WIDTHS) {
