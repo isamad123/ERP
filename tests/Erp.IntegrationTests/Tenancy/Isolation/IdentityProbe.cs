@@ -33,10 +33,13 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
 
     private sealed record Material(
         Guid UserId, string Username, Guid SessionId, string Refresh, string MfaChallenge, string PasswordChange, string MfaEnrolment,
-        string Activation, string RecoveryCode, Guid PendingDeviceId, string PasswordReset, Guid TrustedDeviceId, string TrustedDeviceToken, Guid SavedViewId);
+        string Activation, string RecoveryCode, Guid PendingDeviceId, string PasswordReset, Guid TrustedDeviceId, string TrustedDeviceToken, Guid SavedViewId, Guid DraftId);
 
     /// <summary>The list of the saved views every probe customer has one of (slice S1.12c, cfg.saved_views).</summary>
     private const string ViewList = "org.branches";
+
+    /// <summary>The form every probe customer has one unfinished draft of (slice S1.21a, cfg.form_drafts).</summary>
+    private const string DraftForm = "hrm.hire";
 
     public async Task<IReadOnlyList<string>> RunAsync(ApiEndpoint endpoint, CancellationToken ct)
     {
@@ -56,7 +59,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             return failures;
         }
 
-        var markers = new[] { BrandMarker, a.UserId.ToString(), a.SessionId.ToString(), a.PendingDeviceId.ToString(), sessionA.Value.SessionId.ToString(), a.Refresh, a.MfaChallenge, a.Activation, a.PasswordReset, a.TrustedDeviceId.ToString(), a.TrustedDeviceToken, a.SavedViewId.ToString() };
+        var markers = new[] { BrandMarker, a.UserId.ToString(), a.SessionId.ToString(), a.PendingDeviceId.ToString(), sessionA.Value.SessionId.ToString(), a.Refresh, a.MfaChallenge, a.Activation, a.PasswordReset, a.TrustedDeviceId.ToString(), a.TrustedDeviceToken, a.SavedViewId.ToString(), a.DraftId.ToString() };
         var method = new HttpMethod(endpoint.Method);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
 
@@ -186,6 +189,9 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
         // Saved views (S1.12c): B cannot change or delete A's view (404), and B's own list and new view never show A's.
         "/api/cfg/saved-views/{id:guid}" => (pattern.Replace("{id:guid}", a.SavedViewId.ToString(), StringComparison.Ordinal) + "?rowVersion=1", ViewBody(), HttpStatusCode.NotFound, tokenB),
         "/api/cfg/saved-views/" => (pattern + "?list=" + ViewList, ViewBody(), null, tokenB),
+        // Form drafts (S1.21a): B cannot read or delete A's draft (404); B's own list and save never show A's.
+        "/api/cfg/drafts/{id:guid}" => (pattern.Replace("{id:guid}", a.DraftId.ToString(), StringComparison.Ordinal), null, HttpStatusCode.NotFound, tokenB),
+        "/api/cfg/drafts/" => (pattern + "?form=" + DraftForm, DraftBody(), null, tokenB),
         // Custom fields of a form (S1.15b): the table name is the only input; B is served B's own definitions, never A's (AccessProbe puts A's definitions in A's database and looks for them in every catalogue).
         "/api/kernel/custom-fields/{entityType}" => (pattern.Replace("{entityType}", "org.org_units", StringComparison.Ordinal), null, null, tokenB),
         _ when !pattern.Contains('{', StringComparison.Ordinal) => (pattern, Json(new { currentPassword = Password, label = "probe" }), null, tokenB),
@@ -240,6 +246,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             case EndpointKind.IdentitySelf:
                 var path = endpoint.Pattern
                     .Replace("/saved-views/{id:guid}", "/saved-views/" + a.SavedViewId + "?rowVersion=1", StringComparison.Ordinal)
+                    .Replace("/drafts/{id:guid}", "/drafts/" + a.DraftId, StringComparison.Ordinal)
                     .Replace("/sessions/{id:guid}", "/sessions/" + a.SessionId, StringComparison.Ordinal)
                     .Replace("/trusted-devices/{id:guid}", "/trusted-devices/" + a.TrustedDeviceId, StringComparison.Ordinal)
                     .Replace("{entityType}", "org.org_units", StringComparison.Ordinal)
@@ -249,9 +256,15 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
                     path += "?list=" + ViewList;
                 }
 
+                if (endpoint.Key == "GET /api/cfg/drafts/")
+                {
+                    path += "?form=" + DraftForm;
+                }
+
                 string? body = endpoint.Pattern switch
                 {
                     "/api/cfg/saved-views/" or "/api/cfg/saved-views/{id:guid}" => method == HttpMethod.Delete ? null : ViewBody(),
+                    "/api/cfg/drafts/" when method == HttpMethod.Put => DraftBody(),
                     "/api/iam/me/password" => Json(new { currentPassword = Password, newPassword = "Probe-Own-Pass-33" }),
                     "/api/iam/me/mfa-devices/{id:guid}/confirm" => Json(new { code = "123456" }),
                     _ when method == HttpMethod.Get || method == HttpMethod.Delete => null,
@@ -261,6 +274,11 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
                 if (endpoint.Pattern == "/api/iam/me/sessions" && !reply.Body.Contains(session.SessionId.ToString(), StringComparison.Ordinal))
                 {
                     return $"A's own session list does not contain A's session. {Short(reply.Body)}";
+                }
+
+                if (endpoint.Key == "GET /api/cfg/drafts/" && !reply.Body.Contains(a.DraftId.ToString(), StringComparison.Ordinal))
+                {
+                    return $"A's own drafts do not contain A's draft. {Short(reply.Body)}";
                 }
 
                 if (endpoint.Key == "GET /api/cfg/saved-views/" && !reply.Body.Contains(a.SavedViewId.ToString(), StringComparison.Ordinal))
@@ -339,6 +357,13 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
             insert into cfg.saved_views (id, user_id, list_key, name, definition, created_at, created_by, updated_at, updated_by)
             values ($1, $2, $3, 'probe view', '{"search": "probe"}'::jsonb, now(), $2, now(), $2)
             """, ct, view, user, ViewList);
+        // An unfinished form (slice S1.21a, cfg.form_drafts): the content is encrypted for the draft purpose like the product does.
+        var draft = Guid.CreateVersion7();
+        var draftKey = await fx.Tenancy.Secrets.GetAsync(TenantFieldKeys.Reference(code), ct) ?? throw new InvalidOperationException($"no field key for {code}");
+        await ExecAsync(c, """
+            insert into cfg.form_drafts (id, user_id, form_key, record_id, data, expires_at, created_at, created_by, updated_at, updated_by)
+            values ($1, $2, $3, null, $4, now() + interval '30 days', now(), $2, now(), $2)
+            """, ct, draft, user, DraftForm, new AesGcmFieldEncryptor(Convert.FromBase64String(draftKey), TenantFieldKeys.KeyVersion).Encrypt("{\"step\":\"identifiers\"}"u8, "cfg.form_drafts.data"));
         // Login branding (slice S1.15a): every probe customer has its own product name, banner and terms.
         foreach (var (key, text) in new[] { ("cfg.branding.product_name", BrandMarker), ("cfg.branding.banner_en", BrandMarker + " banner"), ("cfg.branding.terms_ur", BrandMarker + " terms") })
         {
@@ -349,7 +374,7 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
                 """, ct, Guid.CreateVersion7(), key, code == fx.CodeA ? text : "Neighbour brand of B", actor);
         }
 
-        return new Material(user, username, session, refresh, tokens["mfa_challenge"], tokens["password_change"], tokens["mfa_enrolment"], tokens["activation"], recovery, device, tokens["password_reset"], trusted, trustedToken, view);
+        return new Material(user, username, session, refresh, tokens["mfa_challenge"], tokens["password_change"], tokens["mfa_enrolment"], tokens["activation"], recovery, device, tokens["password_reset"], trusted, trustedToken, view, draft);
     }
 
     /// <summary>The code of the latest identity e-mail of the event, decrypted with the customer's field key as the sender does (S1.11b2).</summary>
@@ -437,6 +462,8 @@ public sealed class IdentityProbe(IsolationFixture fx, WebApplication app)
     private static string Json(object value) => JsonSerializer.Serialize(value, JsonSerializerOptions.Web);
 
     /// <summary>A saved view to create or change (S1.12c): the list key is read on create only, the row version on change only.</summary>
+    private static string DraftBody() => Json(new { formKey = DraftForm, data = new { step = "contacts", note = "probe draft" } });
+
     private static string ViewBody() => Json(new { listKey = ViewList, name = "probe " + Guid.NewGuid().ToString("N")[..8], definition = new { search = "x" }, rowVersion = 1 });
 
     private static string Short(string body) => body.Length <= 300 ? body : body[..300] + "…";

@@ -691,6 +691,25 @@
   scope: {user: user_id}
   reqs: [ADM-NAV-02]
 
+# Slice S1.21a (CR-077, ruling Q7; FR-ADM-UXA-05, S1.12 ruling Q13): autosaved drafts of long forms, kept on the server for the person who started them.
+- table: cfg.form_drafts
+  purpose: "Autosaved drafts of long forms (the hire form first), kept for the person who started them and removed after cfg.drafts.keep_days"
+  traits: [std]
+  added_in: S1.21a
+  columns:
+    - [user_id, uuid, req, fk iam.users; the person who started the draft and the only one who may read or change it]
+    - [form_key, text, req, "the form, e.g. hrm.hire; at most 100 characters"]
+    - [record_id, uuid, opt, "the record the form edits; empty for a new record"]
+    - [data, enc, req, "the form's values and the step reached (json, encrypted: a draft holds personal data); at most 64 KB before encryption"]
+    - [expires_at, ts, req, "renewed on every save; the daily clean-up removes drafts past it"]
+  unique: [[user_id, form_key, record_id]]
+  indexes: [[expires_at]]
+  scope: {user: user_id}
+  audit: false
+  audit_reason: "machinery: a draft is a transient copy of what the person is typing; the hire or change it leads to is audited (S1.21a, CR-077)"
+  api_actions: [read]
+  reqs: [ADM-UXA-05]
+
 - table: cfg.numbering_schemes
   traits: [std, co]
   status: [active, retired]
