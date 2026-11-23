@@ -59,10 +59,10 @@ Each slice is one fresh session (or one fresh session per part where its slice f
 | --- | --- | --- | --- |
 | S1.34 | Pay set-up: groups, periods, components, structures, compensation assignments (two parts, fresh Opus review of part b; slice file approved, CR-087) | C | Sonnet |
 | S1.35 | Payroll engine: snapshot, calculation, trace, chunked job, determinism tests (two parts, fresh Opus review of each; slice file approved, CR-093) | B | Opus |
-| S1.36 | Pakistan income tax (salaried slabs, irregular income, declarations, previous employer) | B | Opus |
-| S1.37 | Statutory contributions: EOBI, provincial social security, WWF, provident fund, gratuity accrual | B | Opus |
-| S1.38 | Run stages, validation flags, variance report, maker-checker approval, lock and reopen | B | Opus |
-| S1.39 | Arrears and retro corrections, off-cycle runs, salary hold | B | Opus |
+| S1.36 | Pakistan income tax (salaried slabs, irregular income, declarations, previous employer) (parts S1.36a tax rule and calculator, S1.36b irregular payments, declarations, previous employer, preview; fresh Opus review of each; statutory content open for the professional; slice file approved, CR-109) | B | Opus |
+| S1.37 | Statutory contributions: EOBI, provincial social security, WWF, provident fund, gratuity accrual (parts S1.37a contribution schemes, S1.37b gratuity and company-level contributions; fresh Opus review of each; statutory content and WWF/WPPF open for the professional; slice file approved, CR-110) | B | Opus |
+| S1.38 | Run stages, validation flags, variance report, maker-checker approval, lock and reopen (parts S1.38a validation and approval, S1.38b lock, reopen and close, both Opus with fresh reviews; S1.38c screens on Sonnet; slice file approved, CR-111) | B | Opus (S1.38c Sonnet) |
+| S1.39 | Arrears and retro corrections, off-cycle runs, salary hold (parts S1.39a retro and arrears, S1.39b off-cycle, bonus, hold, reversal; fresh Opus review of each; slice file approved, CR-112) | B | Opus |
 | S1.40 | Payslips (bilingual PDF), bank salary files, payment status import (two parts, fresh Opus review of part a; slice file approved, CR-094) | C | Sonnet |
 | S1.41 | Loans and advances with payroll recovery (slice file approved, CR-097) | C | Sonnet |
 | S1.42 | Expense claims with policy checks and reimbursement (slice file approved, CR-098) | C | Sonnet |
@@ -75,14 +75,14 @@ Each slice is one fresh session (or one fresh session per part where its slice f
 ## Batch 6 — Performance and learning (Sonnet)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.48 | Form designer and responses (built minimal; slice file approved, CR-103) | C | Sonnet |
+| S1.48 | Form designer and responses (built minimal; parts S1.48a engine and contract, S1.48b screens, CR-113; slice file approved, CR-103) | C | Sonnet |
 | S1.49 | Review cycles, goals, reviews, sign-off (two parts; slice file approved, CR-104) | C | Sonnet |
 | S1.50 | Courses, sessions, enrolments, learning records, mandatory training, bonds (two parts; slice file approved, CR-105) | D | Sonnet |
 
 ## Batch 7 — Hardening (Opus)
 | Slice | Work | Class | Model |
 | --- | --- | --- | --- |
-| S1.51 | Standard reports and dashboards (HR, attendance, leave, payroll) (core dashboards only; slice file approved, CR-106) | D | Sonnet |
+| S1.51 | Standard reports and dashboards (HR, attendance, leave, payroll) (core dashboards only; parts S1.51a reports, S1.51b dashboards and performance, CR-113; slice file approved, CR-106) | D | Sonnet |
 | S1.52 | Load test: payroll for 50,000 employees, attendance volume, isolation under load (fresh Opus review; slice file approved, CR-107) | B | Opus |
 | S1.53 | Security review checklist, backup and restore drill, release packaging (two parts, fresh Opus review of each; privacy tools added; slice file approved, CR-108) | B | Opus |
 
