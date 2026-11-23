@@ -12,13 +12,14 @@ public static class AssignmentKeys
     public const string Grade = "grade_id";
     public const string Title = "title";
     public const string Manager = "manager_employment_id";
+    public const string PayGroup = "pay_group_id";
     public const string CostAllocation = "cost_allocation";
     public const string Fte = "fte";
     public const string WorkSchedule = "work_schedule";
     public const string IsActing = "is_acting";
 
     /// <summary>Every key, in the table's order.</summary>
-    public static IReadOnlyList<string> All { get; } = [OrgUnit, Branch, Location, Position, Grade, Title, Manager, CostAllocation, Fte, WorkSchedule, IsActing];
+    public static IReadOnlyList<string> All { get; } = [OrgUnit, Branch, Location, Position, Grade, Title, Manager, PayGroup, CostAllocation, Fte, WorkSchedule, IsActing];
 
     /// <summary>Keys every assignment row needs a value for (the table's required columns).</summary>
     public static IReadOnlyList<string> Required { get; } = [OrgUnit, Branch, Title, CostAllocation, Fte, IsActing];
