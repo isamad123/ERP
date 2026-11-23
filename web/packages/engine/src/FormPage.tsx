@@ -3,7 +3,7 @@
 // left and on save (the generated schema), server errors next to the fields and in a summary, read-only, hidden and
 // masked fields as the server sends them, "last changed by and when", a warning before leaving with unsaved changes,
 // the saved version next to the person's when someone else saved first, and a delete confirmation that says what goes.
-// Custom fields (S1.15) and autosaved drafts (S1.21) have their place here and are not built yet.
+// Custom fields (S1.15b, FR-KRN-MET-02) have their own section after the table's fields; autosaved drafts (S1.21) have their place here and are not built yet.
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useBlocker } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,6 +18,7 @@ import { checkValue, cleanValues, validate, type FieldProblem, type FormValues }
 import { HistoryPanel, useHistory } from './HistoryPanel';
 import { Value } from './values';
 import { useDocumentTitle } from './ListPage';
+import { CUSTOM_PREFIX, CustomSection, customBody, customDefaults, customErrorKey, customOf, customProblems, isEditableCustom, useCustomFields } from './custom';
 
 /**
  * A screen's own editor for one field the engine cannot edit itself (a JSON value such as an address or opening hours,
@@ -111,10 +112,14 @@ function FormBody({ metadata, schema, id, fields: order, defaults, companies, ca
   const label = useLabel();
   const { locale, timeZone, numbers } = useLocaleSettings();
   const queryClient = useQueryClient();
-  const fields = useMemo(() => formFields(metadata, order), [metadata, order]);
+  // The custom column is edited in the custom section, not as a JSON field (S1.15b).
+  const hasCustom = metadata.fields.some((f) => f.field === 'custom');
+  const fields = useMemo(() => formFields(metadata, order).filter((f) => f.field !== 'custom'), [metadata, order]);
   const creating = id === null;
   const editable = creating ? canCreate : canUpdate;
   const [values, setValues] = useState<FormValues>(() => initialValues(fields, saved, defaults));
+  const [customValues, setCustomValues] = useState<Record<string, unknown>>(() => ({ ...customOf(saved) }));
+  const [customBase, setCustomBase] = useState<Record<string, unknown>>(() => ({ ...customOf(saved) }));
   const [problems, setProblems] = useState<Problems>({});
   const [summary, setSummary] = useState<string | null>(null);
   const [reference, setReference] = useState<string | null>(null);
@@ -126,7 +131,19 @@ function FormBody({ metadata, schema, id, fields: order, defaults, companies, ca
   // Set at once when a save or delete succeeds, before the page moves on: the state update would come too late for the guard.
   const finished = useRef(false);
   const initial = useMemo(() => initialValues(fields, saved, defaults), [fields, saved, defaults]);
-  const dirty = !done && fields.some((f) => !same(values[f.field], initial[f.field]));
+  const companyForCustom = typeof values.companyId === 'string' ? values.companyId : null;
+  const definitions = useCustomFields(metadata.table, companyForCustom, hasCustom);
+  const customFields = definitions.data ?? null;
+  const dirty = !done && (fields.some((f) => !same(values[f.field], initial[f.field])) || !same(customValues, customBase));
+  // A new record starts with each field's default value (once the definitions have been read).
+  const defaultsApplied = useRef(false);
+  useEffect(() => {
+    if (!creating || !customFields || defaultsApplied.current) return;
+    defaultsApplied.current = true;
+    const start = customDefaults(customFields);
+    setCustomValues((v) => ({ ...start, ...v }));
+    setCustomBase((v) => ({ ...start, ...v }));
+  }, [creating, customFields]);
   const entity = label(`${metadata.labelKey}.one`);
   const title = creating ? t('engine.form.newTitle', { entity }) : t('engine.form.editTitle', { entity, record: recordTitle(saved ?? values) });
   useDocumentTitle(title);
@@ -167,7 +184,10 @@ function FormBody({ metadata, schema, id, fields: order, defaults, companies, ca
   const save = async (event?: FormEvent, override?: { rowVersion: number; body?: FormValues; how?: 'form' | 'activation' }) => {
     event?.preventDefault();
     const body = override?.body ?? values;
-    const found = validate(body, schema, editableFields);
+    const found: Problems = validate(body, schema, editableFields);
+    for (const [key, text] of Object.entries(customFields && editable ? customProblems(customFields, customValues) : {})) {
+      found[`${CUSTOM_PREFIX}${key}`] = { key: 'engine.error.server', values: { text } };
+    }
     if (Object.keys(found).length > 0) {
       setProblems(found);
       setSummary(t('engine.form.fixErrors'));
@@ -180,7 +200,8 @@ function FormBody({ metadata, schema, id, fields: order, defaults, companies, ca
     setSummary(null);
     try {
       const clean = cleanValues(body, schema, creating ? editableFields : editableFields.filter((f) => f !== 'companyId'), editors ? new Set(Object.keys(editors)) : undefined);
-      const row = id === null || version === undefined ? await client.create(clean) : await client.update(id, clean, version);
+      const sent = customFields && customFields.some(isEditableCustom) && editable ? { ...clean, custom: customBody(customFields, customValues) } : clean;
+      const row = id === null || version === undefined ? await client.create(sent) : await client.update(id, sent, version);
       await queryClient.invalidateQueries({ queryKey: ['engine', metadata.table] });
       if (override?.how === 'activation') {
         // Stays on the record: the saved row becomes the form's starting point.
@@ -266,10 +287,11 @@ function FormBody({ metadata, schema, id, fields: order, defaults, companies, ca
               <ul>
                 {problemList.map(([name, problem]) => {
                   const field = fields.find((f) => f.field === name);
+                  const custom = name.startsWith(CUSTOM_PREFIX) ? customFields?.find((f) => f.fieldKey === name.slice(CUSTOM_PREFIX.length)) : undefined;
                   return (
                     <li key={name}>
                       <a href={`#field-${name}`} onClick={(e) => { e.preventDefault(); document.getElementById(`field-${name}`)?.querySelector<HTMLElement>('input, button, textarea')?.focus(); }}>
-                        {field ? label(field.labelKey) : name}: {problemText(problem, t, server)}
+                        {field ? label(field.labelKey) : custom ? (custom.label[locale] ?? custom.label.en ?? custom.fieldKey) : name}: {problemText(problem, t, server)}
                       </a>
                     </li>
                   );
@@ -292,6 +314,14 @@ function FormBody({ metadata, schema, id, fields: order, defaults, companies, ca
             </div>
           );
         })}
+        {customFields && customFields.length > 0 && (
+          <CustomSection fields={customFields} values={customValues} stored={customOf(saved)} editable={editable}
+            problems={Object.fromEntries(Object.entries(problems).filter(([k]) => k.startsWith(CUSTOM_PREFIX)).map(([k, p]) => [k.slice(CUSTOM_PREFIX.length), p.key === 'engine.error.required' ? 'errors.custom.required' : String(p.values?.text ?? 'errors.custom.invalid_type')]))}
+            onChange={(key, value) => {
+              setCustomValues((v) => ({ ...v, [key]: value }));
+              if (problems[`${CUSTOM_PREFIX}${key}`]) setProblems((p) => without(p, `${CUSTOM_PREFIX}${key}`));
+            }} />
+        )}
         <div className="erp-form-actions">
           {editable && <Button type="submit" variant="primary" icon={<Save size={18} aria-hidden="true" />} isPending={busy}>{creating ? t('engine.form.create') : t('engine.form.save')}</Button>}
           <Button variant="secondary" onPress={onCancel}>{editable ? t('common.cancel') : t('engine.form.backToList')}</Button>
@@ -326,7 +356,11 @@ function FormBody({ metadata, schema, id, fields: order, defaults, companies, ca
 }
 
 function problemText(problem: FieldProblem, t: ReturnType<typeof useText>['t'], server: ReturnType<typeof useText>['server']): string {
-  if (problem.key === 'engine.error.server') return server(String(problem.values?.text ?? '')) ?? t('engine.error.server');
+  if (problem.key === 'engine.error.server') {
+    const text = String(problem.values?.text ?? '');
+    const own = customErrorKey(text);
+    return own ? t(own) : (server(text) ?? t('engine.error.server'));
+  }
   return t(problem.key, problem.values);
 }
 

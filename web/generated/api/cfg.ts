@@ -28,24 +28,6 @@ export interface CustomFieldDef
     rowVersion: number;
 }
 
-export interface CustomFieldDefWrite
-{
-    entityType: string;
-    fieldKey: string;
-    dataType: 'text' | 'long_text' | 'number' | 'decimal' | 'date' | 'bool' | 'choice' | 'multi_choice' | 'user' | 'employee' | 'file';
-    labelI18n: Record<string, string>;
-    helpI18n?: Record<string, string> | null;
-    validation: unknown;
-    defaultValue?: unknown | null;
-    isRequired?: boolean;
-    isUnique?: boolean;
-    optionListId?: string | null;
-    section?: string | null;
-    seq: number;
-    version: number;
-    status: 'active' | 'retired';
-}
-
 export interface CustomFieldDefListQuery
 {
     after?: string;
@@ -60,8 +42,6 @@ export const customFieldDefs =
 {
     list: (query: CustomFieldDefListQuery = {}) => request<PagedResult<CustomFieldDef>>('GET', '/api/cfg/custom-field-defs', { query }),
     get: (id: string) => request<CustomFieldDef>('GET', `/api/cfg/custom-field-defs/${id}`),
-    create: (body: CustomFieldDefWrite) => request<CustomFieldDef>('POST', '/api/cfg/custom-field-defs', { body }),
-    update: (id: string, body: CustomFieldDefWrite & { rowVersion: number }) => request<CustomFieldDef>('PUT', `/api/cfg/custom-field-defs/${id}`, { body }),
 };
 
 /** cfg.feature_flag_overrides: FeatureFlagOverride. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -150,15 +130,6 @@ export interface Label
     rowVersion: number;
 }
 
-export interface LabelWrite
-{
-    key: string;
-    language: string;
-    layer: 'pack' | 'tenant' | 'company';
-    scopeId?: string | null;
-    text: string;
-}
-
 export interface LabelListQuery
 {
     after?: string;
@@ -171,8 +142,6 @@ export const labels =
 {
     list: (query: LabelListQuery = {}) => request<PagedResult<Label>>('GET', '/api/cfg/labels', { query }),
     get: (id: string) => request<Label>('GET', `/api/cfg/labels/${id}`),
-    create: (body: LabelWrite) => request<Label>('POST', '/api/cfg/labels', { body }),
-    update: (id: string, body: LabelWrite & { rowVersion: number }) => request<Label>('PUT', `/api/cfg/labels/${id}`, { body }),
 };
 
 /** cfg.numbering_schemes: NumberingScheme. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -236,93 +205,6 @@ export const numberingVoids =
 {
     list: (query: NumberingVoidListQuery = {}) => request<PagedResult<NumberingVoid>>('GET', '/api/cfg/numbering-voids', { query }),
     get: (id: string) => request<NumberingVoid>('GET', `/api/cfg/numbering-voids/${id}`),
-};
-
-/** cfg.option_list_items: OptionListItem. Field rules (S1.06) may leave a field out or mask it as text. */
-export interface OptionListItem
-{
-    id: string;
-    listId: string;
-    code: string;
-    labelI18n: Record<string, string>;
-    seq: number;
-    isActive: boolean;
-    attributes: unknown;
-    createdAt: string;
-    createdBy: string;
-    updatedAt: string;
-    updatedBy: string;
-    rowVersion: number;
-}
-
-export interface OptionListItemWrite
-{
-    listId: string;
-    code: string;
-    labelI18n: Record<string, string>;
-    seq: number;
-    isActive?: boolean;
-    attributes: unknown;
-}
-
-export interface OptionListItemListQuery
-{
-    after?: string;
-    limit?: number;
-    listId?: string;
-    isActive?: boolean;
-    /** code; a leading minus sorts descending. */
-    sort?: 'code' | '-code';
-    search?: string;
-}
-
-export const optionListItems =
-{
-    list: (query: OptionListItemListQuery = {}) => request<PagedResult<OptionListItem>>('GET', '/api/cfg/option-list-items', { query }),
-    get: (id: string) => request<OptionListItem>('GET', `/api/cfg/option-list-items/${id}`),
-    create: (body: OptionListItemWrite) => request<OptionListItem>('POST', '/api/cfg/option-list-items', { body }),
-    update: (id: string, body: OptionListItemWrite & { rowVersion: number }) => request<OptionListItem>('PUT', `/api/cfg/option-list-items/${id}`, { body }),
-};
-
-/** cfg.option_lists: Shared dropdown lists (reason codes, exit reasons, relationship types). Field rules (S1.06) may leave a field out or mask it as text. */
-export interface OptionList
-{
-    id: string;
-    code: string;
-    nameI18n: Record<string, string>;
-    isSystem: boolean;
-    isActive: boolean;
-    createdAt: string;
-    createdBy: string;
-    updatedAt: string;
-    updatedBy: string;
-    rowVersion: number;
-}
-
-export interface OptionListWrite
-{
-    code: string;
-    nameI18n: Record<string, string>;
-    isSystem?: boolean;
-    isActive?: boolean;
-}
-
-export interface OptionListListQuery
-{
-    after?: string;
-    limit?: number;
-    isActive?: boolean;
-    /** code; a leading minus sorts descending. */
-    sort?: 'code' | '-code';
-    search?: string;
-}
-
-export const optionLists =
-{
-    list: (query: OptionListListQuery = {}) => request<PagedResult<OptionList>>('GET', '/api/cfg/option-lists', { query }),
-    get: (id: string) => request<OptionList>('GET', `/api/cfg/option-lists/${id}`),
-    create: (body: OptionListWrite) => request<OptionList>('POST', '/api/cfg/option-lists', { body }),
-    update: (id: string, body: OptionListWrite & { rowVersion: number }) => request<OptionList>('PUT', `/api/cfg/option-lists/${id}`, { body }),
 };
 
 /** cfg.pack_items: Every object a pack created, with tenant override flag so upgrades keep overrides. Field rules (S1.06) may leave a field out or mask it as text. */
