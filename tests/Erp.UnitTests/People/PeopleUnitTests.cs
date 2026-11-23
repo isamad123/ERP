@@ -54,9 +54,9 @@ public sealed partial class PeopleUnitTests
     {
         using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Infrastructure/Access/permissions.json")));
         var codes = manifest.RootElement.GetProperty("permissions").EnumerateArray().Select(p => p.GetProperty("code").GetString()!).ToList();
-        // The manifest holds the person codes (S1.20a), the employment codes (S1.20b, EmploymentUnitTests checks their texts) and the
-        // policy codes (S1.23a, PolicyUnitTests checks their texts).
-        Assert.Equal(PeoplePermissions.HandWritten.Concat(Erp.Hrm.Contracts.Employments.EmploymentPermissions.HandWritten).Concat(Erp.Hrm.Contracts.Policies.PolicyPermissions.HandWritten)
+        // The manifest holds the person codes (S1.20a), the employment codes (S1.20b, EmploymentUnitTests checks their texts) the
+        // policy codes (S1.23a, PolicyUnitTests checks their texts) and the pay codes (S1.34a).
+        Assert.Equal(PeoplePermissions.HandWritten.Concat(Erp.Hrm.Contracts.Employments.EmploymentPermissions.HandWritten).Concat(Erp.Hrm.Contracts.Policies.PolicyPermissions.HandWritten).Concat(Erp.Hrm.Contracts.Payroll.PayPermissions.HandWritten)
             .Order(StringComparer.Ordinal), codes.Order(StringComparer.Ordinal));
         Assert.True(manifest.RootElement.GetProperty("permissions").EnumerateArray().Single(p => p.GetProperty("code").GetString() == Erp.Hrm.Contracts.Policies.PolicyPermissions.Approve).GetProperty("sensitive").GetBoolean());
         codes = [.. PeoplePermissions.HandWritten];

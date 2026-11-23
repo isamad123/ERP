@@ -67,6 +67,8 @@
   "errors.hrm.employment_event.not_pending": "This employment change is no longer waiting for approval.",
   "errors.hrm.employment_event.nothing_changes": "The correction changes nothing.",
   "errors.hrm.employment_event.transfer_start": "The start of a transfer from a sister company is not corrected alone. Withdraw the transfer and record it again.",
+  "errors.hrm.pay.group_not_found": "This pay group does not exist in this company, or it is switched off.",
+  "errors.hrm.pay.group_open_run": "The employee's current pay group has a payroll run that is not finished. Finish or cancel the run before moving the employee.",
   "errors.hrm.probation.decision_before_start": "The decision cannot be dated before the probation starts.",
   "errors.hrm.probation.extend_not_later": "An extension must end after the current last day of the probation.",
   "errors.hrm.probation.extension_limit": "The extension is longer than the probation policy allows.",

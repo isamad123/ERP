@@ -1,5 +1,6 @@
 using Erp.Hrm.Application.Employments;
 using Erp.Hrm.Infrastructure.Policies;
+using Erp.Hrm.Infrastructure.Payroll;
 using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Contracts.Jobs;
 using Erp.Kernel.Contracts.Workflow;
@@ -50,6 +51,7 @@ public static class EmploymentServices
         services.AddScoped<IEmployeeBankAccountService, EmployeeBankAccountService>(); // S1.20d payment accounts
         services.AddScoped<IStatutoryRegistrationService, StatutoryRegistrationService>();
         services.AddScoped<Erp.Kernel.Contracts.Access.IHeldChangeHandler, BankAccountChangeHandler>(); // approval of held account changes
+        services.AddHrmPayrollApi(); // S1.34a pay groups, calendar and readiness
         return services;
     }
 
@@ -58,6 +60,7 @@ public static class EmploymentServices
     {
         services.AddSingleton<IJobHandler, EmploymentEventsDueJob>();
         services.AddSingleton<IJobHandler, EmploymentTermsDueJob>();
+        services.AddHrmPayrollWorker(); // S1.34a cut-off reminders
         return services;
     }
 

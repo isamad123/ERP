@@ -117,6 +117,10 @@ public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction tr
         ["hrm.policy_versions.version"] = n => (n % 1000) + 1,
         ["hrm.policy_assignments.rule"] = _ => new Json("{}"),
         ["hrm.policy_assignments.precedence"] = n => (n % 9999) + 1,
+        // S1.34a: a pay group's tax-year start month is 1 to 12 and its cut-off and payment offsets 0 to 31 days (tg_pay_groups_rules).
+        ["hrm.pay_groups.tax_year_start_month"] = _ => 7,
+        ["hrm.pay_groups.cut_off_day"] = _ => 3,
+        ["hrm.pay_groups.payment_day"] = _ => 5,
     };
 
     private int _formatted;

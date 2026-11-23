@@ -3174,7 +3174,7 @@ export interface PayGroup
     cutOffDay: number | null;
     paymentDay: number | null;
     companyBankAccountId: string | null;
-    approvalThreshold: number | null;
+    approvalThreshold?: number | string | null;
     isActive: boolean;
     isDeleted: boolean;
     deletedAt: string | null;
@@ -3184,21 +3184,6 @@ export interface PayGroup
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface PayGroupWrite
-{
-    companyId: string;
-    code: string;
-    nameI18n: Record<string, string>;
-    frequency: 'monthly' | 'semi_monthly' | 'bi_weekly' | 'weekly';
-    currencyCode: string;
-    taxYearStartMonth: number;
-    cutOffDay?: number | null;
-    paymentDay?: number | null;
-    companyBankAccountId?: string | null;
-    approvalThreshold?: number | null;
-    isActive?: boolean;
 }
 
 export interface PayGroupListQuery
@@ -3218,9 +3203,6 @@ export const payGroups =
 {
     list: (query: PayGroupListQuery = {}) => request<PagedResult<PayGroup>>('GET', '/api/hrm/pay-groups', { query }),
     get: (id: string) => request<PayGroup>('GET', `/api/hrm/pay-groups/${id}`),
-    create: (body: PayGroupWrite) => request<PayGroup>('POST', '/api/hrm/pay-groups', { body }),
-    update: (id: string, body: PayGroupWrite & { rowVersion: number }) => request<PayGroup>('PUT', `/api/hrm/pay-groups/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/pay-groups/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.pay_inputs: One-time inputs to a period (bonus, incentive, deduction, adjustment, imported file rows). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3305,19 +3287,6 @@ export interface PayPeriod
     rowVersion: number;
 }
 
-export interface PayPeriodWrite
-{
-    companyId: string;
-    payGroupId: string;
-    periodNo: number;
-    taxYear: number;
-    startDate: string;
-    endDate: string;
-    cutOffDate: string;
-    paymentDate: string;
-    status: 'future' | 'open' | 'processing' | 'closed';
-}
-
 export interface PayPeriodListQuery
 {
     after?: string;
@@ -3333,8 +3302,6 @@ export const payPeriods =
 {
     list: (query: PayPeriodListQuery = {}) => request<PagedResult<PayPeriod>>('GET', '/api/hrm/pay-periods', { query }),
     get: (id: string) => request<PayPeriod>('GET', `/api/hrm/pay-periods/${id}`),
-    create: (body: PayPeriodWrite) => request<PayPeriod>('POST', '/api/hrm/pay-periods', { body }),
-    update: (id: string, body: PayPeriodWrite & { rowVersion: number }) => request<PayPeriod>('PUT', `/api/hrm/pay-periods/${id}`, { body }),
 };
 
 /** hrm.pay_result_lines: PayResultLine. Field rules (S1.06) may leave a field out or mask it as text. */

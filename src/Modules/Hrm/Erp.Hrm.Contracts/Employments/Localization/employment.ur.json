@@ -67,6 +67,8 @@
   "errors.hrm.employment_event.not_pending": "یہ ملازمتی تبدیلی اب منظوری کی منتظر نہیں ہے۔",
   "errors.hrm.employment_event.nothing_changes": "اس درستی سے کچھ نہیں بدلتا۔",
   "errors.hrm.employment_event.transfer_start": "ذیلی کمپنی سے تبادلے کا آغاز اکیلے درست نہیں کیا جاتا۔ تبادلہ واپس لے کر دوبارہ درج کریں۔",
+  "errors.hrm.pay.group_not_found": "یہ تنخواہ گروپ اس کمپنی میں موجود نہیں یا بند ہے۔",
+  "errors.hrm.pay.group_open_run": "ملازم کے موجودہ تنخواہ گروپ کا ایک پے رول رن مکمل نہیں ہوا۔ ملازم کو منتقل کرنے سے پہلے رن مکمل یا منسوخ کریں۔",
   "errors.hrm.probation.decision_before_start": "فیصلہ آزمائشی مدت شروع ہونے سے پہلے کی تاریخ کا نہیں ہو سکتا۔",
   "errors.hrm.probation.extend_not_later": "توسیع آزمائشی مدت کے موجودہ آخری دن کے بعد ختم ہونی چاہیے۔",
   "errors.hrm.probation.extension_limit": "توسیع آزمائشی پالیسی کی اجازت سے زیادہ طویل ہے۔",

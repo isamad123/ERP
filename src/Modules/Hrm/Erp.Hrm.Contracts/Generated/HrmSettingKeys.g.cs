@@ -37,6 +37,9 @@ public static class HrmSettingKeys
 
     /// <summary>Activating a policy version or policy assignments needs a second person's approval.</summary>
     public const string HrmPoliciesRequiresApproval = "hrm.policies.requires_approval";
+
+    /// <summary>How many days before a pay period's cut-off the payroll officers are reminded.</summary>
+    public const string HrmPayCutoffReminderDays = "hrm.pay.cutoff_reminder_days";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

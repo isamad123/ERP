@@ -457,7 +457,7 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings, IPoli
     private static bool Write(EmploymentAssignment row, PlannedRow plan)
     {
         var v = plan.Values;
-        var before = (row.EventId, row.OrgUnitId, row.BranchId, row.LocationId, row.PositionId, row.GradeId, row.Title, row.ManagerEmploymentId, Cost: row.CostAllocation.RootElement.GetRawText(), row.Fte, row.WorkSchedule, row.IsActing);
+        var before = (row.EventId, row.OrgUnitId, row.BranchId, row.LocationId, row.PositionId, row.GradeId, row.Title, row.ManagerEmploymentId, row.PayGroupId, Cost: row.CostAllocation.RootElement.GetRawText(), row.Fte, row.WorkSchedule, row.IsActing);
         row.EventId = plan.EventId;
         row.OrgUnitId = Guid.Parse(v[AssignmentKeys.OrgUnit]!.GetValue<string>());
         row.BranchId = Guid.Parse(v[AssignmentKeys.Branch]!.GetValue<string>());
@@ -466,6 +466,7 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings, IPoli
         row.GradeId = OptionalId(v, AssignmentKeys.Grade);
         row.Title = v[AssignmentKeys.Title]!.GetValue<string>();
         row.ManagerEmploymentId = OptionalId(v, AssignmentKeys.Manager);
+        row.PayGroupId = OptionalId(v, AssignmentKeys.PayGroup);
         var cost = v[AssignmentKeys.CostAllocation]!;
         var costChanged = !JsonNode.DeepEquals(JsonNode.Parse(before.Cost), cost);
         if (costChanged)
@@ -476,7 +477,7 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings, IPoli
         row.Fte = v[AssignmentKeys.Fte]!.GetValue<decimal>();
         row.WorkSchedule = v[AssignmentKeys.WorkSchedule]?.GetValue<string>();
         row.IsActing = v[AssignmentKeys.IsActing]!.GetValue<bool>();
-        var after = (row.EventId, row.OrgUnitId, row.BranchId, row.LocationId, row.PositionId, row.GradeId, row.Title, row.ManagerEmploymentId, Cost: before.Cost, row.Fte, row.WorkSchedule, row.IsActing);
+        var after = (row.EventId, row.OrgUnitId, row.BranchId, row.LocationId, row.PositionId, row.GradeId, row.Title, row.ManagerEmploymentId, row.PayGroupId, Cost: before.Cost, row.Fte, row.WorkSchedule, row.IsActing);
         return costChanged || before != after;
     }
 
@@ -502,6 +503,7 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings, IPoli
         Check(AssignmentKeys.Grade, Id(AssignmentKeys.Grade) == row.GradeId?.ToString());
         Check(AssignmentKeys.Title, Id(AssignmentKeys.Title) == row.Title);
         Check(AssignmentKeys.Manager, Id(AssignmentKeys.Manager) == row.ManagerEmploymentId?.ToString());
+        Check(AssignmentKeys.PayGroup, Id(AssignmentKeys.PayGroup) == row.PayGroupId?.ToString());
         Check(AssignmentKeys.CostAllocation, values[AssignmentKeys.CostAllocation] is { } cost && JsonNode.DeepEquals(JsonNode.Parse(row.CostAllocation.RootElement.GetRawText()), cost));
         Check(AssignmentKeys.Fte, values[AssignmentKeys.Fte]?.GetValue<decimal>() == row.Fte);
         Check(AssignmentKeys.WorkSchedule, Id(AssignmentKeys.WorkSchedule) == row.WorkSchedule);
