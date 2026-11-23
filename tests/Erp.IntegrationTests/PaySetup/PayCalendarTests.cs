@@ -135,6 +135,9 @@ public sealed class PayCalendarTests(TenancyFixture fx) : IAsyncLifetime
         var company_currency = await _h.ScalarAsync<string>("select base_currency_code::text from org.companies where id = $1", Ct, company);
         Assert.Equal(company_currency, await _h.ScalarAsync<string>("select currency_code::text from hrm.pay_groups where id = $1", Ct, id)); // slice S1.34 Q2
 
+        // Every change is audited (spec 03 section 10): the creation of the group is in the change log under the person who made it.
+        Assert.True(await _h.ScalarAsync<long>("select count(*) from aud.change_log where entity_type = 'hrm.pay_groups' and entity_id = $1", Ct, id) >= 1);
+
         // The code is unique in the company whatever its case; numbers are in range; frequency and name are required.
         var again = await _h.PostAsync(admin, Groups, new { companyId = company, code = code.ToLowerInvariant(), nameI18n = new { en = "x" }, frequency = "monthly", taxYearStartMonth = 7 }, Ct);
         Assert.Equal(HttpStatusCode.BadRequest, again.Status);
@@ -210,6 +213,7 @@ public sealed class PayCalendarTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(("2026-01-01", "2026-01-15", "2026-01-16", "2026-01-31"), (halves[0].GetProperty("startDate").GetString(), halves[0].GetProperty("endDate").GetString(), halves[1].GetProperty("startDate").GetString(), halves[1].GetProperty("endDate").GetString()));
         Assert.Equal("2026-02-28", halves[3].GetProperty("endDate").GetString());
         Assert.Equal(1L, await _h.ScalarAsync<long>("select count(distinct tax_year) from hrm.pay_periods where pay_group_id = $1", Ct, monthly));
+        Assert.Equal(12L, await _h.ScalarAsync<long>("select count(*) from aud.change_log where entity_type = 'hrm.pay_periods' and entity_id in (select id from hrm.pay_periods where pay_group_id = $1)", Ct, monthly));
 
         // The same year again, or a year that would overlap, is refused; the database has the exclusion constraint too.
         Assert.Equal("errors.hrm.pay.periods_exist", (await _h.PostAsync(admin, $"{Groups}/{monthly}/periods/generate", new { taxYear = 2026 }, Ct)).Json.GetProperty("title").GetString());
@@ -539,8 +543,14 @@ public sealed class PayCalendarTests(TenancyFixture fx) : IAsyncLifetime
         var createDenied = await _h.PostAsync(plain, Groups, new { companyId = company, code = Code(), nameI18n = new { en = "x" }, frequency = "monthly", taxYearStartMonth = 7, approvalThreshold = 5m }, Ct);
         Assert.Equal(HttpStatusCode.BadRequest, createDenied.Status);
 
-        // The audit history of the group does not show the amount to someone without the field class either.
-        Assert.DoesNotContain("7500000", (await _h.GetAsync(plain, $"/api/aud/history?entityType=hrm.pay_groups&entityId={id}", Ct)).Body, StringComparison.Ordinal);
+        // The audit history of the group shows who changed what, but not the amount, to someone without the field class; with it, the amount shows.
+        var auditor = await _h.UserAsync(Ct);
+        await _h.AssignAsync(auditor, await _h.RoleAsync(Ct, ["hrm.pay_groups.read", "aud.history.view"], scopes, [("hrm.pay_groups", "class:salary", "hidden")]), null, Today.AddDays(-1), null, Ct);
+        var history = await _h.GetAsync(auditor, $"/api/aud/history/hrm.pay_groups/{id}", Ct);
+        Assert.True(history.Status == HttpStatusCode.OK, history.Body);
+        Assert.Contains("code", history.Body, StringComparison.OrdinalIgnoreCase); // the log is there
+        Assert.DoesNotContain("7500000", history.Body, StringComparison.Ordinal);
+        Assert.Contains("\"hidden\"", history.Body, StringComparison.Ordinal); // the field is named as hidden, with no value
     }
 
     [Fact]
