@@ -1434,5 +1434,6 @@
   "nav.optionLists": "Option lists",
   "nav.customFields": "Custom fields",
   "nav.numbering": "Numbering",
-  "nav.approvalRoutes": "Approval routes"
+  "nav.approvalRoutes": "Approval routes",
+  "nav.imports": "Imports"
 }

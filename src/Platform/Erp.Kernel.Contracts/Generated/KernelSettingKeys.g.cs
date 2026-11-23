@@ -134,6 +134,12 @@ public static class KernelSettingKeys
     /// <summary>Most megabytes one uploaded file may have.</summary>
     public const string DocUploadMaxMb = "doc.upload.max_mb";
 
+    /// <summary>Days after an import during which a batch that only added records can be rolled back.</summary>
+    public const string ItgImportRollbackDays = "itg.import.rollback_days";
+
+    /// <summary>Most data rows one import file may hold.</summary>
+    public const string ItgImportMaxRows = "itg.import.max_rows";
+
     /// <summary>The kinds of file that may be attached.</summary>
     public const string DocUploadAllowedTypes = "doc.upload.allowed_types";
 

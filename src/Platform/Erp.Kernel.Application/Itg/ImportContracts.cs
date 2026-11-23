@@ -5,7 +5,7 @@ namespace Erp.Kernel.Application.Itg;
 /// <summary>
 /// An import type a module declares in <c>Access/imports.json</c> (slice S1.16a, D-10, CR-072): the table it writes, the
 /// columns of its template, how an existing record is found ("create or update"), the permission it needs and the writer
-/// that applies a row. A writer is the generated one of the table (the same code as manual entry) unless the type names its
+/// that applies a row. <see cref="PostCommit"/> names a step done after a chunk is saved (<c>invite</c>: the invitation e-mail of a new user). A writer is the generated one of the table (the same code as manual entry) unless the type names its
 /// own <see cref="Writer"/> (org units: the unit and its place in the hierarchy; users: the invitation).
 /// </summary>
 public sealed record ImportTypeDefinition(
@@ -17,7 +17,8 @@ public sealed record ImportTypeDefinition(
     IReadOnlyList<string> KeyColumns,
     IReadOnlyList<ImportColumnDefinition> Columns,
     string? Writer,
-    bool CanUpdate);
+    bool CanUpdate,
+    string? PostCommit = null);
 
 /// <summary>
 /// One column of an import type. <see cref="Type"/> is text, number, date, bool or option. <see cref="Lookup"/> names the
@@ -34,8 +35,8 @@ public sealed record ImportColumnDefinition(
     IReadOnlyList<string>? Options,
     string? Example);
 
-/// <summary>A row as the engine hands it to a writer: field values by the write request's property names (camelCase), after mapping, transformation and lookups.</summary>
-public sealed record ImportRow(int RowNumber, JsonObject Values);
+/// <summary>A row as the engine hands it to a writer (<see cref="DryRun"/>: the validation run, whose transaction is rolled back): field values by the write request's property names (camelCase), after mapping, transformation and lookups.</summary>
+public sealed record ImportRow(int RowNumber, JsonObject Values, bool DryRun = false);
 
 /// <summary>A problem found in a row: the field (null for the whole row) and a localization key or plain message.</summary>
 public sealed record ImportRowError(string? Field, string Message);
@@ -60,6 +61,6 @@ public interface IImportRowWriter
     /// <summary>The import type code this writer serves, or the table name for the generated writer of a table.</summary>
     string Code { get; }
 
-    /// <param name="existingId">The record the row's key found, when the template allows updates; null creates.</param>
+    /// <summary>Applies the row. <paramref name="existingId"/> is the record the row's key found when the template allows updates; null creates. A row marked <see cref="ImportRow.DryRun"/> must have no effect outside the open transaction (no e-mails, no other connections).</summary>
     Task<ImportRowOutcome> WriteAsync(ImportRow row, Guid? existingId, CancellationToken cancellationToken);
 }

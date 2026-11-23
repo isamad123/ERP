@@ -29,6 +29,7 @@
     <EmbeddedResource Include="ControlPlane/Provisioning/baseline-seed.json" LogicalName="Erp.Kernel.Infrastructure.ControlPlane.Provisioning.baseline-seed.json" />
     <EmbeddedResource Include="Settings/country-defaults.json" LogicalName="Erp.Kernel.Infrastructure.Settings.country-defaults.json" />
     <EmbeddedResource Include="Access/settings.g.json" LogicalName="Erp.Kernel.Infrastructure.Access.settings.g.json" />
+    <EmbeddedResource Include="Access/imports.json" LogicalName="Erp.Kernel.Infrastructure.Access.imports.json" />
     <EmbeddedResource Include="Access/jobs.json" LogicalName="Erp.Kernel.Infrastructure.Access.jobs.json" />
     <EmbeddedResource Include="Access/notification-events.json" LogicalName="Erp.Kernel.Infrastructure.Access.notification-events.json" />
     <!-- Slice S1.11b2: the fixed words of notification e-mails (button, footer) come from the notification texts. -->

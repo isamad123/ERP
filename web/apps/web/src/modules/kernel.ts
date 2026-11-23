@@ -2,7 +2,7 @@
 // catalogue (S1.11b1: /settings/licence, /admin/jobs/runs, /admin/jobs/health, /admin/audit, /admin/documents/quarantine,
 // /documents/{id}); screens of later slices open "not available yet" until their slice adds the component.
 import { lazy } from 'react';
-import { Activity, BarChart3, Bell, Building2, CalendarDays, ClipboardCheck, Download, EyeOff, FileText, Filter, Flag, House, ImagePlus, KeyRound, Landmark, MapPin, Network, ScrollText, Settings, ShieldAlert, ShieldCheck, UserCog, Users, UsersRound, Workflow } from 'lucide-react';
+import { Activity, BarChart3, Bell, Building2, CalendarDays, ClipboardCheck, Download, EyeOff, FileText, Filter, Flag, House, ImagePlus, KeyRound, Landmark, MapPin, Network, ScrollText, Settings, ShieldAlert, ShieldCheck, Upload, UserCog, Users, UsersRound, Workflow } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
 import { HomePage } from '../pages/home';
 
@@ -37,6 +37,8 @@ const LabelsScreen = lazy(() => import('./admin/labels'));
 const OptionListsScreen = lazy(() => import('./admin/option-lists'));
 const CustomFieldsScreen = lazy(() => import('./admin/custom-fields'));
 // S1.15c: numbering schemes and the approval route editor.
+// S1.16a: the import centre and the template designer.
+const ImportsScreen = lazy(() => import('./admin/imports'));
 const NumberingScreen = lazy(() => import('./admin/numbering'));
 const RoutesScreen = lazy(() => import('./admin/routes'));
 
@@ -74,6 +76,8 @@ export const kernelScreens: ScreenDeclaration[] = [
   // S1.15c (ruling Q1): "Numbering" and "Approval routes" after "Custom fields".
   { id: 'numbering', path: '/settings/numbering', labelKey: 'nav.numbering', icon: ClipboardCheck, group: 'administration', permission: 'cfg.numbering_schemes.read', component: NumberingScreen },
   { id: 'approval-routes', path: '/settings/approval-routes', labelKey: 'nav.approvalRoutes', icon: Workflow, group: 'administration', permission: 'wf.workflow_definitions.read', component: RoutesScreen },
+  // S1.16a (ruling Q1): "Imports" in the Administration group; the template designer is a route of it for people who may design templates.
+  { id: 'imports', path: '/admin/imports/*', labelKey: 'nav.imports', icon: Upload, group: 'administration', permission: 'itg.imports.manage', component: ImportsScreen },
   { id: 'licence', path: '/settings/licence', labelKey: 'nav.licence', icon: KeyRound, group: 'administration', permission: 'cfg.licence.read', allowedWhenLocked: true, comesWith: 'S1.16' },
   { id: 'jobs', path: '/admin/jobs/*', labelKey: 'nav.jobs', icon: Activity, group: 'administration', permission: 'job.runs.read', comesWith: 'S1.16' },
   { id: 'audit', path: '/admin/audit/*', labelKey: 'nav.audit', icon: ScrollText, group: 'administration', permission: 'aud.changes.view', component: AuditScreen },
