@@ -40,7 +40,11 @@ public sealed class BrandingTests(TenancyFixture fx) : IAsyncLifetime
     [Fact]
     public async Task FR_ADM_SEC_08_the_public_branding_has_standard_values_and_only_the_five_fields()
     {
-        var (status, body, headers) = await PublicAsync("/api/kernel/branding");
+        // A customer nobody has branded: the other tests of this class change the shared rig customer's branding, so its values
+        // depend on which tests ran first.
+        var fresh = "bd" + fx.Suffix;
+        await fx.ProvisionAsync(fresh, Ct);
+        var (status, body, headers) = await PublicAsync("/api/kernel/branding", fresh);
         Assert.Equal(HttpStatusCode.OK, status);
         using var doc = JsonDocument.Parse(body);
         var root = doc.RootElement;
@@ -50,7 +54,7 @@ public sealed class BrandingTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal("", root.GetProperty("banner").GetProperty("en").GetString());
         Assert.Contains("max-age=60", headers.CacheControl?.ToString(), StringComparison.Ordinal);
         Assert.Contains("public", headers.CacheControl?.ToString(), StringComparison.Ordinal);
-        Assert.Equal(HttpStatusCode.NotFound, (await PublicAsync("/api/kernel/branding/logo")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await PublicAsync("/api/kernel/branding/logo", fresh)).Status);
     }
 
     [Fact]
@@ -79,11 +83,16 @@ public sealed class BrandingTests(TenancyFixture fx) : IAsyncLifetime
     [Fact]
     public async Task FR_ADM_SEC_08_a_person_without_the_settings_permission_cannot_change_branding_or_upload_the_logo()
     {
+        // The name before the attempt: other tests of this class may already have branded the shared rig customer.
+        string? Name(string body) => JsonDocument.Parse(body).RootElement.GetProperty("productName").GetString();
+        var before = Name((await PublicAsync("/api/kernel/branding")).Body);
         var user = await _rig.UserAsync(Ct, "business_user");
         Assert.Equal(HttpStatusCode.Forbidden, (await SetAsync(user, BrandingKeys.ProductName, "Mine")).Status);
         var upload = await _rig.UploadAsync(user, BrandingKeys.OwnerId, "logo.png", Png, Ct, BrandingKeys.OwnerType);
         Assert.True(upload.Status is HttpStatusCode.Forbidden or HttpStatusCode.NotFound, upload.Text);
-        Assert.Equal("ERP", JsonDocument.Parse((await PublicAsync("/api/kernel/branding")).Body).RootElement.GetProperty("productName").GetString());
+        var after = Name((await PublicAsync("/api/kernel/branding")).Body);
+        Assert.Equal(before, after);
+        Assert.NotEqual("Mine", after);
     }
 
     [Fact]
