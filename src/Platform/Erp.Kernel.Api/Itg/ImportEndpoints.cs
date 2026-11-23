@@ -64,7 +64,7 @@ public static class ImportEndpoints
                 var batch = await s.UploadAsync(form.TemplateId, name, content, ct).ConfigureAwait(false);
                 return Results.Created("/api/itg/imports/batches/" + batch.Id, batch);
             })).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(MaxUploadBytes + FormOverheadBytes), new RequestFormLimitsAttribute { MultipartBodyLengthLimit = MaxUploadBytes + FormOverheadBytes }),
-            "upload", Batches, ImportPermissions.Manage);
+            "create", Batches, ImportPermissions.Manage);
         Tag(g.MapGet("/batches", ([FromQuery] string? type, [FromQuery] string? status, [FromQuery] string? cursor, [FromQuery] int? limit, IImportService s, CancellationToken ct) =>
             RunAsync(async () => Results.Ok(await s.ListAsync(type, status, cursor, limit ?? 0, ct).ConfigureAwait(false)))), "catalog", Batches, ImportPermissions.Manage);
         Tag(g.MapGet("/batches/{id:guid}", (Guid id, IImportService s, CancellationToken ct) => RunAsync(async () => Results.Ok(await s.GetAsync(id, ct).ConfigureAwait(false)))),
