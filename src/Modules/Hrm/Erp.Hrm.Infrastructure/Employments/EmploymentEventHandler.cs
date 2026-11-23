@@ -79,8 +79,7 @@ internal sealed class EmploymentEventHandler(IServiceProvider services, IClock c
             throw new WorkflowException(EmploymentService.ManagerNotCurrent);
         }
 
-        var replacedDate = e.CorrectsEventId is { } corrected ? events.FirstOrDefault(x => x.Id == corrected)?.EffectiveDate : null;
-        var earliest = replacedDate is { } d && d < e.EffectiveDate ? d : e.EffectiveDate;
+        var earliest = EmploymentApplier.EarliestAffected(e.EffectiveDate, e.CorrectsEventId, events);
         var report = await new EmploymentChangeCheck(services.GetServices<Erp.Hrm.Contracts.Employments.IEmploymentChangeImpact>())
             .RunAsync(new Erp.Hrm.Contracts.Employments.EmploymentChange(employment.Id, employment.CompanyId, e.Kind, e.EffectiveDate, earliest, IsTermination: false), today, cancellationToken).ConfigureAwait(false);
         var changes = e.Changes is null ? new System.Text.Json.Nodes.JsonObject() : System.Text.Json.Nodes.JsonNode.Parse(e.Changes.RootElement.GetRawText())!.AsObject();

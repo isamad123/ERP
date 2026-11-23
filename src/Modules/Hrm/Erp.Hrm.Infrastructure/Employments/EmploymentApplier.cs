@@ -376,9 +376,7 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
             return;
         }
 
-        var earliest = e.CorrectsEventId is { } r && events.FirstOrDefault(x => x.Id == r) is { } replaced && replaced.EffectiveDate < e.EffectiveDate
-            ? replaced.EffectiveDate
-            : e.EffectiveDate;
+        var earliest = EarliestAffected(e.EffectiveDate, e.CorrectsEventId, events);
         Raise(EmploymentEvents.EmployeeChanged, employment, now, actor, new
         {
             employmentId = employment.Id,
@@ -389,6 +387,35 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
             effectiveDate = e.EffectiveDate,
             earliestDate = earliest,
         });
+    }
+
+    /// <summary>
+    /// The first day whose results a change may alter (GHR-04): the earliest effective date of the change and of every event its
+    /// correction replaces along the chain (a correction of a correction also removes what the first one replaced; S1.20b review
+    /// follow-up B, CR-076 S1.20b detail r). Used for <c>hrm.employee_changed.earliestDate</c> and for the backdated change check.
+    /// </summary>
+    public static DateOnly EarliestAffected(DateOnly effectiveDate, Guid? correctsEventId, IReadOnlyList<EmploymentEvent> events)
+    {
+        ArgumentNullException.ThrowIfNull(events);
+        var earliest = effectiveDate;
+        var next = correctsEventId;
+        for (var i = 0; next is { } id && i <= events.Count; i++)
+        {
+            var replaced = events.FirstOrDefault(x => x.Id == id);
+            if (replaced is null)
+            {
+                break;
+            }
+
+            if (replaced.EffectiveDate < earliest)
+            {
+                earliest = replaced.EffectiveDate;
+            }
+
+            next = replaced.CorrectsEventId;
+        }
+
+        return earliest;
     }
 
     public static void Stamp<T>(T row, DateTimeOffset now, Guid actor)

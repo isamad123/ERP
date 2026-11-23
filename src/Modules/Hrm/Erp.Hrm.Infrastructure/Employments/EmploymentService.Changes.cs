@@ -288,7 +288,7 @@ internal sealed partial class EmploymentService
         // Data scope and field security of every job-details row the change touches (review S1.20b finding 3): a change carries
         // forward until a later event sets the same field, so it can rewrite later rows too. Each stored row it removes, shortens or
         // changes must be in the caller's records, with the changed fields editable; each row it puts in force must be too.
-        var earliest = target is not null && target.EffectiveDate < date ? target.EffectiveDate : date;
+        var earliest = EmploymentApplier.EarliestAffected(date, target?.Id, events); // along the whole chain (follow-up B)
         var stored = await db.Set<EmploymentAssignment>().AsNoTracking().Where(a => a.EmploymentId == employment.Id).ToListAsync(ct).ConfigureAwait(false);
         var denied = new List<string>();
         foreach (var row in stored)
@@ -340,9 +340,13 @@ internal sealed partial class EmploymentService
         // The backdated change check (GHR-04, ruling Q6, CR-096): asked before saving and kept on the event; never a refusal here.
         var report = await impact.RunAsync(new EmploymentChange(employment.Id, employment.CompanyId, kind!, date, earliest, IsTermination: false), today, ct).ConfigureAwait(false);
         changes["impact"] = JsonSerializer.SerializeToNode(report, JsonSerializerOptions.Web);
-        // A correction waits when its own kind is listed or when the kind it finally replaces is (review S1.20b finding 1).
+        // A correction waits when its own kind is listed or when the kind it finally replaces is (review S1.20b finding 1). A
+        // correction of the start (hire or rehire, never listed) that changes job details waits when any job-change kind is listed,
+        // so the start cannot be used to change a title, grade or unit without the approval those kinds need (follow-up A, FR-XM-32,
+        // CR-076 S1.20b detail r). One that only moves the joining date applies as before.
         var needsApproval = await NeedsApprovalAsync(kind!, employment.CompanyId, ct).ConfigureAwait(false)
-            || (rootKind is not null && await NeedsApprovalAsync(rootKind, employment.CompanyId, ct).ConfigureAwait(false));
+            || (rootKind is not null && await NeedsApprovalAsync(rootKind, employment.CompanyId, ct).ConfigureAwait(false))
+            || (StartsEmployment(rootKind) && delta.Count > 0 && await NeedsApprovalAsync(AssignmentKinds, employment.CompanyId, ct).ConfigureAwait(false));
         if (!save)
         {
             return new PeopleResult(PeopleOutcome.Done, Body: new
@@ -514,10 +518,13 @@ internal sealed partial class EmploymentService
     };
 
     /// <summary>Whether the company's setting lists the kind as needing approval (ruling Q11).</summary>
-    private async Task<bool> NeedsApprovalAsync(string kind, Guid companyId, CancellationToken ct)
+    private Task<bool> NeedsApprovalAsync(string kind, Guid companyId, CancellationToken ct) => NeedsApprovalAsync([kind], companyId, ct);
+
+    /// <summary>Whether the company's setting lists any of the kinds as needing approval.</summary>
+    private async Task<bool> NeedsApprovalAsync(IReadOnlyCollection<string> kinds, Guid companyId, CancellationToken ct)
     {
         var value = (await settings.GetAsync(ApprovalKindsSetting, new SettingContext(companyId, null), ct).ConfigureAwait(false)).Value;
-        return value.ValueKind == JsonValueKind.Array && value.EnumerateArray().Any(v => v.ValueKind == JsonValueKind.String && v.GetString() == kind);
+        return value.ValueKind == JsonValueKind.Array && value.EnumerateArray().Any(v => v.ValueKind == JsonValueKind.String && kinds.Contains(v.GetString()!, StringComparer.Ordinal));
     }
 
     /// <summary>The values the route's conditions may test (document type <c>hrm.employment_event</c> in workflow.json).</summary>

@@ -688,6 +688,73 @@ public sealed class EmploymentServiceTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NotFound, (await _h.GetAsync(user, $"{Employments}/{outside}/as-of", Ct)).Status);
     }
 
+    // ------------------------------------------------------------------ S1.20b review follow-up (CR-076 S1.20b detail r)
+
+    [Fact]
+    public async Task FR_XM_32_followup_A_a_hire_correction_that_changes_job_details_waits_for_approval_when_job_changes_need_it()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var checker = await _h.UserAsync(Ct, null, "hr_admin");
+        var (company, place) = await CompanyAsync(); // default setting: promotion, demotion, transfer and grade change need approval
+        var joining = Today.AddDays(-100);
+        var (id, _, _) = await HireAsync(hr, company, place, Iso(joining));
+        var hire = await _h.ScalarAsync<Guid>("select id from hrm.employment_events where employment_id = $1 and kind = 'hire'", Ct, id);
+
+        // A new title through a correction of the hire waits like a promotion; the requester cannot approve it.
+        var asked = await ChangeAsync(hr, id, new { kind = "data_correction", reasonCode = "entry_error", correctsEventId = hire, effectiveDate = Iso(joining), assignment = new { title = "Manager" }, rowVersion = await VersionAsync(id) });
+        Assert.True(asked.Status == HttpStatusCode.Accepted, asked.Body);
+        Assert.Equal("pending_approval", asked.Text("status"));
+        Assert.Equal("Officer", await TitleOnAsync(hr, id, Today));
+        var task = await _h.ScalarAsync<Guid>("select id from wf.workflow_tasks where instance_id = $1 and status = 'pending' order by created_at limit 1", Ct, asked.Json.GetProperty("instanceId").GetGuid());
+        Assert.NotEqual(HttpStatusCode.OK, (await _h.PostAsync(hr, $"/api/wf/tasks/{task}/approve", new { comment = "mine" }, Ct)).Status);
+        Assert.Equal("Officer", await TitleOnAsync(hr, id, Today));
+        var approved = await _h.PostAsync(checker, $"/api/wf/tasks/{task}/approve", new { comment = "agreed" }, Ct);
+        Assert.True(approved.Status == HttpStatusCode.OK, approved.Body);
+        Assert.Equal("Manager", await TitleOnAsync(hr, id, joining));
+
+        // A correction of the hire that only moves the joining date applies at once, as before.
+        var (other, _, _) = await HireAsync(hr, company, place, Iso(joining));
+        var otherHire = await _h.ScalarAsync<Guid>("select id from hrm.employment_events where employment_id = $1 and kind = 'hire'", Ct, other);
+        var moved = await ChangeAsync(hr, other, new { kind = "data_correction", reasonCode = "entry_error", correctsEventId = otherHire, effectiveDate = Iso(joining.AddDays(-5)), rowVersion = await VersionAsync(other) });
+        Assert.True(moved.Status == HttpStatusCode.Created, moved.Body);
+        Assert.Equal("effective", moved.Text("status"));
+        Assert.Equal(joining.AddDays(-5), await _h.ScalarAsync<DateOnly>("select joining_date from hrm.employments where id = $1", Ct, other));
+
+        // With no job-change kind listed, the job-details correction of the hire applies at once.
+        var (free, freePlace) = await CompanyAsync();
+        await ApprovalKindsAsync(free, "confirmation");
+        var (third, _, _) = await HireAsync(hr, free, freePlace, Iso(joining));
+        var thirdHire = await _h.ScalarAsync<Guid>("select id from hrm.employment_events where employment_id = $1 and kind = 'hire'", Ct, third);
+        var direct = await ChangeAsync(hr, third, new { kind = "data_correction", reasonCode = "entry_error", correctsEventId = thirdHire, effectiveDate = Iso(joining), assignment = new { title = "Manager" }, rowVersion = await VersionAsync(third) });
+        Assert.True(direct.Status == HttpStatusCode.Created, direct.Body);
+    }
+
+    [Fact]
+    public async Task GHR_04_followup_B_a_correction_of_a_correction_announces_the_earliest_date_of_the_whole_replaced_chain()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var (company, place) = await CompanyAsync();
+        await ApprovalKindsAsync(company);
+        var (id, _, _) = await HireAsync(hr, company, place, Iso(Today.AddDays(-400)));
+
+        // Promotion E from 30 days ago; C1 moves it 30 days ahead (approved, nothing raised); C2 corrects C1 to 10 days ago.
+        var e = await ChangeAsync(hr, id, new { kind = "promotion", reasonCode = "merit", effectiveDate = Iso(Today.AddDays(-30)), assignment = new { title = "Manager" }, rowVersion = await VersionAsync(id) });
+        Assert.True(e.Status == HttpStatusCode.Created, e.Body);
+        var c1 = await ChangeAsync(hr, id, new { kind = "data_correction", reasonCode = "entry_error", correctsEventId = e.Json.GetProperty("eventId").GetGuid(), effectiveDate = Iso(Today.AddDays(30)), rowVersion = await VersionAsync(id) });
+        Assert.True(c1.Status == HttpStatusCode.Created, c1.Body);
+        Assert.Equal("approved", c1.Text("status"));
+        var c2 = await ChangeAsync(hr, id, new { kind = "data_correction", reasonCode = "entry_error", correctsEventId = c1.Json.GetProperty("eventId").GetGuid(), effectiveDate = Iso(Today.AddDays(-10)), rowVersion = await VersionAsync(id) });
+        Assert.True(c2.Status == HttpStatusCode.Created, c2.Body);
+        Assert.Equal("effective", c2.Text("status"));
+
+        // Results change from E's date, 30 days ago (E is removed): later modules recalculate from there, not from 10 days ago.
+        var payload = await _h.ScalarAsync<string>("select payload->>'earliestDate' from hrm.outbox_messages where event_type = 'hrm.employee_changed' and payload->>'eventId' = $1", Ct, c2.Json.GetProperty("eventId").GetGuid().ToString());
+        Assert.Equal(Iso(Today.AddDays(-30)), payload);
+        Assert.Equal(Iso(Today.AddDays(-30)), c2.Json.GetProperty("impact").GetProperty("earliestDate").GetString());
+        Assert.Equal("Officer", await TitleOnAsync(hr, id, Today.AddDays(-11)));
+        Assert.Equal("Manager", await TitleOnAsync(hr, id, Today.AddDays(-10)));
+    }
+
     // ------------------------------------------------------------------ database rules
 
     [Fact]
