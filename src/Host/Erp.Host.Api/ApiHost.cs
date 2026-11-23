@@ -30,6 +30,7 @@ using Erp.Kernel.Api.Jobs;
 using Erp.Kernel.Api.Documents;
 using Erp.Kernel.Api.Notifications;
 using Erp.Kernel.Infrastructure.Documents;
+using Erp.Kernel.Api.Drafts;
 using Erp.Kernel.Api.Views;
 using Erp.Kernel.Api.Workflow;
 using Erp.Kernel.Infrastructure.Jobs;
@@ -158,6 +159,7 @@ public static class ApiHost
         services.AddScoped<ISessionContextService, SessionContextService>();
         // Saved list views and label overrides of the web lists and forms (S1.12c, S1.12 rulings Q11 and Q12).
         services.AddScoped<Erp.Kernel.Contracts.Views.ISavedViewService, Erp.Kernel.Infrastructure.Views.SavedViewService>();
+        services.AddScoped<Erp.Kernel.Contracts.Drafts.IFormDraftService, Erp.Kernel.Infrastructure.Drafts.FormDraftService>(); // S1.21a
         services.AddScoped<Erp.Kernel.Contracts.Views.ILabelOverrideService, Erp.Kernel.Infrastructure.Views.LabelOverrideService>();
         // Labels, option lists and custom fields (S1.15b): the services behind the editors and the check of custom values on every write.
         services.AddScoped<Erp.Kernel.Contracts.Metadata.ILabelAdministration, Erp.Kernel.Infrastructure.Metadata.LabelAdministration>();
@@ -243,6 +245,7 @@ public static class ApiHost
         api.MapLicenceEndpoints();
         api.MapSessionContextEndpoints();
         api.MapViewEndpoints();
+        api.MapDraftEndpoints();
         api.MapMetadataEndpoints();
         api.MapWorkflowEndpoints();
         api.MapJobEndpoints();

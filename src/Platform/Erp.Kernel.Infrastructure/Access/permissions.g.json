@@ -15,6 +15,12 @@
       "sensitive": false
     },
     {
+      "code": "cfg.form_drafts.read",
+      "module": "cfg",
+      "descriptionKey": "permissions.cfg.form_drafts.read",
+      "sensitive": true
+    },
+    {
       "code": "cfg.installed_packs.read",
       "module": "cfg",
       "descriptionKey": "permissions.cfg.installed_packs.read",

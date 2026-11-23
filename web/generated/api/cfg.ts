@@ -74,6 +74,36 @@ export const featureFlagOverrides =
     get: (id: string) => request<FeatureFlagOverride>('GET', `/api/cfg/feature-flag-overrides/${id}`),
 };
 
+/** cfg.form_drafts: Autosaved drafts of long forms (the hire form first), kept for the person who started them and removed after cfg.drafts.keep_days. Field rules (S1.06) may leave a field out or mask it as text. */
+export interface FormDraft
+{
+    id: string;
+    userId: string;
+    formKey: string;
+    recordId: string | null;
+    expiresAt: string;
+    createdAt: string;
+    createdBy: string;
+    updatedAt: string;
+    updatedBy: string;
+    rowVersion: number;
+}
+
+export interface FormDraftListQuery
+{
+    after?: string;
+    limit?: number;
+    userId?: string;
+    /** formKey, expiresAt; a leading minus sorts descending. */
+    sort?: 'formKey' | '-formKey' | 'expiresAt' | '-expiresAt';
+}
+
+export const formDrafts =
+{
+    list: (query: FormDraftListQuery = {}) => request<PagedResult<FormDraft>>('GET', '/api/cfg/form-drafts', { query }),
+    get: (id: string) => request<FormDraft>('GET', `/api/cfg/form-drafts/${id}`),
+};
+
 /** cfg.installed_packs: InstalledPack. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface InstalledPack
 {
