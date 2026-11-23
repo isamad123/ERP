@@ -142,6 +142,14 @@ public sealed class PayDetailsTests(TenancyFixture fx) : IAsyncLifetime
         var request = held.Json.GetProperty("requestId").GetGuid();
         Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.employee_bank_accounts where employment_id = $1", Ct, employment));
 
+        // R-233 (S1.21a): the account list says that a change waits, without its content, and whose it is.
+        var waiting = await _h.GetAsync(checker, $"{Employments}/{employment}/bank-accounts", Ct);
+        var wait = Assert.Single(waiting.Json.GetProperty("pending").EnumerateArray());
+        Assert.Equal(request, wait.GetProperty("requestId").GetGuid());
+        Assert.False(wait.GetProperty("mine").GetBoolean());
+        Assert.True((await _h.GetAsync(maker, $"{Employments}/{employment}/bank-accounts", Ct)).Json.GetProperty("pending")[0].GetProperty("mine").GetBoolean());
+        Assert.DoesNotContain(ValidIban[4..], waiting.Body, StringComparison.Ordinal);
+
         // The requester cannot approve; the second HR administrator sees it described (masked IBAN, never the full number).
         var own = await ApproveAsync(maker, request);
         Assert.Equal(HttpStatusCode.Forbidden, own.Status);
@@ -160,6 +168,7 @@ public sealed class PayDetailsTests(TenancyFixture fx) : IAsyncLifetime
         var row = Assert.Single(rows);
         Assert.Equal("****" + ValidIban[^4..], row.GetProperty("iban").GetString());
         Assert.Equal("remainder", row.GetProperty("splitKind").GetString());
+        Assert.Empty((await _h.GetAsync(checker, $"{Employments}/{employment}/bank-accounts", Ct)).Json.GetProperty("pending").EnumerateArray()); // decided: nothing waits any more
 
         // Stored encrypted with a blind index; the plain IBAN is nowhere in the row; the change log names the approver (GHR-09).
         await using var owner = await _h.OwnerAsync(null, Ct);

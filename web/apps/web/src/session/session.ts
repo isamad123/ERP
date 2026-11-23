@@ -6,7 +6,7 @@
 //   idle timeout, counted from the last refresh, still ends forgotten sessions.
 // - Two minutes before the idle end with no activity, the warning offers "Stay signed in"; at the idle end the person
 //   is sent to sign-in and comes back to the same screen afterwards.
-// - Sign-out ends the session on the server and in every tab.
+// - Sign-out ends the session on the server and in every tab; if the server cannot confirm it, the person stays signed in (R-071).
 import type { AuthAnswer } from '../api/identity';
 import { systemClock, type Clock } from './clock';
 
@@ -16,7 +16,11 @@ export interface SessionSnapshot {
   status: SessionStatus;
   /** Milliseconds left before the idle end while the warning is shown, else null. */
   warningRemainingMs: number | null;
+  /** True after a sign-out the server did not confirm (R-071): the person is still signed in and is told so. */
+  signOutFailed: boolean;
 }
+
+export type SignOutResult = 'ended' | 'failed';
 
 /** What the manager needs from the browser and the API; the tests give fakes. */
 export interface SessionEnvironment {
@@ -61,7 +65,8 @@ export class SessionManager {
   private timer: number | null = null;
   private refreshing: Promise<boolean> | null = null;
   private readonly listeners = new Set<() => void>();
-  private snapshot: SessionSnapshot = { status: 'unknown', warningRemainingMs: null };
+  private signOutFailed = false;
+  private snapshot: SessionSnapshot = { status: 'unknown', warningRemainingMs: null, signOutFailed: false };
   private unlisten: (() => void) | null = null;
 
   constructor(private readonly env: SessionEnvironment) {}
@@ -113,14 +118,29 @@ export class SessionManager {
     return this.refreshNow();
   }
 
-  /** Ends the session on the server and in every tab; the local state ends even if the server cannot be reached. */
-  async signOut(): Promise<void> {
+  /**
+   * Ends the session on the server and in every tab (R-071, FR-KRN-IAM-04). The session ends here only when the server
+   * confirmed (204) or said the session is already gone (401). On any other failure (network, 5xx, busy after the retry)
+   * the server session and its cookie remain, so the person stays signed in and is told that sign-out did not work.
+   */
+  async signOut(): Promise<SignOutResult> {
+    this.setSignOutFailed(false);
     const token = this.access;
     try {
       if (token) await this.env.signOut(token);
-    } finally {
-      this.end('signedOut', true);
+    } catch (error) {
+      if ((error as { status?: unknown } | null)?.status !== 401) {
+        this.setSignOutFailed(true);
+        return 'failed';
+      }
     }
+    this.end('signedOut', true);
+    return 'ended';
+  }
+
+  /** The person leaves the failure message (they stay signed in). */
+  dismissSignOutFailure(): void {
+    this.setSignOutFailed(false);
   }
 
   /**
@@ -266,10 +286,16 @@ export class SessionManager {
     this.expiresAt = 0;
     this.serverExpiresAt = 0;
     this.warningRemainingMs = null;
+    this.signOutFailed = false;
     if (this.timer !== null) this.env.clearTimer(this.timer);
     this.timer = null;
     if (tellOthers) this.env.channel?.post({ type: 'ended', reason });
     this.setStatus(reason);
+  }
+
+  private setSignOutFailed(value: boolean): void {
+    this.signOutFailed = value;
+    this.publish();
   }
 
   private setStatus(status: SessionStatus): void {
@@ -278,8 +304,8 @@ export class SessionManager {
   }
 
   private publish(): void {
-    if (this.snapshot.status === this.status && this.snapshot.warningRemainingMs === this.warningRemainingMs) return;
-    this.snapshot = { status: this.status, warningRemainingMs: this.warningRemainingMs };
+    if (this.snapshot.status === this.status && this.snapshot.warningRemainingMs === this.warningRemainingMs && this.snapshot.signOutFailed === this.signOutFailed) return;
+    this.snapshot = { status: this.status, warningRemainingMs: this.warningRemainingMs, signOutFailed: this.signOutFailed };
     this.listeners.forEach((listener) => listener());
   }
 }

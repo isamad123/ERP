@@ -182,4 +182,22 @@ public sealed class MaintenanceJobTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from wf.outbox_messages where id = $1", Ct, null, oldEvent));
         Assert.Equal(2, await _rig.ScalarAsync<long>("select count(*) from wf.outbox_messages where id = any($1)", Ct, null, new[] { newEvent, waiting })); // an event never delivered is never removed
     }
+
+    [Fact]
+    [Trait("Requirement", "FR-ADM-UXA-05")]
+    public async Task S121a_FR_ADM_UXA_05_the_clean_up_job_removes_form_drafts_past_their_keeping_time_and_keeps_the_rest()
+    {
+        var h = await Access.AccessHarness.ForAsync(_rig.Fixture);
+        var user = await h.UserAsync(Ct, _rig.Code, "tenant_admin");
+        var (expired, live) = (Guid.CreateVersion7(), Guid.CreateVersion7());
+        await _rig.ExecAsync("""
+            insert into cfg.form_drafts (id, user_id, form_key, record_id, data, expires_at, created_at, created_by, updated_at, updated_by)
+            values ($1, $3, 'hrm.hire', null, '\x00', $4, $4, $3, $4, $3), ($2, $3, 'hrm.hire', $2, '\x00', $5, $4, $3, $4, $3)
+            """, Ct, null, expired, live, user, _rig.Clock.UtcNow.AddDays(-1), _rig.Clock.UtcNow.AddDays(5));
+
+        var run = await RunAsync(_rig, KernelJobs.Purge);
+        Assert.True(await _rig.StatusAsync(run, Ct) == "succeeded", await _rig.DumpAsync(Ct));
+        Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from cfg.form_drafts where id = $1", Ct, null, expired));
+        Assert.Equal(1, await _rig.ScalarAsync<long>("select count(*) from cfg.form_drafts where id = $1", Ct, null, live));
+    }
 }
