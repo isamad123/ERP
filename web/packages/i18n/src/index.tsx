@@ -23,7 +23,8 @@ export type UiLocale = Locale | 'pseudo';
 type Catalogue = Record<string, string>;
 
 const WEB: Record<Locale, Catalogue> = { en: strip(en), ur: strip(ur) };
-const SERVER: Record<Locale, Catalogue> = { en: serverEn, ur: serverUr };
+// Platform server texts ship with the shell; the business modules' texts arrive as their own chunk right after start-up (below).
+const SERVER: Record<Locale, Catalogue> = { en: { ...serverEn }, ur: { ...serverUr } };
 
 function strip(catalogue: Record<string, string>): Catalogue {
   return Object.fromEntries(Object.entries(catalogue).filter(([key]) => !key.startsWith('_')));
@@ -43,6 +44,19 @@ export function registerMessages(extra: Record<Locale, Record<string, string>>):
 
 const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
 const version = () => registryVersion;
+
+/**
+ * The business modules' server texts (S1.20c: HR answers), loaded as their own chunk as soon as the application starts, so
+ * module growth never weighs on the shell's script budget (spec 13 FR-UX-PRF-01, R-213). Mounted roots pick them up at once;
+ * a module answer can only come after the person acts, by which time they are here. `serverTextsReady` resolves once loaded.
+ */
+export const serverTextsReady: Promise<void> = Promise.all([import('./generated/modules.en.json'), import('./generated/modules.ur.json')])
+  .then(([moduleEn, moduleUr]) => {
+    Object.assign(SERVER.en, moduleEn.default);
+    Object.assign(SERVER.ur, moduleUr.default);
+    registryVersion += 1;
+    for (const listener of listeners) listener();
+  });
 
 export function webMessages(locale: UiLocale, overrides: Readonly<Record<string, string>> = NO_OVERRIDES): Catalogue {
   const base = locale === 'pseudo' ? pseudoCatalogue(WEB.en) : WEB[locale];

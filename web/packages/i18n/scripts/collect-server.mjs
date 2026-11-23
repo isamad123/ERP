@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Collects the server's text catalogues at build time (slice S1.12a, Build item 4): every
-// src/**/Localization/<name>.<lang>.json is merged into src/generated/server.<lang>.json, so problem answers
+// src/**/Localization/<name>.<lang>.json is merged into src/generated/server.<lang>.json (platform) and modules.<lang>.json
+// (business modules, S1.20c), so problem answers
 // (RFC 9457, the key in `title`) show in the person's language. A key defined twice with different texts fails.
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -24,8 +25,13 @@ function walk(dir, found = []) {
 const files = walk(join(repo, 'src'));
 mkdirSync(out, { recursive: true });
 let failed = false;
+// The platform's texts ship with the shell (sign-in, approvals, every kernel answer); the business modules' texts (src/Modules,
+// HR from S1.20c on) go to modules.<lang>.json, loaded as their own chunk right after start-up, so module growth never weighs on the
+// shell's script budget (spec 13 FR-UX-PRF-01; R-213 for screen texts, S1.20c for server texts).
+const isModule = (file) => file.includes(`${join('src', 'Modules')}`);
 for (const lang of LANGUAGES) {
   const merged = {};
+  const owner = {};
   for (const file of files.filter((f) => f.endsWith(`.${lang}.json`)).sort()) {
     for (const [key, text] of Object.entries(JSON.parse(readFileSync(file, 'utf8')))) {
       if (typeof text !== 'string') continue;
@@ -34,10 +40,13 @@ for (const lang of LANGUAGES) {
         failed = true;
       }
       merged[key] = text;
+      owner[key] = owner[key] === false ? false : isModule(file);
     }
   }
-  const sorted = Object.fromEntries(Object.entries(merged).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
-  writeFileSync(join(out, `server.${lang}.json`), JSON.stringify(sorted, null, 1) + '\n');
-  console.log(`server.${lang}.json: ${Object.keys(sorted).length} texts from ${files.filter((f) => f.endsWith(`.${lang}.json`)).length} catalogues`);
+  const sort = (keys) => Object.fromEntries(keys.sort().map((k) => [k, merged[k]]));
+  const all = Object.keys(merged);
+  writeFileSync(join(out, `server.${lang}.json`), JSON.stringify(sort(all.filter((k) => !owner[k])), null, 1) + '\n');
+  writeFileSync(join(out, `modules.${lang}.json`), JSON.stringify(sort(all.filter((k) => owner[k])), null, 1) + '\n');
+  console.log(`server.${lang}.json: ${all.length} texts from ${files.filter((f) => f.endsWith(`.${lang}.json`)).length} catalogues (${all.filter((k) => owner[k]).length} of modules, loaded after start-up)`);
 }
 process.exit(failed ? 1 : 0);

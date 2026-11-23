@@ -21,6 +21,9 @@ public interface IProbationRecordRepository : global::Erp.BuildingBlocks.Applica
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ProbationRecord>> ListAsync(ProbationRecordFilter filter, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
 
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ProbationRecord>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken);
+
+    /// <summary>Rows matching (employment_id); at most PageRequest.MaxLimit rows.</summary>
+    global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.ProbationRecord>> FindByEmploymentIdAsync(global::System.Guid employmentId, global::System.Threading.CancellationToken cancellationToken);
 }
 
 /// <summary>How data scopes locate rows of hrm.probation_records and which fields its API shows (slice S1.06, CR-018).</summary>

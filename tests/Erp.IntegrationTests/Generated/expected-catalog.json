@@ -14362,12 +14362,10 @@
         {
           "name": "fk_employments_previous_employment_id",
           "columns": [
-            "company_id",
             "previous_employment_id"
           ],
           "target": "hrm.employments",
           "target_columns": [
-            "company_id",
             "id"
           ]
         }
@@ -14375,7 +14373,8 @@
       "indexes": [
         "ix_employments_person_id",
         "ix_employments_company_id_status",
-        "ix_employments_company_id_previous_employment_id"
+        "ix_employments_company_id_previous_employment_id",
+        "ix_employments_previous_employment_id"
       ],
       "triggers": [],
       "append_only_updatable": [],
@@ -27939,7 +27938,8 @@
             "in_progress",
             "extended",
             "confirmed",
-            "not_confirmed"
+            "not_confirmed",
+            "transferred"
           ]
         },
         {
@@ -27993,7 +27993,9 @@
           "enum_values": []
         }
       ],
-      "uniques": [],
+      "uniques": [
+        "uq_probation_records_employment_id"
+      ],
       "checks": [
         "ck_probation_records_status"
       ],

@@ -2119,7 +2119,7 @@ Constraints:
 - `ck_employments_status` CHECK ((status = ANY (ARRAY['pre_joining'::text, 'active'::text, 'on_notice'::text, 'separated'::text, 'cancelled'::text])))
 - `fk_employments_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_employments_person_id` FOREIGN KEY (person_id) REFERENCES hrm.persons(id)
-- `fk_employments_previous_employment_id` FOREIGN KEY (company_id, previous_employment_id) REFERENCES hrm.employments(company_id, id)
+- `fk_employments_previous_employment_id` FOREIGN KEY (previous_employment_id) REFERENCES hrm.employments(id)
 - `pk_employments` PRIMARY KEY (id)
 - `uq_employments_company_id_id` UNIQUE (company_id, id)
 
@@ -2128,6 +2128,7 @@ Indexes:
 - `ix_employments_company_id_previous_employment_id` CREATE INDEX ix_employments_company_id_previous_employment_id ON hrm.employments USING btree (company_id, previous_employment_id)
 - `ix_employments_company_id_status` CREATE INDEX ix_employments_company_id_status ON hrm.employments USING btree (company_id, status)
 - `ix_employments_person_id` CREATE INDEX ix_employments_person_id ON hrm.employments USING btree (person_id)
+- `ix_employments_previous_employment_id` CREATE INDEX ix_employments_previous_employment_id ON hrm.employments USING btree (previous_employment_id)
 - `uq_employments_company_id_employee_no` CREATE UNIQUE INDEX uq_employments_company_id_employee_no ON hrm.employments USING btree (company_id, lower(employee_no))
 - `uq_employments_company_id_user_ref` CREATE UNIQUE INDEX uq_employments_company_id_user_ref ON hrm.employments USING btree (company_id, user_ref) NULLS NOT DISTINCT WHERE ((user_ref IS NOT NULL) AND (status = ANY (ARRAY['pre_joining'::text, 'active'::text, 'on_notice'::text])))
 - `uq_employments_person_id` CREATE UNIQUE INDEX uq_employments_person_id ON hrm.employments USING btree (person_id) WHERE (is_primary AND (status = ANY (ARRAY['pre_joining'::text, 'active'::text, 'on_notice'::text])))
@@ -4405,7 +4406,7 @@ Requirements: EMP-10, ONB-12. Source: hrm-people.yaml.
 
 Constraints:
 
-- `ck_probation_records_status` CHECK ((status = ANY (ARRAY['in_progress'::text, 'extended'::text, 'confirmed'::text, 'not_confirmed'::text])))
+- `ck_probation_records_status` CHECK ((status = ANY (ARRAY['in_progress'::text, 'extended'::text, 'confirmed'::text, 'not_confirmed'::text, 'transferred'::text])))
 - `fk_probation_records_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_probation_records_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
 - `fk_probation_records_review_form_response_id` FOREIGN KEY (company_id, review_form_response_id) REFERENCES hrm.form_responses(company_id, id)
@@ -4416,6 +4417,7 @@ Indexes:
 - `ix_probation_records_company_id` CREATE INDEX ix_probation_records_company_id ON hrm.probation_records USING btree (company_id)
 - `ix_probation_records_company_id_employment_id` CREATE INDEX ix_probation_records_company_id_employment_id ON hrm.probation_records USING btree (company_id, employment_id)
 - `ix_probation_records_company_id_review_form_response_id` CREATE INDEX ix_probation_records_company_id_review_form_response_id ON hrm.probation_records USING btree (company_id, review_form_response_id)
+- `uq_probation_records_employment_id` CREATE UNIQUE INDEX uq_probation_records_employment_id ON hrm.probation_records USING btree (employment_id) WHERE (status = ANY (ARRAY['in_progress'::text, 'extended'::text]))
 
 ### hrm.provident_fund_accounts
 

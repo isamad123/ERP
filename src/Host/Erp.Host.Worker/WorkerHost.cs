@@ -88,6 +88,7 @@ public static class WorkerHost
         // employee counters and the daily job hrm.employment_events_due.
         services.AddHrmEmployment().AddHrmEmploymentWorker();
         services.AddSingleton<Erp.Kernel.Contracts.Workflow.IWorkflowDocumentTypeSource>(new WorkflowManifestSource(EmploymentServices.WorkflowManifest));
+        services.AddSingleton(new NotificationManifestSource(EmploymentServices.NotificationManifest)); // S1.20c reminders
         services.AddKernelWorkflow();
 
         // Notifications (S1.11b1): the consumer that turns events into in-app items; modules register their catalogue sources here.

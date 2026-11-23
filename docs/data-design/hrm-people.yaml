@@ -188,6 +188,9 @@
   unique: [[company_id, lower(employee_no)], [person_id, "where is_primary and status in ('pre_joining','active','on_notice')"]]
   # S1.20b (CR-076 S1.20b detail; slice S1.20 ruling Q8): one current employment per user per company (FR-HRM-EMP-17).
   uniques_added_in: {S1.20b: [[company_id, user_ref, "where user_ref is not null and status in ('pre_joining','active','on_notice')"]]}
+  # S1.20c (CR-076 S1.20c detail): previous_employment_id links a transfer to the employment it continues in another company (FR-XM-30),
+  # so its foreign key is the plain one, not the same-company pair of README rule 12 the first migration made.
+  fks_replaced_in: {S1.20c: [previous_employment_id]}
   indexes: [[person_id], [company_id, status]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: id, person: person_id, attributes: [status, employee_type]}
@@ -271,11 +274,15 @@
   numbering: {column: contract_no, type: hrm.contract_no, assign: create, default: "CON-{yyyy}-{seq:5}", reset: yearly, date: start_date}
   # S1.08 review finding 1 (CR-058, closes R-016): one contract number per company, like the other numbered tables.
   uniques_added_in: {S1.08-r1: [[company_id, contract_no]]}
+  # S1.20c (CR-076 S1.20c detail; slice S1.20 Build item 13, R-113): generated writes closed; the HR contract service writes
+  # (number, dates, renewal as a new linked contract). `terms` holds the contract's wording (hours, notice, place of work), never
+  # pay: pay is the compensation of S1.34 (GHR-06).
+  api_actions: [read]
   reqs: [EMP-09]
 
 - table: hrm.probation_records
   traits: [std, co]
-  status: [in_progress, extended, confirmed, not_confirmed]
+  status: [in_progress, extended, confirmed, not_confirmed, transferred]
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
     - [start_date, date, req]
@@ -283,8 +290,16 @@
     - [extended_to, date, opt]
     - [review_form_response_id, uuid, opt, fk hrm.form_responses]
     - [decision_date, date, opt]
+  # S1.20c (CR-076 S1.20c detail; slice S1.20 Build item 13, ruling Q10): at most one open probation per employment.
+  uniques_added_in: {S1.20c: [[employment_id, "where status in ('in_progress','extended')"]]}
+  # S1.20c review finding 2 (CR-076 S1.20c detail): when a transfer takes effect, the open probation of the first employment is
+  # closed as transferred (it continues in the linked employment when service is kept).
+  enum_added_in: {S1.20c: {status: [transferred]}}
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.20c (CR-076 S1.20c detail; R-113): generated writes closed; the HR probation service writes (opened at hire, extended,
+  # confirmed through a confirmation event, not confirmed).
+  api_actions: [read]
   reqs: [EMP-10, ONB-12]
 
 - table: hrm.employee_bank_accounts
