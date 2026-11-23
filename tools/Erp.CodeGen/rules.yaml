@@ -1382,7 +1382,8 @@ functions:
           if exists (
               select 1 from hrm.policy_assignments a
                 join hrm.policies p on p.id = a.policy_id
-               where a.id <> new.id and a.company_id = new.company_id and a.precedence = new.precedence and p.policy_type = kind
+               where a.id <> new.id and a.policy_id <> new.policy_id -- the same policy: the exclusion constraint answers
+                 and a.company_id = new.company_id and a.precedence = new.precedence and p.policy_type = kind
                  and daterange(a.valid_from, a.valid_to, '[)') && daterange(new.valid_from, new.valid_to, '[)')) then
               raise exception 'another % assignment of company % has precedence % on some of these dates', kind, new.company_id, new.precedence
                   using errcode = '23514', constraint = 'ck_policy_assignments_precedence_unique';
