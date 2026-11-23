@@ -4,6 +4,7 @@ using Erp.BuildingBlocks.Domain.Time;
 using Erp.BuildingBlocks.Infrastructure.Time;
 using Erp.Hrm.Infrastructure.Access;
 using Erp.Hrm.Infrastructure.Employments;
+using Erp.Hrm.Infrastructure.Attendance;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Erp.Kernel.Contracts.Entitlements;
@@ -90,6 +91,7 @@ public static class WorkerHost
         // Policies (S1.23a): the transfer job and the probation reminders resolve the probation policy (the kernel answers unit subtrees).
         services.AddScoped<Erp.Kernel.Contracts.Org.IOrgStructure, Erp.Kernel.Infrastructure.Org.OrgStructure>();
         services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldCatalog, Erp.Kernel.Infrastructure.Metadata.CustomFieldCatalog>();
+        services.AddHrmAttendanceWorker(); // S1.27a attendance purge
         services.AddSingleton<Erp.Kernel.Contracts.Workflow.IWorkflowDocumentTypeSource>(new WorkflowManifestSource(EmploymentServices.WorkflowManifest));
         services.AddSingleton(new NotificationManifestSource(EmploymentServices.NotificationManifest)); // S1.20c reminders
         services.AddKernelWorkflow();

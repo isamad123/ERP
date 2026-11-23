@@ -6,6 +6,8 @@ using Erp.BuildingBlocks.Domain.Time;
 using Erp.BuildingBlocks.Infrastructure.Time;
 using Erp.Hrm.Api.Generated;
 using Erp.Hrm.Api.Employments;
+using Erp.Hrm.Api.Attendance;
+using Erp.Hrm.Infrastructure.Attendance;
 using Erp.Hrm.Api.Payroll;
 using Erp.Hrm.Api.People;
 using Erp.Hrm.Infrastructure.Employments;
@@ -117,6 +119,7 @@ public static class ApiHost
         services.AddHrmPoliciesApi();
         services.AddScoped<Erp.Kernel.Contracts.Org.IOrgStructure, Erp.Kernel.Infrastructure.Org.OrgStructure>();
         services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldCatalog, Erp.Kernel.Infrastructure.Metadata.CustomFieldCatalog>();
+        services.AddHrmAttendance().AddHrmAttendanceApi(); // S1.27a attendance capture
         services.AddSingleton<Erp.Kernel.Contracts.Workflow.IWorkflowDocumentTypeSource>(new WorkflowManifestSource(EmploymentServices.WorkflowManifest));
         services.AddSingleton(new NotificationManifestSource(EmploymentServices.NotificationManifest)); // S1.20c reminders
         services.AddScoped<Erp.Kernel.Contracts.Identity.IUserDirectory, Erp.Kernel.Infrastructure.Identity.UserDirectory>();
@@ -269,6 +272,7 @@ public static class ApiHost
         api.MapHrmPeopleEndpoints();
         api.MapHrmEmploymentEndpoints();
         api.MapHrmPolicyEndpoints();
+        api.MapHrmAttendanceEndpoints(); // S1.27a
         api.MapHrmPayEndpoints(); // S1.34a pay groups, calendar and readiness
         return app;
     }

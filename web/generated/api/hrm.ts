@@ -147,7 +147,7 @@ export interface AttendanceEvent
     eventDate: string;
     eventAt: string;
     direction: 'in' | 'out' | 'break_out' | 'break_in' | 'unknown';
-    source: 'web' | 'biometric' | 'kiosk' | 'hr_entry' | 'import';
+    source: 'web' | 'biometric' | 'kiosk' | 'hr_entry' | 'import' | 'qr';
     deviceId: string | null;
     receivedAt: string;
     idempotencyKey: string;
@@ -156,22 +156,6 @@ export interface AttendanceEvent
     supersedesEventId: string | null;
     createdAt: string;
     createdBy: string;
-}
-
-export interface AttendanceEventWrite
-{
-    companyId: string;
-    employmentId: string;
-    eventDate: string;
-    eventAt: string;
-    direction: 'in' | 'out' | 'break_out' | 'break_in' | 'unknown';
-    source: 'web' | 'biometric' | 'kiosk' | 'hr_entry' | 'import';
-    deviceId?: string | null;
-    receivedAt: string;
-    idempotencyKey: string;
-    ipAddress?: string | null;
-    isDuplicate?: boolean;
-    supersedesEventId?: string | null;
 }
 
 export interface AttendanceEventListQuery
@@ -189,7 +173,6 @@ export const attendanceEvents =
 {
     list: (query: AttendanceEventListQuery = {}) => request<PagedResult<AttendanceEvent>>('GET', '/api/hrm/attendance-events', { query }),
     get: (id: string) => request<AttendanceEvent>('GET', `/api/hrm/attendance-events/${id}`),
-    create: (body: AttendanceEventWrite) => request<AttendanceEvent>('POST', '/api/hrm/attendance-events', { body }),
 };
 
 /** hrm.attendance_exceptions: AttendanceException. Field rules (S1.06) may leave a field out or mask it as text. */

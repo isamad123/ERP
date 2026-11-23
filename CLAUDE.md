@@ -226,6 +226,9 @@ Policies (S1.23a): types in `<module>.Infrastructure/Access/policy-types.json` (
 `PolicyResolver`, approval handlers), endpoints `Erp.Hrm.Api/Policies/PolicyEndpoints.cs`. Every HR engine asks `IPolicyResolver` (Hrm.Contracts) and decides itself what "no policy" means; probation opens
 from the `probation` policy (the S1.20 settings are gone). Assignments are activated as a set per type and company from a date (`/api/hrm/policy-assignment-sets/activate` with `basedOn`). Kernel
 contracts `IOrgStructure` and `ICustomFieldCatalog` give unit subtrees and custom field definitions. Tests: `tests/Erp.IntegrationTests/Policies` (`PolicyTestSupport.ProbationAsync` for a company's probation), `tests/Erp.UnitTests/Policies`.
+Attendance capture (S1.27a): all punches go through `IAttendanceEventStore` (`src/Modules/Hrm/Erp.Hrm.Infrastructure/Attendance/`; the generated writes of `hrm.attendance_events` are closed). Web, QR and kiosk punches come from `AttendanceCaptureService`
+(endpoints `Erp.Hrm.Api/Attendance/AttendanceEndpoints.cs` under `/api/hrm/attendance`); the employee of a web or QR punch is the token user's own employment. Settings `hrm.att.*`; purge job `hrm.attendance_purge` (partitions ahead come from `kernel.partitions_ensure`).
+Tests: `tests/Erp.IntegrationTests/Attendance`; web `web/apps/web/src/modules/hrm/attendance-*.tsx`.
 
 Labels, option lists and custom fields (S1.15b): services `src/Platform/Erp.Kernel.Infrastructure/Metadata/` (`LabelAdministration`, `OptionListAdministration`, `CustomFieldAdministration`, `CustomFieldValidator`), endpoints `Erp.Kernel.Api/Metadata/MetadataEndpoints.cs`
 (`/api/cfg/label-overrides`, `/api/cfg/option-lists`, `/api/cfg/custom-fields`, form read `/api/kernel/custom-fields/{table}`), pure value rules `Erp.Kernel.Application/Metadata/CustomFieldRules.cs`. Every write path of a table with the `cust` trait

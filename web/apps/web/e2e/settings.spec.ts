@@ -80,6 +80,8 @@ test('FR-ADM-SET-01 FR-ADM-SET-02 FR-ADM-SET-03 FR-ADM-SET-06 an administrator f
   drawer = await openSetting(page, 'Time zone');
   await change(drawer, /^Time zone/, 'Asia/Dubai', 'Branch in the Gulf', 'Override for this company');
   await expect(page.getByText('The setting was saved.').first()).toBeVisible();
+  // The toast may still be the one of the earlier save: wait for the drawer to show the company value before closing it.
+  await expect(drawer.getByRole('table', { name: 'Where the value comes from' }).getByText('Company', { exact: true })).toBeVisible();
   await closeDrawer(page);
   await expect(zone.getByText('Asia/Dubai', { exact: true })).toBeVisible();
   await expect(zone.getByText('Company', { exact: true })).toBeVisible();
@@ -91,9 +93,12 @@ test('FR-ADM-SET-01 FR-ADM-SET-02 FR-ADM-SET-03 FR-ADM-SET-06 an administrator f
   await page.getByRole('button', { name: /Show values for/ }).click();
   await page.getByRole('option', { name: `Second Co ${run}` }).click();
   drawer = await openSetting(page, 'Time zone');
+  const reset = drawer.getByRole('button', { name: 'Reset to inherited' });
+  await expect(reset).toBeVisible(); // the company value is loaded, so the editor does not start again and clear the reason
   await drawer.getByRole('textbox', { name: /^Reason/ }).fill('Back to the customer value');
-  await drawer.getByRole('button', { name: 'Reset to inherited' }).click();
+  await reset.click();
   await expect(page.getByText('The setting was saved.').first()).toBeVisible();
+  await expect(reset).toHaveCount(0); // done: the company has no value of its own any more (the toast alone may be an earlier one)
   await closeDrawer(page);
   await expect(zone.getByText(inherited, { exact: true })).toBeVisible();
   await expect(zone.getByText('Company', { exact: true })).toHaveCount(0);
