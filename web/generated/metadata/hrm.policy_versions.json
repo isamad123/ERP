@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.policy_versions.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.policy_versions.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.policy_versions.update"
     }
   ],
   "companyScoped": false,
@@ -37,8 +29,11 @@
   ],
   "search": [],
   "constraints": {
+    "ck_policy_versions_parameters_object": "parameters",
     "ck_policy_versions_status": "status",
-    "fk_policy_versions_policy_id": "policyId"
+    "ck_policy_versions_version": "version",
+    "fk_policy_versions_policy_id": "policyId",
+    "uq_policy_versions_policy_id": "policyId"
   },
   "fields": [
     {

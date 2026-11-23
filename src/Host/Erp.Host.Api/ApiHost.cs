@@ -9,6 +9,8 @@ using Erp.Hrm.Api.Employments;
 using Erp.Hrm.Api.People;
 using Erp.Hrm.Infrastructure.Employments;
 using Erp.Hrm.Infrastructure.People;
+using Erp.Hrm.Infrastructure.Policies;
+using Erp.Hrm.Api.Policies;
 using Erp.Hrm.Infrastructure.Access;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Api.ControlPlane.Tenancy;
@@ -107,6 +109,11 @@ public static class ApiHost
         // Employments (S1.20b): hire, events, as-of reads, user link; the approval of held events, the line-manager directory and
         // the active employee counters. The kernel's user directory answers whether a user may be linked (D-10).
         services.AddHrmEmployment().AddHrmEmploymentApi();
+        // Policies (S1.23a): types, policies, versions, assignment sets, the resolver and its view; the kernel answers unit subtrees and custom
+        // field definitions through its Contracts (D-10).
+        services.AddHrmPoliciesApi();
+        services.AddScoped<Erp.Kernel.Contracts.Org.IOrgStructure, Erp.Kernel.Infrastructure.Org.OrgStructure>();
+        services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldCatalog, Erp.Kernel.Infrastructure.Metadata.CustomFieldCatalog>();
         services.AddSingleton<Erp.Kernel.Contracts.Workflow.IWorkflowDocumentTypeSource>(new WorkflowManifestSource(EmploymentServices.WorkflowManifest));
         services.AddSingleton(new NotificationManifestSource(EmploymentServices.NotificationManifest)); // S1.20c reminders
         services.AddScoped<Erp.Kernel.Contracts.Identity.IUserDirectory, Erp.Kernel.Infrastructure.Identity.UserDirectory>();
@@ -253,6 +260,7 @@ public static class ApiHost
         api.MapHrmGeneratedEndpoints();
         api.MapHrmPeopleEndpoints();
         api.MapHrmEmploymentEndpoints();
+        api.MapHrmPolicyEndpoints();
         return app;
     }
 

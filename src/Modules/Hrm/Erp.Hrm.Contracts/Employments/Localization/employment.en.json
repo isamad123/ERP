@@ -69,6 +69,7 @@
   "errors.hrm.employment_event.transfer_start": "The start of a transfer from a sister company is not corrected alone. Withdraw the transfer and record it again.",
   "errors.hrm.probation.decision_before_start": "The decision cannot be dated before the probation starts.",
   "errors.hrm.probation.extend_not_later": "An extension must end after the current last day of the probation.",
+  "errors.hrm.probation.extension_limit": "The extension is longer than the probation policy allows.",
   "errors.hrm.probation.none_open": "This employment has no open probation.",
   "errors.hrm.registration.before_joining": "A registration cannot start before the joining date.",
   "errors.hrm.registration.duplicate": "This registration number of the scheme belongs to another person.",

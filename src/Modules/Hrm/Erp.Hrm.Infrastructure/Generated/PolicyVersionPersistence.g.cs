@@ -68,4 +68,10 @@ internal sealed class PolicyVersionRepository(
         var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         return await query.Where(e => e.PolicyId == policyId && e.Version == version).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
+
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.PolicyVersion>> FindByPolicyIdAsync(global::System.Guid policyId, global::System.Threading.CancellationToken cancellationToken)
+    {
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.PolicyId == policyId).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
 }

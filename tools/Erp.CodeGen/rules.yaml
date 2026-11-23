@@ -306,10 +306,30 @@ tables:
       - text: "Cycle check trigger on reports_to_position_id."
         stub: { name: positions_reporting_cycle, owner: S1.22 }
 
+  hrm.policies:
+    checks:
+      # S1.23a (CR-079 S1.23a detail; slice S1.23 Build item 1): the code of a registered policy type (policy-types.json).
+      - text: "a policy type is lower-case letters, digits and underscores and starts with a letter"
+        check: { name: ck_policies_policy_type_format, sql: "policy_type ~ '^[a-z][a-z0-9_]*$'" }
+
   hrm.policy_versions:
+    checks:
+      # S1.23a (CR-079 S1.23a detail; slice S1.23 Build item 2): parameters are checked against the type's JSON Schema by the service.
+      - text: "parameters are a JSON object"
+        check: { name: ck_policy_versions_parameters_object, sql: "jsonb_typeof(parameters) = 'object'" }
+      - text: "version numbers start at 1"
+        check: { name: ck_policy_versions_version, sql: "version >= 1" }
     notes:
       - text: "Exclusion on policy_id applies where status <> 'draft'; dates assigned on activation."
         eff_where: "status <> 'draft'"
+
+  hrm.policy_assignments:
+    checks:
+      # S1.23a (CR-079 S1.23a detail; slice S1.23 Build item 3, ruling Q4): conditions joined by "and"; the service checks the shape.
+      - text: "a rule is a JSON object"
+        check: { name: ck_policy_assignments_rule_object, sql: "jsonb_typeof(rule) = 'object'" }
+      - text: "precedence is between 1 and 9999"
+        check: { name: ck_policy_assignments_precedence, sql: "precedence between 1 and 9999" }
 
   hrm.form_definitions:
     notes:
@@ -1300,3 +1320,75 @@ functions:
       drop trigger if exists tg_employee_bank_accounts_split on hrm.employee_bank_accounts;
       create constraint trigger tg_employee_bank_accounts_split after insert or update or delete on hrm.employee_bank_accounts
           deferrable initially deferred for each row execute function hrm.tg_employee_bank_accounts_split();
+
+  # S1.23a (CR-079 S1.23a detail; slice S1.23 Build item 2, FR-XM-05): a policy version in force (active, or retired with its policy)
+  # is never edited, so a result that used it can always be explained: only its end date may be set once (a later version or the
+  # policy's retirement ends it) and active may become retired. Only a draft may be deleted. A function entry, not a design note,
+  # because the first migrations are frozen.
+  - slice: S1.23a
+    name: hrm.tg_policy_versions_fixed
+    purpose: "A policy version in force is never changed except its end date (set once) and its status (active to retired), and only a draft may be deleted (FR-XM-05); refused with constraint ck_policy_versions_fixed."
+    triggers:
+      - [hrm.policy_versions, tg_policy_versions_fixed]
+    sql: |
+      create or replace function hrm.tg_policy_versions_fixed() returns trigger
+      language plpgsql as $fn$
+      begin
+          if tg_op = 'DELETE' then
+              if old.status <> 'draft' then
+                  raise exception 'policy version % is % and cannot be deleted', old.id, old.status
+                      using errcode = '23514', constraint = 'ck_policy_versions_fixed';
+              end if;
+              return old;
+          end if;
+          if old.status <> 'draft' and (
+                  (new.policy_id, new.version, new.parameters, new.is_overridden, new.valid_from, new.created_at, new.created_by)
+                  is distinct from
+                  (old.policy_id, old.version, old.parameters, old.is_overridden, old.valid_from, old.created_at, old.created_by)
+                  or (old.valid_to is not null and new.valid_to is distinct from old.valid_to)
+                  or not (new.status = old.status or (old.status = 'active' and new.status = 'retired'))) then
+              raise exception 'policy version % is % and cannot be changed', old.id, old.status
+                  using errcode = '23514', constraint = 'ck_policy_versions_fixed';
+          end if;
+          return new;
+      end
+      $fn$;
+      create or replace trigger tg_policy_versions_fixed before update or delete on hrm.policy_versions
+          for each row execute function hrm.tg_policy_versions_fixed();
+
+  # S1.23a (CR-079 S1.23a detail; slice S1.23 Build items 3 and 5, ruling Q4): on every date, no two assignments of policies of the
+  # same type in one company share a precedence (first match wins, so a tie could not be explained); an assignment is never edited
+  # except its end date, set once, when a newer set replaces it. The service checks the same and holds a lock per company and type.
+  - slice: S1.23a
+    name: hrm.tg_policy_assignments_checks
+    purpose: "No two assignments of one policy type in one company overlap with the same precedence (constraint ck_policy_assignments_precedence_unique); an assignment changes only by its end date, set once (constraint ck_policy_assignments_fixed)."
+    triggers:
+      - [hrm.policy_assignments, tg_policy_assignments_checks]
+    sql: |
+      create or replace function hrm.tg_policy_assignments_checks() returns trigger
+      language plpgsql as $fn$
+      declare
+          kind text;
+      begin
+          if tg_op = 'UPDATE' and (
+                  (new.company_id, new.policy_id, new.precedence, new.rule, new.valid_from, new.created_at, new.created_by)
+                  is distinct from
+                  (old.company_id, old.policy_id, old.precedence, old.rule, old.valid_from, old.created_at, old.created_by)
+                  or (old.valid_to is not null and new.valid_to is distinct from old.valid_to)) then
+              raise exception 'policy assignment % cannot be changed except by ending it', old.id
+                  using errcode = '23514', constraint = 'ck_policy_assignments_fixed';
+          end if;
+          select p.policy_type into kind from hrm.policies p where p.id = new.policy_id;
+          if exists (
+              select 1 from hrm.policy_assignments a
+                join hrm.policies p on p.id = a.policy_id
+               where a.id <> new.id and a.company_id = new.company_id and a.precedence = new.precedence and p.policy_type = kind
+                 and daterange(a.valid_from, a.valid_to, '[)') && daterange(new.valid_from, new.valid_to, '[)')) then
+              raise exception 'another % assignment of company % has precedence % on some of these dates', kind, new.company_id, new.precedence
+                  using errcode = '23514', constraint = 'ck_policy_assignments_precedence_unique';
+          end if;
+          return new;
+      end
+      $fn$;
+      create or replace trigger tg_policy_assignments_checks before insert or update on hrm.policy_assignments
+          for each row execute function hrm.tg_policy_assignments_checks();

@@ -29,7 +29,7 @@ internal sealed class EmploymentEventHandler(IServiceProvider services, IClock c
         await using var db = new HrmDbContext(services.GetRequiredService<DbContextOptions<HrmDbContext>>());
         db.Database.SetDbConnection(transaction.Connection, contextOwnsConnection: false);
         await db.Database.UseTransactionAsync(transaction, cancellationToken).ConfigureAwait(false);
-        var applier = new EmploymentApplier(db, settings);
+        var applier = new EmploymentApplier(db, settings, Policies.PolicyResolver.For(db, services));
 
         var e = await db.Set<EmploymentEvent>().FirstOrDefaultAsync(x => x.Id == outcome.DocumentId && x.CompanyId == outcome.CompanyId, cancellationToken).ConfigureAwait(false)
             ?? throw new WorkflowException("errors.hrm.employment_event.not_found");

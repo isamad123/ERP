@@ -26,12 +26,6 @@ public static class HrmSettingKeys
     /// <summary>Whether loan and advance balances move to the new company or are settled on a transfer.</summary>
     public const string HrmTransferCarryOverLoans = "hrm.transfer.carry_over.loans";
 
-    /// <summary>Length of the probation opened at hire for the employee types listed.</summary>
-    public const string HrmProbationDefaultMonths = "hrm.probation.default_months";
-
-    /// <summary>The employee types that start with a probation when hired.</summary>
-    public const string HrmProbationEmployeeTypes = "hrm.probation.employee_types";
-
     /// <summary>How many days before a probation ends the manager and HR are reminded.</summary>
     public const string HrmProbationReminderDays = "hrm.probation.reminder_days";
 
@@ -40,6 +34,9 @@ public static class HrmSettingKeys
 
     /// <summary>A new or changed payment account of an employee needs a second person's approval.</summary>
     public const string HrmBankAccountsRequiresApproval = "hrm.bank_accounts.requires_approval";
+
+    /// <summary>Activating a policy version or policy assignments needs a second person's approval.</summary>
+    public const string HrmPoliciesRequiresApproval = "hrm.policies.requires_approval";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

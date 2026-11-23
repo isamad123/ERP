@@ -4016,16 +4016,6 @@ export interface Policy
     rowVersion: number;
 }
 
-export interface PolicyWrite
-{
-    companyId: string;
-    code: string;
-    nameI18n: Record<string, string>;
-    policyType: string;
-    source: 'pack' | 'tenant';
-    isActive?: boolean;
-}
-
 export interface PolicyListQuery
 {
     after?: string;
@@ -4041,9 +4031,6 @@ export const policies =
 {
     list: (query: PolicyListQuery = {}) => request<PagedResult<Policy>>('GET', '/api/hrm/policies', { query }),
     get: (id: string) => request<Policy>('GET', `/api/hrm/policies/${id}`),
-    create: (body: PolicyWrite) => request<Policy>('POST', '/api/hrm/policies', { body }),
-    update: (id: string, body: PolicyWrite & { rowVersion: number }) => request<Policy>('PUT', `/api/hrm/policies/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/policies/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.policy_acknowledgements: PolicyAcknowledgement. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4099,16 +4086,6 @@ export interface PolicyAssignment
     rowVersion: number;
 }
 
-export interface PolicyAssignmentWrite
-{
-    companyId: string;
-    policyId: string;
-    precedence: number;
-    rule: unknown;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface PolicyAssignmentListQuery
 {
     after?: string;
@@ -4125,8 +4102,6 @@ export const policyAssignments =
 {
     list: (query: PolicyAssignmentListQuery = {}) => request<PagedResult<PolicyAssignment>>('GET', '/api/hrm/policy-assignments', { query }),
     get: (id: string) => request<PolicyAssignment>('GET', `/api/hrm/policy-assignments/${id}`),
-    create: (body: PolicyAssignmentWrite) => request<PolicyAssignment>('POST', '/api/hrm/policy-assignments', { body }),
-    update: (id: string, body: PolicyAssignmentWrite & { rowVersion: number }) => request<PolicyAssignment>('PUT', `/api/hrm/policy-assignments/${id}`, { body }),
 };
 
 /** hrm.policy_publications: Policy documents published to populations for acknowledgement. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4195,17 +4170,6 @@ export interface PolicyVersion
     rowVersion: number;
 }
 
-export interface PolicyVersionWrite
-{
-    policyId: string;
-    version: number;
-    parameters: unknown;
-    isOverridden?: boolean;
-    status: 'draft' | 'active' | 'retired';
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface PolicyVersionListQuery
 {
     after?: string;
@@ -4222,8 +4186,6 @@ export const policyVersions =
 {
     list: (query: PolicyVersionListQuery = {}) => request<PagedResult<PolicyVersion>>('GET', '/api/hrm/policy-versions', { query }),
     get: (id: string) => request<PolicyVersion>('GET', `/api/hrm/policy-versions/${id}`),
-    create: (body: PolicyVersionWrite) => request<PolicyVersion>('POST', '/api/hrm/policy-versions', { body }),
-    update: (id: string, body: PolicyVersionWrite & { rowVersion: number }) => request<PolicyVersion>('PUT', `/api/hrm/policy-versions/${id}`, { body }),
 };
 
 /** hrm.positions: Position. Field rules (S1.06) may leave a field out or mask it as text. */

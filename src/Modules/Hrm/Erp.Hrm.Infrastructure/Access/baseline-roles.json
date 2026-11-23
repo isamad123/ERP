@@ -123,6 +123,8 @@
         "hrm.policies.read",
         "hrm.policy_versions.read",
         "hrm.policy_assignments.read",
+        "hrm.policies.manage",
+        "hrm.policies.approve",
         "hrm.employee_documents.read",
         "hrm.policy_publications.read",
         "hrm.policy_acknowledgements.read",

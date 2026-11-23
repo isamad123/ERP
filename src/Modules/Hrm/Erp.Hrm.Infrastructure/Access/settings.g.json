@@ -218,83 +218,6 @@
       }
     },
     {
-      "key": "hrm.probation.default_months",
-      "module": "hrm",
-      "type": "int",
-      "default": 3,
-      "validation": {
-        "min": 1,
-        "max": 24
-      },
-      "layers": [
-        "tenant",
-        "company"
-      ],
-      "roleRule": null,
-      "tightenOnly": false,
-      "selfService": false,
-      "visible": true,
-      "requiresApproval": false,
-      "area": "hr.employment",
-      "unit": null,
-      "name": {
-        "en": "Probation period (months)",
-        "ur": "آزمائشی مدت (مہینے)"
-      },
-      "description": {
-        "en": "Length of the probation opened at hire for the employee types listed",
-        "ur": "فہرست شدہ ملازمین کی اقسام کے لیے بھرتی پر شروع ہونے والی آزمائشی مدت"
-      },
-      "help": {
-        "en": "A probation of this many months starts on the joining date. It is replaced by the probation policy when policies arrive.",
-        "ur": "اتنے مہینوں کی آزمائشی مدت شمولیت کی تاریخ سے شروع ہوتی ہے۔ پالیسیاں آنے پر اس کی جگہ آزمائشی پالیسی لے لیتی ہے۔"
-      }
-    },
-    {
-      "key": "hrm.probation.employee_types",
-      "module": "hrm",
-      "type": "list",
-      "default": [
-        "probation",
-        "permanent"
-      ],
-      "validation": {
-        "choices": [
-          "permanent",
-          "contract",
-          "probation",
-          "intern",
-          "daily_wage",
-          "consultant",
-          "part_time"
-        ],
-        "max_items": 7
-      },
-      "layers": [
-        "tenant",
-        "company"
-      ],
-      "roleRule": null,
-      "tightenOnly": false,
-      "selfService": false,
-      "visible": true,
-      "requiresApproval": false,
-      "area": "hr.employment",
-      "unit": null,
-      "name": {
-        "en": "Employee types on probation",
-        "ur": "آزمائش والی ملازمین کی اقسام"
-      },
-      "description": {
-        "en": "The employee types that start with a probation when hired",
-        "ur": "ملازمین کی وہ اقسام جو بھرتی پر آزمائشی مدت سے شروع ہوتی ہیں"
-      },
-      "help": {
-        "en": "A hire or rehire of a listed type opens a probation record. Other types have none.",
-        "ur": "فہرست شدہ قسم کی بھرتی یا دوبارہ بھرتی پر آزمائشی ریکارڈ کھلتا ہے۔ باقی اقسام کا کوئی نہیں۔"
-      }
-    },
-    {
       "key": "hrm.probation.reminder_days",
       "module": "hrm",
       "type": "int",
@@ -388,6 +311,36 @@
       "help": {
         "en": "Adding, changing, ending or removing an employee's payment account waits until another person with the approval permission approves it. The person who asked can never approve it.",
         "ur": "ملازم کا ادائیگی اکاؤنٹ شامل کرنا، تبدیل کرنا، ختم کرنا یا ہٹانا اس وقت تک رکا رہتا ہے جب تک منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور نہ کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔"
+      }
+    },
+    {
+      "key": "hrm.policies.requires_approval",
+      "module": "hrm",
+      "type": "bool",
+      "default": false,
+      "validation": {},
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": true,
+      "area": "hr.policies",
+      "unit": null,
+      "name": {
+        "en": "Approval of policy activations",
+        "ur": "پالیسیوں کے نفاذ کی منظوری"
+      },
+      "description": {
+        "en": "Activating a policy version or policy assignments needs a second person's approval",
+        "ur": "پالیسی کے ورژن یا پالیسی تفویضات کے نفاذ کے لیے دوسرے شخص کی منظوری درکار"
+      },
+      "help": {
+        "en": "A version or a set of assignments is put into force only after another person with the approval permission approves it. The person who asked can never approve it.",
+        "ur": "ورژن یا تفویضات کا مجموعہ اسی وقت نافذ ہوتا ہے جب منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔"
       }
     }
   ],
