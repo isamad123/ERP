@@ -43,6 +43,7 @@ public static class EmploymentStatutoryRegistrationAccess
         new("scheme", "Scheme", null),
         new("is_applicable", "IsApplicable", null),
         new("exemption_reason", "ExemptionReason", null),
+        new("registration_no", "RegistrationNo", "personal"),
         new("valid_from", "ValidFrom", null),
         new("valid_to", "ValidTo", null),
         new("created_at", "CreatedAt", null),

@@ -192,6 +192,15 @@
         "hrm.employments.transfer",
         "hrm.contracts.create",
         "hrm.probation_records.update",
+        "hrm.employee_bank_accounts.create",
+        "hrm.employee_bank_accounts.update",
+        "hrm.employee_bank_accounts.delete",
+        "hrm.employee_bank_accounts.reveal",
+        "hrm.employee_bank_accounts.approve",
+        "hrm.employment_statutory_registrations.create",
+        "hrm.employment_statutory_registrations.update",
+        "hrm.employment_statutory_registrations.delete",
+        "hrm.employment_statutory_registrations.reveal",
         "wf.workflow_tasks.read",
         "wf.workflow_tasks.update"
       ],
@@ -258,7 +267,9 @@
         "hrm.statutory_returns.read",
         "hrm.parallel_runs.read",
         "hrm.parallel_run_lines.read",
-        "aud.history.view"
+        "aud.history.view",
+        "hrm.employee_bank_accounts.read",
+        "hrm.employment_statutory_registrations.read"
       ],
       "scopes": {
         "*": "all"

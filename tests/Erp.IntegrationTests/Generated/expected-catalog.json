@@ -12583,7 +12583,10 @@
       "checks": [
         "ck_employee_bank_accounts_payment_mode",
         "ck_employee_bank_accounts_split_kind",
-        "ck_employee_bank_accounts_valid_to"
+        "ck_employee_bank_accounts_valid_to",
+        "ck_employee_bank_accounts_split_value",
+        "ck_employee_bank_accounts_priority",
+        "ck_employee_bank_accounts_blind_index"
       ],
       "exclusions": [
         "ex_employee_bank_accounts_employment_id_priority"
@@ -12629,7 +12632,10 @@
         "ix_employee_bank_accounts_company_id_employment_id",
         "ix_employee_bank_accounts_bank_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_employee_bank_accounts_bank_fields_required",
+        "tg_employee_bank_accounts_split"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.employee_bank_accounts"
@@ -14059,7 +14065,10 @@
       "uniques": [],
       "checks": [
         "ck_employment_statutory_registrations_scheme_code",
-        "ck_employment_statutory_registrations_valid_to"
+        "ck_employment_statutory_registrations_valid_to",
+        "ck_employment_statutory_registrations_exemption",
+        "ck_employment_statutory_registrations_blind_index",
+        "ck_employment_statutory_registrations_scheme_format"
       ],
       "exclusions": [
         "ex_employment_statutory_registrations_employment_id_scheme"
@@ -45034,13 +45043,6 @@
       "table": "hrm.attendance_periods",
       "owner": "S1.31",
       "rule": "A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments."
-    },
-    {
-      "schema": "hrm",
-      "function": "todo_employee_bank_accounts_bank_fields_required",
-      "table": "hrm.employee_bank_accounts",
-      "owner": "S1.20",
-      "rule": "bank fields required when payment_mode = bank_transfer or mobile_wallet"
     },
     {
       "schema": "hrm",
