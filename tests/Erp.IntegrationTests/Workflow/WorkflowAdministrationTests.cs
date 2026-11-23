@@ -73,14 +73,17 @@ public sealed class WorkflowAdministrationTests(TenancyFixture fx) : IAsyncLifet
         var detail = await _w.GetAsync(admin, $"/api/wf/definitions/{definition}", Ct);
         Assert.Equal(HttpStatusCode.OK, detail.Status);
         var counts = detail.Json.GetProperty("versions").EnumerateArray().ToDictionary(v => v.GetProperty("id").GetGuid(), v => v.GetProperty("runningInstances").GetInt32());
-        Assert.Equal(1, counts[v1]); // the request raised before the new version stays on the old one
+        // The shared test tenant may hold other requests of this document type, so compare this test's own versions.
+        Assert.True(counts[v1] >= 1); // the request raised before the new version stays on the old one
         Assert.Equal(0, counts[v2]);
 
         // Once the request ends it no longer counts.
         var task = Assert.Single(await _w.OpenTasksAsync(running, Ct));
         Assert.Equal(HttpStatusCode.OK, (await _w.PostAsync(approver, $"/api/wf/tasks/{task}/approve", new { }, Ct)).Status);
         var after = await _w.GetAsync(admin, $"/api/wf/definitions/{definition}", Ct);
-        Assert.All(after.Json.GetProperty("versions").EnumerateArray(), v => Assert.Equal(0, v.GetProperty("runningInstances").GetInt32()));
+        var afterCounts = after.Json.GetProperty("versions").EnumerateArray().ToDictionary(v => v.GetProperty("id").GetGuid(), v => v.GetProperty("runningInstances").GetInt32());
+        Assert.Equal(counts[v1] - 1, afterCounts[v1]);
+        Assert.Equal(0, afterCounts[v2]);
     }
 
     [Fact]
