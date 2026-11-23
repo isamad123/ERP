@@ -95,7 +95,7 @@ test('FR-KRN-WFL-01 FR-KRN-WFL-02 FR-KRN-WFL-03 FR-KRN-WFL-10 a draft route with
   await accessible(page, 'routes list');
   await list.getByRole('button', { name: /^Open the route Expense/ }).first().click();
   const versions = page.getByRole('list', { name: 'Versions' });
-  await expect(versions.getByText('1 request is running on it')).toBeVisible();
+  await expect(versions.getByText('1 request is running on it').first()).toBeVisible();
   await expect(page.getByText(/cannot be edited/)).toBeVisible();
   await shot(page, 'routes-en-light-1280');
 
@@ -125,7 +125,7 @@ test('FR-KRN-WFL-01 FR-KRN-WFL-02 FR-KRN-WFL-03 FR-KRN-WFL-10 a draft route with
   await expect(dialog.getByText(/1 is running now/)).toBeVisible();
   await dialog.getByRole('button', { name: /^Activate version/ }).click();
   await expect(page.getByText(/is active\.|Waiting for a second administrator/).first()).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Versions' }).getByText('1 request is running on it')).toBeVisible(); // still on version 1
+  await expect(page.getByRole('list', { name: 'Versions' }).getByText('1 request is running on it').first()).toBeVisible(); // still on version 1
   noProblems(page);
   await admin.context.close();
   await manager.context.close();
