@@ -2,7 +2,7 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 222 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 223 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
@@ -11,7 +11,7 @@ Release 1.0. Customer database: 222 tables. Control-plane database: 15 tables. E
 | customer | doc | 7 |
 | customer | hrm | 113 |
 | customer | iam | 24 |
-| customer | itg | 11 |
+| customer | itg | 12 |
 | customer | job | 5 |
 | customer | meta | 4 |
 | customer | ntf | 7 |
@@ -6160,9 +6160,11 @@ Requirements: ADM-DAT-01. Source: kernel.yaml.
 | message | text | no |  |  |
 | created_at | timestamp with time zone | no |  |  |
 | created_by | uuid | no |  |  |
+| phase | text | no | 'validate'::text | default validate; S1.16a: whether the problem came from the validation run or from the commit |
 
 Constraints:
 
+- `ck_import_batch_errors_phase` CHECK ((phase = ANY (ARRAY['validate'::text, 'commit'::text])))
 - `fk_import_batch_errors_batch_id` FOREIGN KEY (batch_id) REFERENCES itg.import_batches(id)
 - `pk_import_batch_errors` PRIMARY KEY (id)
 
@@ -6174,6 +6176,39 @@ Triggers:
 
 - `tg_import_batch_errors_append_only` CREATE TRIGGER tg_import_batch_errors_append_only BEFORE DELETE OR UPDATE ON itg.import_batch_errors FOR EACH ROW EXECUTE FUNCTION itg.tg_refuse_change()
 - `tg_import_batch_errors_no_truncate` CREATE TRIGGER tg_import_batch_errors_no_truncate BEFORE TRUNCATE ON itg.import_batch_errors FOR EACH STATEMENT EXECUTE FUNCTION itg.tg_refuse_change()
+
+### itg.import_batch_rows
+
+Records created or updated by each row of an import batch (rollback check, FR-KRN-INT-03). Requirements: KRN-INT-03, KRN-INT-04. Source: kernel.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| batch_id | uuid | no |  | fk itg.import_batches |
+| row_no | integer | no |  |  |
+| table_name | text | no |  |  |
+| record_id | uuid | no |  |  |
+| action | text | no |  |  |
+| record_version | integer | yes |  | the record row_version right after the import wrote it |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+
+Constraints:
+
+- `ck_import_batch_rows_action` CHECK ((action = ANY (ARRAY['created'::text, 'updated'::text])))
+- `fk_import_batch_rows_batch_id` FOREIGN KEY (batch_id) REFERENCES itg.import_batches(id)
+- `pk_import_batch_rows` PRIMARY KEY (id)
+- `uq_import_batch_rows_batch_id_row_no_table_name_record_id` UNIQUE (batch_id, row_no, table_name, record_id)
+
+Indexes:
+
+- `ix_import_batch_rows_batch_id_row_no` CREATE INDEX ix_import_batch_rows_batch_id_row_no ON itg.import_batch_rows USING btree (batch_id, row_no)
+- `ix_import_batch_rows_table_name_record_id` CREATE INDEX ix_import_batch_rows_table_name_record_id ON itg.import_batch_rows USING btree (table_name, record_id)
+
+Triggers:
+
+- `tg_import_batch_rows_append_only` CREATE TRIGGER tg_import_batch_rows_append_only BEFORE DELETE OR UPDATE ON itg.import_batch_rows FOR EACH ROW EXECUTE FUNCTION itg.tg_refuse_change()
+- `tg_import_batch_rows_no_truncate` CREATE TRIGGER tg_import_batch_rows_no_truncate BEFORE TRUNCATE ON itg.import_batch_rows FOR EACH STATEMENT EXECUTE FUNCTION itg.tg_refuse_change()
 
 ### itg.import_batches
 
@@ -6195,9 +6230,17 @@ Requirements: KRN-INT-04, ADM-DAT-01. Source: kernel.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| file_name | text | yes |  | S1.16a (CR-072 addendum): the uploaded file's name, shown in the import centre |
+| mode | text | no | 'create'::text | default create; S1.16a: copied from the template at upload (a later template change does not alter a running batch) |
+| created_rows | integer | yes |  | S1.16a: rows created by the commit |
+| updated_rows | integer | yes |  | S1.16a: rows updated by the commit (a batch with updates cannot be rolled back) |
+| validated_at | timestamp with time zone | yes |  |  |
+| committed_at | timestamp with time zone | yes |  |  |
+| rolled_back_at | timestamp with time zone | yes |  |  |
 
 Constraints:
 
+- `ck_import_batches_mode` CHECK ((mode = ANY (ARRAY['create'::text, 'create_or_update'::text])))
 - `ck_import_batches_status` CHECK ((status = ANY (ARRAY['uploaded'::text, 'validating'::text, 'validated'::text, 'committing'::text, 'committed'::text, 'failed'::text, 'rolled_back'::text])))
 - `fk_import_batches_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_import_batches_file_id` FOREIGN KEY (company_id, file_id) REFERENCES doc.files(company_id, id)
@@ -6231,11 +6274,14 @@ Requirements: KRN-INT-03, ADM-INT-04. Source: kernel.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| mode | text | no | 'create'::text | default create; S1.16a (CR-072 addendum): what a row whose key exists means; update batches cannot be rolled back (Q5) |
+| is_default | boolean | no | false | default false; S1.16a: the shipped template of an import type (one per type) |
 
 Constraints:
 
 - `ck_import_templates_code_code` CHECK ((((length(code) >= 1) AND (length(code) <= 40)) AND (code = btrim(code))))
 - `ck_import_templates_format` CHECK ((format = ANY (ARRAY['csv'::text, 'xlsx'::text])))
+- `ck_import_templates_mode` CHECK ((mode = ANY (ARRAY['create'::text, 'create_or_update'::text])))
 - `ck_import_templates_name_i18n_object` CHECK ((jsonb_typeof(name_i18n) = 'object'::text))
 - `pk_import_templates` PRIMARY KEY (id)
 

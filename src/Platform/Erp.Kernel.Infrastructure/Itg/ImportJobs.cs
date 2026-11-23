@@ -150,6 +150,7 @@ public sealed class ImportValidateJob : IJobHandler
 {
     private const int FlushEvery = 200;
     private const int ProgressEvery = 500;
+    private const int SegmentRows = 500;
 
     public string Code => ImportJobCodes.Validate;
 
@@ -180,7 +181,7 @@ public sealed class ImportValidateJob : IJobHandler
                 await using var run = ImportRunScope.Create(job.Services);
                 var db = run.Db;
                 await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
-                await using var tx = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+                var tx = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
                 try
                 {
                     var pipeline = new ImportRowPipeline(data.Type, data.Mapping, data.Mode, sheet.Headers, ImportWriters.Generated(run.Services, data.Type.Writer ?? data.Type.Table), db, run.Services.GetRequiredService<ICallerAccess>());
@@ -204,6 +205,16 @@ public sealed class ImportValidateJob : IJobHandler
                             errors.Clear();
                         }
 
+                        if (done % SegmentRows == 0)
+                        {
+                            // One transaction for the whole file would collect tens of thousands of savepoints and slow every row down: the check
+                            // starts a new transaction every SegmentRows rows (the keys of good rows are remembered for later rows).
+                            await tx.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
+                            await tx.DisposeAsync().ConfigureAwait(false);
+                            db.ChangeTracker.Clear();
+                            tx = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+                        }
+
                         if (done % ProgressEvery == 0)
                         {
                             await job.CommitChunkAsync(null, new { row = rowNo }, data.Total == 0 ? 0 : Math.Min(99m, done * 100m / data.Total), cancellationToken).ConfigureAwait(false);
@@ -213,6 +224,7 @@ public sealed class ImportValidateJob : IJobHandler
                 finally
                 {
                     await tx.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
+                    await tx.DisposeAsync().ConfigureAwait(false);
                 }
             }
             else

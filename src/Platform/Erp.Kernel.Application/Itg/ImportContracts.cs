@@ -35,8 +35,13 @@ public sealed record ImportColumnDefinition(
     IReadOnlyList<string>? Options,
     string? Example);
 
-/// <summary>A row as the engine hands it to a writer (<see cref="DryRun"/>: the validation run, whose transaction is rolled back): field values by the write request's property names (camelCase), after mapping, transformation and lookups.</summary>
-public sealed record ImportRow(int RowNumber, JsonObject Values, bool DryRun = false);
+/// <summary>A row as the engine hands it to a writer (<see cref="DryRun"/>: the validation run, whose transaction is rolled back and restarted every few hundred rows; <see cref="KnownKeys"/>: the keys of rows that were fine earlier in the run, which a dry run no longer sees in the database): field values by the write request's property names (camelCase), after mapping, transformation and lookups.</summary>
+public sealed record ImportRow(int RowNumber, JsonObject Values, bool DryRun = false, IReadOnlySet<string>? KnownKeys = null)
+{
+    /// <summary>The key text of a record as <see cref="KnownKeys"/> holds it: each part as lower-case JSON, joined with <c>|</c>.</summary>
+    public static string Key(params string[] parts) =>
+        string.Join('|', (parts ?? throw new ArgumentNullException(nameof(parts))).Select(p => JsonValue.Create(p)!.ToJsonString().ToLowerInvariant()));
+}
 
 /// <summary>A problem found in a row: the field (null for the whole row) and a localization key or plain message.</summary>
 public sealed record ImportRowError(string? Field, string Message);

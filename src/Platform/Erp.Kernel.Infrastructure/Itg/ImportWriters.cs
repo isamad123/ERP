@@ -59,9 +59,16 @@ public sealed class OrgUnitImportWriter(IServiceProvider services, KernelDbConte
         if (!string.IsNullOrWhiteSpace(parentCode))
         {
             parentId = await ScalarAsync("select id from org.org_units where company_id = $1 and lower(code) = lower($2) and not is_deleted", [company, parentCode.Trim()], cancellationToken).ConfigureAwait(false);
-            if (parentId is null)
+            // A check run rolls its transaction back every few hundred rows; a parent that was fine earlier in the file is still a parent.
+            var knownParent = parentId is null && row.KnownKeys?.Contains(ImportRow.Key(company.ToString(), parentCode.Trim())) == true;
+            if (parentId is null && !knownParent)
             {
                 return ImportRowOutcome.Failed(new ImportRowError("parent", "errors.import.parent_unknown"));
+            }
+
+            if (knownParent)
+            {
+                return await ImportWriters.Generated(services, "org.org_units").WriteAsync(row, existingId, cancellationToken).ConfigureAwait(false);
             }
         }
 

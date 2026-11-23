@@ -35,6 +35,7 @@ public sealed class ImportRowPipeline
     private readonly Dictionary<string, Guid?> _lookups = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (bool Company, bool Soft)> _tableShape = new(StringComparer.Ordinal);
     private readonly HashSet<string> _keysSeen = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _known = new(StringComparer.Ordinal);
     private int _savepoints;
 
     public ImportRowPipeline(ImportTypeDefinition type, TemplateMapping mapping, string mode, IReadOnlyList<string> headers, IImportRowWriter writer, KernelDbContext db, ICallerAccess? access = null)
@@ -179,7 +180,7 @@ public sealed class ImportRowPipeline
         ImportRowOutcome outcome;
         try
         {
-            outcome = await _writer.WriteAsync(new ImportRow(rowNo, values, dryRun), existing, ct).ConfigureAwait(false);
+            outcome = await _writer.WriteAsync(new ImportRow(rowNo, values, dryRun, dryRun ? _known : null), existing, ct).ConfigureAwait(false);
         }
         catch (Exception e) when (e is not OperationCanceledException and not Erp.Kernel.Contracts.Jobs.JobStoppedException)
         {
@@ -188,6 +189,11 @@ public sealed class ImportRowPipeline
 
         if (outcome.Ok)
         {
+            if (dryRun && KeyText(values) is { } known)
+            {
+                _known.Add(known);
+            }
+
             if (tx is not null && savepoint is not null)
             {
                 await tx.ReleaseSavepointAsync(savepoint, ct).ConfigureAwait(false);

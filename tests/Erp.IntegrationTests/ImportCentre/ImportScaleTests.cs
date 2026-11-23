@@ -37,16 +37,13 @@ public sealed class ImportScaleTests(TenancyFixture fx) : IAsyncLifetime
         }
 
         var template = await _rig.TemplateAsync("holidays", Ct);
-        var clock = System.Diagnostics.Stopwatch.StartNew();
         var up = await _rig.UploadAsync(template, "holidays.csv", Encoding.UTF8.GetBytes(text.ToString()), Ct);
         Assert.True(up.Status == System.Net.HttpStatusCode.Created, up.Text);
         var id = up.Json.GetProperty("id").GetGuid();
         Assert.Equal(Rows, up.Json.GetProperty("totalRows").GetInt32());
 
-        File.AppendAllText("/tmp/claude-0/scale-times.txt", $"{Rows} upload {clock.Elapsed}\n");
         await _rig.PostJsonAsync($"/api/itg/imports/batches/{id}/validate", null, Ct);
         await _rig.RunJobsAsync(Ct);
-        File.AppendAllText("/tmp/claude-0/scale-times.txt", $"{Rows} validated {clock.Elapsed}\n");
         var batch = (await _rig.GetAsync($"/api/itg/imports/batches/{id}", Ct)).Json;
         Assert.True(batch.GetProperty("status").GetString() == "validated" && batch.GetProperty("okRows").GetInt32() == Rows, batch + await _rig.Jobs.DumpAsync(Ct, _rig.Code));
         Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from ref.holidays h join ref.calendars c on c.id = h.calendar_id where c.code like $1", Ct, "S" + tag + "%"));
@@ -68,7 +65,6 @@ public sealed class ImportScaleTests(TenancyFixture fx) : IAsyncLifetime
         _rig.Docs.Clock.Advance(TimeSpan.FromSeconds(61));
         _rig.NewWorker();
         await _rig.RunJobsAsync(Ct);
-        File.AppendAllText("/tmp/claude-0/scale-times.txt", $"{Rows} finished {clock.Elapsed}\n");
         var done = (await _rig.GetAsync($"/api/itg/imports/batches/{id}", Ct)).Json;
         Assert.True(done.GetProperty("status").GetString() == "committed", done + await _rig.Jobs.DumpAsync(Ct, _rig.Code));
         Assert.Equal(Rows, done.GetProperty("createdRows").GetInt32());
