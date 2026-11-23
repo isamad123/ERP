@@ -8,7 +8,7 @@ namespace Erp.IntegrationTests.ImportCentre;
 [Collection(TenancyGroup.Name)]
 public sealed class ImportScaleTests(TenancyFixture fx) : IAsyncLifetime
 {
-    private const int Rows = 50_000;
+    private static readonly int Rows = int.TryParse(Environment.GetEnvironmentVariable("IMPORT_SCALE_ROWS"), out var n) ? n : 50_000;
     private ImportRig _rig = null!;
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -24,11 +24,11 @@ public sealed class ImportScaleTests(TenancyFixture fx) : IAsyncLifetime
         var tag = Guid.NewGuid().ToString("N")[..4].ToUpperInvariant();
         await _rig.ExecAsync("""
             insert into ref.calendars (id, code, name_i18n, source, is_active, created_at, created_by, updated_at, updated_by)
-            select gen_random_uuid(), 'S' || $1 || lpad(n::text, 2, '0'), '{"en":"Scale"}', 'tenant', true, now(), $2, now(), $2 from generate_series(0, 49) n
-            """, Ct, tag, Erp.Kernel.Infrastructure.ControlPlane.Provisioning.BaselineSeed.SystemUserId);
+            select gen_random_uuid(), 'S' || $1 || lpad(n::text, 2, '0'), '{"en":"Scale"}', 'tenant', true, now(), $2, now(), $2 from generate_series(0, $3::int - 1) n
+            """, Ct, tag, Erp.Kernel.Infrastructure.ControlPlane.Provisioning.BaselineSeed.SystemUserId, Rows / 1000);
         var text = new StringBuilder("calendar,holiday_date,name_en,name_ur,kind,is_tentative\r\n");
         var start = new DateOnly(2030, 1, 1);
-        for (var c = 0; c < 50; c++)
+        for (var c = 0; c < Rows / 1000; c++)
         {
             for (var d = 0; d < 1000; d++)
             {
@@ -37,36 +37,38 @@ public sealed class ImportScaleTests(TenancyFixture fx) : IAsyncLifetime
         }
 
         var template = await _rig.TemplateAsync("holidays", Ct);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
         var up = await _rig.UploadAsync(template, "holidays.csv", Encoding.UTF8.GetBytes(text.ToString()), Ct);
         Assert.True(up.Status == System.Net.HttpStatusCode.Created, up.Text);
         var id = up.Json.GetProperty("id").GetGuid();
         Assert.Equal(Rows, up.Json.GetProperty("totalRows").GetInt32());
 
+        TestContext.Current.SendDiagnosticMessage("upload " + clock.Elapsed);
         await _rig.PostJsonAsync($"/api/itg/imports/batches/{id}/validate", null, Ct);
         await _rig.RunJobsAsync(Ct);
+        TestContext.Current.SendDiagnosticMessage("validated " + clock.Elapsed);
         var batch = (await _rig.GetAsync($"/api/itg/imports/batches/{id}", Ct)).Json;
         Assert.True(batch.GetProperty("status").GetString() == "validated" && batch.GetProperty("okRows").GetInt32() == Rows, batch + await _rig.Jobs.DumpAsync(Ct, _rig.Code));
         Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from ref.holidays h join ref.calendars c on c.id = h.calendar_id where c.code like $1", Ct, "S" + tag + "%"));
 
         // The commit starts on one worker, which stops (as a crashed process would) after some chunks were saved.
-        var a = _rig.NewWorker();
-        await _rig.PostJsonAsync($"/api/itg/imports/batches/{id}/commit", null, Ct);
+        PausingCommitJob pause = null!;
+        var a = _rig.NewWorker(extra: services => pause = PausingCommitJob.Install(services, 10));
+        var queued = await _rig.PostJsonAsync($"/api/itg/imports/batches/{id}/commit", null, Ct);
+        var commitRun = queued.Json.GetProperty("jobRunId").GetGuid();
         Assert.Equal(1, (await _rig.Jobs.PollAsync(a, Ct)).Started);
-        var deadline = DateTime.UtcNow.AddMinutes(5);
-        while (await _rig.ScalarAsync<long>("select count(*) from itg.import_batch_rows where batch_id = $1", Ct, id) < 5_000 && DateTime.UtcNow < deadline)
-        {
-            await Task.Delay(200, Ct);
-        }
-
+        await pause.Reached.Task.WaitAsync(TimeSpan.FromMinutes(10), Ct);
         await a.KillAsync();
         var saved = await _rig.ScalarAsync<long>("select count(*) from itg.import_batch_rows where batch_id = $1", Ct, id);
-        Assert.InRange(saved, 1, Rows - 1);
-        Assert.Equal("running", await _rig.Jobs.StatusAsync(batch.GetProperty("jobRunId").GetGuid(), Ct));
+        Assert.Equal("running", await _rig.Jobs.StatusAsync(commitRun, Ct));
+        Assert.Equal(2_000, saved); // ten chunks of 200 rows were saved, each with its checkpoint
+        Assert.Equal("running", await _rig.Jobs.StatusAsync(commitRun, Ct));
 
         // Another worker takes the run over once the lease has run out and finishes the batch.
         _rig.Docs.Clock.Advance(TimeSpan.FromSeconds(61));
         _rig.NewWorker();
         await _rig.RunJobsAsync(Ct);
+        TestContext.Current.SendDiagnosticMessage("finished " + clock.Elapsed);
         var done = (await _rig.GetAsync($"/api/itg/imports/batches/{id}", Ct)).Json;
         Assert.True(done.GetProperty("status").GetString() == "committed", done + await _rig.Jobs.DumpAsync(Ct, _rig.Code));
         Assert.Equal(Rows, done.GetProperty("createdRows").GetInt32());

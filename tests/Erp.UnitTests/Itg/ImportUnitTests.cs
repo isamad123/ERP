@@ -14,6 +14,10 @@ public sealed class ImportUnitTests
     private static ImportColumnDefinition Column(string type, string name = "c", bool required = false, params string[] options) =>
         new(name, name, type, required, new Dictionary<string, string>(), null, options.Length == 0 ? null : options, null);
 
+    private static readonly string[] Transform = ["trim", "upper"];
+    private static readonly string[] Shout = ["shout"];
+    private static readonly string[] KindOnly = ["kind"];
+
     [Theory]
     [InlineData("  Ali  ", "trim", "Ali")]
     [InlineData("ali", "upper", "ALI")]
@@ -28,7 +32,7 @@ public sealed class ImportUnitTests
         Assert.Equal("errors.import.not_a_date", ImportTransforms.Apply("2027-03-23", ["date:dd/MM/yyyy"]).Error);
         Assert.Equal("1234.5", ImportTransforms.Apply("1.234,5", ["number:de-DE"]).Value);
         Assert.Equal("errors.import.not_a_number", ImportTransforms.Apply("abc", ["number:de-DE"]).Error);
-        Assert.Null(ImportTransforms.Apply(null, ["trim", "upper"]).Value);
+        Assert.Null(ImportTransforms.Apply(null, Transform).Value);
     }
 
     [Theory]
@@ -89,7 +93,7 @@ public sealed class ImportUnitTests
         {
             columns = new object[]
             {
-                new { field = "username", source = "Login", transform = new[] { "shout" } },
+                new { field = "username", source = "Login", transform = Shout },
                 new { field = "nothing", source = "X" },
             },
         }));
@@ -180,7 +184,7 @@ public sealed class ImportUnitTests
     {
         var type = ImportManifest.Parse(ImportManifest.KernelJson).Single(t => t.Code == "holidays");
         var mapping = TemplateMapping.Parse(JsonSerializer.SerializeToElement(TemplateMapping.DefaultFor(type)));
-        Assert.Equal(["kind"], ImportRowPipeline.MissingHeaders(type, mapping, ["calendar", "holiday_date", "name_en"]));
+        Assert.Equal(KindOnly, ImportRowPipeline.MissingHeaders(type, mapping, ["calendar", "holiday_date", "name_en"]));
         Assert.Empty(ImportRowPipeline.MissingHeaders(type, mapping, ["CALENDAR", " holiday_date ", "name_en", "kind"]));
     }
 }

@@ -5,7 +5,10 @@ using System.Text.Json;
 using Erp.IntegrationTests.Documents;
 using Erp.IntegrationTests.Jobs;
 using Erp.IntegrationTests.Tenancy;
+using Erp.Kernel.Contracts.Jobs;
+using Erp.Kernel.Infrastructure.Itg;
 using Erp.Kernel.Infrastructure.Jobs;
+using Microsoft.Extensions.DependencyInjection;
 using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Npgsql;
@@ -45,7 +48,11 @@ public sealed class ImportRig : IAsyncDisposable
     /// <summary>A worker over this customer; every call to <see cref="RunJobsAsync"/> uses the same one unless <see cref="NewWorker"/> replaced it.</summary>
     public JobWorker Worker => _worker ??= NewWorker();
 
-    public JobWorker NewWorker(int leaseSeconds = 60) => _worker = _jobs.Worker(leaseSeconds: leaseSeconds, extra: s => DocumentTestServices.Register(s, Docs.Root));
+    public JobWorker NewWorker(int leaseSeconds = 60, Action<IServiceCollection>? extra = null) => _worker = _jobs.Worker(leaseSeconds: leaseSeconds, extra: s =>
+    {
+        DocumentTestServices.Register(s, Docs.Root);
+        extra?.Invoke(s);
+    });
 
     public async Task RunJobsAsync(CancellationToken ct) => await _jobs.RunUntilIdleAsync(Worker, ct);
 
@@ -182,5 +189,62 @@ public sealed class ImportRig : IAsyncDisposable
     {
         await _jobs.DisposeAsync();
         await Docs.DisposeAsync();
+    }
+}
+
+/// <summary>The commit job with a pause after a number of saved chunks, so a test can stop the worker at a known place (the pattern of the job tests' block job).</summary>
+public sealed class PausingCommitJob(int afterChunks) : IJobHandler
+{
+    private readonly ImportCommitJob _inner = new();
+
+    public TaskCompletionSource Reached { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public string Code => _inner.Code;
+
+    public static PausingCommitJob Install(IServiceCollection services, int afterChunks)
+    {
+        var job = new PausingCommitJob(afterChunks);
+        foreach (var d in services.Where(d => d.ServiceType == typeof(IJobHandler) && d.ImplementationType == typeof(ImportCommitJob)).ToList())
+        {
+            services.Remove(d);
+        }
+
+        services.AddSingleton<IJobHandler>(job);
+        return job;
+    }
+
+    public Task RunAsync(IJobExecution job, CancellationToken cancellationToken) => _inner.RunAsync(new Pausing(job, this, afterChunks), cancellationToken);
+
+    private sealed class Pausing(IJobExecution inner, PausingCommitJob owner, int after) : IJobExecution
+    {
+        private int _chunks;
+
+        public Guid RunId => inner.RunId;
+
+        public string Code => inner.Code;
+
+        public Guid? CompanyId => inner.CompanyId;
+
+        public System.Text.Json.JsonElement Parameters => inner.Parameters;
+
+        public System.Text.Json.JsonElement? Checkpoint => inner.Checkpoint;
+
+        public int Attempt => inner.Attempt;
+
+        public DateTimeOffset? ScheduledFor => inner.ScheduledFor;
+
+        public IServiceProvider Services => inner.Services;
+
+        public async Task CommitChunkAsync(Func<System.Data.Common.DbConnection, System.Data.Common.DbTransaction, CancellationToken, Task>? work, object? checkpoint, decimal? progressPct, CancellationToken cancellationToken)
+        {
+            await inner.CommitChunkAsync(work, checkpoint, progressPct, cancellationToken);
+            if (++_chunks == after)
+            {
+                owner.Reached.TrySetResult();
+                await Task.Delay(Timeout.Infinite, cancellationToken);
+            }
+        }
+
+        public Task LogAsync(string level, string message, CancellationToken cancellationToken) => inner.LogAsync(level, message, cancellationToken);
     }
 }
