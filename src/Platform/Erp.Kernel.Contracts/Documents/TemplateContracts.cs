@@ -106,6 +106,9 @@ public interface ITemplateDataProvider
     Task<TemplateData?> LoadAsync(Guid ownerId, CancellationToken cancellationToken);
 }
 
+/// <summary>A printable record type with the fields its module offers to templates (the placeholder list of the editor).</summary>
+public sealed record TemplateEntityFields(string EntityType, IReadOnlyList<TemplateFieldDefinition> Fields);
+
 /// <summary>A template (the row of <c>doc.templates</c>).</summary>
 public sealed record TemplateView(Guid Id, string Code, IReadOnlyDictionary<string, string> Name, string Kind, string EntityType, Guid? CompanyId, string Language, string Source, Guid? ActiveVersionId, bool IsActive, long RowVersion);
 
