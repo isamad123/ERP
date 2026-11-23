@@ -63,6 +63,9 @@ public sealed class GeneratedEndpointTests : IAsyncLifetime
         builder.Services.AddSingleton<global::Erp.BuildingBlocks.Application.Tenancy.ITenantConnectionProvider>(new FixedTenant(_numbers));
         builder.Services.AddSingleton(new global::Erp.Kernel.Infrastructure.Numbering.DocumentTypeRegistry([new HrmNumberingTypes()]));
         builder.Services.AddScoped<global::Erp.Kernel.Contracts.Numbering.INumberAllocator, global::Erp.Kernel.Infrastructure.Numbering.NumberAllocator>();
+        // S1.15b: generated creates and updates of tables with custom fields check the values through the kernel validator.
+        builder.Services.AddSingleton(new global::Erp.BuildingBlocks.Application.Security.ResourceCatalog([.. global::Erp.Kernel.Infrastructure.Generated.KernelResourceCatalog.All, .. global::Erp.Hrm.Infrastructure.Generated.HrmResourceCatalog.All]));
+        builder.Services.AddScoped<global::Erp.Kernel.Contracts.Metadata.ICustomFieldValidator, global::Erp.Kernel.Infrastructure.Metadata.CustomFieldValidator>();
         _app = builder.Build();
         _app.MapKernelGeneratedEndpoints();
         _app.MapHrmGeneratedEndpoints();

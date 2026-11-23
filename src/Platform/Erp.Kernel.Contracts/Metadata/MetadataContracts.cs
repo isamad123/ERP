@@ -176,7 +176,8 @@ public sealed record CustomFieldState(long? RowVersion);
 public sealed record CustomOption(string Code, Names Label);
 
 /// <summary>
-/// A custom field as the form of a record shows it (contract "Custom field form API"): <paramref name="Access"/> is what the
+/// A custom field as the form of a record shows it (contract "Custom field form API"): <paramref name="Options"/> are the active items of the
+/// field's list (the whole list for a retired field, which is shown read-only); <paramref name="Access"/> is what the
 /// caller's roles allow for <c>custom.&lt;key&gt;</c> (<c>editable</c>, <c>readonly</c> or <c>masked</c>; hidden fields are left out).
 /// </summary>
 public sealed record FormCustomField(

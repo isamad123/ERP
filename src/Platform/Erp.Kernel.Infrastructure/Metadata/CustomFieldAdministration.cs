@@ -132,10 +132,11 @@ public sealed partial class CustomFieldAdministration(
 
         var access = await fieldAccess.ForAsync(entity.Fields, "read", companyId, cancellationToken).ConfigureAwait(false);
         var defs = await db.Set<CustomFieldDef>().AsNoTracking().Where(d => d.EntityType == entity.Resource).OrderBy(d => d.Seq).ThenBy(d => d.FieldKey).ToListAsync(cancellationToken).ConfigureAwait(false);
-        var lists = defs.Where(d => d.Status == "active" && d.OptionListId is not null).Select(d => d.OptionListId!.Value).Distinct().ToList();
+        // An active field offers the active items; a retired field is shown read-only, so its list is given whole (an item since switched off still has its name).
+        var lists = defs.Where(d => d.OptionListId is not null).Select(d => d.OptionListId!.Value).Distinct().ToList();
         var items = lists.Count == 0
             ? []
-            : await db.Set<OptionListItem>().AsNoTracking().Where(i => lists.Contains(i.ListId) && i.IsActive).OrderBy(i => i.Seq).ThenBy(i => i.Code).ToListAsync(cancellationToken).ConfigureAwait(false);
+            : await db.Set<OptionListItem>().AsNoTracking().Where(i => lists.Contains(i.ListId)).OrderBy(i => i.Seq).ThenBy(i => i.Code).ToListAsync(cancellationToken).ConfigureAwait(false);
         var result = new List<FormCustomField>();
         foreach (var def in defs)
         {
@@ -147,7 +148,7 @@ public sealed partial class CustomFieldAdministration(
 
             var retired = def.Status == "retired";
             var options = def.OptionListId is { } list
-                ? items.Where(i => i.ListId == list).Select(i => new CustomOption(i.Code, OptionListAdministration.NamesOf(i.LabelI18n))).ToList()
+                ? items.Where(i => i.ListId == list && (retired || i.IsActive)).Select(i => new CustomOption(i.Code, OptionListAdministration.NamesOf(i.LabelI18n))).ToList()
                 : [];
             result.Add(new FormCustomField(
                 def.FieldKey, def.DataType, Names(def.LabelI18n), def.HelpI18n is null ? null : Names(def.HelpI18n), def.Validation.RootElement.Clone(), def.DefaultValue?.RootElement.Clone(),

@@ -17,6 +17,7 @@ import { useShell } from '../../shell/context';
 import { cleanNames, NamePair, useRefused } from './config-parts';
 import './config-messages';
 import './users.css';
+import './settings.css';
 import './configure.css';
 
 const KEY = /^[a-z][a-z0-9_]{0,39}$/;
@@ -97,7 +98,8 @@ function Definitions({ entity, entityName }: { entity: CustomEntity; entityName:
         <EmptyState title={t('cf.empty', { entity: entityName })} action={canCreate ? <Button variant="primary" onPress={() => setEditing('new')}>{t('cf.new')}</Button> : undefined}>{t('cf.empty.body')}</EmptyState>
       )}
       {list.isSuccess && defs.length > 0 && (
-        <table className="erp-table" aria-label={t('cf.defs.title', { entity: entityName })}>
+        <div className="erp-table-scroll">
+          <table className="erp-table" aria-label={t('cf.defs.title', { entity: entityName })}>
           <thead>
             <tr>
               <th scope="col">{t('cf.col.label')}</th>
@@ -137,6 +139,7 @@ function Definitions({ entity, entityName }: { entity: CustomEntity; entityName:
             })}
           </tbody>
         </table>
+          </div>
       )}
       <p className="erp-small erp-muted">{t('cf.note.noPurge')}</p>
       {editing && (

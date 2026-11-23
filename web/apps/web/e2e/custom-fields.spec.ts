@@ -6,7 +6,7 @@
 // it and a role it is hidden from sees no custom section; retiring the field hides it on new records and keeps the stored
 // values; every screen passes axe in English and Urdu and fits three widths.
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { accessible, display, field, fitsWidth, freshContext, menu, noProblems, person, server, shot } from './support';
+import { accessible, display, field, fitsWidth, menu, noProblems, person, server, shot } from './support';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -21,7 +21,7 @@ const FIELD_UR = `بلڈ گروپ ${run}`;
 const ORG = ['org.org_units.read', 'org.org_units.create', 'org.org_units.update', 'org.org_unit_types.read', 'org.org_hierarchies.read', 'org.org_unit_links.read', 'org.locations.read',
   'org.companies.read', 'org.branches.read', 'ref.calendars.read', 'aud.history.view', 'cfg.saved_views.share'];
 const CONFIG = ['cfg.labels.read', 'cfg.labels.update', 'cfg.option_lists.read', 'cfg.option_lists.create', 'cfg.option_lists.update', 'cfg.option_list_items.read', 'cfg.option_list_items.create',
-  'cfg.option_list_items.update', 'cfg.custom_field_defs.read', 'cfg.custom_field_defs.create', 'cfg.custom_field_defs.update', 'iam.roles.read'];
+  'cfg.option_list_items.update', 'cfg.custom_field_defs.read', 'cfg.custom_field_defs.create', 'cfg.custom_field_defs.update', 'iam.roles.read', 'iam.access.preview'];
 const ADMIN = [...ORG, ...CONFIG];
 
 /** Opens a select (React Aria needs a second press when the first one only focuses it) and picks an option. */
@@ -63,9 +63,10 @@ test('FR-ADM-STU-25 FR-ADM-STU-05 FR-KRN-MET-22 an administrator renames a menu 
   await expect(page.locator('.erp-small.erp-muted', { hasText: 'Changed for the customer' }).or(page.getByText('Changed for the customer'))).toBeVisible();
 
   // Another person, in Urdu, sees the Urdu text after the next load (the shell also asks again every minute).
-  const urdu = await person(browser, { permissions: ORG, displayName: 'Urdu Reader', context: await freshContext(browser, 'ur') });
+  const urdu = await person(browser, { permissions: ORG, displayName: 'Urdu Reader' });
+  await display(urdu.context, { language: 'ur' });
   await urdu.page.reload();
-  await expect(menu(urdu.page).getByRole('link', { name: 'ونگز' })).toBeVisible();
+  await expect(urdu.page.getByRole('navigation', { name: 'مرکزی مینو' }).getByRole('link', { name: 'ونگز' })).toBeVisible();
   await urdu.context.close();
 
   // Reset to the product text.
@@ -81,7 +82,8 @@ test('FR-ADM-STU-25 FR-ADM-STU-05 FR-KRN-MET-22 an administrator renames a menu 
 test('FR-KRN-MET-01 FR-KRN-MET-02 FR-KRN-MET-05 a required custom choice field on org units is refused when missing in both languages, kept when given, hidden by a field rule, and retired with its values kept', async ({ browser }) => {
   await server.orgStructure(CODE);
   const admin = await person(browser, { permissions: ADMIN, displayName: 'Carla Custom' });
-  const reader = await person(browser, { permissions: ORG, displayName: 'Rana Reader' });
+  // Without the baseline role: the most open access among a person's roles wins, so a rule on one role would not show.
+  const reader = await person(browser, { permissions: [...ORG, 'iam.self.manage', 'ntf.in_app_items.read'], removeBaseline: true, displayName: 'Rana Reader' });
   const page = admin.page;
   await page.reload();
 
@@ -119,7 +121,7 @@ test('FR-KRN-MET-01 FR-KRN-MET-02 FR-KRN-MET-05 a required custom choice field o
   await drawer.getByRole('textbox', { name: /^Name in English/ }).fill(FIELD_EN);
   await drawer.getByRole('textbox', { name: /^Name in Urdu/ }).fill(FIELD_UR);
   await drawer.getByRole('textbox', { name: 'Section' }).fill('Health');
-  await drawer.getByRole('switch', { name: 'Required' }).click();
+  await drawer.getByText('Required', { exact: true }).click(); // the switch's input is visually hidden: its label takes the click
   await accessible(page, 'custom field drawer');
   await shot(page, 'custom-field-drawer-en-light-1280');
   await drawer.getByRole('button', { name: 'Create field' }).click();
@@ -140,7 +142,8 @@ test('FR-KRN-MET-01 FR-KRN-MET-02 FR-KRN-MET-05 a required custom choice field o
     await p.goto('/organization/org-units');
     await p.getByRole('searchbox', { name: 'Search' }).fill(code);
     await p.getByRole('button', { name: 'Search', exact: true }).click();
-    await p.getByRole('gridcell', { name: code }).first().click();
+    await p.getByRole('button', { name: new RegExp(`^Open ${code}`) }).first().click();
+    await expect(p.getByRole('heading', { level: 1 })).toBeVisible();
   };
   await page.goto('/organization/org-units/new');
   const section = page.getByRole('region', { name: 'Additional fields' });
@@ -154,7 +157,8 @@ test('FR-KRN-MET-01 FR-KRN-MET-02 FR-KRN-MET-05 a required custom choice field o
   await accessible(page, 'org unit form with a custom field error');
   await shot(page, 'org-unit-custom-error-en-light-1280');
   // The same refusal in Urdu.
-  const urduAdmin = await person(browser, { permissions: ADMIN, displayName: 'Urdu Custom', context: await freshContext(browser, 'ur') });
+  const urduAdmin = await person(browser, { permissions: ADMIN, displayName: 'Urdu Custom' });
+  await display(urduAdmin.context, { language: 'ur' });
   await urduAdmin.page.goto('/organization/org-units/new');
   await expect(urduAdmin.page.getByRole('region', { name: 'اضافی خانے' })).toBeVisible();
   await urduAdmin.page.locator('button[type="submit"]').click();

@@ -16,6 +16,7 @@ import { hrmScreens } from '../hrm';
 import { catalogue, declaredTables, matchesEntry, overridesByKey, screensOf, viewOf, type CatalogueEntry } from './labels-model';
 import './config-messages';
 import './settings.css';
+import './configure.css';
 
 const screens = [...kernelScreens, ...hrmScreens];
 const PAGE = 50;
@@ -81,6 +82,7 @@ export default function LabelsScreen() {
       {list.isSuccess && rows.length > 0 && (
         <>
           <p className="erp-small erp-muted" role="status">{t('labels.count', { count: rows.length })}</p>
+          <div className="erp-table-scroll">
           <table className="erp-table erp-labels-table" aria-label={t('labels.title')}>
             <thead>
               <tr>
@@ -119,6 +121,7 @@ export default function LabelsScreen() {
               })}
             </tbody>
           </table>
+          </div>
           {rows.length > shown && <Button variant="secondary" onPress={() => setShown((n) => n + PAGE)}>{t('labels.more', { shown: visible.length, total: rows.length })}</Button>}
         </>
       )}

@@ -25,7 +25,14 @@ public sealed class MetadataTests(TenancyFixture fx) : IAsyncLifetime
     {
         _h = await AccessHarness.ForAsync(fx);
         _h.Clock.Reset();
-        _admin = await _h.UserAsync(Ct, null, "tenant_admin");
+        // The customer is shared by the tests of the collection and another test removes a permission from the baseline tenant
+        // administrator role (AccessGovernanceTests), so this class works with a role of its own.
+        var role = await _h.RoleAsync(Ct, [
+            "iam.self.manage", "iam.roles.read", "cfg.labels.read", "cfg.labels.update", "cfg.option_lists.read", "cfg.option_lists.create", "cfg.option_lists.update",
+            "cfg.option_list_items.read", "cfg.option_list_items.create", "cfg.option_list_items.update", "cfg.custom_field_defs.read", "cfg.custom_field_defs.create",
+            "cfg.custom_field_defs.update", "org.org_units.read", "org.org_units.create", "org.org_units.update"], [("org.org_units", "all")]);
+        _admin = await _h.UserAsync(Ct);
+        await _h.AssignAsync(_admin, role, null, _h.Today.AddDays(-1), null, Ct);
         await ClearDefinitionsAsync();
     }
 
@@ -524,7 +531,7 @@ public sealed class MetadataTests(TenancyFixture fx) : IAsyncLifetime
         var user = await _h.UserAsync(Ct);
         await _h.AssignAsync(user, role, null, _h.Today.AddDays(-1), null, Ct);
 
-        var preview = await _h.GetAsync(_admin, $"/api/iam/roles/{role}/field-preview?resource=org.org_units", Ct);
+        var preview = await _h.GetAsync(await _h.UserAsync(Ct, null, "tenant_admin"), $"/api/iam/roles/{role}/field-preview?resource=org.org_units", Ct);
         var rows = preview.Json.GetProperty("fields").EnumerateArray().ToList();
         var shown = rows.Single(r => r.GetProperty("field").GetString() == "custom." + shownKey.Key);
         Assert.Equal("read_only", shown.GetProperty("access").GetString());

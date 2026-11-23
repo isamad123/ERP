@@ -245,10 +245,13 @@ Requirements: KRN-MET-01, KRN-MET-02, KRN-MET-05. Source: kernel.yaml.
 Constraints:
 
 - `ck_custom_field_defs_data_type` CHECK ((data_type = ANY (ARRAY['text'::text, 'long_text'::text, 'number'::text, 'decimal'::text, 'date'::text, 'bool'::text, 'choice'::text, 'multi_choice'::text, 'user'::text, 'employee'::text, 'file'::text])))
+- `ck_custom_field_defs_field_key` CHECK ((field_key ~ '^[a-z][a-z0-9_]{0,39}$'::text))
 - `ck_custom_field_defs_field_key_code` CHECK ((((length(field_key) >= 1) AND (length(field_key) <= 40)) AND (field_key = btrim(field_key))))
 - `ck_custom_field_defs_help_i18n_object` CHECK ((jsonb_typeof(help_i18n) = 'object'::text))
 - `ck_custom_field_defs_label_i18n_object` CHECK ((jsonb_typeof(label_i18n) = 'object'::text))
+- `ck_custom_field_defs_option_list` CHECK (((data_type = ANY (ARRAY['choice'::text, 'multi_choice'::text])) = (option_list_id IS NOT NULL)))
 - `ck_custom_field_defs_status` CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
+- `ck_custom_field_defs_unique_types` CHECK (((NOT is_unique) OR (data_type = ANY (ARRAY['text'::text, 'number'::text, 'decimal'::text, 'date'::text, 'choice'::text, 'user'::text, 'employee'::text]))))
 - `fk_custom_field_defs_option_list_id` FOREIGN KEY (option_list_id) REFERENCES cfg.option_lists(id)
 - `pk_custom_field_defs` PRIMARY KEY (id)
 - `uq_custom_field_defs_entity_type_field_key` UNIQUE (entity_type, field_key)
@@ -370,6 +373,7 @@ Label and terminology overrides per language and layer. Requirements: KRN-ORG-08
 Constraints:
 
 - `ck_labels_layer` CHECK ((layer = ANY (ARRAY['pack'::text, 'tenant'::text, 'company'::text])))
+- `ck_labels_text_length` CHECK (((length(text) >= 1) AND (length(text) <= 300)))
 - `pk_labels` PRIMARY KEY (id)
 - `uq_labels_key_language_layer_scope_id` UNIQUE NULLS NOT DISTINCT (key, language, layer, scope_id)
 

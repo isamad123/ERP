@@ -193,6 +193,7 @@ function ListDetail({ id }: { id: string }) {
       {list.items.length === 0
         ? <EmptyState title={t('lists.items.empty')}>{t('lists.items.empty.body')}</EmptyState>
         : (
+          <div className="erp-table-scroll">
           <table className="erp-table" aria-label={t('lists.items.title', { name: nameOf(list.name, locale) })}>
             <thead>
               <tr>
@@ -232,6 +233,7 @@ function ListDetail({ id }: { id: string }) {
               })}
             </tbody>
           </table>
+          </div>
         )}
       <p className="erp-small erp-muted">{t('lists.note.noDelete')}</p>
       {adding && <ItemDialog listId={id} onClose={() => setAdding(false)} onDone={(answer) => { take(answer); toast.success(t('lists.item.added')); setAdding(false); }} />}

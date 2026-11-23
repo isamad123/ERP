@@ -121,6 +121,23 @@ export async function shot(page: Page, name: string): Promise<void> {
 /** The page fits the width: no sideways scrolling (spec 13 NFR-11). */
 export async function fitsWidth(page: Page): Promise<void> {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  if (overflow > 0) {
+    // Name the elements whose removal makes the page fit, so a failure says which one pushes the page out.
+    const wide = await page.evaluate(() => {
+      const found: string[] = [];
+      for (const e of document.querySelectorAll('body *')) {
+        const element = e as HTMLElement;
+        const before = element.style.display;
+        element.style.display = 'none';
+        const fits = document.documentElement.scrollWidth <= window.innerWidth;
+        element.style.display = before;
+        if (fits) found.push(`${e.tagName.toLowerCase()}.${String(e.className).slice(0, 50)}<${(e.parentElement?.tagName ?? '').toLowerCase()}.${String(e.parentElement?.className ?? '').slice(0, 50)}`);
+        if (found.length >= 6) break;
+      }
+      return found;
+    });
+    expect(`${overflow}px too wide: ${wide.join(' | ')}`).toBe('fits');
+  }
   expect(overflow).toBeLessThanOrEqual(0);
 }
 
