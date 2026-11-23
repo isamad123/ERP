@@ -88,6 +88,12 @@ public sealed partial class TemplateService(
         return (await FindTemplateAsync(c, id, cancellationToken).ConfigureAwait(false))!;
     }
 
+    public async Task<IReadOnlyList<TemplateEntityFields>> EntityFieldsAsync(CancellationToken cancellationToken)
+    {
+        await RequireAsync(TemplatePermissions.VersionsRead, cancellationToken).ConfigureAwait(false);
+        return [.. providers.OrderBy(p => p.EntityType, StringComparer.Ordinal).Select(p => new TemplateEntityFields(p.EntityType, p.Fields))];
+    }
+
     public async Task<IReadOnlyList<TemplateVersionView>> VersionsAsync(Guid templateId, CancellationToken cancellationToken)
     {
         await RequireAsync(TemplatePermissions.VersionsRead, cancellationToken).ConfigureAwait(false);

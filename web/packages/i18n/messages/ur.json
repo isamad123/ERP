@@ -1437,5 +1437,7 @@
   "nav.numbering": "نمبرنگ",
   "nav.approvalRoutes": "منظوری کے راستے",
   "nav.payGroups": "تنخواہ گروپ",
-  "nav.payCalendar": "پے رول کیلنڈر"
+  "nav.payCalendar": "پے رول کیلنڈر",
+  "nav.notificationTexts": "اطلاعات کے متن",
+  "nav.documentTemplates": "دستاویزی سانچے"
 }

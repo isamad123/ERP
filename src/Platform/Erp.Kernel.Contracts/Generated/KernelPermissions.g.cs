@@ -24,8 +24,6 @@ public static class KernelPermissions
         new("cfg.pack_items.update", "cfg", "permissions.cfg.pack_items.update", false),
         new("cfg.setting_value_history.read", "cfg", "permissions.cfg.setting_value_history.read", false),
         new("cfg.setup_tasks.read", "cfg", "permissions.cfg.setup_tasks.read", false),
-        new("cfg.setup_tasks.create", "cfg", "permissions.cfg.setup_tasks.create", false),
-        new("cfg.setup_tasks.update", "cfg", "permissions.cfg.setup_tasks.update", false),
         new("doc.generated_documents.read", "doc", "permissions.doc.generated_documents.read", false),
         new("doc.retention_rules.read", "doc", "permissions.doc.retention_rules.read", false),
         new("doc.retention_rules.create", "doc", "permissions.doc.retention_rules.create", false),
