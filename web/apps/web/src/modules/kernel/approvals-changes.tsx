@@ -98,7 +98,8 @@ function ChangeCard({ change, decidable }: { change: ChangeRequest; decidable: b
 function DetailRow({ detail }: { detail: ChangeDetail }) {
   const { t, server } = useText();
   const { locale, timeZone, numbers } = useLocaleSettings();
-  const label = (LABELS as readonly string[]).includes(detail.label) ? t(`approvals.${detail.label}` as MessageKey) : detail.label;
+  // A module's own labels and values are server text keys (S1.20d: HR payment accounts); they load with the module texts.
+  const label = (LABELS as readonly string[]).includes(detail.label) ? t(`approvals.${detail.label}` as MessageKey) : server(detail.label) ?? detail.label;
   let value: ReactNode;
   switch (detail.type) {
     case 'date':
@@ -108,7 +109,7 @@ function DetailRow({ detail }: { detail: ChangeDetail }) {
       value = isolate(nameOf(detail.names, locale)) || t('approvals.field.empty');
       break;
     case 'key':
-      value = detail.text && (KEYS as readonly string[]).includes(detail.text) ? t(`approvals.${detail.text}` as MessageKey) : (detail.text ?? '');
+      value = detail.text && (KEYS as readonly string[]).includes(detail.text) ? t(`approvals.${detail.text}` as MessageKey) : (detail.text ? server(detail.text) ?? detail.text : '');
       break;
     case 'items':
       value = (
