@@ -24,6 +24,7 @@ internal sealed partial class EmploymentService
     public const string ConfirmationBeforeJoiningAfter = "errors.hrm.employment.confirmation_before_new_joining";
     public const string ServiceStartAfterJoining = "errors.hrm.employment.service_start_after_joining";
     public const string AfterEnd = "errors.hrm.employment.after_end";
+    public const string TransferStartCorrection = "errors.hrm.employment_event.transfer_start";
 
     public Task<PeopleResult> CheckChangeAsync(Guid employmentId, EmploymentChangeRequest request, CancellationToken cancellationToken) =>
         ChangeAsync(employmentId, request, save: false, cancellationToken);
@@ -143,6 +144,20 @@ internal sealed partial class EmploymentService
             errors.Add("correctsEventId", CorrectionTarget);
         }
 
+        // The start of a transfer is not corrected alone either (review S1.20c finding 1, FR-XM-30, FR-XM-32): moving it would leave
+        // the first company's end where it was, without the transfer permission or its approval. A wrong transfer date is put right
+        // by withdrawing and recording the transfer again (S1.25); its service start follows the recorded carry-over choice.
+        var transferStart = events.FirstOrDefault(x => x.Kind == "hire" && x.ReasonCode == TransferApplier.TransferInReason);
+        if (target is not null && transferStart is not null && RootEvent(target, events)?.Id == transferStart.Id)
+        {
+            errors.Add("correctsEventId", TransferStartCorrection);
+        }
+
+        if (transferStart is not null && r.Employment?.ServiceStartDate is not null)
+        {
+            errors.Add("employment.serviceStartDate", TransferStartCorrection);
+        }
+
         var delta = r.Assignment is { } input ? AssignmentDelta(input, errors, hire: false) : [];
         if (kind == "acting" && !delta.ContainsKey(AssignmentKeys.IsActing))
         {
@@ -191,7 +206,7 @@ internal sealed partial class EmploymentService
                 employmentDelta["confirmation_date"] = Iso(date);
             }
         }
-        else if (rootKind != "hire" && date < employment.JoiningDate)
+        else if (!StartsEmployment(rootKind) && date < employment.JoiningDate)
         {
             errors.Add("effectiveDate", BeforeJoining);
         }
@@ -252,9 +267,17 @@ internal sealed partial class EmploymentService
             return Field("effectiveDate", BeforeJoining);
         }
 
-        if (rootKind == "hire" && planned.Count > 0 && planned[0].ValidFrom > today && employment.Status != "pre_joining")
+        if (StartsEmployment(rootKind) && planned.Count > 0 && planned[0].ValidFrom > today && employment.Status != "pre_joining")
         {
             return Field("effectiveDate", JoiningAfterToday);
+        }
+
+        // A corrected rehire still joins after the former employment ended (BR-01; review S1.20c finding 7).
+        if (rootKind == "rehire" && planned.Count > 0 && employment.PreviousEmploymentId is { } former
+            && await db.Set<Employment>().AsNoTracking().Where(x => x.Id == former).Select(x => x.SeparationDate).FirstOrDefaultAsync(ct).ConfigureAwait(false) is { } ended
+            && planned[0].ValidFrom <= ended)
+        {
+            return Field("effectiveDate", RehireBeforeSeparation);
         }
 
         if (await PlannedProblemAsync(employment, planned, assignment, ct).ConfigureAwait(false) is { } invalid)
@@ -383,6 +406,22 @@ internal sealed partial class EmploymentService
             : service > joining ? Field("employment.serviceStartDate", ServiceStartAfterJoining)
             : end < joining ? Field("employment.expectedEndDate", DateOrder)
             : null;
+    }
+
+    /// <summary>Whether a kind starts an employment: a hire or a rehire (review S1.20c finding 7).</summary>
+    private static bool StartsEmployment(string? kind) => kind is "hire" or "rehire";
+
+    /// <summary>The event a correction finally replaces, following the chain of corrections; null when the chain is broken.</summary>
+    private static EmploymentEvent? RootEvent(EmploymentEvent target, List<EmploymentEvent> events)
+    {
+        var current = target;
+        for (var i = 0; current is not null && current.Kind == "data_correction" && i < events.Count; i++)
+        {
+            var next = current.CorrectsEventId;
+            current = next is null ? null : events.FirstOrDefault(x => x.Id == next);
+        }
+
+        return current;
     }
 
     /// <summary>The kind a correction finally replaces (a correction of a correction replaces what the first one replaced).</summary>

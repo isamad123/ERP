@@ -4402,7 +4402,7 @@ Requirements: EMP-10, ONB-12. Source: hrm-people.yaml.
 
 Constraints:
 
-- `ck_probation_records_status` CHECK ((status = ANY (ARRAY['in_progress'::text, 'extended'::text, 'confirmed'::text, 'not_confirmed'::text])))
+- `ck_probation_records_status` CHECK ((status = ANY (ARRAY['in_progress'::text, 'extended'::text, 'confirmed'::text, 'not_confirmed'::text, 'transferred'::text])))
 - `fk_probation_records_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_probation_records_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
 - `fk_probation_records_review_form_response_id` FOREIGN KEY (company_id, review_form_response_id) REFERENCES hrm.form_responses(company_id, id)

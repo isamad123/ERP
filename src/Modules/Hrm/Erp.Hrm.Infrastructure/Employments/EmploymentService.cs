@@ -598,6 +598,13 @@ internal sealed partial class EmploymentService(
             db.ChangeTracker.Clear();
             return PeopleResult.Conflict(ex.ErrorKey, ex.Details.Count == 0 ? null : new Dictionary<string, object?> { ["details"] = ex.Details });
         }
+        catch (PostgresException pg) when (pg.SqlState is "40P01" or "40001")
+        {
+            // Two changes waiting for each other's rows (for example opposite manager changes, review S1.20c finding 6): the
+            // database stops one; its caller is told to read again and retry.
+            db.ChangeTracker.Clear();
+            return PeopleResult.Conflict(Concurrency);
+        }
     }
 
     /// <summary>Database refusals of employment rows as answers next to the field they concern.</summary>

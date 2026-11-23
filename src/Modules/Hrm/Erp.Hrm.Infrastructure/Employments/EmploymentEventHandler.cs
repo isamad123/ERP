@@ -156,6 +156,13 @@ internal sealed class EmploymentEventHandler(IServiceProvider services, IClock c
         }
 
         var events = await applier.EventsAsync(from.Id, ct).ConfigureAwait(false);
+
+        // Another change of the first employment waiting for its own approval would be stranded by the end (review S1.20c finding 4).
+        if (events.Any(x => x.Id != separation.Id && x.Status == "pending_approval"))
+        {
+            throw new WorkflowException(EmploymentService.TransferPendingChanges);
+        }
+
         var replaced = EmploymentTimeline.ReplacedBy([.. events.Select(EmploymentApplier.ToTimeline)]);
         if (events.Any(x => x.Id != separation.Id && x.Status is "approved" or "effective" && x.EffectiveDate >= separation.EffectiveDate && !replaced.ContainsKey(x.Id)))
         {

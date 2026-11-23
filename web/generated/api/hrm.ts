@@ -4378,7 +4378,7 @@ export interface ProbationRecord
     extendedTo: string | null;
     reviewFormResponseId: string | null;
     decisionDate: string | null;
-    status: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed';
+    status: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed' | 'transferred';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
@@ -4393,7 +4393,7 @@ export interface ProbationRecordListQuery
     companyId?: string;
     employmentId?: string;
     reviewFormResponseId?: string;
-    status?: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed';
+    status?: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed' | 'transferred';
 }
 
 export const probationRecords =

@@ -45,6 +45,8 @@ internal sealed class EmploymentTermsService(
     public const string NoOpenProbation = "errors.hrm.probation.none_open";
     public const string ExtendNotLater = "errors.hrm.probation.extend_not_later";
     public const string DecisionBeforeStart = "errors.hrm.probation.decision_before_start";
+    public const string EmploymentWaiting = "errors.hrm.contract.employment_waiting";
+    public const string AfterEnd = "errors.hrm.contract.after_end";
 
     private const int TermsLength = 16_384;
 
@@ -195,6 +197,11 @@ internal sealed class EmploymentTermsService(
 
     private async Task<PeopleResult> SaveContractAsync(Employment employment, Contract contract, Guid? renewed, long? expected, CancellationToken ct)
     {
+        if (await EndProblemAsync(employment, contract, ct).ConfigureAwait(false) is { } ended)
+        {
+            return ended;
+        }
+
         if (!await scope.AllowsAsync(contract, ContractAccess.Scope, "create", Source, ct).ConfigureAwait(false))
         {
             return PeopleResult.Forbidden(AccessDeniedException.OutOfScope);
@@ -261,6 +268,25 @@ internal sealed class EmploymentTermsService(
                 rowVersion = contract.RowVersion,
             });
         }, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// A contract fits the employment's life (review S1.20c finding 8): not on an employment whose start still waits for approval (a
+    /// held transfer), and within a recorded end (a transfer's separation; its date is the first day without the employment).
+    /// Ending the contracts of an ended employment is S1.25's (R-227).
+    /// </summary>
+    private async Task<PeopleResult?> EndProblemAsync(Employment employment, Contract contract, CancellationToken ct)
+    {
+        var events = await db.Set<EmploymentEvent>().AsNoTracking().Where(e => e.EmploymentId == employment.Id).ToListAsync(ct).ConfigureAwait(false);
+        if (events.Any(e => e.Kind == "hire" && e.Status == "pending_approval"))
+        {
+            return PeopleResult.Conflict(EmploymentWaiting);
+        }
+
+        var end = events.Where(e => e.Kind == EmploymentApplier.SeparationKind && e.Status is "pending_approval" or "approved" or "effective").Select(e => (DateOnly?)e.EffectiveDate).Min();
+        return end is { } last && (contract.StartDate >= last || contract.EndDate is not { } finish || finish >= last)
+            ? PeopleResult.Fields(new Dictionary<string, string[]> { [contract.StartDate >= last ? "startDate" : "endDate"] = [AfterEnd] })
+            : null;
     }
 
     // ================================================================== probation (FR-HRM-EMP-10, ruling Q10)

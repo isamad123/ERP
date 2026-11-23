@@ -351,6 +351,120 @@ public sealed class EmploymentTermsTests(TenancyFixture fx) : IAsyncLifetime
         }
     }
 
+    [Fact]
+    public async Task FR_XM_30_FR_XM_32_review_1_the_start_of_a_transfer_cannot_be_corrected_alone()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var (first, place) = await CompanyAsync();
+        var (second, there) = await CompanyAsync();
+        var (id, _) = await HireAsync(hr, first, place, Today.AddDays(-200));
+        var date = Today.AddDays(-20);
+        var moved = await TransferAsync(hr, id, second, there, date);
+        Assert.True(moved.Status == HttpStatusCode.Created, moved.Body);
+        var next = moved.Json.GetProperty("id").GetGuid();
+        Assert.Equal(await VersionAsync(next), moved.Json.GetProperty("rowVersion").GetInt64()); // the linked employment's own version
+        Assert.Equal(await VersionAsync(id), moved.Json.GetProperty("fromRowVersion").GetInt64());
+        var start = moved.Json.GetProperty("eventId").GetGuid();
+
+        // Moving the linked start would leave the first company's end where it is (the reviewer's reproduction): refused.
+        var corrected = await _h.PostAsync(hr, $"{Employments}/{next}/events", new { kind = "data_correction", reasonCode = "entry_error", correctsEventId = start, effectiveDate = Iso(date.AddDays(-30)), rowVersion = await VersionAsync(next) }, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, corrected.Status);
+        Assert.Equal("errors.hrm.employment_event.transfer_start", corrected.Json.GetProperty("errors").GetProperty("correctsEventId")[0].GetString());
+        var service = await _h.PostAsync(hr, $"{Employments}/{next}/events", new { kind = "data_correction", reasonCode = "entry_error", effectiveDate = Iso(Today), employment = new { serviceStartDate = Iso(date) }, rowVersion = await VersionAsync(next) }, Ct);
+        Assert.Equal("errors.hrm.employment_event.transfer_start", service.Json.GetProperty("errors").GetProperty("employment.serviceStartDate")[0].GetString());
+        Assert.Equal(date, await _h.ScalarAsync<DateOnly>("select joining_date from hrm.employments where id = $1", Ct, next));
+        Assert.Null(await TitleOnAsync(hr, next, date.AddDays(-1)));
+        Assert.Null(await TitleOnAsync(hr, id, date));
+    }
+
+    [Fact]
+    public async Task FR_HRM_EMP_10_FR_XM_30_review_2_an_open_probation_moves_only_when_a_future_transfer_takes_effect()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var (first, place) = await CompanyAsync();
+        var (second, there) = await CompanyAsync();
+        var joining = Today.AddDays(-30);
+        var (id, _) = await HireAsync(hr, first, place, joining);
+        var end = joining.AddMonths(3).AddDays(-1);
+        var date = Today.AddDays(5);
+        var moved = await TransferAsync(hr, id, second, there, date, new { service = "keep" });
+        Assert.True(moved.Status == HttpStatusCode.Created, moved.Body);
+        var next = moved.Json.GetProperty("id").GetGuid();
+
+        // Until the date only the first employment has a probation, so nobody is reminded twice.
+        Assert.Equal("in_progress", await _h.ScalarAsync<string>("select status from hrm.probation_records where employment_id = $1", Ct, id));
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.probation_records where employment_id = $1", Ct, next));
+
+        await using var rig = await JobRig.ForExistingAsync(fx, _h.Code, _h.Clock, Ct);
+        _h.Clock.Advance(TimeSpan.FromDays(6));
+        var worker = rig.Worker();
+        await rig.QueueAsync("hrm.employment_events_due", ct: Ct);
+        await rig.RunUntilIdleAsync(worker, Ct);
+        Assert.Equal($"transferred|{Iso(date)}", await _h.ScalarAsync<string>("select status || '|' || decision_date from hrm.probation_records where employment_id = $1", Ct, id));
+        Assert.Equal($"in_progress|{Iso(date)}|{Iso(end)}", await _h.ScalarAsync<string>("select status || '|' || start_date || '|' || end_date from hrm.probation_records where employment_id = $1", Ct, next));
+    }
+
+    [Fact]
+    public async Task FR_HRM_EMP_09_FR_HRM_EMP_10_FR_KRN_IAM_12_FR_KRN_IAM_13_review_3_contracts_and_probation_follow_the_permission_the_scope_and_field_security()
+    {
+        var hr = await _h.UserAsync(Ct, null, "hr_admin");
+        var (company, place) = await CompanyAsync();
+        var (other, _) = await CompanyAsync();
+        var (id, _) = await HireAsync(hr, company, place, Today.AddDays(-30));
+        var contract = await _h.PostAsync(hr, $"{Employments}/{id}/contracts", new { startDate = Iso(Today.AddDays(-30)), endDate = Iso(Today.AddDays(300)) }, Ct);
+        Assert.True(contract.Status == HttpStatusCode.Created, contract.Body);
+        var contractId = contract.Json.GetProperty("id").GetGuid();
+        Task<long> ProbationVersion() => _h.ScalarAsync<long>("select row_version from hrm.probation_records where employment_id = $1", Ct, id);
+
+        async Task<Guid> UserWithAsync(string[] permissions, (string, object)[] scopes, (string, string, string)[]? fields = null)
+        {
+            var user = await _h.UserAsync(Ct);
+            await _h.AssignAsync(user, await _h.RoleAsync(Ct, permissions, scopes, fields), null, _h.Today.AddDays(-1), null, Ct);
+            return user;
+        }
+
+        string[] reads = ["hrm.employments.read", "hrm.contracts.read", "hrm.probation_records.read", "hrm.employment_assignments.read"];
+        (string, object)[] all = [("hrm.employments", "all"), ("hrm.contracts", "all"), ("hrm.probation_records", "all"), ("hrm.employment_assignments", "all")];
+        var elsewhere = await _h.ScopeAsync("companies", new { company_ids = new[] { other } }, Ct);
+
+        // Without the permission.
+        var reader = await UserWithAsync(reads, all);
+        Assert.Equal(HttpStatusCode.Forbidden, (await _h.PostAsync(reader, $"{Employments}/{id}/contracts", new { startDate = Iso(Today.AddDays(400)) }, Ct)).Status);
+        Assert.Equal(HttpStatusCode.Forbidden, (await _h.PostAsync(reader, $"/api/hrm/contracts/{contractId}/renew", new { rowVersion = 1 }, Ct)).Status);
+        Assert.Equal(HttpStatusCode.Forbidden, (await _h.PostAsync(reader, $"{Employments}/{id}/probation/extend", new { extendedTo = Iso(Today.AddDays(200)), rowVersion = await ProbationVersion() }, Ct)).Status);
+        Assert.Equal(HttpStatusCode.Forbidden, (await _h.PostAsync(reader, $"{Employments}/{id}/probation/confirm", new { rowVersion = await VersionAsync(id) }, Ct)).Status);
+
+        // With the permission but writing only in another company: out of scope, nothing saved.
+        var outside = await UserWithAsync([.. reads, "hrm.contracts.create", "hrm.probation_records.update", "hrm.employment_events.create"],
+            [("hrm.employments", "all"), ("hrm.contracts", elsewhere), ("hrm.probation_records", elsewhere), ("hrm.employment_assignments", "all")]);
+        Assert.Equal(HttpStatusCode.Forbidden, (await _h.PostAsync(outside, $"{Employments}/{id}/contracts", new { startDate = Iso(Today.AddDays(400)) }, Ct)).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await _h.PostAsync(outside, $"/api/hrm/contracts/{contractId}/renew", new { rowVersion = 1 }, Ct)).Status);
+        Assert.NotEqual(HttpStatusCode.OK, (await _h.PostAsync(outside, $"{Employments}/{id}/probation/extend", new { extendedTo = Iso(Today.AddDays(200)), rowVersion = await ProbationVersion() }, Ct)).Status);
+        Assert.NotEqual(HttpStatusCode.Created, (await _h.PostAsync(outside, $"{Employments}/{id}/probation/confirm", new { rowVersion = await VersionAsync(id) }, Ct)).Status);
+        Assert.Equal(1L, await _h.ScalarAsync<long>("select count(*) from hrm.contracts where employment_id = $1", Ct, id));
+        Assert.Equal("in_progress", await _h.ScalarAsync<string>("select status from hrm.probation_records where employment_id = $1", Ct, id));
+
+        // In scope but with the field hidden: refused by field.
+        var hidden = await UserWithAsync([.. reads, "hrm.contracts.create", "hrm.probation_records.update"], all,
+            [("hrm.contracts", "end_date", "hidden"), ("hrm.probation_records", "extended_to", "hidden")]);
+        var noEnd = await _h.PostAsync(hidden, $"{Employments}/{id}/contracts", new { startDate = Iso(Today.AddDays(400)), endDate = Iso(Today.AddDays(500)) }, Ct);
+        Assert.Equal("errors.access.field_not_editable", noEnd.Json.GetProperty("errors").GetProperty("end_date")[0].GetString());
+        var noExtend = await _h.PostAsync(hidden, $"{Employments}/{id}/probation/extend", new { extendedTo = Iso(Today.AddDays(200)), rowVersion = await ProbationVersion() }, Ct);
+        Assert.Equal("errors.access.field_not_editable", noExtend.Json.GetProperty("errors").GetProperty("extended_to")[0].GetString());
+
+        // A transfer with a job-details field hidden in the receiving company is refused by field; one limited to the receiving
+        // company cannot find the first employment.
+        var (target, there) = await CompanyAsync();
+        var titleHidden = await UserWithAsync(["hrm.employments.read", "hrm.employments.transfer", "hrm.employment_assignments.read"],
+            [("hrm.employments", "all"), ("hrm.employment_assignments", "all")], [("hrm.employment_assignments", "title", "hidden")]);
+        var refused = await TransferAsync(titleHidden, id, target, there, Today);
+        Assert.Equal("errors.access.field_not_editable", refused.Json.GetProperty("errors").GetProperty("title")[0].GetString());
+        var onlyThere = await _h.UserAsync(Ct);
+        await _h.AssignAsync(onlyThere, await _h.RoleAsync(Ct, ["hrm.employments.read", "hrm.employments.transfer", "hrm.employment_assignments.read"], [("hrm.employments", "all"), ("hrm.employment_assignments", "all")]), target, _h.Today.AddDays(-1), null, Ct);
+        Assert.Equal(HttpStatusCode.NotFound, (await TransferAsync(onlyThere, id, target, there, Today)).Status);
+        Assert.Equal("active", await StatusAsync(id));
+    }
+
     // ------------------------------------------------------------------ rehire (BR-01)
 
     [Fact]
@@ -457,6 +571,13 @@ public sealed class EmploymentTermsTests(TenancyFixture fx) : IAsyncLifetime
         await rig.QueueAsync("hrm.employment_terms_due", ct: Ct);
         await rig.RunUntilIdleAsync(worker, Ct);
         Assert.Equal("expired", await _h.ScalarAsync<string>("select status from hrm.contracts where id = $1", Ct, ended.Json.GetProperty("id").GetGuid()));
+
+        // A contract fits within a recorded end (review S1.20c finding 8).
+        var (sister, there) = await CompanyAsync();
+        Assert.Equal(HttpStatusCode.Created, (await TransferAsync(hr, other, sister, there, Today.AddDays(30))).Status);
+        var beyond = await _h.PostAsync(hr, $"{Employments}/{other}/contracts", new { startDate = Iso(Today.AddDays(1)), endDate = Iso(Today.AddDays(60)) }, Ct);
+        Assert.Equal("errors.hrm.contract.after_end", beyond.Json.GetProperty("errors").GetProperty("endDate")[0].GetString());
+        Assert.Equal(HttpStatusCode.Created, (await _h.PostAsync(hr, $"{Employments}/{other}/contracts", new { startDate = Iso(Today.AddDays(1)), endDate = Iso(Today.AddDays(29)) }, Ct)).Status);
     }
 
     // ------------------------------------------------------------------ probation (FR-HRM-EMP-10, ruling Q10)

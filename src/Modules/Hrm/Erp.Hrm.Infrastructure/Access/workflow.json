@@ -1,5 +1,5 @@
 {
-  "_comment": "Document types the HR module sends for approval (slice S1.10 format). S1.20b (CR-076 item 8, slice S1.20 ruling Q11): an employment event of a kind the company setting hrm.employment_events.approval_kinds lists waits for this route and applies on approval; the requester and the employee never approve it (FR-XM-32). Changing the route needs a second administrator (requires_approval). Seeded by migrate and provisioning with its default route, active at once. Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "Document types the HR module sends for approval (slice S1.10 format). S1.20b (CR-076 item 8, slice S1.20 ruling Q11): an employment event of a kind the company setting hrm.employment_events.approval_kinds lists waits for this route and applies on approval; the requester and the employee never approve it (FR-XM-32). Changing the route needs a second administrator (requires_approval). S1.20c: a transfer between companies uses kind transfer and gives to_company (review S1.20c finding 9). Seeded by migrate and provisioning with its default route, active at once. Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "document_types": [
     {
@@ -12,7 +12,8 @@
         {"name": "effective_date", "type": "date", "label": {"en": "Effective date", "ur": "مؤثر تاریخ"}},
         {"name": "employee", "type": "user", "label": {"en": "Employee", "ur": "ملازم"}},
         {"name": "employee_no", "type": "text", "label": {"en": "Employee number", "ur": "ملازم نمبر"}},
-        {"name": "unit", "type": "org_unit", "label": {"en": "Unit after the change", "ur": "تبدیلی کے بعد یونٹ"}}
+        {"name": "unit", "type": "org_unit", "label": {"en": "Unit after the change", "ur": "تبدیلی کے بعد یونٹ"}},
+        {"name": "to_company", "type": "company", "label": {"en": "Receiving company (transfer between companies)", "ur": "وصول کرنے والی کمپنی (کمپنیوں کے درمیان تبادلہ)"}}
       ],
       "company_field": "company",
       "subject_fields": ["employee"],

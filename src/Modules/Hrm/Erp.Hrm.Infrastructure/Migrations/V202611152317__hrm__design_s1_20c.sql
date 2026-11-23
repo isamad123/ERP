@@ -5,6 +5,8 @@
 -- Data design changes of slice S1.20c (expand only; earlier migrations are frozen)
 
 create index if not exists ix_employments_previous_employment_id on hrm.employments (previous_employment_id); -- foreign key fk_employments_previous_employment_id
+alter table hrm.probation_records drop constraint if exists ck_probation_records_status;
+alter table hrm.probation_records add constraint ck_probation_records_status check (status in ('in_progress', 'extended', 'confirmed', 'not_confirmed', 'transferred'));
 create unique index if not exists uq_probation_records_employment_id on hrm.probation_records (employment_id) where (status in ('in_progress','extended'));
 alter table hrm.employments drop constraint if exists fk_employments_previous_employment_id;
 do $do$ begin
