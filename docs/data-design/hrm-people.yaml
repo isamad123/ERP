@@ -282,7 +282,7 @@
 
 - table: hrm.probation_records
   traits: [std, co]
-  status: [in_progress, extended, confirmed, not_confirmed]
+  status: [in_progress, extended, confirmed, not_confirmed, transferred]
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
     - [start_date, date, req]
@@ -292,6 +292,9 @@
     - [decision_date, date, opt]
   # S1.20c (CR-076 S1.20c detail; slice S1.20 Build item 13, ruling Q10): at most one open probation per employment.
   uniques_added_in: {S1.20c: [[employment_id, "where status in ('in_progress','extended')"]]}
+  # S1.20c review finding 2 (CR-076 S1.20c detail): when a transfer takes effect, the open probation of the first employment is
+  # closed as transferred (it continues in the linked employment when service is kept).
+  enum_added_in: {S1.20c: {status: [transferred]}}
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   # S1.20c (CR-076 S1.20c detail; R-113): generated writes closed; the HR probation service writes (opened at hire, extended,
@@ -320,6 +323,16 @@
   scope: {company: company_id, employment: employment_id}
   # S1.07 (CR-026, Q5): personal fields; the audit log encrypts their values with the person's key (R-21).
   field_class: {account_title: personal, account_number: personal, iban: personal}
+  # S1.20d (CR-076 S1.20d detail; slice S1.20 Build item 14, R-113): generated writes closed; the HR bank account service writes
+  # (IBAN check, split rules, duplicate warning, every change held for a second person). The account number and IBAN are shown by
+  # the hand-written view, masked, or in full through the reveal action (access-logged), under field security.
+  field_view: [account_number, iban]
+  checks_added_in:
+    S1.20d:
+      - "the remainder account has no split value; a percent is above 0 and at most 100; an amount is above 0"
+      - "priority is between 1 and 99"
+      - "an account number or IBAN is stored exactly with its blind index"
+  api_actions: [read]
   reqs: [EMP-06, PAY-24]
   eff_key: [employment_id, priority]
 
@@ -338,6 +351,16 @@
   scope: {company: company_id, employment: employment_id}
   # S1.07 (CR-026, Q5): personal fields; the audit log encrypts their values with the person's key (R-21).
   field_class: {registration_no: personal}
+  # S1.20d (CR-076 S1.20d detail; slice S1.20 Build item 15, R-113): generated writes closed; the HR registration service writes.
+  # Registrations only: no contribution rate, ceiling or rule is stored here (S1.37, AS-4). The scheme is typed until the pack
+  # catalogue (S1.23) lists the schemes.
+  field_view: [registration_no]
+  checks_added_in:
+    S1.20d:
+      - "an exemption reason is given exactly when the scheme does not apply"
+      - "a registration number is stored exactly with its blind index"
+      - "a scheme code is lower-case letters, digits and underscores and starts with a letter"
+  api_actions: [read]
   reqs: [PAY-20, CPL-02]
 
 - table: hrm.change_requests

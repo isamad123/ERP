@@ -216,6 +216,46 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings)
             linked.IsPrimary = true;
             Bump(linked, e.UpdatedAt, e.UpdatedBy);
         }
+
+        await TransferProbationAsync(employment, linked, TransferApplier.CarryOver(e)?.Service, e.UpdatedAt, e.UpdatedBy, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The probation of a transfer, when it takes effect (review S1.20c finding 2: never while both employments are current, so a
+    /// probation is never reminded twice). The first employment's open probation is closed as <c>transferred</c>. With service kept
+    /// it continues in the linked employment with its dates (when it has not ended before the transfer date); with service
+    /// restarted the linked employment gets a probation by its company's hire rule (ruling Q10). A confirmation of the first
+    /// employment is not carried: BR-02 forbids a confirmation date before the joining date, and the link shows where it is.
+    /// </summary>
+    private async Task TransferProbationAsync(Employment from, Employment to, string? service, DateTimeOffset now, Guid actor, CancellationToken ct)
+    {
+        var open = await db.Set<ProbationRecord>().FirstOrDefaultAsync(p => p.EmploymentId == from.Id && (p.Status == "in_progress" || p.Status == "extended"), ct).ConfigureAwait(false);
+        if (open is not null)
+        {
+            open.Status = "transferred";
+            open.DecisionDate = to.JoiningDate;
+            Bump(open, now, actor);
+        }
+
+        if (await db.Set<ProbationRecord>().AnyAsync(p => p.EmploymentId == to.Id && (p.Status == "in_progress" || p.Status == "extended"), ct).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        if (service == "keep")
+        {
+            if (open is not null && (open.ExtendedTo ?? open.EndDate) >= to.JoiningDate)
+            {
+                var record = NewProbation(to, to.JoiningDate, open.EndDate < to.JoiningDate ? to.JoiningDate : open.EndDate, now, actor);
+                record.ExtendedTo = open.ExtendedTo;
+                record.Status = open.ExtendedTo is null ? "in_progress" : "extended";
+                db.Add(record);
+            }
+
+            return;
+        }
+
+        await OpenProbationAsync(to, now, actor, ct).ConfigureAwait(false);
     }
 
     /// <summary>The employment a transfer's separation event links to (<c>changes.transfer.to_employment_id</c>), or null.</summary>

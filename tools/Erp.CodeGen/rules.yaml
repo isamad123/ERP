@@ -254,9 +254,52 @@ tables:
     checks:
       - text: "bank fields required when payment_mode = bank_transfer or mobile_wallet"
         stub: { name: employee_bank_accounts_bank_fields_required, owner: S1.20 }
+        # S1.20d (CR-076 S1.20d detail): a bank transfer or mobile wallet names the bank (or wallet provider) of ref.banks, the
+        # account title and an account number or IBAN; cash and cheque carry no bank, account number or IBAN (a cheque may name
+        # its payee in the title). A trigger, not a check constraint, because the first migration is frozen and the generated
+        # catalogue knows rules implemented after it by their triggers.
+        implemented:
+          slice: S1.20d
+          triggers:
+            - [hrm.employee_bank_accounts, tg_employee_bank_accounts_bank_fields_required]
+          sql: |
+            create or replace function hrm.tg_employee_bank_accounts_bank_fields_required() returns trigger
+            language plpgsql as $fn$
+            begin
+                if new.payment_mode in ('bank_transfer', 'mobile_wallet') then
+                    if new.bank_id is null or new.account_title is null or (new.account_number is null and new.iban is null) then
+                        raise exception 'bank account % paid by % needs the bank, the account title and an account number or IBAN', new.id, new.payment_mode
+                            using errcode = '23514', constraint = 'ck_employee_bank_accounts_bank_fields_required';
+                    end if;
+                elsif new.bank_id is not null or new.account_number is not null or new.iban is not null then
+                    raise exception 'bank account % paid by % carries no bank, account number or IBAN', new.id, new.payment_mode
+                        using errcode = '23514', constraint = 'ck_employee_bank_accounts_bank_fields_required';
+                end if;
+                return new;
+            end
+            $fn$;
+            create or replace trigger tg_employee_bank_accounts_bank_fields_required before insert or update
+                on hrm.employee_bank_accounts for each row execute function hrm.tg_employee_bank_accounts_bank_fields_required();
+      # S1.20d (CR-076 S1.20d detail; FR-HRM-EMP-06, FR-HRM-PAY-24): the split value of each kind.
+      - text: "the remainder account has no split value; a percent is above 0 and at most 100; an amount is above 0"
+        check: { name: ck_employee_bank_accounts_split_value, sql: "(split_kind = 'remainder' and split_value is null) or (split_kind = 'percent' and split_value > 0 and split_value <= 100) or (split_kind = 'amount' and split_value > 0)" }
+      - text: "priority is between 1 and 99"
+        check: { name: ck_employee_bank_accounts_priority, sql: "priority between 1 and 99" }
+      - text: "an account number or IBAN is stored exactly with its blind index"
+        check: { name: ck_employee_bank_accounts_blind_index, sql: "(account_number is null) = (account_number_hmac is null) and (iban is null) = (iban_hmac is null)" }
     notes:
       - text: "Changes go through maker-checker (iam.maker_checker_requests)."
         comment: true
+
+  hrm.employment_statutory_registrations:
+    checks:
+      # S1.20d (CR-076 S1.20d detail; slice S1.20 Build item 15): registrations only, no contribution rule (S1.37, AS-4).
+      - text: "an exemption reason is given exactly when the scheme does not apply"
+        check: { name: ck_employment_statutory_registrations_exemption, sql: "(not is_applicable) = (exemption_reason is not null)" }
+      - text: "a registration number is stored exactly with its blind index"
+        check: { name: ck_employment_statutory_registrations_blind_index, sql: "(registration_no is null) = (registration_no_hmac is null)" }
+      - text: "a scheme code is lower-case letters, digits and underscores and starts with a letter"
+        check: { name: ck_employment_statutory_registrations_scheme_format, sql: "scheme ~ '^[a-z][a-z0-9_]*$'" }
 
   hrm.positions:
     notes:
@@ -442,6 +485,20 @@ tables:
             $fn$;
             create or replace trigger tg_org_unit_links_checks before insert or update on org.org_unit_links
                 for each row execute function org.tg_org_unit_links_checks();
+
+  cfg.custom_field_defs:
+    checks:
+      - text: "a custom field key is lower-case letters, digits and underscores, starts with a letter, at most 40 characters"
+        check: { name: ck_custom_field_defs_field_key, sql: "field_key ~ '^[a-z][a-z0-9_]{0,39}$'" }
+      - text: "a choice or multi-choice field names an option list; other fields do not"
+        check: { name: ck_custom_field_defs_option_list, sql: "(data_type in ('choice', 'multi_choice')) = (option_list_id is not null)" }
+      - text: "unique applies only to text, number, decimal, date, choice, user and employee fields"
+        check: { name: ck_custom_field_defs_unique_types, sql: "not is_unique or data_type in ('text', 'number', 'decimal', 'date', 'choice', 'user', 'employee')" }
+
+  cfg.labels:
+    checks:
+      - text: "a label text has 1 to 300 characters"
+        check: { name: ck_labels_text_length, sql: "length(text) between 1 and 300" }
 
   cfg.numbering_schemes:
     checks:
@@ -1192,3 +1249,54 @@ functions:
       $fn$;
       create or replace trigger tg_employment_events_fixed before update or delete on hrm.employment_events
           for each row execute function hrm.tg_employment_events_fixed();
+
+  # S1.20d (CR-076 S1.20d detail; FR-HRM-EMP-06, FR-HRM-PAY-24): on every date where an employment has payment accounts, exactly
+  # one of them takes the remainder and the percentages add up to at most 100. Deferred to the commit, because one held change may
+  # move the remainder from one account to another (two rows); the services check the same rule first and set the constraint
+  # immediate before they commit, so a refusal is an answer, not a failed commit.
+  - slice: S1.20d
+    name: hrm.tg_employee_bank_accounts_split
+    purpose: "On every date with payment accounts an employment has exactly one remainder account and percentages summing to at most 100 (FR-HRM-EMP-06); refused with constraint ck_employee_bank_accounts_split at commit."
+    triggers:
+      - [hrm.employee_bank_accounts, tg_employee_bank_accounts_split]
+    sql: |
+      create or replace function hrm.tg_employee_bank_accounts_split() returns trigger
+      language plpgsql as $fn$
+      declare
+          emps uuid[];
+          emp uuid;
+          d date;
+          accounts integer;
+          remainders integer;
+          percent numeric;
+      begin
+          -- The employment of the row; on an update that moves a row, both employments (review S1.20d finding 10).
+          if tg_op = 'DELETE' then
+              emps := array[old.employment_id];
+          elsif tg_op = 'UPDATE' and old.employment_id <> new.employment_id then
+              emps := array[old.employment_id, new.employment_id];
+          else
+              emps := array[new.employment_id];
+          end if;
+          foreach emp in array emps loop
+              for d in
+                  select a.valid_from from hrm.employee_bank_accounts a where a.employment_id = emp
+                  union
+                  select a.valid_to from hrm.employee_bank_accounts a where a.employment_id = emp and a.valid_to is not null
+              loop
+                  select count(*), count(*) filter (where a.split_kind = 'remainder'), coalesce(sum(a.split_value) filter (where a.split_kind = 'percent'), 0)
+                    into accounts, remainders, percent
+                    from hrm.employee_bank_accounts a
+                   where a.employment_id = emp and a.valid_from <= d and (a.valid_to is null or a.valid_to > d);
+                  if accounts > 0 and (remainders <> 1 or percent > 100) then
+                      raise exception 'payment accounts of employment % on % have % remainder accounts and % percent', emp, d, remainders, percent
+                          using errcode = '23514', constraint = 'ck_employee_bank_accounts_split';
+                  end if;
+              end loop;
+          end loop;
+          return null;
+      end
+      $fn$;
+      drop trigger if exists tg_employee_bank_accounts_split on hrm.employee_bank_accounts;
+      create constraint trigger tg_employee_bank_accounts_split after insert or update or delete on hrm.employee_bank_accounts
+          deferrable initially deferred for each row execute function hrm.tg_employee_bank_accounts_split();

@@ -319,6 +319,7 @@ internal sealed partial class EmploymentService : IEmploymentMoves
                 ["kind"] = JsonSerializer.SerializeToElement("transfer"),
                 ["effective_date"] = JsonSerializer.SerializeToElement(Iso(p.Date)),
                 ["employee_no"] = JsonSerializer.SerializeToElement(from.EmployeeNo),
+                ["to_company"] = JsonSerializer.SerializeToElement(to.CompanyId.ToString()), // routes can tell a transfer between companies apart (finding 9)
             };
             if (from.UserRef is { } user)
             {
@@ -328,7 +329,7 @@ internal sealed partial class EmploymentService : IEmploymentMoves
             var started = await workflow.StartAsync(new WorkflowStartRequest(DocumentType, separation.Id, from.CompanyId, from.UserRef is { } subject ? [subject] : [], values), Transaction, ct).ConfigureAwait(false);
             separation.WorkflowInstanceId = started.InstanceId;
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
-            return new PeopleResult(PeopleOutcome.Pending, Body: new { id = to.Id, employeeNo = to.EmployeeNo, separationEventId = separation.Id, eventId = start.Id, status = separation.Status, instanceId = started.InstanceId, rowVersion = from.RowVersion, impact = p.Report });
+            return new PeopleResult(PeopleOutcome.Pending, Body: new { id = to.Id, employeeNo = to.EmployeeNo, separationEventId = separation.Id, eventId = start.Id, status = separation.Status, instanceId = started.InstanceId, rowVersion = to.RowVersion, fromRowVersion = from.RowVersion, impact = p.Report });
         }
 
         if (await TransferApplier.ApplyAsync(db, applier, from, separation, to, start, p.Today, now, actor.UserId, ct).ConfigureAwait(false) is { } problem)
@@ -355,7 +356,8 @@ internal sealed partial class EmploymentService : IEmploymentMoves
             separationEventId = separation.Id,
             separationStatus = separation.Status,
             carryOver = p.CarryOver,
-            rowVersion = from.RowVersion,
+            rowVersion = to.RowVersion, // each id with its own row's version (review S1.20c finding 5)
+            fromRowVersion = from.RowVersion,
             impact = p.Report,
         });
     }

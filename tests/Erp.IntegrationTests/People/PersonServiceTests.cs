@@ -125,10 +125,10 @@ public sealed class PersonServiceTests(TenancyFixture fx) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task FR_HRM_EMP_01_person_fields_are_validated_and_religion_and_custom_fields_wait_for_their_slices()
+    public async Task FR_HRM_EMP_01_person_fields_are_validated_and_religion_waits_for_its_slice()
     {
         var hr = await _h.UserAsync(Ct, null, "hr_admin");
-        var bad = await _h.PostAsync(hr, Persons, new { firstName = " ", gender = "x", dateOfBirth = "2999-01-01", maritalStatus = "complicated", religion = "any", custom = new { a = 1 } }, Ct);
+        var bad = await _h.PostAsync(hr, Persons, new { firstName = " ", gender = "x", dateOfBirth = "2999-01-01", maritalStatus = "complicated", religion = "any" }, Ct);
         Assert.Equal(HttpStatusCode.BadRequest, bad.Status);
         var errors = bad.Json.GetProperty("errors");
         Assert.Equal("errors.hrm.field.required", errors.GetProperty("firstName")[0].GetString());
@@ -136,7 +136,7 @@ public sealed class PersonServiceTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal("errors.hrm.date.future", errors.GetProperty("dateOfBirth")[0].GetString());
         Assert.Equal("errors.hrm.field.unknown_code", errors.GetProperty("maritalStatus")[0].GetString());
         Assert.Equal("errors.hrm.person.religion_not_asked", errors.GetProperty("religion")[0].GetString());
-        Assert.Equal("errors.hrm.person.custom_not_available", errors.GetProperty("custom")[0].GetString());
+        // Custom fields are checked against their definitions since S1.15b (MetadataTests); an unknown key is refused there.
 
         var country = await _h.PostAsync(hr, Persons, new { firstName = Unique("N"), gender = "male", nationalityCode = "QQ" }, Ct);
         Assert.Equal(HttpStatusCode.BadRequest, country.Status); // not in ref.countries: the foreign key refuses it

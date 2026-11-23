@@ -2,7 +2,6 @@ using System.Text.Json;
 using Erp.Hrm.Contracts.Employments;
 using Erp.Hrm.Domain.Generated;
 using Erp.Hrm.Infrastructure.Generated;
-using Microsoft.EntityFrameworkCore;
 
 namespace Erp.Hrm.Infrastructure.Employments;
 
@@ -12,8 +11,8 @@ namespace Erp.Hrm.Infrastructure.Employments;
 /// the caller: the separation event of the first employment and the starting <c>hire</c> event (reason <c>transfer_in</c>) of the
 /// linked one become approved (dated in the future) or effective; the first employment's job details end on the transfer date and
 /// the linked one's start on it; on the date the first becomes <c>separated</c> and the linked one the person's main employment
-/// (<see cref="EmploymentApplier"/>); <c>hrm.employee_hired</c> and, once effective, <c>hrm.employee_separated</c> are raised; an open
-/// probation continues with its dates when service is kept, otherwise the hire rule opens one (ruling Q10).
+/// (<see cref="EmploymentApplier"/>, which also moves the probation then: review S1.20c finding 2); <c>hrm.employee_hired</c> and, once
+/// effective, <c>hrm.employee_separated</c> are raised.
 /// </summary>
 internal static class TransferApplier
 {
@@ -41,7 +40,6 @@ internal static class TransferApplier
         }
 
         await applier.ApplyEmploymentFieldsAsync(to, start, today, ct).ConfigureAwait(false);
-        await CarryProbationAsync(db, applier, from, to, separation, now, actor, ct).ConfigureAwait(false);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         List<EmploymentEvent> all = [.. fromEvents.Where(e => e.Id != separation.Id), separation];
@@ -80,33 +78,5 @@ internal static class TransferApplier
 
         string? Text(string name) => doc.RootElement.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
         return Text("service") is { } s && Text("leave") is { } l && Text("loans") is { } n ? new TransferCarryOver(s, l, n) : null;
-    }
-
-    /// <summary>
-    /// Service kept: an open probation of the first employment continues in the linked one with the same dates (FR-HRM-EMP-10).
-    /// Service restarted (or no open probation): the linked employment gets a probation by the hire rule of its company.
-    /// </summary>
-    private static async Task CarryProbationAsync(HrmDbContext db, EmploymentApplier applier, Employment from, Employment to, EmploymentEvent separation, DateTimeOffset now, Guid actor, CancellationToken ct)
-    {
-        if (await db.Set<ProbationRecord>().AnyAsync(p => p.EmploymentId == to.Id && (p.Status == "in_progress" || p.Status == "extended"), ct).ConfigureAwait(false))
-        {
-            return;
-        }
-
-        var open = await db.Set<ProbationRecord>().AsNoTracking().FirstOrDefaultAsync(p => p.EmploymentId == from.Id && (p.Status == "in_progress" || p.Status == "extended"), ct).ConfigureAwait(false);
-        if (CarryOver(separation)?.Service == "keep")
-        {
-            if (open is not null && (open.ExtendedTo ?? open.EndDate) >= to.JoiningDate)
-            {
-                var record = EmploymentApplier.NewProbation(to, to.JoiningDate, open.EndDate < to.JoiningDate ? to.JoiningDate : open.EndDate, now, actor);
-                record.ExtendedTo = open.ExtendedTo;
-                record.Status = open.Status;
-                db.Add(record);
-            }
-
-            return;
-        }
-
-        await applier.OpenProbationAsync(to, now, actor, ct).ConfigureAwait(false);
     }
 }

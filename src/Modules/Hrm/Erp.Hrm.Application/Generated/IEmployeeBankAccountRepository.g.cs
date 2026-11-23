@@ -49,6 +49,8 @@ public static class EmployeeBankAccountAccess
         new("payment_mode", "PaymentMode", null),
         new("bank_id", "BankId", null),
         new("account_title", "AccountTitle", "personal"),
+        new("account_number", "AccountNumber", "personal"),
+        new("iban", "Iban", "personal"),
         new("split_kind", "SplitKind", null),
         new("split_value", "SplitValue", null),
         new("priority", "Priority", null),

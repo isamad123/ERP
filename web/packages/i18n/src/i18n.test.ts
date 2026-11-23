@@ -3,7 +3,9 @@
 import { describe, expect, it } from 'vitest';
 import en from '../messages/en.json';
 import ur from '../messages/ur.json';
-import { directionOf, formatDecimal, formatMoney, isolate, roundTo, serverText, PSEUDO_OPEN, pseudoText } from './index';
+import configEn from '../messages/config.en.json';
+import configUr from '../messages/config.ur.json';
+import { directionOf, formatDecimal, formatMoney, isolate, roundTo, serverText, serverTextsReady, PSEUDO_OPEN, pseudoText } from './index';
 
 describe('FR-KRN-LOC-01 number and money formatting (Q6)', () => {
   it('groups internationally by default and in lakh and crore when chosen', () => {
@@ -38,8 +40,8 @@ describe('FR-KRN-LOC-01 number and money formatting (Q6)', () => {
 
 describe('FR-KRN-LOC-01 catalogues', () => {
   it('Urdu has every English key and no key of its own', () => {
-    const english = Object.keys(en).filter((k) => !k.startsWith('_'));
-    const urdu = Object.keys(ur).filter((k) => !k.startsWith('_'));
+    const english = Object.keys({ ...en, ...configEn }).filter((k) => !k.startsWith('_'));
+    const urdu = Object.keys({ ...ur, ...configUr }).filter((k) => !k.startsWith('_'));
     expect(english.filter((k) => !urdu.includes(k))).toEqual([]);
     expect(urdu.filter((k) => !english.includes(k))).toEqual([]);
   });
@@ -48,6 +50,12 @@ describe('FR-KRN-LOC-01 catalogues', () => {
     expect(serverText('errors.auth.sign_in_failed', 'en')).toMatch(/Sign-in failed/);
     expect(serverText('errors.auth.sign_in_failed', 'ur')).not.toBe(serverText('errors.auth.sign_in_failed', 'en'));
     expect(serverText('no.such.key', 'ur')).toBeNull();
+  });
+
+  it('module server texts (S1.20c) arrive as their own chunk after start-up, in both languages', async () => {
+    await serverTextsReady;
+    expect(serverText('errors.hrm.transfer.same_company', 'en')).toMatch(/another company/);
+    expect(serverText('errors.hrm.transfer.same_company', 'ur')).not.toBe(serverText('errors.hrm.transfer.same_company', 'en'));
   });
 
   it('the pseudo-locale accents text, lengthens it and keeps ICU arguments', () => {

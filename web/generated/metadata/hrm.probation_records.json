@@ -149,6 +149,10 @@
         {
           "value": "not_confirmed",
           "labelKey": "options.hrm.probation_records.status.not_confirmed"
+        },
+        {
+          "value": "transferred",
+          "labelKey": "options.hrm.probation_records.status.transferred"
         }
       ]
     },

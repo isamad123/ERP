@@ -1178,20 +1178,6 @@ export interface EmployeeBankAccount
     rowVersion: number;
 }
 
-export interface EmployeeBankAccountWrite
-{
-    companyId: string;
-    employmentId: string;
-    paymentMode: 'bank_transfer' | 'cheque' | 'cash' | 'mobile_wallet';
-    bankId?: string | null;
-    accountTitle?: string | null;
-    splitKind: 'remainder' | 'percent' | 'amount';
-    splitValue?: number | null;
-    priority: number;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface EmployeeBankAccountListQuery
 {
     after?: string;
@@ -1209,8 +1195,6 @@ export const employeeBankAccounts =
 {
     list: (query: EmployeeBankAccountListQuery = {}) => request<PagedResult<EmployeeBankAccount>>('GET', '/api/hrm/employee-bank-accounts', { query }),
     get: (id: string) => request<EmployeeBankAccount>('GET', `/api/hrm/employee-bank-accounts/${id}`),
-    create: (body: EmployeeBankAccountWrite) => request<EmployeeBankAccount>('POST', '/api/hrm/employee-bank-accounts', { body }),
-    update: (id: string, body: EmployeeBankAccountWrite & { rowVersion: number }) => request<EmployeeBankAccount>('PUT', `/api/hrm/employee-bank-accounts/${id}`, { body }),
 };
 
 /** hrm.employee_documents: Employee document vault entries (file in doc.files). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -1447,17 +1431,6 @@ export interface EmploymentStatutoryRegistration
     rowVersion: number;
 }
 
-export interface EmploymentStatutoryRegistrationWrite
-{
-    companyId: string;
-    employmentId: string;
-    scheme: string;
-    isApplicable?: boolean;
-    exemptionReason?: string | null;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface EmploymentStatutoryRegistrationListQuery
 {
     after?: string;
@@ -1472,8 +1445,6 @@ export const employmentStatutoryRegistrations =
 {
     list: (query: EmploymentStatutoryRegistrationListQuery = {}) => request<PagedResult<EmploymentStatutoryRegistration>>('GET', '/api/hrm/employment-statutory-registrations', { query }),
     get: (id: string) => request<EmploymentStatutoryRegistration>('GET', `/api/hrm/employment-statutory-registrations/${id}`),
-    create: (body: EmploymentStatutoryRegistrationWrite) => request<EmploymentStatutoryRegistration>('POST', '/api/hrm/employment-statutory-registrations', { body }),
-    update: (id: string, body: EmploymentStatutoryRegistrationWrite & { rowVersion: number }) => request<EmploymentStatutoryRegistration>('PUT', `/api/hrm/employment-statutory-registrations/${id}`, { body }),
 };
 
 /** hrm.employments: One employment of a person with one company; transfers between companies create a new linked row (FR-XM-30). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4378,7 +4349,7 @@ export interface ProbationRecord
     extendedTo: string | null;
     reviewFormResponseId: string | null;
     decisionDate: string | null;
-    status: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed';
+    status: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed' | 'transferred';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
@@ -4393,7 +4364,7 @@ export interface ProbationRecordListQuery
     companyId?: string;
     employmentId?: string;
     reviewFormResponseId?: string;
-    status?: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed';
+    status?: 'in_progress' | 'extended' | 'confirmed' | 'not_confirmed' | 'transferred';
 }
 
 export const probationRecords =

@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Erp.BuildingBlocks.Domain.Time;
+using Erp.IntegrationTests.Documents;
 using Erp.IntegrationTests.Identity;
 using Erp.IntegrationTests.Tenancy;
 using Erp.IntegrationTests.Workflow;
@@ -74,6 +75,8 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
             services =>
             {
                 WorkflowRig.RegisterTestModule(services);
+                // S1.15a: the login logo is a stored file; the browser tests use a folder store and a scanner that finds nothing.
+                DocumentTestServices.Register(services, Path.Combine(Path.GetTempPath(), "erp-e2e-files-" + Guid.NewGuid().ToString("N")));
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(clock);
                 // Access tokens are checked against the same test clock (the real time is also accepted, for the
@@ -224,6 +227,23 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
                     """, Ct, body.Username);
             }
 
+            return Results.NoContent();
+        });
+
+        // S1.15b: a field rule on every role of the person (a custom field is `custom.<key>`), written as the field matrix of S1.13b writes it.
+        app.MapPost("/field-policy", async (FieldPolicyBody body) =>
+        {
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            await IdentityHarness.ExecAsync(owner, """
+                delete from iam.field_policies fp using iam.user_roles ur, iam.users u
+                where ur.user_id = u.id and lower(u.username) = lower($1) and fp.role_id = ur.role_id and fp.resource_type = $2 and fp.field_key = $3
+                """, Ct, body.Username, body.Resource, body.Field);
+            await IdentityHarness.ExecAsync(owner, """
+                insert into iam.field_policies (id, role_id, resource_type, field_key, access, created_at, created_by, updated_at, updated_by)
+                select gen_random_uuid(), ur.role_id, $2, $3, $4, now(), $5, now(), $5
+                from iam.user_roles ur join iam.users u on u.id = ur.user_id join iam.roles r on r.id = ur.role_id
+                where lower(u.username) = lower($1) and r.source = 'tenant'
+                """, Ct, body.Username, body.Resource, body.Field, body.Access, BaselineSeed.SystemUserId);
             return Results.NoContent();
         });
 
@@ -582,6 +602,8 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
     private sealed record OrgStructureBody(string Prefix);
 
     private sealed record LabelBody(string Key, string Language, string? Text);
+
+    private sealed record FieldPolicyBody(string Username, string Resource, string Field, string Access);
 
     private sealed record RouteBody(string DocumentType, string Approver, bool Bulk);
 

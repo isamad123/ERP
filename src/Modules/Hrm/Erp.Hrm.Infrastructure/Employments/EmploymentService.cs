@@ -14,6 +14,7 @@ using Erp.Hrm.Infrastructure.Generated;
 using Erp.Hrm.Infrastructure.People;
 using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Contracts.Identity;
+using Erp.Kernel.Contracts.Metadata;
 using Erp.Kernel.Contracts.Numbering;
 using Erp.Kernel.Contracts.Settings;
 using Erp.Kernel.Contracts.Workflow;
@@ -37,6 +38,7 @@ internal sealed partial class EmploymentService(
     IPermissionChecker permissions,
     IDataScopeFilter scope,
     IFieldAccess fields,
+    ICustomFieldValidator customFields,
     ISensitiveAccessLog accessLog,
     INumberAllocator numbers,
     ISettings settings,
@@ -219,6 +221,25 @@ internal sealed partial class EmploymentService(
         {
             return NotEditable(denied);
         }
+
+        // Custom values (S1.15b, FR-KRN-MET-02): field security first, then the active definitions; the check holds the locks of
+        // unique fields until the hire is saved.
+        var customAccess = await fields.ForAsync(EmploymentAccess.Fields, "create", company, cancellationToken).ConfigureAwait(false);
+        var customDenied = new List<string>();
+        var customValues = FieldShaping.MergeCustom(request.Custom, null, customAccess, customDenied);
+        if (customDenied.Count > 0)
+        {
+            return NotEditable(customDenied);
+        }
+
+        await using var customCheck = await customFields.CheckAsync(
+            new CustomWrite("hrm.employments", null, company, customValues, null, key => customAccess.CanEdit(FieldAccessMap.CustomPrefix + key), false), cancellationToken).ConfigureAwait(false);
+        if (customCheck.Errors.Count > 0)
+        {
+            return PeopleResult.Fields(customCheck.Errors.ToDictionary(e => e.Key, e => new[] { e.Value }, StringComparer.Ordinal));
+        }
+
+        employment.Custom = customCheck.Values;
 
         // An existing person must be one the caller may read and not retired by a merge (FR-HRM-EMP-18).
         if (request.PersonId is not null)
@@ -597,6 +618,13 @@ internal sealed partial class EmploymentService(
         {
             db.ChangeTracker.Clear();
             return PeopleResult.Conflict(ex.ErrorKey, ex.Details.Count == 0 ? null : new Dictionary<string, object?> { ["details"] = ex.Details });
+        }
+        catch (PostgresException pg) when (pg.SqlState is "40P01" or "40001")
+        {
+            // Two changes waiting for each other's rows (for example opposite manager changes, review S1.20c finding 6): the
+            // database stops one; its caller is told to read again and retry.
+            db.ChangeTracker.Clear();
+            return PeopleResult.Conflict(Concurrency);
         }
     }
 

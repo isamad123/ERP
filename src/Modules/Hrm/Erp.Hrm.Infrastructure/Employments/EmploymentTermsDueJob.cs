@@ -28,76 +28,144 @@ internal sealed class EmploymentTermsDueJob(IClock clock) : IJobHandler
 
     public string Code => JobCode;
 
+    /// <summary>Rows per chunk; each chunk is its own transaction (review S1.20c finding 10).</summary>
+    private const int Chunk = 500;
+
     public async Task RunAsync(IJobExecution job, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(job);
         var settings = job.Services.GetRequiredService<ISettings>();
         var actor = job.Services.GetRequiredService<ICurrentActor>();
+        var now = clock.UtcNow;
+        var todays = new Dictionary<Guid, DateOnly>();
+        var days = new Dictionary<(string Key, Guid Company), int>();
         var (expired, contracts, probations) = (0, 0, 0);
-        await job.CommitChunkAsync(async (connection, transaction, ct) =>
+
+        // Contracts: expiry and renewal reminders, by id in chunks.
+        var horizon = DateOnly.FromDateTime(now.UtcDateTime).AddDays(366);
+        Guid? after = null;
+        while (true)
         {
-            (expired, contracts, probations) = (0, 0, 0);
-            await using var db = new HrmDbContext(job.Services.GetRequiredService<DbContextOptions<HrmDbContext>>());
-            db.Database.SetDbConnection(connection, contextOwnsConnection: false);
-            await db.Database.UseTransactionAsync(transaction, ct).ConfigureAwait(false);
-            var applier = new EmploymentApplier(db, settings);
-            var now = clock.UtcNow;
-            var todays = new Dictionary<Guid, DateOnly>();
-            async Task<DateOnly> TodayAsync(Guid company)
+            var read = 0;
+            var pageStart = after; // a retried chunk reads the same page again
+            var (e1, c1) = (0, 0);
+            await job.CommitChunkAsync(async (connection, transaction, ct) =>
             {
-                if (!todays.TryGetValue(company, out var today))
+                (e1, c1) = (0, 0);
+                var (db, applier) = Open(job, settings, connection);
+                await using var _ = db;
+                await db.Database.UseTransactionAsync(transaction, ct).ConfigureAwait(false);
+                var query = db.Set<Contract>().Where(c => c.Status == "active" && c.EndDate != null && c.EndDate <= horizon);
+                if (pageStart is { } cursor)
                 {
-                    todays[company] = today = await applier.TodayAsync(company, now, ct).ConfigureAwait(false);
+                    query = query.Where(c => c.Id.CompareTo(cursor) > 0);
                 }
 
-                return today;
-            }
-
-            async Task<int> DaysAsync(string key, Guid company, int fallback)
-            {
-                var value = (await settings.GetAsync(key, new SettingContext(company, null), ct).ConfigureAwait(false)).Value;
-                return value.ValueKind == JsonValueKind.Number ? value.GetInt32() : fallback;
-            }
-
-            // Contracts: expiry and renewal reminders.
-            var horizon = DateOnly.FromDateTime(now.UtcDateTime).AddDays(366);
-            var active = await db.Set<Contract>().Where(c => c.Status == "active" && c.EndDate != null && c.EndDate <= horizon).OrderBy(c => c.EndDate).ThenBy(c => c.Id).ToListAsync(ct).ConfigureAwait(false);
-            foreach (var c in active)
-            {
-                var today = await TodayAsync(c.CompanyId).ConfigureAwait(false);
-                var end = c.EndDate!.Value;
-                if (end < today)
+                var page = await query.OrderBy(c => c.Id).Take(Chunk).ToListAsync(ct).ConfigureAwait(false);
+                read = page.Count;
+                foreach (var c in page)
                 {
-                    c.Status = "expired";
-                    EmploymentApplier.Bump(c, now, actor.UserId);
-                    expired++;
-                    continue;
+                    after = c.Id;
+                    var today = await TodayAsync(applier, todays, c.CompanyId, now, ct).ConfigureAwait(false);
+                    var end = c.EndDate!.Value;
+                    if (end < today)
+                    {
+                        c.Status = "expired";
+                        EmploymentApplier.Bump(c, now, actor.UserId);
+                        e1++;
+                        continue;
+                    }
+
+                    var notice = c.RenewalNoticeDays ?? await DaysAsync(settings, days, "hrm.contracts.renewal_notice_days", c.CompanyId, 30, ct).ConfigureAwait(false);
+                    if (today >= end.AddDays(-notice) && await RemindAsync(db, applier, EmploymentEvents.ContractEnding, "hrm.contract", c.Id, c.EmploymentId, c.CompanyId, end, today, now, actor.UserId, ct).ConfigureAwait(false))
+                    {
+                        c1++;
+                    }
                 }
 
-                var notice = c.RenewalNoticeDays ?? await DaysAsync("hrm.contracts.renewal_notice_days", c.CompanyId, 30).ConfigureAwait(false);
-                if (today >= end.AddDays(-notice) && await RemindAsync(db, applier, EmploymentEvents.ContractEnding, "hrm.contract", c.Id, c.EmploymentId, c.CompanyId, end, today, now, actor.UserId, ct).ConfigureAwait(false))
-                {
-                    contracts++;
-                }
-            }
-
-            // Probation: reminders before the last day.
-            var open = await db.Set<ProbationRecord>().AsNoTracking().Where(p => p.Status == "in_progress" || p.Status == "extended").OrderBy(p => p.Id).ToListAsync(ct).ConfigureAwait(false);
-            foreach (var p in open)
+                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            }, null, null, cancellationToken).ConfigureAwait(false);
+            (expired, contracts) = (expired + e1, contracts + c1);
+            if (read < Chunk)
             {
-                var today = await TodayAsync(p.CompanyId).ConfigureAwait(false);
-                var last = p.ExtendedTo ?? p.EndDate;
-                var lead = await DaysAsync("hrm.probation.reminder_days", p.CompanyId, 14).ConfigureAwait(false);
-                if (today <= last && today >= last.AddDays(-lead)
-                    && await RemindAsync(db, applier, EmploymentEvents.ProbationEnding, "hrm.probation_record", p.Id, p.EmploymentId, p.CompanyId, last, today, now, actor.UserId, ct).ConfigureAwait(false))
-                {
-                    probations++;
-                }
+                break;
             }
+        }
 
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
-        }, null, null, cancellationToken).ConfigureAwait(false);
+        // Probation: reminders before the last day, by id in chunks.
+        after = null;
+        while (true)
+        {
+            var read = 0;
+            var pageStart = after;
+            var p1 = 0;
+            await job.CommitChunkAsync(async (connection, transaction, ct) =>
+            {
+                p1 = 0;
+                var (db, applier) = Open(job, settings, connection);
+                await using var _ = db;
+                await db.Database.UseTransactionAsync(transaction, ct).ConfigureAwait(false);
+                var query = db.Set<ProbationRecord>().AsNoTracking().Where(p => p.Status == "in_progress" || p.Status == "extended");
+                if (pageStart is { } cursor)
+                {
+                    query = query.Where(p => p.Id.CompareTo(cursor) > 0);
+                }
+
+                var page = await query.OrderBy(p => p.Id).Take(Chunk).ToListAsync(ct).ConfigureAwait(false);
+                read = page.Count;
+                foreach (var p in page)
+                {
+                    after = p.Id;
+                    var today = await TodayAsync(applier, todays, p.CompanyId, now, ct).ConfigureAwait(false);
+                    var last = p.ExtendedTo ?? p.EndDate;
+                    var lead = await DaysAsync(settings, days, "hrm.probation.reminder_days", p.CompanyId, 14, ct).ConfigureAwait(false);
+                    if (today <= last && today >= last.AddDays(-lead)
+                        && await RemindAsync(db, applier, EmploymentEvents.ProbationEnding, "hrm.probation_record", p.Id, p.EmploymentId, p.CompanyId, last, today, now, actor.UserId, ct).ConfigureAwait(false))
+                    {
+                        p1++;
+                    }
+                }
+
+                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            }, null, null, cancellationToken).ConfigureAwait(false);
+            probations += p1;
+            if (read < Chunk)
+            {
+                break;
+            }
+        }
+
         await job.LogAsync("info", $"{expired} contracts expired, {contracts} contract and {probations} probation reminders raised.", cancellationToken).ConfigureAwait(false);
+    }
+
+    private static (HrmDbContext Db, EmploymentApplier Applier) Open(IJobExecution job, ISettings settings, System.Data.Common.DbConnection connection)
+    {
+        var db = new HrmDbContext(job.Services.GetRequiredService<DbContextOptions<HrmDbContext>>());
+        db.Database.SetDbConnection(connection, contextOwnsConnection: false);
+        return (db, new EmploymentApplier(db, settings));
+    }
+
+    /// <summary>The company's business date, read once per company and run.</summary>
+    private static async Task<DateOnly> TodayAsync(EmploymentApplier applier, Dictionary<Guid, DateOnly> todays, Guid company, DateTimeOffset now, CancellationToken ct)
+    {
+        if (!todays.TryGetValue(company, out var today))
+        {
+            todays[company] = today = await applier.TodayAsync(company, now, ct).ConfigureAwait(false);
+        }
+
+        return today;
+    }
+
+    /// <summary>A number of days from a company setting, read once per company and run.</summary>
+    private static async Task<int> DaysAsync(ISettings settings, Dictionary<(string, Guid), int> cache, string key, Guid company, int fallback, CancellationToken ct)
+    {
+        if (!cache.TryGetValue((key, company), out var days))
+        {
+            var value = (await settings.GetAsync(key, new SettingContext(company, null), ct).ConfigureAwait(false)).Value;
+            cache[(key, company)] = days = value.ValueKind == JsonValueKind.Number ? value.GetInt32() : fallback;
+        }
+
+        return days;
     }
 
     /// <summary>

@@ -60,6 +60,9 @@ export function SessionWatch() {
   return null;
 }
 
+/** Label changes of other administrators reach every open screen within a minute (S1.15b, FR-KRN-MET-22). */
+const LABEL_REFRESH_MS = 60_000;
+
 export function ShellDataProvider({ children }: { children: ReactNode }) {
   const me = useQuery({ queryKey: meKey, queryFn: () => kernel.me() });
   const capabilities = useQuery({ queryKey: capabilitiesKey, queryFn: kernel.capabilities, refetchInterval: 5 * 60_000 });
@@ -83,7 +86,7 @@ export function ShellDataProvider({ children }: { children: ReactNode }) {
 
   // The customer's and the company's label overrides apply to every label shown (S1.12c Build item 15, deviation i of
   // CR-063). They only change words: a failed load keeps the product's own labels.
-  const labels = useQuery({ queryKey: ['kernel', 'labels', activeId], queryFn: () => kernel.labels(activeId), enabled: !!person, staleTime: 5 * 60_000 });
+  const labels = useQuery({ queryKey: ['kernel', 'labels', activeId], queryFn: () => kernel.labels(activeId), enabled: !!person, staleTime: 5 * 60_000, refetchInterval: LABEL_REFRESH_MS });
   useEffect(() => {
     if (labels.data) setOverrides(labels.data);
   }, [labels.data, setOverrides]);

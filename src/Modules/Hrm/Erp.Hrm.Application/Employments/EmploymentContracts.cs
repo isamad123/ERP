@@ -84,6 +84,9 @@ public sealed class HireRequest
     public string? Notes { get; init; }
 
     public AssignmentInput? Assignment { get; init; }
+
+    /// <summary>Custom field values of the employment by key (S1.15b, FR-KRN-MET-02): checked against the active definitions and field security.</summary>
+    public System.Text.Json.JsonElement? Custom { get; init; }
 }
 
 /// <summary>Employment fields a <c>data_correction</c> event may correct (ruling Q2). Null leaves a field; Clear empties expectedEndDate.</summary>

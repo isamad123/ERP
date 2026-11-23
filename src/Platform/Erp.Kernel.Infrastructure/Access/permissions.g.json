@@ -9,18 +9,6 @@
       "sensitive": false
     },
     {
-      "code": "cfg.custom_field_defs.create",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.custom_field_defs.create",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.custom_field_defs.update",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.custom_field_defs.update",
-      "sensitive": false
-    },
-    {
       "code": "cfg.feature_flag_overrides.read",
       "module": "cfg",
       "descriptionKey": "permissions.cfg.feature_flag_overrides.read",
@@ -51,18 +39,6 @@
       "sensitive": false
     },
     {
-      "code": "cfg.labels.create",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.labels.create",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.labels.update",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.labels.update",
-      "sensitive": false
-    },
-    {
       "code": "cfg.numbering_schemes.read",
       "module": "cfg",
       "descriptionKey": "permissions.cfg.numbering_schemes.read",
@@ -72,42 +48,6 @@
       "code": "cfg.numbering_voids.read",
       "module": "cfg",
       "descriptionKey": "permissions.cfg.numbering_voids.read",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.option_list_items.read",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.option_list_items.read",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.option_list_items.create",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.option_list_items.create",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.option_list_items.update",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.option_list_items.update",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.option_lists.read",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.option_lists.read",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.option_lists.create",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.option_lists.create",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.option_lists.update",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.option_lists.update",
       "sensitive": false
     },
     {

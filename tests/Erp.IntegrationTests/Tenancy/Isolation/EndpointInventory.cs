@@ -253,6 +253,12 @@ public static class EndpointInventory
         "POST /api/iam/auth/password/forgot",
         "POST /api/iam/auth/password/reset",
         "POST /api/iam/auth/mfa/email-code",
+
+        // Slice S1.15a (FR-ADM-SEC-08, S1.15 ruling Q3): the sign-in page needs the customer's logo, product name, banner and
+        // terms before anyone is known. They answer from the host's customer only and carry no other data. Security decision of
+        // the product owner (CR-071), noted in the slice report.
+        "GET /api/kernel/branding",
+        "GET /api/kernel/branding/logo",
     };
 
     private static readonly Lazy<IReadOnlyList<ApiEndpoint>> Discovered = new(DiscoverFromHost);

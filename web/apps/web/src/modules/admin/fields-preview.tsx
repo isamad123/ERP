@@ -2,7 +2,7 @@
 // from the server's field preview. Every state has a text, never colour alone: hidden is struck and named, masked shows dots.
 import { useQuery } from '@tanstack/react-query';
 import { Button, ErrorPanel, Skeleton } from '@erp/ui';
-import { useText, type MessageKey } from '@erp/i18n';
+import { useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { access, type FieldPreviewItem } from '../../api/access';
 import { ApiProblem } from '../../api/client';
 
@@ -11,6 +11,7 @@ export const levelKey = (level: string) => `fsec.level.${level}` as MessageKey;
 
 export function FormPreview({ roleId, resource, roleName, label }: { roleId: string; resource: string; roleName: string; label: (field: string) => string }) {
   const { t } = useText();
+  const { locale } = useLocaleSettings();
   const preview = useQuery({ queryKey: ['iam', 'field-preview', roleId, resource], queryFn: () => access.fieldPreview(roleId, resource), refetchOnMount: 'always' });
   if (preview.isPending) return <Skeleton lines={4} />;
   if (preview.isError) {
@@ -20,7 +21,7 @@ export function FormPreview({ roleId, resource, roleName, label }: { roleId: str
   }
   return (
     <section className="erp-mock" aria-label={t('fsec.preview.label', { role: roleName })}>
-      {preview.data.fields.map((f) => <MockField key={f.field} item={f} label={label(f.field)} />)}
+      {preview.data.fields.map((f) => <MockField key={f.field} item={f} label={f.label?.[locale] || f.label?.en || label(f.field)} />)}
     </section>
   );
 }

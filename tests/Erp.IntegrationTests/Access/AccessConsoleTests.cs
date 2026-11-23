@@ -89,16 +89,20 @@ public sealed class AccessConsoleTests(TenancyFixture fx) : IAsyncLifetime
     [Fact]
     public async Task FR_ADM_ROL_11_S113b_role_usage_report_lists_unused_permissions_and_inactive_users_by_the_setting()
     {
-        var admin = await _h.UserAsync(Ct, null, "tenant_admin");
-        var holder = await _h.UserAsync(Ct);
-        var recent = await _h.UserAsync(Ct);
-        var stale = await _h.UserAsync(Ct);
-        var never = await _h.UserAsync(Ct);
-        await _h.ExecAsync("update iam.users set last_login_at = $2 where id = $1", Ct, recent, _h.Clock.UtcNow.AddDays(-5));
-        await _h.ExecAsync("update iam.users set last_login_at = $2 where id = $1", Ct, stale, _h.Clock.UtcNow.AddDays(-45));
-        await _h.ExecAsync("update iam.users set last_login_at = null where id = $1", Ct, never);
+        // A customer of its own: the report lists at most 500 inactive users, and the shared test customer gathers more test users
+        // than that over a full run, so its own users could fall outside the list (found in S1.20d, whose tests add users).
+        var code = await _h.ProvisionAsync("ru", Ct);
+        var admin = await _h.UserAsync(Ct, code, "tenant_admin");
+        var holder = await _h.UserAsync(Ct, code);
+        var recent = await _h.UserAsync(Ct, code);
+        var stale = await _h.UserAsync(Ct, code);
+        var never = await _h.UserAsync(Ct, code);
+        await using var owner = await _h.OwnerAsync(code, Ct);
+        await AccessHarness.ExecAsync(owner, "update iam.users set last_login_at = $2 where id = $1", Ct, recent, _h.Clock.UtcNow.AddDays(-5));
+        await AccessHarness.ExecAsync(owner, "update iam.users set last_login_at = $2 where id = $1", Ct, stale, _h.Clock.UtcNow.AddDays(-45));
+        await AccessHarness.ExecAsync(owner, "update iam.users set last_login_at = null where id = $1", Ct, never);
 
-        var answer = await _h.GetAsync(admin, "/api/iam/reports/role-usage", Ct);
+        var answer = await _h.GetAsync(admin, "/api/iam/reports/role-usage", Ct, code);
         Assert.Equal(HttpStatusCode.OK, answer.Status);
         Assert.Equal(90, answer.Json.GetProperty("inactiveDays").GetInt32());
         var unused = answer.Json.GetProperty("unusedPermissions").EnumerateArray().Select(e => e.GetProperty("code").GetString()).ToList();
@@ -108,23 +112,23 @@ public sealed class AccessConsoleTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(probe, entry.GetProperty("module").GetString() + "." + entry.GetProperty("resource").GetString() + "." + entry.GetProperty("action").GetString());
 
         // A role nobody holds does not use its permission; once an active user holds it, the permission leaves the list.
-        var role = await _h.RoleAsync(Ct, [probe]);
-        Assert.Contains(probe, (await _h.GetAsync(admin, "/api/iam/reports/role-usage", Ct)).Json.GetProperty("unusedPermissions").EnumerateArray().Select(e => e.GetProperty("code").GetString()));
-        await _h.AssignAsync(holder, role, null, _h.Today.AddDays(-1), null, Ct);
-        Assert.DoesNotContain(probe, (await _h.GetAsync(admin, "/api/iam/reports/role-usage", Ct)).Json.GetProperty("unusedPermissions").EnumerateArray().Select(e => e.GetProperty("code").GetString()));
+        var role = await _h.RoleAsync(Ct, [probe], code: code);
+        Assert.Contains(probe, (await _h.GetAsync(admin, "/api/iam/reports/role-usage", Ct, code)).Json.GetProperty("unusedPermissions").EnumerateArray().Select(e => e.GetProperty("code").GetString()));
+        await _h.AssignAsync(holder, role, null, _h.Today.AddDays(-1), null, Ct, code);
+        Assert.DoesNotContain(probe, (await _h.GetAsync(admin, "/api/iam/reports/role-usage", Ct, code)).Json.GetProperty("unusedPermissions").EnumerateArray().Select(e => e.GetProperty("code").GetString()));
         var inactive = answer.Json.GetProperty("inactiveUsers").EnumerateArray().Select(e => e.GetProperty("id").GetGuid()).ToList();
         Assert.Contains(never, inactive);
         Assert.DoesNotContain(stale, inactive); // 45 days is inside 90
         Assert.DoesNotContain(recent, inactive);
 
         // The setting decides: 30 days lists the stale user, and a recent one stays out.
-        Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(admin, "/api/iam/settings/iam.report.inactive_days", new { value = 30, reason = "test" }, Ct)).Status);
-        var thirty = await _h.GetAsync(admin, "/api/iam/reports/role-usage", Ct);
+        Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(admin, "/api/iam/settings/iam.report.inactive_days", new { value = 30, reason = "test" }, Ct, code)).Status);
+        var thirty = await _h.GetAsync(admin, "/api/iam/reports/role-usage", Ct, code);
         Assert.Equal(30, thirty.Json.GetProperty("inactiveDays").GetInt32());
         var inactive30 = thirty.Json.GetProperty("inactiveUsers").EnumerateArray().Select(e => e.GetProperty("id").GetGuid()).ToList();
         Assert.Contains(stale, inactive30);
         Assert.DoesNotContain(recent, inactive30);
 
-        Assert.Equal(HttpStatusCode.Forbidden, (await _h.GetAsync(await _h.UserAsync(Ct, null, "business_user"), "/api/iam/reports/role-usage", Ct)).Status);
+        Assert.Equal(HttpStatusCode.Forbidden, (await _h.GetAsync(await _h.UserAsync(Ct, code, "business_user"), "/api/iam/reports/role-usage", Ct, code)).Status);
     }
 }

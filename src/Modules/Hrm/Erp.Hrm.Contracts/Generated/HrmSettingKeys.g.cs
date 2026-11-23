@@ -37,6 +37,9 @@ public static class HrmSettingKeys
 
     /// <summary>How many days before a contract ends the manager and HR are reminded, when the contract gives no number.</summary>
     public const string HrmContractsRenewalNoticeDays = "hrm.contracts.renewal_notice_days";
+
+    /// <summary>A new or changed payment account of an employee needs a second person's approval.</summary>
+    public const string HrmBankAccountsRequiresApproval = "hrm.bank_accounts.requires_approval";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

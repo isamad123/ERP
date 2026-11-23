@@ -45,6 +45,8 @@ function Matrix({ resource }: { resource: string }) {
   const canChange = writable && can('iam.roles.manage');
   const roleName = (id: string) => { const r = roles.data?.find((x) => x.id === id); return r ? nameOf(r.nameI18n, locale) || r.code : id; };
   const fieldLabel = (field: string) => { const text = label(`fields.${resource}.${field}`); return text.startsWith('fields.') ? field : text; };
+  /** A custom field carries the name the administrator gave it (S1.15b); a table's own field comes from the label catalogue. */
+  const itemLabel = (f: { field: string; label?: Record<string, string | null> | null }) => f.label?.[locale] || f.label?.en || fieldLabel(f.field);
 
   const explicit = (index: number, field: string): Cell => summaries[index]?.data?.fieldPolicies.find((p) => p.resource === resource && p.field === field)?.access ?? 'default';
   const value = (index: number, field: string): Cell => edits[shown[index] ?? '']?.[field] ?? explicit(index, field);
@@ -91,14 +93,14 @@ function Matrix({ resource }: { resource: string }) {
             <tbody>
               {fields.map((f) => (
                 <tr key={f.field}>
-                  <th scope="row"><bdi>{fieldLabel(f.field)}</bdi> <span className="erp-small erp-muted erp-code">{f.field}</span></th>
+                  <th scope="row"><bdi>{itemLabel(f)}</bdi> <span className="erp-small erp-muted erp-code">{f.field}</span></th>
                   <td>{f.fieldClass ?? <span className="erp-muted">{t('fsec.class.none')}</span>}</td>
                   {shown.map((id, i) => {
                     const v = value(i, f.field);
                     const changed = v !== explicit(i, f.field);
                     return (
                       <td key={id} className={changed ? 'erp-changed' : undefined}>
-                        <SelectField label={`${fieldLabel(f.field)} — ${roleName(id)}`} value={v} isDisabled={!canChange || !summaries[i]?.data}
+                        <SelectField label={`${itemLabel(f)} — ${roleName(id)}`} value={v} isDisabled={!canChange || !summaries[i]?.data}
                           onChange={(next) => setEdits((e) => ({ ...e, [id]: { ...(e[id] ?? {}), [f.field]: next as Cell } }))}
                           options={[{ id: 'default', label: t('fsec.level.default') }, ...ACCESS_LEVELS.map((l) => ({ id: l, label: t(levelKey(l)) }))]} />
                       </td>
