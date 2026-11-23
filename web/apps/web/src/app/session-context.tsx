@@ -21,6 +21,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     <SessionContext.Provider value={manager}>
       {children}
       <IdleWarning manager={manager} />
+      <SignOutFailure manager={manager} />
     </SessionContext.Provider>
   );
 }
@@ -44,6 +45,13 @@ export function useSession(): SessionManager {
   const manager = useContext(SessionContext);
   if (!manager) throw new Error('SessionProvider is missing');
   return manager;
+}
+
+/** Signs out and goes to sign-in only when the session really ended; on a failure the failure message shows (R-071). */
+export function useSignOut(): () => void {
+  const manager = useSession();
+  const navigate = useNavigate();
+  return () => { void manager.signOut().then((result) => { if (result === 'ended') navigate('/sign-in?reason=signedOut', { replace: true }); }); };
 }
 
 export function useSessionState(): SessionSnapshot {
@@ -85,8 +93,8 @@ export function RequireSession({ children }: { children: ReactNode }) {
 /** Two minutes before the idle end with no activity: "Stay signed in" or sign out now (spec 13 FR-UX-SEC-04). */
 function IdleWarning({ manager }: { manager: SessionManager }) {
   const { t } = useText();
-  const navigate = useNavigate();
-  const { warningRemainingMs } = useSyncExternalStore(manager.subscribe, manager.getSnapshot);
+  const signOut = useSignOut();
+  const { warningRemainingMs, signOutFailed } = useSyncExternalStore(manager.subscribe, manager.getSnapshot);
   const [, setTick] = useState(0);
   useEffect(() => {
     if (warningRemainingMs === null) return undefined;
@@ -99,11 +107,31 @@ function IdleWarning({ manager }: { manager: SessionManager }) {
     <Dialog title={t('session.warning.title')} isOpen role="alertdialog"
       actions={() => (
         <>
-          <Button variant="secondary" onPress={() => { void manager.signOut().then(() => navigate('/sign-in?reason=signedOut')); }}>{t('session.warning.signOut')}</Button>
+          <Button variant="secondary" onPress={signOut}>{t('session.warning.signOut')}</Button>
           <Button variant="primary" onPress={() => { void manager.staySignedIn(); }}>{t('session.warning.stay')}</Button>
         </>
       )}>
       <p>{t('session.warning.body', { seconds })}</p>
+      {signOutFailed ? <p role="alert">{t('session.signOutFailed.body')}</p> : null}
+    </Dialog>
+  );
+}
+
+/** "Sign-out did not work" (R-071, FR-KRN-IAM-04): the person is still signed in; try again, or close the browser. */
+function SignOutFailure({ manager }: { manager: SessionManager }) {
+  const { t } = useText();
+  const signOut = useSignOut();
+  const { signOutFailed, warningRemainingMs } = useSyncExternalStore(manager.subscribe, manager.getSnapshot);
+  if (!signOutFailed || warningRemainingMs !== null) return null; // the idle warning carries the message itself
+  return (
+    <Dialog title={t('session.signOutFailed.title')} isOpen role="alertdialog" onOpenChange={(open) => { if (!open) manager.dismissSignOutFailure(); }}
+      actions={() => (
+        <>
+          <Button variant="secondary" onPress={() => manager.dismissSignOutFailure()}>{t('session.signOutFailed.close')}</Button>
+          <Button variant="primary" onPress={signOut}>{t('common.retry')}</Button>
+        </>
+      )}>
+      <p>{t('session.signOutFailed.body')}</p>
     </Dialog>
   );
 }

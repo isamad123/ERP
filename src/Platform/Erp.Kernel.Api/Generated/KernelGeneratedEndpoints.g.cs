@@ -16,6 +16,7 @@ public static class KernelGeneratedEndpoints
     {
         global::Erp.Kernel.Api.Generated.Cfg.CustomFieldDefEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.FeatureFlagOverrideEndpoints.Map(app);
+        global::Erp.Kernel.Api.Generated.Cfg.FormDraftEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.InstalledPackEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.LabelEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Cfg.NumberingSchemeEndpoints.Map(app);

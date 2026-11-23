@@ -53,6 +53,16 @@ refuses to start when no key exists. `Auth__SigningPublicKeys__0` may add a furt
    signed with the new key until it restarts (users may see a sign-in prompt in that window). Do rotations at a quiet
    time; a two-phase rotation without restarts is planned with the hosting slice (S1.05 review finding 8).
 
+## HTTPS is required for browser sign-in (S1.12a review finding 6, R-070)
+Serve every customer host over HTTPS, with a certificate the browsers trust. Reasons:
+- The browser sign-in keeps its refresh token in a `Secure` cookie (`__Secure-erp_rt`, and `__Secure-erp_td` for a remembered browser).
+  A browser drops a `Secure` cookie that arrives over plain HTTP (only `localhost` is exempt), so over plain HTTP a person can sign in
+  but is signed out again after 5 minutes, when the first access token runs out.
+- The host sends `Strict-Transport-Security` only on a request it sees as HTTPS. The host does not yet read forwarded headers, so when a
+  proxy ends TLS in front of it the host sees plain HTTP and sends no such header. Until a hosting setting for trusted proxies exists
+  (open question to the product owner, to be decided with the first on-premises installation work), the customer's proxy must add
+  `Strict-Transport-Security: max-age=31536000` itself, and must pass the original host name through (the customer is found from it).
+
 ## Provision a customer (FR-KRN-TEN-02)
 1. Issuer signs the entitlement (payload: `tenant`, `version`, `edition`, `effective_from`, `expires_at`, `claims`; the claims
    format is in `docs/registers/contracts.md`, S1.09b; `M entitlement draft` writes a payload to start from):
