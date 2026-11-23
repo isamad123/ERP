@@ -2,7 +2,6 @@ using System.Text.Json;
 using Erp.Hrm.Contracts.Employments;
 using Erp.Hrm.Domain.Generated;
 using Erp.Hrm.Infrastructure.Generated;
-using Microsoft.EntityFrameworkCore;
 
 namespace Erp.Hrm.Infrastructure.Employments;
 
