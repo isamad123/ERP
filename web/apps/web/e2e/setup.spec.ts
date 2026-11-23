@@ -25,7 +25,8 @@ test('FR-ADM-ONB-01 FR-ADM-ONB-02 a new administrator is led to the set-up guide
   await expect(page.getByText('Step marked as done.')).toBeVisible();
   await page.getByRole('button', { name: 'Open the step Modules to use' }).click();
   const why = page.getByRole('textbox', { name: /Why are you skipping/ });
-  await why.fill('Later this week');
+  await why.click();
+  await why.pressSequentially('Later this week');
   await expect(why).toHaveValue('Later this week');
   await page.getByRole('button', { name: 'Skip this step' }).click();
   await expect(page.getByText(/Step skipped/)).toBeVisible();
@@ -64,7 +65,9 @@ test('FR-ADM-ONB-03 the checklist shows what is missing with a link, and go live
   await page.getByRole('button', { name: 'Go live: Core platform' }).click();
   const dialog = page.getByRole('dialog', { name: 'Take Core platform live' });
   await expect(dialog.getByRole('button', { name: 'Go live' })).toBeDisabled();
-  await dialog.getByRole('textbox', { name: /Reason for going live/ }).fill('Pilot with the head office only');
+  const reason = dialog.getByRole('textbox', { name: /Reason for going live/ });
+  await reason.click();
+  await reason.pressSequentially('Pilot with the head office only');
   await accessible(page, 'go-live dialog');
   await dialog.getByRole('button', { name: 'Go live' }).click();
   await expect(page.getByText('Core platform is now live for this company.')).toBeVisible();
