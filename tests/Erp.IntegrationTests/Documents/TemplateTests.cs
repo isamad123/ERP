@@ -101,6 +101,20 @@ public sealed class TemplateTests(TenancyFixture fx) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task S115d_KRN_DOC_05_the_editor_lists_the_fields_each_printable_record_offers_with_their_class_and_refuses_a_person_without_the_right()
+    {
+        var admin = await AdminAsync();
+        var answer = await _rig.GetAsync(admin, "/api/doc/templates/entity-fields", Ct);
+        Assert.Equal(HttpStatusCode.OK, answer.Status);
+        var entry = answer.Json.EnumerateArray().Single(e => e.GetProperty("entityType").GetString() == TestRecordBook.OwnerType);
+        var salary = entry.GetProperty("fields").EnumerateArray().Single(f => f.GetProperty("path").GetString() == "employee.salary");
+        Assert.Equal("salary", salary.GetProperty("fieldClass").GetString());
+        Assert.DoesNotContain("85000", answer.Text, StringComparison.Ordinal);
+        var worker = await _rig.UserAsync(Ct, "business_user");
+        Assert.Equal(HttpStatusCode.Forbidden, (await _rig.GetAsync(worker, "/api/doc/templates/entity-fields", Ct)).Status);
+    }
+
+    [Fact]
     public async Task S111c2_KRN_DOC_05_an_english_letter_is_produced_as_a_pdf_stored_encrypted_against_the_record()
     {
         var admin = await AdminAsync();
