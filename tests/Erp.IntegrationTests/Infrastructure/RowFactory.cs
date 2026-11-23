@@ -102,6 +102,14 @@ public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction tr
         ["cfg.custom_field_defs.field_key"] = n => "f_" + n.ToString(CultureInfo.InvariantCulture),
         // S1.20b: an assignment's cost allocation is a list of shares summing to 1 (rules.yaml tg_employment_assignments_cost_allocation_sum).
         ["hrm.employment_assignments.cost_allocation"] = _ => new Json("[{\"cost_center_ref\": \"CC-1\", \"pct\": 1}]"),
+        // S1.20d: a payment account without bank details is a cash one (tg_employee_bank_accounts_bank_fields_required), the remainder
+        // (tg_employee_bank_accounts_split) with a priority of 1 to 99; a registration's scheme is a lower-case code and, applicable, has
+        // no exemption reason (ck_employment_statutory_registrations_scheme_format, _exemption).
+        ["hrm.employee_bank_accounts.payment_mode"] = _ => "cash",
+        ["hrm.employee_bank_accounts.split_kind"] = _ => "remainder",
+        ["hrm.employee_bank_accounts.priority"] = n => (n % 99) + 1,
+        ["hrm.employment_statutory_registrations.scheme"] = n => "scheme_" + n.ToString(CultureInfo.InvariantCulture),
+        ["hrm.employment_statutory_registrations.is_applicable"] = _ => true,
     };
 
     private int _formatted;
