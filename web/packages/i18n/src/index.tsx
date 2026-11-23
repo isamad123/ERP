@@ -5,11 +5,12 @@ import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNod
 import { IntlProvider, useIntl } from 'react-intl';
 import en from '../messages/en.json';
 import ur from '../messages/ur.json';
-// Texts of the settings, feature-flag and sign-in-page screens (S1.15a), numbering and approval routes (S1.15c) live in their own files, loaded with those screens
+// Texts of the settings, feature-flag and sign-in-page screens (S1.15a), numbering and approval routes (S1.15c), HR policies (S1.23a) live in their own files, loaded with those screens
 // (`registerMessages`), so they do not weigh on the shell's script budget (spec 13 FR-UX-PRF-01). Only the types come from here.
 import type configEn from '../messages/config.en.json';
 import type numberingEn from '../messages/numbering.en.json';
 import type routesEn from '../messages/routes.en.json';
+import type policiesEn from '../messages/policies.en.json';
 import serverEn from './generated/server.en.json';
 import serverUr from './generated/server.ur.json';
 import { pseudoCatalogue, pseudoText } from './pseudo';
@@ -32,7 +33,7 @@ function strip(catalogue: Record<string, string>): Catalogue {
   return Object.fromEntries(Object.entries(catalogue).filter(([key]) => !key.startsWith('_')));
 }
 
-export type MessageKey = keyof typeof en | keyof typeof configEn | keyof typeof numberingEn | keyof typeof routesEn;
+export type MessageKey = keyof typeof en | keyof typeof configEn | keyof typeof numberingEn | keyof typeof routesEn | keyof typeof policiesEn;
 
 let registryVersion = 0;
 const listeners = new Set<() => void>();

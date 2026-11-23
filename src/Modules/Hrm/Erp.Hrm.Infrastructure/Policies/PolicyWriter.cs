@@ -30,7 +30,6 @@ internal static class PolicyErrors
     public const string PrecedenceTaken = "errors.hrm.policy.assignment.precedence_taken";
     public const string PolicyUnknown = "errors.hrm.policy.assignment.policy_unknown";
     public const string PolicyNoVersion = "errors.hrm.policy.assignment.policy_no_version";
-    public const string SetDate = "errors.hrm.policy.assignment.set_date";
     public const string UnknownValue = "errors.hrm.policy.rule.unknown_value";
     public const string CustomUnknown = "errors.hrm.policy.rule.custom_field_unknown";
     public const string CustomRetired = "errors.hrm.policy.rule.custom_field_retired";
@@ -230,13 +229,6 @@ internal sealed class PolicyWriter(HrmDbContext db, PolicyTypeCatalog types, IOr
         var names = await db.Set<Person>().AsNoTracking().Where(p => personIds.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => string.Join(' ', new[] { p.FirstName, p.LastName }.Where(n => !string.IsNullOrEmpty(n))), ct).ConfigureAwait(false);
         return new Unmatched(missing.Count, [.. shown.Select(s => new UnmatchedEmployee(s.Employment.Id, s.Employment.EmployeeNo, names.GetValueOrDefault(s.Employment.PersonId) ?? string.Empty, s.Decision.Reason!))]);
     }
-
-    /// <summary>
-    /// The date rule of a new set: after the start of the newest set, or on that same start when it is still in the future (that set is
-    /// then replaced before it ever applied). Null when the date is acceptable.
-    /// </summary>
-    public static string? DateProblem(DateOnly from, DateOnly? latest, DateOnly today) =>
-        latest is not { } s || from > s || (from == s && s > today) ? null : PolicyErrors.SetDate;
 
     /// <summary>Replaces the set in force from the date with the prepared one; returns the new assignment ids.</summary>
     public async Task<List<Guid>> ApplySetAsync(PolicyType type, Guid companyId, DateOnly start, IReadOnlyList<LoadedAssignment> set, DateTimeOffset now, Guid actor, CancellationToken ct)

@@ -9,10 +9,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Erp.Hrm.Infrastructure.Policies;
 
 /// <summary>One assignment of a set, with its policy and parsed rule.</summary>
-internal sealed record LoadedAssignment(PolicyAssignment Row, Policy Policy, PolicyRule Rule);
+public sealed record LoadedAssignment(PolicyAssignment Row, Policy Policy, PolicyRule Rule);
 
 /// <summary>The assignments of one type and company valid on a date (precedence order), the versions in force, and the unit subtrees the rules name.</summary>
-internal sealed record LoadedSet(IReadOnlyList<LoadedAssignment> Assignments, IReadOnlyDictionary<Guid, PolicyVersion> Versions, IReadOnlyDictionary<Guid, IReadOnlySet<Guid>> Subtrees);
+public sealed record LoadedSet(IReadOnlyList<LoadedAssignment> Assignments, IReadOnlyDictionary<Guid, PolicyVersion> Versions, IReadOnlyDictionary<Guid, IReadOnlySet<Guid>> Subtrees);
 
 /// <summary>
 /// The policy resolver (contract <c>IPolicyResolver</c>, slice S1.23a Build item 4, ruling Q5). Reads through the given HR context, so it
@@ -76,7 +76,7 @@ public sealed class PolicyResolver(HrmDbContext db, PolicyTypeCatalog types, IOr
     }
 
     /// <summary>The decision for one employee (pure given the loaded set): precedence order, first match (or every match for "many").</summary>
-    internal static PolicyResolution Decide(PolicyType type, PolicyAttributes who, DateOnly asOf, LoadedSet set)
+    public static PolicyResolution Decide(PolicyType type, PolicyAttributes who, DateOnly asOf, LoadedSet set)
     {
         var evaluations = new List<AssignmentEvaluation>();
         var matches = new List<PolicyMatch>();

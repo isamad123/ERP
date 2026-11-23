@@ -54,6 +54,9 @@ public sealed class EmploymentTermsTests(TenancyFixture fx) : IAsyncLifetime
             await ApprovalKindsAsync(company);
         }
 
+        // S1.23a (slice S1.23 ruling Q3): probation comes from the probation policy, which replaced the S1.20 settings; the policy
+        // here gives what the settings' defaults gave (3 months for the types probation and permanent).
+        await Policies.PolicyTestSupport.ProbationAsync(_h, await _h.UserAsync(Ct, null, "hr_admin"), company, Ct);
         return (company, await _h.PlaceAsync(company, Ct));
     }
 

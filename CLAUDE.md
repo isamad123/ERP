@@ -221,6 +221,12 @@ add/change/end/remove, held for a second person while `hrm.bank_accounts.require
 `Erp.Hrm.Application/Employments/PayDetailsRules.cs`) and statutory registrations `StatutoryRegistrationService.cs` (registrations only, no contribution rule). Numbers are always masked in lists;
 full values only through the `/reveal` endpoints (access-logged). Tests: `tests/Erp.IntegrationTests/Employments/PayDetailsTests.cs` (each test makes its own IBAN: the duplicate account warning spans the tenant).
 
+Policies (S1.23a): types in `<module>.Infrastructure/Access/policy-types.json` (HR: `probation`, `notice_period`; tests register `test_leave` and `test_benefit` in `AccessHarness`), catalogue
+`Erp.Hrm.Application/Policies/PolicyTypeCatalog.cs`, parameter schema subset `PolicySchema.cs`, rules `PolicyRules.cs`; services `Erp.Hrm.Infrastructure/Policies/` (`PolicyService`, `PolicyWriter`,
+`PolicyResolver`, approval handlers), endpoints `Erp.Hrm.Api/Policies/PolicyEndpoints.cs`. Every HR engine asks `IPolicyResolver` (Hrm.Contracts) and decides itself what "no policy" means; probation opens
+from the `probation` policy (the S1.20 settings are gone). Assignments are activated as a set per type and company from a date (`/api/hrm/policy-assignment-sets/activate` with `basedOn`). Kernel
+contracts `IOrgStructure` and `ICustomFieldCatalog` give unit subtrees and custom field definitions. Tests: `tests/Erp.IntegrationTests/Policies` (`PolicyTestSupport.ProbationAsync` for a company's probation), `tests/Erp.UnitTests/Policies`.
+
 Labels, option lists and custom fields (S1.15b): services `src/Platform/Erp.Kernel.Infrastructure/Metadata/` (`LabelAdministration`, `OptionListAdministration`, `CustomFieldAdministration`, `CustomFieldValidator`), endpoints `Erp.Kernel.Api/Metadata/MetadataEndpoints.cs`
 (`/api/cfg/label-overrides`, `/api/cfg/option-lists`, `/api/cfg/custom-fields`, form read `/api/kernel/custom-fields/{table}`), pure value rules `Erp.Kernel.Application/Metadata/CustomFieldRules.cs`. Every write path of a table with the `cust` trait
 must call `ICustomFieldValidator`: the generator does it for generated create and update; a hand-written write (HR person and hire services, later imports and employee screens) calls it itself after `FieldShaping.MergeCustom` and holds the result until the save is done

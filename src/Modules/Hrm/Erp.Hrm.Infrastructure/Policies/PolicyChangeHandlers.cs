@@ -50,7 +50,7 @@ internal abstract class PolicyChangeHandler(IServiceProvider services, IDataScop
         var source = new DbContextScopeSource(db);
         var probe = new Policy { CompanyId = company, Code = string.Empty, NameI18n = JsonDocument.Parse("{}"), PolicyType = string.Empty, Source = "tenant" };
         return await scope.AllowsAsync(probe, PolicyAccess.Scope, "read", source, cancellationToken).ConfigureAwait(false)
-            && await scope.AllowsAsync(probe, PolicyAccess.Scope, "update", source, cancellationToken).ConfigureAwait(false);
+            && await scope.AllowsAsync(probe, PolicyAccess.Scope, "approve", source, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<HeldChangeProblem?> CheckAsync(HeldChange change, DbTransaction transaction, CancellationToken cancellationToken)

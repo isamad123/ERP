@@ -1435,5 +1435,9 @@
   "nav.optionLists": "اختیارات کی فہرستیں",
   "nav.customFields": "حسب ضرورت خانے",
   "nav.numbering": "نمبرنگ",
-  "nav.approvalRoutes": "منظوری کے راستے"
+  "nav.approvalRoutes": "منظوری کے راستے",
+  "nav.policies": "پالیسیاں",
+  "nav.policyResolution": "کون سی پالیسی لاگو ہے؟",
+  "approvals.changes.kind.hrm.policy.version_activation": "پالیسی {subject} کا نیا ورژن نافذ کریں",
+  "approvals.changes.kind.hrm.policy.assignment_activation": "{subject} پالیسیوں کی نئی تفویضات نافذ کریں"
 }

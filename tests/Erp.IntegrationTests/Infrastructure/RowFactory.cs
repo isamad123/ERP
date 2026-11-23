@@ -110,6 +110,13 @@ public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction tr
         ["hrm.employee_bank_accounts.priority"] = n => (n % 99) + 1,
         ["hrm.employment_statutory_registrations.scheme"] = n => "scheme_" + n.ToString(CultureInfo.InvariantCulture),
         ["hrm.employment_statutory_registrations.is_applicable"] = _ => true,
+        // S1.23a: a policy type is a lower-case code; parameters and rules are JSON objects; version numbers start at 1; precedence is
+        // 1 to 9999 (ck_policies_policy_type_format, ck_policy_versions_*, ck_policy_assignments_*).
+        ["hrm.policies.policy_type"] = n => "type_" + n.ToString(CultureInfo.InvariantCulture),
+        ["hrm.policy_versions.parameters"] = _ => new Json("{}"),
+        ["hrm.policy_versions.version"] = n => (n % 1000) + 1,
+        ["hrm.policy_assignments.rule"] = _ => new Json("{}"),
+        ["hrm.policy_assignments.precedence"] = n => (n % 9999) + 1,
     };
 
     private int _formatted;

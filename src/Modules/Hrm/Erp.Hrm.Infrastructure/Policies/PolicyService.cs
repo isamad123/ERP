@@ -158,7 +158,7 @@ internal sealed partial class PolicyService(
             Id = Guid.CreateVersion7(now), CompanyId = request.CompanyId!.Value, Code = code!, NameI18n = name!, PolicyType = type!.Code, Source = "tenant", IsActive = true,
             CreatedAt = now, CreatedBy = actor.UserId, UpdatedAt = now, UpdatedBy = actor.UserId, RowVersion = 1,
         };
-        if (!await scope.AllowsAsync(policy, PolicyAccess.Scope, "create", Source, cancellationToken).ConfigureAwait(false))
+        if (!await scope.AllowsAsync(policy, PolicyAccess.Scope, "manage", Source, cancellationToken).ConfigureAwait(false))
         {
             return PeopleResult.Forbidden(AccessDeniedException.OutOfScope);
         }
@@ -429,7 +429,7 @@ internal sealed partial class PolicyService(
             return PeopleResult.Forbidden();
         }
 
-        var (type, company, problem) = await TypeAndCompanyAsync(request.CompanyId, request.PolicyType, "update", cancellationToken).ConfigureAwait(false);
+        var (type, company, problem) = await TypeAndCompanyAsync(request.CompanyId, request.PolicyType, "manage", cancellationToken).ConfigureAwait(false);
         if (problem is not null)
         {
             return problem;
@@ -443,7 +443,7 @@ internal sealed partial class PolicyService(
             errors["effectiveFrom"] = [PersonService.Required];
             from = today;
         }
-        else if (PolicyWriter.DateProblem(from, latest, today) is { } dateProblem)
+        else if (PolicySetDates.Problem(from, latest, today) is { } dateProblem)
         {
             errors["effectiveFrom"] = [dateProblem];
         }
@@ -466,7 +466,7 @@ internal sealed partial class PolicyService(
             return PeopleResult.Forbidden();
         }
 
-        var (type, company, problem) = await TypeAndCompanyAsync(request.CompanyId, request.PolicyType, "update", cancellationToken).ConfigureAwait(false);
+        var (type, company, problem) = await TypeAndCompanyAsync(request.CompanyId, request.PolicyType, "manage", cancellationToken).ConfigureAwait(false);
         if (problem is not null)
         {
             return problem;
@@ -522,7 +522,7 @@ internal sealed partial class PolicyService(
             return (null, null, PeopleResult.Conflict(PersonService.Concurrency, new Dictionary<string, object?> { ["latestFrom"] = latest }));
         }
 
-        if (PolicyWriter.DateProblem(from, latest, today) is { } dateProblem)
+        if (PolicySetDates.Problem(from, latest, today) is { } dateProblem)
         {
             return (null, null, new PeopleResult(PeopleOutcome.Invalid, "errors.data.invalid_request", FieldErrors: new Dictionary<string, string[]> { ["effectiveFrom"] = [dateProblem] },
                 Extensions: new Dictionary<string, object?> { ["latestFrom"] = latest }));
@@ -640,7 +640,7 @@ internal sealed partial class PolicyService(
             return (null, PeopleResult.NotFound);
         }
 
-        if (!await scope.AllowsAsync(policy, PolicyAccess.Scope, "update", Source, ct).ConfigureAwait(false))
+        if (!await scope.AllowsAsync(policy, PolicyAccess.Scope, "manage", Source, ct).ConfigureAwait(false))
         {
             return (null, PeopleResult.Forbidden(AccessDeniedException.OutOfScope));
         }
@@ -673,7 +673,7 @@ internal sealed partial class PolicyService(
             return (null, null, PeopleResult.NotFound);
         }
 
-        if (!await scope.AllowsAsync(policy, PolicyAccess.Scope, "update", Source, ct).ConfigureAwait(false))
+        if (!await scope.AllowsAsync(policy, PolicyAccess.Scope, "manage", Source, ct).ConfigureAwait(false))
         {
             return (null, null, PeopleResult.Forbidden(AccessDeniedException.OutOfScope));
         }
