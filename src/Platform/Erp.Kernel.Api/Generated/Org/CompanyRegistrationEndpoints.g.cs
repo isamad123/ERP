@@ -34,6 +34,9 @@ public sealed class CompanyRegistrationListQuery
     public int? Limit { get; init; }
 
     public global::System.Guid? CompanyId { get; init; }
+
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated endpoints of org.company_registrations: read. Answers pass through field security (S1.06).</summary>
@@ -52,7 +55,7 @@ internal static class CompanyRegistrationEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "org.company_registrations.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Org.CompanyRegistrationFilter { CompanyId = query.CompanyId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Org.CompanyRegistrationFilter { CompanyId = query.CompanyId, AsOf = query.AsOf }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Org.CompanyRegistrationAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

@@ -17,6 +17,7 @@ public static class AccessServices
         services.AddScoped<IFieldAccess>(sp => sp.GetRequiredService<AccessEngine>());
         services.AddScoped<ICallerAccess>(sp => sp.GetRequiredService<AccessEngine>());
         services.TryAddScoped<IWorkforceDirectory, NoWorkforce>();
+        services.AddScoped<IHeldChanges, HeldChangeService>(); // modules' changes held for a second person (S1.20a)
         return services;
     }
 }

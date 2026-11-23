@@ -42,6 +42,8 @@ export const server = {
   setting: (key: string, json: string) => call<undefined>('POST', '/settings', { key, json }),
   /** S1.12c: `count` branches coded `<prefix>-001`... in a company (default: the customer's first); every 7th inactive. */
   branches: (prefix: string, count: number, company?: string) => call<undefined>('POST', '/branches', { prefix, count, company: company ?? null }),
+  /** S1.14b: a reporting hierarchy with a five-level structure (`<prefix>-ROOT`, `-DIVA`, `-DIVB`, `-DEPT`, `-TEAM`) and a unit in no place (`-LOOSE`). */
+  orgStructure: (prefix: string) => call<{ hierarchy: string }>('POST', '/org-structure', { prefix }),
   /** S1.12c: the customer's label override of a key in a language (null removes it). */
   label: (key: string, language: 'en' | 'ur', text: string | null) => call<undefined>('POST', '/labels', { key, language, text }),
   /** S1.12d: a route of the test document type: one step decided by the named person, bulk approval allowed or not. */
@@ -53,6 +55,8 @@ export const server = {
   delegate: (from: string, to: string) => call<undefined>('POST', '/delegations', { from, to }),
   /** S1.12d: a customer setting changed by another administrator and held for a second person's approval. */
   heldSetting: (value: number, reason: string) => call<{ key: string; requestId: string }>('POST', '/changes/setting', { value, reason }),
+  /** S1.15b: a field rule for every role of the named person: access `hidden`, `masked`, `read_only` or `editable` for a field (a custom field is `custom.<key>`); the field matrix of S1.13b does the same by screen. */
+  fieldAccess: (username: string, resource: string, field: string, access: 'hidden' | 'masked' | 'read_only' | 'editable') => call<undefined>('POST', '/field-policy', { username, resource, field, access }),
   settingValue: async (key: string) => (await call<{ value: string | null }>('GET', `/settings/value?key=${encodeURIComponent(key)}`)).value,
   facts: (username: string) => call<{ liveSessions: number; reusedSessions: number; trustedDevices: number }>('GET', `/facts?username=${encodeURIComponent(username)}`),
 };
@@ -117,6 +121,23 @@ export async function shot(page: Page, name: string): Promise<void> {
 /** The page fits the width: no sideways scrolling (spec 13 NFR-11). */
 export async function fitsWidth(page: Page): Promise<void> {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  if (overflow > 0) {
+    // Name the elements whose removal makes the page fit, so a failure says which one pushes the page out.
+    const wide = await page.evaluate(() => {
+      const found: string[] = [];
+      for (const e of document.querySelectorAll('body *')) {
+        const element = e as HTMLElement;
+        const before = element.style.display;
+        element.style.display = 'none';
+        const fits = document.documentElement.scrollWidth <= window.innerWidth;
+        element.style.display = before;
+        if (fits) found.push(`${e.tagName.toLowerCase()}.${String(e.className).slice(0, 50)}<${(e.parentElement?.tagName ?? '').toLowerCase()}.${String(e.parentElement?.className ?? '').slice(0, 50)}`);
+        if (found.length >= 6) break;
+      }
+      return found;
+    });
+    expect(`${overflow}px too wide: ${wide.join(' | ')}`).toBe('fits');
+  }
   expect(overflow).toBeLessThanOrEqual(0);
 }
 

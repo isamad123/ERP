@@ -1506,6 +1506,193 @@
         "en": "Protects the server from a template that never ends.",
         "ur": "ایسے سانچے سے سرور کی حفاظت کرتا ہے جو کبھی ختم نہیں ہوتا۔"
       }
+    },
+    {
+      "key": "cfg.branding.product_name",
+      "module": "cfg",
+      "type": "text",
+      "default": "ERP",
+      "validation": {
+        "max_length": 60
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "branding",
+      "unit": null,
+      "name": {
+        "en": "Product name",
+        "ur": "پروڈکٹ کا نام"
+      },
+      "description": {
+        "en": "The name shown on the sign-in page and in the top bar",
+        "ur": "سائن ان صفحے اور اوپر کی پٹی میں دکھایا جانے والا نام"
+      },
+      "help": {
+        "en": "Leave it as it is to use the standard product name. A customer may show its own name here.",
+        "ur": "معیاری پروڈکٹ کا نام استعمال کرنے کے لیے اسے ویسے ہی رہنے دیں۔ گاہک یہاں اپنا نام دکھا سکتا ہے۔"
+      }
+    },
+    {
+      "key": "cfg.branding.logo_file_id",
+      "module": "cfg",
+      "type": "text",
+      "default": "",
+      "validation": {
+        "pattern": "^$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+        "max_length": 36
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "branding",
+      "unit": null,
+      "name": {
+        "en": "Logo file",
+        "ur": "لوگو فائل"
+      },
+      "description": {
+        "en": "The uploaded logo shown on the sign-in page (set by the Sign-in page screen)",
+        "ur": "سائن ان صفحے پر دکھایا جانے والا اپ لوڈ شدہ لوگو (سائن ان صفحے کی اسکرین سے طے ہوتا ہے)"
+      },
+      "help": {
+        "en": "Use the Sign-in page screen to upload a logo; it sets this value.",
+        "ur": "لوگو اپ لوڈ کرنے کے لیے سائن ان صفحے کی اسکرین استعمال کریں؛ وہی یہ قدر طے کرتی ہے۔"
+      }
+    },
+    {
+      "key": "cfg.branding.banner_en",
+      "module": "cfg",
+      "type": "text",
+      "default": "",
+      "validation": {
+        "max_length": 300
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "branding",
+      "unit": null,
+      "name": {
+        "en": "Login banner (English)",
+        "ur": "لاگ ان بینر (انگریزی)"
+      },
+      "description": {
+        "en": "A short notice above the sign-in form, shown in English",
+        "ur": "سائن ان فارم کے اوپر ایک مختصر اطلاع، انگریزی میں"
+      },
+      "help": {
+        "en": "Plain text, up to 300 characters. Leave empty for no banner.",
+        "ur": "سادہ متن، زیادہ سے زیادہ 300 حروف۔ بینر نہ چاہیے تو خالی چھوڑیں۔"
+      }
+    },
+    {
+      "key": "cfg.branding.banner_ur",
+      "module": "cfg",
+      "type": "text",
+      "default": "",
+      "validation": {
+        "max_length": 300
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "branding",
+      "unit": null,
+      "name": {
+        "en": "Login banner (Urdu)",
+        "ur": "لاگ ان بینر (اردو)"
+      },
+      "description": {
+        "en": "A short notice above the sign-in form, shown in Urdu",
+        "ur": "سائن ان فارم کے اوپر ایک مختصر اطلاع، اردو میں"
+      },
+      "help": {
+        "en": "Plain text, up to 300 characters. Leave empty to show the English banner.",
+        "ur": "سادہ متن، زیادہ سے زیادہ 300 حروف۔ خالی ہو تو انگریزی بینر دکھایا جاتا ہے۔"
+      }
+    },
+    {
+      "key": "cfg.branding.terms_en",
+      "module": "cfg",
+      "type": "text",
+      "default": "",
+      "validation": {
+        "max_length": 2000
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "branding",
+      "unit": null,
+      "name": {
+        "en": "Terms notice (English)",
+        "ur": "شرائط کی اطلاع (انگریزی)"
+      },
+      "description": {
+        "en": "The terms of use notice shown under the sign-in form, in English",
+        "ur": "سائن ان فارم کے نیچے دکھائی جانے والی شرائطِ استعمال کی اطلاع، انگریزی میں"
+      },
+      "help": {
+        "en": "Plain text, up to 2000 characters. Leave empty for no terms notice.",
+        "ur": "سادہ متن، زیادہ سے زیادہ 2000 حروف۔ شرائط کی اطلاع نہ چاہیے تو خالی چھوڑیں۔"
+      }
+    },
+    {
+      "key": "cfg.branding.terms_ur",
+      "module": "cfg",
+      "type": "text",
+      "default": "",
+      "validation": {
+        "max_length": 2000
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "branding",
+      "unit": null,
+      "name": {
+        "en": "Terms notice (Urdu)",
+        "ur": "شرائط کی اطلاع (اردو)"
+      },
+      "description": {
+        "en": "The terms of use notice shown under the sign-in form, in Urdu",
+        "ur": "سائن ان فارم کے نیچے دکھائی جانے والی شرائطِ استعمال کی اطلاع، اردو میں"
+      },
+      "help": {
+        "en": "Plain text, up to 2000 characters. Leave empty to show the English notice.",
+        "ur": "سادہ متن، زیادہ سے زیادہ 2000 حروف۔ خالی ہو تو انگریزی اطلاع دکھائی جاتی ہے۔"
+      }
     }
   ],
   "flags": []

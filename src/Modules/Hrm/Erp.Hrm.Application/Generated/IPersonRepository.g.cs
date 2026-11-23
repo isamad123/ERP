@@ -11,6 +11,7 @@ public sealed record PersonFilter
 {
     public string? NationalityCode { get; init; }
     public global::System.Guid? PhotoFileId { get; init; }
+    public global::System.Guid? MergedIntoPersonId { get; init; }
     /// <summary>Sort key: personNo; a leading minus sorts descending. Empty: by id (creation order).</summary>
     public string? Sort { get; init; }
 }
@@ -51,6 +52,7 @@ public static class PersonAccess
         new("religion", "Religion", "personal"),
         new("photo_file_id", "PhotoFileId", null),
         new("party_ref", "PartyRef", null),
+        new("merged_into_person_id", "MergedIntoPersonId", null),
         new("custom", "Custom", null, IsCustom: true),
         new("is_deleted", "IsDeleted", null),
         new("deleted_at", "DeletedAt", null),

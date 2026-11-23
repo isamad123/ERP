@@ -53,6 +53,10 @@ internal sealed class PolicyVersionRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
+        if (filter.AsOf is { } asOf)
+        {
+            query = query.Where(e => e.ValidFrom <= asOf && (e.ValidTo == null || e.ValidTo > asOf));
+        }
         return await Sorts.PageAsync(Context.Set<global::Erp.Hrm.Domain.Generated.PolicyVersion>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
 

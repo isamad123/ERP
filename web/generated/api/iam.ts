@@ -228,6 +228,8 @@ export interface UserGroupRoleListQuery
     groupId?: string;
     roleId?: string;
     companyId?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const userGroupRoles =
@@ -293,6 +295,8 @@ export interface UserRoleListQuery
     userId?: string;
     roleId?: string;
     companyId?: string;
+    /** Only the rows valid on this date (YYYY-MM-DD). */
+    asOf?: string;
 }
 
 export const userRoles =

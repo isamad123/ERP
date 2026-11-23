@@ -13,12 +13,13 @@ import { useShell } from '../../shell/context';
 /** Kinds of held changes with a plain-words title (others: a general one). */
 const KINDS = ['iam.role.set_permissions', 'iam.role.set_data_scopes', 'iam.role.set_field_policies', 'iam.role.assign', 'iam.role.end_assignment',
   'iam.group.assign', 'iam.group.end_role', 'iam.group.add_member', 'iam.group.remove_member', 'iam.setting.set', 'cfg.setting.change',
-  'wf.version.activate', 'iam.user.change_email', 'org.bank_account.save', 'org.bank_account.delete'] as const;
+  'wf.version.activate', 'iam.user.change_email', 'org.bank_account.save', 'org.bank_account.delete', 'hrm.person.merge'] as const;
 
 const LABELS = ['changes.detail.role', 'changes.detail.company', 'changes.detail.from', 'changes.detail.to', 'changes.detail.endDate', 'changes.detail.member',
   'changes.detail.permissionsAdded', 'changes.detail.permissionsRemoved', 'changes.detail.dataScopes', 'changes.detail.fieldRules', 'changes.detail.settingKey',
   'changes.detail.layer', 'changes.detail.newValue', 'changes.detail.version', 'changes.detail.previousEmail', 'changes.detail.newEmail',
-  'changes.detail.operation', 'changes.detail.bankAccount', 'changes.detail.bankCode', 'changes.detail.accountTitle', 'changes.detail.accountNumber', 'changes.detail.iban', 'changes.detail.currency'] as const;
+  'changes.detail.operation', 'changes.detail.bankAccount', 'changes.detail.bankCode', 'changes.detail.accountTitle', 'changes.detail.accountNumber', 'changes.detail.iban', 'changes.detail.currency',
+  'changes.detail.mergeInto'] as const;
 
 const KEYS = ['changes.detail.allCompanies', 'changes.detail.reset', 'changes.layer.tenant', 'changes.layer.company', 'changes.layer.role', 'changes.layer.user', 'changes.layer.pack',
   'changes.operation.create', 'changes.operation.update', 'changes.operation.delete', 'changes.detail.removed', 'changes.detail.changed'] as const;
@@ -97,7 +98,8 @@ function ChangeCard({ change, decidable }: { change: ChangeRequest; decidable: b
 function DetailRow({ detail }: { detail: ChangeDetail }) {
   const { t, server } = useText();
   const { locale, timeZone, numbers } = useLocaleSettings();
-  const label = (LABELS as readonly string[]).includes(detail.label) ? t(`approvals.${detail.label}` as MessageKey) : detail.label;
+  // A module's own labels and values are server text keys (S1.20d: HR payment accounts); they load with the module texts.
+  const label = (LABELS as readonly string[]).includes(detail.label) ? t(`approvals.${detail.label}` as MessageKey) : server(detail.label) ?? detail.label;
   let value: ReactNode;
   switch (detail.type) {
     case 'date':
@@ -107,7 +109,7 @@ function DetailRow({ detail }: { detail: ChangeDetail }) {
       value = isolate(nameOf(detail.names, locale)) || t('approvals.field.empty');
       break;
     case 'key':
-      value = detail.text && (KEYS as readonly string[]).includes(detail.text) ? t(`approvals.${detail.text}` as MessageKey) : (detail.text ?? '');
+      value = detail.text && (KEYS as readonly string[]).includes(detail.text) ? t(`approvals.${detail.text}` as MessageKey) : (detail.text ? server(detail.text) ?? detail.text : '');
       break;
     case 'items':
       value = (

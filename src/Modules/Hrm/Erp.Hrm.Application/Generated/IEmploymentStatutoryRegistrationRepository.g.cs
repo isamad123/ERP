@@ -11,6 +11,8 @@ public sealed record EmploymentStatutoryRegistrationFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? EmploymentId { get; init; }
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated repository of hrm.employment_statutory_registrations.</summary>
@@ -41,6 +43,7 @@ public static class EmploymentStatutoryRegistrationAccess
         new("scheme", "Scheme", null),
         new("is_applicable", "IsApplicable", null),
         new("exemption_reason", "ExemptionReason", null),
+        new("registration_no", "RegistrationNo", "personal"),
         new("valid_from", "ValidFrom", null),
         new("valid_to", "ValidTo", null),
         new("created_at", "CreatedAt", null),

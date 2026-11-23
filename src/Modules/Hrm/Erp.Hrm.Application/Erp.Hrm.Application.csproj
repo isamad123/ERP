@@ -3,5 +3,6 @@
     <ProjectReference Include="../Erp.Hrm.Domain/Erp.Hrm.Domain.csproj" />
     <ProjectReference Include="../../../BuildingBlocks/Erp.BuildingBlocks.Application/Erp.BuildingBlocks.Application.csproj" />
     <ProjectReference Include="../../../Platform/Erp.Kernel.Contracts/Erp.Kernel.Contracts.csproj" />
+    <ProjectReference Include="../Erp.Hrm.Contracts/Erp.Hrm.Contracts.csproj" />
   </ItemGroup>
 </Project>

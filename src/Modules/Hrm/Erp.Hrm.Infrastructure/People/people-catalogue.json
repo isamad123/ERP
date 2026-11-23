@@ -1,0 +1,24 @@
+{
+  "_comment": "Provisional person catalogue (slice S1.20a, ruling Q3, CR-076): identifier kinds and their format rules as pack data, seeded for Pakistan and marked 'provisional: to be confirmed by the pack'. Slice S1.23 moves the identifier kinds into the Pakistan pack unchanged; S1.15b option lists replace the marital statuses and relations. Only the CNIC and NICOP rules are specified (13 digits, dash layout 12345-1234567-1, ruling Q3); the other kinds only refuse characters an identifier never has. No rule here claims statutory meaning. Urdu names to be reviewed by a native speaker (R-062).",
+  "identifierKinds": [
+    { "code": "cnic", "country": "PK", "name": { "en": "CNIC", "ur": "قومی شناختی کارڈ (CNIC)" }, "pattern": "^(\\d{13}|\\d{5}-\\d{7}-\\d)$", "example": "12345-1234567-1", "hasExpiry": true, "status": "provisional" },
+    { "code": "nicop", "country": "PK", "name": { "en": "NICOP", "ur": "بیرون ملک پاکستانیوں کا شناختی کارڈ (NICOP)" }, "pattern": "^(\\d{13}|\\d{5}-\\d{7}-\\d)$", "example": "12345-1234567-1", "hasExpiry": true, "status": "provisional" },
+    { "code": "passport", "country": "*", "name": { "en": "Passport", "ur": "پاسپورٹ" }, "pattern": "^[A-Za-z0-9][A-Za-z0-9 -]{0,29}$", "example": "AB1234567", "hasExpiry": true, "status": "provisional" },
+    { "code": "ntn", "country": "PK", "name": { "en": "National Tax Number (NTN)", "ur": "قومی ٹیکس نمبر (NTN)" }, "pattern": "^[A-Za-z0-9][A-Za-z0-9 -]{0,29}$", "example": "1234567-8", "hasExpiry": false, "status": "provisional" },
+    { "code": "eobi", "country": "PK", "name": { "en": "EOBI number", "ur": "ای او بی آئی نمبر" }, "pattern": "^[A-Za-z0-9][A-Za-z0-9 -]{0,29}$", "example": "ABC1234567", "hasExpiry": false, "status": "provisional" },
+    { "code": "social_security", "country": "PK", "name": { "en": "Social security number", "ur": "سوشل سیکیورٹی نمبر" }, "pattern": "^[A-Za-z0-9][A-Za-z0-9 -]{0,29}$", "example": "1234567890", "hasExpiry": false, "status": "provisional" }
+  ],
+  "maritalStatuses": [
+    { "code": "single", "name": { "en": "Single", "ur": "غیر شادی شدہ" } },
+    { "code": "married", "name": { "en": "Married", "ur": "شادی شدہ" } },
+    { "code": "divorced", "name": { "en": "Divorced", "ur": "طلاق یافتہ" } },
+    { "code": "widowed", "name": { "en": "Widowed", "ur": "بیوہ / رنڈوا" } }
+  ],
+  "relations": [
+    { "code": "spouse", "name": { "en": "Spouse", "ur": "شریکِ حیات" } },
+    { "code": "child", "name": { "en": "Child", "ur": "بچہ" } },
+    { "code": "parent", "name": { "en": "Parent", "ur": "والدین" } },
+    { "code": "sibling", "name": { "en": "Brother or sister", "ur": "بہن یا بھائی" } },
+    { "code": "other", "name": { "en": "Other", "ur": "دیگر" } }
+  ]
+}

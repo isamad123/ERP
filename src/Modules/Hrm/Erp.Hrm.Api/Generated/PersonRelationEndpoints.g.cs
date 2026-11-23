@@ -32,22 +32,6 @@ public sealed class PersonRelationResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for hrm.person_relations. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class PersonRelationWriteRequest
-{
-    public global::System.Guid? PersonId { get; init; }
-    public string? Relation { get; init; }
-    public string? FullName { get; init; }
-    public global::System.DateOnly? DateOfBirth { get; init; }
-    public string? Gender { get; init; }
-    public string? Phone { get; init; }
-    public bool? IsDependent { get; init; }
-    public bool? IsEmergencyContact { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for hrm.person_relations.</summary>
 public sealed class PersonRelationListQuery
 {
@@ -58,7 +42,7 @@ public sealed class PersonRelationListQuery
     public global::System.Guid? PersonId { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.person_relations: read, create, update, delete. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.person_relations: read. Answers pass through field security (S1.06).</summary>
 internal static class PersonRelationEndpoints
 {
     private const string Resource = "hrm.person_relations";
@@ -68,9 +52,6 @@ internal static class PersonRelationEndpoints
         var group = app.MapGroup("/api/hrm/person-relations").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.person_relations.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.person_relations.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.person_relations.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.person_relations.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.person_relations.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.person_relations.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.person_relations.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.person_relations.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapDelete("/{id:guid}", DeleteAsync).WithName("hrm.person_relations.delete").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "delete", "hrm.person_relations.delete"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PersonRelationListQuery query, global::Erp.Hrm.Application.Generated.IPersonRelationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -87,65 +68,6 @@ internal static class PersonRelationEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PersonRelationAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PersonRelationWriteRequest request, global::Erp.Hrm.Application.Generated.IPersonRelationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.person_relations.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PersonRelationAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.PersonRelation();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/person-relations/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PersonRelationAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PersonRelationWriteRequest request, global::Erp.Hrm.Application.Generated.IPersonRelationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.person_relations.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.PersonRelationAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PersonRelationAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> DeleteAsync(global::System.Guid id, long? rowVersion, global::Erp.Hrm.Application.Generated.IPersonRelationRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.person_relations.delete", async () =>
-        {
-            if (rowVersion is null)
-            {
-                return GeneratedEndpointSupport.Invalid(["rowVersion"]);
-            }
-
-            var deleted = await repository.SoftDeleteAsync(id, rowVersion.Value, cancellationToken).ConfigureAwait(false);
-            return deleted ? TypedResults.NoContent() : GeneratedEndpointSupport.NotFound();
         }, cancellationToken);
 
     private static PersonRelationResponse ToResponse(global::Erp.Hrm.Domain.Generated.PersonRelation row) => new()
@@ -168,104 +90,4 @@ internal static class PersonRelationEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(PersonRelationWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.PersonId is null && (!update || access.CanEdit("person_id")))
-        {
-            errors.Add("personId");
-        }
-        if (request.Relation is null && (!update || access.CanEdit("relation")))
-        {
-            errors.Add("relation");
-        }
-        if (request.FullName is null && (!update || access.CanEdit("full_name")))
-        {
-            errors.Add("fullName");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(PersonRelationWriteRequest request, global::Erp.Hrm.Domain.Generated.PersonRelation row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("person_id"))
-        {
-            row.PersonId = request.PersonId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PersonId, row.PersonId, update))
-        {
-            denied.Add("personId");
-        }
-        if (access.CanEdit("relation"))
-        {
-            row.Relation = request.Relation!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Relation, row.Relation, update))
-        {
-            denied.Add("relation");
-        }
-        if (access.CanEdit("full_name"))
-        {
-            row.FullName = request.FullName!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FullName, row.FullName, update))
-        {
-            denied.Add("fullName");
-        }
-        if (access.CanEdit("date_of_birth"))
-        {
-            row.DateOfBirth = request.DateOfBirth;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DateOfBirth, row.DateOfBirth, update))
-        {
-            denied.Add("dateOfBirth");
-        }
-        if (access.CanEdit("gender"))
-        {
-            row.Gender = request.Gender;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Gender, row.Gender, update))
-        {
-            denied.Add("gender");
-        }
-        if (access.CanEdit("phone"))
-        {
-            row.Phone = request.Phone;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Phone, row.Phone, update))
-        {
-            denied.Add("phone");
-        }
-        if (access.CanEdit("is_dependent"))
-        {
-            if (request.IsDependent is not null)
-            {
-                row.IsDependent = request.IsDependent!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsDependent, row.IsDependent, update))
-        {
-            denied.Add("isDependent");
-        }
-        if (access.CanEdit("is_emergency_contact"))
-        {
-            if (request.IsEmergencyContact is not null)
-            {
-                row.IsEmergencyContact = request.IsEmergencyContact!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsEmergencyContact, row.IsEmergencyContact, update))
-        {
-            denied.Add("isEmergencyContact");
-        }
-        return denied;
-    }
 }

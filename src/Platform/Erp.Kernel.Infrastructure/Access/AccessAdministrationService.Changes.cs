@@ -31,6 +31,11 @@ public sealed partial class AccessAdministrationService
     public async Task<AccessResult> ApproveAsync(Guid requestId, string? reason, CancellationToken cancellationToken)
     {
         await ExpireOldRequestsAsync(cancellationToken).ConfigureAwait(false);
+        if (await HeldHandlerOfRequestAsync(requestId, cancellationToken).ConfigureAwait(false) is { } handler)
+        {
+            return await DecideHeldAsync(handler, requestId, reason, approve: true, cancellationToken).ConfigureAwait(false); // a module's change (S1.20a)
+        }
+
         var result = await RunAsync(AccessControlPermissions.ApproveChanges, async (c, tx, now, by) =>
         {
             if (await LockRequestAsync(c, tx, requestId, cancellationToken).ConfigureAwait(false) is not { } request)
@@ -97,6 +102,11 @@ public sealed partial class AccessAdministrationService
     public async Task<AccessResult> RejectAsync(Guid requestId, string? reason, CancellationToken cancellationToken)
     {
         await ExpireOldRequestsAsync(cancellationToken).ConfigureAwait(false);
+        if (await HeldHandlerOfRequestAsync(requestId, cancellationToken).ConfigureAwait(false) is { } handler)
+        {
+            return await DecideHeldAsync(handler, requestId, reason, approve: false, cancellationToken).ConfigureAwait(false); // a module's change (S1.20a)
+        }
+
         return await RunAsync(AccessControlPermissions.ApproveChanges, async (c, tx, now, by) =>
         {
             if (string.IsNullOrWhiteSpace(reason))

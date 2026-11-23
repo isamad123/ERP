@@ -471,5 +471,62 @@ settings:
     description: {en: "A generated PDF with more pages than this is refused", ur: "اس سے زیادہ صفحات والا تیار شدہ PDF مسترد کر دیا جاتا ہے"}
     help: {en: "Protects the server from a template that never ends.", ur: "ایسے سانچے سے سرور کی حفاظت کرتا ہے جو کبھی ختم نہیں ہوتا۔"}
 
+  # Slice S1.15a (FR-ADM-SEC-08, S1.12 ruling Q21, S1.15 ruling Q3): login branding. Only these settings and the logo file reach
+  # the public sign-in page (GET /api/kernel/branding); colours, custom domains and e-mail identity are 1.1 (FR-KRN-TEN-08).
+  - key: cfg.branding.product_name
+    type: text
+    default: "ERP"
+    validation: {max_length: 60}
+    layers: [tenant]
+    area: branding
+    name: {en: "Product name", ur: "پروڈکٹ کا نام"}
+    description: {en: "The name shown on the sign-in page and in the top bar", ur: "سائن ان صفحے اور اوپر کی پٹی میں دکھایا جانے والا نام"}
+    help: {en: "Leave it as it is to use the standard product name. A customer may show its own name here.", ur: "معیاری پروڈکٹ کا نام استعمال کرنے کے لیے اسے ویسے ہی رہنے دیں۔ گاہک یہاں اپنا نام دکھا سکتا ہے۔"}
+  - key: cfg.branding.logo_file_id
+    type: text
+    default: ""
+    validation: {pattern: "^$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", max_length: 36}
+    layers: [tenant]
+    area: branding
+    name: {en: "Logo file", ur: "لوگو فائل"}
+    description: {en: "The uploaded logo shown on the sign-in page (set by the Sign-in page screen)", ur: "سائن ان صفحے پر دکھایا جانے والا اپ لوڈ شدہ لوگو (سائن ان صفحے کی اسکرین سے طے ہوتا ہے)"}
+    help: {en: "Use the Sign-in page screen to upload a logo; it sets this value.", ur: "لوگو اپ لوڈ کرنے کے لیے سائن ان صفحے کی اسکرین استعمال کریں؛ وہی یہ قدر طے کرتی ہے۔"}
+  - key: cfg.branding.banner_en
+    type: text
+    default: ""
+    validation: {max_length: 300}
+    layers: [tenant]
+    area: branding
+    name: {en: "Login banner (English)", ur: "لاگ ان بینر (انگریزی)"}
+    description: {en: "A short notice above the sign-in form, shown in English", ur: "سائن ان فارم کے اوپر ایک مختصر اطلاع، انگریزی میں"}
+    help: {en: "Plain text, up to 300 characters. Leave empty for no banner.", ur: "سادہ متن، زیادہ سے زیادہ 300 حروف۔ بینر نہ چاہیے تو خالی چھوڑیں۔"}
+  - key: cfg.branding.banner_ur
+    type: text
+    default: ""
+    validation: {max_length: 300}
+    layers: [tenant]
+    area: branding
+    name: {en: "Login banner (Urdu)", ur: "لاگ ان بینر (اردو)"}
+    description: {en: "A short notice above the sign-in form, shown in Urdu", ur: "سائن ان فارم کے اوپر ایک مختصر اطلاع، اردو میں"}
+    help: {en: "Plain text, up to 300 characters. Leave empty to show the English banner.", ur: "سادہ متن، زیادہ سے زیادہ 300 حروف۔ خالی ہو تو انگریزی بینر دکھایا جاتا ہے۔"}
+  - key: cfg.branding.terms_en
+    type: text
+    default: ""
+    validation: {max_length: 2000}
+    layers: [tenant]
+    area: branding
+    name: {en: "Terms notice (English)", ur: "شرائط کی اطلاع (انگریزی)"}
+    description: {en: "The terms of use notice shown under the sign-in form, in English", ur: "سائن ان فارم کے نیچے دکھائی جانے والی شرائطِ استعمال کی اطلاع، انگریزی میں"}
+    help: {en: "Plain text, up to 2000 characters. Leave empty for no terms notice.", ur: "سادہ متن، زیادہ سے زیادہ 2000 حروف۔ شرائط کی اطلاع نہ چاہیے تو خالی چھوڑیں۔"}
+  - key: cfg.branding.terms_ur
+    type: text
+    default: ""
+    validation: {max_length: 2000}
+    layers: [tenant]
+    area: branding
+    name: {en: "Terms notice (Urdu)", ur: "شرائط کی اطلاع (اردو)"}
+    description: {en: "The terms of use notice shown under the sign-in form, in Urdu", ur: "سائن ان فارم کے نیچے دکھائی جانے والی شرائطِ استعمال کی اطلاع، اردو میں"}
+    help: {en: "Plain text, up to 2000 characters. Leave empty to show the English notice.", ur: "سادہ متن، زیادہ سے زیادہ 2000 حروف۔ خالی ہو تو انگریزی اطلاع دکھائی جاتی ہے۔"}
+
 # Release 1.0 has no requirement that needs a specific flag yet (ruling Q14): the mechanism ships with an empty list.
 flags: []

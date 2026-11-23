@@ -290,7 +290,7 @@ public static class OperatorCommands
 
     private static async Task<int> LicenceRefreshAsync(Context c, CancellationToken cancellationToken)
     {
-        var outcomes = await new LicenceMaintenance(Context.ControlPlane, c.Secrets, c.Clock).RunAsync(c.OptionalOption("tenant"), cancellationToken).ConfigureAwait(false);
+        var outcomes = await new LicenceMaintenance(Context.ControlPlane, c.Secrets, c.Clock, new Erp.Hrm.Infrastructure.Employments.ActiveEmployeeCounter()).RunAsync(c.OptionalOption("tenant"), cancellationToken).ConfigureAwait(false);
         foreach (var o in outcomes)
         {
             await c.Output.WriteLineAsync(o.Error is null

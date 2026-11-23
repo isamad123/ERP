@@ -14,6 +14,8 @@ public sealed record EmployeeBankAccountFilter
     public global::System.Guid? BankId { get; init; }
     /// <summary>Sort key: validFrom; a leading minus sorts descending. Empty: by id (creation order).</summary>
     public string? Sort { get; init; }
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated repository of hrm.employee_bank_accounts.</summary>
@@ -47,6 +49,8 @@ public static class EmployeeBankAccountAccess
         new("payment_mode", "PaymentMode", null),
         new("bank_id", "BankId", null),
         new("account_title", "AccountTitle", "personal"),
+        new("account_number", "AccountNumber", "personal"),
+        new("iban", "Iban", "personal"),
         new("split_kind", "SplitKind", null),
         new("split_value", "SplitValue", null),
         new("priority", "Priority", null),

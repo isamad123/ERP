@@ -90,14 +90,26 @@ public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction tr
     }
 
     /// <summary>
-    /// Text columns whose database check asks for a shape the generic "t1" value does not have (slice S1.12c:
-    /// <c>ck_saved_views_list_key</c> wants a dotted list key; S1.14a: <c>ck_locations_time_zone</c> wants an IANA time zone).
+    /// Columns whose database check asks for a shape the generic value does not have (slice S1.12c: <c>ck_saved_views_list_key</c>
+    /// wants a dotted list key; S1.14a: <c>ck_locations_time_zone</c> wants an IANA time zone; S1.20b: a cost allocation summing to 1).
     /// </summary>
     private static readonly Dictionary<string, Func<int, object>> KnownFormats = new(StringComparer.Ordinal)
     {
         ["cfg.saved_views.list_key"] = n => "org.list_" + n.ToString(CultureInfo.InvariantCulture),
         // S1.14a: a location's time zone must be an IANA name the database knows (rules.yaml org.tg_locations_checks).
         ["org.locations.time_zone"] = _ => "Asia/Karachi",
+        // S1.15b: a custom field key is lower-case letters, digits and underscore (ck_custom_field_defs_field_key).
+        ["cfg.custom_field_defs.field_key"] = n => "f_" + n.ToString(CultureInfo.InvariantCulture),
+        // S1.20b: an assignment's cost allocation is a list of shares summing to 1 (rules.yaml tg_employment_assignments_cost_allocation_sum).
+        ["hrm.employment_assignments.cost_allocation"] = _ => new Json("[{\"cost_center_ref\": \"CC-1\", \"pct\": 1}]"),
+        // S1.20d: a payment account without bank details is a cash one (tg_employee_bank_accounts_bank_fields_required), the remainder
+        // (tg_employee_bank_accounts_split) with a priority of 1 to 99; a registration's scheme is a lower-case code and, applicable, has
+        // no exemption reason (ck_employment_statutory_registrations_scheme_format, _exemption).
+        ["hrm.employee_bank_accounts.payment_mode"] = _ => "cash",
+        ["hrm.employee_bank_accounts.split_kind"] = _ => "remainder",
+        ["hrm.employee_bank_accounts.priority"] = n => (n % 99) + 1,
+        ["hrm.employment_statutory_registrations.scheme"] = n => "scheme_" + n.ToString(CultureInfo.InvariantCulture),
+        ["hrm.employment_statutory_registrations.is_applicable"] = _ => true,
     };
 
     private int _formatted;

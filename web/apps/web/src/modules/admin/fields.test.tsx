@@ -9,7 +9,7 @@ import { json, shell, show } from './access-test-support';
 const ADMIN = ['iam.roles.read', 'iam.roles.manage', 'iam.access.preview'];
 interface Posted { method: string; url: string; body: unknown }
 
-function serve(posted: Posted[], options: { pending?: boolean; fail?: number } = {}) {
+function serve(posted: Posted[], options: { pending?: boolean; fail?: number; custom?: boolean } = {}) {
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     const path = url.split('?')[0] ?? url;
     const method = init?.method ?? 'GET';
@@ -20,7 +20,7 @@ function serve(posted: Posted[], options: { pending?: boolean; fail?: number } =
     if (options.fail) return json({ status: options.fail, title: 'errors.access.forbidden' }, options.fail);
     if (path === '/api/iam/roles') return json({ items: [{ id: 'r1', code: 'hr_officer', nameI18n: { en: 'HR officer' }, isActive: true }], next: null });
     if (path === '/api/iam/roles/r1/summary') return json({ id: 'r1', code: 'hr_officer', name: { en: 'HR officer' }, source: 'custom', baselineCode: null, isActive: true, rowVersion: 1, isPrivileged: false, permissions: [], dataScopes: [], fieldPolicies: [{ resource: 'iam.users', field: 'email', access: 'masked' }], userCount: 1 });
-    if (path === '/api/iam/roles/r1/field-preview') return json({ resource: 'iam.users', roleId: 'r1', fields: [{ field: 'email', fieldClass: 'personal', access: 'masked' }, { field: 'username', fieldClass: null, access: 'editable' }, { field: 'access_valid_to', fieldClass: null, access: 'hidden' }] });
+    if (path === '/api/iam/roles/r1/field-preview') return json({ resource: 'iam.users', roleId: 'r1', fields: [{ field: 'email', fieldClass: 'personal', access: 'masked' }, { field: 'username', fieldClass: null, access: 'editable' }, { field: 'access_valid_to', fieldClass: null, access: 'hidden' }, ...(options.custom ? [{ field: 'custom.blood_group', fieldClass: null, access: 'read_only', label: { en: 'Blood group', ur: 'خون کا گروپ' } }] : [])] });
     return json({ status: 404, title: 'errors.data.not_found' }, 404);
   }));
 }
@@ -42,6 +42,16 @@ describe('FR-ADM-ROL-07 field matrix', () => {
     const row = await screen.findByRole('row', { name: /email/ });
     expect(within(row).getByText('personal')).toBeTruthy();
     expect(within(row).getByRole('button', { name: /Masked/ })).toBeTruthy();
+  });
+
+  it('FR-KRN-MET-02 lists a custom field with the name the administrator gave it next to its key', async () => {
+    serve([], { custom: true });
+    open();
+    await choose('iam.users');
+    const row = await screen.findByRole('row', { name: /custom\.blood_group/ });
+    expect(within(row).getByText('Blood group')).toBeTruthy();
+    expect(within(row).getByText('custom.blood_group')).toBeTruthy();
+    expect(within(row).getByRole('button', { name: /Default/ })).toBeTruthy();
   });
 
   it('sends only the changed row, with a reason, and shows a pending answer as waiting', async () => {

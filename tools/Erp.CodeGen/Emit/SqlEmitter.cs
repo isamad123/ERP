@@ -69,18 +69,30 @@ public static class SqlEmitter
             output.Add($"{HrmMigrations}/{FileName(s, sequence, "hrm", "design_" + slice.Replace(".", "_", StringComparison.Ordinal).Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant())}", DesignChanges(model, slice, "hrm"));
         }
 
-        // Database functions written by a slice (rules.yaml `functions`, S1.07): after that slice's design file.
-        foreach (var group in model.Functions.GroupBy(f => f.Slice).OrderBy(g => g.Key, StringComparer.Ordinal))
+        // Database functions written by a slice (rules.yaml `functions`, S1.07): after that slice's design file. A function of
+        // an HR schema goes to the HR migrations (S1.20b): the HR module is installed only when licensed, so its rules may not
+        // sit in the kernel's files.
+        foreach (var group in model.Functions.GroupBy(f => (f.Slice, Module: FunctionModule(s, f))).OrderBy(g => g.Key.Slice, StringComparer.Ordinal).ThenBy(g => g.Key.Module, StringComparer.Ordinal))
         {
             // A revision (S1.07-r1) gets its own file one hour later, like design revisions: S1.07 → 0334, S1.07-r1 → 0434.
-            var revision = group.Key.Contains("-r", StringComparison.Ordinal) ? int.Parse(group.Key[^1..], CultureInfo.InvariantCulture) : 0;
-            var sequence = 180 + (60 * revision) + 30 + RuleSliceOrder(group.Key.Split('-')[0]) + LaterPartOffset(group.Key);
-            output.Add($"{KernelMigrations}/{FileName(s, sequence, "kernel", "functions_" + group.Key.Replace(".", "_", StringComparison.Ordinal).Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant())}", Functions(group.Key, group));
+            var slice = group.Key.Slice;
+            var revision = slice.Contains("-r", StringComparison.Ordinal) ? int.Parse(slice[^1..], CultureInfo.InvariantCulture) : 0;
+            var sequence = 180 + (60 * revision) + 30 + RuleSliceOrder(slice.Split('-')[0]) + LaterPartOffset(slice);
+            var folder = group.Key.Module == "hrm" ? HrmMigrations : KernelMigrations;
+            output.Add($"{folder}/{FileName(s, sequence, group.Key.Module, "functions_" + slice.Replace(".", "_", StringComparison.Ordinal).Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant())}", Functions(slice, group));
         }
 
-        if (model.ImplementedStubs.Any(st => model.Table(st.Table).Module != "kernel"))
+        // Rules of HR tables that replace placeholders (rules.yaml `implemented`, S1.20b onwards): one file per slice in the HR
+        // migrations, after the HR tables (V…0100) and, for a later part of a slice, ten hours later per part like design files.
+        foreach (var slice in model.ImplementedStubs.Where(st => model.Table(st.Table).Module == "hrm").GroupBy(st => st.Implementation!.Slice).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
-            throw new DesignException("rules.yaml", "implemented rules outside the kernel need their module's rules migration (not built yet)");
+            var sequence = 121 + RuleSliceOrder(slice.Key.Split('-')[0]) + LaterPartOffset(slice.Key);
+            output.Add($"{HrmMigrations}/{FileName(s, sequence, "hrm", "rules_" + slice.Key.Replace(".", "_", StringComparison.Ordinal).Replace("-", "_", StringComparison.Ordinal).ToLowerInvariant())}", RuleImplementations(model, slice.Key, slice));
+        }
+
+        if (model.ImplementedStubs.Any(st => model.Table(st.Table).Module is not ("kernel" or "hrm")))
+        {
+            throw new DesignException("rules.yaml", "implemented rules outside the kernel and HR need their module's rules migration (not built yet)");
         }
 
         foreach (var schema in s.ControlPlaneSchemas)
@@ -109,6 +121,10 @@ public static class SqlEmitter
     /// </summary>
     private static int RuleSliceOrder(string slice) =>
         int.Parse(slice[(slice.IndexOf('.', StringComparison.Ordinal) + 1)..].TrimEnd(PartLetters), CultureInfo.InvariantCulture) - 3;
+
+    /// <summary>The module whose migrations hold a database function: HR for a function in an HR schema, else the kernel.</summary>
+    private static string FunctionModule(Settings s, FunctionDef f) =>
+        s.HrmSchemas.Contains(f.Name.Split('.')[0], StringComparer.Ordinal) ? "hrm" : "kernel";
 
     /// <summary>Part letters of a slice built in parts (S1.09a, S1.11f; CR-054 widened a to d to every lower-case letter).</summary>
     private static readonly char[] PartLetters = [.. Enumerable.Range('a', 26).Select(c => (char)c)];
@@ -293,6 +309,16 @@ public static class SqlEmitter
             }
         }
 
+        // Company-scoped foreign keys replaced by the plain key (fks_replaced_in, S1.20c): dropped and recreated in the same file.
+        foreach (var table in tables)
+        {
+            foreach (var fk in table.ForeignKeys.Where(f => f.ReplacedIn == slice))
+            {
+                b.Append(CultureInfo.InvariantCulture, $"alter table {table.FullName} drop constraint if exists {fk.Name};\n");
+                b.Append(AddForeignKey(table, fk));
+            }
+        }
+
         foreach (var table in tables.Where(t => t.AddedIn != slice && t.UpdatableAddedIn.Exists(u => u.Slice == slice)))
         {
             var asOf = table.AppendOnlyUpdatable.Where(c => table.UpdatableAddedIn.Find(u => u.Column == c) is not { Slice: { } later } || UpTo(later, slice));
@@ -429,7 +455,7 @@ public static class SqlEmitter
         {
             foreach (var fk in table.ForeignKeys.Where(f => (crossSchemaForeignKeys || !f.CrossesSchema(schema)) && table.ForeignKeyAddedIn(f) is null))
             {
-                b.Append(AddForeignKey(table, fk));
+                b.Append(AddForeignKey(table, fk.AsFirstCreated));
             }
         }
 
@@ -453,7 +479,7 @@ public static class SqlEmitter
         {
             foreach (var fk in table.ForeignKeys.Where(f => f.CrossesSchema(table.Schema) && table.ForeignKeyAddedIn(f) is null))
             {
-                b.Append(AddForeignKey(table, fk));
+                b.Append(AddForeignKey(table, fk.AsFirstCreated));
             }
         }
 

@@ -127,8 +127,15 @@ public sealed class GeneratorTests
     public void Rules_every_free_text_rule_becomes_sql_or_a_tracked_placeholder()
     {
         var stubs = Model.Value.Stubs.ToList();
-        Assert.Equal(28, stubs.Count); // 30 from S1.02; S1.03 implemented SC-2 (org.branches), S1.10a FR-XM-32 (wf.workflow_tasks)
+        // 30 from S1.02; S1.03 implemented SC-2 (org.branches), S1.10a FR-XM-32 (wf.workflow_tasks), S1.14b the unit link cycle check
+        // (org.org_unit_links), S1.20b the manager cycle and the cost allocation of hrm.employment_assignments, S1.20d the bank fields
+        // of hrm.employee_bank_accounts.
+        Assert.Equal(24, stubs.Count);
         Assert.Equal(30, Model.Value.AllStubs.Count());
+        Assert.Equal(["employment_assignments_cost_allocation_sum", "employment_assignments_manager_cycle"],
+            Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.20b").Select(s => s.Name).Order(StringComparer.Ordinal));
+        Assert.Equal(["employee_bank_accounts_bank_fields_required"],
+            Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.20d").Select(s => s.Name));
         Assert.All(stubs, s => Assert.Matches(@"^S1\.\d{2}$", s.Owner));
         Assert.Contains(stubs, s => s.Name == "attendance_periods_lock" && s.Owner == "S1.31"); // FR-XM-26
         Assert.Contains(Model.Value.ImplementedStubs, s => s.Name == "workflow_tasks_no_self_approval" && s.Owner == "S1.10"); // FR-XM-32
@@ -194,7 +201,7 @@ public sealed class GeneratorTests
     {
         var files = Generator.Generate(Root).Files;
         var grants = files[SqlEmitter.KernelMigrations + "/V202611150200__kernel__grants.sql"] + files[SqlEmitter.HrmMigrations + "/V202611150101__hrm__grants.sql"]
-            + string.Concat(files.Where(f => f.Key.Contains("__kernel__design_", StringComparison.Ordinal)).Select(f => f.Value));
+            + string.Concat(files.Where(f => f.Key.Contains("__kernel__design_", StringComparison.Ordinal) || f.Key.Contains("__hrm__design_", StringComparison.Ordinal)).Select(f => f.Value));
         foreach (var table in Model.Value.Tables.Where(t => t.Database == DatabaseKind.Tenant))
         {
             var lines = grants.Split('\n').Where(l => l.EndsWith($" on {table.FullName} to app_rw;", StringComparison.Ordinal)).ToList();
@@ -409,16 +416,78 @@ public sealed class GeneratorTests
     }
 
     [Fact]
+    public void S120c_FR_XM_30_fks_replaced_in_keeps_the_frozen_pair_and_replaces_it_with_the_plain_key_in_the_slice_file()
+    {
+        var files = Generator.Generate(Root).Files;
+        var frozen = files["src/Modules/Hrm/Erp.Hrm.Infrastructure/Migrations/V202611150100__hrm__hrm.sql"];
+        Assert.Contains("add constraint fk_employments_previous_employment_id foreign key (company_id, previous_employment_id) references hrm.employments (company_id, id);", frozen, StringComparison.Ordinal);
+        Assert.Contains("create index if not exists ix_employments_company_id_previous_employment_id on hrm.employments (company_id, previous_employment_id);", frozen, StringComparison.Ordinal);
+        var slice = files["src/Modules/Hrm/Erp.Hrm.Infrastructure/Migrations/V202611152317__hrm__design_s1_20c.sql"];
+        var drop = slice.IndexOf("alter table hrm.employments drop constraint if exists fk_employments_previous_employment_id;", StringComparison.Ordinal);
+        var add = slice.IndexOf("add constraint fk_employments_previous_employment_id foreign key (previous_employment_id) references hrm.employments (id);", StringComparison.Ordinal);
+        Assert.True(drop >= 0 && add > drop, slice);
+        Assert.Contains("create index if not exists ix_employments_previous_employment_id on hrm.employments (previous_employment_id);", slice, StringComparison.Ordinal);
+        var key = Model.Value.Table("hrm.employments").ForeignKeys.Single(f => f.Name == "fk_employments_previous_employment_id");
+        Assert.Equal(["previous_employment_id"], key.Columns);
+        Assert.Equal("S1.20c", key.ReplacedIn);
+    }
+
+    [Theory]
+    [InlineData("[person_id]", "is the company-scoped pair")]
+    [InlineData("[employee_type]", "without a foreign key")]
+    public void S120c_fks_replaced_in_refuses_a_column_without_a_same_company_foreign_key(string columns, string problem)
+    {
+        var folder = Directory.CreateTempSubdirectory("erp-s120c-design-").FullName;
+        try
+        {
+            foreach (var file in Directory.GetFiles(Path.Combine(Root, "docs", "data-design"), "*.yaml"))
+            {
+                File.Copy(file, Path.Combine(folder, Path.GetFileName(file)));
+            }
+
+            var people = Path.Combine(folder, "hrm-people.yaml");
+            File.WriteAllText(people, File.ReadAllText(people).Replace("fks_replaced_in: {S1.20c: [previous_employment_id]}", "fks_replaced_in: {S1.20c: " + columns + "}", StringComparison.Ordinal));
+            var error = Assert.Throws<DesignException>(() => DesignLoader.Load(folder, Path.Combine(Root, "tools", "Erp.CodeGen")));
+            Assert.Contains(problem, error.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    [Fact]
     public void S108_FR_KRN_NUM_03_numbered_columns_are_filled_by_the_numbering_service_and_never_accepted_from_the_caller()
     {
         var files = Generator.Generate(Root).Files;
+        var leave = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/LeaveRequestEndpoints.g.cs"];
+        var request = leave[leave.IndexOf("public sealed class LeaveRequestWriteRequest", StringComparison.Ordinal)..leave.IndexOf("public sealed class LeaveRequestListQuery", StringComparison.Ordinal)];
+        Assert.DoesNotContain("RequestNo", request, StringComparison.Ordinal);
+        Assert.Contains("NumberRequest(\"hrm.leave_request_no\", row.CompanyId, row.BranchId, row.StartDate)", leave, StringComparison.Ordinal);
+
+        // Slice S1.20c (R-113): contracts have no generated create; the contract service takes the number from the numbering
+        // service, dated by the start date, and the request has no number to type.
+        var contracts = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/ContractEndpoints.g.cs"];
+        Assert.DoesNotContain("WriteRequest", contracts, StringComparison.Ordinal);
+        Assert.DoesNotContain("AssignOnCreateAsync", contracts, StringComparison.Ordinal);
+        Assert.Contains("numbers.AssignOnCreateAsync(new NumberRequest(\"hrm.contract_no\", contract.CompanyId, null, contract.StartDate)", File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Infrastructure/Employments/EmploymentTermsService.cs")), StringComparison.Ordinal);
+        Assert.DoesNotContain("ContractNo", File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Application/Employments/EmploymentTermsContracts.cs")), StringComparison.Ordinal);
+
+        // Slice S1.20a (ruling Q1): persons have no generated create, so nobody can type a person number; the person service
+        // takes it from the kernel numbering service.
+        var persons = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/PersonEndpoints.g.cs"];
+        Assert.DoesNotContain("WriteRequest", persons, StringComparison.Ordinal);
+        Assert.DoesNotContain("AssignOnCreateAsync", persons, StringComparison.Ordinal);
+        Assert.Contains("new NumberRequest(\"hrm.person_no\", null, null, null)", File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Infrastructure/People/PersonService.cs")), StringComparison.Ordinal);
+
+        // Slice S1.20b (ruling Q1): employments have no generated create either; the hire takes the employee number from the
+        // numbering service (or checks a typed one with the override permission).
         var employments = files["src/Modules/Hrm/Erp.Hrm.Api/Generated/EmploymentEndpoints.g.cs"];
-        var request = employments[employments.IndexOf("public sealed class EmploymentWriteRequest", StringComparison.Ordinal)..employments.IndexOf("public sealed class EmploymentListQuery", StringComparison.Ordinal)];
-        Assert.DoesNotContain("EmployeeNo", request, StringComparison.Ordinal);
-        Assert.Contains("row.EmployeeNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest(\"hrm.employee_no\", row.CompanyId, null, null)", employments, StringComparison.Ordinal);
-        Assert.Contains("NumberRequest(\"hrm.contract_no\", row.CompanyId, null, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/ContractEndpoints.g.cs"], StringComparison.Ordinal);
-        Assert.Contains("NumberRequest(\"hrm.person_no\", null, null, null)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/PersonEndpoints.g.cs"], StringComparison.Ordinal);
-        Assert.Contains("NumberRequest(\"hrm.leave_request_no\", row.CompanyId, row.BranchId, row.StartDate)", files["src/Modules/Hrm/Erp.Hrm.Api/Generated/LeaveRequestEndpoints.g.cs"], StringComparison.Ordinal);
+        Assert.DoesNotContain("WriteRequest", employments, StringComparison.Ordinal);
+        Assert.DoesNotContain("AssignOnCreateAsync", employments, StringComparison.Ordinal);
+        var hire = File.ReadAllText(Path.Combine(Root, "src/Modules/Hrm/Erp.Hrm.Infrastructure/Employments/EmploymentService.cs"));
+        Assert.Contains("numbers.AssignOnCreateAsync(new NumberRequest(\"hrm.employee_no\", company, null, employment.JoiningDate)", hire, StringComparison.Ordinal);
+        Assert.Contains("numbers.CheckManualAsync(new NumberRequest(\"hrm.employee_no\", company, null, employment.JoiningDate), typed", hire, StringComparison.Ordinal);
 
         var registry = files["src/Modules/Hrm/Erp.Hrm.Infrastructure/Generated/HrmNumberingTypes.g.cs"];
         Assert.Equal(9, Model.Value.Tables.Sum(t => t.Numbering.Count));
@@ -545,7 +614,7 @@ public sealed class GeneratorTests
         var files = Generator.Generate(Root).Files;
         var manifest = System.Text.Json.JsonDocument.Parse(files["src/Platform/Erp.Kernel.Infrastructure/Access/settings.g.json"]).RootElement;
         var settings = manifest.GetProperty("settings").EnumerateArray().ToList();
-        Assert.Equal(46, settings.Count); // iam.report.inactive_days (S1.13b, ruling Q8), loc.number.digits and loc.number.grouping (S1.12b, ruling Q6), two of S1.11c2 (doc.template.max_kb, doc.pdf.max_pages), four of S1.11c1 (doc.scan.mode, doc.upload.max_mb, doc.upload.allowed_types, doc.expiry.reminder_days), 22 of S1.09a, cfg.limits.warning_percent (S1.09b, ruling Q7), four of S1.10b (CR-041), two of S1.11a (Q9, P3), ntf.in_app.retention_days (S1.11b1), seven of S1.11b2 (P3, P9, P11)
+        Assert.Equal(52, settings.Count); // six of S1.15a (cfg.branding.product_name, logo_file_id, banner_en, banner_ur, terms_en, terms_ur: login branding, FR-ADM-SEC-08), iam.report.inactive_days (S1.13b, ruling Q8), loc.number.digits and loc.number.grouping (S1.12b, ruling Q6), two of S1.11c2 (doc.template.max_kb, doc.pdf.max_pages), four of S1.11c1 (doc.scan.mode, doc.upload.max_mb, doc.upload.allowed_types, doc.expiry.reminder_days), 22 of S1.09a, cfg.limits.warning_percent (S1.09b, ruling Q7), four of S1.10b (CR-041), two of S1.11a (Q9, P3), ntf.in_app.retention_days (S1.11b1), seven of S1.11b2 (P3, P9, P11)
         Assert.Equal(50, settings.Single(s => s.GetProperty("key").GetString() == "aud.alerts.sensitive_people_per_hour").GetProperty("default").GetInt32()); // S1.11 ruling Q9
         Assert.Equal(30, settings.Single(s => s.GetProperty("key").GetString() == "job.retention.run_days").GetProperty("default").GetInt32()); // S1.11a P3
         var off = settings.Single(s => s.GetProperty("key").GetString() == "org.weekly_off_days");

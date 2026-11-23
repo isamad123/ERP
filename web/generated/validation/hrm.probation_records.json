@@ -48,7 +48,8 @@
         "in_progress",
         "extended",
         "confirmed",
-        "not_confirmed"
+        "not_confirmed",
+        "transferred"
       ]
     }
   }

@@ -4,4 +4,13 @@
     <ProjectReference Include="../Erp.Hrm.Application/Erp.Hrm.Application.csproj" />
     <ProjectReference Include="../../../BuildingBlocks/Erp.BuildingBlocks.Infrastructure/Erp.BuildingBlocks.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- S1.20a (ruling Q3): the provisional person catalogue (identifier kinds, marital statuses, relations). -->
+    <EmbeddedResource Include="People/people-catalogue.json" LogicalName="Erp.Hrm.Infrastructure.People.people-catalogue.json" />
+    <!-- S1.20b: the provisional employment catalogue, and the HR workflow and job manifests the hosts register. -->
+    <EmbeddedResource Include="Employments/employment-catalogue.json" LogicalName="Erp.Hrm.Infrastructure.Employments.employment-catalogue.json" />
+    <EmbeddedResource Include="Access/workflow.json" LogicalName="Erp.Hrm.Infrastructure.Access.workflow.json" />
+    <EmbeddedResource Include="Access/jobs.json" LogicalName="Erp.Hrm.Infrastructure.Access.jobs.json" />
+    <EmbeddedResource Include="Access/notification-events.json" LogicalName="Erp.Hrm.Infrastructure.Access.notification-events.json" />
+  </ItemGroup>
 </Project>

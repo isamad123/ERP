@@ -13,18 +13,6 @@
     {
       "action": "read",
       "permission": "hrm.persons.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.persons.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.persons.update"
-    },
-    {
-      "action": "delete",
-      "permission": "hrm.persons.delete"
     }
   ],
   "companyScoped": false,
@@ -49,6 +37,7 @@
     "ck_persons_gender": "gender",
     "ck_persons_marital_status_code": "maritalStatus",
     "ck_persons_religion_code": "religion",
+    "fk_persons_merged_into_person_id": "mergedIntoPersonId",
     "fk_persons_nationality_code": "nationalityCode",
     "fk_persons_photo_file_id": "photoFileId",
     "uq_persons_person_no": "personNo"
@@ -218,6 +207,17 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.persons.party_ref"
+    },
+    {
+      "column": "merged_into_person_id",
+      "field": "mergedIntoPersonId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": true,
+      "labelKey": "fields.hrm.persons.merged_into_person_id",
+      "references": "hrm.persons"
     },
     {
       "column": "custom",

@@ -13,14 +13,6 @@
     {
       "action": "read",
       "permission": "hrm.employment_events.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.employment_events.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.employment_events.update"
     }
   ],
   "companyScoped": true,
@@ -47,6 +39,7 @@
     "ck_employment_events_reason_code_code": "reasonCode",
     "ck_employment_events_status": "status",
     "fk_employment_events_company_id": "companyId",
+    "fk_employment_events_corrects_event_id": "correctsEventId",
     "fk_employment_events_employment_id": "employmentId",
     "fk_employment_events_letter_document_id": "letterDocumentId",
     "fk_employment_events_workflow_instance_id": "workflowInstanceId",
@@ -212,6 +205,28 @@
       "filter": true,
       "labelKey": "fields.hrm.employment_events.letter_document_id",
       "references": "doc.generated_documents"
+    },
+    {
+      "column": "changes",
+      "field": "changes",
+      "kind": "Json",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.employment_events.changes",
+      "fieldClass": "salary"
+    },
+    {
+      "column": "corrects_event_id",
+      "field": "correctsEventId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": true,
+      "labelKey": "fields.hrm.employment_events.corrects_event_id",
+      "references": "hrm.employment_events"
     },
     {
       "column": "status",

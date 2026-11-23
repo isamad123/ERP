@@ -52,6 +52,10 @@ internal sealed class NominationRepository(
         {
             query = query.Where(e => e.RelationId == relationIdFilter);
         }
+        if (filter.AsOf is { } asOf)
+        {
+            query = query.Where(e => e.ValidFrom <= asOf && (e.ValidTo == null || e.ValidTo > asOf));
+        }
         return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
     }
 }

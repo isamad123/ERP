@@ -105,6 +105,7 @@ public static class HrmAccessServices
     public static IServiceCollection AddHrmAccess(this IServiceCollection services)
     {
         services.AddScoped<IWorkforceDirectory, WorkforceDirectory>();
+        services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomReferenceResolver, EmployeeReferenceResolver>(); // S1.15b: employee custom fields
         return services;
     }
 }

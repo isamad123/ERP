@@ -5,10 +5,15 @@ using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.BuildingBlocks.Infrastructure.Time;
 using Erp.Hrm.Api.Generated;
+using Erp.Hrm.Api.Employments;
+using Erp.Hrm.Api.People;
+using Erp.Hrm.Infrastructure.Employments;
+using Erp.Hrm.Infrastructure.People;
 using Erp.Hrm.Infrastructure.Access;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Api.ControlPlane.Tenancy;
 using Erp.Kernel.Api.Access;
+using Erp.Kernel.Api.Metadata;
 using Erp.Kernel.Api.Org;
 using Erp.Kernel.Application.Org;
 using Erp.Kernel.Infrastructure.Org;
@@ -98,6 +103,13 @@ public static class ApiHost
         // module answers the team and department questions through the kernel's Contracts interface (Q3, D-10).
         services.AddKernelAccess();
         services.AddHrmAccess();
+        services.AddHrmPeople(); // person services and the handler of held merges (S1.20a)
+        // Employments (S1.20b): hire, events, as-of reads, user link; the approval of held events, the line-manager directory and
+        // the active employee counters. The kernel's user directory answers whether a user may be linked (D-10).
+        services.AddHrmEmployment().AddHrmEmploymentApi();
+        services.AddSingleton<Erp.Kernel.Contracts.Workflow.IWorkflowDocumentTypeSource>(new WorkflowManifestSource(EmploymentServices.WorkflowManifest));
+        services.AddSingleton(new NotificationManifestSource(EmploymentServices.NotificationManifest)); // S1.20c reminders
+        services.AddScoped<Erp.Kernel.Contracts.Identity.IUserDirectory, Erp.Kernel.Infrastructure.Identity.UserDirectory>();
         services.AddSingleton(new ResourceCatalog([.. KernelResourceCatalog.All, .. HrmResourceCatalog.All]));
         services.AddScoped<AccessAdministrationService>();
         services.AddScoped<IRoleService>(sp => sp.GetRequiredService<AccessAdministrationService>());
@@ -106,6 +118,7 @@ public static class ApiHost
         services.AddScoped<IAccessPreviewService>(sp => sp.GetRequiredService<AccessAdministrationService>());
         services.AddScoped<IUserConsoleService, UserConsoleService>();
         services.AddScoped<IOrganizationAdministration, OrganizationAdministrationService>(); // S1.14a: registrations, bank accounts, holiday years
+        services.AddScoped<IOrgUnitService, OrgUnitService>(); // S1.14b: hierarchy on a date, compare, move of a unit
         services.AddScoped<IAccessConsoleService, AccessConsoleService>();
         services.AddScoped<IAccessSettingsService>(sp => sp.GetRequiredService<AccessAdministrationService>());
 
@@ -146,6 +159,11 @@ public static class ApiHost
         // Saved list views and label overrides of the web lists and forms (S1.12c, S1.12 rulings Q11 and Q12).
         services.AddScoped<Erp.Kernel.Contracts.Views.ISavedViewService, Erp.Kernel.Infrastructure.Views.SavedViewService>();
         services.AddScoped<Erp.Kernel.Contracts.Views.ILabelOverrideService, Erp.Kernel.Infrastructure.Views.LabelOverrideService>();
+        // Labels, option lists and custom fields (S1.15b): the services behind the editors and the check of custom values on every write.
+        services.AddScoped<Erp.Kernel.Contracts.Metadata.ILabelAdministration, Erp.Kernel.Infrastructure.Metadata.LabelAdministration>();
+        services.AddScoped<Erp.Kernel.Contracts.Metadata.IOptionListAdministration, Erp.Kernel.Infrastructure.Metadata.OptionListAdministration>();
+        services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldAdministration, Erp.Kernel.Infrastructure.Metadata.CustomFieldAdministration>();
+        services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldValidator, Erp.Kernel.Infrastructure.Metadata.CustomFieldValidator>();
         // Limits (S1.09b, ruling Q7): one guard; the kernel counts named users, concurrent users and companies.
         services.AddSingleton<ILimitCounter, NamedUserCounter>();
         services.AddSingleton<ILimitCounter, ConcurrentUserCounter>();
@@ -158,6 +176,7 @@ public static class ApiHost
         services.AddScoped<ISettings>(sp => sp.GetRequiredService<SettingsService>());
         services.AddScoped<IFeatureFlags>(sp => sp.GetRequiredService<SettingsService>());
         services.AddScoped<ISettingsAdministration, SettingsAdministrationService>();
+        services.AddScoped<Erp.Kernel.Contracts.Settings.IBrandingService, Erp.Kernel.Infrastructure.Settings.BrandingService>(); // S1.15a
 
         // Workflow engine (S1.10): modules register their document types (IWorkflowDocumentTypeSource), outcome handlers
         // and, for HR, the approver directory; routes are data seeded by provisioning and migrate.
@@ -211,6 +230,7 @@ public static class ApiHost
         app.UseAuthorization();
         app.MapHealthChecks("/health");
         app.MapIdentityAuthEndpoints();
+        app.MapBrandingEndpoints(); // S1.15a: the public sign-in page's branding
         var api = app.MapGroup(string.Empty).RequireAuthorization();
         api.MapIdentityAccountEndpoints();
         api.MapAccessEndpoints();
@@ -223,6 +243,7 @@ public static class ApiHost
         api.MapLicenceEndpoints();
         api.MapSessionContextEndpoints();
         api.MapViewEndpoints();
+        api.MapMetadataEndpoints();
         api.MapWorkflowEndpoints();
         api.MapJobEndpoints();
         api.MapNotificationEndpoints();
@@ -230,6 +251,8 @@ public static class ApiHost
         api.MapTemplateEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();
+        api.MapHrmPeopleEndpoints();
+        api.MapHrmEmploymentEndpoints();
         return app;
     }
 

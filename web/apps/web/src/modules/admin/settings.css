@@ -1,0 +1,70 @@
+/* The settings centre, feature flags and sign-in page screens (slice S1.15a). Tokens and logical properties only. */
+.erp-settings-tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.erp-settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.erp-settings-group > h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.erp-settings-list,
+.erp-settings-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.erp-settings-history li {
+  padding-block-end: var(--space-2);
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+}
+
+.erp-settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  inline-size: 100%;
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+  text-align: start;
+}
+
+.erp-settings-row > * {
+  min-inline-size: 0;
+}
+
+.erp-settings-name {
+  font-weight: 600;
+}
+
+.erp-settings-value {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 47.99rem) {
+  .erp-settings-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.erp-settings-logo {
+  max-inline-size: 16rem;
+  max-block-size: 6rem;
+  object-fit: contain;
+}

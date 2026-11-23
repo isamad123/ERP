@@ -1,0 +1,161 @@
+/* Labels editor, option lists and custom field definitions (slice S1.15b). Tokens and logical properties only. */
+.erp-table-scroll {
+  display: block;
+  inline-size: 100%;
+  overflow-x: auto;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  contain: inline-size layout paint;
+}
+
+/* Keys and codes are long unbreakable words: they wrap instead of widening the page (as roles.css does for its tables). */
+.erp-labels-table .erp-code,
+.erp-config-card .erp-code,
+.erp-config-list .erp-code,
+.erp-table-scroll .erp-code {
+  overflow-wrap: anywhere;
+}
+
+.erp-config-card,
+.erp-config-list > li {
+  min-inline-size: 0;
+}
+
+.erp-labels-table th,
+.erp-labels-table td {
+  vertical-align: top;
+}
+
+.erp-config-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 47.99rem) {
+  .erp-config-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.erp-config-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.erp-config-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+}
+
+.erp-config-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* Numbering screen (slice S1.15c). */
+.erp-num-tokens {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.erp-num-example {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.erp-num-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.erp-num-facts dt {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.erp-num-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Approval route editor (slice S1.15c). */
+.erp-route-group,
+.erp-route-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  min-inline-size: 0;
+}
+
+.erp-route-step {
+  background: var(--color-surface-raised);
+}
+
+.erp-route-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.erp-route-item {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  min-inline-size: 0;
+}
+
+.erp-route-item > :first-child {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.erp-route-test {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-2);
+}
+
+.erp-route-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.erp-route-problems {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+.erp-route-versions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

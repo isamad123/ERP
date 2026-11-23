@@ -16,6 +16,7 @@ public static class AuditRegistration
         services.AddSingleton<AuditTamperInterceptor>();
         services.AddScoped<ISensitiveAccessLog, SensitiveAccessLog>();
         services.AddScoped<SubjectKeyService>();
+        services.AddScoped<Contracts.Audit.IAuditEvents, AuditEventWriter>(); // modules' business events (S1.20a)
         return services;
     }
 

@@ -74,6 +74,9 @@ public sealed class PositionListQuery
     public global::System.Guid? LocationId { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.positions: read, create, update. Answers pass through field security (S1.06).</summary>
@@ -94,7 +97,7 @@ internal static class PositionEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.positions.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PositionFilter { CompanyId = query.CompanyId, OrgUnitId = query.OrgUnitId, GradeId = query.GradeId, ReportsToPositionId = query.ReportsToPositionId, LocationId = query.LocationId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.PositionFilter { CompanyId = query.CompanyId, OrgUnitId = query.OrgUnitId, GradeId = query.GradeId, ReportsToPositionId = query.ReportsToPositionId, LocationId = query.LocationId, Status = query.Status, AsOf = query.AsOf }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PositionAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
@@ -106,7 +109,7 @@ internal static class PositionEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PositionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PositionWriteRequest request, global::Erp.Hrm.Application.Generated.IPositionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PositionWriteRequest request, global::Erp.Hrm.Application.Generated.IPositionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Metadata.ICustomFieldValidator customFields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.positions.create", async () =>
         {
             var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PositionAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
@@ -123,11 +126,19 @@ internal static class PositionEndpoints
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
 
+            await using var customCheck = await customFields.CheckAsync(new global::Erp.Kernel.Contracts.Metadata.CustomWrite("hrm.positions", null, row.CompanyId, row.Custom, null, key => access.CanEdit(global::Erp.BuildingBlocks.Application.Security.FieldAccessMap.CustomPrefix + key), false), cancellationToken).ConfigureAwait(false);
+            if (customCheck.Errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.InvalidCustom(customCheck.Errors);
+            }
+
+            row.Custom = customCheck.Values;
+
             await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created("/api/hrm/positions/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PositionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PositionWriteRequest request, global::Erp.Hrm.Application.Generated.IPositionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
+    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PositionWriteRequest request, global::Erp.Hrm.Application.Generated.IPositionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Metadata.ICustomFieldValidator customFields, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.positions.update", async () =>
         {
             var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
@@ -143,11 +154,20 @@ internal static class PositionEndpoints
                 return GeneratedEndpointSupport.Invalid(errors);
             }
 
+            var storedCustom = row.Custom;
             var denied = Apply(request, row, update: true, access);
             if (denied.Count > 0)
             {
                 return GeneratedEndpointSupport.NotEditable(denied);
             }
+
+            await using var customCheck = await customFields.CheckAsync(new global::Erp.Kernel.Contracts.Metadata.CustomWrite("hrm.positions", row.Id, row.CompanyId, row.Custom, storedCustom, key => access.CanEdit(global::Erp.BuildingBlocks.Application.Security.FieldAccessMap.CustomPrefix + key), true), cancellationToken).ConfigureAwait(false);
+            if (customCheck.Errors.Count > 0)
+            {
+                return GeneratedEndpointSupport.InvalidCustom(customCheck.Errors);
+            }
+
+            row.Custom = customCheck.Values;
 
             await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PositionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));

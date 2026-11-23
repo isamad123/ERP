@@ -51,6 +51,10 @@ internal sealed class StatutoryTableRepository(
         {
             query = query.Where(e => e.CompanyId == companyIdFilter);
         }
+        if (filter.AsOf is { } asOf)
+        {
+            query = query.Where(e => e.ValidFrom <= asOf && (e.ValidTo == null || e.ValidTo > asOf));
+        }
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
             var pattern = global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSearch.Pattern(filter.Search);

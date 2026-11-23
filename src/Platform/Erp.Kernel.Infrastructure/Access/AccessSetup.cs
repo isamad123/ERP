@@ -22,15 +22,21 @@ public sealed class AccessManifest
 
     public List<BaselineScope> DataScopes { get; } = [];
 
-    /// <summary>Reads <c>permissions.g.json</c> (generated) and <c>baseline-roles.json</c> (hand-written data) of a folder.</summary>
+    /// <summary>
+    /// Reads <c>permissions.g.json</c> (generated), <c>permissions.json</c> (a module's hand-written permissions: the actions of
+    /// its purpose-built services, slice S1.20a, CR-076) and <c>baseline-roles.json</c> (hand-written data) of a folder.
+    /// </summary>
     public static AccessManifest Load(string folder)
     {
         var manifest = new AccessManifest { Module = folder };
-        var permissions = Path.Combine(folder, "permissions.g.json");
-        if (File.Exists(permissions))
+        foreach (var name in new[] { "permissions.g.json", "permissions.json" })
         {
-            var file = JsonSerializer.Deserialize<PermissionFile>(File.ReadAllText(permissions)) ?? throw new InvalidDataException(permissions + " is empty.");
-            manifest.Permissions.AddRange(file.Permissions.Select(p => new PermissionDefinition(p.Code, p.Module, p.DescriptionKey, p.Sensitive)));
+            var permissions = Path.Combine(folder, name);
+            if (File.Exists(permissions))
+            {
+                var file = JsonSerializer.Deserialize<PermissionFile>(File.ReadAllText(permissions)) ?? throw new InvalidDataException(permissions + " is empty.");
+                manifest.Permissions.AddRange(file.Permissions.Select(p => new PermissionDefinition(p.Code, p.Module, p.DescriptionKey, p.Sensitive)));
+            }
         }
 
         var roles = Path.Combine(folder, "baseline-roles.json");
@@ -150,7 +156,7 @@ public sealed record AccessSetupResult(int PermissionsAdded, int PermissionsReti
 /// </summary>
 public static class AccessSetup
 {
-    public static IReadOnlyList<PermissionDefinition> HandWritten { get; } = [.. IdentityPermissions.All, .. AccessControlPermissions.All, .. Contracts.Audit.AuditPermissions.All, .. Contracts.Numbering.NumberingPermissions.All, .. Contracts.Settings.SettingsPermissions.All, .. Contracts.Entitlements.LicencePermissions.All, .. Contracts.Workflow.WorkflowPermissions.All, .. Contracts.Jobs.JobPermissions.All, .. Contracts.Notifications.NotificationPermissions.All, .. Contracts.Documents.DocumentPermissions.All, .. Contracts.Documents.TemplatePermissions.All, .. Contracts.Views.ViewPermissions.All];
+    public static IReadOnlyList<PermissionDefinition> HandWritten { get; } = [.. IdentityPermissions.All, .. AccessControlPermissions.All, .. Contracts.Audit.AuditPermissions.All, .. Contracts.Numbering.NumberingPermissions.All, .. Contracts.Settings.SettingsPermissions.All, .. Contracts.Entitlements.LicencePermissions.All, .. Contracts.Workflow.WorkflowPermissions.All, .. Contracts.Jobs.JobPermissions.All, .. Contracts.Notifications.NotificationPermissions.All, .. Contracts.Documents.DocumentPermissions.All, .. Contracts.Documents.TemplatePermissions.All, .. Contracts.Views.ViewPermissions.All, .. Contracts.Metadata.MetadataPermissions.All];
 
     public static async Task<AccessSetupResult> EnsureAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, IReadOnlyList<string> manifestFolders, DateTimeOffset now, CancellationToken cancellationToken)
     {

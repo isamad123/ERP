@@ -270,6 +270,15 @@ public sealed class AccessControlTests(TenancyFixture fx) : IAsyncLifetime
         var unit = await _h.RowAsync("org.org_units", company, null, Ct);
         var id = (Guid)unit["id"]!;
         await _h.ExecAsync("update org.org_units set custom = '{\"secret\":\"s1\",\"note\":\"n1\",\"free\":\"f1\"}' where id = $1", Ct, id);
+        // Custom values are checked against their definitions since S1.15b: the three fields the record carries are defined first.
+        foreach (var key in new[] { "secret", "note", "free" })
+        {
+            await _h.ExecAsync("""
+                insert into cfg.custom_field_defs (id, entity_type, field_key, data_type, label_i18n, validation, is_required, is_unique, seq, version, status, created_at, created_by, updated_at, updated_by)
+                values ($1, 'org.org_units', $2, 'text', '{"en":"x"}', '{}', false, false, 10, 1, 'active', now(), $3, now(), $3)
+                """, Ct, Guid.CreateVersion7(), key, Erp.Kernel.Infrastructure.ControlPlane.Provisioning.BaselineSeed.SystemUserId);
+        }
+
         var user = await _h.UserAsync(Ct);
         await _h.AssignAsync(user, await _h.RoleAsync(Ct, ["org.org_units.read", "org.org_units.update"], [("org.org_units", "all")],
             [("org.org_units", "custom.secret", "hidden"), ("org.org_units", "custom.note", "read_only")]), null, _h.Today, null, Ct);
@@ -290,6 +299,7 @@ public sealed class AccessControlTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal("s1", stored.RootElement.GetProperty("secret").GetString()); // the hidden value was kept, never dropped
         Assert.Equal("n1", stored.RootElement.GetProperty("note").GetString());
         Assert.Equal("f2", stored.RootElement.GetProperty("free").GetString());
+        await _h.ExecAsync("delete from cfg.custom_field_defs where entity_type = 'org.org_units' and field_key in ('secret', 'note', 'free')", Ct);
     }
 
     // ------------------------------------------------------------------ granting (spec 02 BR)

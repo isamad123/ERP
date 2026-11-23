@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Erp.BuildingBlocks.Domain.Time;
+using Erp.IntegrationTests.Documents;
 using Erp.IntegrationTests.Identity;
 using Erp.IntegrationTests.Tenancy;
 using Erp.IntegrationTests.Workflow;
@@ -74,6 +75,8 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
             services =>
             {
                 WorkflowRig.RegisterTestModule(services);
+                // S1.15a: the login logo is a stored file; the browser tests use a folder store and a scanner that finds nothing.
+                DocumentTestServices.Register(services, Path.Combine(Path.GetTempPath(), "erp-e2e-files-" + Guid.NewGuid().ToString("N")));
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(clock);
                 // Access tokens are checked against the same test clock (the real time is also accepted, for the
@@ -227,6 +230,23 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
             return Results.NoContent();
         });
 
+        // S1.15b: a field rule on every role of the person (a custom field is `custom.<key>`), written as the field matrix of S1.13b writes it.
+        app.MapPost("/field-policy", async (FieldPolicyBody body) =>
+        {
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            await IdentityHarness.ExecAsync(owner, """
+                delete from iam.field_policies fp using iam.user_roles ur, iam.users u
+                where ur.user_id = u.id and lower(u.username) = lower($1) and fp.role_id = ur.role_id and fp.resource_type = $2 and fp.field_key = $3
+                """, Ct, body.Username, body.Resource, body.Field);
+            await IdentityHarness.ExecAsync(owner, """
+                insert into iam.field_policies (id, role_id, resource_type, field_key, access, created_at, created_by, updated_at, updated_by)
+                select gen_random_uuid(), ur.role_id, $2, $3, $4, now(), $5, now(), $5
+                from iam.user_roles ur join iam.users u on u.id = ur.user_id join iam.roles r on r.id = ur.role_id
+                where lower(u.username) = lower($1) and r.source = 'tenant'
+                """, Ct, body.Username, body.Resource, body.Field, body.Access, BaselineSeed.SystemUserId);
+            return Results.NoContent();
+        });
+
         // S1.12b: another company of the customer (as the organization screens will add one, S1.14); the database adds its branch.
         app.MapPost("/companies", async (CompanyBody body) =>
         {
@@ -320,6 +340,38 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
                 from (select id from org.companies where ($1::text is null and lower(code) = lower($5)) or lower(code) = lower($1) limit 1) c, generate_series(1, $3) n
                 """, Ct, (object?)body.Company ?? DBNull.Value, body.Prefix, body.Count, BaselineSeed.SystemUserId, code);
             return Results.NoContent();
+        });
+
+        // S1.14b: a reporting hierarchy with a five-level structure in the customer's first company, linked from 1 January 2026:
+        // <prefix>-ROOT, under it <prefix>-DIVA and <prefix>-DIVB, <prefix>-DEPT under DIVA, <prefix>-TEAM under DEPT, and
+        // <prefix>-LOOSE that is in no place. Answers the hierarchy id.
+        app.MapPost("/org-structure", async (OrgStructureBody body) =>
+        {
+            await using var owner = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            var system = BaselineSeed.SystemUserId;
+            var hierarchy = Guid.CreateVersion7();
+            var type = Guid.CreateVersion7();
+            await using var find = new NpgsqlCommand("select id from org.companies where lower(code) = lower($1)", owner) { Parameters = { new NpgsqlParameter { Value = code } } };
+            var company = (Guid)(await find.ExecuteScalarAsync(Ct))!;
+            await IdentityHarness.ExecAsync(owner, "insert into org.org_hierarchies (id, code, name_i18n, kind, created_at, created_by, updated_at, updated_by) values ($1, $2, $3::jsonb, 'reporting', now(), $4, now(), $4)", Ct,
+                hierarchy, body.Prefix + "-reporting", "{\"en\":\"Reporting " + body.Prefix + "\",\"ur\":\"رپورٹنگ " + body.Prefix + "\"}", system);
+            await IdentityHarness.ExecAsync(owner, "insert into org.org_unit_types (id, code, name_i18n, created_at, created_by, updated_at, updated_by) values ($1, $2, $3::jsonb, now(), $4, now(), $4)", Ct,
+                type, body.Prefix + "-TYPE", "{\"en\":\"Department\",\"ur\":\"شعبہ\"}", system);
+            var ids = new Dictionary<string, Guid>();
+            foreach (var (name, parent) in new (string, string?)[] { ("ROOT", null), ("DIVA", "ROOT"), ("DIVB", "ROOT"), ("DEPT", "DIVA"), ("TEAM", "DEPT"), ("LOOSE", "-") })
+            {
+                var id = Guid.CreateVersion7();
+                ids[name] = id;
+                await IdentityHarness.ExecAsync(owner, "insert into org.org_units (id, company_id, code, name_i18n, unit_type_id, created_at, created_by, updated_at, updated_by) values ($1, $2, $3, $4::jsonb, $5, now(), $6, now(), $6)", Ct,
+                    id, company, body.Prefix + "-" + name, "{\"en\":\"Unit " + name + "\",\"ur\":\"یونٹ " + name + "\"}", type, system);
+                if (parent != "-")
+                {
+                    await IdentityHarness.ExecAsync(owner, "insert into org.org_unit_links (id, hierarchy_id, unit_id, parent_unit_id, valid_from, created_at, created_by, updated_at, updated_by) values ($1, $2, $3, $4, '2026-01-01', now(), $5, now(), $5)", Ct,
+                        Guid.CreateVersion7(), hierarchy, id, parent is null ? null : ids[parent], system);
+                }
+            }
+
+            return Results.Ok(new { hierarchy });
         });
 
         // S1.12c: a label override of the customer (cfg.labels, layer tenant), as the settings centre will write it (S1.15);
@@ -547,7 +599,11 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
 
     private sealed record BranchesBody(string? Company, string Prefix, int Count);
 
+    private sealed record OrgStructureBody(string Prefix);
+
     private sealed record LabelBody(string Key, string Language, string? Text);
+
+    private sealed record FieldPolicyBody(string Username, string Resource, string Field, string Access);
 
     private sealed record RouteBody(string DocumentType, string Approver, bool Bulk);
 

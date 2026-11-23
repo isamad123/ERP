@@ -5,21 +5,26 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { Banner, Button } from '@erp/ui';
 import { useText, type MessageKey } from '@erp/i18n';
 import { ApiProblem } from '../api/client';
+import { useBranding } from '../app/branding';
 import { useDisplay } from '../app/display-context';
 
 export function AuthLayout({ titleKey: title, children }: { titleKey: MessageKey; children: ReactNode }) {
   const { t } = useText();
   const heading = useRef<HTMLHeadingElement>(null);
   const { display, setDisplay } = useDisplay();
+  const brand = useBranding();
   useEffect(() => {
-    document.title = `${t(title)} – ${t('product.name')}`;
+    document.title = `${t(title)} – ${brand.productName}`;
     heading.current?.focus();
-  }, [t, title]);
+  }, [t, title, brand.productName]);
   const other = display.language === 'en' ? 'ur' : 'en';
   return (
     <div className="erp-auth">
       <header className="erp-auth-top">
-        <span className="erp-auth-product">{t('product.name')}</span>
+        <span className="erp-auth-brand">
+          {brand.logoUrl && <img className="erp-auth-logo" src={brand.logoUrl} alt="" />}
+          <span className="erp-auth-product">{brand.productName}</span>
+        </span>
         <Button variant="quiet" onPress={() => setDisplay({ ...display, language: other })}>
           <span lang={other}>{t(other === 'ur' ? 'language.ur' : 'language.en')}</span>
         </Button>
@@ -27,7 +32,9 @@ export function AuthLayout({ titleKey: title, children }: { titleKey: MessageKey
       <main className="erp-auth-main" id="main">
         <section className="erp-auth-card erp-stack" aria-labelledby="auth-title">
           <h1 id="auth-title" ref={heading} tabIndex={-1}>{t(title)}</h1>
+          {brand.banner && <Banner tone="info">{brand.banner}</Banner>}
           {children}
+          {brand.terms && <p className="erp-auth-terms erp-small">{brand.terms}</p>}
         </section>
       </main>
     </div>

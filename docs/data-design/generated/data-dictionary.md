@@ -2,14 +2,14 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 221 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 222 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
 | customer | aud | 7 |
 | customer | cfg | 19 |
 | customer | doc | 7 |
-| customer | hrm | 112 |
+| customer | hrm | 113 |
 | customer | iam | 24 |
 | customer | itg | 11 |
 | customer | job | 5 |
@@ -245,10 +245,13 @@ Requirements: KRN-MET-01, KRN-MET-02, KRN-MET-05. Source: kernel.yaml.
 Constraints:
 
 - `ck_custom_field_defs_data_type` CHECK ((data_type = ANY (ARRAY['text'::text, 'long_text'::text, 'number'::text, 'decimal'::text, 'date'::text, 'bool'::text, 'choice'::text, 'multi_choice'::text, 'user'::text, 'employee'::text, 'file'::text])))
+- `ck_custom_field_defs_field_key` CHECK ((field_key ~ '^[a-z][a-z0-9_]{0,39}$'::text))
 - `ck_custom_field_defs_field_key_code` CHECK ((((length(field_key) >= 1) AND (length(field_key) <= 40)) AND (field_key = btrim(field_key))))
 - `ck_custom_field_defs_help_i18n_object` CHECK ((jsonb_typeof(help_i18n) = 'object'::text))
 - `ck_custom_field_defs_label_i18n_object` CHECK ((jsonb_typeof(label_i18n) = 'object'::text))
+- `ck_custom_field_defs_option_list` CHECK (((data_type = ANY (ARRAY['choice'::text, 'multi_choice'::text])) = (option_list_id IS NOT NULL)))
 - `ck_custom_field_defs_status` CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
+- `ck_custom_field_defs_unique_types` CHECK (((NOT is_unique) OR (data_type = ANY (ARRAY['text'::text, 'number'::text, 'decimal'::text, 'date'::text, 'choice'::text, 'user'::text, 'employee'::text]))))
 - `fk_custom_field_defs_option_list_id` FOREIGN KEY (option_list_id) REFERENCES cfg.option_lists(id)
 - `pk_custom_field_defs` PRIMARY KEY (id)
 - `uq_custom_field_defs_entity_type_field_key` UNIQUE (entity_type, field_key)
@@ -370,6 +373,7 @@ Label and terminology overrides per language and layer. Requirements: KRN-ORG-08
 Constraints:
 
 - `ck_labels_layer` CHECK ((layer = ANY (ARRAY['pack'::text, 'tenant'::text, 'company'::text])))
+- `ck_labels_text_length` CHECK (((length(text) >= 1) AND (length(text) <= 300)))
 - `pk_labels` PRIMARY KEY (id)
 - `uq_labels_key_language_layer_scope_id` UNIQUE NULLS NOT DISTINCT (key, language, layer, scope_id)
 
@@ -1796,7 +1800,7 @@ Indexes:
 
 ### hrm.employee_bank_accounts
 
-Requirements: EMP-06, PAY-24. Pending rule (S1.20, placeholder hrm.todo_employee_bank_accounts_bank_fields_required): bank fields required when payment_mode = bank_transfer or mobile_wallet Changes go through maker-checker (iam.maker_checker_requests). Source: hrm-people.yaml.
+Requirements: EMP-06, PAY-24. Rule (implemented in S1.20d): bank fields required when payment_mode = bank_transfer or mobile_wallet Changes go through maker-checker (iam.maker_checker_requests). Source: hrm-people.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -1823,8 +1827,11 @@ Requirements: EMP-06, PAY-24. Pending rule (S1.20, placeholder hrm.todo_employee
 
 Constraints:
 
+- `ck_employee_bank_accounts_blind_index` CHECK ((((account_number IS NULL) = (account_number_hmac IS NULL)) AND ((iban IS NULL) = (iban_hmac IS NULL))))
 - `ck_employee_bank_accounts_payment_mode` CHECK ((payment_mode = ANY (ARRAY['bank_transfer'::text, 'cheque'::text, 'cash'::text, 'mobile_wallet'::text])))
+- `ck_employee_bank_accounts_priority` CHECK (((priority >= 1) AND (priority <= 99)))
 - `ck_employee_bank_accounts_split_kind` CHECK ((split_kind = ANY (ARRAY['remainder'::text, 'percent'::text, 'amount'::text])))
+- `ck_employee_bank_accounts_split_value` CHECK ((((split_kind = 'remainder'::text) AND (split_value IS NULL)) OR ((split_kind = 'percent'::text) AND (split_value > (0)::numeric) AND (split_value <= (100)::numeric)) OR ((split_kind = 'amount'::text) AND (split_value > (0)::numeric))))
 - `ck_employee_bank_accounts_valid_to` CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))
 - `ex_employee_bank_accounts_employment_id_priority` EXCLUDE USING gist (employment_id WITH =, priority WITH =, daterange(valid_from, valid_to, '[)'::text) WITH &&)
 - `fk_employee_bank_accounts_bank_id` FOREIGN KEY (bank_id) REFERENCES ref.banks(id)
@@ -1840,6 +1847,11 @@ Indexes:
 - `ix_employee_bank_accounts_company_id_employment_id` CREATE INDEX ix_employee_bank_accounts_company_id_employment_id ON hrm.employee_bank_accounts USING btree (company_id, employment_id)
 - `ix_employee_bank_accounts_employment_id_valid_from` CREATE INDEX ix_employee_bank_accounts_employment_id_valid_from ON hrm.employee_bank_accounts USING btree (employment_id, valid_from)
 - `ix_employee_bank_accounts_iban_hmac` CREATE INDEX ix_employee_bank_accounts_iban_hmac ON hrm.employee_bank_accounts USING btree (iban_hmac)
+
+Triggers:
+
+- `tg_employee_bank_accounts_bank_fields_required` CREATE TRIGGER tg_employee_bank_accounts_bank_fields_required BEFORE INSERT OR UPDATE ON hrm.employee_bank_accounts FOR EACH ROW EXECUTE FUNCTION hrm.tg_employee_bank_accounts_bank_fields_required()
+- `tg_employee_bank_accounts_split` CREATE CONSTRAINT TRIGGER tg_employee_bank_accounts_split AFTER INSERT OR DELETE OR UPDATE ON hrm.employee_bank_accounts DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION hrm.tg_employee_bank_accounts_split()
 
 ### hrm.employee_documents
 
@@ -1930,7 +1942,7 @@ Indexes:
 
 ### hrm.employment_assignments
 
-Effective-dated job details; every change closes the current row and opens a new one. Requirements: EMP-02, EMP-03, POS-01. Pending rule (S1.20, placeholder hrm.todo_employment_assignments_manager_cycle): Cycle check trigger on manager_employment_id. Source: hrm-people.yaml.
+Effective-dated job details; every change closes the current row and opens a new one. Requirements: EMP-02, EMP-03, POS-01. Rule (implemented in S1.20b): Cycle check trigger on manager_employment_id. Source: hrm-people.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -1991,6 +2003,11 @@ Indexes:
 - `ix_employment_assignments_manager_employment_id` CREATE INDEX ix_employment_assignments_manager_employment_id ON hrm.employment_assignments USING btree (manager_employment_id)
 - `ix_employment_assignments_org_unit_id` CREATE INDEX ix_employment_assignments_org_unit_id ON hrm.employment_assignments USING btree (org_unit_id)
 
+Triggers:
+
+- `tg_employment_assignments_cost_allocation_sum` CREATE TRIGGER tg_employment_assignments_cost_allocation_sum BEFORE INSERT OR UPDATE OF cost_allocation ON hrm.employment_assignments FOR EACH ROW EXECUTE FUNCTION hrm.tg_employment_assignments_cost_allocation_sum()
+- `tg_employment_assignments_manager_cycle` CREATE TRIGGER tg_employment_assignments_manager_cycle AFTER INSERT OR UPDATE OF manager_employment_id, employment_id, valid_from, valid_to ON hrm.employment_assignments FOR EACH ROW EXECUTE FUNCTION hrm.tg_employment_assignments_manager_cycle()
+
 ### hrm.employment_events
 
 Why something changed (hire, promotion, transfer ... termination) with reason code. Requirements: EMP-03, EMP-11, FR-XM-30. Source: hrm-people.yaml.
@@ -2013,6 +2030,8 @@ Why something changed (hire, promotion, transfer ... termination) with reason co
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| changes | jsonb | yes |  | what the event changes: assignment and employment fields with their new values, and the backdated change check (S1.20b) |
+| corrects_event_id | uuid | yes |  | fk hrm.employment_events; the earlier event a data_correction replaces (FR-XM-05: never edited) |
 
 Constraints:
 
@@ -2020,6 +2039,7 @@ Constraints:
 - `ck_employment_events_reason_code_code` CHECK ((((length(reason_code) >= 1) AND (length(reason_code) <= 40)) AND (reason_code = btrim(reason_code))))
 - `ck_employment_events_status` CHECK ((status = ANY (ARRAY['draft'::text, 'pending_approval'::text, 'approved'::text, 'effective'::text, 'cancelled'::text])))
 - `fk_employment_events_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
+- `fk_employment_events_corrects_event_id` FOREIGN KEY (company_id, corrects_event_id) REFERENCES hrm.employment_events(company_id, id)
 - `fk_employment_events_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
 - `fk_employment_events_letter_document_id` FOREIGN KEY (company_id, letter_document_id) REFERENCES doc.generated_documents(company_id, id)
 - `fk_employment_events_workflow_instance_id` FOREIGN KEY (company_id, workflow_instance_id) REFERENCES wf.workflow_instances(company_id, id)
@@ -2028,10 +2048,15 @@ Constraints:
 
 Indexes:
 
+- `ix_employment_events_company_id_corrects_event_id` CREATE INDEX ix_employment_events_company_id_corrects_event_id ON hrm.employment_events USING btree (company_id, corrects_event_id)
 - `ix_employment_events_company_id_employment_id` CREATE INDEX ix_employment_events_company_id_employment_id ON hrm.employment_events USING btree (company_id, employment_id)
 - `ix_employment_events_company_id_letter_document_id` CREATE INDEX ix_employment_events_company_id_letter_document_id ON hrm.employment_events USING btree (company_id, letter_document_id)
 - `ix_employment_events_company_id_workflow_instance_id` CREATE INDEX ix_employment_events_company_id_workflow_instance_id ON hrm.employment_events USING btree (company_id, workflow_instance_id)
 - `ix_employment_events_employment_id_effective_date` CREATE INDEX ix_employment_events_employment_id_effective_date ON hrm.employment_events USING btree (employment_id, effective_date)
+
+Triggers:
+
+- `tg_employment_events_fixed` CREATE TRIGGER tg_employment_events_fixed BEFORE DELETE OR UPDATE ON hrm.employment_events FOR EACH ROW EXECUTE FUNCTION hrm.tg_employment_events_fixed()
 
 ### hrm.employment_statutory_registrations
 
@@ -2057,7 +2082,10 @@ Per-employee applicability and registration for EOBI, provincial social security
 
 Constraints:
 
+- `ck_employment_statutory_registrations_blind_index` CHECK (((registration_no IS NULL) = (registration_no_hmac IS NULL)))
+- `ck_employment_statutory_registrations_exemption` CHECK (((NOT is_applicable) = (exemption_reason IS NOT NULL)))
 - `ck_employment_statutory_registrations_scheme_code` CHECK ((((length(scheme) >= 1) AND (length(scheme) <= 40)) AND (scheme = btrim(scheme))))
+- `ck_employment_statutory_registrations_scheme_format` CHECK ((scheme ~ '^[a-z][a-z0-9_]*$'::text))
 - `ck_employment_statutory_registrations_valid_to` CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))
 - `ex_employment_statutory_registrations_employment_id_scheme` EXCLUDE USING gist (employment_id WITH =, scheme WITH =, daterange(valid_from, valid_to, '[)'::text) WITH &&)
 - `fk_employment_statutory_registrations_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
@@ -2102,7 +2130,7 @@ Constraints:
 - `ck_employments_status` CHECK ((status = ANY (ARRAY['pre_joining'::text, 'active'::text, 'on_notice'::text, 'separated'::text, 'cancelled'::text])))
 - `fk_employments_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_employments_person_id` FOREIGN KEY (person_id) REFERENCES hrm.persons(id)
-- `fk_employments_previous_employment_id` FOREIGN KEY (company_id, previous_employment_id) REFERENCES hrm.employments(company_id, id)
+- `fk_employments_previous_employment_id` FOREIGN KEY (previous_employment_id) REFERENCES hrm.employments(id)
 - `pk_employments` PRIMARY KEY (id)
 - `uq_employments_company_id_id` UNIQUE (company_id, id)
 
@@ -2111,7 +2139,9 @@ Indexes:
 - `ix_employments_company_id_previous_employment_id` CREATE INDEX ix_employments_company_id_previous_employment_id ON hrm.employments USING btree (company_id, previous_employment_id)
 - `ix_employments_company_id_status` CREATE INDEX ix_employments_company_id_status ON hrm.employments USING btree (company_id, status)
 - `ix_employments_person_id` CREATE INDEX ix_employments_person_id ON hrm.employments USING btree (person_id)
+- `ix_employments_previous_employment_id` CREATE INDEX ix_employments_previous_employment_id ON hrm.employments USING btree (previous_employment_id)
 - `uq_employments_company_id_employee_no` CREATE UNIQUE INDEX uq_employments_company_id_employee_no ON hrm.employments USING btree (company_id, lower(employee_no))
+- `uq_employments_company_id_user_ref` CREATE UNIQUE INDEX uq_employments_company_id_user_ref ON hrm.employments USING btree (company_id, user_ref) NULLS NOT DISTINCT WHERE ((user_ref IS NOT NULL) AND (status = ANY (ARRAY['pre_joining'::text, 'active'::text, 'on_notice'::text])))
 - `uq_employments_person_id` CREATE UNIQUE INDEX uq_employments_person_id ON hrm.employments USING btree (person_id) WHERE (is_primary AND (status = ANY (ARRAY['pre_joining'::text, 'active'::text, 'on_notice'::text])))
 
 ### hrm.expense_categories
@@ -3917,6 +3947,44 @@ Indexes:
 
 - `ix_person_contacts_person_id` CREATE INDEX ix_person_contacts_person_id ON hrm.person_contacts USING btree (person_id)
 
+### hrm.person_duplicate_cases
+
+Possible duplicate persons kept for HR review (FR-HRM-EMP-18). Requirements: EMP-18. Source: hrm-people.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| person_id | uuid | no |  | fk hrm.persons; the person whose creation raised the case |
+| other_person_id | uuid | no |  | fk hrm.persons; the existing person it resembles |
+| match_kind | text | no |  |  |
+| source | text | no |  |  |
+| decided_by | uuid | yes |  | fk iam.users |
+| decided_at | timestamp with time zone | yes |  |  |
+| decision_note | text | yes |  |  |
+| status | text | no |  |  |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `ck_person_duplicate_cases_match_kind` CHECK ((match_kind = ANY (ARRAY['name_and_birth_date'::text, 'bank_account'::text])))
+- `ck_person_duplicate_cases_source` CHECK ((source = ANY (ARRAY['create'::text, 'import'::text])))
+- `ck_person_duplicate_cases_status` CHECK ((status = ANY (ARRAY['open'::text, 'distinct'::text, 'merged'::text])))
+- `fk_person_duplicate_cases_decided_by` FOREIGN KEY (decided_by) REFERENCES iam.users(id)
+- `fk_person_duplicate_cases_other_person_id` FOREIGN KEY (other_person_id) REFERENCES hrm.persons(id)
+- `fk_person_duplicate_cases_person_id` FOREIGN KEY (person_id) REFERENCES hrm.persons(id)
+- `pk_person_duplicate_cases` PRIMARY KEY (id)
+- `uq_person_duplicate_cases_person_id_other_person_id_match_kind` UNIQUE (person_id, other_person_id, match_kind)
+
+Indexes:
+
+- `ix_person_duplicate_cases_decided_by` CREATE INDEX ix_person_duplicate_cases_decided_by ON hrm.person_duplicate_cases USING btree (decided_by)
+- `ix_person_duplicate_cases_other_person_id` CREATE INDEX ix_person_duplicate_cases_other_person_id ON hrm.person_duplicate_cases USING btree (other_person_id)
+- `ix_person_duplicate_cases_status_created_at` CREATE INDEX ix_person_duplicate_cases_status_created_at ON hrm.person_duplicate_cases USING btree (status, created_at)
+
 ### hrm.person_identifiers
 
 National IDs, passports, tax numbers; validated per country pack. Requirements: EMP-05, EMP-16, EMP-18. One row per identifier; renewal updates issue and expiry dates (history in the audit log). Source: hrm-people.yaml.
@@ -4059,18 +4127,21 @@ One row per human (FR-XM-28). Employments hang off the person. Requirements: EMP
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| merged_into_person_id | uuid | yes |  | fk hrm.persons; set when this person was merged into another (retired, FR-HRM-EMP-18) |
 
 Constraints:
 
 - `ck_persons_gender` CHECK ((gender = ANY (ARRAY['male'::text, 'female'::text, 'other'::text, 'unspecified'::text])))
 - `ck_persons_marital_status_code` CHECK ((((length(marital_status) >= 1) AND (length(marital_status) <= 40)) AND (marital_status = btrim(marital_status))))
 - `ck_persons_religion_code` CHECK ((((length(religion) >= 1) AND (length(religion) <= 40)) AND (religion = btrim(religion))))
+- `fk_persons_merged_into_person_id` FOREIGN KEY (merged_into_person_id) REFERENCES hrm.persons(id)
 - `fk_persons_nationality_code` FOREIGN KEY (nationality_code) REFERENCES ref.countries(code)
 - `fk_persons_photo_file_id` FOREIGN KEY (photo_file_id) REFERENCES doc.files(id)
 - `pk_persons` PRIMARY KEY (id)
 
 Indexes:
 
+- `ix_persons_merged_into_person_id` CREATE INDEX ix_persons_merged_into_person_id ON hrm.persons USING btree (merged_into_person_id)
 - `ix_persons_nationality_code` CREATE INDEX ix_persons_nationality_code ON hrm.persons USING btree (nationality_code)
 - `ix_persons_photo_file_id` CREATE INDEX ix_persons_photo_file_id ON hrm.persons USING btree (photo_file_id)
 - `uq_persons_person_no` CREATE UNIQUE INDEX uq_persons_person_no ON hrm.persons USING btree (lower(person_no)) WHERE (NOT is_deleted)
@@ -4346,7 +4417,7 @@ Requirements: EMP-10, ONB-12. Source: hrm-people.yaml.
 
 Constraints:
 
-- `ck_probation_records_status` CHECK ((status = ANY (ARRAY['in_progress'::text, 'extended'::text, 'confirmed'::text, 'not_confirmed'::text])))
+- `ck_probation_records_status` CHECK ((status = ANY (ARRAY['in_progress'::text, 'extended'::text, 'confirmed'::text, 'not_confirmed'::text, 'transferred'::text])))
 - `fk_probation_records_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_probation_records_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
 - `fk_probation_records_review_form_response_id` FOREIGN KEY (company_id, review_form_response_id) REFERENCES hrm.form_responses(company_id, id)
@@ -4357,6 +4428,7 @@ Indexes:
 - `ix_probation_records_company_id` CREATE INDEX ix_probation_records_company_id ON hrm.probation_records USING btree (company_id)
 - `ix_probation_records_company_id_employment_id` CREATE INDEX ix_probation_records_company_id_employment_id ON hrm.probation_records USING btree (company_id, employment_id)
 - `ix_probation_records_company_id_review_form_response_id` CREATE INDEX ix_probation_records_company_id_review_form_response_id ON hrm.probation_records USING btree (company_id, review_form_response_id)
+- `uq_probation_records_employment_id` CREATE UNIQUE INDEX uq_probation_records_employment_id ON hrm.probation_records USING btree (employment_id) WHERE (status = ANY (ARRAY['in_progress'::text, 'extended'::text]))
 
 ### hrm.provident_fund_accounts
 
@@ -6953,6 +7025,10 @@ Indexes:
 - `ix_org_unit_links_parent_unit_id` CREATE INDEX ix_org_unit_links_parent_unit_id ON org.org_unit_links USING btree (parent_unit_id)
 - `ix_org_unit_links_unit_id` CREATE INDEX ix_org_unit_links_unit_id ON org.org_unit_links USING btree (unit_id)
 
+Triggers:
+
+- `tg_org_unit_links_checks` CREATE TRIGGER tg_org_unit_links_checks BEFORE INSERT OR UPDATE ON org.org_unit_links FOR EACH ROW EXECUTE FUNCTION org.tg_org_unit_links_checks()
+
 ### org.org_unit_types
 
 Requirements: KRN-ORG-03, ADM-ORG-04. Source: kernel.yaml.
@@ -7447,12 +7523,14 @@ Constraints:
 - `cfg.tg_config_version` 
 - `cfg.tg_refuse_change` 
 - `doc.tg_refuse_change` 
+- `hrm.tg_employee_bank_accounts_bank_fields_required` 
+- `hrm.tg_employee_bank_accounts_split` 
+- `hrm.tg_employment_assignments_cost_allocation_sum` 
+- `hrm.tg_employment_assignments_manager_cycle` 
+- `hrm.tg_employment_events_fixed` 
 - `hrm.tg_refuse_change` 
 - `hrm.todo_attendance_days_lock` Pending rule for hrm.attendance_days, owned by S1.31: Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26).
 - `hrm.todo_attendance_periods_lock` Pending rule for hrm.attendance_periods, owned by S1.31: A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments.
-- `hrm.todo_employee_bank_accounts_bank_fields_required` Pending rule for hrm.employee_bank_accounts, owned by S1.20: bank fields required when payment_mode = bank_transfer or mobile_wallet
-- `hrm.todo_employment_assignments_cost_allocation_sum` Pending rule for hrm.employment_assignments, owned by S1.20: cost_allocation: list of {cost_center_ref or department, pct}; must sum to 1
-- `hrm.todo_employment_assignments_manager_cycle` Pending rule for hrm.employment_assignments, owned by S1.20: Cycle check trigger on manager_employment_id.
 - `hrm.todo_final_settlements_approval_needs_clearance` Pending rule for hrm.final_settlements, owned by S1.43: status may become approved only when clearance_status in (cleared, waived) (FR-XM-29)
 - `hrm.todo_final_settlements_lock` Pending rule for hrm.final_settlements, owned by S1.43: Header and lines locked by trigger from approved onward; correction by cancel and reissue (FR-XM-05).
 - `hrm.todo_goals_parent_cycle` Pending rule for hrm.goals, owned by S1.49: Cycle check trigger on parent_goal_id.
@@ -7481,10 +7559,11 @@ Constraints:
 - `job.tg_refuse_change` 
 - `meta.ensure_partitions` 
 - `meta.tg_refuse_change` 
+- `org.org_unit_link_would_cycle` 
 - `org.tg_branches_keep_one_per_company` 
 - `org.tg_companies_default_branch` 
 - `org.tg_locations_checks` 
-- `org.todo_org_unit_links_parent_cycle` Pending rule for org.org_unit_links, owned by S1.14: parent_unit_id: fk org.org_units; null for root; cycle check by trigger
+- `org.tg_org_unit_links_checks` 
 - `wf.tg_refuse_change` 
 - `wf.tg_workflow_instances_parties_fixed` 
 - `wf.tg_workflow_tasks_no_self_approval` 

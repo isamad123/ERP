@@ -13,6 +13,8 @@ public sealed record PolicyAssignmentFilter
     public global::System.Guid? PolicyId { get; init; }
     /// <summary>Sort key: precedence; a leading minus sorts descending. Empty: by id (creation order).</summary>
     public string? Sort { get; init; }
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated repository of hrm.policy_assignments.</summary>

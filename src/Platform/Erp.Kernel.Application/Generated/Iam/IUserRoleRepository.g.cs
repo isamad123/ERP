@@ -12,6 +12,8 @@ public sealed record UserRoleFilter
     public global::System.Guid? UserId { get; init; }
     public global::System.Guid? RoleId { get; init; }
     public global::System.Guid? CompanyId { get; init; }
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated repository of iam.user_roles.</summary>

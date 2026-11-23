@@ -371,6 +371,12 @@ public static class TypeScriptEmitter
                 w.Line("search?: string;");
             }
 
+            if (t.IsEffectiveDated)
+            {
+                w.Line("/** Only the rows valid on this date (YYYY-MM-DD). */");
+                w.Line("asOf?: string;");
+            }
+
             w.Close().Line();
             var route = N.Route(t);
             w.Open($"export const {Naming.Camel(t.Name)} =");

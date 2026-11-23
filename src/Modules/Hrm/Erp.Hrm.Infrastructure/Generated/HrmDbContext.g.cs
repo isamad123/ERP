@@ -91,6 +91,7 @@ public sealed partial class HrmDbContext(DbContextOptions<HrmDbContext> options)
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.PaymentLineConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.PersonAddressConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.PersonContactConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.PersonDuplicateCaseConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.PersonIdentifierConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.PersonQualificationConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.PersonRelationConfiguration());
@@ -208,6 +209,7 @@ public static class HrmGeneratedServices
         services.AddScoped<global::Erp.Hrm.Application.Generated.IPaymentLineRepository, global::Erp.Hrm.Infrastructure.Generated.PaymentLineRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IPersonAddressRepository, global::Erp.Hrm.Infrastructure.Generated.PersonAddressRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IPersonContactRepository, global::Erp.Hrm.Infrastructure.Generated.PersonContactRepository>();
+        services.AddScoped<global::Erp.Hrm.Application.Generated.IPersonDuplicateCaseRepository, global::Erp.Hrm.Infrastructure.Generated.PersonDuplicateCaseRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IPersonIdentifierRepository, global::Erp.Hrm.Infrastructure.Generated.PersonIdentifierRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IPersonQualificationRepository, global::Erp.Hrm.Infrastructure.Generated.PersonQualificationRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IPersonRelationRepository, global::Erp.Hrm.Infrastructure.Generated.PersonRelationRepository>();

@@ -3,6 +3,7 @@ using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.BuildingBlocks.Infrastructure.Time;
 using Erp.Hrm.Infrastructure.Access;
+using Erp.Hrm.Infrastructure.Employments;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Erp.Kernel.Contracts.Entitlements;
@@ -83,6 +84,11 @@ public static class WorkerHost
         services.AddScoped<IFeatureFlags>(sp => sp.GetRequiredService<SettingsService>());
 
         // Workflow (S1.10b): modules register their document types and, for HR, the approver directory here as in the API host.
+        // Employments (S1.20b): the document type hrm.employment_event with its handler, the line-manager directory, the active
+        // employee counters and the daily job hrm.employment_events_due.
+        services.AddHrmEmployment().AddHrmEmploymentWorker();
+        services.AddSingleton<Erp.Kernel.Contracts.Workflow.IWorkflowDocumentTypeSource>(new WorkflowManifestSource(EmploymentServices.WorkflowManifest));
+        services.AddSingleton(new NotificationManifestSource(EmploymentServices.NotificationManifest)); // S1.20c reminders
         services.AddKernelWorkflow();
 
         // Notifications (S1.11b1): the consumer that turns events into in-app items; modules register their catalogue sources here.

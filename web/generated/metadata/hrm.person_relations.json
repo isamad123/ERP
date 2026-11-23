@@ -13,18 +13,6 @@
     {
       "action": "read",
       "permission": "hrm.person_relations.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.person_relations.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.person_relations.update"
-    },
-    {
-      "action": "delete",
-      "permission": "hrm.person_relations.delete"
     }
   ],
   "companyScoped": false,

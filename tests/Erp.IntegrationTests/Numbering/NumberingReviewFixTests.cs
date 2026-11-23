@@ -1,6 +1,7 @@
 #pragma warning disable CA1861 // literal test data arrays, each used once
 using System.Net;
 using Erp.IntegrationTests.Access;
+using Erp.IntegrationTests.Employments;
 using Erp.IntegrationTests.Tenancy;
 using Erp.Kernel.Contracts.Numbering;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
@@ -121,24 +122,21 @@ public sealed class NumberingReviewFixTests(TenancyFixture fx) : IAsyncLifetime
     // ------------------------------------------------------------------ finding 2: no number outside the caller's data scope
 
     [Fact]
-    public async Task FR_KRN_NUM_03_the_generated_create_takes_no_number_and_creates_no_scheme_in_a_company_outside_the_callers_scope()
+    public async Task FR_KRN_NUM_03_a_hire_takes_no_number_and_creates_no_scheme_in_a_company_outside_the_callers_scope()
     {
+        // S1.20b: the hire service replaced the generated create (ruling Q1); the data scope is still checked before any number.
         var mine = await _h.CompanyAsync(Ct);
         var other = await _h.CompanyAsync(Ct);
         var withScheme = await _h.CompanyAsync(Ct);
         var scheme = await _rig.SchemeAsync(withScheme, "hrm.employee_no", "EMP-{seq:5}", "never", ct: Ct);
         var user = await _h.UserAsync(Ct);
-        var role = await _h.RoleAsync(Ct, ["hrm.employments.read", "hrm.employments.create"], [("hrm.employments", "all")]);
+        var role = await _h.RoleAsync(Ct, ["hrm.employments.read", "hrm.employments.create", "hrm.employment_assignments.read"], [("hrm.employments", "all"), ("hrm.employment_assignments", "all")]);
         await _h.AssignAsync(user, role, mine, _h.Today.AddDays(-1), null, Ct);
 
         foreach (var company in new[] { other, withScheme })
         {
             var person = (Guid)(await _h.RowAsync("hrm.persons", Guid.Empty, null, Ct))["id"]!;
-            var answer = await _h.PostAsync(user, "/api/hrm/employments", new
-            {
-                companyId = company, personId = person, employeeType = "permanent", joiningDate = "2026-01-05",
-                serviceStartDate = "2026-01-05", status = "active", isPrimary = true,
-            }, Ct);
+            var answer = await _h.PostAsync(user, "/api/hrm/employments", EmploymentTestSupport.HireBody(company, await _h.PlaceAsync(company, Ct), person), Ct);
             Assert.Equal(HttpStatusCode.Forbidden, answer.Status);
         }
 

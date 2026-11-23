@@ -39,6 +39,9 @@ public sealed class UserGroupRoleListQuery
     public global::System.Guid? RoleId { get; init; }
 
     public global::System.Guid? CompanyId { get; init; }
+
+    /// <summary>Only the rows valid on this date (valid_from on or before it, valid_to after it or open).</summary>
+    public global::System.DateOnly? AsOf { get; init; }
 }
 
 /// <summary>Generated endpoints of iam.user_group_roles: read. Answers pass through field security (S1.06).</summary>
@@ -57,7 +60,7 @@ internal static class UserGroupRoleEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "iam.user_group_roles.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.UserGroupRoleFilter { GroupId = query.GroupId, RoleId = query.RoleId, CompanyId = query.CompanyId }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Iam.UserGroupRoleFilter { GroupId = query.GroupId, RoleId = query.RoleId, CompanyId = query.CompanyId, AsOf = query.AsOf }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Iam.UserGroupRoleAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);

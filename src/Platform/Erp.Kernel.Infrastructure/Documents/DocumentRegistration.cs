@@ -25,6 +25,7 @@ public static class DocumentRegistration
         services.AddScoped<IAttachmentService, AttachmentService>();
         services.AddScoped<IAttachmentOwner, WorkflowTaskOwner>();
         services.AddScoped<IAttachmentOwner, CompanyAttachmentOwner>(); // S1.14a: the company logo
+        services.AddScoped<IAttachmentOwner, BrandingAttachmentOwner>(); // S1.15a: the login logo
         return services;
     }
 

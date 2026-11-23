@@ -19,6 +19,8 @@ public static class OrganizationEndpoints
     private const string Registrations = "org.company_registrations";
     private const string BankAccounts = "org.company_bank_accounts";
     private const string Calendars = "ref.calendars";
+    private const string Hierarchies = "org.org_hierarchies";
+    private const string Units = "org.org_units";
 
     public static IEndpointRouteBuilder MapOrganizationEndpoints(this IEndpointRouteBuilder app)
     {
@@ -45,6 +47,20 @@ public static class OrganizationEndpoints
             var (result, copied) = await s.CopyYearAsync(id, body, ct).ConfigureAwait(false);
             return result.Outcome == AccessOutcome.Done ? Results.Ok(copied) : Problem(result);
         }).WithTags(Calendars), "record_action", Calendars, "ref.holidays.create");
+
+        // S1.14b (CR-070 S1.14b detail): a hierarchy on a date, two dates compared, and the move of a unit.
+        Tag(app.MapGet("/api/org/hierarchies/{id:guid}/tree", async (Guid id, DateOnly? asOf, IOrgUnitService s, CancellationToken ct) =>
+        {
+            var (result, tree) = await s.TreeAsync(id, asOf, ct).ConfigureAwait(false);
+            return result.Outcome == AccessOutcome.Done ? Results.Ok(tree) : Problem(result);
+        }).WithTags(Hierarchies), "query", Hierarchies, "org.org_unit_links.read");
+        Tag(app.MapGet("/api/org/hierarchies/{id:guid}/compare", async (Guid id, DateOnly? from, DateOnly? to, IOrgUnitService s, CancellationToken ct) =>
+        {
+            var (result, compare) = await s.CompareAsync(id, from, to, ct).ConfigureAwait(false);
+            return result.Outcome == AccessOutcome.Done ? Results.Ok(compare) : Problem(result);
+        }).WithTags(Hierarchies), "query", Hierarchies, "org.org_unit_links.read");
+        Tag(app.MapPost("/api/org/org-units/{id:guid}/move", (Guid id, MoveUnitRequest body, IOrgUnitService s, CancellationToken ct) =>
+            Answer(s.MoveAsync(id, body, ct), "/api/org/org-unit-links/")).WithTags(Units), "record_action", Units, "org.org_unit_links.update");
         return app;
     }
 
