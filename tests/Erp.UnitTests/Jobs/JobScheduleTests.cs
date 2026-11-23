@@ -94,7 +94,7 @@ public sealed class JobScheduleTests
         // Every permission a manifest names exists in the kernel's permission catalogue (R-009).
         var catalogue = JsonDocument.Parse(File.ReadAllText(Path.Combine(RepositoryRoot(), "src/Platform/Erp.Kernel.Infrastructure/Access/permissions.g.json")))
             .RootElement.GetProperty("permissions").EnumerateArray().Select(p => p.GetProperty("code").GetString()!)
-            .Concat(JobPermissions.All.Select(p => p.Code)).Concat(Erp.Kernel.Contracts.Documents.TemplatePermissions.All.Select(p => p.Code)).ToHashSet(StringComparer.Ordinal);
+            .Concat(JobPermissions.All.Select(p => p.Code)).Concat(Erp.Kernel.Contracts.Documents.TemplatePermissions.All.Select(p => p.Code)).Concat(Erp.Kernel.Contracts.Itg.ImportPermissions.All.Select(p => p.Code)).ToHashSet(StringComparer.Ordinal);
         Assert.All(specs.SelectMany(s => s.Permissions.Append(s.RequestPermission!)), p => Assert.Contains(p, catalogue));
     }
 

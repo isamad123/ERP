@@ -62,7 +62,7 @@ public sealed class ImportTypeTests(TenancyFixture fx) : IAsyncLifetime
     [Fact]
     public async Task S116a_FR_ADM_INT_04_a_designed_template_maps_other_headers_and_updates_existing_rows_and_an_update_batch_cannot_be_rolled_back()
     {
-        var tag = Guid.NewGuid().ToString("N")[..5];
+        var tag = Guid.NewGuid().ToString("N")[..5].ToUpperInvariant();
         await _rig.ExecAsync("insert into ref.calendars (id, code, name_i18n, source, is_active, created_at, created_by, updated_at, updated_by) values ($1, $2, '{\"en\":\"Cal\"}', 'tenant', true, now(), $3, now(), $3)", Ct, Guid.CreateVersion7(), "CAL" + tag, Erp.Kernel.Infrastructure.ControlPlane.Provisioning.BaselineSeed.SystemUserId);
         var mapping = new
         {
@@ -85,7 +85,7 @@ public sealed class ImportTypeTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(2, test.Json.GetProperty("totalRows").GetInt32());
         Assert.Equal(0, test.Json.GetProperty("errorRows").GetInt32());
         Assert.Equal("2027-12-24", test.Json.GetProperty("sample")[0].GetProperty("values").GetProperty("holidayDate").GetString());
-        Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from ref.holidays h join ref.calendars c on c.id = h.calendar_id where c.code = $1", Ct, "CAL" + tag.ToUpperInvariant()));
+        Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from ref.holidays h join ref.calendars c on c.id = h.calendar_id where c.code = $1", Ct, "CAL" + tag));
 
         var up = await _rig.UploadAsync(template, "h.csv", Encoding.UTF8.GetBytes(csv), Ct);
         var batchId = up.Json.GetProperty("id").GetGuid();
@@ -93,7 +93,7 @@ public sealed class ImportTypeTests(TenancyFixture fx) : IAsyncLifetime
         await _rig.RunJobsAsync(Ct);
         var first = await _rig.CommitAsync(batchId, Ct);
         Assert.Equal(2, first.GetProperty("createdRows").GetInt32());
-        Assert.Equal("public", await _rig.ScalarAsync<string>("select h.kind from ref.holidays h join ref.calendars c on c.id = h.calendar_id where c.code = $1 and h.holiday_date = date '2027-12-25'", Ct, "CAL" + tag.ToUpperInvariant()));
+        Assert.Equal("public", await _rig.ScalarAsync<string>("select h.kind from ref.holidays h join ref.calendars c on c.id = h.calendar_id where c.code = $1 and h.holiday_date = date '2027-12-25'", Ct, "CAL" + tag));
 
         // The same keys again with other names: update, and such a batch can never be rolled back.
         var changed = $"Kalender;Datum;Name;Art\r\ncal{tag};24/12/2027;Christmas Eve (half day);optional\r\n";
@@ -104,7 +104,7 @@ public sealed class ImportTypeTests(TenancyFixture fx) : IAsyncLifetime
         var done = await _rig.CommitAsync(secondId, Ct);
         Assert.Equal(1, done.GetProperty("updatedRows").GetInt32());
         Assert.Equal(0, done.GetProperty("createdRows").GetInt32());
-        Assert.Equal("optional", await _rig.ScalarAsync<string>("select h.kind from ref.holidays h join ref.calendars c on c.id = h.calendar_id where c.code = $1 and h.holiday_date = date '2027-12-24'", Ct, "CAL" + tag.ToUpperInvariant()));
+        Assert.Equal("optional", await _rig.ScalarAsync<string>("select h.kind from ref.holidays h join ref.calendars c on c.id = h.calendar_id where c.code = $1 and h.holiday_date = date '2027-12-24'", Ct, "CAL" + tag));
         Assert.False(done.GetProperty("canRollback").GetBoolean());
         Assert.Equal("errors.import.rollback_has_updates", done.GetProperty("rollbackBlockedKey").GetString());
         Assert.Equal(HttpStatusCode.Conflict, (await _rig.PostJsonAsync($"/api/itg/imports/batches/{secondId}/rollback", new { reason = "x" }, Ct)).Status);
