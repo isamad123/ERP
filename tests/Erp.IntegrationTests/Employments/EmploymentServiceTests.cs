@@ -208,7 +208,10 @@ public sealed class EmploymentServiceTests(TenancyFixture fx) : IAsyncLifetime
     {
         var hr = await _h.UserAsync(Ct, null, "hr_admin");
         var (company, place) = await CompanyAsync();
-        var seats = await _h.ScalarAsync<long>("select count(*) from hrm.employments where status in ('pre_joining', 'active', 'on_notice')", Ct);
+        // Seats count persons, not employments (S1.20c, contracts register "HR active employee counters count persons"): a person in
+        // the middle of a transfer between companies has two current employments and takes one seat. Counting rows here would leave
+        // room for a second hire whenever another test has left a transfer in this shared customer.
+        var seats = await _h.ScalarAsync<long>("select count(distinct person_id) from hrm.employments where status in ('pre_joining', 'active', 'on_notice')", Ct);
         var claims = await fx.SetClaimAsync(_h.Code, "limits,employees.active", seats + 1, Ct);
         try
         {
@@ -223,10 +226,10 @@ public sealed class EmploymentServiceTests(TenancyFixture fx) : IAsyncLifetime
             await fx.RestoreClaimsAsync(_h.Code, claims, Ct);
         }
 
-        // The monthly meter (S1.09b ruling Q8) counts active and on-notice employments, not future joiners.
+        // The monthly meter (S1.09b ruling Q8) counts persons with an active or on-notice employment, not future joiners (S1.20c).
         await using var c = await _h.OwnerAsync(null, Ct);
         var meter = await new Erp.Hrm.Infrastructure.Employments.ActiveEmployeeCounter().CountAsync(c, Ct);
-        Assert.Equal(await _h.ScalarAsync<long>("select count(*) from hrm.employments where status in ('active', 'on_notice')", Ct), meter);
+        Assert.Equal(await _h.ScalarAsync<long>("select count(distinct person_id) from hrm.employments where status in ('active', 'on_notice')", Ct), meter);
     }
 
     // ------------------------------------------------------------------ changes, corrections, as-of, timeline (EMP AC)
