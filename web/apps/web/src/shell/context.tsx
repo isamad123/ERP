@@ -2,14 +2,13 @@
 // ruling Q9) and /api/kernel/capabilities, the active company (ruling Q10), and the helpers screens use to show or hide
 // things. Showing is not deciding: the server checks every request again (FR-XM-32 for approvals, FR-KRN-IAM-10).
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, EmptyState, ErrorPanel, Skeleton } from '@erp/ui';
 import { useText } from '@erp/i18n';
 import { ApiProblem } from '../api/client';
 import { kernel, type Capabilities, type Me, type SessionCompany } from '../api/kernel';
 import { DEFAULT_FORMATS, useDisplay } from '../app/display-context';
-import { takeFreshSignIn, useSession, useSessionState } from '../app/session-context';
+import { takeFreshSignIn, useSessionState, useSignOut } from '../app/session-context';
 import { accessFacts, holds, type AccessFacts } from '../navigation/screens';
 import { isWritable } from './licence';
 import { activeCompanyOf, rememberCompany } from './memory';
@@ -143,13 +142,12 @@ export function companyName(company: SessionCompany | null, language: string): s
 /** A signed-in person whom no role gives anything yet (FR-UX-STA-08: say what is missing and what to do). */
 function NoAccess() {
   const { t } = useText();
-  const session = useSession();
-  const navigate = useNavigate();
+  const signOut = useSignOut();
   useEffect(() => { document.title = `${t('shell.noAccess.title')} – ${t('product.name')}`; }, [t]);
   return (
     <main className="erp-auth-main" id="main">
       <EmptyState level={1} title={t('shell.noAccess.title')}
-        action={<Button variant="secondary" onPress={() => { void session.signOut().then(() => navigate('/sign-in?reason=signedOut', { replace: true })); }}>{t('home.signOut')}</Button>}>
+        action={<Button variant="secondary" onPress={() => { signOut(); }}>{t('home.signOut')}</Button>}>
         {t('shell.noAccess.body')}
       </EmptyState>
     </main>

@@ -33,6 +33,8 @@ public static class EmploymentEndpoints
             PersonEndpoints.Answer(await s.RecordChangeAsync(id, body, ct).ConfigureAwait(false))), "record_action", Employments, EmploymentPermissions.EventsCreate);
         Tag(app.MapPost("/api/hrm/employments/{id:guid}/events/check", async (Guid id, EmploymentChangeRequest body, IEmploymentService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.CheckChangeAsync(id, body, ct).ConfigureAwait(false))), "record_action", Employments, EmploymentPermissions.EventsCreate);
+        Tag(app.MapGet("/api/hrm/employee-list", async ([AsParameters] EmployeeListParameters q, IEmploymentService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.EmployeeListAsync(new EmployeeListQuery(q.Search, q.EmployeeNo, q.CompanyId, q.OrgUnitId, q.Title, q.ManagerEmploymentId, q.Status, q.EmployeeType, q.JoinedFrom, q.JoinedTo, q.AsOf, q.Sort, q.After, q.Limit), ct).ConfigureAwait(false))), "catalog", Employments, EmploymentPermissions.EmploymentsRead);
         Tag(app.MapGet("/api/hrm/employments/{id:guid}/as-of", async (Guid id, [FromQuery] DateOnly? date, IEmploymentService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.AsOfAsync(id, date, ct).ConfigureAwait(false))), "record_action", Employments, EmploymentPermissions.EmploymentsRead);
         Tag(app.MapGet("/api/hrm/employments/{id:guid}/timeline", async (Guid id, [FromQuery] string? kind, IEmploymentService s, CancellationToken ct) =>
@@ -82,4 +84,36 @@ public static class EmploymentEndpoints
 
     private static void Tag(RouteHandlerBuilder endpoint, string kind, string resource, string permission) =>
         endpoint.WithTags(resource).WithMetadata(new HrmEndpointMetadata(kind, resource, permission), Core);
+
+    /// <summary>Query string of <c>GET /api/hrm/employee-list</c> (slice S1.21a).</summary>
+    public sealed class EmployeeListParameters
+    {
+        public string? Search { get; init; }
+
+        public string? EmployeeNo { get; init; }
+
+        public Guid? CompanyId { get; init; }
+
+        public Guid? OrgUnitId { get; init; }
+
+        public string? Title { get; init; }
+
+        public Guid? ManagerEmploymentId { get; init; }
+
+        public string? Status { get; init; }
+
+        public string? EmployeeType { get; init; }
+
+        public DateOnly? JoinedFrom { get; init; }
+
+        public DateOnly? JoinedTo { get; init; }
+
+        public DateOnly? AsOf { get; init; }
+
+        public string? Sort { get; init; }
+
+        public string? After { get; init; }
+
+        public int? Limit { get; init; }
+    }
 }

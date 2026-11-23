@@ -1387,6 +1387,158 @@
     {
       "database": "tenant",
       "schema": "cfg",
+      "name": "form_drafts",
+      "module": "kernel",
+      "traits": [
+        "std"
+      ],
+      "requirements": [
+        "ADM-UXA-05"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "user_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "form_key",
+          "kind": "Text",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "record_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "data",
+          "kind": "Encrypted",
+          "type": "bytea",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": true,
+          "enum_values": []
+        },
+        {
+          "name": "expires_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [
+        "uq_form_drafts_user_id_form_key_record_id"
+      ],
+      "checks": [],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_form_drafts_user_id",
+          "columns": [
+            "user_id"
+          ],
+          "target": "iam.users",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_form_drafts_expires_at"
+      ],
+      "triggers": [],
+      "append_only_updatable": [],
+      "has_api": true,
+      "full_name": "cfg.form_drafts"
+    },
+    {
+      "database": "tenant",
+      "schema": "cfg",
       "name": "inbox_messages",
       "module": "kernel",
       "traits": [],
