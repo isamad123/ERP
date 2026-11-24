@@ -30,6 +30,8 @@ const REFUSALS: Record<string, MessageKey> = {
   'errors.import.rollback_expired': 'imp.refused.rollbackExpired',
   'errors.import.rollback_has_updates': 'imp.refused.rollbackUpdated',
   'errors.import.rollback_not_allowed': 'imp.refused.rollbackNotCommitted',
+  'errors.import.rollback_in_use': 'imp.refused.rollbackInUse',
+  'errors.import.rollback_forbidden': 'imp.refused.rollbackForbidden',
   'errors.access.forbidden': 'imp.refused.forbidden',
 };
 

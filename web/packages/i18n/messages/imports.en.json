@@ -148,5 +148,7 @@
   "imp.test.run": "Test the template",
   "imp.test.saveFirst": "Save the template first, then test it with a sample file.",
   "imp.test.result": "{total} rows read, {errors} with problems",
-  "imp.test.sample": "First rows as they would be imported"
+  "imp.test.sample": "First rows as they would be imported",
+  "imp.refused.rollbackInUse": "This import cannot be rolled back because other records now depend on what it created.",
+  "imp.refused.rollbackForbidden": "You may not roll back this import: removing what it created needs a permission you do not hold."
 }

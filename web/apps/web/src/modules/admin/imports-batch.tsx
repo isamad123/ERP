@@ -101,7 +101,7 @@ export function BatchPage() {
             </Button>
           )}
           <Button variant="primary" isDisabled={!mayCommit} isPending={step.isPending && step.variables === 'commit'} onPress={() => step.mutate('commit')}>{t('imp.commit')}</Button>
-          {b.status === 'committed' && <Button variant="danger" isDisabled={!b.canRollback} onPress={() => setRolling(true)}>{t('imp.rollback')}</Button>}
+          {(b.status === 'committed' || (b.status === 'failed' && b.canRollback)) && <Button variant="danger" isDisabled={!b.canRollback} onPress={() => setRolling(true)}>{t('imp.rollback')}</Button>}
         </div>
       )}
       {b.status === 'validated' && !mayCommit && (b.errorRows ?? 0) > 0 && <p className="erp-muted">{t('imp.commit.blocked')}</p>}
