@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "itg.import_templates.read"
-    },
-    {
-      "action": "create",
-      "permission": "itg.import_templates.create"
-    },
-    {
-      "action": "update",
-      "permission": "itg.import_templates.update"
     }
   ],
   "companyScoped": false,

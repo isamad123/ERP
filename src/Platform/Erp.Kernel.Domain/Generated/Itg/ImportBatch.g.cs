@@ -57,6 +57,12 @@ public sealed partial class ImportBatch : global::Erp.BuildingBlocks.Domain.Enti
     /// <summary>rolled_back_at</summary>
     public global::System.DateTimeOffset? RolledBackAt { get; set; }
 
+    /// <summary>mapping: S1.16a review finding 4: the template's mapping as it was at upload; the check, the commit and the error file read this copy, so a later template change cannot alter what a batch writes</summary>
+    public global::System.Text.Json.JsonDocument? Mapping { get; set; }
+
+    /// <summary>template_version: S1.16a review finding 4: the template version the mapping was copied from</summary>
+    public int? TemplateVersion { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

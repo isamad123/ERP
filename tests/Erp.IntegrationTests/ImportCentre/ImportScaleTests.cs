@@ -40,11 +40,11 @@ public sealed class ImportScaleTests(TenancyFixture fx) : IAsyncLifetime
         var up = await _rig.UploadAsync(template, "holidays.csv", Encoding.UTF8.GetBytes(text.ToString()), Ct);
         Assert.True(up.Status == System.Net.HttpStatusCode.Created, up.Text);
         var id = up.Json.GetProperty("id").GetGuid();
-        Assert.Equal(Rows, up.Json.GetProperty("totalRows").GetInt32());
 
         await _rig.PostJsonAsync($"/api/itg/imports/batches/{id}/validate", null, Ct);
         await _rig.RunJobsAsync(Ct);
         var batch = (await _rig.GetAsync($"/api/itg/imports/batches/{id}", Ct)).Json;
+        Assert.Equal(Rows, batch.GetProperty("totalRows").GetInt32()); // the rows are counted by the check run, not by the upload (review finding 2)
         Assert.True(batch.GetProperty("status").GetString() == "validated" && batch.GetProperty("okRows").GetInt32() == Rows, batch + await _rig.Jobs.DumpAsync(Ct, _rig.Code));
         Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from ref.holidays h join ref.calendars c on c.id = h.calendar_id where c.code like $1", Ct, "S" + tag + "%"));
 

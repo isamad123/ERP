@@ -57,6 +57,15 @@ public static class ImportManifest
                 }
             }
 
+            var unique = Strings(t["uniqueColumns"]) ?? [];
+            foreach (var column in unique)
+            {
+                if (!columns.Exists(c => c.Name == column))
+                {
+                    throw new InvalidDataException($"{code}: unique column {column} is not a column of the type.");
+                }
+            }
+
             types.Add(new ImportTypeDefinition(
                 code,
                 module,
@@ -67,7 +76,12 @@ public static class ImportManifest
                 columns,
                 t["writer"]?.GetValue<string>(),
                 t["canUpdate"]?.GetValue<bool>() ?? false,
-                t["postCommit"]?.GetValue<string>()));
+                t["postCommit"]?.GetValue<string>(),
+                t["readPermission"]?.GetValue<string>(),
+                t["rollbackPermission"]?.GetValue<string>(),
+                Strings(t["uniqueColumns"]),
+                Strings(t["writes"]),
+                Strings(t["rollbackDependents"])));
         }
 
         return types;
@@ -88,6 +102,8 @@ public static class ImportManifest
 
         return found;
     }
+
+    private static List<string>? Strings(JsonNode? node) => (node as JsonArray)?.Select(x => x!.GetValue<string>()).ToList();
 
     private static Dictionary<string, string> Names(JsonNode? node) =>
         node is JsonObject o ? o.ToDictionary(p => p.Key, p => p.Value!.GetValue<string>(), StringComparer.Ordinal) : [];

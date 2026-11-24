@@ -53,7 +53,7 @@ public sealed class ImportTypeTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Contains("errors.import.key_exists", (await _rig.GetAsync($"/api/itg/imports/batches/{again.GetProperty("id").GetGuid()}/errors", Ct, person)).Text, StringComparison.Ordinal);
 
         // A batch that created rows rolls back: the units are deleted and the links go with them.
-        var rolled = await _rig.PostJsonAsync($"/api/itg/imports/batches/{id}/rollback", new { reason = "undo" }, Ct, person);
+        var rolled = await _rig.PostJsonAsync($"/api/itg/imports/batches/{id}/rollback", new { reason = "undo" }, Ct); // the administrator: the importer holds no delete right (review finding 5)
         Assert.True(rolled.Status == HttpStatusCode.OK, rolled.Text);
         Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from org.org_units where code like $1 and not is_deleted", Ct, "%" + tag));
         Assert.Equal(0, await _rig.ScalarAsync<long>("select count(*) from org.org_unit_links l join org.org_units u on u.id = l.unit_id where u.code like $1", Ct, "%" + tag));

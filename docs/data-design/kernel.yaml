@@ -1198,6 +1198,8 @@
     - [is_default, bool, req, "default false; S1.16a: the shipped template of an import type (one per type)"]
   unique: [[lower(code)]]
   added_in: {S1.16a: [mode, is_default]}
+  # S1.16a review finding 1 (CR-072 review detail): templates change only through /api/itg/imports/templates (mapping and mode are checked against the type).
+  api_actions: [read]
   reqs: [KRN-INT-03, ADM-INT-04]
 
 - table: itg.import_batches
@@ -1217,9 +1219,13 @@
     - [validated_at, ts, opt]
     - [committed_at, ts, opt]
     - [rolled_back_at, ts, opt]
+    - [mapping, json, opt, "S1.16a review finding 4: the template's mapping as it was at upload; the check, the commit and the error file read this copy, so a later template change cannot alter what a batch writes"]
+    - [template_version, int, opt, "S1.16a review finding 4: the template version the mapping was copied from"]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
-  added_in: {S1.16a: [file_name, mode, created_rows, updated_rows, validated_at, committed_at, rolled_back_at]}
+  added_in: {S1.16a: [file_name, mode, created_rows, updated_rows, validated_at, committed_at, rolled_back_at, mapping, template_version]}
+  # S1.16a review finding 1 (CR-072 review detail): a batch changes only through the import service (status, counts, file and mapping are the engine's).
+  api_actions: [read]
   reqs: [KRN-INT-04, ADM-DAT-01]
 
 - table: itg.import_batch_errors
@@ -1232,6 +1238,8 @@
     - [phase, "enum(validate,commit)", req, "default validate; S1.16a: whether the problem came from the validation run or from the commit"]
   indexes: [[batch_id, row_no]]
   added_in: {S1.16a: [phase]}
+  # S1.16a review finding 1 (CR-072 review detail): problems are written only by the engine.
+  api_actions: [read]
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
   audit: false
   audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
@@ -1252,6 +1260,8 @@
   indexes: [[batch_id, row_no], [table_name, record_id]]
   unique: [[batch_id, row_no, table_name, record_id]]
   added_in: S1.16a
+  # S1.16a review finding 1 (CR-072 review detail): the rollback list is written only by the commit job; a forged row would make a rollback delete any record.
+  api_actions: [read]
   audit: false
   audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [KRN-INT-03, KRN-INT-04]

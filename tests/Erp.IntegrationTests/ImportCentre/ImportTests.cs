@@ -18,7 +18,7 @@ public sealed class ImportTests(TenancyFixture fx) : IAsyncLifetime
     public async ValueTask DisposeAsync() => await _rig.DisposeAsync();
 
     [Fact]
-    public async Task S116a_FR_KRN_INT_03_FR_ADM_DAT_01_a_users_file_is_checked_without_saving_then_committed_with_invitations_and_rolled_back_until_a_user_activates()
+    public async Task S116a_FR_KRN_INT_03_FR_ADM_DAT_01_FR_ADM_USR_02_a_users_file_is_checked_without_saving_then_committed_with_invitations_and_rolled_back_until_a_user_activates()
     {
         // 500 rows, 12 of them bad: the check finds exactly those and saves nothing.
         var before = await _rig.ScalarAsync<long>("select count(*) from iam.users", Ct);
@@ -96,7 +96,23 @@ public sealed class ImportTests(TenancyFixture fx) : IAsyncLifetime
             await _rig.ExecAsync("delete from cfg.setting_values where setting_key = 'itg.import.max_rows'", Ct);
         }
 
-        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, many.Status);
-        Assert.Equal("errors.import.too_many_rows", many.Json.GetProperty("title").GetString());
+        // Over the row limit: the upload does not count rows (review finding 2); the check run does and says so as a problem of the file.
+        Assert.Equal(HttpStatusCode.Created, many.Status);
+        var batchId = many.Json.GetProperty("id").GetGuid();
+        await _rig.ExecAsync("insert into cfg.setting_values (id, setting_key, layer, scope_id, value, created_at, created_by, updated_at, updated_by) values (gen_random_uuid(), 'itg.import.max_rows', 'tenant', null, '3'::jsonb, now(), $1, now(), $1) on conflict (setting_key, layer, scope_id) do update set value = excluded.value",
+            Ct, Erp.Kernel.Infrastructure.ControlPlane.Provisioning.BaselineSeed.SystemUserId);
+        try
+        {
+            await _rig.PostJsonAsync($"/api/itg/imports/batches/{batchId}/validate", null, Ct);
+            await _rig.RunJobsAsync(Ct);
+        }
+        finally
+        {
+            await _rig.ExecAsync("delete from cfg.setting_values where setting_key = 'itg.import.max_rows'", Ct);
+        }
+
+        var checkedBatch = (await _rig.GetAsync($"/api/itg/imports/batches/{batchId}", Ct)).Json;
+        Assert.Equal(0, checkedBatch.GetProperty("okRows").GetInt32());
+        Assert.Contains("errors.import.too_many_rows", (await _rig.GetAsync($"/api/itg/imports/batches/{batchId}/errors", Ct)).Text, StringComparison.Ordinal);
     }
 }

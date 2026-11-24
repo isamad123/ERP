@@ -77,7 +77,7 @@ internal static class ImportRunSupport
         var catalog = services.GetRequiredService<ImportCatalog>();
         await using var c = await IdentityDb.OpenAsync(tenant.DataSource, ct).ConfigureAwait(false);
         var row = (await OpsAlerts.ReadAsync(c, """
-            select b.company_id, b.status, b.mode, b.file_id, coalesce(b.file_name, ''), coalesce(b.total_rows, 0), t.entity_type, t.mapping::text, t.format, coalesce(b.ok_rows, 0), coalesce(b.error_rows, 0)
+            select b.company_id, b.status, b.mode, b.file_id, coalesce(b.file_name, ''), coalesce(b.total_rows, 0), t.entity_type, coalesce(b.mapping, t.mapping)::text, t.format, coalesce(b.ok_rows, 0), coalesce(b.error_rows, 0)
             from itg.import_batches b join itg.import_templates t on t.id = b.template_id where b.id = $1
             """, r => (Company: r.GetGuid(0), Status: r.GetString(1), Mode: r.GetString(2), File: r.GetGuid(3), Name: r.GetString(4), Total: r.GetInt32(5), Type: r.GetString(6), Mapping: r.GetString(7), Format: r.GetString(8), Ok: r.GetInt32(9), Err: r.GetInt32(10)), ct, batchId).ConfigureAwait(false)).SingleOrDefault();
         if (row.Type is null || row.Status != expectedStatus)
@@ -167,16 +167,41 @@ public sealed class ImportValidateJob : IJobHandler
 
         try
         {
-            var content = await job.Services.GetRequiredService<ImportFiles>().ReadAsync(data.FileId, cancellationToken).ConfigureAwait(false);
-            using var sheet = ImportFileReader.Open(content, ImportFileReader.Detect(content, data.FileName) ?? data.Format, data.Mapping);
+            var files = job.Services.GetRequiredService<ImportFiles>();
+            var content = await files.ReadAsync(data.FileId, data.BatchId, cancellationToken).ConfigureAwait(false);
+            var limits = await files.LimitsAsync(data.CompanyId, cancellationToken).ConfigureAwait(false);
+            var format = ImportFileReader.Detect(content, data.FileName) ?? data.Format;
             var errors = new List<(int, ImportRowError)>();
-            foreach (var missing in ImportRowPipeline.MissingHeaders(data.Type, data.Mapping, sheet.Headers))
+            var total = 0;
+            ImportSheet? opened = null;
+            try
+            {
+                // The rows are counted here, in the background, and refused over the limit (finding 2): the upload only looked at the headers.
+                total = ImportFileReader.CountRows(content, format, data.Mapping, limits.MaxPhysicalRows - ImportLimits.BlankRowMargin, limits);
+                if (total > limits.MaxPhysicalRows - ImportLimits.BlankRowMargin)
+                {
+                    errors.Add((1, new ImportRowError(null, "errors.import.too_many_rows")));
+                }
+                else if (total == 0)
+                {
+                    errors.Add((1, new ImportRowError(null, "errors.import.empty_file")));
+                }
+
+                opened = ImportFileReader.Open(content, format, data.Mapping, limits);
+            }
+            catch (ImportFileException e)
+            {
+                errors.Add((1, new ImportRowError(null, e.Message)));
+            }
+
+            using var sheet = opened;
+            foreach (var missing in sheet is null ? [] : ImportRowPipeline.MissingHeaders(data.Type, data.Mapping, sheet.Headers))
             {
                 errors.Add((1, new ImportRowError(missing, "errors.import.header_missing")));
             }
 
             int ok = 0, bad = 0, done = 0;
-            if (errors.Count == 0)
+            if (errors.Count == 0 && sheet is not null)
             {
                 await using var run = ImportRunScope.Create(job.Services);
                 var db = run.Db;
@@ -217,7 +242,7 @@ public sealed class ImportValidateJob : IJobHandler
 
                         if (done % ProgressEvery == 0)
                         {
-                            await job.CommitChunkAsync(null, new { row = rowNo }, data.Total == 0 ? 0 : Math.Min(99m, done * 100m / data.Total), cancellationToken).ConfigureAwait(false);
+                            await job.CommitChunkAsync(null, new { row = rowNo }, total == 0 ? 0 : Math.Min(99m, done * 100m / total), cancellationToken).ConfigureAwait(false);
                         }
                     }
                 }
@@ -229,7 +254,7 @@ public sealed class ImportValidateJob : IJobHandler
             }
             else
             {
-                bad = data.Total;
+                bad = Math.Max(total, 1);
             }
 
             await ImportRunSupport.WriteErrorsAsync(job.Services, batchId, errors, "validate", null, null, cancellationToken).ConfigureAwait(false);
@@ -238,8 +263,8 @@ public sealed class ImportValidateJob : IJobHandler
             await using (var c = await IdentityDb.OpenAsync(tenant.DataSource, cancellationToken).ConfigureAwait(false))
             await using (var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false))
             {
-                await IdentityDb.ExecuteAsync(c, tx, "update itg.import_batches set status = 'validated', ok_rows = $2, error_rows = $3, validated_at = $4, updated_at = $4, row_version = row_version + 1 where id = $1 and status = 'validating'",
-                    cancellationToken, batchId, ok, bad, now).ConfigureAwait(false);
+                await IdentityDb.ExecuteAsync(c, tx, "update itg.import_batches set status = 'validated', ok_rows = $2, error_rows = $3, total_rows = $5, validated_at = $4, updated_at = $4, row_version = row_version + 1 where id = $1 and status = 'validating'",
+                    cancellationToken, batchId, ok, bad, now, total).ConfigureAwait(false);
                 await ImportRunSupport.AuditStatusAsync(job.Services, c, tx, batchId, data.CompanyId, "validating", "validated", cancellationToken).ConfigureAwait(false);
                 await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -269,6 +294,9 @@ public sealed class ImportValidateJob : IJobHandler
 public sealed class ImportCommitJob : IJobHandler
 {
     private const int ChunkRows = 200;
+
+    /// <summary>The attempts the job's retry policy allows (<c>max_attempts</c> of <c>kernel.import_commit</c> in jobs.json): the last one marks the batch failed.</summary>
+    internal const int MaxAttempts = 3;
 
     public string Code => ImportJobCodes.Commit;
 
@@ -306,7 +334,13 @@ public sealed class ImportCommitJob : IJobHandler
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            await ImportRunSupport.SetStatusAsync(job.Services, batchId, "failed", "committing", CancellationToken.None).ConfigureAwait(false);
+            // An unexpected error leaves the batch committing, so the retry of the job continues from the last checkpoint (finding 8). Only after
+            // the last attempt is the batch marked failed; a failed batch that wrote only new records can still be rolled back.
+            if (job.Attempt >= MaxAttempts)
+            {
+                await ImportRunSupport.SetStatusAsync(job.Services, batchId, "failed", "committing", CancellationToken.None).ConfigureAwait(false);
+            }
+
             await job.LogAsync("error", e is ImportRefusedException or ImportFileException ? e.Message : "The commit stopped: " + e.GetType().Name, CancellationToken.None).ConfigureAwait(false);
             throw;
         }
@@ -314,7 +348,9 @@ public sealed class ImportCommitJob : IJobHandler
 
     private static async Task WriteChunksAsync(IJobExecution job, ImportRunData data, ImportCommitState state, CancellationToken ct)
     {
-        var content = await job.Services.GetRequiredService<ImportFiles>().ReadAsync(data.FileId, ct).ConfigureAwait(false);
+        var files = job.Services.GetRequiredService<ImportFiles>();
+        var content = await files.ReadAsync(data.FileId, data.BatchId, ct).ConfigureAwait(false);
+        var limits = await files.LimitsAsync(data.CompanyId, ct).ConfigureAwait(false);
         var tenant = job.Services.GetRequiredService<ITenantConnectionProvider>();
         HashSet<int> skip;
         await using (var c = await IdentityDb.OpenAsync(tenant.DataSource, ct).ConfigureAwait(false))
@@ -322,7 +358,7 @@ public sealed class ImportCommitJob : IJobHandler
             skip = [.. await OpsAlerts.ReadAsync(c, "select distinct row_no from itg.import_batch_errors where batch_id = $1 and phase = 'validate'", r => r.GetInt32(0), ct, data.BatchId).ConfigureAwait(false)];
         }
 
-        using var sheet = ImportFileReader.Open(content, ImportFileReader.Detect(content, data.FileName) ?? data.Format, data.Mapping);
+        using var sheet = ImportFileReader.Open(content, ImportFileReader.Detect(content, data.FileName) ?? data.Format, data.Mapping, limits);
         using var rows = sheet.Rows().GetEnumerator();
         var more = true;
         while (more)
@@ -393,6 +429,12 @@ public sealed class ImportCommitJob : IJobHandler
 
             foreach (var record in result.Outcome.Records)
             {
+                if (!data.Type.WrittenTables.Contains(record.Table, StringComparer.Ordinal))
+                {
+                    // A writer reporting a table its type does not declare would put it on the rollback list: stop the row's chunk instead (finding 1).
+                    throw new InvalidOperationException($"The writer of {data.Type.Code} reported the table {record.Table}, which the type does not declare.");
+                }
+
                 var version = await IdentityDb.ScalarAsync<long?>((NpgsqlConnection)conn, (NpgsqlTransaction)tx, $"select row_version from {ImportService.Safe(record.Table)} where id = $1", ct, record.Id).ConfigureAwait(false);
                 await IdentityDb.ExecuteAsync((NpgsqlConnection)conn, (NpgsqlTransaction)tx, """
                     insert into itg.import_batch_rows (id, batch_id, row_no, table_name, record_id, action, record_version, created_at, created_by) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)

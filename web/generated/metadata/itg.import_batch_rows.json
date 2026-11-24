@@ -12,10 +12,6 @@
     {
       "action": "read",
       "permission": "itg.import_batch_rows.read"
-    },
-    {
-      "action": "create",
-      "permission": "itg.import_batch_rows.create"
     }
   ],
   "companyScoped": false,

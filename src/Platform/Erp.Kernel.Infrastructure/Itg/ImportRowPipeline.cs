@@ -36,6 +36,7 @@ public sealed class ImportRowPipeline
     private readonly Dictionary<string, (bool Company, bool Soft)> _tableShape = new(StringComparer.Ordinal);
     private readonly HashSet<string> _keysSeen = new(StringComparer.Ordinal);
     private readonly HashSet<string> _known = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, HashSet<string>> _uniqueSeen = new(StringComparer.Ordinal);
     private int _savepoints;
 
     public ImportRowPipeline(ImportTypeDefinition type, TemplateMapping mapping, string mode, IReadOnlyList<string> headers, IImportRowWriter writer, KernelDbContext db, ICallerAccess? access = null)
@@ -83,6 +84,17 @@ public sealed class ImportRowPipeline
             var column = _type.Columns[i];
             var mapped = _mapped[i];
             var cell = _sourceIndex[i] >= 0 && _sourceIndex[i] < cells.Length ? cells[_sourceIndex[i]] : null;
+            if (cell is { Length: > ImportLimits.DefaultCellChars })
+            {
+                errors.Add(new ImportRowError(column.Name, "errors.import.cell_too_long"));
+                continue;
+            }
+
+            if (cell is { Length: > 1 } && cell[0] == '\'' && cell[1] is '=' or '+' or '-' or '@' or '\t' or '\r')
+            {
+                cell = cell[1..]; // the error file writes such a cell as text with an apostrophe; it loads back as it was (finding 11)
+            }
+
             var (text, transformError) = ImportTransforms.Apply(cell, mapped?.Transform ?? []);
             if (transformError is not null)
             {
@@ -153,6 +165,15 @@ public sealed class ImportRowPipeline
                 return new ImportRowResult(rowNo, [new ImportRowError(_type.KeyColumns[0], "errors.import.duplicate_in_file")], null);
             }
 
+            foreach (var name in _type.UniqueColumns ?? [])
+            {
+                var unique = _type.Columns.First(c => c.Name == name);
+                if (Get(values, unique.Field) is { } value && _uniqueSeen.TryGetValue(name, out var seen) && seen.Contains(value.ToJsonString().ToLowerInvariant()))
+                {
+                    return new ImportRowResult(rowNo, [new ImportRowError(name, "errors.import.duplicate_in_file")], null);
+                }
+            }
+
             existing = await FindExistingAsync(values, cancellationToken).ConfigureAwait(false);
             if (existing is not null && !(_mode == "create_or_update" && _type.CanUpdate))
             {
@@ -189,6 +210,21 @@ public sealed class ImportRowPipeline
 
         if (outcome.Ok)
         {
+            // The other unique values of the file (an e-mail address) are remembered for the whole run, as the key is, because the check
+            // run starts a new transaction every few hundred rows and forgets what the database held (finding 7).
+            foreach (var name in _type.UniqueColumns ?? [])
+            {
+                if (Get(values, _type.Columns.First(c => c.Name == name).Field) is { } value)
+                {
+                    if (!_uniqueSeen.TryGetValue(name, out var seen))
+                    {
+                        _uniqueSeen[name] = seen = new HashSet<string>(StringComparer.Ordinal);
+                    }
+
+                    seen.Add(value.ToJsonString().ToLowerInvariant());
+                }
+            }
+
             if (dryRun && KeyText(values) is { } known)
             {
                 _known.Add(known);

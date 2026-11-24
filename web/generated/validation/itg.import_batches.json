@@ -83,6 +83,16 @@
       "format": "date-time",
       "nullable": true
     },
+    "mapping": {
+      "readOnly": true,
+      "nullable": true
+    },
+    "templateVersion": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647,
+      "nullable": true
+    },
     "status": {
       "type": "string",
       "enum": [

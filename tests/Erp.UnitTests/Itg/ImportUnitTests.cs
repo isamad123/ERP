@@ -116,7 +116,7 @@ public sealed class ImportUnitTests
     {
         var mapping = TemplateMapping.Parse(JsonSerializer.SerializeToElement(new { columns = Array.Empty<object>() }));
         var comma = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes("a,b\r\n1,\"x,y\"\r\n,\r\n2,z\r\n")).ToArray();
-        using (var sheet = ImportFileReader.Open(comma, "csv", mapping))
+        using (var sheet = ImportFileReader.Open(comma, "csv", mapping, ImportLimits.Unbounded))
         {
             Assert.Equal(["a", "b"], sheet.Headers);
             var rows = sheet.Rows().ToList();
@@ -124,7 +124,7 @@ public sealed class ImportUnitTests
             Assert.Equal("x,y", rows[0].Cells[1]);
         }
 
-        using var semicolon = ImportFileReader.Open(Encoding.UTF8.GetBytes("a;b\r\n1;2\r\n"), "csv", mapping);
+        using var semicolon = ImportFileReader.Open(Encoding.UTF8.GetBytes("a;b\r\n1;2\r\n"), "csv", mapping, ImportLimits.Unbounded);
         Assert.Equal(["a", "b"], semicolon.Headers);
         Assert.Equal("2", semicolon.Rows().Single().Cells[1]);
     }
@@ -155,19 +155,19 @@ public sealed class ImportUnitTests
         var bytes = stream.ToArray();
         Assert.Equal("xlsx", ImportFileReader.Detect(bytes, "f.xlsx"));
         var open = TemplateMapping.Parse(JsonSerializer.SerializeToElement(new { columns = Array.Empty<object>() }));
-        using (var sheet = ImportFileReader.Open(bytes, "xlsx", open))
+        using (var sheet = ImportFileReader.Open(bytes, "xlsx", open, ImportLimits.Unbounded))
         {
             var row = sheet.Rows().Single();
             Assert.Equal(["A", "2027-03-23", "12.5"], row.Cells);
         }
 
         var second = TemplateMapping.Parse(JsonSerializer.SerializeToElement(new { sheet = "Second", columns = Array.Empty<object>() }));
-        using (var sheet = ImportFileReader.Open(bytes, "xlsx", second))
+        using (var sheet = ImportFileReader.Open(bytes, "xlsx", second, ImportLimits.Unbounded))
         {
             Assert.Equal("only here", sheet.Rows().Single().Cells[0]);
         }
 
-        Assert.Throws<ImportFileException>(() => ImportFileReader.Open(bytes, "xlsx", TemplateMapping.Parse(JsonSerializer.SerializeToElement(new { sheet = "Missing", columns = Array.Empty<object>() }))));
+        Assert.Throws<ImportFileException>(() => ImportFileReader.Open(bytes, "xlsx", TemplateMapping.Parse(JsonSerializer.SerializeToElement(new { sheet = "Missing", columns = Array.Empty<object>() })), ImportLimits.Unbounded));
     }
 
     [Fact]

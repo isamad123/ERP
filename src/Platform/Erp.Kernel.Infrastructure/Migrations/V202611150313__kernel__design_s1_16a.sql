@@ -50,6 +50,8 @@ alter table itg.import_batches add column if not exists updated_rows integer;
 alter table itg.import_batches add column if not exists validated_at timestamptz;
 alter table itg.import_batches add column if not exists committed_at timestamptz;
 alter table itg.import_batches add column if not exists rolled_back_at timestamptz;
+alter table itg.import_batches add column if not exists mapping jsonb;
+alter table itg.import_batches add column if not exists template_version integer;
 do $do$ begin
     if not exists (select 1 from pg_constraint where conname = 'ck_import_batches_mode' and conrelid = 'itg.import_batches'::regclass) then
         alter table itg.import_batches add constraint ck_import_batches_mode check (mode in ('create', 'create_or_update'));
@@ -84,6 +86,8 @@ comment on column itg.import_batches.file_name is 'S1.16a (CR-072 addendum): the
 comment on column itg.import_batches.mode is 'default create; S1.16a: copied from the template at upload (a later template change does not alter a running batch)';
 comment on column itg.import_batches.created_rows is 'S1.16a: rows created by the commit';
 comment on column itg.import_batches.updated_rows is 'S1.16a: rows updated by the commit (a batch with updates cannot be rolled back)';
+comment on column itg.import_batches.mapping is 'S1.16a review finding 4: the template''s mapping as it was at upload; the check, the commit and the error file read this copy, so a later template change cannot alter what a batch writes';
+comment on column itg.import_batches.template_version is 'S1.16a review finding 4: the template version the mapping was copied from';
 comment on table itg.import_templates is 'Requirements: KRN-INT-03, ADM-INT-04. Source: kernel.yaml.';
 comment on column itg.import_templates.mode is 'default create; S1.16a (CR-072 addendum): what a row whose key exists means; update batches cannot be rolled back (Q5)';
 comment on column itg.import_templates.is_default is 'default false; S1.16a: the shipped template of an import type (one per type)';

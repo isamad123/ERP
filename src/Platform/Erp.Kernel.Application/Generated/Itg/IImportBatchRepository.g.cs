@@ -52,6 +52,8 @@ public static class ImportBatchAccess
         new("validated_at", "ValidatedAt", null),
         new("committed_at", "CommittedAt", null),
         new("rolled_back_at", "RolledBackAt", null),
+        new("mapping", "Mapping", null),
+        new("template_version", "TemplateVersion", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

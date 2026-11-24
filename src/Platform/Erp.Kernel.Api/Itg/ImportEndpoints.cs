@@ -3,6 +3,7 @@ using Erp.Kernel.Application.Itg;
 using Erp.Kernel.Contracts.Itg;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
@@ -44,26 +45,26 @@ public static class ImportEndpoints
                 var file = await s.TemplateFileAsync(id, format, ct).ConfigureAwait(false);
                 return Results.File(file.Content, file.ContentType, file.FileName);
             })), "record_action", Templates, ImportPermissions.Manage);
-        Tag(g.MapPost("/templates/{id:guid}/test", (Guid id, [FromForm] UploadForm form, IImportService s, CancellationToken ct) =>
+        Tag(g.MapPost("/templates/{id:guid}/test", (Guid id, HttpRequest request, IImportService s, CancellationToken ct) =>
             RunAsync(async () =>
             {
-                var (name, content) = await ReadAsync(form, ct).ConfigureAwait(false);
+                var (name, content, _) = await ReadAsync(request, s, ct).ConfigureAwait(false);
                 return Results.Ok(await s.TestTemplateAsync(id, name, content, ct).ConfigureAwait(false));
-            })).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(MaxUploadBytes + FormOverheadBytes), new RequestFormLimitsAttribute { MultipartBodyLengthLimit = MaxUploadBytes + FormOverheadBytes }),
+            })).DisableAntiforgery().WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = MaxUploadBytes + FormOverheadBytes }),
             "record_action", Templates, ImportPermissions.Manage);
 
-        Tag(g.MapPost("/batches", ([FromForm] UploadForm form, IImportService s, CancellationToken ct) =>
+        Tag(g.MapPost("/batches", (HttpRequest request, IImportService s, CancellationToken ct) =>
             RunAsync(async () =>
             {
-                if (form.TemplateId == Guid.Empty)
+                var (name, content, templateId) = await ReadAsync(request, s, ct).ConfigureAwait(false);
+                if (templateId == Guid.Empty)
                 {
                     throw new ImportException("errors.import.not_found", 404);
                 }
 
-                var (name, content) = await ReadAsync(form, ct).ConfigureAwait(false);
-                var batch = await s.UploadAsync(form.TemplateId, name, content, ct).ConfigureAwait(false);
+                var batch = await s.UploadAsync(templateId, name, content, ct).ConfigureAwait(false);
                 return Results.Created("/api/itg/imports/batches/" + batch.Id, batch);
-            })).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(MaxUploadBytes + FormOverheadBytes), new RequestFormLimitsAttribute { MultipartBodyLengthLimit = MaxUploadBytes + FormOverheadBytes }),
+            })).DisableAntiforgery().WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = MaxUploadBytes + FormOverheadBytes }),
             "create", Batches, ImportPermissions.Manage);
         Tag(g.MapGet("/batches", ([FromQuery] string? type, [FromQuery] string? status, [FromQuery] string? cursor, [FromQuery] int? limit, IImportService s, CancellationToken ct) =>
             RunAsync(async () => Results.Ok(await s.ListAsync(type, status, cursor, limit ?? 0, ct).ConfigureAwait(false)))), "catalog", Batches, ImportPermissions.Manage);
@@ -86,22 +87,59 @@ public static class ImportEndpoints
         return app;
     }
 
-    private static async Task<(string Name, byte[] Content)> ReadAsync(UploadForm form, CancellationToken ct)
+    /// <summary>
+    /// Reads the upload form (S1.16a review finding 9). The limit of the person's upload setting (<c>doc.upload.max_mb</c>) is put on the
+    /// request body before the body is read, so a larger upload is refused by the server without being held in memory; the file is then
+    /// copied once into a buffer of its exact size.
+    /// </summary>
+    private static async Task<(string Name, byte[] Content, Guid TemplateId)> ReadAsync(HttpRequest request, IImportService service, CancellationToken ct)
     {
-        if (form.File is null)
-        {
-            throw new ImportException("errors.import.empty_file", 400);
-        }
-
-        if (form.File.Length > MaxUploadBytes)
+        var limit = await service.UploadLimitAsync(ct).ConfigureAwait(false);
+        var bodyLimit = limit + FormOverheadBytes;
+        if (request.ContentLength > bodyLimit)
         {
             throw new ImportException("errors.import.too_large", 413);
         }
 
-        await using var stream = form.File.OpenReadStream();
-        using var buffer = new MemoryStream();
-        await stream.CopyToAsync(buffer, ct).ConfigureAwait(false);
-        return (form.File.FileName, buffer.ToArray());
+        var feature = request.HttpContext.Features.Get<IHttpMaxRequestBodySizeFeature>();
+        if (feature is { IsReadOnly: false })
+        {
+            feature.MaxRequestBodySize = bodyLimit;
+        }
+
+        IFormCollection form;
+        try
+        {
+            form = await request.ReadFormAsync(ct).ConfigureAwait(false);
+        }
+        catch (BadHttpRequestException e) when (e.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        {
+            throw new ImportException("errors.import.too_large", 413);
+        }
+        catch (InvalidDataException)
+        {
+            throw new ImportException("errors.import.too_large", 413);
+        }
+
+        var file = form.Files.GetFile("file") ?? (form.Files.Count > 0 ? form.Files[0] : null);
+        if (file is null)
+        {
+            throw new ImportException("errors.import.empty_file", 400);
+        }
+
+        if (file.Length > limit)
+        {
+            throw new ImportException("errors.import.too_large", 413);
+        }
+
+        var buffer = new byte[file.Length];
+        await using (var stream = file.OpenReadStream())
+        {
+            await stream.ReadExactlyAsync(buffer, ct).ConfigureAwait(false);
+        }
+
+        _ = Guid.TryParse(form["templateId"].ToString(), out var templateId);
+        return (file.FileName, buffer, templateId);
     }
 
     private static async Task<IResult> RunAsync(Func<Task<IResult>> action)
@@ -118,14 +156,6 @@ public static class ImportEndpoints
 
     private static void Tag(RouteHandlerBuilder endpoint, string kind, string resource, string permission) =>
         endpoint.WithMetadata(new AccessEndpointMetadata(kind, resource, permission));
-
-    /// <summary>The multipart form of an upload or a template test.</summary>
-    public sealed class UploadForm
-    {
-        public IFormFile? File { get; init; }
-
-        public Guid TemplateId { get; init; }
-    }
 
     /// <summary>The optional body of a commit.</summary>
     public sealed record CommitBody(bool? SkipErrors);

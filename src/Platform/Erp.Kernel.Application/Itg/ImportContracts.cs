@@ -18,7 +18,22 @@ public sealed record ImportTypeDefinition(
     IReadOnlyList<ImportColumnDefinition> Columns,
     string? Writer,
     bool CanUpdate,
-    string? PostCommit = null);
+    string? PostCommit = null,
+    string? ReadPermission = null,
+    string? RollbackPermission = null,
+    IReadOnlyList<string>? UniqueColumns = null,
+    IReadOnlyList<string>? Writes = null,
+    IReadOnlyList<string>? RollbackDependents = null)
+{
+    /// <summary>The tables a row of this type may write: the type's table and the tables its writer reports besides (org units: their links). A rollback deletes nothing outside this list (S1.16a review finding 1).</summary>
+    public IReadOnlyList<string> WrittenTables => Writes is { Count: > 0 } ? Writes : [Table];
+
+    /// <summary>The permission a person needs to read other people's batches of this type (their problem files hold the original rows).</summary>
+    public string ReadRight => ReadPermission ?? Permission;
+
+    /// <summary>The permission a person needs to roll a batch of this type back (the right to delete what it created).</summary>
+    public string RollbackRight => RollbackPermission ?? Permission;
+}
 
 /// <summary>
 /// One column of an import type. <see cref="Type"/> is text, number, date, bool or option. <see cref="Lookup"/> names the
@@ -129,6 +144,9 @@ public sealed record ImportFileContent(string FileName, string ContentType, byte
 public interface IImportService
 {
     Task<IReadOnlyList<ImportTypeView>> TypesAsync(CancellationToken cancellationToken);
+
+    /// <summary>The largest upload this person may make (setting <c>doc.upload.max_mb</c>); the endpoint limits the request body to it before reading it (S1.16a review finding 9).</summary>
+    Task<long> UploadLimitAsync(CancellationToken cancellationToken);
 
     Task<IReadOnlyList<ImportTemplateView>> TemplatesAsync(string? type, CancellationToken cancellationToken);
 

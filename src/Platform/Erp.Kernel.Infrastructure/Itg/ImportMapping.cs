@@ -70,6 +70,11 @@ public sealed record TemplateMapping(char? Delimiter, string? Sheet, int HeaderR
     {
         ArgumentNullException.ThrowIfNull(type);
         var problems = new List<string>();
+        if (HeaderRow != 1)
+        {
+            problems.Add("headerRow: only the first row can hold the headers");
+        }
+
         foreach (var c in Columns)
         {
             if (Column(type, c.Field) is null)

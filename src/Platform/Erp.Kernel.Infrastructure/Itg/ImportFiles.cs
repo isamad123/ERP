@@ -20,7 +20,7 @@ public sealed class ImportRefusedException(string errorKey, int status = 400) : 
 /// could not be scanned while scanning is required, is refused and never read.
 /// </summary>
 public sealed class ImportFiles(ITenantConnectionProvider tenant, ITenantContext tenantContext, IClock clock, ICurrentActor actor, IAuditContext audit,
-    IFileStore store, FileEncryption encryption, FileScanning scanning)
+    IFileStore store, FileEncryption encryption, FileScanning scanning, IVirusScanner scanner)
 {
     public const string OwnerType = "itg.import_batches";
 
@@ -97,11 +97,70 @@ public sealed class ImportFiles(ITenantConnectionProvider tenant, ITenantContext
         return (id, format);
     }
 
-    /// <summary>The decrypted content of a stored import file; only a clean file is read.</summary>
-    public async Task<byte[]> ReadAsync(Guid fileId, CancellationToken cancellationToken)
+    /// <summary>The largest upload the person may make (the setting <c>doc.upload.max_mb</c> of the company the upload goes to).</summary>
+    public async Task<long> MaxBytesAsync(Guid companyId, CancellationToken cancellationToken)
+    {
+        await using var c = await IdentityDb.OpenAsync(tenant.DataSource, cancellationToken).ConfigureAwait(false);
+        return (await DocumentSettings.LoadAsync(c, companyId, actor.UserId, DateOnly.FromDateTime(clock.UtcNow.UtcDateTime), cancellationToken).ConfigureAwait(false)).MaxBytes;
+    }
+
+    /// <summary>What a file may unpack to and how many rows it may hold (finding 2): the upload limit and <c>itg.import.max_rows</c> of the company.</summary>
+    public async Task<ImportLimits> LimitsAsync(Guid companyId, CancellationToken cancellationToken)
+    {
+        await using var c = await IdentityDb.OpenAsync(tenant.DataSource, cancellationToken).ConfigureAwait(false);
+        var now = clock.UtcNow;
+        var settings = await DocumentSettings.LoadAsync(c, companyId, actor.UserId, DateOnly.FromDateTime(now.UtcDateTime), cancellationToken).ConfigureAwait(false);
+        return ImportLimits.For(settings.MaxBytes, await ImportService.MaxRowsAsync(c, companyId, now, cancellationToken).ConfigureAwait(false));
+    }
+
+    /// <summary>
+    /// The gate every file passes before anything reads it, when it is not stored (the template test, finding 3): not empty, not over the
+    /// upload limit, a CSV or Excel file, and clean by the virus scan. Throws <see cref="ImportRefusedException"/>.
+    /// </summary>
+    public async Task<string> GateAsync(byte[] content, string fileName, Guid companyId, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        if (content.Length == 0)
+        {
+            throw new ImportRefusedException("errors.import.empty_file");
+        }
+
+        await using var c = await IdentityDb.OpenAsync(tenant.DataSource, cancellationToken).ConfigureAwait(false);
+        var settings = await DocumentSettings.LoadAsync(c, companyId, actor.UserId, DateOnly.FromDateTime(clock.UtcNow.UtcDateTime), cancellationToken).ConfigureAwait(false);
+        if (content.Length > settings.MaxBytes)
+        {
+            throw new ImportRefusedException("errors.import.too_large", 413);
+        }
+
+        var format = ImportFileReader.Detect(content, fileName ?? string.Empty) ?? throw new ImportRefusedException("errors.import.unsupported_file", 415);
+        if (settings.ScanRequired)
+        {
+            var (verdict, _) = await scanner.ScanAsync(content, cancellationToken).ConfigureAwait(false);
+            if (verdict == ScanVerdict.Infected)
+            {
+                throw new ImportRefusedException("errors.import.infected", 422);
+            }
+
+            if (verdict != ScanVerdict.Clean)
+            {
+                throw new ImportRefusedException("errors.import.not_scanned", 503);
+            }
+        }
+
+        return format;
+    }
+
+    /// <summary>The decrypted content of a stored import file of this batch; only a clean file is read, and only one the batch owns (finding 1).</summary>
+    public async Task<byte[]> ReadAsync(Guid fileId, Guid batchId, CancellationToken cancellationToken)
     {
         await using var c = await IdentityDb.OpenAsync(tenant.DataSource, cancellationToken).ConfigureAwait(false);
         var file = await FileRows.FindAsync(c, null, fileId, cancellationToken).ConfigureAwait(false) ?? throw new ImportRefusedException("errors.import.not_found", 404);
+        if (!string.Equals(file.OwnerType, OwnerType, StringComparison.Ordinal) || file.OwnerId != batchId)
+        {
+            // A batch row that points at another record's file (an HR document, an attachment) is never read.
+            throw new ImportRefusedException("errors.import.not_found", 404);
+        }
+
         if (file.Status == FileStatuses.Quarantined || file.Status == FileStatuses.Infected)
         {
             throw new ImportRefusedException("errors.import.infected", 422);

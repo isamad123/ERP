@@ -80,6 +80,9 @@ public sealed class ImportRig : IAsyncDisposable
     public Task<FileAnswer> PostJsonAsync(string path, object? body, CancellationToken ct, Guid? user = null) =>
         Docs.SendAsync(HttpMethod.Post, user ?? Admin, path, new StringContent(JsonSerializer.Serialize(body ?? new { }), Encoding.UTF8, "application/json"), ct);
 
+    public Task<FileAnswer> PutJsonAsync(string path, object body, CancellationToken ct, Guid? user = null) =>
+        Docs.SendAsync(HttpMethod.Put, user ?? Admin, path, new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"), ct);
+
     public Task<FileAnswer> UploadAsync(Guid templateId, string fileName, byte[] content, CancellationToken ct, Guid? user = null) =>
         Docs.SendAsync(HttpMethod.Post, user ?? Admin, "/api/itg/imports/batches", Form(content, fileName, templateId), ct);
 
@@ -242,6 +245,60 @@ public sealed class PausingCommitJob(int afterChunks) : IJobHandler
             {
                 owner.Reached.TrySetResult();
                 await Task.Delay(Timeout.Infinite, cancellationToken);
+            }
+        }
+
+        public Task LogAsync(string level, string message, CancellationToken cancellationToken) => inner.LogAsync(level, message, cancellationToken);
+    }
+}
+
+/// <summary>The commit job that fails (an unexpected error, not a stopped worker) after some saved chunks, in its first attempts (review finding 8).</summary>
+public sealed class FailingCommitJob(int afterChunks, int failingAttempts) : IJobHandler
+{
+    private readonly ImportCommitJob _inner = new();
+
+    public string Code => _inner.Code;
+
+    public static FailingCommitJob Install(IServiceCollection services, int afterChunks, int failingAttempts)
+    {
+        var job = new FailingCommitJob(afterChunks, failingAttempts);
+        foreach (var d in services.Where(d => d.ServiceType == typeof(IJobHandler) && d.ImplementationType == typeof(ImportCommitJob)).ToList())
+        {
+            services.Remove(d);
+        }
+
+        services.AddSingleton<IJobHandler>(job);
+        return job;
+    }
+
+    public Task RunAsync(IJobExecution job, CancellationToken cancellationToken) => _inner.RunAsync(new Failing(job, afterChunks, failingAttempts), cancellationToken);
+
+    private sealed class Failing(IJobExecution inner, int after, int failingAttempts) : IJobExecution
+    {
+        private int _chunks;
+
+        public Guid RunId => inner.RunId;
+
+        public string Code => inner.Code;
+
+        public Guid? CompanyId => inner.CompanyId;
+
+        public System.Text.Json.JsonElement Parameters => inner.Parameters;
+
+        public System.Text.Json.JsonElement? Checkpoint => inner.Checkpoint;
+
+        public int Attempt => inner.Attempt;
+
+        public DateTimeOffset? ScheduledFor => inner.ScheduledFor;
+
+        public IServiceProvider Services => inner.Services;
+
+        public async Task CommitChunkAsync(Func<System.Data.Common.DbConnection, System.Data.Common.DbTransaction, CancellationToken, Task>? work, object? checkpoint, decimal? progressPct, CancellationToken cancellationToken)
+        {
+            await inner.CommitChunkAsync(work, checkpoint, progressPct, cancellationToken);
+            if (++_chunks == after && inner.Attempt <= failingAttempts)
+            {
+                throw new InvalidOperationException("The writer failed (test).");
             }
         }
 

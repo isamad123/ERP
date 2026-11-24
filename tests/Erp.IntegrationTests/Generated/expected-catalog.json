@@ -38706,6 +38706,26 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "mapping",
+          "kind": "Json",
+          "type": "jsonb",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "template_version",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [

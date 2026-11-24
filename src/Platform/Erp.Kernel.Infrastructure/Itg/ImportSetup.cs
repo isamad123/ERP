@@ -36,10 +36,11 @@ public static class ImportSetup
             var created = 0;
             foreach (var type in types.OrderBy(t => t.Code, StringComparer.Ordinal))
             {
+                // The type's own name: the screen marks the shipped template with its badge (is_default), so no text is written here (finding 16).
                 var name = new JsonObject();
                 foreach (var (language, text) in type.Name)
                 {
-                    name[language] = text + (language == "ur" ? " (پہلے سے طے شدہ سانچہ)" : " (shipped template)");
+                    name[language] = text;
                 }
 
                 created += await IdentityDb.ExecuteAsync(connection, tx, """

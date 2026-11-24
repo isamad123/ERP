@@ -267,21 +267,9 @@
       "sensitive": false
     },
     {
-      "code": "itg.import_batch_errors.create",
-      "module": "itg",
-      "descriptionKey": "permissions.itg.import_batch_errors.create",
-      "sensitive": false
-    },
-    {
       "code": "itg.import_batch_rows.read",
       "module": "itg",
       "descriptionKey": "permissions.itg.import_batch_rows.read",
-      "sensitive": false
-    },
-    {
-      "code": "itg.import_batch_rows.create",
-      "module": "itg",
-      "descriptionKey": "permissions.itg.import_batch_rows.create",
       "sensitive": false
     },
     {
@@ -291,33 +279,9 @@
       "sensitive": false
     },
     {
-      "code": "itg.import_batches.create",
-      "module": "itg",
-      "descriptionKey": "permissions.itg.import_batches.create",
-      "sensitive": false
-    },
-    {
-      "code": "itg.import_batches.update",
-      "module": "itg",
-      "descriptionKey": "permissions.itg.import_batches.update",
-      "sensitive": false
-    },
-    {
       "code": "itg.import_templates.read",
       "module": "itg",
       "descriptionKey": "permissions.itg.import_templates.read",
-      "sensitive": false
-    },
-    {
-      "code": "itg.import_templates.create",
-      "module": "itg",
-      "descriptionKey": "permissions.itg.import_templates.create",
-      "sensitive": false
-    },
-    {
-      "code": "itg.import_templates.update",
-      "module": "itg",
-      "descriptionKey": "permissions.itg.import_templates.update",
       "sensitive": false
     },
     {

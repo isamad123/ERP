@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "itg.import_batches.read"
-    },
-    {
-      "action": "create",
-      "permission": "itg.import_batches.create"
-    },
-    {
-      "action": "update",
-      "permission": "itg.import_batches.update"
     }
   ],
   "companyScoped": true,
@@ -213,6 +205,26 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.itg.import_batches.rolled_back_at"
+    },
+    {
+      "column": "mapping",
+      "field": "mapping",
+      "kind": "Json",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.import_batches.mapping"
+    },
+    {
+      "column": "template_version",
+      "field": "templateVersion",
+      "kind": "Int4",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.import_batches.template_version"
     },
     {
       "column": "status",
