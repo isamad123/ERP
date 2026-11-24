@@ -26,10 +26,7 @@ internal sealed class EffectiveShiftService(
     HrmDbContext db,
     IPermissionChecker permissions,
     IDataScopeFilter scope,
-    IPolicyResolver resolver,
-    ShiftPolicyReader shiftPolicies,
-    IHolidayCalendars calendars,
-    AttendanceSettingReader settings) : IEffectiveShiftService, IEffectiveShiftReader
+    EffectiveShiftReader reader) : IEffectiveShiftService, IEffectiveShiftReader
 {
     private DbContextScopeSource Source => new(db);
 
@@ -46,9 +43,24 @@ internal sealed class EffectiveShiftService(
             return PeopleResult.NotFound;
         }
 
-        var answer = await ReadAsync(employmentId, day, cancellationToken).ConfigureAwait(false);
+        var answer = await reader.ReadAsync(employmentId, day, cancellationToken).ConfigureAwait(false);
         return answer is null ? PeopleResult.NotFound : new PeopleResult(PeopleOutcome.Done, Body: answer);
     }
+
+    public Task<EffectiveShift?> ReadAsync(Guid employmentId, DateOnly day, CancellationToken cancellationToken) => reader.ReadAsync(employmentId, day, cancellationToken);
+}
+
+/// <summary>
+/// The answer of <see cref="IEffectiveShiftReader"/> without a permission or scope check (the endpoint's service checks those): used by the
+/// endpoint and by day processing (S1.29a, R-158), which builds it on the job's own HR database connection.
+/// </summary>
+internal sealed class EffectiveShiftReader(
+    HrmDbContext db,
+    IPolicyResolver resolver,
+    IHolidayCalendars calendars,
+    AttendanceSettingReader settings) : IEffectiveShiftReader
+{
+    private readonly ShiftPolicyReader shiftPolicies = new(resolver);
 
     public async Task<EffectiveShift?> ReadAsync(Guid employmentId, DateOnly day, CancellationToken cancellationToken)
     {

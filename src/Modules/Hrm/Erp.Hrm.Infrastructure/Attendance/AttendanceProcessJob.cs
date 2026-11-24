@@ -26,7 +26,8 @@ internal static class AttendanceEngine
     public static AttendanceDayProcessor Processor(HrmDbContext db, IServiceProvider services)
     {
         var resolver = PolicyResolver.For(db, services);
-        return new AttendanceDayProcessor(db, resolver, services.GetRequiredService<IApprovedLeaveDays>(), services.GetRequiredService<IApprovedDutyDays>(),
+        var effective = new EffectiveShiftReader(db, resolver, services.GetRequiredService<IHolidayCalendars>(), new AttendanceSettingReader(services.GetRequiredService<ISettings>()));
+        return new AttendanceDayProcessor(db, resolver, effective, services.GetRequiredService<IApprovedLeaveDays>(), services.GetRequiredService<IApprovedDutyDays>(),
             services.GetRequiredService<IAttendancePeriodLock>(), new EmploymentApplier(db, services.GetRequiredService<ISettings>(), resolver));
     }
 

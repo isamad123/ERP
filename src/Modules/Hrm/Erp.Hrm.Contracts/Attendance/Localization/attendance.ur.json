@@ -98,6 +98,8 @@
   "hrm.att.step.rounded": "کام کے منٹ ({mode}، {step} کے قدم) {from} سے {to} کیے گئے۔",
   "hrm.att.step.shift": "شفٹ {shift}، {start} سے {end} تک۔",
   "hrm.att.step.weekly_off_pattern": "روسٹر میں اس دن کی سطر نہیں؛ شفٹ پالیسی کا ہفتہ وار چھٹی کا طریقہ اسے ہفتہ وار چھٹی بناتا ہے۔",
+  "hrm.att.step.holiday_calendar": "روسٹر میں اس دن کی سطر نہیں اور یہ ہفتہ وار چھٹی نہیں؛ یہ دن ملازم کے تعطیلات کے کیلنڈر کی تعطیل ہے۔",
+  "hrm.att.step.season": "پالیسی {policy} کا موسم {season} اس دن شفٹ کے اوقات طے کرتا ہے۔",
   "hrm.att.step.within_grace": "پہلا اندراج شروع ہونے کے {late} منٹ بعد، {grace} منٹ کی رعایت کے اندر۔",
   "hrm.att.value.down": "نیچے",
   "hrm.att.value.field_duty": "فیلڈ ڈیوٹی",

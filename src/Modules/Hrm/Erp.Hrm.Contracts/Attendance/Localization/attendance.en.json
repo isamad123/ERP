@@ -98,6 +98,8 @@
   "hrm.att.step.rounded": "Worked minutes rounded ({mode}, steps of {step}) from {from} to {to}.",
   "hrm.att.step.shift": "Shift {shift} from {start} to {end}.",
   "hrm.att.step.weekly_off_pattern": "No roster line; the shift policy's weekly-off pattern makes the day a weekly off.",
+  "hrm.att.step.holiday_calendar": "No roster line and not a weekly off; the day is a holiday of the employee's holiday calendar.",
+  "hrm.att.step.season": "The season {season} of the policy {policy} sets the shift's times on this day.",
   "hrm.att.step.within_grace": "First punch {late} minutes after the start, within the grace of {grace} minutes.",
   "hrm.att.value.down": "down",
   "hrm.att.value.field_duty": "field duty",

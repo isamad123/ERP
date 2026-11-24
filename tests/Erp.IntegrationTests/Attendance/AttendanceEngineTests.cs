@@ -507,6 +507,61 @@ public sealed class AttendanceEngineTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(("late", 30), (days[Iso(seasonal)].Result, days[Iso(seasonal)].Late));
     }
 
+    /// <summary>
+    /// R-158: the job plans each day from S1.28b's effective shift. A calendar holiday with no roster line is a holiday; a Ramzan season of a
+    /// <c>seasonal_timing</c> policy moves the rostered shift's end (lateness and early leaving follow the season's times, the full day scales);
+    /// the day after the season the shift's own times apply again, and a rostered working day stays working although the calendar has a holiday.
+    /// </summary>
+    [Fact]
+    public async Task FR_HRM_ATT_16_R158_the_job_plans_days_from_the_effective_shift_calendar_holidays_and_seasons_included()
+    {
+        var o = await OrgAsync();
+        var e = await HireAsync(o);
+        var holiday = o.Monday.AddDays(1);
+        var season = o.Monday.AddDays(2);
+        var after = o.Monday.AddDays(3);
+
+        var calendar = Guid.CreateVersion7();
+        await _h.ExecAsync("""
+            insert into ref.calendars (id, code, name_i18n, source, is_active, created_at, created_by, updated_at, updated_by, row_version)
+            values ($1, $2, '{"en":"Engine calendar"}'::jsonb, 'tenant', true, now(), $3, now(), $3, 1)
+            """, Ct, calendar, "CAL" + Guid.NewGuid().ToString("N")[..10], o.Hr);
+        foreach (var date in new[] { holiday, after })
+        {
+            await _h.ExecAsync("""
+                insert into ref.holidays (id, calendar_id, holiday_date, name_i18n, kind, is_tentative, created_at, created_by, updated_at, updated_by, row_version)
+                values ($1, $2, $3::date, '{"en":"Test holiday"}'::jsonb, 'public', false, now(), $4, now(), $4, 1)
+                """, Ct, Guid.CreateVersion7(), calendar, Iso(date), o.Hr);
+        }
+
+        await _h.ExecAsync("update org.companies set holiday_calendar_id = $2 where id = $1", Ct, o.Company, calendar);
+        await PolicyAsync(o, "seasonal_timing", new { seasons = new[] { new { name = "Ramzan", from = Iso(season), to = Iso(season), startTime = "09:00", endTime = "15:00" } } });
+        await RosterAsync(o, (e, season, "working", o.Day), (e, after, "working", o.Day));
+        await PunchAsync(o, e, (At(season, "09:20"), "in"), (At(season, "15:00"), "out"), (At(after, "09:00"), "in"), (At(after, "15:00"), "out"));
+
+        await RunJobAsync(new { employment_id = e, from = Iso(holiday), to = Iso(after) });
+        var days = await DaysAsync(e);
+
+        // The calendar's holiday, with no roster line and no punch, is stored as a holiday (before R-158 it was an unscheduled day, not stored).
+        Assert.Equal(("holiday", "holiday", "holiday"), (days[Iso(holiday)].Result, days[Iso(holiday)].DayType, days[Iso(holiday)].Rule));
+        // In the season the shift is 09:00 to 15:00: 20 minutes late, not early; 280 minutes worked meet the scaled full day (420 x 6 / 9 = 280).
+        Assert.Equal(("late", 20, 0, 280), (days[Iso(season)].Result, days[Iso(season)].Late, days[Iso(season)].Early, days[Iso(season)].Worked));
+        // The day after, the shift's own 09:00 to 18:00 applies: leaving at 15:00 is three hours early (a half day), holiday or not.
+        Assert.Equal(("half_day", "working", 180), (days[Iso(after)].Result, days[Iso(after)].DayType, days[Iso(after)].Early));
+
+        var explained = await _h.GetAsync(o.Hr, $"{Employments}/{e}/attendance-days/{Iso(holiday)}/explain", Ct);
+        Assert.True(explained.Status == HttpStatusCode.OK, explained.Body);
+        Assert.Contains(explained.Json.GetProperty("current").GetProperty("explanation").GetProperty("steps").EnumerateArray(), s => s.GetProperty("key").GetString() == "hrm.att.step.holiday_calendar");
+        var seasonal = (await _h.GetAsync(o.Hr, $"{Employments}/{e}/attendance-days/{Iso(season)}/explain", Ct)).Json.GetProperty("current").GetProperty("explanation");
+        Assert.Contains(seasonal.GetProperty("steps").EnumerateArray(), s => s.GetProperty("key").GetString() == "hrm.att.step.season" && s.GetProperty("params").GetProperty("season").GetString() == "Ramzan");
+        Assert.Contains(seasonal.GetProperty("steps").EnumerateArray(), s => s.GetProperty("key").GetString() == "hrm.att.step.shift" && s.GetProperty("params").GetProperty("end").GetString() == "15:00");
+
+        // A second run writes nothing: the plan from the effective shift is as repeatable as before.
+        var before = await CountAsync("select count(*) from hrm.attendance_days where employment_id = $1", e);
+        await RunJobAsync(new { employment_id = e, from = Iso(holiday), to = Iso(after) });
+        Assert.Equal(before, await CountAsync("select count(*) from hrm.attendance_days where employment_id = $1", e));
+    }
+
     // ------------------------------------------------------------------ access and the database
 
     [Fact]

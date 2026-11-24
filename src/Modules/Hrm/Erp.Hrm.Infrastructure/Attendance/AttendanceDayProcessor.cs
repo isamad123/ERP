@@ -27,7 +27,8 @@ internal sealed record DayRun(DateOnly Date, string Status, string? Reason, Guid
 
 /// <summary>
 /// The attendance engine (slice S1.29 Build items 2 to 4 and 6; FR-HRM-ATT-10, ATT-11, FR-XM-26). For an employment and a range of dates it
-/// reads the plan of each day (the published roster line and the shift row it names, R-144, or the weekly-off pattern of the shift policy),
+/// reads the plan of each day from the effective shift of S1.28b (<see cref="IEffectiveShiftReader"/>, R-158: the published roster line and the
+/// shift row it names with a season's times, R-144, else the weekly-off pattern of the shift policy, else a holiday of the calendar),
 /// the <c>attendance</c> policy in force on that date (BR-05), approved leave and duty, and the counted punches the day owns, and works the day
 /// out with <see cref="DayRules"/>. A result is stored only when it differs from the current one: the current row is marked replaced and a
 /// new row is added (history kept, never edited in place; the database allows nothing else), so the same inputs never add a row and a
@@ -35,7 +36,8 @@ internal sealed record DayRun(DateOnly Date, string Status, string? Reason, Guid
 /// open ones that no longer apply are closed (or marked regularized when an approved regularization exists for the day), new ones are raised
 /// with the event <c>hrm.attendance.exception_raised</c>. Each employment is processed by one writer at a time (advisory lock).
 /// </summary>
-internal sealed class AttendanceDayProcessor(HrmDbContext db, IPolicyResolver resolver, IApprovedLeaveDays leaves, IApprovedDutyDays duties, IAttendancePeriodLock locks, EmploymentApplier applier)
+internal sealed class AttendanceDayProcessor(
+    HrmDbContext db, IPolicyResolver resolver, IEffectiveShiftReader effective, IApprovedLeaveDays leaves, IApprovedDutyDays duties, IAttendancePeriodLock locks, EmploymentApplier applier)
 {
     public const string NoRoster = "hrm.att.skip.no_roster";
     public const string Locked = "hrm.att.skip.locked";
@@ -58,12 +60,16 @@ internal sealed class AttendanceDayProcessor(HrmDbContext db, IPolicyResolver re
         }
 
         var zone = await applier.ZoneAsync(e.CompanyId, ct).ConfigureAwait(false);
-        var lines = await db.Set<RosterLine>().AsNoTracking()
-            .Where(l => l.EmploymentId == e.Id && l.RosterStatus == "published" && l.WorkDate >= from.AddDays(-1) && l.WorkDate <= to)
-            .ToDictionaryAsync(l => l.WorkDate, ct).ConfigureAwait(false);
-        var shiftIds = lines.Values.Where(l => l.ShiftId is not null).Select(l => l.ShiftId!.Value).Distinct().ToList();
+        // The plan of each day, and of the day before the range (its night shift owns punches after midnight), is S1.28b's effective shift (R-158).
+        var effectives = new Dictionary<DateOnly, EffectiveShift?>();
+        for (var date = from.AddDays(-1); date <= to; date = date.AddDays(1))
+        {
+            effectives[date] = await effective.ReadAsync(e.Id, date, ct).ConfigureAwait(false);
+        }
+
+        var shiftIds = effectives.Values.Where(x => x?.ShiftId is not null).Select(x => x!.ShiftId!.Value).Distinct().ToList();
         var shifts = await db.Set<Shift>().AsNoTracking().Where(s => shiftIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, ct).ConfigureAwait(false);
-        var pattern = await new ShiftPolicyReader(resolver).ReadAsync(e.Id, from, to, ct).ConfigureAwait(false);
+        var plans = effectives.ToDictionary(x => x.Key, x => PlanOf(x.Value, shifts));
 
         // Punches of the range: a day owns punches of its own date and, for a night shift, of the next one (ruling Q3).
         var events = await db.Set<AttendanceEvent>().AsNoTracking().Where(x => x.EmploymentId == e.Id && x.EventDate >= from && x.EventDate <= to.AddDays(1))
@@ -75,8 +81,7 @@ internal sealed class AttendanceDayProcessor(HrmDbContext db, IPolicyResolver re
         var current = await db.Set<AttendanceDay>().AsNoTracking().Where(d => d.EmploymentId == e.Id && d.WorkDate >= from && d.WorkDate <= to && d.SupersededAt == null)
             .ToDictionaryAsync(d => d.WorkDate, ct).ConfigureAwait(false);
 
-        DayShift? ShiftOf(DateOnly date) =>
-            lines.TryGetValue(date, out var l) && l.DayType == DayPlan.Working && l.ShiftId is { } id && shifts.TryGetValue(id, out var s) ? ToDayShift(s) : null;
+        DayShift? ShiftOf(DateOnly date) => plans[date].Shift;
 
         var runs = new List<DayRun>();
 
@@ -106,9 +111,7 @@ internal sealed class AttendanceDayProcessor(HrmDbContext db, IPolicyResolver re
                 continue;
             }
 
-            var plan = lines.TryGetValue(date, out var line)
-                ? new DayPlan(DayPlan.FromRoster, line.DayType, ShiftOf(date))
-                : pattern?.For(date).IsOff(date) == true ? new DayPlan(DayPlan.FromPattern, DayPlan.WeeklyOff, null) : DayPlan.None;
+            var plan = plans[date];
             var shiftRow = plan.Shift is { } ps ? shifts[ps.Id] : null;
             var answer = await policies.AtAsync(e.Id, date, shiftRow?.PolicyId, ct).ConfigureAwait(false);
             if (answer.Policy is not { } policy)
@@ -186,6 +189,40 @@ internal sealed class AttendanceDayProcessor(HrmDbContext db, IPolicyResolver re
         }
 
         return runs;
+    }
+
+    /// <summary>
+    /// The engine's plan of a day from the effective shift (R-158): a roster day (its type, and for a working day the shift row with the season's
+    /// start, end and crossing midnight; core times, policy and full-day minutes stay the row's, the full-day minutes scaled to the season's
+    /// span by <see cref="DayRules.WithSeason"/>), the shift policy's weekly off, a calendar holiday (day type holiday), or nothing planned. A
+    /// rostered working day stays a working day when the calendar has a holiday on it: the published roster decides (S1.28b ruling Q6).
+    /// </summary>
+    public static DayPlan PlanOf(EffectiveShift? answer, IReadOnlyDictionary<Guid, Shift> shifts)
+    {
+        ArgumentNullException.ThrowIfNull(shifts);
+        switch (answer?.Source)
+        {
+            case "roster":
+                var row = answer.ShiftId is { } id && answer.DayType == DayPlan.Working ? shifts.GetValueOrDefault(id) : null;
+                if (row is null)
+                {
+                    return new DayPlan(DayPlan.FromRoster, answer.DayType, null);
+                }
+
+                var shift = ToDayShift(row);
+                if (answer.Season is { } season && answer.Start is { } start && answer.End is { } end)
+                {
+                    return new DayPlan(DayPlan.FromRoster, DayPlan.Working, DayRules.WithSeason(shift, start, end, answer.CrossesMidnight), new DaySeason(season.SeasonName, season.PolicyCode));
+                }
+
+                return new DayPlan(DayPlan.FromRoster, DayPlan.Working, shift);
+            case "weekly_off_policy":
+                return new DayPlan(DayPlan.FromPattern, DayPlan.WeeklyOff, null);
+            case "holiday_calendar":
+                return new DayPlan(DayPlan.FromCalendar, DayPlan.Holiday, null);
+            default:
+                return DayPlan.None;
+        }
     }
 
     public static DayShift ToDayShift(Shift s)
