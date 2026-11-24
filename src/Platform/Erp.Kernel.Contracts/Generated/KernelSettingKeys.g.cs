@@ -166,6 +166,9 @@ public static class KernelSettingKeys
 
     /// <summary>The terms of use notice shown under the sign-in form, in Urdu.</summary>
     public const string CfgBrandingTermsUr = "cfg.branding.terms_ur";
+
+    /// <summary>Installing or upgrading a country or industry pack needs a second person's approval.</summary>
+    public const string CfgPacksRequiresApproval = "cfg.packs.requires_approval";
 }
 
 /// <summary>Keys of the feature flags declared in the kernel settings manifest (FR-KRN-SET-05).</summary>

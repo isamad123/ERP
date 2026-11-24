@@ -111,20 +111,15 @@ export interface InstalledPack
     packId: string;
     version: string;
     installedAt: string;
+    manifest: unknown | null;
+    previousVersion: string | null;
+    upgradedAt: string | null;
     status: 'installed' | 'upgrading' | 'failed';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface InstalledPackWrite
-{
-    packId: string;
-    version: string;
-    installedAt: string;
-    status: 'installed' | 'upgrading' | 'failed';
 }
 
 export interface InstalledPackListQuery
@@ -140,8 +135,6 @@ export const installedPacks =
 {
     list: (query: InstalledPackListQuery = {}) => request<PagedResult<InstalledPack>>('GET', '/api/cfg/installed-packs', { query }),
     get: (id: string) => request<InstalledPack>('GET', `/api/cfg/installed-packs/${id}`),
-    create: (body: InstalledPackWrite) => request<InstalledPack>('POST', '/api/cfg/installed-packs', { body }),
-    update: (id: string, body: InstalledPackWrite & { rowVersion: number }) => request<InstalledPack>('PUT', `/api/cfg/installed-packs/${id}`, { body }),
 };
 
 /** cfg.labels: Label and terminology overrides per language and layer. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -246,20 +239,17 @@ export interface PackItem
     objectKey: string;
     version: string;
     isOverridden: boolean;
+    contentHash: string | null;
+    appliedHash: string | null;
+    packValue: unknown | null;
+    conflictVersion: string | null;
+    conflictValue: unknown | null;
+    retiredIn: string | null;
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface PackItemWrite
-{
-    packId: string;
-    objectType: string;
-    objectKey: string;
-    version: string;
-    isOverridden?: boolean;
 }
 
 export interface PackItemListQuery
@@ -274,8 +264,6 @@ export const packItems =
 {
     list: (query: PackItemListQuery = {}) => request<PagedResult<PackItem>>('GET', '/api/cfg/pack-items', { query }),
     get: (id: string) => request<PackItem>('GET', `/api/cfg/pack-items/${id}`),
-    create: (body: PackItemWrite) => request<PackItem>('POST', '/api/cfg/pack-items', { body }),
-    update: (id: string, body: PackItemWrite & { rowVersion: number }) => request<PackItem>('PUT', `/api/cfg/pack-items/${id}`, { body }),
 };
 
 /** cfg.setting_value_history: SettingValueHistory. Field rules (S1.06) may leave a field out or mask it as text. */

@@ -540,5 +540,18 @@ settings:
     description: {en: "The terms of use notice shown under the sign-in form, in Urdu", ur: "سائن ان فارم کے نیچے دکھائی جانے والی شرائطِ استعمال کی اطلاع، اردو میں"}
     help: {en: "Plain text, up to 2000 characters. Leave empty to show the English notice.", ur: "سادہ متن، زیادہ سے زیادہ 2000 حروف۔ خالی ہو تو انگریزی اطلاع دکھائی جاتی ہے۔"}
 
+  # Slice S1.23b (CR-079 S1.23b detail; Build item 11 "install update (tenant administrator; maker-checker when on)"). While on, installing
+  # a pack, upgrading it and taking a pack value wait for a second person holding cfg.installed_packs.approve. Changing the setting waits
+  # for a second person too (FR-XM-32). Urdu texts to be reviewed by a native speaker (R-062).
+  - key: cfg.packs.requires_approval
+    type: bool
+    default: false
+    layers: [tenant]
+    requires_approval: true
+    area: general
+    name: {en: "Approval of pack installs", ur: "پیک کی تنصیب کی منظوری"}
+    description: {en: "Installing or upgrading a country or industry pack needs a second person's approval", ur: "ملکی یا صنعتی پیک کی تنصیب یا اپ گریڈ کے لیے دوسرے شخص کی منظوری درکار"}
+    help: {en: "An install, an upgrade or taking a pack value is applied only after another person with the approval permission approves it. The person who asked can never approve it.", ur: "تنصیب، اپ گریڈ یا پیک کی قدر اپنانا اسی وقت لاگو ہوتا ہے جب منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔"}
+
 # Release 1.0 has no requirement that needs a specific flag yet (ruling Q14): the mechanism ships with an empty list.
 flags: []

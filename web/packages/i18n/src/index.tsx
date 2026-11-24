@@ -16,6 +16,7 @@ import type payEn from '../messages/pay.en.json';
 import type notifyEn from '../messages/notify.en.json';
 import type doctemplatesEn from '../messages/doctemplates.en.json';
 import type policiesEn from '../messages/policies.en.json';
+import type packsEn from '../messages/packs.en.json';
 import type positionsEn from '../messages/positions.en.json';
 import serverEn from './generated/server.en.json';
 import serverUr from './generated/server.ur.json';
@@ -39,7 +40,7 @@ function strip(catalogue: Record<string, string>): Catalogue {
   return Object.fromEntries(Object.entries(catalogue).filter(([key]) => !key.startsWith('_')));
 }
 
-export type MessageKey = keyof typeof en | keyof typeof configEn | keyof typeof numberingEn | keyof typeof routesEn | keyof typeof notifyEn | keyof typeof doctemplatesEn | keyof typeof payEn | keyof typeof setupEn | keyof typeof attendanceEn | keyof typeof policiesEn | keyof typeof positionsEn;
+export type MessageKey = keyof typeof en | keyof typeof configEn | keyof typeof numberingEn | keyof typeof routesEn | keyof typeof notifyEn | keyof typeof doctemplatesEn | keyof typeof payEn | keyof typeof setupEn | keyof typeof attendanceEn | keyof typeof policiesEn | keyof typeof positionsEn | keyof typeof packsEn;
 
 let registryVersion = 0;
 const listeners = new Set<() => void>();

@@ -155,3 +155,14 @@ public sealed class OtherAdministratorCheck(KernelDbContext db, IClock clock) : 
         return administrators >= 2 ? ReadinessResult.Ok : ReadinessResult.Open("setup.messages.other_administrator_missing");
     }
 }
+
+/// <summary>The customer installed at least one country or industry pack (slice S1.23b, the wizard's pack step; FR-ADM-ONB-01).</summary>
+public sealed class PacksCheck(KernelDbContext db) : IReadinessCheck
+{
+    public string Name => "kernel.packs";
+
+    public async Task<ReadinessResult> CheckAsync(Guid? companyId, CancellationToken cancellationToken) =>
+        await db.Set<Erp.Kernel.Domain.Generated.Cfg.InstalledPack>().AsNoTracking().AnyAsync(p => p.Status == "installed", cancellationToken).ConfigureAwait(false)
+            ? ReadinessResult.Ok
+            : ReadinessResult.Open("setup.messages.no_pack");
+}

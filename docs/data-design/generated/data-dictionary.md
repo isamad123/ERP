@@ -372,6 +372,9 @@ Requirements: KRN-CFG-01, KRN-CFG-02, ADM-PKG-01. Source: kernel.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| manifest | jsonb | yes |  | S1.23b: the manifest of the installed version (titles, kind, country, compatible product versions, release notes, objects) |
+| previous_version | text | yes |  | S1.23b: the version before the last upgrade |
+| upgraded_at | timestamp with time zone | yes |  | S1.23b: when the last upgrade was installed |
 
 Constraints:
 
@@ -586,6 +589,12 @@ Every object a pack created, with tenant override flag so upgrades keep override
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| content_hash | text | yes |  | S1.23b: SHA-256 of the canonical JSON of the pack's normalized value of the object in the version installed (not the manifest's file hash) |
+| applied_hash | text | yes |  | S1.23b: SHA-256 of the object as the installer left it; the customer changed it when its value now hashes differently |
+| pack_value | jsonb | yes |  | S1.23b: the pack's value in the version installed (the 'pack value' of the diff view) |
+| conflict_version | text | yes |  | S1.23b: a later pack version whose value was not applied because the customer had changed the object |
+| conflict_value | jsonb | yes |  | S1.23b: that version's value, offered as 'take the pack value' (ruling Q7) |
+| retired_in | text | yes |  | S1.23b: the pack version that no longer contains the object (retired, never deleted when referenced) |
 
 Constraints:
 
@@ -7876,6 +7885,9 @@ Signed country and industry packs available to install. Requirements: KRN-CFG-01
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| key_id | text | yes |  | S1.23b: the cp.signing_keys key (purpose pack) the manifest was signed with; always set by pack publish |
+| manifest | jsonb | yes |  | S1.23b: the signed manifest (id, kind, version, country, titles, compatible product versions, dependencies, merge rules, objects with hashes); always set by pack publish |
+| content | bytea | yes |  | S1.23b: the signed pack file (zip) as published; installs read it from here and check it again |
 
 Constraints:
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Collects the server's text catalogues at build time (slice S1.12a, Build item 4): every
 // src/**/Localization/<name>.<lang>.json is merged into src/generated/server.<lang>.json (platform) and modules.<lang>.json
-// (business modules, S1.20c), so problem answers
+// (business modules, S1.20c; platform catalogues marked "_load": "after_start", S1.23b), so problem answers
 // (RFC 9457, the key in `title`) show in the person's language. A key defined twice with different texts fails.
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -28,13 +28,15 @@ let failed = false;
 // The platform's texts ship with the shell (sign-in, approvals, every kernel answer); the business modules' texts (src/Modules,
 // HR from S1.20c on) go to modules.<lang>.json, loaded as their own chunk right after start-up, so module growth never weighs on the
 // shell's script budget (spec 13 FR-UX-PRF-01; R-213 for screen texts, S1.20c for server texts).
-const isModule = (file) => file.includes(`${join('src', 'Modules')}`);
+// A platform catalogue whose texts are not needed before the first screen (S1.23b: the pack manager) says so with
+// "_load": "after_start" and joins the module chunk.
+const isModule = (file) => file.includes(`${join('src', 'Modules')}`) || JSON.parse(readFileSync(file, 'utf8'))._load === 'after_start';
 for (const lang of LANGUAGES) {
   const merged = {};
   const owner = {};
   for (const file of files.filter((f) => f.endsWith(`.${lang}.json`)).sort()) {
     for (const [key, text] of Object.entries(JSON.parse(readFileSync(file, 'utf8')))) {
-      if (typeof text !== 'string') continue;
+      if (typeof text !== 'string' || key.startsWith('_')) continue;
       if (key in merged && merged[key] !== text) {
         console.error(`server text ${key} (${lang}) differs between catalogues (${file})`);
         failed = true;

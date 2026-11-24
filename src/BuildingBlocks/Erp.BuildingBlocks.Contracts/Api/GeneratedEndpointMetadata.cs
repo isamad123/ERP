@@ -105,3 +105,10 @@ public sealed record JobEndpointMetadata(string Kind, string Resource, string Pe
 /// or rule: another customer's id is 404).
 /// </summary>
 public sealed record NotificationEndpointMetadata(string Kind, string Resource, string Permission);
+
+/// <summary>
+/// Marks a pack manager endpoint (slice S1.23b) for the tenant-isolation suite: <see cref="Kind"/> is <c>catalog</c> (the bound customer's
+/// installed packs and the vendor catalogue), <c>query</c> (the objects of one installed pack, named by pack id), <c>action</c> (install
+/// or upgrade, naming a pack id) or <c>record_action</c> (a route with a pack item's <c>{id}</c>).
+/// </summary>
+public sealed record PackEndpointMetadata(string Kind, string Resource, string Permission);
