@@ -14,6 +14,8 @@ public static class PositionServices
     {
         services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, StrengthExceptionHandler>();
         services.AddScoped<Kernel.Contracts.Settings.ISettingChangeGuard, OrgModelChangeGuard>();
+        services.AddScoped<Kernel.Contracts.Org.IOrgUnitUseGuard, HrmOrgUnitUseGuard>(); // S1.22b: a unit with active posts or people is not switched off
+        services.AddScoped<Kernel.Contracts.Jobs.IEventConsumer, OrgStructureConsumer>(); // S1.22b: org.unit_moved becomes hrm.org_structure_changed
         return services;
     }
 
@@ -21,6 +23,8 @@ public static class PositionServices
     {
         services.AddScoped<IPositionService, PositionService>();
         services.AddScoped<IStrengthExceptionService, StrengthExceptionService>();
+        services.AddScoped<IStrengthReportService, StrengthReportService>();
+        services.AddScoped<IOrgChartService, OrgChartService>();
         return services;
     }
 }

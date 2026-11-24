@@ -12,6 +12,7 @@ using Erp.Hrm.Infrastructure.Positions;
 using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Contracts.Settings;
+using Erp.Kernel.Infrastructure.Org;
 using Erp.Kernel.Infrastructure.Access;
 using Erp.Kernel.Infrastructure.Audit;
 using Erp.Kernel.Infrastructure.ControlPlane;
@@ -60,7 +61,7 @@ public static class WorkerHost
         services.AddErpTenancy(options, secretStore);
         services.AddKernelAudit([.. KernelAuditCatalog.All, .. HrmAuditCatalog.All]);
         services.AddDbContext<KernelDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp)
-            .AddInterceptors(sp.GetRequiredService<CompanyLimitInterceptor>()));
+            .AddInterceptors(sp.GetRequiredService<CompanyLimitInterceptor>(), sp.GetRequiredService<OrgUnitUseInterceptor>()));
         services.AddDbContext<HrmDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp));
         services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
         services.AddKernelImportEngine().AddKernelImportWriters();
@@ -88,6 +89,7 @@ public static class WorkerHost
         services.AddScoped<ILimitWarningSource>(sp => sp.GetRequiredService<LimitWarnings>());
         services.AddScoped<ILimitGuard, LimitGuard>();
         services.AddSingleton<CompanyLimitInterceptor>();
+        services.AddSingleton<OrgUnitUseInterceptor>();
         services.AddScoped<SettingsService>();
         services.AddScoped<ISettings>(sp => sp.GetRequiredService<SettingsService>());
         services.AddScoped<IFeatureFlags>(sp => sp.GetRequiredService<SettingsService>());

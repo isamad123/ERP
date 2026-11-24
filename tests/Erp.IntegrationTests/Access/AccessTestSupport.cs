@@ -57,6 +57,9 @@ public sealed class AccessHarness
             services.AddSingleton<IClock>(clock);
             // S1.23a (Build item 1): the policy framework's test types, registered as a module would (tests only).
             services.AddSingleton(new Erp.Hrm.Contracts.Policies.PolicyTypeSource(Policies.PolicyTestSupport.TestTypes));
+            // S1.22b: the chart's PDF export prints with Chromium, which needs --no-sandbox when the runner is root (as the template tests do).
+            services.RemoveAll<Erp.Kernel.Infrastructure.Documents.Templates.PdfRendererOptions>();
+            services.AddSingleton(new Erp.Kernel.Infrastructure.Documents.Templates.PdfRendererOptions(null, NoSandbox: true, TimeoutSeconds: 90, Parallel: 2));
         }, realAccess: true);
         return new AccessHarness(fx, app, clock, code);
     }

@@ -283,6 +283,17 @@ public sealed class OrgUnitService(
 
         entries.Add(OrganizationAdministrationService.Entry(LinksResource, id, companyId, "create", now, by, fields));
         await OrganizationAdministrationService.WriteChangesAsync(c, tx, entries, ct).ConfigureAwait(false);
+
+        // The structure changed: HR turns this into hrm.org_structure_changed for cost-centre mapping (S1.22b, FR-HRM-POS-08).
+        await IdentityDb.RaiseAsync(c, tx, Erp.Kernel.Contracts.Org.OrgEvents.UnitMoved, unitId, by, now, new
+        {
+            unitId,
+            companyId,
+            hierarchyId,
+            oldParentId = current?.Parent,
+            newParentId,
+            effectiveFrom = effective.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+        }, ct, Erp.Kernel.Contracts.Org.OrgEvents.AggregateType).ConfigureAwait(false);
         await tx.CommitAsync(ct).ConfigureAwait(false);
         return AccessResult.Done(id);
     }
