@@ -231,6 +231,10 @@
   added_in: {S1.29a: [superseded_at]}
   uniques_replaced_in: {S1.29a: [[employment_id, work_date, "where superseded_at is null"]]}
   api_actions: [read]
+  # S1.07 audit key (CR-026), set by S1.29a (CR-089 S1.29a detail f): each result is its own row, never changed or deleted; the row says who
+  # processed it and when, and superseded_at when a newer one replaced it, so the change log skips the table like the other append-only ones.
+  audit: false
+  audit_reason: "row versions: each result is a new row that is never changed or deleted; superseded_at records when a newer one replaced it (S1.29a)"
 
 - table: hrm.attendance_exceptions
   traits: [std, co]

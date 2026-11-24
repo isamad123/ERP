@@ -313,7 +313,7 @@ public sealed class AttendanceEngineTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Contains(again, l => l.Contains("written 0, unchanged 14", StringComparison.Ordinal));
         Assert.Equal(14, await CountAsync("select count(*) from hrm.attendance_days where employment_id = $1", e));
         Assert.Equal(3, await CountAsync("select count(*) from hrm.outbox_messages where event_type = 'hrm.attendance.exception_raised' and payload->>'employmentId' = $1", e.ToString()));
-        Assert.True(await CountAsync("select count(*) from aud.change_log where entity_type = 'hrm.attendance_days' and entity_id in (select id from hrm.attendance_days where employment_id = $1)", e) >= 14); // audited
+        Assert.True(await CountAsync("select count(*) from aud.change_log where entity_type = 'hrm.attendance_exceptions' and entity_id in (select id from hrm.attendance_exceptions where employment_id = $1)", e) >= 3); // exceptions are audited; day rows are their own record
     }
 
     // ------------------------------------------------------------------ FR-HRM-ATT-11, GHR-03: exceptions and re-queueing
