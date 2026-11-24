@@ -1031,8 +1031,82 @@ public static class CSharpEmitter
             w.Close();
         }
 
+        if (CanCreate(t) && t.Schema is not "hrm")
+        {
+            ImportWriter(w, t);
+        }
+
         w.Close();
         return w.ToString();
+    }
+
+    /// <summary>
+    /// The import writer of a table (slice S1.16a, FR-KRN-INT-03): applies one imported row through the same create or update
+    /// code as the endpoint (permission, field security, custom fields, numbering, the table's checks), so an import can never do
+    /// what manual entry cannot. Nested in the endpoints class to reach its private handlers.
+    /// </summary>
+    private static void ImportWriter(CodeWriter w, Table t)
+    {
+        var entity = N.Entity(t);
+        var repo = N.RepositoryInterfaceFull(t);
+        const string svc = "global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions";
+        const string ct = "cancellationToken";
+        var numbers = t.Numbering.Count > 0;
+        var custom = HasCustom(t);
+        w.Line();
+        w.Line($"/// <summary>Applies imported rows of {CodeWriter.Xml(t.FullName)} (create, or update of an existing record) through the endpoint's own rules (S1.16a).</summary>");
+        w.Open("internal sealed class ImportWriter(global::System.IServiceProvider services) : global::Erp.Kernel.Application.Itg.IImportRowWriter");
+        w.Line($"public string Code => {CodeWriter.CSharpString(t.FullName)};");
+        w.Line();
+        w.Open("public async global::System.Threading.Tasks.Task<global::Erp.Kernel.Application.Itg.ImportRowOutcome> WriteAsync(global::Erp.Kernel.Application.Itg.ImportRow row, global::System.Guid? existingId, global::System.Threading.CancellationToken cancellationToken)");
+        w.Line($"var repository = {svc}.GetRequiredService<{repo}>(services);");
+        w.Line($"var permissions = {svc}.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IPermissionChecker>(services);");
+        w.Line($"var fields = {svc}.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(services);");
+        w.Line($"var accessLog = {svc}.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog>(services);");
+        if (numbers)
+        {
+            w.Line($"var numbers = {svc}.GetRequiredService<global::Erp.Kernel.Contracts.Numbering.INumberAllocator>(services);");
+        }
+
+        if (custom)
+        {
+            w.Line($"var customFields = {svc}.GetRequiredService<global::Erp.Kernel.Contracts.Metadata.ICustomFieldValidator>(services);");
+        }
+
+        w.Line("IResult result;");
+        w.Open("if (existingId is null)");
+        w.Line($"var request = global::System.Text.Json.JsonSerializer.Deserialize<{entity}WriteRequest>(row.Values.ToJsonString(), global::System.Text.Json.JsonSerializerOptions.Web)!;");
+        w.Line($"result = await CreateAsync(request, repository, permissions, fields, accessLog{(numbers ? ", numbers" : string.Empty)}{(custom ? ", customFields" : string.Empty)}, {ct}).ConfigureAwait(false);");
+        w.Close();
+        w.Open("else");
+        if (CanUpdate(t))
+        {
+            var version = t.Columns.Find(c => c.Name == "row_version");
+            w.Line($"var current = await repository.GetByIdAsync(existingId.Value, {ct}).ConfigureAwait(false);");
+            w.Open("if (current is null)");
+            w.Line("return global::Erp.Kernel.Application.Itg.ImportRowOutcome.Failed(new global::Erp.Kernel.Application.Itg.ImportRowError(null, \"errors.data.not_found\"));");
+            w.Close();
+            w.Line("var merged = global::System.Text.Json.JsonSerializer.SerializeToNode(ToResponse(current), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();");
+            w.Open("foreach (var item in row.Values)");
+            w.Line("merged[item.Key] = item.Value?.DeepClone();");
+            w.Close();
+            if (version is not null)
+            {
+                w.Line($"merged[\"rowVersion\"] = current.{N.Property(t, version)};");
+            }
+
+            w.Line($"var request = global::System.Text.Json.JsonSerializer.Deserialize<{entity}WriteRequest>(merged, global::System.Text.Json.JsonSerializerOptions.Web)!;");
+            w.Line($"result = await UpdateAsync(existingId.Value, request, repository, permissions, fields, accessLog{(custom ? ", customFields" : string.Empty)}, {ct}).ConfigureAwait(false);");
+        }
+        else
+        {
+            w.Line("return global::Erp.Kernel.Application.Itg.ImportRowOutcome.Failed(new global::Erp.Kernel.Application.Itg.ImportRowError(null, \"errors.import.update_not_supported\"));");
+        }
+
+        w.Close();
+        w.Line($"return await GeneratedImportSupport.ReadAsync(result, {CodeWriter.CSharpString(t.FullName)}, services, existingId is null ? \"created\" : \"updated\").ConfigureAwait(false);");
+        w.Close();
+        w.Close();
     }
 
     private static void Map(CodeWriter w, string method, string pattern, string handler, string name, string action, Table t) =>
@@ -1169,7 +1243,70 @@ public static class CSharpEmitter
         w.Line("    return shaped;");
         w.Line("}");
         w.Close();
+        if (project == "Kernel")
+        {
+            ImportSupport(w, tables);
+        }
+
         return w.ToString();
+    }
+
+    /// <summary>The shared import helpers of the kernel's generated endpoints (S1.16a) and the registration of every table's import writer.</summary>
+    private static void ImportSupport(CodeWriter w, List<Table> tables)
+    {
+        w.Line();
+        w.Line("/// <summary>Reads the answer of a generated create or update handler as the outcome of one imported row (S1.16a).</summary>");
+        w.Open("internal static class GeneratedImportSupport");
+        w.Open("public static async global::System.Threading.Tasks.Task<global::Erp.Kernel.Application.Itg.ImportRowOutcome> ReadAsync(IResult result, string table, global::System.IServiceProvider services, string action)");
+        w.Line("var context = new DefaultHttpContext { RequestServices = services };");
+        w.Line("await using var body = new global::System.IO.MemoryStream();");
+        w.Line("context.Response.Body = body;");
+        w.Line("await result.ExecuteAsync(context).ConfigureAwait(false);");
+        w.Line("body.Position = 0;");
+        w.Line("var text = await new global::System.IO.StreamReader(body).ReadToEndAsync().ConfigureAwait(false);");
+        w.Line("global::System.Text.Json.Nodes.JsonObject? json = null;");
+        w.Open("try");
+        w.Line("json = string.IsNullOrWhiteSpace(text) ? null : global::System.Text.Json.Nodes.JsonNode.Parse(text) as global::System.Text.Json.Nodes.JsonObject;");
+        w.Close();
+        w.Open("catch (global::System.Text.Json.JsonException)");
+        w.Line("json = null;");
+        w.Close();
+        w.Open("if (context.Response.StatusCode is StatusCodes.Status200OK or StatusCodes.Status201Created)");
+        w.Line("var id = json?[\"id\"]?.GetValue<global::System.Guid>();");
+        w.Open("if (id is null)");
+        w.Line("return global::Erp.Kernel.Application.Itg.ImportRowOutcome.Failed(new global::Erp.Kernel.Application.Itg.ImportRowError(null, \"errors.import.no_record\"));");
+        w.Close();
+        w.Line("int? version = json?[\"rowVersion\"] is { } v && v.GetValueKind() == global::System.Text.Json.JsonValueKind.Number ? v.GetValue<int>() : null;");
+        w.Line("return new global::Erp.Kernel.Application.Itg.ImportRowOutcome([], action, [new global::Erp.Kernel.Application.Itg.ImportWrittenRecord(table, id.Value, version)]);");
+        w.Close();
+        w.Line("var errors = new global::System.Collections.Generic.List<global::Erp.Kernel.Application.Itg.ImportRowError>();");
+        w.Open("if (json?[\"errors\"] is global::System.Text.Json.Nodes.JsonObject fields)");
+        w.Open("foreach (var field in fields)");
+        w.Open("foreach (var message in (field.Value as global::System.Text.Json.Nodes.JsonArray) ?? [])");
+        w.Line("errors.Add(new global::Erp.Kernel.Application.Itg.ImportRowError(field.Key, message?.GetValue<string>() ?? \"errors.data.invalid_request\"));");
+        w.Close();
+        w.Close();
+        w.Close();
+        w.Open("if (errors.Count == 0)");
+        w.Line("var title = json?[\"title\"]?.GetValue<string>() ?? \"errors.data.invalid_request\";");
+        w.Line("var detail = json?[\"detail\"]?.GetValue<string>();");
+        w.Line("errors.Add(new global::Erp.Kernel.Application.Itg.ImportRowError(null, detail is null ? title : title + \" (\" + detail + \")\"));");
+        w.Close();
+        w.Line("return new global::Erp.Kernel.Application.Itg.ImportRowOutcome(errors, null, []);");
+        w.Close();
+        w.Close();
+        w.Line();
+        w.Line("/// <summary>Registers the import writer of every generated table that can be created (S1.16a).</summary>");
+        w.Open("public static class KernelImportWriters");
+        w.Open("public static global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddKernelImportWriters(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
+        foreach (var t in tables.Where(t => CanCreate(t) && t.Schema is not "hrm"))
+        {
+            w.Line($"global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::{N.Namespace(t, "Api")}.{N.Entity(t)}Endpoints.ImportWriter>());");
+        }
+
+        w.Line("return services;");
+        w.Close();
+        w.Close();
     }
 
     /// <summary>The module's resources for access control (fields and scope preview), registered by the host (S1.06).</summary>

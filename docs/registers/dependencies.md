@@ -17,6 +17,8 @@ Only permissive licences (MIT, Apache-2.0, BSD, ISC, PostgreSQL, Zlib). Anything
 | Microsoft.IdentityModel.JsonWebTokens | 8.0.1 | MIT | Erp.Kernel.Infrastructure (issues ES256 access tokens, S1.05); same version JwtBearer already brought in S1.03 | S1.05 |
 | MailKit | 4.18.2 | MIT | Erp.Kernel.Infrastructure (SMTP adapter of e-mail notifications and IMAP reading of the bounce mailbox, S1.11b2, ruling Q10); brings MimeKit 4.18.2 (MIT), BouncyCastle.Cryptography 2.7.0 (MIT) and System.Security.Cryptography.Pkcs 10.0.13 (MIT) | S1.11b2 |
 | AWSSDK.S3 | 4.1.0 | Apache-2.0 | Erp.Kernel.Infrastructure (S3-compatible file store, S1.11c1, ruling Q20); brings AWSSDK.Core (Apache-2.0) | S1.11c1 |
+| Sylvan.Data.Csv | 1.4.4 | MIT | Erp.Kernel.Infrastructure (streaming CSV read and write for imports and exports, S1.16a, ruling Q3) | S1.16a |
+| Sylvan.Data.Excel | 0.5.8 | MIT | Erp.Kernel.Infrastructure (streaming .xlsx read and write for imports and exports, S1.16a, ruling Q3) | S1.16a |
 | Scriban | 7.6.1 | BSD-2-Clause | Erp.Kernel.Infrastructure (sandboxed document templates, S1.11c2, KRN-DOC-05); no dependencies | S1.11c2 |
 | PuppeteerSharp | 25.18.1 | MIT | Erp.Kernel.Infrastructure (drives the server's headless Chromium to print HTML to PDF, S1.11c2, ruling Q17); brings Microsoft.Bcl.AsyncInterfaces and Microsoft.Extensions.Logging.Abstractions (MIT) | S1.11c2 |
 | QRCoder | 1.8.1 | MIT | Erp.Kernel.Infrastructure (QR codes in documents as SVG, S1.11c2); no dependencies | S1.11c2 |

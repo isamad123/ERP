@@ -9,6 +9,8 @@
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
     <PackageReference Include="MailKit" />
     <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="Sylvan.Data.Csv" />
+    <PackageReference Include="Sylvan.Data.Excel" />
     <PackageReference Include="Scriban" />
     <PackageReference Include="PuppeteerSharp" />
     <PackageReference Include="QRCoder" />
@@ -27,10 +29,13 @@
     <EmbeddedResource Include="ControlPlane/Provisioning/baseline-seed.json" LogicalName="Erp.Kernel.Infrastructure.ControlPlane.Provisioning.baseline-seed.json" />
     <EmbeddedResource Include="Settings/country-defaults.json" LogicalName="Erp.Kernel.Infrastructure.Settings.country-defaults.json" />
     <EmbeddedResource Include="Access/settings.g.json" LogicalName="Erp.Kernel.Infrastructure.Access.settings.g.json" />
+    <EmbeddedResource Include="Access/imports.json" LogicalName="Erp.Kernel.Infrastructure.Access.imports.json" />
     <EmbeddedResource Include="Access/jobs.json" LogicalName="Erp.Kernel.Infrastructure.Access.jobs.json" />
     <EmbeddedResource Include="Access/setup-tasks.json" LogicalName="Erp.Kernel.Infrastructure.Access.setup-tasks.json" />
     <EmbeddedResource Include="Access/notification-events.json" LogicalName="Erp.Kernel.Infrastructure.Access.notification-events.json" />
     <!-- Slice S1.11b2: the fixed words of notification e-mails (button, footer) come from the notification texts. -->
+    <EmbeddedResource Include="../Erp.Kernel.Contracts/Itg/Localization/import.en.json" LogicalName="Erp.Kernel.Import.en.json" WithCulture="false" />
+    <EmbeddedResource Include="../Erp.Kernel.Contracts/Itg/Localization/import.ur.json" LogicalName="Erp.Kernel.Import.ur.json" WithCulture="false" />
     <EmbeddedResource Include="../Erp.Kernel.Contracts/Notifications/Localization/notifications.en.json" LogicalName="Erp.Kernel.Notifications.en.json" WithCulture="false" />
     <EmbeddedResource Include="../Erp.Kernel.Contracts/Notifications/Localization/notifications.ur.json" LogicalName="Erp.Kernel.Notifications.ur.json" WithCulture="false" />
     <EmbeddedResource Include="Entitlements/entitlement-keys.json" LogicalName="Erp.Kernel.Infrastructure.Entitlements.entitlement-keys.json" />

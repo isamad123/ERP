@@ -24,6 +24,15 @@ internal sealed class ImportBatchConfiguration : IEntityTypeConfiguration<global
         builder.Property(e => e.OkRows).HasColumnName("ok_rows").HasColumnType("integer");
         builder.Property(e => e.ErrorRows).HasColumnName("error_rows").HasColumnType("integer");
         builder.Property(e => e.JobRunId).HasColumnName("job_run_id").HasColumnType("uuid");
+        builder.Property(e => e.FileName).HasColumnName("file_name").HasColumnType("text");
+        builder.Property(e => e.Mode).HasColumnName("mode").HasColumnType("text").IsRequired();
+        builder.Property(e => e.CreatedRows).HasColumnName("created_rows").HasColumnType("integer");
+        builder.Property(e => e.UpdatedRows).HasColumnName("updated_rows").HasColumnType("integer");
+        builder.Property(e => e.ValidatedAt).HasColumnName("validated_at").HasColumnType("timestamptz");
+        builder.Property(e => e.CommittedAt).HasColumnName("committed_at").HasColumnType("timestamptz");
+        builder.Property(e => e.RolledBackAt).HasColumnName("rolled_back_at").HasColumnType("timestamptz");
+        builder.Property(e => e.Mapping).HasColumnName("mapping").HasColumnType("jsonb");
+        builder.Property(e => e.TemplateVersion).HasColumnName("template_version").HasColumnType("integer");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");

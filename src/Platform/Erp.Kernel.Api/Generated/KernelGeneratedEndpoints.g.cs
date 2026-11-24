@@ -43,6 +43,7 @@ public static class KernelGeneratedEndpoints
         global::Erp.Kernel.Api.Generated.Itg.ConnectorEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Itg.ExportJobEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Itg.ImportBatchErrorEndpoints.Map(app);
+        global::Erp.Kernel.Api.Generated.Itg.ImportBatchRowEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Itg.ImportBatchEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Itg.ImportTemplateEndpoints.Map(app);
         global::Erp.Kernel.Api.Generated.Itg.JournalExportEndpoints.Map(app);
@@ -153,5 +154,82 @@ internal static class GeneratedEndpointSupport
         }
 
         return shaped;
+    }
+}
+
+/// <summary>Reads the answer of a generated create or update handler as the outcome of one imported row (S1.16a).</summary>
+internal static class GeneratedImportSupport
+{
+    public static async global::System.Threading.Tasks.Task<global::Erp.Kernel.Application.Itg.ImportRowOutcome> ReadAsync(IResult result, string table, global::System.IServiceProvider services, string action)
+    {
+        var context = new DefaultHttpContext { RequestServices = services };
+        await using var body = new global::System.IO.MemoryStream();
+        context.Response.Body = body;
+        await result.ExecuteAsync(context).ConfigureAwait(false);
+        body.Position = 0;
+        var text = await new global::System.IO.StreamReader(body).ReadToEndAsync().ConfigureAwait(false);
+        global::System.Text.Json.Nodes.JsonObject? json = null;
+        try
+        {
+            json = string.IsNullOrWhiteSpace(text) ? null : global::System.Text.Json.Nodes.JsonNode.Parse(text) as global::System.Text.Json.Nodes.JsonObject;
+        }
+        catch (global::System.Text.Json.JsonException)
+        {
+            json = null;
+        }
+        if (context.Response.StatusCode is StatusCodes.Status200OK or StatusCodes.Status201Created)
+        {
+            var id = json?["id"]?.GetValue<global::System.Guid>();
+            if (id is null)
+            {
+                return global::Erp.Kernel.Application.Itg.ImportRowOutcome.Failed(new global::Erp.Kernel.Application.Itg.ImportRowError(null, "errors.import.no_record"));
+            }
+            int? version = json?["rowVersion"] is { } v && v.GetValueKind() == global::System.Text.Json.JsonValueKind.Number ? v.GetValue<int>() : null;
+            return new global::Erp.Kernel.Application.Itg.ImportRowOutcome([], action, [new global::Erp.Kernel.Application.Itg.ImportWrittenRecord(table, id.Value, version)]);
+        }
+        var errors = new global::System.Collections.Generic.List<global::Erp.Kernel.Application.Itg.ImportRowError>();
+        if (json?["errors"] is global::System.Text.Json.Nodes.JsonObject fields)
+        {
+            foreach (var field in fields)
+            {
+                foreach (var message in (field.Value as global::System.Text.Json.Nodes.JsonArray) ?? [])
+                {
+                    errors.Add(new global::Erp.Kernel.Application.Itg.ImportRowError(field.Key, message?.GetValue<string>() ?? "errors.data.invalid_request"));
+                }
+            }
+        }
+        if (errors.Count == 0)
+        {
+            var title = json?["title"]?.GetValue<string>() ?? "errors.data.invalid_request";
+            var detail = json?["detail"]?.GetValue<string>();
+            errors.Add(new global::Erp.Kernel.Application.Itg.ImportRowError(null, detail is null ? title : title + " (" + detail + ")"));
+        }
+        return new global::Erp.Kernel.Application.Itg.ImportRowOutcome(errors, null, []);
+    }
+}
+
+/// <summary>Registers the import writer of every generated table that can be created (S1.16a).</summary>
+public static class KernelImportWriters
+{
+    public static global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddKernelImportWriters(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+    {
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Doc.RetentionRuleEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Iam.UserEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Itg.AccountMappingEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Itg.AccountingEventEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Itg.ConnectorEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Itg.ExportJobEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Itg.JournalExportEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Org.BranchEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Org.CompanyEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Org.LocationEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Org.OrgHierarchyEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Org.OrgUnitLinkEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Org.OrgUnitTypeEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Org.OrgUnitEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Ref.BankEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Ref.CalendarEndpoints.ImportWriter>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Application.Itg.IImportRowWriter, global::Erp.Kernel.Api.Generated.Ref.HolidayEndpoints.ImportWriter>());
+        return services;
     }
 }

@@ -27,6 +27,9 @@ public sealed partial class ImportBatchError : global::Erp.BuildingBlocks.Domain
     /// <summary>message</summary>
     public string Message { get; set; } = null!;
 
+    /// <summary>phase: default validate; S1.16a: whether the problem came from the validation run or from the commit</summary>
+    public string Phase { get; set; } = "validate";
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

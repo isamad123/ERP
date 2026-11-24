@@ -21,28 +21,21 @@ public sealed class ImportBatchResponse
     public int? OkRows { get; init; }
     public int? ErrorRows { get; init; }
     public global::System.Guid? JobRunId { get; init; }
+    public string? FileName { get; init; }
+    public string Mode { get; init; } = null!;
+    public int? CreatedRows { get; init; }
+    public int? UpdatedRows { get; init; }
+    public global::System.DateTimeOffset? ValidatedAt { get; init; }
+    public global::System.DateTimeOffset? CommittedAt { get; init; }
+    public global::System.DateTimeOffset? RolledBackAt { get; init; }
+    public global::System.Text.Json.JsonElement? Mapping { get; init; }
+    public int? TemplateVersion { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for itg.import_batches. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class ImportBatchWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public global::System.Guid? TemplateId { get; init; }
-    public global::System.Guid? FileId { get; init; }
-    public int? TotalRows { get; init; }
-    public int? OkRows { get; init; }
-    public int? ErrorRows { get; init; }
-    public global::System.Guid? JobRunId { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for itg.import_batches.</summary>
@@ -63,7 +56,7 @@ public sealed class ImportBatchListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of itg.import_batches: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of itg.import_batches: read. Answers pass through field security (S1.06).</summary>
 internal static class ImportBatchEndpoints
 {
     private const string Resource = "itg.import_batches";
@@ -73,8 +66,6 @@ internal static class ImportBatchEndpoints
         var group = app.MapGroup("/api/itg/import-batches").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("itg.import_batches.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "itg.import_batches.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("itg.import_batches.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "itg.import_batches.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("itg.import_batches.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "itg.import_batches.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("itg.import_batches.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "itg.import_batches.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ImportBatchListQuery query, global::Erp.Kernel.Application.Generated.Itg.IImportBatchRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -93,53 +84,6 @@ internal static class ImportBatchEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ImportBatchAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ImportBatchWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IImportBatchRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "itg.import_batches.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Itg.ImportBatchAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Itg.ImportBatch();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/itg/import-batches/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ImportBatchAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ImportBatchWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IImportBatchRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "itg.import_batches.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Itg.ImportBatchAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ImportBatchAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static ImportBatchResponse ToResponse(global::Erp.Kernel.Domain.Generated.Itg.ImportBatch row) => new()
     {
         Id = row.Id,
@@ -150,6 +94,15 @@ internal static class ImportBatchEndpoints
         OkRows = row.OkRows,
         ErrorRows = row.ErrorRows,
         JobRunId = row.JobRunId,
+        FileName = row.FileName,
+        Mode = row.Mode,
+        CreatedRows = row.CreatedRows,
+        UpdatedRows = row.UpdatedRows,
+        ValidatedAt = row.ValidatedAt,
+        CommittedAt = row.CommittedAt,
+        RolledBackAt = row.RolledBackAt,
+        Mapping = row.Mapping?.RootElement.Clone(),
+        TemplateVersion = row.TemplateVersion,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -157,105 +110,4 @@ internal static class ImportBatchEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(ImportBatchWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.TemplateId is null && (!update || access.CanEdit("template_id")))
-        {
-            errors.Add("templateId");
-        }
-        if (request.FileId is null && (!update || access.CanEdit("file_id")))
-        {
-            errors.Add("fileId");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(ImportBatchWriteRequest request, global::Erp.Kernel.Domain.Generated.Itg.ImportBatch row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("template_id"))
-        {
-            row.TemplateId = request.TemplateId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TemplateId, row.TemplateId, update))
-        {
-            denied.Add("templateId");
-        }
-        if (access.CanEdit("file_id"))
-        {
-            row.FileId = request.FileId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileId, row.FileId, update))
-        {
-            denied.Add("fileId");
-        }
-        if (access.CanEdit("total_rows"))
-        {
-            row.TotalRows = request.TotalRows;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TotalRows, row.TotalRows, update))
-        {
-            denied.Add("totalRows");
-        }
-        if (access.CanEdit("ok_rows"))
-        {
-            row.OkRows = request.OkRows;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OkRows, row.OkRows, update))
-        {
-            denied.Add("okRows");
-        }
-        if (access.CanEdit("error_rows"))
-        {
-            row.ErrorRows = request.ErrorRows;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ErrorRows, row.ErrorRows, update))
-        {
-            denied.Add("errorRows");
-        }
-        if (access.CanEdit("job_run_id"))
-        {
-            row.JobRunId = request.JobRunId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.JobRunId, row.JobRunId, update))
-        {
-            denied.Add("jobRunId");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
 }

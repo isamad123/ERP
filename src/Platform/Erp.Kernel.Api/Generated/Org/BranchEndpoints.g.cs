@@ -232,4 +232,41 @@ internal static class BranchEndpoints
         }
         return denied;
     }
+
+    /// <summary>Applies imported rows of org.branches (create, or update of an existing record) through the endpoint's own rules (S1.16a).</summary>
+    internal sealed class ImportWriter(global::System.IServiceProvider services) : global::Erp.Kernel.Application.Itg.IImportRowWriter
+    {
+        public string Code => "org.branches";
+
+        public async global::System.Threading.Tasks.Task<global::Erp.Kernel.Application.Itg.ImportRowOutcome> WriteAsync(global::Erp.Kernel.Application.Itg.ImportRow row, global::System.Guid? existingId, global::System.Threading.CancellationToken cancellationToken)
+        {
+            var repository = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.Kernel.Application.Generated.Org.IBranchRepository>(services);
+            var permissions = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IPermissionChecker>(services);
+            var fields = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(services);
+            var accessLog = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog>(services);
+            IResult result;
+            if (existingId is null)
+            {
+                var request = global::System.Text.Json.JsonSerializer.Deserialize<BranchWriteRequest>(row.Values.ToJsonString(), global::System.Text.Json.JsonSerializerOptions.Web)!;
+                result = await CreateAsync(request, repository, permissions, fields, accessLog, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                var current = await repository.GetByIdAsync(existingId.Value, cancellationToken).ConfigureAwait(false);
+                if (current is null)
+                {
+                    return global::Erp.Kernel.Application.Itg.ImportRowOutcome.Failed(new global::Erp.Kernel.Application.Itg.ImportRowError(null, "errors.data.not_found"));
+                }
+                var merged = global::System.Text.Json.JsonSerializer.SerializeToNode(ToResponse(current), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();
+                foreach (var item in row.Values)
+                {
+                    merged[item.Key] = item.Value?.DeepClone();
+                }
+                merged["rowVersion"] = current.RowVersion;
+                var request = global::System.Text.Json.JsonSerializer.Deserialize<BranchWriteRequest>(merged, global::System.Text.Json.JsonSerializerOptions.Web)!;
+                result = await UpdateAsync(existingId.Value, request, repository, permissions, fields, accessLog, cancellationToken).ConfigureAwait(false);
+            }
+            return await GeneratedImportSupport.ReadAsync(result, "org.branches", services, existingId is null ? "created" : "updated").ConfigureAwait(false);
+        }
+    }
 }
