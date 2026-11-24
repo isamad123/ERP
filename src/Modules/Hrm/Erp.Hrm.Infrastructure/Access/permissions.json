@@ -327,6 +327,24 @@
       "sensitive": false
     },
     {
+      "code": "hrm.holidays.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.holidays.read",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.optional_holidays.choose",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.optional_holidays.choose",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.shift_effective.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.shift_effective.read",
+      "sensitive": false
+    },
+    {
       "code": "hrm.attendance_devices.create",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.attendance_devices.create",

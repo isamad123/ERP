@@ -47,6 +47,10 @@ public static class AttendanceServices
         services.AddScoped<ShiftPolicyReader>();
         services.AddScoped<IShiftService, ShiftService>();
         services.AddScoped<IRosterService, RosterService>();
+        services.AddScoped<IHolidayService, HolidayService>(); // S1.28b: Hijri dates and optional holidays
+        services.AddScoped<EffectiveShiftService>();
+        services.AddScoped<IEffectiveShiftService>(sp => sp.GetRequiredService<EffectiveShiftService>());
+        services.AddScoped<IEffectiveShiftReader>(sp => sp.GetRequiredService<EffectiveShiftService>());
         return services;
     }
 

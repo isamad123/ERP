@@ -867,6 +867,12 @@
       "sensitive": false
     },
     {
+      "code": "hrm.optional_holiday_choices.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.optional_holiday_choices.read",
+      "sensitive": false
+    },
+    {
       "code": "hrm.overtime_entries.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.overtime_entries.read",

@@ -2,7 +2,7 @@
 // ruling 2026-11-21: People, Time and Payroll show now and open "not available yet" until their slices build them).
 // Features are D-24 keys of the licence; permissions are the read permission of each area's main table.
 import { lazy } from 'react';
-import { Briefcase, CalendarDays, CalendarRange, Clock, FileSearch, GitFork, Grid3x3, MonitorSmartphone, QrCode, Router, ScrollText, Sigma, Users, UsersRound, Wallet } from 'lucide-react';
+import { Briefcase, CalendarDays, CalendarRange, Clock, FileSearch, GitFork, Grid3x3, LayoutGrid, MonitorSmartphone, QrCode, Router, ScrollText, Sigma, SunMoon, Timer, Users, UsersRound, Wallet } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
 
 // S1.23a: the policy framework's screens (policies with versions and assignments; "Which policy applies?"), loaded with their routes.
@@ -15,6 +15,10 @@ const KioskScreen = lazy(() => import('./hrm/attendance-kiosk'));
 const QrScreen = lazy(() => import('./hrm/attendance-qr'));
 // S1.27b: devices, device users, unmapped punches and the punch log, loaded with its route.
 const DevicesScreen = lazy(() => import('./hrm/devices'));
+// S1.28b: shifts (engine), the roster grid and the optional holidays with the shift of a day, loaded with their routes.
+const ShiftsScreen = lazy(() => import('./hrm/shifts'));
+const RostersScreen = lazy(() => import('./hrm/rosters'));
+const OptionalHolidaysScreen = lazy(() => import('./hrm/optional-holidays'));
 // S1.34a: the pay groups (made by the engine) and the payroll calendar with its readiness list, loaded with their routes.
 const PayGroupsScreen = lazy(() => import('./payroll/pay-groups'));
 const PayCalendarScreen = lazy(() => import('./payroll/calendar'));
@@ -39,6 +43,9 @@ export const hrmScreens: ScreenDeclaration[] = [
   { id: 'kiosk', path: '/time/kiosk', labelKey: 'nav.kiosk', icon: MonitorSmartphone, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance.kiosk', component: KioskScreen },
   { id: 'qr', path: '/time/qr', labelKey: 'nav.qr', icon: QrCode, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance.qr_display', component: QrScreen },
   { id: 'devices', path: '/time/devices', labelKey: 'nav.devices', icon: Router, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_devices.read', component: DevicesScreen },
+  { id: 'shifts', path: '/time/shifts/*', labelKey: 'nav.shifts', icon: Timer, group: 'time', feature: 'hrm.core', permission: 'hrm.shifts.read', component: ShiftsScreen, tables: ['hrm.shifts'] },
+  { id: 'rosters', path: '/time/rosters/*', labelKey: 'nav.rosters', icon: LayoutGrid, group: 'time', feature: 'hrm.core', permission: 'hrm.rosters.read', component: RostersScreen, tables: ['hrm.rosters'] },
+  { id: 'optional-holidays', path: '/time/optional-holidays', labelKey: 'nav.optionalHolidays', icon: SunMoon, group: 'time', feature: 'hrm.core', permission: 'hrm.holidays.read', component: OptionalHolidaysScreen },
   { id: 'leave', path: '/time/leave/*', labelKey: 'nav.leave', icon: CalendarDays, group: 'time', feature: 'hrm.core', permission: 'hrm.leave_requests.read', comesWith: 'S1.33' },
   // S1.23a (FR-HRM-POL-02, -03; ruling Q1): HR administrators manage policies; both entries need the permission to read policies.
   { id: 'policies', path: '/hr/policies/*', labelKey: 'nav.policies', icon: ScrollText, group: 'people', feature: 'hrm.core', permission: 'hrm.policies.read', component: PoliciesScreen },

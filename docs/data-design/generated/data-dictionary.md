@@ -2,14 +2,14 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 226 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 227 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
 | customer | aud | 7 |
 | customer | cfg | 20 |
 | customer | doc | 7 |
-| customer | hrm | 115 |
+| customer | hrm | 116 |
 | customer | iam | 24 |
 | customer | itg | 12 |
 | customer | job | 5 |
@@ -3280,6 +3280,39 @@ Indexes:
 
 - `ix_nominations_person_id` CREATE INDEX ix_nominations_person_id ON hrm.nominations USING btree (person_id)
 - `ix_nominations_relation_id` CREATE INDEX ix_nominations_relation_id ON hrm.nominations USING btree (relation_id)
+
+### hrm.optional_holiday_choices
+
+The optional holidays an employee chose for a year (S1.28b, CR-085, FR-HRM-ATT-15). Requirements: ATT-15. Source: hrm-time.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| company_id | uuid | no |  |  |
+| employment_id | uuid | no |  | fk hrm.employments |
+| holiday_id | uuid | no |  | fk ref.holidays |
+| holiday_year | integer | no |  | the calendar year of the holiday's date; the yearly limit counts per employment and year |
+| chosen_at | timestamp with time zone | no |  | when the choice was made (the injected clock) |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `fk_optional_holiday_choices_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
+- `fk_optional_holiday_choices_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
+- `fk_optional_holiday_choices_holiday_id` FOREIGN KEY (holiday_id) REFERENCES ref.holidays(id)
+- `pk_optional_holiday_choices` PRIMARY KEY (id)
+- `uq_optional_holiday_choices_employment_id_holiday_id` UNIQUE (employment_id, holiday_id)
+
+Indexes:
+
+- `ix_optional_holiday_choices_company_id` CREATE INDEX ix_optional_holiday_choices_company_id ON hrm.optional_holiday_choices USING btree (company_id)
+- `ix_optional_holiday_choices_company_id_employment_id` CREATE INDEX ix_optional_holiday_choices_company_id_employment_id ON hrm.optional_holiday_choices USING btree (company_id, employment_id)
+- `ix_optional_holiday_choices_employment_id_holiday_year` CREATE INDEX ix_optional_holiday_choices_employment_id_holiday_year ON hrm.optional_holiday_choices USING btree (employment_id, holiday_year)
+- `ix_optional_holiday_choices_holiday_id` CREATE INDEX ix_optional_holiday_choices_holiday_id ON hrm.optional_holiday_choices USING btree (holiday_id)
 
 ### hrm.outbox_messages
 

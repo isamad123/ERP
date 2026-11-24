@@ -149,6 +149,23 @@
   api_actions: [read]
   reqs: [ATT-07]
 
+- table: hrm.optional_holiday_choices
+  purpose: "The optional holidays an employee chose for a year (S1.28b, CR-085, FR-HRM-ATT-15)"
+  traits: [std, co]
+  added_in: S1.28b
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [holiday_id, uuid, req, fk ref.holidays]
+    - [holiday_year, int, req, "the calendar year of the holiday's date; the yearly limit counts per employment and year"]
+    - [chosen_at, ts, req, "when the choice was made (the injected clock)"]
+  unique: [[employment_id, holiday_id]]
+  indexes: [[employment_id, holiday_year]]
+  # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed; the HR optional-holiday service writes
+  # (it holds the yearly limit and the cut-off).
+  scope: {company: company_id, employment: employment_id}
+  api_actions: [read]
+  reqs: [ATT-15]
+
 - table: hrm.attendance_events
   purpose: "Raw punches from web check-in, biometric import, kiosk and HR entry (spec name 'punches')"
   traits: [app, co]

@@ -70,6 +70,7 @@ public static class HrmGeneratedEndpoints
         global::Erp.Hrm.Api.Generated.LoanEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.MandatoryTrainingRuleEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.NominationEndpoints.Map(app);
+        global::Erp.Hrm.Api.Generated.OptionalHolidayChoiceEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.OvertimeEntryEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.ParallelRunLineEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.ParallelRunEndpoints.Map(app);
