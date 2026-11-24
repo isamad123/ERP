@@ -406,6 +406,55 @@ tables:
       - column: base_component_ids
         text: "cycle check on save"
         stub: { name: pay_component_versions_base_cycle, owner: S1.34 }
+        # S1.34b (CR-087 S1.34b detail; FR-HRM-PAY-03): the components a version is a percentage of (or a formula names) exist, belong to
+        # the component's company, never include the component itself and never lead back to it: the walk follows the base lists of
+        # the versions in force on the new version's start date. The component service checks the same first to give a clear message
+        # (and also reads the names in a formula); the trigger stops any other path.
+        implemented:
+          slice: S1.34b
+          triggers:
+            - [hrm.pay_component_versions, tg_pay_component_versions_bases]
+          sql: |
+            create or replace function hrm.tg_pay_component_versions_bases() returns trigger
+            language plpgsql as $fn$
+            declare
+                v_company uuid;
+                v_bad uuid;
+            begin
+                if cardinality(new.base_component_ids) = 0 then
+                    return new;
+                end if;
+                select company_id into v_company from hrm.pay_components where id = new.component_id;
+                if new.component_id = any (new.base_component_ids) then
+                    raise exception 'pay component %: a component cannot be based on itself', new.component_id
+                        using errcode = '23514', constraint = 'ck_pay_component_versions_bases';
+                end if;
+                select b into v_bad from unnest(new.base_component_ids) as b
+                 where not exists (select 1 from hrm.pay_components c where c.id = b and c.company_id = v_company) limit 1;
+                if v_bad is not null then
+                    raise exception 'pay component %: base component % does not exist in the company', new.component_id, v_bad
+                        using errcode = '23514', constraint = 'ck_pay_component_versions_bases';
+                end if;
+                if exists (
+                    with recursive walk(id) as (
+                        select unnest(new.base_component_ids)
+                        union
+                        select unnest(v.base_component_ids)
+                          from walk w
+                          join hrm.pay_component_versions v on v.component_id = w.id
+                           and v.id <> new.id
+                           and v.valid_from <= new.valid_from and (v.valid_to is null or v.valid_to > new.valid_from)
+                    )
+                    select 1 from walk where id = new.component_id) then
+                    raise exception 'pay component %: its base components lead back to it', new.component_id
+                        using errcode = '23514', constraint = 'ck_pay_component_versions_bases';
+                end if;
+                return new;
+            end
+            $fn$;
+            drop trigger if exists tg_pay_component_versions_bases on hrm.pay_component_versions;
+            create trigger tg_pay_component_versions_bases before insert or update on hrm.pay_component_versions
+                for each row execute function hrm.tg_pay_component_versions_bases();
 
   hrm.attendance_periods:
     checks:
@@ -1605,6 +1654,43 @@ functions:
       drop trigger if exists tg_pay_periods_fixed on hrm.pay_periods;
       create trigger tg_pay_periods_fixed before update or delete on hrm.pay_periods
           for each row execute function hrm.tg_pay_periods_fixed();
+
+  # S1.34b (CR-087 S1.34b detail; FR-HRM-PAY-06, FR-XM-05): a compensation assignment is a record of what was agreed from a date: a revision
+  # closes the old row (only its end date changes) and opens a new one; a row is never deleted and its lines never change (a correction is
+  # a new revision). Refused with constraint ck_compensation_fixed.
+  - slice: S1.34b
+    name: hrm.tg_compensation_fixed
+    purpose: "A compensation assignment changes only its end date and is never deleted; its lines are never updated or deleted (FR-HRM-PAY-06); refused with constraint ck_compensation_fixed."
+    triggers:
+      - [hrm.compensation_assignments, tg_compensation_assignments_fixed]
+      - [hrm.compensation_lines, tg_compensation_lines_fixed]
+    sql: |
+      create or replace function hrm.tg_compensation_fixed() returns trigger
+      language plpgsql as $fn$
+      begin
+          if tg_op = 'DELETE' then
+              raise exception '% rows are never deleted: a revision supersedes them', tg_table_name
+                  using errcode = '23514', constraint = 'ck_compensation_fixed';
+          end if;
+          if tg_table_name = 'compensation_lines' then
+              raise exception 'compensation lines never change: record a revision'
+                  using errcode = '23514', constraint = 'ck_compensation_fixed';
+          end if;
+          if (new.employment_id, new.structure_id, new.event_id, new.currency_code, new.valid_from, new.gross_amount, new.increment_proposal_id, new.company_id)
+             is distinct from
+             (old.employment_id, old.structure_id, old.event_id, old.currency_code, old.valid_from, old.gross_amount, old.increment_proposal_id, old.company_id) then
+              raise exception 'a compensation assignment changes only its end date: record a revision'
+                  using errcode = '23514', constraint = 'ck_compensation_fixed';
+          end if;
+          return new;
+      end
+      $fn$;
+      drop trigger if exists tg_compensation_assignments_fixed on hrm.compensation_assignments;
+      create trigger tg_compensation_assignments_fixed before update or delete on hrm.compensation_assignments
+          for each row execute function hrm.tg_compensation_fixed();
+      drop trigger if exists tg_compensation_lines_fixed on hrm.compensation_lines;
+      create trigger tg_compensation_lines_fixed before update or delete on hrm.compensation_lines
+          for each row execute function hrm.tg_compensation_fixed();
 
   # S1.28a (CR-085 S1.28a detail; slice S1.28 Build item 5, FR-HRM-ATT-07): once a roster is published, a day of it is added, moved to
   # another shift or day type, or removed only with a reason, and a published day is never deleted (the day is changed to a weekly off

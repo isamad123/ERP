@@ -43,7 +43,7 @@ public static class CompensationLineAccess
         new("assignment_id", "AssignmentId", null),
         new("component_id", "ComponentId", null),
         new("amount", "Amount", "salary"),
-        new("percent", "Percent", null),
+        new("percent", "Percent", "salary"),
         new("units", "Units", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

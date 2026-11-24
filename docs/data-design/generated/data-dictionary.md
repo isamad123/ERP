@@ -1535,6 +1535,10 @@ Indexes:
 - `ix_compensation_assignments_company_id_structure_id` CREATE INDEX ix_compensation_assignments_company_id_structure_id ON hrm.compensation_assignments USING btree (company_id, structure_id)
 - `ix_compensation_assignments_employment_id_valid_from` CREATE INDEX ix_compensation_assignments_employment_id_valid_from ON hrm.compensation_assignments USING btree (employment_id, valid_from)
 
+Triggers:
+
+- `tg_compensation_assignments_fixed` CREATE TRIGGER tg_compensation_assignments_fixed BEFORE DELETE OR UPDATE ON hrm.compensation_assignments FOR EACH ROW EXECUTE FUNCTION hrm.tg_compensation_fixed()
+
 ### hrm.compensation_lines
 
 Amounts per component for an assignment, including allowances and perquisites (CMP-03). Requirements: PAY-04, CMP-03. Source: hrm-pay.yaml.
@@ -1567,6 +1571,10 @@ Indexes:
 - `ix_compensation_lines_company_id` CREATE INDEX ix_compensation_lines_company_id ON hrm.compensation_lines USING btree (company_id)
 - `ix_compensation_lines_company_id_assignment_id` CREATE INDEX ix_compensation_lines_company_id_assignment_id ON hrm.compensation_lines USING btree (company_id, assignment_id)
 - `ix_compensation_lines_company_id_component_id` CREATE INDEX ix_compensation_lines_company_id_component_id ON hrm.compensation_lines USING btree (company_id, component_id)
+
+Triggers:
+
+- `tg_compensation_lines_fixed` CREATE TRIGGER tg_compensation_lines_fixed BEFORE DELETE OR UPDATE ON hrm.compensation_lines FOR EACH ROW EXECUTE FUNCTION hrm.tg_compensation_fixed()
 
 ### hrm.compliance_obligations
 
@@ -3426,6 +3434,7 @@ Calculation definition of a component, effective-dated; runs record the version 
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| pro_rata_params | jsonb | yes |  | parameters of the custom rule: the divisor and which days count (S1.34b, PAY-05) |
 
 Constraints:
 
@@ -3441,6 +3450,10 @@ Constraints:
 Indexes:
 
 - `ix_pay_component_versions_component_id` CREATE INDEX ix_pay_component_versions_component_id ON hrm.pay_component_versions USING btree (component_id)
+
+Triggers:
+
+- `tg_pay_component_versions_bases` CREATE TRIGGER tg_pay_component_versions_bases BEFORE INSERT OR UPDATE ON hrm.pay_component_versions FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_component_versions_bases()
 
 ### hrm.pay_components
 
@@ -7713,6 +7726,7 @@ Constraints:
 - `cfg.tg_refuse_change` 
 - `doc.tg_refuse_change` 
 - `hrm.drop_expired_attendance_partitions` 
+- `hrm.tg_compensation_fixed` 
 - `hrm.tg_employee_bank_accounts_bank_fields_required` 
 - `hrm.tg_employee_bank_accounts_split` 
 - `hrm.tg_employment_assignments_cost_allocation_sum` 
@@ -7720,6 +7734,7 @@ Constraints:
 - `hrm.tg_employment_events_fixed` 
 - `hrm.tg_grades_value_checks` 
 - `hrm.tg_headcount_budgets_value_checks` 
+- `hrm.tg_pay_component_versions_bases` 
 - `hrm.tg_pay_groups_rules` 
 - `hrm.tg_pay_periods_fixed` 
 - `hrm.tg_policy_assignments_checks` 
@@ -7738,7 +7753,6 @@ Constraints:
 - `hrm.todo_loan_installments_freeze` Pending rule for hrm.loan_installments, owned by S1.41: Frozen by trigger once status = deducted.
 - `hrm.todo_loan_transactions_recovery_within_balance` Pending rule for hrm.loan_transactions, owned by S1.41: trigger: a recovery cannot exceed the outstanding balance
 - `hrm.todo_nominations_shares_sum_to_one` Pending rule for hrm.nominations, owned by S1.20: deferred: shares per (person_id, scheme) on any date sum to 1
-- `hrm.todo_pay_component_versions_base_cycle` Pending rule for hrm.pay_component_versions, owned by S1.34: base_component_ids: cycle check on save
 - `hrm.todo_pay_periods_closed_period_guard` Pending rule for hrm.pay_periods, owned by S1.38: Trigger refuses new pay_inputs, retro_adjustments or installments targeting a closed period.
 - `hrm.todo_pay_result_lines_lock` Pending rule for hrm.pay_result_lines, owned by S1.38: Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33).
 - `hrm.todo_pay_result_reversals_before_payment` Pending rule for hrm.pay_result_reversals, owned by S1.39: allowed only while no non-failed payment line exists for the result

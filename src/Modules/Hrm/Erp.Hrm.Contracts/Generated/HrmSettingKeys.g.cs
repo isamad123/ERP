@@ -58,6 +58,9 @@ public static class HrmSettingKeys
 
     /// <summary>How many days before a pay period's cut-off the payroll officers are reminded.</summary>
     public const string HrmPayCutoffReminderDays = "hrm.pay.cutoff_reminder_days";
+
+    /// <summary>A change of a salary structure's components or of an employee's salary needs a second person's approval.</summary>
+    public const string HrmPayChangeApproval = "hrm.pay.change_approval";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

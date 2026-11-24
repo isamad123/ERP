@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.compensation_lines.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.compensation_lines.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.compensation_lines.update"
     }
   ],
   "companyScoped": true,
@@ -106,7 +98,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.compensation_lines.percent"
+      "labelKey": "fields.hrm.compensation_lines.percent",
+      "fieldClass": "salary"
     },
     {
       "column": "units",
