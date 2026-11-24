@@ -58,6 +58,9 @@ public static class HrmSettingKeys
 
     /// <summary>How many days before a pay period's cut-off the payroll officers are reminded.</summary>
     public const string HrmPayCutoffReminderDays = "hrm.pay.cutoff_reminder_days";
+
+    /// <summary>The month (1 = January to 12 = December) in which the leave year starts.</summary>
+    public const string HrmLeaveYearStartMonth = "hrm.leave.year_start_month";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

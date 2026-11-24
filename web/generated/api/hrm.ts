@@ -2271,23 +2271,6 @@ export interface LeaveLedger
     createdBy: string;
 }
 
-export interface LeaveLedgerWrite
-{
-    companyId: string;
-    employmentId: string;
-    leaveTypeId: string;
-    leaveYear: number;
-    entryDate: string;
-    kind: 'opening' | 'accrual' | 'grant' | 'usage' | 'usage_reversal' | 'adjustment' | 'carry_forward' | 'lapse' | 'encashment' | 'comp_off_earned' | 'comp_off_expired' | 'transfer_in' | 'transfer_out';
-    quantity: number;
-    expiresOn?: string | null;
-    sourceType?: string | null;
-    sourceId?: string | null;
-    policyVersionId?: string | null;
-    reversesEntryId?: string | null;
-    reason?: string | null;
-}
-
 export interface LeaveLedgerListQuery
 {
     after?: string;
@@ -2305,7 +2288,6 @@ export const leaveLedger =
 {
     list: (query: LeaveLedgerListQuery = {}) => request<PagedResult<LeaveLedger>>('GET', '/api/hrm/leave-ledger', { query }),
     get: (id: string) => request<LeaveLedger>('GET', `/api/hrm/leave-ledger/${id}`),
-    create: (body: LeaveLedgerWrite) => request<LeaveLedger>('POST', '/api/hrm/leave-ledger', { body }),
 };
 
 /** hrm.leave_request_days: Day-by-day breakdown used by attendance and payroll. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2326,17 +2308,6 @@ export interface LeaveRequestDay
     rowVersion: number;
 }
 
-export interface LeaveRequestDayWrite
-{
-    companyId: string;
-    leaveRequestId: string;
-    employmentId: string;
-    leaveDate: string;
-    quantity: number;
-    isPaid?: boolean;
-    requestStatus: string;
-}
-
 export interface LeaveRequestDayListQuery
 {
     after?: string;
@@ -2352,8 +2323,6 @@ export const leaveRequestDays =
 {
     list: (query: LeaveRequestDayListQuery = {}) => request<PagedResult<LeaveRequestDay>>('GET', '/api/hrm/leave-request-days', { query }),
     get: (id: string) => request<LeaveRequestDay>('GET', `/api/hrm/leave-request-days/${id}`),
-    create: (body: LeaveRequestDayWrite) => request<LeaveRequestDay>('POST', '/api/hrm/leave-request-days', { body }),
-    update: (id: string, body: LeaveRequestDayWrite & { rowVersion: number }) => request<LeaveRequestDay>('PUT', `/api/hrm/leave-request-days/${id}`, { body }),
 };
 
 /** hrm.leave_requests: LeaveRequest. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2384,26 +2353,6 @@ export interface LeaveRequest
     rowVersion: number;
 }
 
-export interface LeaveRequestWrite
-{
-    companyId: string;
-    branchId?: string | null;
-    employmentId: string;
-    leaveTypeId: string;
-    startDate: string;
-    endDate: string;
-    startPart: 'full' | 'first_half' | 'second_half';
-    endPart: 'full' | 'first_half' | 'second_half';
-    hours?: number | null;
-    days: number;
-    reason?: string | null;
-    fileIds?: string[];
-    modifiesRequestId?: string | null;
-    workflowInstanceId?: string | null;
-    status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'cancel_requested' | 'cancelled';
-    custom?: unknown;
-}
-
 export interface LeaveRequestListQuery
 {
     after?: string;
@@ -2423,8 +2372,6 @@ export const leaveRequests =
 {
     list: (query: LeaveRequestListQuery = {}) => request<PagedResult<LeaveRequest>>('GET', '/api/hrm/leave-requests', { query }),
     get: (id: string) => request<LeaveRequest>('GET', `/api/hrm/leave-requests/${id}`),
-    create: (body: LeaveRequestWrite) => request<LeaveRequest>('POST', '/api/hrm/leave-requests', { body }),
-    update: (id: string, body: LeaveRequestWrite & { rowVersion: number }) => request<LeaveRequest>('PUT', `/api/hrm/leave-requests/${id}`, { body }),
 };
 
 /** hrm.leave_types: LeaveType. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2452,21 +2399,6 @@ export interface LeaveType
     rowVersion: number;
 }
 
-export interface LeaveTypeWrite
-{
-    companyId: string;
-    code: string;
-    nameI18n: Record<string, string>;
-    isPaid?: boolean;
-    counting: 'calendar_days' | 'working_days' | 'hours';
-    unit: 'day' | 'half_day' | 'hour';
-    requiresDocument?: boolean;
-    isCompOff?: boolean;
-    isUnpaidDeduction?: boolean;
-    source: 'pack' | 'tenant';
-    isActive?: boolean;
-}
-
 export interface LeaveTypeListQuery
 {
     after?: string;
@@ -2482,9 +2414,6 @@ export const leaveTypes =
 {
     list: (query: LeaveTypeListQuery = {}) => request<PagedResult<LeaveType>>('GET', '/api/hrm/leave-types', { query }),
     get: (id: string) => request<LeaveType>('GET', `/api/hrm/leave-types/${id}`),
-    create: (body: LeaveTypeWrite) => request<LeaveType>('POST', '/api/hrm/leave-types', { body }),
-    update: (id: string, body: LeaveTypeWrite & { rowVersion: number }) => request<LeaveType>('PUT', `/api/hrm/leave-types/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/leave-types/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.leave_year_end_runs: Carry-forward, lapse and encashment with preview and rollback (LVE-11). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2503,15 +2432,6 @@ export interface LeaveYearEndRun
     rowVersion: number;
 }
 
-export interface LeaveYearEndRunWrite
-{
-    companyId: string;
-    leaveYear: number;
-    jobRunId?: string | null;
-    summary: unknown;
-    status: 'preview' | 'applied' | 'rolled_back';
-}
-
 export interface LeaveYearEndRunListQuery
 {
     after?: string;
@@ -2527,8 +2447,6 @@ export const leaveYearEndRuns =
 {
     list: (query: LeaveYearEndRunListQuery = {}) => request<PagedResult<LeaveYearEndRun>>('GET', '/api/hrm/leave-year-end-runs', { query }),
     get: (id: string) => request<LeaveYearEndRun>('GET', `/api/hrm/leave-year-end-runs/${id}`),
-    create: (body: LeaveYearEndRunWrite) => request<LeaveYearEndRun>('POST', '/api/hrm/leave-year-end-runs', { body }),
-    update: (id: string, body: LeaveYearEndRunWrite & { rowVersion: number }) => request<LeaveYearEndRun>('PUT', `/api/hrm/leave-year-end-runs/${id}`, { body }),
 };
 
 /** hrm.liability_accruals: Gratuity, leave encashment and similar liabilities computed per period (CMP-07, LVE-13 basis). Field rules (S1.06) may leave a field out or mask it as text. */

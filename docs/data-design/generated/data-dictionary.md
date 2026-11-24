@@ -2823,6 +2823,7 @@ Triggers:
 
 - `tg_leave_ledger_append_only` CREATE TRIGGER tg_leave_ledger_append_only BEFORE DELETE OR UPDATE ON hrm.leave_ledger FOR EACH ROW EXECUTE FUNCTION hrm.tg_refuse_change()
 - `tg_leave_ledger_no_truncate` CREATE TRIGGER tg_leave_ledger_no_truncate BEFORE TRUNCATE ON hrm.leave_ledger FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_refuse_change()
+- `tg_leave_ledger_reversal` CREATE TRIGGER tg_leave_ledger_reversal BEFORE INSERT ON hrm.leave_ledger FOR EACH ROW EXECUTE FUNCTION hrm.tg_leave_ledger_reversal()
 
 ### hrm.leave_request_days
 
@@ -2956,6 +2957,10 @@ Constraints:
 Indexes:
 
 - `uq_leave_types_company_id_code` CREATE UNIQUE INDEX uq_leave_types_company_id_code ON hrm.leave_types USING btree (company_id, lower(code)) WHERE (NOT is_deleted)
+
+Triggers:
+
+- `tg_leave_types_rules` CREATE TRIGGER tg_leave_types_rules BEFORE INSERT OR UPDATE ON hrm.leave_types FOR EACH ROW EXECUTE FUNCTION hrm.tg_leave_types_rules()
 
 ### hrm.leave_year_end_runs
 
@@ -7720,6 +7725,8 @@ Constraints:
 - `hrm.tg_employment_events_fixed` 
 - `hrm.tg_grades_value_checks` 
 - `hrm.tg_headcount_budgets_value_checks` 
+- `hrm.tg_leave_ledger_reversal` 
+- `hrm.tg_leave_types_rules` 
 - `hrm.tg_pay_groups_rules` 
 - `hrm.tg_pay_periods_fixed` 
 - `hrm.tg_policy_assignments_checks` 

@@ -1644,3 +1644,81 @@ functions:
       drop trigger if exists tg_roster_lines_published on hrm.roster_lines;
       create trigger tg_roster_lines_published before insert or update or delete on hrm.roster_lines
           for each row execute function hrm.tg_roster_lines_published();
+
+  # S1.32a (CR-086 S1.32a detail; slice S1.32 Build item 1, FR-HRM-LVE-01): a leave type counted in hours is taken in hours (and only
+  # then), a paid type is never a pay deduction, and the code, counting and unit of a type no longer change once its ledger has entries
+  # (policies name the type by code; the entries are in its unit). No statutory leave value is here (AS-4, R-002, R-145).
+  - slice: S1.32a
+    name: hrm.tg_leave_types_rules
+    purpose: "A leave type counted in hours has the unit hour and only then; a paid type is not an unpaid-leave deduction; code, counting and unit are fixed once the type has ledger entries (FR-HRM-LVE-01); refused with constraint ck_leave_types_rules."
+    triggers:
+      - [hrm.leave_types, tg_leave_types_rules]
+    sql: |
+      create or replace function hrm.tg_leave_types_rules() returns trigger
+      language plpgsql as $fn$
+      begin
+          if (new.counting = 'hours') <> (new.unit = 'hour') then
+              raise exception 'leave type %: a type counted in hours is taken in hours, and only then', new.code
+                  using errcode = '23514', constraint = 'ck_leave_types_rules';
+          end if;
+          if new.is_paid and new.is_unpaid_deduction then
+              raise exception 'leave type %: a paid type cannot be an unpaid-leave deduction', new.code
+                  using errcode = '23514', constraint = 'ck_leave_types_rules';
+          end if;
+          if tg_op = 'UPDATE'
+             and (lower(new.code) is distinct from lower(old.code) or new.counting is distinct from old.counting or new.unit is distinct from old.unit
+                  or new.company_id is distinct from old.company_id)
+             and exists (select 1 from hrm.leave_ledger l where l.company_id = old.company_id and l.leave_type_id = old.id) then
+              raise exception 'leave type %: code, counting and unit cannot change once the type has ledger entries', old.code
+                  using errcode = '23514', constraint = 'ck_leave_types_rules';
+          end if;
+          return new;
+      end
+      $fn$;
+      drop trigger if exists tg_leave_types_rules on hrm.leave_types;
+      create trigger tg_leave_types_rules before insert or update on hrm.leave_types
+          for each row execute function hrm.tg_leave_types_rules();
+
+  # S1.32a (CR-086 S1.32a detail; slice S1.32 Build item 4, FR-HRM-LVE-10, FR-XM-05 and -06): an entry never changes (the first migration's
+  # tg_leave_ledger_append_only refuses update, delete and truncate); a correction is a new entry that reverses one entry exactly: the same
+  # employment, leave type and leave year, the opposite quantity, the same kind (a usage is reversed by usage_reversal), never a reversal of a
+  # reversal; each entry is reversed at most once (unique index on reverses_entry_id). No entry moves nothing.
+  - slice: S1.32a
+    name: hrm.tg_leave_ledger_reversal
+    purpose: "A leave ledger entry is never zero, and a reversal negates exactly one entry of the same employment, type and leave year, of the same kind (usage by usage_reversal), never a reversal (FR-HRM-LVE-10, FR-XM-06); refused with constraint ck_leave_ledger_reversal."
+    triggers:
+      - [hrm.leave_ledger, tg_leave_ledger_reversal]
+    sql: |
+      create or replace function hrm.tg_leave_ledger_reversal() returns trigger
+      language plpgsql as $fn$
+      declare
+          original hrm.leave_ledger%rowtype;
+      begin
+          if new.quantity = 0 then
+              raise exception 'leave ledger: an entry of nothing is not recorded'
+                  using errcode = '23514', constraint = 'ck_leave_ledger_reversal';
+          end if;
+          if new.reverses_entry_id is null then
+              if new.kind = 'usage_reversal' then
+                  raise exception 'leave ledger: a usage reversal names the usage it reverses'
+                      using errcode = '23514', constraint = 'ck_leave_ledger_reversal';
+              end if;
+              return new;
+          end if;
+          select * into original from hrm.leave_ledger where company_id = new.company_id and id = new.reverses_entry_id;
+          if not found
+             or original.reverses_entry_id is not null
+             or original.employment_id <> new.employment_id
+             or original.leave_type_id <> new.leave_type_id
+             or original.leave_year <> new.leave_year
+             or new.quantity <> -original.quantity
+             or not (new.kind = original.kind and original.kind <> 'usage' or original.kind = 'usage' and new.kind = 'usage_reversal') then
+              raise exception 'leave ledger: entry % does not reverse entry % exactly', new.id, new.reverses_entry_id
+                  using errcode = '23514', constraint = 'ck_leave_ledger_reversal';
+          end if;
+          return new;
+      end
+      $fn$;
+      drop trigger if exists tg_leave_ledger_reversal on hrm.leave_ledger;
+      create trigger tg_leave_ledger_reversal before insert on hrm.leave_ledger
+          for each row execute function hrm.tg_leave_ledger_reversal();

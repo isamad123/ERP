@@ -23,7 +23,7 @@ public static class HrmPackHandlers
     public static IReadOnlyList<IPackObjectHandler> Create(PolicyTypeCatalog types) => [new PolicyPackHandler(types)];
 
     /// <summary>The handlers with the HR module's own policy-type manifest (the migrator and provisioning, which have no service container).</summary>
-    public static IReadOnlyList<IPackObjectHandler> Default { get; } = Create(new PolicyTypeCatalog([new PolicyTypeSource(PolicyServices.TypeManifest)]));
+    public static IReadOnlyList<IPackObjectHandler> Default { get; } = Create(new PolicyTypeCatalog([new PolicyTypeSource(PolicyServices.TypeManifest)], [new Erp.Hrm.Application.Leave.LeavePolicyCheck()]));
 }
 
 /// <summary>
@@ -78,7 +78,7 @@ internal sealed partial class PolicyPackHandler(PolicyTypeCatalog types) : IPack
         }
 
         using var document = JsonDocument.Parse(parameters.ToJsonString());
-        var problems = PolicySchema.Check(type.Schema, document.RootElement);
+        var problems = types.Check(type, document.RootElement);
         return problems.Count == 0 ? null : "parameters do not fit the type's schema: " + string.Join("; ", problems.Select(p => p.Key + " " + string.Join(",", p.Value)));
     }
 

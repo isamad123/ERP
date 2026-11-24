@@ -288,6 +288,7 @@ public static class ApiHost
         api.MapHrmAttendanceEndpoints(); // S1.27a
         api.MapHrmRosterEndpoints(); // S1.28a
         api.MapHrmPayEndpoints(); // S1.34a pay groups, calendar and readiness
+        Erp.Hrm.Api.Leave.LeaveEndpoints.MapHrmLeaveEndpoints(api); // S1.32a leave types, ledger, balances and recompute
         return app;
     }
 

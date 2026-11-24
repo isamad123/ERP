@@ -777,27 +777,9 @@
       "sensitive": false
     },
     {
-      "code": "hrm.leave_ledger.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_ledger.create",
-      "sensitive": false
-    },
-    {
       "code": "hrm.leave_request_days.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.leave_request_days.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.leave_request_days.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_request_days.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.leave_request_days.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_request_days.update",
       "sensitive": false
     },
     {
@@ -807,57 +789,15 @@
       "sensitive": false
     },
     {
-      "code": "hrm.leave_requests.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_requests.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.leave_requests.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_requests.update",
-      "sensitive": false
-    },
-    {
       "code": "hrm.leave_types.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.leave_types.read",
       "sensitive": false
     },
     {
-      "code": "hrm.leave_types.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_types.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.leave_types.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_types.update",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.leave_types.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_types.delete",
-      "sensitive": false
-    },
-    {
       "code": "hrm.leave_year_end_runs.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.leave_year_end_runs.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.leave_year_end_runs.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_year_end_runs.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.leave_year_end_runs.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_year_end_runs.update",
       "sensitive": false
     },
     {

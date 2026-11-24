@@ -176,3 +176,14 @@ settings:
     name: {en: "Payroll cut-off reminder (days before)", ur: "پے رول کٹ آف کی یاد دہانی (دن پہلے)"}
     description: {en: "How many days before a pay period's cut-off the payroll officers are reminded", ur: "تنخواہی دور کی کٹ آف سے کتنے دن پہلے پے رول افسران کو یاد دلایا جائے"}
     help: {en: "The payroll officers get a reminder this many days before the cut-off date of each pay period that has not closed, once for each cut-off date. Zero reminds only on the cut-off day itself.", ur: "ہر اس تنخواہی دور کی کٹ آف تاریخ سے اتنے دن پہلے پے رول افسران کو یاد دہانی ملتی ہے جو ابھی بند نہیں ہوا، ہر کٹ آف تاریخ کے لیے ایک بار۔ صفر ہو تو صرف کٹ آف کے دن یاد دلایا جاتا ہے۔"}
+  # S1.32a (CR-086; slice S1.32 ruling Q3): the month a leave year starts, read by the leave balances, the accrual job and the recompute; a
+  # leave policy may set another month for one leave type (yearStartMonth). January by default, as the slice's recommendation says.
+  - key: hrm.leave.year_start_month
+    type: int
+    default: 1
+    validation: {min: 1, max: 12}
+    layers: [tenant, company]
+    area: hr.leave
+    name: {en: "Leave year starts in month", ur: "رخصت کا سال اس مہینے سے شروع"}
+    description: {en: "The month (1 = January to 12 = December) in which the leave year starts", ur: "وہ مہینہ (1 = جنوری سے 12 = دسمبر) جس سے رخصت کا سال شروع ہوتا ہے"}
+    help: {en: "Leave balances are counted per leave year. A yearly grant is given at the start of the leave year (or on joining), and the year-end carries forward, lapses or pays out what is left. A leave policy can give one leave type a different start month.", ur: "رخصت کا بقایا ہر رخصتی سال کے حساب سے گنا جاتا ہے۔ سالانہ عطا رخصتی سال کے آغاز پر (یا شمولیت پر) دی جاتی ہے، اور سال کے اختتام پر بچی ہوئی رخصت آگے منتقل، ختم یا ادا کی جاتی ہے۔ رخصت کی پالیسی کسی ایک قسم کے لیے آغاز کا دوسرا مہینہ مقرر کر سکتی ہے۔"}

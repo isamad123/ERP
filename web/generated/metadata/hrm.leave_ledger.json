@@ -15,10 +15,6 @@
     {
       "action": "read",
       "permission": "hrm.leave_ledger.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.leave_ledger.create"
     }
   ],
   "companyScoped": true,

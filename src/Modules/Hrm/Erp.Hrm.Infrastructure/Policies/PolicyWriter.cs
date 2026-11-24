@@ -77,7 +77,7 @@ internal sealed class PolicyWriter(HrmDbContext db, PolicyTypeCatalog types, IOr
             return PeopleResult.Invalid(PolicyErrors.UnknownType);
         }
 
-        if (PolicySchema.Check(type.Schema, version.Parameters.RootElement) is { Count: > 0 } errors)
+        if (types.Check(type, version.Parameters.RootElement) is { Count: > 0 } errors)
         {
             return PeopleResult.Fields(errors);
         }

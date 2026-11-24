@@ -142,7 +142,7 @@ internal sealed partial class PolicyService(
         var parameters = request.Parameters is { ValueKind: JsonValueKind.Object } p ? p : JsonSerializer.SerializeToElement(new { });
         if (type is not null)
         {
-            foreach (var (path, keys) in PolicySchema.Check(type.Schema, parameters))
+            foreach (var (path, keys) in types.Check(type, parameters))
             {
                 errors[path] = keys;
             }
@@ -654,7 +654,7 @@ internal sealed partial class PolicyService(
             return PeopleResult.Invalid(PolicyErrors.UnknownType);
         }
 
-        var errors = PolicySchema.Check(type.Schema, parameters);
+        var errors = types.Check(type, parameters);
         return errors.Count > 0 ? PeopleResult.Fields(errors) : null;
     }
 

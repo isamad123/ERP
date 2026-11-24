@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.leave_request_days.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.leave_request_days.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.leave_request_days.update"
     }
   ],
   "companyScoped": true,
