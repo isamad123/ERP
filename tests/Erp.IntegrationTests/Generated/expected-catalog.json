@@ -38807,10 +38807,25 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "phase",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "validate",
+            "commit"
+          ]
         }
       ],
       "uniques": [],
-      "checks": [],
+      "checks": [
+        "ck_import_batch_errors_phase"
+      ],
       "exclusions": [],
       "foreign_keys": [
         {
@@ -38834,6 +38849,148 @@
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "itg.import_batch_errors"
+    },
+    {
+      "database": "tenant",
+      "schema": "itg",
+      "name": "import_batch_rows",
+      "module": "kernel",
+      "traits": [
+        "app"
+      ],
+      "requirements": [
+        "KRN-INT-03",
+        "KRN-INT-04"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "batch_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_no",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "table_name",
+          "kind": "Text",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "record_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "action",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "created",
+            "updated"
+          ]
+        },
+        {
+          "name": "record_version",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [
+        "uq_import_batch_rows_batch_id_row_no_table_name_record_id"
+      ],
+      "checks": [
+        "ck_import_batch_rows_action"
+      ],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_import_batch_rows_batch_id",
+          "columns": [
+            "batch_id"
+          ],
+          "target": "itg.import_batches",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_import_batch_rows_batch_id_row_no",
+        "ix_import_batch_rows_table_name_record_id"
+      ],
+      "triggers": [
+        "tg_import_batch_rows_append_only",
+        "tg_import_batch_rows_no_truncate"
+      ],
+      "append_only_updatable": [],
+      "has_api": true,
+      "full_name": "itg.import_batch_rows"
     },
     {
       "database": "tenant",
@@ -39000,12 +39157,106 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "file_name",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "mode",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "create",
+            "create_or_update"
+          ]
+        },
+        {
+          "name": "created_rows",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_rows",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "validated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "committed_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "rolled_back_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "mapping",
+          "kind": "Json",
+          "type": "jsonb",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "template_version",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
         "uq_import_batches_company_id_id"
       ],
       "checks": [
+        "ck_import_batches_mode",
         "ck_import_batches_status"
       ],
       "exclusions": [],
@@ -39213,6 +39464,29 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "mode",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "create",
+            "create_or_update"
+          ]
+        },
+        {
+          "name": "is_default",
+          "kind": "Bool",
+          "type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -39221,7 +39495,8 @@
       "checks": [
         "ck_import_templates_code_code",
         "ck_import_templates_name_i18n_object",
-        "ck_import_templates_format"
+        "ck_import_templates_format",
+        "ck_import_templates_mode"
       ],
       "exclusions": [],
       "foreign_keys": [],

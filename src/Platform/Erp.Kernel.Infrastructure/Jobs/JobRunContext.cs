@@ -29,6 +29,9 @@ public sealed class JobRunContext
     /// <summary>The permissions of a job-actor run; null for a requested run (the person's own roles apply).</summary>
     public IReadOnlySet<string>? Grant { get; private set; }
 
+    /// <summary>The audit source of what this run writes when it is not <c>job</c> (an import run writes with source <c>import</c>, S1.16a).</summary>
+    public string? AuditSource { get; set; }
+
     public void BindJobActor(Guid runId, string code, IEnumerable<string> permissions)
     {
         ArgumentNullException.ThrowIfNull(permissions);
@@ -70,7 +73,7 @@ public sealed class JobAuditContext(JobRunContext job) : IAuditContext
 
     public string? IpAddress => null;
 
-    public string Source => job.IsBound ? AuditSources.Job : AuditSources.System;
+    public string Source => job.IsBound ? job.AuditSource ?? AuditSources.Job : AuditSources.System;
 
     public Guid? ActorUserId => job.ActorUserId;
 

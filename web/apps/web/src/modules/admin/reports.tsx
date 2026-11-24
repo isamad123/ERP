@@ -10,6 +10,7 @@ import { formatDateTime, formatInteger, useLocaleSettings, useText, type Message
 import { ApiProblem } from '../../api/client';
 import { access, type PermissionChange } from '../../api/access';
 import { useShell } from '../../shell/context';
+import './reports-messages';
 import './users.css';
 
 export const REPORTS_PATH = '/admin/access-reports';

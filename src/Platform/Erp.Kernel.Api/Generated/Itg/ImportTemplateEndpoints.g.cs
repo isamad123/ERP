@@ -20,27 +20,14 @@ public sealed class ImportTemplateResponse
     public string Format { get; init; } = null!;
     public global::System.Text.Json.JsonElement Mapping { get; init; }
     public int Version { get; init; }
+    public string Mode { get; init; } = null!;
+    public bool IsDefault { get; init; }
     public bool IsActive { get; init; }
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for itg.import_templates. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class ImportTemplateWriteRequest
-{
-    public string? Code { get; init; }
-    public global::System.Text.Json.JsonElement? NameI18n { get; init; }
-    public string? EntityType { get; init; }
-    public string? Format { get; init; }
-    public global::System.Text.Json.JsonElement? Mapping { get; init; }
-    public int? Version { get; init; }
-    public bool? IsActive { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for itg.import_templates.</summary>
@@ -59,7 +46,7 @@ public sealed class ImportTemplateListQuery
     public string? Search { get; init; }
 }
 
-/// <summary>Generated endpoints of itg.import_templates: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of itg.import_templates: read. Answers pass through field security (S1.06).</summary>
 internal static class ImportTemplateEndpoints
 {
     private const string Resource = "itg.import_templates";
@@ -69,8 +56,6 @@ internal static class ImportTemplateEndpoints
         var group = app.MapGroup("/api/itg/import-templates").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("itg.import_templates.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "itg.import_templates.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("itg.import_templates.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "itg.import_templates.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("itg.import_templates.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "itg.import_templates.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("itg.import_templates.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "itg.import_templates.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ImportTemplateListQuery query, global::Erp.Kernel.Application.Generated.Itg.IImportTemplateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -89,53 +74,6 @@ internal static class ImportTemplateEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ImportTemplateAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ImportTemplateWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IImportTemplateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "itg.import_templates.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Itg.ImportTemplateAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Itg.ImportTemplate();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/itg/import-templates/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ImportTemplateAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ImportTemplateWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IImportTemplateRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "itg.import_templates.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Itg.ImportTemplateAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ImportTemplateAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static ImportTemplateResponse ToResponse(global::Erp.Kernel.Domain.Generated.Itg.ImportTemplate row) => new()
     {
         Id = row.Id,
@@ -145,6 +83,8 @@ internal static class ImportTemplateEndpoints
         Format = row.Format,
         Mapping = row.Mapping.RootElement.Clone(),
         Version = row.Version,
+        Mode = row.Mode,
+        IsDefault = row.IsDefault,
         IsActive = row.IsActive,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -152,105 +92,4 @@ internal static class ImportTemplateEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(ImportTemplateWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.Code is null && (!update || access.CanEdit("code")))
-        {
-            errors.Add("code");
-        }
-        if (request.NameI18n is null && (!update || access.CanEdit("name_i18n")))
-        {
-            errors.Add("nameI18n");
-        }
-        if (request.EntityType is null && (!update || access.CanEdit("entity_type")))
-        {
-            errors.Add("entityType");
-        }
-        if (request.Format is null && (!update || access.CanEdit("format")))
-        {
-            errors.Add("format");
-        }
-        if (request.Mapping is null && (!update || access.CanEdit("mapping")))
-        {
-            errors.Add("mapping");
-        }
-        if (request.Version is null && (!update || access.CanEdit("version")))
-        {
-            errors.Add("version");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(ImportTemplateWriteRequest request, global::Erp.Kernel.Domain.Generated.Itg.ImportTemplate row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("code"))
-        {
-            row.Code = request.Code!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Code, row.Code, update))
-        {
-            denied.Add("code");
-        }
-        if (access.CanEdit("name_i18n"))
-        {
-            row.NameI18n = GeneratedEndpointSupport.ToDocument(request.NameI18n)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.NameI18n, row.NameI18n, update))
-        {
-            denied.Add("nameI18n");
-        }
-        if (access.CanEdit("entity_type"))
-        {
-            row.EntityType = request.EntityType!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EntityType, row.EntityType, update))
-        {
-            denied.Add("entityType");
-        }
-        if (access.CanEdit("format"))
-        {
-            row.Format = request.Format!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Format, row.Format, update))
-        {
-            denied.Add("format");
-        }
-        if (access.CanEdit("mapping"))
-        {
-            row.Mapping = GeneratedEndpointSupport.ToDocument(request.Mapping)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Mapping, row.Mapping, update))
-        {
-            denied.Add("mapping");
-        }
-        if (access.CanEdit("version"))
-        {
-            row.Version = request.Version!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Version, row.Version, update))
-        {
-            denied.Add("version");
-        }
-        if (access.CanEdit("is_active"))
-        {
-            if (request.IsActive is not null)
-            {
-                row.IsActive = request.IsActive!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsActive, row.IsActive, update))
-        {
-            denied.Add("isActive");
-        }
-        return denied;
-    }
 }

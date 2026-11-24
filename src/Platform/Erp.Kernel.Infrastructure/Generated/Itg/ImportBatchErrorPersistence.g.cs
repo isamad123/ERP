@@ -21,6 +21,7 @@ internal sealed class ImportBatchErrorConfiguration : IEntityTypeConfiguration<g
         builder.Property(e => e.RowNo).HasColumnName("row_no").HasColumnType("integer");
         builder.Property(e => e.Field).HasColumnName("field").HasColumnType("text");
         builder.Property(e => e.Message).HasColumnName("message").HasColumnType("text").IsRequired();
+        builder.Property(e => e.Phase).HasColumnName("phase").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
     }

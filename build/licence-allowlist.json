@@ -22,6 +22,14 @@
     "NetArchTest.Rules@1.3.2": {
       "licence": "MIT",
       "evidence": "https://github.com/BenMorris/NetArchTest/blob/master/LICENSE (package metadata declares no licence; checked in S1.01)"
+    },
+    "Sylvan.Data.Csv@1.4.4": {
+      "licence": "MIT",
+      "evidence": "license.txt inside the package is the MIT licence (Mark Pflug); package metadata names only a file (checked in S1.16a, ruling Q3)"
+    },
+    "Sylvan.Data.Excel@0.5.8": {
+      "licence": "MIT",
+      "evidence": "license.txt inside the package is the MIT licence (Mark Pflug); package metadata names only a file (checked in S1.16a, ruling Q3)"
     }
   },
   "npm": {

@@ -179,6 +179,38 @@
       "schedule_editable": false
     },
     {
+      "code": "kernel.import_validate",
+      "name": {"en": "Check an import file", "ur": "درآمدی فائل کی جانچ"},
+      "description": {"en": "Runs every row of an uploaded import file through the rules of manual entry in a transaction that is rolled back, and lists the problems. Nothing is saved.", "ur": "اپ لوڈ کی گئی درآمدی فائل کی ہر قطار کو دستی اندراج کے قواعد سے گزارتا ہے، ایسی ٹرانزیکشن میں جو واپس کر دی جاتی ہے، اور مسائل کی فہرست بناتا ہے۔ کچھ محفوظ نہیں ہوتا۔"},
+      "permissions": [],
+      "retry": {"max_attempts": 1, "backoff_seconds": [60]},
+      "timeout_seconds": 3600,
+      "priority": 30,
+      "concurrency": 2,
+      "runs_in": ["full"],
+      "entitlement": "platform.base",
+      "manual": true,
+      "request_permission": "itg.imports.manage",
+      "runs_as": "requester",
+      "schedule_editable": false
+    },
+    {
+      "code": "kernel.import_commit",
+      "name": {"en": "Save an import", "ur": "درآمد کو محفوظ کرنا"},
+      "description": {"en": "Saves the good rows of a checked import file in chunks, with the rights of the person who started it. A worker that stops and starts again continues without doing a row twice.", "ur": "جانچی ہوئی درآمدی فائل کی درست قطاریں حصوں میں محفوظ کرتا ہے، شروع کرنے والے کے اختیارات کے ساتھ۔ ورکر رک کر دوبارہ چلے تو کوئی قطار دو بار نہیں ہوتی۔"},
+      "permissions": [],
+      "retry": {"max_attempts": 3, "backoff_seconds": [30, 120]},
+      "timeout_seconds": 7200,
+      "priority": 30,
+      "concurrency": 2,
+      "runs_in": ["full"],
+      "entitlement": "platform.base",
+      "manual": true,
+      "request_permission": "itg.imports.manage",
+      "runs_as": "requester",
+      "schedule_editable": false
+    },
+    {
       "code": "kernel.doc_generate_batch",
       "name": {"en": "Produce documents in a batch", "ur": "دستاویزات کی کھیپ تیار کرنا"},
       "description": {"en": "Produces the PDF of one document template for many records, with the rights of the person who asked. A record that cannot be done is listed in the run log.", "ur": "ایک دستاویزی سانچے کا PDF بہت سے ریکارڈز کے لیے تیار کرتا ہے، درخواست کرنے والے کے اختیارات کے ساتھ۔ جو ریکارڈ تیار نہ ہو سکے وہ رن لاگ میں درج ہوتا ہے۔"},
