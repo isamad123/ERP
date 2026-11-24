@@ -11,6 +11,14 @@
     {
       "action": "read",
       "permission": "hrm.leave_year_end_runs.read"
+    },
+    {
+      "action": "create",
+      "permission": "hrm.leave_year_end_runs.create"
+    },
+    {
+      "action": "update",
+      "permission": "hrm.leave_year_end_runs.update"
     }
   ],
   "companyScoped": true,

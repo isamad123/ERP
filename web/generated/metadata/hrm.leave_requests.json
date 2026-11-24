@@ -15,6 +15,14 @@
     {
       "action": "read",
       "permission": "hrm.leave_requests.read"
+    },
+    {
+      "action": "create",
+      "permission": "hrm.leave_requests.create"
+    },
+    {
+      "action": "update",
+      "permission": "hrm.leave_requests.update"
     }
   ],
   "companyScoped": true,

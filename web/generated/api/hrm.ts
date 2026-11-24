@@ -2308,6 +2308,17 @@ export interface LeaveRequestDay
     rowVersion: number;
 }
 
+export interface LeaveRequestDayWrite
+{
+    companyId: string;
+    leaveRequestId: string;
+    employmentId: string;
+    leaveDate: string;
+    quantity: number;
+    isPaid?: boolean;
+    requestStatus: string;
+}
+
 export interface LeaveRequestDayListQuery
 {
     after?: string;
@@ -2323,6 +2334,8 @@ export const leaveRequestDays =
 {
     list: (query: LeaveRequestDayListQuery = {}) => request<PagedResult<LeaveRequestDay>>('GET', '/api/hrm/leave-request-days', { query }),
     get: (id: string) => request<LeaveRequestDay>('GET', `/api/hrm/leave-request-days/${id}`),
+    create: (body: LeaveRequestDayWrite) => request<LeaveRequestDay>('POST', '/api/hrm/leave-request-days', { body }),
+    update: (id: string, body: LeaveRequestDayWrite & { rowVersion: number }) => request<LeaveRequestDay>('PUT', `/api/hrm/leave-request-days/${id}`, { body }),
 };
 
 /** hrm.leave_requests: LeaveRequest. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2353,6 +2366,26 @@ export interface LeaveRequest
     rowVersion: number;
 }
 
+export interface LeaveRequestWrite
+{
+    companyId: string;
+    branchId?: string | null;
+    employmentId: string;
+    leaveTypeId: string;
+    startDate: string;
+    endDate: string;
+    startPart: 'full' | 'first_half' | 'second_half';
+    endPart: 'full' | 'first_half' | 'second_half';
+    hours?: number | null;
+    days: number;
+    reason?: string | null;
+    fileIds?: string[];
+    modifiesRequestId?: string | null;
+    workflowInstanceId?: string | null;
+    status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'cancel_requested' | 'cancelled';
+    custom?: unknown;
+}
+
 export interface LeaveRequestListQuery
 {
     after?: string;
@@ -2372,6 +2405,8 @@ export const leaveRequests =
 {
     list: (query: LeaveRequestListQuery = {}) => request<PagedResult<LeaveRequest>>('GET', '/api/hrm/leave-requests', { query }),
     get: (id: string) => request<LeaveRequest>('GET', `/api/hrm/leave-requests/${id}`),
+    create: (body: LeaveRequestWrite) => request<LeaveRequest>('POST', '/api/hrm/leave-requests', { body }),
+    update: (id: string, body: LeaveRequestWrite & { rowVersion: number }) => request<LeaveRequest>('PUT', `/api/hrm/leave-requests/${id}`, { body }),
 };
 
 /** hrm.leave_types: LeaveType. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2432,6 +2467,15 @@ export interface LeaveYearEndRun
     rowVersion: number;
 }
 
+export interface LeaveYearEndRunWrite
+{
+    companyId: string;
+    leaveYear: number;
+    jobRunId?: string | null;
+    summary: unknown;
+    status: 'preview' | 'applied' | 'rolled_back';
+}
+
 export interface LeaveYearEndRunListQuery
 {
     after?: string;
@@ -2447,6 +2491,8 @@ export const leaveYearEndRuns =
 {
     list: (query: LeaveYearEndRunListQuery = {}) => request<PagedResult<LeaveYearEndRun>>('GET', '/api/hrm/leave-year-end-runs', { query }),
     get: (id: string) => request<LeaveYearEndRun>('GET', `/api/hrm/leave-year-end-runs/${id}`),
+    create: (body: LeaveYearEndRunWrite) => request<LeaveYearEndRun>('POST', '/api/hrm/leave-year-end-runs', { body }),
+    update: (id: string, body: LeaveYearEndRunWrite & { rowVersion: number }) => request<LeaveYearEndRun>('PUT', `/api/hrm/leave-year-end-runs/${id}`, { body }),
 };
 
 /** hrm.liability_accruals: Gratuity, leave encashment and similar liabilities computed per period (CMP-07, LVE-13 basis). Field rules (S1.06) may leave a field out or mask it as text. */

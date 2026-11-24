@@ -1,7 +1,7 @@
 namespace Erp.Hrm.Contracts.Leave;
 
 /// <summary>
-/// Permissions of the leave engine (slice S1.32a, CR-086 S1.32a detail). The generated writes of the five leave tables are closed; reads stay
+/// Permissions of the leave engine (slice S1.32a, CR-086 S1.32a detail). The generated writes of <c>hrm.leave_types</c> and <c>hrm.leave_ledger</c> are closed (those of the request and year-end tables in S1.32b); reads stay
 /// the generated <c>&lt;table&gt;.read</c>. The hand-written codes are declared in <c>Erp.Hrm.Infrastructure/Access/permissions.json</c>.
 /// </summary>
 public static class LeavePermissions

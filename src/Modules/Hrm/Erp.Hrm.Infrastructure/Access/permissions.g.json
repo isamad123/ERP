@@ -783,9 +783,33 @@
       "sensitive": false
     },
     {
+      "code": "hrm.leave_request_days.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.leave_request_days.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.leave_request_days.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.leave_request_days.update",
+      "sensitive": false
+    },
+    {
       "code": "hrm.leave_requests.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.leave_requests.read",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.leave_requests.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.leave_requests.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.leave_requests.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.leave_requests.update",
       "sensitive": false
     },
     {
@@ -798,6 +822,18 @@
       "code": "hrm.leave_year_end_runs.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.leave_year_end_runs.read",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.leave_year_end_runs.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.leave_year_end_runs.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.leave_year_end_runs.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.leave_year_end_runs.update",
       "sensitive": false
     },
     {
