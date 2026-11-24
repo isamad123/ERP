@@ -33,6 +33,36 @@ public sealed partial class ExportJob : global::Erp.BuildingBlocks.Domain.Entiti
     /// <summary>file_id: fk doc.files</summary>
     public global::System.Guid? FileId { get; set; }
 
+    /// <summary>file_name: S1.16b (CR-072 addendum): the name of the file the person downloads</summary>
+    public string? FileName { get; set; }
+
+    /// <summary>reason: S1.16b: why the export was made; required when a sensitive field class is in it (Q8)</summary>
+    public string? Reason { get; set; }
+
+    /// <summary>sensitive_classes: S1.16b: the field classes (salary, personal, restricted) of the columns exported, as asked at request time</summary>
+    public string[]? SensitiveClasses { get; set; }
+
+    /// <summary>job_run_id: fk job.runs</summary>
+    public global::System.Guid? JobRunId { get; set; }
+
+    /// <summary>held_request_id: S1.16b: the maker-checker request while the export waits for a second person (iam.maker_checker_requests; no foreign key across the approval history)</summary>
+    public global::System.Guid? HeldRequestId { get; set; }
+
+    /// <summary>size_bytes: S1.16b: size of the finished file</summary>
+    public int? SizeBytes { get; set; }
+
+    /// <summary>error_key: S1.16b: localization key of why a failed or rejected export ended</summary>
+    public string? ErrorKey { get; set; }
+
+    /// <summary>expires_at: S1.16b: when the file is deleted (itg.export.keep_days after it was made)</summary>
+    public global::System.DateTimeOffset? ExpiresAt { get; set; }
+
+    /// <summary>started_at</summary>
+    public global::System.DateTimeOffset? StartedAt { get; set; }
+
+    /// <summary>finished_at</summary>
+    public global::System.DateTimeOffset? FinishedAt { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

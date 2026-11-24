@@ -109,6 +109,7 @@ public static class ApiHost
         services.AddDbContext<HrmDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp));
         services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
         services.AddKernelImportEngine().AddKernelImportWriters();
+        services.AddKernelExportEngine().AddKernelExportReaders().AddHrmExportReaders(); // S1.16b
         services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 
         // Access control (S1.06): one engine decides permissions, data scopes and field access for every endpoint. The HR
@@ -278,6 +279,7 @@ public static class ApiHost
         api.MapNotificationEndpoints();
         api.MapDocumentEndpoints();
         api.MapImportEndpoints();
+        api.MapExportEndpoints();
         api.MapTemplateEndpoints();
         api.MapKernelGeneratedEndpoints();
         api.MapHrmGeneratedEndpoints();

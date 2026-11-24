@@ -70,6 +70,8 @@ public static class KernelJobs
         services.AddSingleton<IJobHandler, Documents.Templates.GenerateBatchJob>();
         services.AddSingleton<IJobHandler, Itg.ImportValidateJob>();
         services.AddSingleton<IJobHandler, Itg.ImportCommitJob>();
+        services.AddSingleton<IJobHandler, Itg.ExportRunJob>(); // S1.16b
+        services.AddSingleton<IJobHandler, Itg.ExportExpireJob>();
         return services;
     }
 
