@@ -504,6 +504,21 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         // S1.34b: a component and a salary structure of the probe's company.
         var component = await PostAsync(host, token, "/api/hrm/pay-components", new { companyId = org.Company, code = "C" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe component" }, kind = "earning", payslipOrder = 1 }, ct);
         var structure = await PostAsync(host, token, "/api/hrm/salary-structures", new { companyId = org.Company, code = "S" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe structure" } }, ct);
+        // The component list of a structure is held for a second person by default, so the one component of the probe's structure is written directly.
+        await using (var c = await fx.OpenAdminAsync(code, ct))
+        {
+            await using var insert = new NpgsqlCommand("""
+                insert into hrm.salary_structure_components (id, structure_id, component_id, evaluation_order, is_mandatory, currency_code, valid_from, created_at, created_by, updated_at, updated_by)
+                select $1, $2, $3, 1, false, base_currency_code, date '2020-01-01', now(), $4, now(), $4 from org.companies where id = $5
+                """, c);
+            insert.Parameters.Add(new NpgsqlParameter { Value = Guid.CreateVersion7() });
+            insert.Parameters.Add(new NpgsqlParameter { Value = structure.GetProperty("id").GetGuid() });
+            insert.Parameters.Add(new NpgsqlParameter { Value = component.GetProperty("id").GetGuid() });
+            insert.Parameters.Add(new NpgsqlParameter { Value = BaselineSeed.SystemUserId });
+            insert.Parameters.Add(new NpgsqlParameter { Value = org.Company });
+            await insert.ExecuteNonQueryAsync(ct);
+        }
+
         // S1.28a: a shift and a draft roster of the week of 4 March 2030 with one working day of the first employment.
         var shift = await PostAsync(host, token, "/api/hrm/shifts", new { companyId = org.Company, code = "SH" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe shift" }, shiftType = "fixed", startTime = "08:00", endTime = "16:00", crossesMidnight = false, minFullDayMinutes = 420 }, ct);
         var roster = await PostAsync(host, token, "/api/hrm/rosters", new { companyId = org.Company, name = "Probe week", orgUnitId = org.OrgUnit, periodStart = "2030-03-04", periodEnd = "2030-03-10" }, ct);
