@@ -788,7 +788,7 @@ public sealed class ImportService(
                 join pg_class target on target.oid = k.confrelid
                 join pg_namespace tn on tn.oid = target.relnamespace
                 join pg_attribute a on a.attrelid = k.conrelid and a.attnum = k.conkey[1]
-                where k.contype = 'f' and array_length(k.conkey, 1) = 1 and tn.nspname = $1 and target.relname = $2
+                where k.contype = 'f' and k.conparentid = 0 and array_length(k.conkey, 1) = 1 and tn.nspname = $1 and target.relname = $2
                 """, r => (Table: r.GetString(0), Column: r.GetString(1)), ct, SchemaOf(table), NameOf(table)).ConfigureAwait(false);
             foreach (var (refTable, column) in refs)
             {
@@ -958,14 +958,7 @@ internal static class ImportTexts
 
     private static Dictionary<string, string> Load(string language)
     {
-        var assembly = typeof(ImportPermissions).Assembly;
-        var name = assembly.GetManifestResourceNames().FirstOrDefault(n => n.EndsWith($"import.{language}.json", StringComparison.OrdinalIgnoreCase));
-        if (name is null)
-        {
-            return [];
-        }
-
-        using var stream = assembly.GetManifestResourceStream(name)!;
-        return JsonSerializer.Deserialize<Dictionary<string, string>>(stream) ?? [];
+        using var stream = typeof(ImportTexts).Assembly.GetManifestResourceStream($"Erp.Kernel.Import.{language}.json");
+        return stream is null ? [] : JsonSerializer.Deserialize<Dictionary<string, string>>(stream) ?? [];
     }
 }

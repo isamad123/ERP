@@ -34,6 +34,8 @@
     <EmbeddedResource Include="Access/setup-tasks.json" LogicalName="Erp.Kernel.Infrastructure.Access.setup-tasks.json" />
     <EmbeddedResource Include="Access/notification-events.json" LogicalName="Erp.Kernel.Infrastructure.Access.notification-events.json" />
     <!-- Slice S1.11b2: the fixed words of notification e-mails (button, footer) come from the notification texts. -->
+    <EmbeddedResource Include="../Erp.Kernel.Contracts/Itg/Localization/import.en.json" LogicalName="Erp.Kernel.Import.en.json" WithCulture="false" />
+    <EmbeddedResource Include="../Erp.Kernel.Contracts/Itg/Localization/import.ur.json" LogicalName="Erp.Kernel.Import.ur.json" WithCulture="false" />
     <EmbeddedResource Include="../Erp.Kernel.Contracts/Notifications/Localization/notifications.en.json" LogicalName="Erp.Kernel.Notifications.en.json" WithCulture="false" />
     <EmbeddedResource Include="../Erp.Kernel.Contracts/Notifications/Localization/notifications.ur.json" LogicalName="Erp.Kernel.Notifications.ur.json" WithCulture="false" />
     <EmbeddedResource Include="Entitlements/entitlement-keys.json" LogicalName="Erp.Kernel.Infrastructure.Entitlements.entitlement-keys.json" />
