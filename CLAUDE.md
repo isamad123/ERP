@@ -94,8 +94,8 @@ higher one is a defect in the lower one: stop and report it.
 
 ## Parallel lanes and batch approvals (CR-082, `docs/slices/acceleration-plan.md`)
 - At most three build sessions at once, one slice part each, each on its own branch from the latest `main` and in its own module area.
-- One coordinator only (product owner, 2026-11-23): only the coordinator session (`session_01RvrLZG1wNiLcbLDk7fLz5F` until the product owner names
-  another) starts build or review sessions or schedules tasks that start them. Any other session finishes its own part, starts at most the fresh
+- One coordinator only (product owner, 2026-11-23): only the coordinator session (`session_01RvrLZDJoJetwKmef7FKs35` since the product owner named it on 2026-11-24; before that
+  `session_01RvrLZG1wNiLcbLDk7fLz5F`; it stays until the product owner names another) starts build or review sessions or schedules tasks that start them. Any other session finishes its own part, starts at most the fresh
   review its slice file requires, and reports to the coordinator; it never starts the next part itself.
 - Reserve CR and R numbers first. Edit shared files (generator, manifests, web module declarations, registers) in small separate
   commits; rebase on `main` before the pull request; a conflict that is not mechanical goes to the product owner.
