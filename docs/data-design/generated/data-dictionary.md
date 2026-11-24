@@ -2,7 +2,7 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 224 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 225 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
@@ -6350,6 +6350,8 @@ Requirements: KRN-INT-04, ADM-DAT-01. Source: kernel.yaml.
 | validated_at | timestamp with time zone | yes |  |  |
 | committed_at | timestamp with time zone | yes |  |  |
 | rolled_back_at | timestamp with time zone | yes |  |  |
+| mapping | jsonb | yes |  | S1.16a review finding 4: the template's mapping as it was at upload; the check, the commit and the error file read this copy, so a later template change cannot alter what a batch writes |
+| template_version | integer | yes |  | S1.16a review finding 4: the template version the mapping was copied from |
 
 Constraints:
 
