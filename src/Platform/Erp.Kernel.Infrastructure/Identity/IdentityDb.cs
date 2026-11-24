@@ -398,14 +398,14 @@ internal static class IdentityDb
     /// audit log that records these events come with later slices (S1.07).
     /// </summary>
     /// <remarks>Slice S1.07: the audit rows of the event are written in the same transaction (<see cref="Audit.AuditTrail"/>).</remarks>
-    public static async Task RaiseAsync(NpgsqlConnection c, NpgsqlTransaction tx, string eventType, Guid userId, Guid actor, DateTimeOffset now, object payload, CancellationToken ct)
+    public static async Task RaiseAsync(NpgsqlConnection c, NpgsqlTransaction tx, string eventType, Guid userId, Guid actor, DateTimeOffset now, object payload, CancellationToken ct, string aggregateType = "iam.user")
     {
         await ExecuteAsync(c, tx, """
             insert into iam.outbox_messages (id, occurred_at, event_type, aggregate_type, aggregate_id, payload, headers, published_at)
-            values ($1, $2, $3, 'iam.user', $4, $5, $6, null)
+            values ($1, $2, $3, $7, $4, $5, $6, null)
             """, ct, Guid.CreateVersion7(now), now, eventType, userId,
-            new JsonPayload(JsonSerializer.Serialize(payload)), new JsonPayload(JsonSerializer.Serialize(new { actor }))).ConfigureAwait(false);
-        await Audit.AuditTrail.RecordEventAsync(c, tx, eventType, "iam.user", userId, actor, now, payload, ct).ConfigureAwait(false);
+            new JsonPayload(JsonSerializer.Serialize(payload)), new JsonPayload(JsonSerializer.Serialize(new { actor })), aggregateType).ConfigureAwait(false);
+        await Audit.AuditTrail.RecordEventAsync(c, tx, eventType, aggregateType, userId, actor, now, payload, ct).ConfigureAwait(false);
     }
 
     private static IPAddress? ParseIp(string? ip) => IPAddress.TryParse(ip, out var parsed) ? parsed : null;

@@ -103,7 +103,7 @@ public static class ApiHost
         services.AddScoped<IAuditQueryService, AuditQueryService>();
         services.AddScoped<IAuditVerifier, AuditVerifier>();
         services.AddDbContext<KernelDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp)
-            .AddInterceptors(sp.GetRequiredService<CompanyLimitInterceptor>())); // the company limit, after the audit interceptor (S1.09b)
+            .AddInterceptors(sp.GetRequiredService<CompanyLimitInterceptor>(), sp.GetRequiredService<OrgUnitUseInterceptor>())); // the company limit, after the audit interceptor (S1.09b)
         services.AddDbContext<HrmDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp));
         services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
         services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
@@ -194,6 +194,7 @@ public static class ApiHost
         services.AddScoped<ILimitWarningSource>(sp => sp.GetRequiredService<LimitWarnings>());
         services.AddScoped<ILimitGuard, LimitGuard>();
         services.AddSingleton<CompanyLimitInterceptor>();
+        services.AddSingleton<OrgUnitUseInterceptor>();
         services.AddScoped<SettingsService>();
         services.AddScoped<ISettings>(sp => sp.GetRequiredService<SettingsService>());
         services.AddScoped<IFeatureFlags>(sp => sp.GetRequiredService<SettingsService>());

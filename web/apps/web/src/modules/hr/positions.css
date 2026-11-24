@@ -1,0 +1,110 @@
+/* The positions, strength report and position chart (slice S1.22b). Tokens and logical properties only; the chart prints on A4 landscape. */
+.erp-pos-controls {
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.erp-pos-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.erp-pos-table th,
+.erp-pos-table td {
+  padding-block: var(--space-2);
+  padding-inline: var(--space-2);
+  text-align: start;
+  vertical-align: top;
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+}
+
+.erp-pos-table .erp-num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-pos-over {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-strong);
+}
+
+.erp-pos-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  inline-size: 100%;
+}
+
+.erp-pos-box {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-raised);
+  cursor: pointer;
+}
+
+.erp-pos-box:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.erp-pos-box-vacant {
+  border-style: dashed;
+  background: var(--color-warning-subtle);
+}
+
+.erp-pos-box-match {
+  background: var(--color-primary-subtle);
+  border-color: var(--color-primary);
+}
+
+.erp-pos-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  inline-size: 2em;
+  block-size: 2em;
+  border-radius: 50%;
+  background: var(--color-neutral-subtle);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-strong);
+}
+
+.erp-pos-lines {
+  display: flex;
+  flex-direction: column;
+}
+
+.erp-pos-print-heading {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 1rem;
+  }
+
+  /* The page chrome and the controls do not print; the chart and its heading do. */
+  .erp-page .erp-pos-controls,
+  .erp-page .erp-pos-noprint,
+  body .erp-topbar,
+  body .erp-shell-side,
+  body .erp-shell-banners {
+    display: none;
+  }
+
+  .erp-page .erp-pos-print-heading {
+    display: block;
+  }
+
+  .erp-pos-box {
+    break-inside: avoid;
+  }
+}
