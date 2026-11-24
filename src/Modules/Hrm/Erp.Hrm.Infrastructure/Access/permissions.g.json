@@ -27,24 +27,6 @@
       "sensitive": false
     },
     {
-      "code": "hrm.attendance_devices.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.attendance_devices.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.attendance_devices.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.attendance_devices.update",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.attendance_devices.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.attendance_devices.delete",
-      "sensitive": false
-    },
-    {
       "code": "hrm.attendance_events.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.attendance_events.read",
@@ -366,18 +348,6 @@
       "code": "hrm.device_user_maps.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.device_user_maps.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.device_user_maps.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.device_user_maps.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.device_user_maps.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.device_user_maps.update",
       "sensitive": false
     },
     {
@@ -1704,6 +1674,12 @@
       "code": "hrm.training_requirements.update",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.training_requirements.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.unmapped_punches.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.unmapped_punches.read",
       "sensitive": false
     }
   ]

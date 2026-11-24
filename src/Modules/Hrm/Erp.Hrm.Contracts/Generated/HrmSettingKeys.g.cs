@@ -59,6 +59,15 @@ public static class HrmSettingKeys
     /// <summary>How many days before a pay period's cut-off the payroll officers are reminded.</summary>
     public const string HrmPayCutoffReminderDays = "hrm.pay.cutoff_reminder_days";
 
+    /// <summary>Allow this company to use biometric attendance devices; mapping a device user then needs the person's consent.</summary>
+    public const string HrmAttBiometricEnabled = "hrm.att.biometric_enabled";
+
+    /// <summary>A device not heard from for this many minutes is shown offline.</summary>
+    public const string HrmAttDeviceOfflineMinutes = "hrm.att.device_offline_minutes";
+
+    /// <summary>How often the platform reads punches from devices it connects to.</summary>
+    public const string HrmAttDevicePullMinutes = "hrm.att.device_pull_minutes";
+
     /// <summary>The month (1 = January to 12 = December) in which the leave year starts.</summary>
     public const string HrmLeaveYearStartMonth = "hrm.leave.year_start_month";
 }
