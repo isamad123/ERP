@@ -97,7 +97,7 @@ public sealed class ExportRunJob : IJobHandler
         var rows = new List<ExportCell[]>();
         var present = new bool[columns.Count];
         var shown = new SortedSet<string>(StringComparer.Ordinal);
-        Guid? after = null;
+        string? after = null;
         do
         {
             ct.ThrowIfCancellationRequested();

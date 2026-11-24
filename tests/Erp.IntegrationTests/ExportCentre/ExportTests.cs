@@ -343,6 +343,25 @@ public sealed class ExportTests(TenancyFixture fx) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task S116b_FR_KRN_AUD_04_the_audit_search_is_exported_as_a_job_past_the_quick_export_cap_with_a_reason_for_its_restricted_column()
+    {
+        await BranchAsync("EXU-1", "Audit");
+        var (first, _) = await ExportAsync(BranchBody(search: "EXU-"));
+        object Body(string? reason) => new
+        {
+            source = "aud.change_log", query = new { entityType = "itg.export_jobs", entityId = first }, format = "csv", reason, companyId = Company, language = "en",
+            columns = new[] { new { field = "occurredAt", label = "When" }, new { field = "entityType", label = "Table" }, new { field = "action", label = "Action" }, new { field = "changes", label = "Changes" } },
+        };
+        Assert.Equal("errors.export.reason_required", (await _rig.PostJsonAsync(Exports, Body(null), Ct)).Json.GetProperty("title").GetString());
+        var (id, view) = await ExportAsync(Body("Quarterly audit sample"));
+        Assert.True("done" == view.GetProperty("status").GetString(), view + await _rig.Jobs.DumpAsync(Ct, _rig.Code));
+        var lines = (await DownloadTextAsync(id)).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        Assert.True(lines.Length >= 4, string.Join("|", lines));
+        Assert.Contains(lines, l => l.Contains("itg.export_jobs,create", StringComparison.Ordinal));
+        Assert.Equal(1, await _rig.ScalarAsync<long>("select count(*) from itg.export_jobs where id = $1 and 'restricted' = any(sensitive_classes)", Ct, id));
+    }
+
+    [Fact]
     public async Task S116b_FR_ADM_DAT_04_a_request_for_an_unknown_list_column_format_or_company_is_refused_with_its_key()
     {
         async Task<string> TitleAsync(object body) => (await _rig.PostJsonAsync(Exports, body, Ct)).Json.GetProperty("title").GetString()!;

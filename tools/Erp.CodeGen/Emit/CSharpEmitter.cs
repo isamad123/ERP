@@ -1079,11 +1079,11 @@ public static class CSharpEmitter
         w.Line("return " + access + ".Fields.Fields.Select(f => (new " + itg + ".ExportColumn(f.Key, f.JsonName, f.FieldClass, f.IsCustom), map.Of(f.Key) switch { " + sec + ".FieldAccessLevel.Hidden => \"hidden\", " + sec + ".FieldAccessLevel.Masked => \"masked\", _ => \"visible\" })).ToList();");
         w.Close();
         w.Line();
-        w.Open($"public async global::System.Threading.Tasks.Task<{itg}.ExportPage> ReadPageAsync({itg}.ExportQuery export, global::System.Guid? after, int limit, global::System.Threading.CancellationToken {ct})");
+        w.Open($"public async global::System.Threading.Tasks.Task<{itg}.ExportPage> ReadPageAsync({itg}.ExportQuery export, string? after, int limit, global::System.Threading.CancellationToken {ct})");
         w.Line($"var repository = {svc}.GetRequiredService<{repo}>(services);");
         w.Line($"var fields = {svc}.GetRequiredService<{sec}.IFieldAccess>(services);");
         w.Line("var query = export.Filter.ValueKind == global::System.Text.Json.JsonValueKind.Object ? global::System.Text.Json.JsonSerializer.Deserialize<" + entity + "ListQuery>(export.Filter.GetRawText(), global::System.Text.Json.JsonSerializerOptions.Web) ?? new " + entity + "ListQuery() : new " + entity + "ListQuery();");
-        w.Line("var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(after, limit);");
+        w.Line("var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(after is null ? null : global::System.Guid.Parse(after), limit);");
         w.Line("var rows = await repository.ListAsync(new " + N.FilterFull(t) + " { " + init + " }, page, " + ct + ").ConfigureAwait(false);");
         w.Line($"var maps = await repository.FieldAccessAsync(rows, {access}.Fields, fields, \"read\", {ct}).ConfigureAwait(false);");
         w.Line("var shaped = new global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>(rows.Count);");
@@ -1091,7 +1091,7 @@ public static class CSharpEmitter
         w.Line($"var node = global::System.Text.Json.JsonSerializer.SerializeToNode(ToResponse(rows[i]), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();");
         w.Line($"shaped.Add({sec}.FieldShaping.Shape(node, {access}.Fields, maps[i]));");
         w.Close();
-        w.Line($"return new {itg}.ExportPage(shaped, rows.Count == page.Limit ? rows[^1].Id : null, {sec}.FieldShaping.SensitiveShown(shaped, {access}.Fields, maps));");
+        w.Line($"return new {itg}.ExportPage(shaped, rows.Count == page.Limit ? rows[^1].Id.ToString() : null, {sec}.FieldShaping.SensitiveShown(shaped, {access}.Fields, maps));");
         w.Close();
         w.Close();
     }

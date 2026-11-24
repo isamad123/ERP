@@ -14,6 +14,7 @@ public static class ExportRegistration
         services.TryAddScoped<ExportFiles>();
         services.TryAddScoped<IExportService, ExportService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IHeldChangeHandler, ExportChangeHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<Erp.Kernel.Contracts.Itg.IExportRowReader, AuditExportReader>());
         return services;
     }
 }

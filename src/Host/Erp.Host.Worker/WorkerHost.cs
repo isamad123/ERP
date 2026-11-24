@@ -67,6 +67,7 @@ public static class WorkerHost
         services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
         services.AddKernelImportEngine().AddKernelImportWriters();
         services.AddKernelExportEngine().AddKernelExportReaders().AddHrmExportReaders(); // S1.16b
+        services.AddScoped<Erp.Kernel.Application.Audit.IAuditQueryService, Erp.Kernel.Infrastructure.Audit.AuditQueryService>(); // the audit export reader
         services.AddLogging(); // the generated import writers run the endpoints' results, which log (S1.16a)
 
         // Field encryption of the customer (S1.05 P7): generated repositories encrypt enc columns on write.

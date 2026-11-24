@@ -277,7 +277,7 @@ public sealed class ExportService(
     {
         var query = new ExportQuery(request.Query is { ValueKind: JsonValueKind.Object } q ? q : JsonDocument.Parse("{}").RootElement, request.Search, request.Sort);
         var total = 0;
-        Guid? after = null;
+        string? after = null;
         while (total < cap)
         {
             var page = await plan.Reader.ReadPageAsync(query, after, Math.Min(PageRows, cap - total), ct).ConfigureAwait(false);

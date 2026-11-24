@@ -312,12 +312,12 @@ internal static class AccountingEventEndpoints
             return global::Erp.Kernel.Application.Generated.Itg.AccountingEventAccess.Fields.Fields.Select(f => (new global::Erp.Kernel.Contracts.Itg.ExportColumn(f.Key, f.JsonName, f.FieldClass, f.IsCustom), map.Of(f.Key) switch { global::Erp.BuildingBlocks.Application.Security.FieldAccessLevel.Hidden => "hidden", global::Erp.BuildingBlocks.Application.Security.FieldAccessLevel.Masked => "masked", _ => "visible" })).ToList();
         }
 
-        public async global::System.Threading.Tasks.Task<global::Erp.Kernel.Contracts.Itg.ExportPage> ReadPageAsync(global::Erp.Kernel.Contracts.Itg.ExportQuery export, global::System.Guid? after, int limit, global::System.Threading.CancellationToken cancellationToken)
+        public async global::System.Threading.Tasks.Task<global::Erp.Kernel.Contracts.Itg.ExportPage> ReadPageAsync(global::Erp.Kernel.Contracts.Itg.ExportQuery export, string? after, int limit, global::System.Threading.CancellationToken cancellationToken)
         {
             var repository = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.Kernel.Application.Generated.Itg.IAccountingEventRepository>(services);
             var fields = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(services);
             var query = export.Filter.ValueKind == global::System.Text.Json.JsonValueKind.Object ? global::System.Text.Json.JsonSerializer.Deserialize<AccountingEventListQuery>(export.Filter.GetRawText(), global::System.Text.Json.JsonSerializerOptions.Web) ?? new AccountingEventListQuery() : new AccountingEventListQuery();
-            var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(after, limit);
+            var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(after is null ? null : global::System.Guid.Parse(after), limit);
             var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Itg.AccountingEventFilter { CompanyId = query.CompanyId, SupersedesEventId = query.SupersedesEventId, Sort = export.Sort ?? query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var maps = await repository.FieldAccessAsync(rows, global::Erp.Kernel.Application.Generated.Itg.AccountingEventAccess.Fields, fields, "read", cancellationToken).ConfigureAwait(false);
             var shaped = new global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>(rows.Count);
@@ -326,7 +326,7 @@ internal static class AccountingEventEndpoints
                 var node = global::System.Text.Json.JsonSerializer.SerializeToNode(ToResponse(rows[i]), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();
                 shaped.Add(global::Erp.BuildingBlocks.Application.Security.FieldShaping.Shape(node, global::Erp.Kernel.Application.Generated.Itg.AccountingEventAccess.Fields, maps[i]));
             }
-            return new global::Erp.Kernel.Contracts.Itg.ExportPage(shaped, rows.Count == page.Limit ? rows[^1].Id : null, global::Erp.BuildingBlocks.Application.Security.FieldShaping.SensitiveShown(shaped, global::Erp.Kernel.Application.Generated.Itg.AccountingEventAccess.Fields, maps));
+            return new global::Erp.Kernel.Contracts.Itg.ExportPage(shaped, rows.Count == page.Limit ? rows[^1].Id.ToString() : null, global::Erp.BuildingBlocks.Application.Security.FieldShaping.SensitiveShown(shaped, global::Erp.Kernel.Application.Generated.Itg.AccountingEventAccess.Fields, maps));
         }
     }
 }
