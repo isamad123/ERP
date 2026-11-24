@@ -6,7 +6,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { EngineProvider, LazyExportButton } from '@erp/engine';
+import { EngineProvider, ExportButton } from '@erp/engine';
 import { I18nRoot } from '@erp/i18n';
 import { ToastProvider } from '@erp/ui';
 import { accessFacts } from '../../navigation/screens';
@@ -109,7 +109,7 @@ describe('the export dialog', () => {
     render(
       <MemoryRouter><I18nRoot locale="en"><ToastProvider><QueryClientProvider client={client()}>
         <EngineProvider api={{ send: async (method, path, body) => { const r = await fetch(path, { method, ...(body ? { body } : {}) }); return r.text(); } }}>
-          <LazyExportButton source="org.branches" title="Branches" companyId={COMPANY} search="lahore" sort="-code" query={{ isActive: true, companyId: COMPANY }}
+          <ExportButton source="org.branches" title="Branches" companyId={COMPANY} search="lahore" sort="-code" query={{ isActive: true, companyId: COMPANY }}
             columns={[{ field: 'code', label: 'Code' }, { field: 'nameI18n', label: 'Name' }]} />
         </EngineProvider>
       </QueryClientProvider></ToastProvider></I18nRoot></MemoryRouter>,

@@ -2,7 +2,7 @@
 // title, saved views, search, typed filters, the company in hand or "all my companies", the grid, and a create button
 // only for people who may create. Search, filters and sort run on the server (Build item 14); export comes with the
 // export centre (S1.16) and has its place in the toolbar.
-import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { keepPreviousData, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Columns3, Plus, Save, Trash2 } from 'lucide-react';
 import { Button, CheckboxField, Dialog, ErrorPanel, EmptyState, IconButton, PageHeader, SelectField, SwitchField, TextField, type Option } from '@erp/ui';
@@ -12,12 +12,11 @@ import { isProblem, queryString, tableClient, useEngineApi, type Row } from './d
 import { decimalFields, fieldOf, type TableMetadata } from './metadata';
 import { useLabel } from './labels';
 import { Value } from './values';
+import ExportButton from './ExportButton';
 import { CustomValue, CUSTOM_PREFIX, customOf, useCustomFields } from './custom';
 
 export const PAGE_SIZE = 100;
 
-// Export of the list as it is now (S1.16b): its own lazy chunk with its texts, so lists that cannot export load nothing of it.
-const ExportButton = lazy(() => import('./ExportButton'));
 
 /** What a saved view keeps (cfg.saved_views.definition). */
 export interface ViewDefinition {
@@ -141,11 +140,7 @@ export function ListPage({ metadata, columns, companies, canCreate, canShare, ca
         <SavedViews listKey={metadata.table} current={viewId} definition={definition} canShare={canShare}
           onApply={(view) => { setDraft(view?.definition.search ?? ''); apply(view?.definition ?? { companies: 'active' }, view?.id ?? 'standard'); }} />
         <ColumnsChooser columns={gridColumns} choices={definition.columns} onChange={(columnsChoice) => apply({ ...definition, columns: columnsChoice }, viewId)} />
-        {canExport && (
-          <Suspense fallback={null}>
-            <ExportButton source={metadata.table} title={title} columns={exportColumns} query={exportQuery} search={definition.search ?? null} sort={definition.sort ?? null} companyId={companies?.activeId ?? null} />
-          </Suspense>
-        )}
+        {canExport && <ExportButton source={metadata.table} title={title} columns={exportColumns} query={exportQuery} search={definition.search ?? null} sort={definition.sort ?? null} companyId={companies?.activeId ?? null} />}
       </div>
       <form className="erp-filters" role="search" aria-label={t('engine.list.filters', { list: title })} onSubmit={submit}>
         {metadata.search && metadata.search.length > 0 && (

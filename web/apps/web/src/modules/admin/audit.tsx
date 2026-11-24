@@ -7,7 +7,7 @@ import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { parseDate, type CalendarDate } from '@internationalized/date';
 import { Download } from 'lucide-react';
 import { Button, DateField, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, TextField, Tabs, useToast, type Option } from '@erp/ui';
-import { EngineProvider, LazyExportButton, type EngineApi, useDocumentTitle } from '@erp/engine';
+import { EngineProvider, ExportButton, type EngineApi, useDocumentTitle } from '@erp/engine';
 import { formatDateTime, formatInteger, useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { ApiProblem, sendText } from '../../api/client';
 import { access, downloadChangeExport, type AuditChange, type ChangeFilters } from '../../api/access';
@@ -108,7 +108,7 @@ function Changes() {
         <Button variant="quiet" onPress={reset}>{t('rep.clear')}</Button>
         {can('aud.export') && <Button variant="secondary" icon={<Download size={16} aria-hidden="true" />} isPending={exporting} onPress={() => { void exportNow(); }}>{t('audit.export')}</Button>}
         {can('aud.export') && can('itg.exports.run') && (
-          <EngineProvider api={exportApi}><LazyExportButton source="aud.change_log" title={t('audit.tab.changes')} companyId={activeCompany?.id ?? null}
+          <EngineProvider api={exportApi}><ExportButton source="aud.change_log" title={t('audit.tab.changes')} companyId={activeCompany?.id ?? null}
             query={{ userId: applied.userId, entityType: applied.entityType, entityId: applied.entityId, from: applied.from, to: applied.to, action: applied.action, source: applied.source }}
             columns={[
               { field: 'occurredAt', label: t('rep.col.when') }, { field: 'actorName', label: t('rep.col.who') }, { field: 'entityType', label: t('audit.table') }, { field: 'entityId', label: t('audit.record') },

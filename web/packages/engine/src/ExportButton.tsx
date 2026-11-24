@@ -1,9 +1,8 @@
 // Export of the list as it is now (slice S1.16b, FR-ADM-DAT-04, FR-ADM-NAV-02): a button that opens a small dialog, asks the server what the
 // export would be (sensitive field classes, a reason, a second person's approval) and asks for it. The file is made in the background as the
-// person, with the list's own search, filters, sort, data scope and field security; it is downloaded from the export centre. The module is
-// loaded only when a list shows the button, with its own texts (not part of the shell's scripts, R-213).
-import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+// person, with the list's own search, filters, sort, data scope and field security; it is downloaded from the export centre. Its texts are
+// registered when the module loads, with the list screens (not part of the shell's scripts, R-213).
+import { useEffect, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { Banner, Button, Dialog, Link, SelectField, TextField, useToast } from '@erp/ui';
 import { registerMessages, useLocaleSettings, useText } from '@erp/i18n';
@@ -57,14 +56,19 @@ export default function ExportButton(props: ExportButtonProps) {
   const [error, setError] = useState<string | null>(null);
   const clean = Object.fromEntries(Object.entries(query).filter(([, v]) => v !== undefined && v !== null && v !== ''));
   const body = (extra: Record<string, unknown>) => JSON.stringify({ source, query: clean, search: search || null, sort: sort || null, columns, companyId, language: locale, ...extra });
-  const check = useQuery({
-    queryKey: ['engine', 'export-check', source, clean, search, sort, columns, companyId],
-    queryFn: async ({ signal }) => JSON.parse(await api.send('POST', '/api/itg/exports/check', body({ format }), signal)) as Check,
-    enabled: open,
-    staleTime: 0,
-    gcTime: 0,
-    retry: false,
-  });
+  // What the export would be, asked of the server each time the dialog opens or the view changes (nothing is written).
+  const [checked, setChecked] = useState<{ data: Check | null; error: unknown; pending: boolean }>({ data: null, error: null, pending: false });
+  const request = useMemo(() => body({ format: 'csv' }), [source, clean, search, sort, columns, companyId, locale]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!open) return undefined;
+    const abort = new AbortController();
+    setChecked({ data: null, error: null, pending: true });
+    api.send('POST', '/api/itg/exports/check', request, abort.signal)
+      .then((text) => setChecked({ data: JSON.parse(text) as Check, error: null, pending: false }))
+      .catch((e: unknown) => { if (!abort.signal.aborted) setChecked({ data: null, error: e, pending: false }); });
+    return () => abort.abort();
+  }, [open, request, api]);
+  const check = { isPending: checked.pending, isError: checked.error !== null, error: checked.error, data: checked.data };
   useEffect(() => { if (open) { setError(null); setReason(''); } }, [open]);
   const failure = (e: unknown): string => (isProblem(e) ? (server(e.key) ?? t('exp.error.generic')) : t('exp.error.generic'));
   const data = check.data ?? null;
