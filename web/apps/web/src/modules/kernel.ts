@@ -39,6 +39,8 @@ const CustomFieldsScreen = lazy(() => import('./admin/custom-fields'));
 // S1.15c: numbering schemes and the approval route editor.
 // S1.16a: the import centre and the template designer.
 const ImportsScreen = lazy(() => import('./admin/imports'));
+// S1.16b: the export centre.
+const ExportsScreen = lazy(() => import('./admin/exports'));
 const NumberingScreen = lazy(() => import('./admin/numbering'));
 const RoutesScreen = lazy(() => import('./admin/routes'));
 // S1.15d: notification texts and rules, document templates.
@@ -94,7 +96,7 @@ export const kernelScreens: ScreenDeclaration[] = [
   { id: 'licence', path: '/settings/licence', labelKey: 'nav.licence', icon: KeyRound, group: 'administration', permission: 'cfg.licence.read', allowedWhenLocked: true, comesWith: 'S1.16' },
   { id: 'jobs', path: '/admin/jobs/*', labelKey: 'nav.jobs', icon: Activity, group: 'administration', permission: 'job.runs.read', comesWith: 'S1.16' },
   { id: 'audit', path: '/admin/audit/*', labelKey: 'nav.audit', icon: ScrollText, group: 'administration', permission: 'aud.changes.view', component: AuditScreen },
-  { id: 'exports', path: '/admin/exports', labelKey: 'nav.exports', icon: Download, permission: 'aud.export', allowedWhenLocked: true, comesWith: 'S1.16' },
+  { id: 'exports', path: '/admin/exports', labelKey: 'nav.exports', icon: Download, group: 'administration', permission: 'itg.exports.run', allowedWhenLocked: true, component: ExportsScreen },
   { id: 'quarantine', path: '/admin/documents/quarantine', labelKey: 'nav.quarantine', icon: ShieldAlert, comesWith: 'S1.16' },
   // A file follows its record (S1.11c1 ruling Q23): the server decides when the screen asks for it.
   { id: 'document', path: '/documents/:id', labelKey: 'nav.document', icon: FileText, comesWith: 'S1.24' },

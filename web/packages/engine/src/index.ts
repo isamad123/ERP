@@ -12,3 +12,5 @@ export * from './ListPage';
 export * from './FormPage';
 export * from './HistoryPanel';
 export * from './custom';
+export type { ExportButtonProps, ExportColumnChoice } from './ExportButton';
+export { LazyExportButton } from './LazyExportButton';

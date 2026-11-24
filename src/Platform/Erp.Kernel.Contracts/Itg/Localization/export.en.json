@@ -1,4 +1,5 @@
 {
+  "_load": "after_start",
   "permissions.itg.exports.run": "Export lists the person may read, and download one's own exports",
   "permissions.itg.exports.approve": "Approve or refuse an export held for a second person",
   "errors.export.not_found": "The export was not found.",

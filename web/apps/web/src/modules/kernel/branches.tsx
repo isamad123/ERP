@@ -51,7 +51,7 @@ function BranchList() {
   return (
     <ListPage metadata={metadata} columns={['code', 'nameI18n', 'companyId', 'isActive']}
       companies={{ activeId: activeCompany?.id ?? null, options }}
-      canCreate={writable && can('org.branches.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')}
+      canCreate={writable && can('org.branches.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')} canExport={can('itg.exports.run')}
       description={t('branches.description')}
       onCreate={() => { void navigate(`${BRANCHES_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${BRANCHES_PATH}/${row.id}`); }}
       rowLabel={(row) => title(row)} />

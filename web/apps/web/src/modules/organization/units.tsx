@@ -112,7 +112,7 @@ function UnitList() {
           unitTypeId: (row) => <bdi>{types.name.get(String(row.unitTypeId)) ?? '—'}</bdi>,
           locationId: (row) => <bdi>{row.locationId ? siteName.get(String(row.locationId)) ?? '—' : '—'}</bdi>,
         }}
-        canCreate={writable && can('org.org_units.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')} description={t('units.description')}
+        canCreate={writable && can('org.org_units.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')} canExport={can('itg.exports.run')} description={t('units.description')}
         onCreate={() => { void navigate(`${UNITS_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${UNITS_PATH}/${row.id}`); }} rowLabel={(row) => title(row)} />
     </Sections>
   );
@@ -176,7 +176,7 @@ function TypeList() {
   return (
     <Sections>
       <ListPage metadata={typeMetadata} columns={['code', 'nameI18n', 'levelHint', 'isActive']} canCreate={writable && can('org.org_unit_types.create')}
-        canShare={can('cfg.saved_views.share')} description={t('unitTypes.description')}
+        canShare={can('cfg.saved_views.share')} canExport={can('itg.exports.run')} description={t('unitTypes.description')}
         onCreate={() => { void navigate(`${UNIT_TYPES_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${UNIT_TYPES_PATH}/${row.id}`); }} rowLabel={(row) => title(row)} />
       <p className="erp-page erp-help"><Link href={LABELS_LINK}>{t('unitTypes.rename.link')}</Link> {t('unitTypes.rename.help')}</p>
     </Sections>
@@ -217,7 +217,7 @@ function HierarchyList() {
   return (
     <Sections>
       <ListPage metadata={hierarchyMetadata} columns={['code', 'nameI18n', 'kind', 'isActive']} canCreate={writable && can('org.org_hierarchies.create')}
-        canShare={can('cfg.saved_views.share')} description={t('hierarchies.description')}
+        canShare={can('cfg.saved_views.share')} canExport={can('itg.exports.run')} description={t('hierarchies.description')}
         onCreate={() => { void navigate(`${HIERARCHIES_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${HIERARCHIES_PATH}/${row.id}`); }} rowLabel={(row) => title(row)} />
     </Sections>
   );

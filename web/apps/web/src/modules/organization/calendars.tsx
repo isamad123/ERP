@@ -53,7 +53,7 @@ function CalendarList() {
   const title = useTitle();
   return (
     <ListPage metadata={metadata} columns={['code', 'nameI18n', 'countryCode', 'source', 'isActive']} canCreate={writable && can('ref.calendars.create')}
-      canShare={can('cfg.saved_views.share')} description={t('calendars.description')}
+      canShare={can('cfg.saved_views.share')} canExport={can('itg.exports.run')} description={t('calendars.description')}
       onCreate={() => { void navigate(`${CALENDARS_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${CALENDARS_PATH}/${row.id}`); }} rowLabel={(row) => title(row)} />
   );
 }

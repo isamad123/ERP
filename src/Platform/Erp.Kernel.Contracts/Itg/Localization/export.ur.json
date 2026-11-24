@@ -1,4 +1,5 @@
 {
+  "_load": "after_start",
   "permissions.itg.exports.run": "وہ فہرستیں برآمد کرنا جنہیں شخص پڑھ سکتا ہے، اور اپنی برآمدات ڈاؤن لوڈ کرنا",
   "permissions.itg.exports.approve": "دوسرے شخص کے لیے روکی گئی برآمد کو منظور یا مسترد کرنا",
   "errors.export.not_found": "برآمد نہیں ملی۔",
