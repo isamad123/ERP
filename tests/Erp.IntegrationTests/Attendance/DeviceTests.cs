@@ -88,7 +88,9 @@ public sealed class DeviceTests(TenancyFixture fx) : IAsyncLifetime
 
     private async Task<Answer> MapAsync(World w, Guid? device, string number, string? consent = null, string? employeeNo = null)
     {
-        var body = new Dictionary<string, object?> { ["companyId"] = w.Company, ["deviceUserNo"] = number, ["employeeNo"] = employeeNo ?? w.EmployeeNo };
+        // From yesterday (UTC), not the company's today: the tests push punches up to ten hours back, which fall on the company's yesterday
+        // between midnight and about 09:00 Karachi time, before a mapping that starts today (found by the S1.29a session; the tests failed then).
+        var body = new Dictionary<string, object?> { ["companyId"] = w.Company, ["deviceUserNo"] = number, ["employeeNo"] = employeeNo ?? w.EmployeeNo, ["validFrom"] = Iso(_h.Today.AddDays(-1)) };
         if (device is { } d)
         {
             body["deviceId"] = d;
