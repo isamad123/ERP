@@ -589,7 +589,7 @@ Every object a pack created, with tenant override flag so upgrades keep override
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
-| content_hash | text | yes |  | S1.23b: SHA-256 of the pack's value of the object in the version installed (from the manifest) |
+| content_hash | text | yes |  | S1.23b: SHA-256 of the canonical JSON of the pack's normalized value of the object in the version installed (not the manifest's file hash) |
 | applied_hash | text | yes |  | S1.23b: SHA-256 of the object as the installer left it; the customer changed it when its value now hashes differently |
 | pack_value | jsonb | yes |  | S1.23b: the pack's value in the version installed (the 'pack value' of the diff view) |
 | conflict_version | text | yes |  | S1.23b: a later pack version whose value was not applied because the customer had changed the object |

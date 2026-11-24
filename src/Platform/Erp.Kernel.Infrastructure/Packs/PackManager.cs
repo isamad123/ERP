@@ -32,14 +32,19 @@ public sealed class PackManager(
     ICurrentActor actor,
     ISettings settings,
     IHeldChanges held,
-    PackInstaller installer) : IPackManager
+    PackInstaller installer,
+    IEnumerable<IPackTakeGuard> guards) : IPackManager
 {
     /// <summary>The held-change kind of pack actions (payload <see cref="PackPlan"/>).</summary>
     public const string HeldKind = "cfg.pack.change";
 
     public const int MaxItemsShown = 2000;
 
-    internal sealed record PackPlan(string Action, string PackId, string? Version, Guid? ItemId);
+    /// <summary>
+    /// What a request asks for, as held for the approver (S1.23b review finding 4): install and upgrade carry the exact version resolved
+    /// when it was asked; "take the pack value" carries the object (type, key, company) and the hash of the pack value then offered.
+    /// </summary>
+    internal sealed record PackPlan(string Action, string PackId, string? Version, Guid? ItemId, string? Type = null, string? Key = null, Guid? CompanyId = null, string? ValueHash = null);
 
     internal const string ActionInstall = "install";
     internal const string ActionUpgrade = "upgrade";
@@ -53,7 +58,7 @@ public sealed class PackManager(
         var catalogue = await CatalogueAsync(cancellationToken).ConfigureAwait(false);
         var licensed = licence.Licence.Claims?.Packs ?? [];
         await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
-        await using var tx = await c.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false);
+        await using var tx = await c.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, cancellationToken).ConfigureAwait(false);
         var installed = new List<InstalledPackView>();
         foreach (var row in await InstalledAsync(c, tx, cancellationToken).ConfigureAwait(false))
         {
@@ -95,7 +100,7 @@ public sealed class PackManager(
     {
         var now = clock.UtcNow;
         await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
-        await using var tx = await c.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead, cancellationToken).ConfigureAwait(false);
+        await using var tx = await c.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, cancellationToken).ConfigureAwait(false);
         var row = (await InstalledAsync(c, tx, cancellationToken).ConfigureAwait(false)).FirstOrDefault(r => r.PackId == packId);
         if (row is null)
         {
@@ -156,15 +161,36 @@ public sealed class PackManager(
     public async Task<PackActionResult> TakePackValueAsync(Guid itemId, PackReasonRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
-        var packId = await Sql.ScalarAsync<string?>(c, null, "select pack_id from cfg.pack_items where id = $1", cancellationToken, itemId).ConfigureAwait(false);
-        return packId is null
-            ? new PackActionResult(404, ErrorKey: PackErrors.ItemNotFound)
-            : await RunAsync(new PackPlan(ActionTake, packId, null, itemId), request.Reason, cancellationToken).ConfigureAwait(false);
+        PackPlan plan;
+        await using (var c = await OpenAsync(cancellationToken).ConfigureAwait(false))
+        await using (var command = Sql.Command(c, null, "select pack_id, object_type, object_key, coalesce(conflict_value, pack_value)::text from cfg.pack_items where id = $1", [itemId]))
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+        {
+            if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                return new PackActionResult(404, ErrorKey: PackErrors.ItemNotFound);
+            }
+
+            var (key, company) = PackInstaller.SplitKey(reader.GetString(2));
+            plan = new PackPlan(ActionTake, reader.GetString(0), null, itemId, reader.GetString(1), key, company,
+                reader.IsDBNull(3) ? null : PackArchive.Hash(JsonNode.Parse(reader.GetString(3))));
+        }
+
+        // The owning module's own rule (S1.23b review finding 2): for a pack policy, HR's manage permission in its company and HR's approval setting.
+        var decision = await TakeDecisionAsync(plan, cancellationToken).ConfigureAwait(false);
+        return decision.Allowed
+            ? await RunAsync(plan, request.Reason, cancellationToken, decision.RequiresApproval).ConfigureAwait(false)
+            : new PackActionResult(403, ErrorKey: decision.ErrorKey ?? "errors.access.forbidden");
     }
 
+    /// <summary>The guard of the object's module, or "allowed" for objects whose module adds no rule to the pack permissions.</summary>
+    internal async Task<PackTakeDecision> TakeDecisionAsync(PackPlan plan, CancellationToken ct) =>
+        guards.FirstOrDefault(g => g.ObjectType == plan.Type) is { } guard && plan.Key is not null
+            ? await guard.DecideAsync(plan.Key, plan.CompanyId, ct).ConfigureAwait(false)
+            : new PackTakeDecision(true, false);
+
     /// <summary>Checks the action now; holds it for a second person while the setting is on, otherwise applies it.</summary>
-    private async Task<PackActionResult> RunAsync(PackPlan plan, string? reason, CancellationToken cancellationToken)
+    private async Task<PackActionResult> RunAsync(PackPlan plan, string? reason, CancellationToken cancellationToken, bool moduleApproval = false)
     {
         if (reason is { Length: > 500 })
         {
@@ -173,12 +199,12 @@ public sealed class PackManager(
 
         try
         {
-            var approval = await ApprovalRequiredAsync(cancellationToken).ConfigureAwait(false);
+            var approval = moduleApproval || await ApprovalRequiredAsync(cancellationToken).ConfigureAwait(false);
             await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
             await using var tx = await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
             if (approval)
             {
-                await CheckAsync(c, tx, plan, cancellationToken).ConfigureAwait(false);
+                plan = await CheckAsync(c, tx, plan, cancellationToken).ConfigureAwait(false);
                 var payload = JsonSerializer.Serialize(plan, Web);
                 var requestId = await held.SubmitAsync(new HeldChangeRequest(HeldKind, plan.ItemId is null ? "cfg.installed_packs" : "cfg.pack_items",
                     plan.ItemId ?? Subject(plan.PackId), payload, Blank(reason)), tx, cancellationToken).ConfigureAwait(false);
@@ -196,27 +222,37 @@ public sealed class PackManager(
         }
     }
 
-    /// <summary>The checks of an action without writing (the request and the approver's check).</summary>
-    internal async Task CheckAsync(NpgsqlConnection c, NpgsqlTransaction tx, PackPlan plan, CancellationToken ct)
+    /// <summary>
+    /// The checks of an action without writing (the request and the approver's check). Returns the plan with the exact version of an install
+    /// or upgrade; a held request whose version or offered value no longer matches is refused (S1.23b review finding 4).
+    /// </summary>
+    internal async Task<PackPlan> CheckAsync(NpgsqlConnection c, NpgsqlTransaction tx, PackPlan plan, CancellationToken ct)
     {
         if (plan.Action == ActionTake)
         {
-            var value = await Sql.ScalarAsync<bool?>(c, tx, "select (conflict_value is not null or pack_value is not null) and retired_in is null from cfg.pack_items where id = $1", ct, plan.ItemId).ConfigureAwait(false);
-            if (value is null)
+            await using var command = Sql.Command(c, tx, "select coalesce(conflict_value, pack_value)::text, retired_in from cfg.pack_items where id = $1", [plan.ItemId]);
+            await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
+            if (!await reader.ReadAsync(ct).ConfigureAwait(false))
             {
                 throw new PackRefusedException(404, PackErrors.ItemNotFound, "The pack item does not exist.");
             }
 
-            if (value is false)
+            if (reader.IsDBNull(0) || !reader.IsDBNull(1))
             {
                 throw new PackRefusedException(409, PackErrors.NoConflict, "The pack has no value to take for this object.");
             }
 
-            return;
+            if (plan.ValueHash is not null && PackArchive.Hash(JsonNode.Parse(reader.GetString(0))) != plan.ValueHash)
+            {
+                throw new PackRefusedException(409, PackErrors.ChangedSinceRequest, "The pack's value of this object changed after the request (a later upgrade); ask again.");
+            }
+
+            return plan;
         }
 
         var pack = await LoadAsync(plan, ct).ConfigureAwait(false);
         await installer.CheckAsync(c, tx, pack, plan.Action == ActionUpgrade, ct).ConfigureAwait(false);
+        return plan with { Version = pack.Manifest.Version };
     }
 
     /// <summary>Applies an action in the caller's transaction as <paramref name="by"/> (the requester, or the approver of a held one).</summary>
@@ -357,7 +393,13 @@ public sealed class PackChangeHandler(IServiceProvider services, ICurrentActor a
 
     public Task<bool> VisibleAsync(HeldChange change, DbTransaction transaction, CancellationToken cancellationToken) => Task.FromResult(true);
 
-    public async Task<HeldChangeProblem?> CheckAsync(HeldChange change, DbTransaction transaction, CancellationToken cancellationToken)
+    public Task<HeldChangeProblem?> CheckAsync(HeldChange change, DbTransaction transaction, CancellationToken cancellationToken) =>
+        RunAsync(change, transaction, apply: false, cancellationToken);
+
+    public Task<HeldChangeProblem?> ApplyAsync(HeldChange change, DbTransaction transaction, CancellationToken cancellationToken) =>
+        RunAsync(change, transaction, apply: true, cancellationToken);
+
+    private async Task<HeldChangeProblem?> RunAsync(HeldChange change, DbTransaction transaction, bool apply, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(change);
         if (PackManager.ReadPlan(change.Payload) is not { } plan)
@@ -365,10 +407,26 @@ public sealed class PackChangeHandler(IServiceProvider services, ICurrentActor a
             return new HeldChangeProblem("errors.data.invalid_request");
         }
 
+        // The approver of a "take the pack value" also needs the owning module's right (for a pack policy, HR's manage right in its company).
+        if (plan.Action == PackManager.ActionTake && await Manager.TakeDecisionAsync(plan, cancellationToken).ConfigureAwait(false) is { Allowed: false } refused)
+        {
+            return new HeldChangeProblem(refused.ErrorKey ?? "errors.access.forbidden", Forbidden: true);
+        }
+
         var tx = (NpgsqlTransaction)transaction;
         try
         {
-            await Manager.CheckAsync(tx.Connection!, tx, plan, cancellationToken).ConfigureAwait(false);
+            var checkedPlan = await Manager.CheckAsync(tx.Connection!, tx, plan, cancellationToken).ConfigureAwait(false);
+            if (plan.Version is not null && checkedPlan.Version != plan.Version)
+            {
+                return new HeldChangeProblem(PackErrors.ChangedSinceRequest);
+            }
+
+            if (apply)
+            {
+                await Manager.ApplyAsync(tx.Connection!, tx, plan, actor.UserId, cancellationToken).ConfigureAwait(false);
+            }
+
             return null;
         }
         catch (PackRefusedException ex)
@@ -377,27 +435,7 @@ public sealed class PackChangeHandler(IServiceProvider services, ICurrentActor a
         }
     }
 
-    public async Task<HeldChangeProblem?> ApplyAsync(HeldChange change, DbTransaction transaction, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(change);
-        if (PackManager.ReadPlan(change.Payload) is not { } plan)
-        {
-            return new HeldChangeProblem("errors.data.invalid_request");
-        }
-
-        var tx = (NpgsqlTransaction)transaction;
-        try
-        {
-            await Manager.ApplyAsync(tx.Connection!, tx, plan, actor.UserId, cancellationToken).ConfigureAwait(false);
-            return null;
-        }
-        catch (PackRefusedException ex)
-        {
-            return new HeldChangeProblem(ex.ErrorKey);
-        }
-    }
-
-    public Task<HeldChangeDescription> DescribeAsync(HeldChange change, DbTransaction transaction, CancellationToken cancellationToken)
+    public async Task<HeldChangeDescription> DescribeAsync(HeldChange change, DbTransaction transaction, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(change);
         var plan = PackManager.ReadPlan(change.Payload);
@@ -411,6 +449,24 @@ public sealed class PackChangeHandler(IServiceProvider services, ICurrentActor a
             details.Add(new HeldChangeDetail("packs.held.detail.version", "text", Text: version));
         }
 
-        return Task.FromResult(new HeldChangeDescription(plan is null ? null : new Dictionary<string, string> { ["en"] = plan.PackId, ["ur"] = plan.PackId }, details));
+        // A "take the pack value" names the object and shows both values (S1.23b review finding 4).
+        if (plan is { Action: PackManager.ActionTake, ItemId: { } itemId } && transaction is NpgsqlTransaction tx && tx.Connection is { } c)
+        {
+            details.Add(new HeldChangeDetail("packs.held.detail.object", "text", Text: $"{plan.Type} {plan.Key}"));
+            if (plan.CompanyId is { } company)
+            {
+                details.Add(new HeldChangeDetail("packs.held.detail.company", "text",
+                    Text: await Sql.ScalarAsync<string?>(c, tx, "select code from org.companies where id = $1", cancellationToken, company).ConfigureAwait(false)));
+            }
+
+            var item = await Sql.ScalarAsync<string?>(c, tx, "select coalesce(conflict_value, pack_value)::text from cfg.pack_items where id = $1", cancellationToken, itemId).ConfigureAwait(false);
+            var country = await Sql.ScalarAsync<string?>(c, tx, "select manifest->>'country' from cfg.installed_packs where pack_id = $1", cancellationToken, plan.PackId).ConfigureAwait(false);
+            var current = plan.Type is null ? null : await services.GetRequiredService<PackInstaller>().CurrentAsync(c, tx, plan.Type,
+                plan.CompanyId is { } id ? plan.Key + "@" + id.ToString("D") : plan.Key!, country, services.GetRequiredService<IClock>().UtcNow, cancellationToken).ConfigureAwait(false);
+            details.Add(new HeldChangeDetail("packs.held.detail.customer_value", "text", Text: current?.Value.ToJsonString()));
+            details.Add(new HeldChangeDetail("packs.held.detail.pack_value", "text", Text: item));
+        }
+
+        return new HeldChangeDescription(plan is null ? null : new Dictionary<string, string> { ["en"] = plan.PackId, ["ur"] = plan.PackId }, details);
     }
 }

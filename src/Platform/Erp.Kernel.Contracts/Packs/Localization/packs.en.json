@@ -24,5 +24,10 @@
   "packs.held.detail.version": "Version",
   "packs.held.action.install": "Install the pack",
   "packs.held.action.upgrade": "Upgrade the pack",
-  "packs.held.action.take_value": "Take the pack's value"
+  "packs.held.action.take_value": "Take the pack's value",
+  "errors.packs.changed_since_request": "The pack's version or value changed after the request was made; ask again.",
+  "packs.held.detail.object": "Object",
+  "packs.held.detail.company": "Company",
+  "packs.held.detail.customer_value": "Your value now",
+  "packs.held.detail.pack_value": "Pack value"
 }

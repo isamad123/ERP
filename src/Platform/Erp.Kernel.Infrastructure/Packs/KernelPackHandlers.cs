@@ -85,7 +85,14 @@ internal abstract partial class KernelPackHandler : IPackObjectHandler
 
     protected static JsonObject? ParseObject(string? json) => json is null ? null : JsonNode.Parse(json) as JsonObject;
 
-    protected static NpgsqlCommand Command(PackObjectContext c, string sql, params object?[] values) => Sql.Command(Db(c), Tx(c), sql, values);
+    /// <summary>A read of the installer locks the row it reads (`for update` at the end of the query); a view's read (<see cref="PackObjectContext.ReadOnly"/>) does not.</summary>
+    protected static NpgsqlCommand Command(PackObjectContext c, string sql, params object?[] values) =>
+        Sql.Command(Db(c), Tx(c), c.ReadOnly ? Unlocked(sql) : sql, values);
+
+    internal static string Unlocked(string sql) => LockClause().Replace(sql, string.Empty);
+
+    [GeneratedRegex(@"\s+for update( of [a-z]+)?\s*$", RegexOptions.CultureInvariant)]
+    private static partial Regex LockClause();
 
     protected static NpgsqlParameter Jsonb(JsonNode value) => new() { NpgsqlDbType = NpgsqlDbType.Jsonb, Value = value.ToJsonString() };
 

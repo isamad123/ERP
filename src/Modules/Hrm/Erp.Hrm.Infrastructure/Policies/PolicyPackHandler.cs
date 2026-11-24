@@ -1,9 +1,17 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using Erp.BuildingBlocks.Application.Security;
+using Erp.BuildingBlocks.Infrastructure.Persistence;
+using Erp.Hrm.Application.Generated;
 using Erp.Hrm.Application.Policies;
 using Erp.Hrm.Contracts.Policies;
+using Erp.Hrm.Contracts.Generated;
+using Erp.Hrm.Domain.Generated;
+using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Contracts.Packs;
+using Erp.Kernel.Contracts.Settings;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -22,8 +30,9 @@ public static class HrmPackHandlers
 /// <c>policy</c>: a policy of a registered type with source <c>pack</c>, created for every company of the pack's country (ruling Q9;
 /// FR-HRM-POL-04, POL-06). Key <c>type:code</c>; value <c>{"name", "parameters"}</c>, the parameters checked against the type's schema.
 /// Writing creates the policy and activates a version from the install date (or the day after the latest version's start); a version
-/// in force is never edited (S1.23a). The present value is the name and the parameters of the version in force today, so a customer's
-/// own version (<c>is_overridden</c>) or a renamed policy shows as changed. Retiring is refused while an assignment still uses the policy
+/// in force is never edited (S1.23a). The present value is the name and the parameters of the latest version, whatever its start, with
+/// the number of a version HR wrote (<c>is_overridden</c>), so a customer's own version (also one dated in the future) or a renamed policy
+/// shows as changed (S1.23b review findings 1 and 3). Retiring is refused while an assignment still uses the policy
 /// (it is then left as it is). The pack creates no assignment: HR assigns pack policies (S1.23b detail).
 /// </summary>
 internal sealed partial class PolicyPackHandler(PolicyTypeCatalog types) : IPackObjectHandler
@@ -81,14 +90,18 @@ internal sealed partial class PolicyPackHandler(PolicyTypeCatalog types) : IPack
 
     public async Task<PackObjectState?> ReadAsync(PackObjectContext context, string key, CancellationToken cancellationToken)
     {
+        // The policy as a whole, not one day of it (S1.23b review findings 1 and 3): the latest version that was or will be in force,
+        // whatever its start date. HR can only add a version after the latest one's start, so a version HR activated, even for a future
+        // date, becomes the latest and shows as the customer's (`customerVersion`); the pack's own version written for tomorrow is what
+        // the installer left and stays so as the days pass.
         var (type, code) = Split(key);
         await using var command = Command(context, """
-            select p.id, p.name_i18n::text, p.is_active, p.source,
-                   (select v.parameters::text from hrm.policy_versions v where v.policy_id = p.id and v.status <> 'draft' and v.valid_from <= $4
-                        and (v.valid_to is null or v.valid_to > $4) order by v.valid_from desc limit 1),
-                   (select v.parameters::text from hrm.policy_versions v where v.policy_id = p.id and v.status <> 'draft' order by v.valid_from desc limit 1)
-            from hrm.policies p where p.company_id = $1 and p.policy_type = $2 and lower(p.code) = lower($3) and not p.is_deleted for update of p
-            """, context.CompanyId, type, code, context.Today);
+            select p.id, p.name_i18n::text, p.is_active, p.source, v.parameters::text, v.is_overridden, v.version
+            from hrm.policies p
+            left join lateral (select x.parameters, x.is_overridden, x.version from hrm.policy_versions x where x.policy_id = p.id and x.status <> 'draft'
+                               order by x.valid_from desc, x.version desc limit 1) v on true
+            where p.company_id = $1 and p.policy_type = $2 and lower(p.code) = lower($3) and not p.is_deleted for update of p
+            """, context.CompanyId, type, code);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {
@@ -99,9 +112,13 @@ internal sealed partial class PolicyPackHandler(PolicyTypeCatalog types) : IPack
         var value = new JsonObject
         {
             ["name"] = new JsonObject(name.Where(p => p.Key is "en" or "ur").OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => KeyValuePair.Create(p.Key, p.Value?.DeepClone()))),
-            // The version in force today; before the first one starts (a dated activation), the latest one.
-            ["parameters"] = reader.IsDBNull(4) ? reader.IsDBNull(5) ? null : JsonNode.Parse(reader.GetString(5)) : JsonNode.Parse(reader.GetString(4)),
+            ["parameters"] = reader.IsDBNull(4) ? null : JsonNode.Parse(reader.GetString(4)),
         };
+        if (!reader.IsDBNull(5) && reader.GetBoolean(5))
+        {
+            value["customerVersion"] = reader.GetInt32(6);
+        }
+
         if (!reader.GetBoolean(2))
         {
             value["active"] = false;
@@ -235,7 +252,9 @@ internal sealed partial class PolicyPackHandler(PolicyTypeCatalog types) : IPack
 #pragma warning disable CA2100 // constant SQL text; every value is a parameter
     private static NpgsqlCommand Command(PackObjectContext context, string sql, params object?[] values)
     {
-        var command = new NpgsqlCommand(sql, (NpgsqlConnection)context.Connection, (NpgsqlTransaction)context.Transaction);
+        // A view's read (ReadOnly) takes no row lock (S1.23b review finding 5).
+        var text = context.ReadOnly ? LockClause().Replace(sql, string.Empty) : sql;
+        var command = new NpgsqlCommand(text, (NpgsqlConnection)context.Connection, (NpgsqlTransaction)context.Transaction);
         foreach (var value in values)
         {
             command.Parameters.Add(value is JsonNode node
@@ -261,4 +280,39 @@ internal sealed partial class PolicyPackHandler(PolicyTypeCatalog types) : IPack
 
     [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$", RegexOptions.CultureInvariant)]
     private static partial Regex CodeShape();
+
+    [GeneratedRegex(@"\s+for update( of [a-z]+)?\s*$", RegexOptions.CultureInvariant)]
+    private static partial Regex LockClause();
 }
+
+/// <summary>
+/// HR's rule on "take the pack value" of a pack policy (S1.23b review finding 2, ruling recorded in CR-079): the person needs
+/// <c>hrm.policies.manage</c> in the policy's company (data scope, as S1.23a's own writes), and the change waits for a second person
+/// while the company's <c>hrm.policies.requires_approval</c> is on, as HR's own activations do.
+/// </summary>
+internal sealed class PolicyPackTakeGuard(HrmDbContext db, IPermissionChecker permissions, IDataScopeFilter scope, ISettings settings) : IPackTakeGuard
+{
+    public string ObjectType => "policy";
+
+    public async Task<PackTakeDecision> DecideAsync(string key, Guid? companyId, CancellationToken cancellationToken)
+    {
+        if (companyId is not { } company || !await permissions.HasPermissionAsync(PolicyPermissions.Manage, cancellationToken).ConfigureAwait(false))
+        {
+            return new PackTakeDecision(false, false, "errors.access.forbidden");
+        }
+
+        var at = key.IndexOf(':', StringComparison.Ordinal);
+        var (type, code) = (key[..at], key[(at + 1)..]);
+        var policy = (await db.Set<Policy>().AsNoTracking().Where(p => p.CompanyId == company && p.PolicyType == type && !p.IsDeleted).ToListAsync(cancellationToken).ConfigureAwait(false))
+                .FirstOrDefault(p => string.Equals(p.Code, code, StringComparison.OrdinalIgnoreCase))
+            ?? new Policy { CompanyId = company, PolicyType = type, Code = code, Source = "pack", NameI18n = JsonDocument.Parse("{}") };
+        if (!await scope.AllowsAsync(policy, PolicyAccess.Scope, "manage", new DbContextScopeSource(db), cancellationToken).ConfigureAwait(false))
+        {
+            return new PackTakeDecision(false, false, "errors.access.forbidden");
+        }
+
+        var approval = await settings.GetAsync(HrmSettingKeys.HrmPoliciesRequiresApproval, (Guid?)company, cancellationToken).ConfigureAwait(false);
+        return new PackTakeDecision(true, approval.Value.ValueKind == JsonValueKind.True);
+    }
+}
+

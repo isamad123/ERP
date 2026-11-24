@@ -24,5 +24,10 @@
   "packs.held.detail.version": "ورژن",
   "packs.held.action.install": "پیک نصب کریں",
   "packs.held.action.upgrade": "پیک اپ گریڈ کریں",
-  "packs.held.action.take_value": "پیک کی قدر اپنائیں"
+  "packs.held.action.take_value": "پیک کی قدر اپنائیں",
+  "errors.packs.changed_since_request": "درخواست کے بعد پیک کا ورژن یا قدر بدل گئی؛ دوبارہ درخواست کریں۔",
+  "packs.held.detail.object": "چیز",
+  "packs.held.detail.company": "کمپنی",
+  "packs.held.detail.customer_value": "آپ کی موجودہ قدر",
+  "packs.held.detail.pack_value": "پیک کی قدر"
 }

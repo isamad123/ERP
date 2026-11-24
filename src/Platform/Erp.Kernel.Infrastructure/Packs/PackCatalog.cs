@@ -149,6 +149,7 @@ public static class PackCatalog
     public static async Task<PackArchive> LoadAsync(NpgsqlConnection controlPlane, string packId, string? version, DateTimeOffset now, CancellationToken cancellationToken)
     {
         byte[]? content = null;
+        string? rowVersion = null;
         foreach (var row in (await ListAsync(controlPlane, cancellationToken).ConfigureAwait(false)).Where(p => p.PackId == packId))
         {
             if (version is null ? !row.Parsed.CompatibleWith(ProductRelease.Version) : row.Version != version)
@@ -157,6 +158,7 @@ public static class PackCatalog
             }
 
             content = await Sql.ScalarAsync<byte[]?>(controlPlane, null, "select content from cp.pack_catalog where pack_id = $1 and version = $2", cancellationToken, packId, row.Version).ConfigureAwait(false);
+            rowVersion = row.Version;
             break;
         }
 
@@ -168,7 +170,8 @@ public static class PackCatalog
         }
 
         var pack = PackArchive.Open(content);
-        if (pack.Manifest.Id != packId)
+        // The signed manifest decides, not the catalogue's unsigned columns (S1.23b review finding 11b).
+        if (pack.Manifest.Id != packId || pack.Manifest.Version != rowVersion)
         {
             throw new InvalidDataException("The catalogue row does not match the pack it holds.");
         }

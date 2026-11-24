@@ -19,7 +19,7 @@ comment on column cfg.installed_packs.manifest is 'S1.23b: the manifest of the i
 comment on column cfg.installed_packs.previous_version is 'S1.23b: the version before the last upgrade';
 comment on column cfg.installed_packs.upgraded_at is 'S1.23b: when the last upgrade was installed';
 comment on table cfg.pack_items is 'Every object a pack created, with tenant override flag so upgrades keep overrides. Requirements: KRN-CFG-02, HRM-POL-06. Source: kernel.yaml.';
-comment on column cfg.pack_items.content_hash is 'S1.23b: SHA-256 of the pack''s value of the object in the version installed (from the manifest)';
+comment on column cfg.pack_items.content_hash is 'S1.23b: SHA-256 of the canonical JSON of the pack''s normalized value of the object in the version installed (not the manifest''s file hash)';
 comment on column cfg.pack_items.applied_hash is 'S1.23b: SHA-256 of the object as the installer left it; the customer changed it when its value now hashes differently';
 comment on column cfg.pack_items.pack_value is 'S1.23b: the pack''s value in the version installed (the ''pack value'' of the diff view)';
 comment on column cfg.pack_items.conflict_version is 'S1.23b: a later pack version whose value was not applied because the customer had changed the object';

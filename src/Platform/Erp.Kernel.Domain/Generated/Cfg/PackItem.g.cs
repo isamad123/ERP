@@ -30,7 +30,7 @@ public sealed partial class PackItem : global::Erp.BuildingBlocks.Domain.Entitie
     /// <summary>is_overridden</summary>
     public bool IsOverridden { get; set; }
 
-    /// <summary>content_hash: S1.23b: SHA-256 of the pack's value of the object in the version installed (from the manifest)</summary>
+    /// <summary>content_hash: S1.23b: SHA-256 of the canonical JSON of the pack's normalized value of the object in the version installed (not the manifest's file hash)</summary>
     public string? ContentHash { get; set; }
 
     /// <summary>applied_hash: S1.23b: SHA-256 of the object as the installer left it; the customer changed it when its value now hashes differently</summary>

@@ -36,6 +36,8 @@ public enum PackObjectScope
 /// <summary>
 /// The transaction a pack object is read or written in (one transaction per pack, Build item 10). <see cref="CountryCode"/> is
 /// the country of a country pack (null for other kinds); <see cref="CompanyId"/> is set for objects installed per company.
+/// <see cref="Today"/> is the customer's own date (its time zone). <see cref="ReadOnly"/> (the pack manager's views) reads without
+/// row locks; the installer reads with them (S1.23b review finding 5).
 /// </summary>
 public sealed record PackObjectContext(
     DbConnection Connection,
@@ -44,7 +46,26 @@ public sealed record PackObjectContext(
     DateOnly Today,
     Guid ActorUserId,
     string? CountryCode,
-    Guid? CompanyId);
+    Guid? CompanyId,
+    bool ReadOnly = false);
+
+/// <summary>Whether the signed-in person may replace the customer's value of an object with the pack's, and whether that waits for a second person.</summary>
+public sealed record PackTakeDecision(bool Allowed, bool RequiresApproval, string? ErrorKey = null);
+
+/// <summary>
+/// The owning module's rule on "take the pack value" for its objects (S1.23b review finding 2): its own permission, data scope and
+/// approval setting, which the kernel's pack permissions do not replace. Registered by the module in the API host next to its
+/// <see cref="IPackObjectHandler"/>; the kernel asks it for the requester and again for the approver of a held request.
+/// </summary>
+public interface IPackTakeGuard
+{
+    string ObjectType { get; }
+
+    /// <param name="key">The object's manifest key.</param>
+    /// <param name="companyId">The company of an object installed per company.</param>
+    /// <param name="cancellationToken">Cancels the check.</param>
+    Task<PackTakeDecision> DecideAsync(string key, Guid? companyId, CancellationToken cancellationToken);
+}
 
 /// <summary>
 /// An object as it now is, in the shape of the pack's value (after <see cref="IPackObjectHandler.Normalize"/>), so the installer can

@@ -33,6 +33,7 @@ public static class PackErrors
     public const string Signature = "errors.packs.signature";
     public const string NoConflict = "errors.packs.no_pack_value";
     public const string ItemNotFound = "errors.packs.item_not_found";
+    public const string ChangedSinceRequest = "errors.packs.changed_since_request";
 }
 
 /// <summary>What happened to one object (per company for company objects).</summary>
@@ -42,7 +43,7 @@ public sealed record PackItemOutcome(string Type, string Key, Guid? CompanyId, s
 /// The report of an install or upgrade (FR-KRN-CFG-02 "report conflicts"): counts per outcome and the objects the customer had
 /// changed (kept, with the pack's value offered).
 /// </summary>
-public sealed record PackApplyReport(string PackId, string Version, string? PreviousVersion, int Added, int Updated, int Unchanged, int Kept, int Retired, IReadOnlyList<PackItemOutcome> Conflicts);
+public sealed record PackApplyReport(string PackId, string Version, string? PreviousVersion, int Added, int Updated, int Unchanged, int Kept, int Retired, IReadOnlyList<PackItemOutcome> Conflicts, int LeftInPlace = 0);
 
 /// <summary>Outcomes of <see cref="PackItemOutcome"/>.</summary>
 public static class PackOutcomes
@@ -52,6 +53,7 @@ public static class PackOutcomes
     public const string Unchanged = "unchanged";
     public const string Kept = "kept";
     public const string Retired = "retired";
+    public const string Left = "left_in_place";
 }
 
 /// <summary>
@@ -128,9 +130,9 @@ public sealed class PackInstaller(IEnumerable<IPackObjectHandler> handlers)
     {
         ArgumentNullException.ThrowIfNull(pack);
         var m = pack.Manifest;
-        await Sql.ExecuteAsync(c, tx, "select pg_advisory_xact_lock(hashtext('cfg.packs:' || $1))", ct, m.Id).ConfigureAwait(false);
+        await LockAsync(c, tx, ct).ConfigureAwait(false);
         var previous = await CheckAsync(c, tx, pack, upgrade, ct).ConfigureAwait(false);
-        var today = DateOnly.FromDateTime(now.UtcDateTime);
+        var today = await TodayAsync(c, tx, now, ct).ConfigureAwait(false);
         var companies = await CompaniesAsync(c, tx, m.Country, ct).ConfigureAwait(false);
         var items = await ItemsAsync(c, tx, m.Id, ct).ConfigureAwait(false);
         var changes = new List<ChangeEntry>();
@@ -169,6 +171,15 @@ public sealed class PackInstaller(IEnumerable<IPackObjectHandler> handlers)
                 {
                     changes.Add(Entry(change, now, actor));
                 }
+
+                // A handler leaves an object in use where it is (a policy still assigned, a past holiday): the item stays live, so a later
+                // version can retire it, and the report says "left in place" (S1.23b review finding 7).
+                var after = await handler.ReadAsync(context, key, ct).ConfigureAwait(false);
+                if (after is not null && PackArchive.Hash(after.Value) == PackArchive.Hash(current.Value))
+                {
+                    outcomes.Add(new PackItemOutcome(item.Type, key, company, PackOutcomes.Left));
+                    continue;
+                }
             }
 
             await Sql.ExecuteAsync(c, tx, """
@@ -183,7 +194,7 @@ public sealed class PackInstaller(IEnumerable<IPackObjectHandler> handlers)
         var conflicts = outcomes.Where(o => o.Outcome == PackOutcomes.Kept).ToList();
         return new PackApplyReport(m.Id, m.Version, previous,
             outcomes.Count(o => o.Outcome == PackOutcomes.Added), outcomes.Count(o => o.Outcome == PackOutcomes.Updated),
-            outcomes.Count(o => o.Outcome == PackOutcomes.Unchanged), conflicts.Count, outcomes.Count(o => o.Outcome == PackOutcomes.Retired), conflicts);
+            outcomes.Count(o => o.Outcome == PackOutcomes.Unchanged), conflicts.Count, outcomes.Count(o => o.Outcome == PackOutcomes.Retired), conflicts, outcomes.Count(o => o.Outcome == PackOutcomes.Left));
     }
 
     /// <summary>
@@ -194,7 +205,7 @@ public sealed class PackInstaller(IEnumerable<IPackObjectHandler> handlers)
     {
         var item = await ItemAsync(c, tx, itemId, ct).ConfigureAwait(false)
             ?? throw new PackRefusedException(404, PackErrors.ItemNotFound, "The pack item does not exist.");
-        await Sql.ExecuteAsync(c, tx, "select pg_advisory_xact_lock(hashtext('cfg.packs:' || $1))", ct, item.PackId).ConfigureAwait(false);
+        await LockAsync(c, tx, ct).ConfigureAwait(false);
         item = (await ItemAsync(c, tx, itemId, ct).ConfigureAwait(false))!;
         var value = item.ConflictValue ?? item.PackValue;
         if (value is null || item.RetiredIn is not null)
@@ -205,7 +216,7 @@ public sealed class PackInstaller(IEnumerable<IPackObjectHandler> handlers)
         var handler = Handler(item.Type);
         var (key, company) = SplitKey(item.Key);
         var country = await Sql.ScalarAsync<string?>(c, tx, "select manifest->>'country' from cfg.installed_packs where pack_id = $1", ct, item.PackId).ConfigureAwait(false);
-        var context = new PackObjectContext(c, tx, now, DateOnly.FromDateTime(now.UtcDateTime), actor, country, company);
+        var context = new PackObjectContext(c, tx, now, await TodayAsync(c, tx, now, ct).ConfigureAwait(false), actor, country, company);
         var current = await handler.ReadAsync(context, key, ct).ConfigureAwait(false);
         var changes = new List<ChangeEntry>();
         if (current is null || PackArchive.Hash(current.Value) != PackArchive.Hash(value))
@@ -239,7 +250,7 @@ public sealed class PackInstaller(IEnumerable<IPackObjectHandler> handlers)
         var transaction = tx ?? await c.BeginTransactionAsync(ct).ConfigureAwait(false);
         try
         {
-            return await handler.ReadAsync(new PackObjectContext(c, transaction, now, DateOnly.FromDateTime(now.UtcDateTime), BaselineSeed.SystemUserId, country, company), key, ct).ConfigureAwait(false);
+            return await handler.ReadAsync(new PackObjectContext(c, transaction, now, DateOnly.FromDateTime(now.UtcDateTime), BaselineSeed.SystemUserId, country, company, ReadOnly: true), key, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -249,6 +260,20 @@ public sealed class PackInstaller(IEnumerable<IPackObjectHandler> handlers)
                 await transaction.DisposeAsync().ConfigureAwait(false);
             }
         }
+    }
+
+    /// <summary>
+    /// One lock for every pack write of a customer (install, upgrade, take the pack value): two packs may hold the same object (a bank,
+    /// a setting), so their installs take turns (S1.23b review finding 9).
+    /// </summary>
+    private static Task<int> LockAsync(NpgsqlConnection c, NpgsqlTransaction tx, CancellationToken ct) =>
+        Sql.ExecuteAsync(c, tx, "select pg_advisory_xact_lock(hashtext('cfg.packs'))", ct);
+
+    /// <summary>The customer's own date (customer-level <c>org.time_zone</c>), not the UTC date (S1.23b review finding 6).</summary>
+    private static async Task<DateOnly> TodayAsync(NpgsqlConnection c, NpgsqlTransaction tx, DateTimeOffset now, CancellationToken ct)
+    {
+        var zone = await Entitlements.CustomerLicence.TimeZoneAsync(c, tx, DateOnly.FromDateTime(now.UtcDateTime), ct).ConfigureAwait(false);
+        return Erp.Kernel.Domain.Entitlements.LicenceStates.Today(now, Erp.Kernel.Domain.Entitlements.LicenceStates.Zone(zone));
     }
 
     /// <summary>True when the object is gone or no longer hashes like what the installer left (the customer changed it).</summary>
