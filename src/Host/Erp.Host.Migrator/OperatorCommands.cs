@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.BuildingBlocks.Infrastructure.Time;
+using Erp.Kernel.Contracts.Packs;
 using Erp.Kernel.Infrastructure.Access;
 using Erp.Kernel.Infrastructure.Audit;
 using Erp.Kernel.Infrastructure.ControlPlane.Audit;
@@ -16,6 +17,7 @@ using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Erp.Kernel.Infrastructure.Identity;
 using Erp.Kernel.Infrastructure.Notifications.Email;
+using Erp.Kernel.Infrastructure.Packs;
 using Erp.Kernel.Infrastructure.Workflow;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -36,7 +38,12 @@ public static class OperatorCommands
           cluster add --name <n> --region <r> --host <h> --port <p> --max-databases <n> --admin-user <u>
                                                          [--change-address yes] (only to re-point a cluster that holds databases)
                                                          (password from ERP_CLUSTER_ADMIN_PASSWORD)
-          signing-key add --key-id <id> --public-key <file.pem> [--purpose entitlement]
+          signing-key add --key-id <id> --public-key <file.pem> [--purpose entitlement|pack]
+          pack build --folder <packs/id> --out <file.zip>  checks every object, writes manifest.json, writes the unsigned pack
+          pack sign --pack <file.zip> --key-id <id> --private-key <file.pem> --out <signed.zip>
+                                                         offline, with the vendor's pack key (never in the repository)
+          pack publish --file <signed.zip>               verifies and stores the pack in the catalogue (cp.pack_catalog)
+          pack list                                      published packs and versions
           entitlement sign --payload <file.json> --key-id <id> --private-key <file.pem> --out <file.json>
           entitlement draft --edition <starter|business|enterprise> --tenant <code> --out <file.json> [--from <yyyy-mm-dd>] [--to <yyyy-mm-dd>]
                                                          unsigned payload of the next version, pre-filled from the edition template
@@ -50,7 +57,7 @@ public static class OperatorCommands
                                                          (the worker does this every minute; never approves anything)
           tenant provision --code <c> --name <n> --host <h[,h2]> --region <r> --country <CC> --currency <CUR>
                            --size-profile <micro|sme|mid|enterprise> --cluster <n> --legal-name <n>
-                           --admin-email <e> --admin-name <n> --entitlement <file.json>
+                           --admin-email <e> --admin-name <n> --entitlement <file.json> [--packs <id[@version],...>]
           tenant admin-activation-link --code <c>        prints a new activation link for the invited first administrator
           tenant admin-role-repair --code <c> --reason <text>
                                                          Super Admin: restores the protected Tenant Admin role (CR-024)
@@ -98,6 +105,10 @@ public static class OperatorCommands
                 "cluster add" => await ClusterAddAsync(context, cancellationToken).ConfigureAwait(false),
                 "signing-key add" => await SigningKeyAddAsync(context, cancellationToken).ConfigureAwait(false),
                 "entitlement sign" => await EntitlementSignAsync(context).ConfigureAwait(false),
+                "pack build" => await PackBuildAsync(context, cancellationToken).ConfigureAwait(false),
+                "pack sign" => await PackSignAsync(context, cancellationToken).ConfigureAwait(false),
+                "pack publish" => await PackPublishAsync(context, cancellationToken).ConfigureAwait(false),
+                "pack list" => await PackListAsync(context, cancellationToken).ConfigureAwait(false),
                 "entitlement draft" => await EntitlementDraftAsync(context, cancellationToken).ConfigureAwait(false),
                 "entitlement apply" => await EntitlementApplyAsync(context, cancellationToken).ConfigureAwait(false),
                 "entitlement history" => await EntitlementHistoryAsync(context, cancellationToken).ConfigureAwait(false),
@@ -224,6 +235,54 @@ public static class OperatorCommands
         return 0;
     }
 
+    /// <summary>Every module's pack object handlers (D-10), for building and provisioning.</summary>
+    private static IReadOnlyList<IPackObjectHandler> PackHandlers { get; } = [.. KernelPackHandlers.All, .. Erp.Hrm.Infrastructure.Policies.HrmPackHandlers.Default];
+
+    /// <summary>Slice S1.23b (Build item 8): checks a pack source folder and writes its manifest and the unsigned pack file.</summary>
+    private static async Task<int> PackBuildAsync(Context c, CancellationToken cancellationToken)
+    {
+        var (manifest, pack) = PackArchive.Build(c.Option("folder"), PackHandlers);
+        await File.WriteAllBytesAsync(c.Option("out"), pack, cancellationToken).ConfigureAwait(false);
+        await c.Output.WriteLineAsync($"pack {manifest.Id} {manifest.Version}: built, {manifest.Objects.Count} objects ({string.Join(", ", manifest.Objects.GroupBy(o => o.Type).OrderBy(g => g.Key, StringComparer.Ordinal).Select(g => $"{g.Count()} {g.Key}"))}); sign it next").ConfigureAwait(false);
+        return 0;
+    }
+
+    /// <summary>Slice S1.23b: signs a built pack offline with the vendor's private pack key (ruling Q6: never in the repository or the control plane).</summary>
+    private static async Task<int> PackSignAsync(Context c, CancellationToken cancellationToken)
+    {
+        var signed = PackArchive.Sign(await File.ReadAllBytesAsync(c.Option("pack"), cancellationToken).ConfigureAwait(false), c.Option("key-id"),
+            await File.ReadAllTextAsync(c.Option("private-key"), cancellationToken).ConfigureAwait(false));
+        await File.WriteAllBytesAsync(c.Option("out"), signed, cancellationToken).ConfigureAwait(false);
+        var manifest = PackArchive.Open(signed).Manifest;
+        await c.Output.WriteLineAsync($"pack {manifest.Id} {manifest.Version}: signed with {c.Option("key-id")}").ConfigureAwait(false);
+        return 0;
+    }
+
+    /// <summary>Slice S1.23b: verifies a signed pack and adds it to the catalogue; customers then see it as available (ruling Q8).</summary>
+    private static async Task<int> PackPublishAsync(Context c, CancellationToken cancellationToken)
+    {
+        var actor = await c.ActorAsync(cancellationToken).ConfigureAwait(false);
+        var result = await PackCatalog.PublishAsync(Context.ControlPlane.ConnectionString, actor, await File.ReadAllBytesAsync(c.Option("file"), cancellationToken).ConfigureAwait(false), c.Clock, cancellationToken).ConfigureAwait(false);
+        await c.Output.WriteLineAsync(result.AlreadyPublished
+            ? $"pack {result.PackId} {result.Version}: already published (same file); nothing changed"
+            : $"pack {result.PackId} {result.Version}: published").ConfigureAwait(false);
+        return 0;
+    }
+
+    private static async Task<int> PackListAsync(Context c, CancellationToken cancellationToken)
+    {
+        await using var cp = new NpgsqlConnection(Context.ControlPlane.ConnectionString);
+        await cp.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await c.Output.WriteLineAsync("pack\tkind\tversion\tcompatible_from\treleased_at\tobjects").ConfigureAwait(false);
+        foreach (var p in await PackCatalog.ListAsync(cp, cancellationToken).ConfigureAwait(false))
+        {
+            await c.Output.WriteLineAsync(string.Join('\t', p.PackId, p.Kind, p.Version, p.CompatibleFrom, p.ReleasedAt.ToString("u", CultureInfo.InvariantCulture),
+                (p.Manifest["objects"] as JsonArray)?.Count.ToString(CultureInfo.InvariantCulture) ?? "0")).ConfigureAwait(false);
+        }
+
+        return 0;
+    }
+
     private static async Task<int> EntitlementDraftAsync(Context c, CancellationToken cancellationToken)
     {
         var edition = c.Option("edition");
@@ -340,8 +399,9 @@ public static class OperatorCommands
         var request = new ProvisioningRequest(
             c.Option("code"), c.Option("name"), c.Option("host").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
             c.Option("region"), c.Option("country"), c.Option("currency"), c.Option("size-profile"), c.Option("cluster"), c.Option("legal-name"),
-            c.Option("admin-email"), c.Option("admin-name"), await File.ReadAllTextAsync(c.Option("entitlement"), cancellationToken).ConfigureAwait(false));
-        var result = await new TenantProvisioner(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations)
+            c.Option("admin-email"), c.Option("admin-name"), await File.ReadAllTextAsync(c.Option("entitlement"), cancellationToken).ConfigureAwait(false),
+            Packs: c.OptionalOption("packs")?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+        var result = await new TenantProvisioner(Context.ControlPlane, c.Secrets, c.Clock, Context.Migrations) { PackHandlers = PackHandlers }
             .ProvisionAsync(actor, request, new ConsoleProgress(c.Output), cancellationToken).ConfigureAwait(false);
         await c.Output.WriteLineAsync(result.AlreadyProvisioned
             ? $"{result.Code}: already provisioned (database {result.DatabaseName}); nothing changed"

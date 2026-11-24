@@ -37,6 +37,7 @@ public static class PolicyServices
         services.AddScoped<IPolicyService, PolicyService>();
         services.AddScoped<IHeldChangeHandler, PolicyVersionChangeHandler>();
         services.AddScoped<IHeldChangeHandler, PolicyAssignmentChangeHandler>();
+        services.AddSingleton<Erp.Kernel.Contracts.Packs.IPackObjectHandler>(sp => new PolicyPackHandler(sp.GetRequiredService<PolicyTypeCatalog>())); // S1.23b
         return services;
     }
 
