@@ -31,6 +31,21 @@
       "type": "string",
       "format": "date"
     },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
+    "publishedBy": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
+    "copiedFromRosterId": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
     "status": {
       "type": "string",
       "enum": [

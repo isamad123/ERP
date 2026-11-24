@@ -43,6 +43,10 @@
     },
     "rosterStatus": {
       "type": "string"
+    },
+    "reason": {
+      "type": "string",
+      "nullable": true
     }
   }
 }

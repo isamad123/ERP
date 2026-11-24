@@ -29,6 +29,9 @@ internal sealed class ShiftConfiguration : IEntityTypeConfiguration<global::Erp.
         builder.Property(e => e.Segments).HasColumnName("segments").HasColumnType("jsonb").IsRequired();
         builder.Property(e => e.MinFullDayMinutes).HasColumnName("min_full_day_minutes").HasColumnType("integer");
         builder.Property(e => e.PolicyId).HasColumnName("policy_id").HasColumnType("uuid");
+        builder.Property(e => e.ValidFrom).HasColumnName("valid_from").HasColumnType("date");
+        builder.Property(e => e.ValidTo).HasColumnName("valid_to").HasColumnType("date");
+        builder.Property(e => e.PreviousShiftId).HasColumnName("previous_shift_id").HasColumnType("uuid");
         builder.Property(e => e.IsActive).HasColumnName("is_active").HasColumnType("boolean");
         builder.Property(e => e.IsDeleted).HasColumnName("is_deleted").HasColumnType("boolean");
         builder.Property(e => e.DeletedAt).HasColumnName("deleted_at").HasColumnType("timestamptz");
@@ -61,6 +64,10 @@ internal sealed class ShiftRepository(
         if (filter.PolicyId is { } policyIdFilter)
         {
             query = query.Where(e => e.PolicyId == policyIdFilter);
+        }
+        if (filter.PreviousShiftId is { } previousShiftIdFilter)
+        {
+            query = query.Where(e => e.PreviousShiftId == previousShiftIdFilter);
         }
         if (filter.IsActive is { } isActiveFilter)
         {
