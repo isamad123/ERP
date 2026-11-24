@@ -98,7 +98,7 @@ public sealed class JobProbe(IsolationFixture fx, WebApplication app)
         var key = endpoint.Method + " " + endpoint.Pattern;
         return key switch
         {
-            "GET /api/jobs/definitions" or "GET /api/jobs/runs" or "GET /api/jobs/health" => (endpoint.Pattern, null),
+            "GET /api/jobs/definitions" or "GET /api/jobs/runs" or "GET /api/jobs/health" or "GET /api/jobs/system-health" => (endpoint.Pattern, null),
             "PUT /api/jobs/definitions/{id:guid}/schedule" => ($"/api/jobs/definitions/{m.Job}/schedule", Json(new { schedule = (object?)null, isEnabled = true, rowVersion = m.JobVersion })),
             "POST /api/jobs/definitions/{id:guid}/run" => ($"/api/jobs/definitions/{m.Job}/run", "{}"),
             "GET /api/jobs/runs/{id:guid}" => ($"/api/jobs/runs/{m.Finished}", null),

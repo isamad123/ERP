@@ -48,6 +48,9 @@ const DocumentTemplatesScreen = lazy(() => import('./admin/doctemplates'));
 const SetupScreen = lazy(() => import('./admin/setup'));
 // S1.23b: the pack manager (country and industry packs; the wizard's pack step links here).
 const PacksScreen = lazy(() => import('./admin/packs'));
+// S1.16c: the job centre (jobs, runs, notification log and system health as its tabs, R-291: the shell budget has no room for two more menu entries) and the licence page.
+const JobsScreen = lazy(() => import('./admin/jobs'));
+const LicenceScreen = lazy(() => import('./admin/licence'));
 
 export const kernelScreens: ScreenDeclaration[] = [
   { id: 'home', path: '/', labelKey: 'nav.home', icon: House, group: 'home', allowedWhenLocked: false, component: HomePage },
@@ -91,8 +94,10 @@ export const kernelScreens: ScreenDeclaration[] = [
   // S1.15d (ruling Q1): "Notification texts" and "Document templates" after "Approval routes".
   { id: 'notification-texts', path: '/settings/notification-texts', labelKey: 'nav.notificationTexts', icon: Bell, group: 'administration', permission: 'ntf.templates.read', component: NotifyScreen },
   { id: 'document-templates', path: '/settings/document-templates', labelKey: 'nav.documentTemplates', icon: FileText, group: 'administration', permission: 'doc.templates.read', component: DocumentTemplatesScreen },
-  { id: 'licence', path: '/settings/licence', labelKey: 'nav.licence', icon: KeyRound, group: 'administration', permission: 'cfg.licence.read', allowedWhenLocked: true, comesWith: 'S1.16' },
-  { id: 'jobs', path: '/admin/jobs/*', labelKey: 'nav.jobs', icon: Activity, group: 'administration', permission: 'job.runs.read', comesWith: 'S1.16' },
+  // S1.16c: "Licence" and "Background jobs" in the Administration group. Under the jobs route: runs, messages (the notification log) and health (the path the
+  // notification catalogue links to, /admin/jobs/health). The licence page answers in the locked state.
+  { id: 'licence', path: '/settings/licence', labelKey: 'nav.licence', icon: KeyRound, group: 'administration', permission: 'cfg.licence.read', allowedWhenLocked: true, component: LicenceScreen },
+  { id: 'jobs', path: '/admin/jobs/*', labelKey: 'nav.jobs', icon: Activity, group: 'administration', permission: 'job.runs.read', component: JobsScreen },
   { id: 'audit', path: '/admin/audit/*', labelKey: 'nav.audit', icon: ScrollText, group: 'administration', permission: 'aud.changes.view', component: AuditScreen },
   { id: 'exports', path: '/admin/exports', labelKey: 'nav.exports', icon: Download, permission: 'aud.export', allowedWhenLocked: true, comesWith: 'S1.16' },
   { id: 'quarantine', path: '/admin/documents/quarantine', labelKey: 'nav.quarantine', icon: ShieldAlert, comesWith: 'S1.16' },

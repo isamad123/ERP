@@ -110,3 +110,24 @@ public interface IJobCentre
 
     Task<JobHealthView> HealthAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// The system health page (FR-ADM-OPS-05, Q11: no slow-queries figure) beyond the job numbers: files still waiting for the
+/// scan, storage and database size, and the last backup and verified restore drill of this customer only (FR-ADM-DAT-08,
+/// Q12; timestamps only, never a path or a secret).
+/// </summary>
+public sealed record SystemHealthView(
+    JobHealthView Jobs,
+    int FilesNotScanned,
+    DateTimeOffset? OldestUnscannedAt,
+    long StorageUsedBytes,
+    long DatabaseSizeBytes,
+    DateTimeOffset? LastBackupAt,
+    DateTimeOffset? LastRestoreTestAt,
+    DateTimeOffset At);
+
+/// <summary>Reads the system health page (permission <c>job.runs.read</c>).</summary>
+public interface ISystemHealth
+{
+    Task<SystemHealthView> ReadAsync(CancellationToken cancellationToken);
+}

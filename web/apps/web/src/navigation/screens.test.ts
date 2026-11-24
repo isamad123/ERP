@@ -67,7 +67,7 @@ describe('FR-KRN-ENT-04 FR-KRN-TEN-09 locked licence', () => {
     const byId = (id: string) => screens.find((s) => s.id === id)!;
     expect(decide(byId('home'), reader)).toBe('locked');
     expect(decide(byId('notifications'), reader)).toBe('locked');
-    expect(decide(byId('licence'), reader)).toBe('notYet');
+    expect(decide(byId('licence'), reader)).toBe('show'); // S1.16c: the licence page exists and answers when locked
     expect(decide(byId('exports'), reader)).toBe('denied');
     const other = accessFacts(everything, [], 'locked');
     expect(decide(byId('licence'), other)).toBe('denied');

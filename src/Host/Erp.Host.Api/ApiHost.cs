@@ -175,6 +175,7 @@ public static class ApiHost
         services.AddSingleton<ILicenceResolver, LicenceResolver>();
         services.AddScoped<ILicensedFeatures, EntitlementFeatures>();
         services.AddScoped<ILicenceService, LicenceService>();
+        services.AddScoped<global::Erp.Kernel.Application.Jobs.ISystemHealth, global::Erp.Kernel.Infrastructure.Jobs.SystemHealthService>();
         // Session context of the web shell (S1.12b, S1.12 ruling Q9).
         services.AddScoped<ISessionContextService, SessionContextService>();
         // Saved list views and label overrides of the web lists and forms (S1.12c, S1.12 rulings Q11 and Q12).

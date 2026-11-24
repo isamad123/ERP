@@ -127,4 +127,36 @@ public sealed class DeliveryLogApiTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal("errors.notification.field_unknown", (await _h.PostAsync(admin, "/api/ntf/text-templates/test-send", new { eventCode = "workflow.task_assigned", language = "en", subject = "x", body = "{salary}" }, Ct)).Text("title"));
         Assert.Equal(HttpStatusCode.Forbidden, (await _h.PostAsync(await _h.UserAsync(Ct, null, "business_user"), "/api/ntf/text-templates/test-send", new { eventCode = "workflow.task_assigned", language = "en", subject = "x", body = "y" }, Ct)).Status);
     }
+
+    [Fact]
+    public async Task S116c_FR_ADM_OPS_04_GHR_06_identity_and_salary_message_text_is_withheld_and_the_daily_summary_counts_results_per_day()
+    {
+        var admin = await _h.UserAsync(Ct, null, "tenant_admin");
+        var employee = await _h.UserAsync(Ct, null, "business_user");
+        var reset = await MessageAsync("sent", "identity.password_reset", employee, subject: "Reset your password");
+        var slip = await MessageAsync("sent", "payroll.payslip_ready", employee, subject: "Your payslip");
+        var plain = await MessageAsync("sent", "workflow.task_assigned", employee);
+
+        foreach (var id in new[] { reset, slip })
+        {
+            var detail = await _h.GetAsync(admin, $"/api/ntf/deliveries/{id}", Ct);
+            Assert.True(detail.Status == HttpStatusCode.OK, detail.Body);
+            Assert.True(detail.Json.GetProperty("bodyWithheld").GetBoolean());
+            Assert.Equal(string.Empty, detail.Json.GetProperty("body").GetString());
+            Assert.Equal(System.Text.Json.JsonValueKind.Null, detail.Json.GetProperty("link").ValueKind);
+            Assert.DoesNotContain("Open the request", detail.Body, StringComparison.Ordinal);
+        }
+
+        var open = await _h.GetAsync(admin, $"/api/ntf/deliveries/{plain}", Ct);
+        Assert.False(open.Json.GetProperty("bodyWithheld").GetBoolean());
+        Assert.Equal("Open the request.", open.Json.GetProperty("body").GetString());
+
+        await MessageAsync("failed", "workflow.task_assigned", employee);
+        var daily = await _h.GetAsync(admin, "/api/ntf/deliveries/daily?days=3", Ct);
+        Assert.True(daily.Status == HttpStatusCode.OK, daily.Body);
+        var today = daily.Json.EnumerateArray().First();
+        Assert.True(today.GetProperty("sent").GetInt32() >= 3);
+        Assert.True(today.GetProperty("failed").GetInt32() >= 1);
+        Assert.Equal(HttpStatusCode.Forbidden, (await _h.GetAsync(employee, "/api/ntf/deliveries/daily", Ct)).Status);
+    }
 }
