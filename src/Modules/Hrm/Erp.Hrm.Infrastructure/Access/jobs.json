@@ -1,5 +1,5 @@
 {
-  "_comment": "HR background jobs (slice S1.11a format). S1.20b (CR-076 item 9, slice S1.20 ruling Q12): approved employment events take effect on their date. S1.20c (CR-076 S1.20c detail, Build item 13): contracts past their end expire, and contract and probation reminders go out. S1.34a (CR-087, slice S1.34 Build item 3): the cut-off reminder of the payroll calendar (FR-HRM-PAY-38). S1.27b (CR-088 S1.27b detail, FR-HRM-ATT-02, ATT-03): hrm.device_sync, every minute, reads the devices that are due. S1.32a (CR-086, slice S1.32 Build items 3 and 6): leave entitlements are granted and accrued by policy once per employment, leave type and period (hrm.leave_accrual), and balances are recomputed from the ledger and the policies with the differences logged, nothing changed (hrm.leave_recompute). Seeded into job.definitions by migrate and provisioning, keyed by code; a customer's schedule and on/off choice are kept on upgrade. Times are in the customer's time zone (org.time_zone). The job writes through the HR module's own code and checks no permissions, so it declares none (R-009). Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "HR background jobs (slice S1.11a format). S1.20b (CR-076 item 9, slice S1.20 ruling Q12): approved employment events take effect on their date. S1.20c (CR-076 S1.20c detail, Build item 13): contracts past their end expire, and contract and probation reminders go out. S1.34a (CR-087, slice S1.34 Build item 3): the cut-off reminder of the payroll calendar (FR-HRM-PAY-38). S1.27b (CR-088 S1.27b detail, FR-HRM-ATT-02, ATT-03): hrm.device_sync, every minute, reads the devices that are due. S1.32a (CR-086, slice S1.32 Build items 3 and 6): leave entitlements are granted and accrued by policy once per employment, leave type and period (hrm.leave_accrual), and balances are recomputed from the ledger and the policies with the differences logged, nothing changed (hrm.leave_recompute). S1.29a (CR-089 S1.29a detail, slice S1.29 Build item 5, ruling Q5): hrm.attendance_process works out every employee's previous day each night at 02:00 company time (the schedule is the customer's to change in the job centre; it stands for the setting hrm.att.process_time of CR-089) and, on demand, a range of up to 62 days for the company, a unit or one employment; each day is written once per change of its inputs. Seeded into job.definitions by migrate and provisioning, keyed by code; a customer's schedule and on/off choice are kept on upgrade. Times are in the customer's time zone (org.time_zone). The job writes through the HR module's own code and checks no permissions, so it declares none (R-009). Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "jobs": [
     {
@@ -114,6 +114,23 @@
       "entitlement": "hrm.core",
       "manual": true,
       "request_permission": "hrm.leave_ledger.recompute",
+      "schedule_editable": true
+    },
+    {
+      "code": "hrm.attendance_process",
+      "name": {"en": "Attendance processing", "ur": "حاضری کی پراسیسنگ"},
+      "description": {"en": "Turns each employee's punches, shift, holidays, leave and duty into one result per day with an explanation, and puts missing or odd punches in the exception queue. Each night it works out the previous day; on demand, the days you name for the company, a unit or one employee. A day already worked out is written again only when something changed, and a day in a locked attendance period is never changed. Days of employees with no attendance policy stay unprocessed.", "ur": "ہر ملازم کے اندراجات، شفٹ، تعطیلات، رخصت اور ڈیوٹی سے ہر دن کا ایک نتیجہ وضاحت کے ساتھ بناتا ہے، اور غائب یا بے ترتیب اندراجات استثنائی قطار میں ڈالتا ہے۔ ہر رات پچھلا دن پراسیس کرتا ہے؛ ضرورت پر کمپنی، کسی یونٹ یا ایک ملازم کے آپ کے بتائے ہوئے دن۔ پراسیس شدہ دن صرف کچھ بدلنے پر دوبارہ لکھا جاتا ہے، اور حاضری کے بند دور کا دن کبھی نہیں بدلتا۔ جن ملازمین کی کوئی حاضری پالیسی نہیں ان کے دن پراسیس نہیں ہوتے۔"},
+      "schedule": {"daily": {"at": "02:00"}},
+      "parameters": [{"name": "from", "type": "date", "required": false}, {"name": "to", "type": "date", "required": false}, {"name": "org_unit_id", "type": "uuid", "required": false}, {"name": "sub_units", "type": "bool", "required": false}, {"name": "employment_id", "type": "uuid", "required": false}],
+      "permissions": [],
+      "retry": {"max_attempts": 3, "backoff_seconds": [300, 1800]},
+      "timeout_seconds": 3600,
+      "priority": 40,
+      "concurrency": 1,
+      "runs_in": ["full"],
+      "entitlement": "hrm.core",
+      "manual": true,
+      "request_permission": "hrm.attendance_days.process",
       "schedule_editable": true
     }
   ]

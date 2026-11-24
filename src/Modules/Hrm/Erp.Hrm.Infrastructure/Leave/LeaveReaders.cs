@@ -112,7 +112,7 @@ internal sealed class WorkedTimeReader(HrmDbContext db)
 
     public async Task<decimal> WorkedAsync(Guid employmentId, DateOnly from, DateOnly to, bool hours, CancellationToken ct)
     {
-        var days = db.Set<AttendanceDay>().AsNoTracking().Where(d => d.EmploymentId == employmentId && d.WorkDate >= from && d.WorkDate <= to);
+        var days = db.Set<AttendanceDay>().AsNoTracking().Where(d => d.EmploymentId == employmentId && d.WorkDate >= from && d.WorkDate <= to && d.SupersededAt == null); // the current result of each day (S1.29a row versions)
         if (hours)
         {
             var minutes = await days.SumAsync(d => (long)d.WorkedMinutes, ct).ConfigureAwait(false);
