@@ -61,6 +61,15 @@ public static class HrmSettingKeys
 
     /// <summary>A change of a salary structure's components or of an employee's salary needs a second person's approval.</summary>
     public const string HrmPayChangeApproval = "hrm.pay.change_approval";
+
+    /// <summary>Allow this company to use biometric attendance devices; mapping a device user then needs the person's consent.</summary>
+    public const string HrmAttBiometricEnabled = "hrm.att.biometric_enabled";
+
+    /// <summary>A device not heard from for this many minutes is shown offline.</summary>
+    public const string HrmAttDeviceOfflineMinutes = "hrm.att.device_offline_minutes";
+
+    /// <summary>How often the platform reads punches from devices it connects to.</summary>
+    public const string HrmAttDevicePullMinutes = "hrm.att.device_pull_minutes";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

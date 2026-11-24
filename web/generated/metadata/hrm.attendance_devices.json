@@ -12,18 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.attendance_devices.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.attendance_devices.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.attendance_devices.update"
-    },
-    {
-      "action": "delete",
-      "permission": "hrm.attendance_devices.delete"
     }
   ],
   "companyScoped": true,
@@ -166,6 +154,26 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.attendance_devices.last_error"
+    },
+    {
+      "column": "sync_cursor_at",
+      "field": "syncCursorAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.attendance_devices.sync_cursor_at"
+    },
+    {
+      "column": "sync_requested_at",
+      "field": "syncRequestedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.attendance_devices.sync_requested_at"
     },
     {
       "column": "status",

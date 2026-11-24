@@ -187,3 +187,30 @@ settings:
     name: {en: "Approval of salary structure and compensation changes", ur: "تنخواہ کے ڈھانچے اور معاوضے کی تبدیلیوں کی منظوری"}
     description: {en: "A change of a salary structure's components or of an employee's salary needs a second person's approval", ur: "تنخواہ کے ڈھانچے کے اجزا یا ملازم کی تنخواہ کی تبدیلی کے لیے دوسرے شخص کی منظوری درکار"}
     help: {en: "A change of the components of a salary structure, and a new salary arrangement or revision for an employee, waits until another person with the approval permission approves it. The person who asked can never approve it. Switching this off also waits for a second person.", ur: "تنخواہ کے ڈھانچے کے اجزا کی تبدیلی اور ملازم کے لیے نیا تنخواہی انتظام یا نظرثانی اس وقت تک رکی رہتی ہے جب تک منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور نہ کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔ اسے بند کرنا بھی دوسرے شخص کی منظوری کا منتظر رہتا ہے۔"}
+  # S1.27b (CR-088 S1.27b detail; FR-HRM-ATT-02, ATT-03, ATT-20). Urdu texts to be reviewed by a native speaker (R-062).
+  - key: hrm.att.biometric_enabled
+    type: bool
+    default: false
+    layers: [tenant, company]
+    area: hr.attendance
+    name: {en: "Biometric devices", ur: "بایومیٹرک آلات"}
+    description: {en: "Allow this company to use biometric attendance devices; mapping a device user then needs the person's consent", ur: "اس کمپنی کو بایومیٹرک حاضری آلات استعمال کرنے کی اجازت؛ آلے کے صارف کو جوڑنے کے لیے پھر شخص کی رضامندی لازمی ہے"}
+    help: {en: "While this is on, a device user can be mapped to an employee only after the employee's consent date is recorded. The system never reads, stores or logs fingerprint or face templates; the device keeps them. Switch off where no biometric device is used.", ur: "جب تک یہ آن ہے، آلے کے صارف کو ملازم سے تبھی جوڑا جا سکتا ہے جب ملازم کی رضامندی کی تاریخ درج ہو۔ نظام انگلیوں کے نشان یا چہرے کے ٹیمپلیٹ کبھی نہیں پڑھتا، نہ محفوظ کرتا ہے، نہ لاگ کرتا ہے؛ وہ آلے میں رہتے ہیں۔ جہاں بایومیٹرک آلہ استعمال نہیں ہوتا وہاں بند رکھیں۔"}
+  - key: hrm.att.device_offline_minutes
+    type: int
+    default: 30
+    validation: {min: 1, max: 10080}
+    layers: [tenant, company]
+    area: hr.attendance
+    name: {en: "Device offline after (minutes)", ur: "آلہ آف لائن شمار ہونے کی مدت (منٹ)"}
+    description: {en: "A device not heard from for this many minutes is shown offline", ur: "جس آلے سے اتنے منٹ رابطہ نہ ہو وہ آف لائن دکھایا جاتا ہے"}
+    help: {en: "Pull devices are checked by the device sync job; push devices are online while they keep sending. A device silent for longer than this is shown offline and HR sees its last error.", ur: "کھینچنے والے آلات کو آلات کی ہم آہنگی کا کام جانچتا ہے؛ دھکیلنے والے آلات بھیجتے رہنے تک آن لائن ہیں۔ اس سے زیادہ خاموش آلہ آف لائن دکھایا جاتا ہے اور ایچ آر اس کی آخری خرابی دیکھتا ہے۔"}
+  - key: hrm.att.device_pull_minutes
+    type: int
+    default: 5
+    validation: {min: 1, max: 1440}
+    layers: [tenant]
+    area: hr.attendance
+    name: {en: "Device pull interval (minutes)", ur: "آلات سے پڑھنے کا وقفہ (منٹ)"}
+    description: {en: "How often the platform reads punches from devices it connects to", ur: "پلیٹ فارم جن آلات سے رابطہ کرتا ہے ان سے اندراجات کتنی بار پڑھے"}
+    help: {en: "The device sync job visits every active pull device that was last read more than this many minutes ago. A person can also ask for a device to be read now from the device list.", ur: "آلات کی ہم آہنگی کا کام ہر اس فعال آلے پر جاتا ہے جسے آخری بار اتنے منٹ سے پہلے پڑھا گیا ہو۔ آلات کی فہرست سے کوئی شخص آلے کو ابھی پڑھنے کو بھی کہہ سکتا ہے۔"}

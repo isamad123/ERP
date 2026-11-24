@@ -52,6 +52,8 @@ public static class AttendanceDeviceAccess
         new("last_seen_at", "LastSeenAt", null),
         new("last_sync_at", "LastSyncAt", null),
         new("last_error", "LastError", null),
+        new("sync_cursor_at", "SyncCursorAt", null),
+        new("sync_requested_at", "SyncRequestedAt", null),
         new("status", "Status", null),
         new("is_deleted", "IsDeleted", null),
         new("deleted_at", "DeletedAt", null),

@@ -129,6 +129,7 @@ public sealed partial class HrmDbContext(DbContextOptions<HrmDbContext> options)
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.TaxDeclarationConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.TrainingBondConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.TrainingRequirementConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.UnmappedPunchConfiguration());
     }
 }
 
@@ -248,6 +249,7 @@ public static class HrmGeneratedServices
         services.AddScoped<global::Erp.Hrm.Application.Generated.ITaxDeclarationRepository, global::Erp.Hrm.Infrastructure.Generated.TaxDeclarationRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.ITrainingBondRepository, global::Erp.Hrm.Infrastructure.Generated.TrainingBondRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.ITrainingRequirementRepository, global::Erp.Hrm.Infrastructure.Generated.TrainingRequirementRepository>();
+        services.AddScoped<global::Erp.Hrm.Application.Generated.IUnmappedPunchRepository, global::Erp.Hrm.Infrastructure.Generated.UnmappedPunchRepository>();
         return services;
     }
 }

@@ -27,6 +27,9 @@ namespace Erp.IntegrationTests.Tenancy.Isolation;
 /// </summary>
 public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
 {
+    private static readonly string PushSecret = "probe-" + Guid.NewGuid().ToString("N");
+    private readonly Dictionary<Guid, string> pushSecrets = [];
+
     private sealed record Material(
         Guid Person, long PersonVersion, Guid Into, Guid Identifier, long IdentifierVersion, Guid Contact, long ContactVersion, Guid Address, long AddressVersion,
         Guid Relation, long RelationVersion, Guid Qualification, long QualificationVersion, Guid Case, long CaseVersion, string PersonNo,
@@ -37,7 +40,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         Guid Punching, Guid Location, string QrCode, string Badge,
         Guid PayGroup, long PayGroupVersion, Guid Period, long PeriodVersion, string PeriodCutOff,
         Guid Shift, long ShiftVersion, Guid Roster, long RosterVersion,
-        Guid Component, long ComponentVersion, Guid Structure, long StructureVersion);
+        Guid Component, long ComponentVersion, Guid Structure, long StructureVersion,
+        Guid PushDevice, long PushDeviceVersion, Guid PullDevice, Guid Map, long MapVersion, Guid RemovalMap, long RemovalMapVersion, Guid Unmapped, long UnmappedVersion, string MapNo);
 
     /// <summary>Where the probe hires (slice S1.20b): an org unit of a company and that company's branch.</summary>
     private sealed record Hire(Guid Company, Guid OrgUnit, Guid Branch);
@@ -50,9 +54,10 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.Component, a.Structure }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.Component, a.Structure }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
+        pushSecrets[a.PushDevice] = PushSecret;
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
 
         foreach (var hints in new[] { false, true })
@@ -256,6 +261,19 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "PUT /api/hrm/rosters/{id:guid}/days" => ($"/api/hrm/rosters/{m.Roster}/days", Json(new { changes = new[] { new { employmentId = m.Employment, workDate = "2030-03-05", dayType = "weekly_off" } } })),
             "GET /api/hrm/rosters/{id:guid}/checks" => ($"/api/hrm/rosters/{m.Roster}/checks", null),
             "POST /api/hrm/rosters/{id:guid}/publish" => ($"/api/hrm/rosters/{m.Roster}/publish", Json(new { rowVersion = m.RosterVersion })),
+            // S1.27b: devices, the signed push, device-user mapping, removal tasks, unmapped punches and the punch log.
+            "GET /api/hrm/attendance/devices" => ($"/api/hrm/attendance/devices?companyId={m.Org.Company}", null),
+            "POST /api/hrm/attendance/devices" => ("/api/hrm/attendance/devices", Json(new { companyId = m.Org.Company, locationId = m.Location, serialNo = "SN" + Guid.NewGuid().ToString("N")[..10], provider = "generic_push", credentials = PushSecret })),
+            "PUT /api/hrm/attendance/devices/{id:guid}" => ($"/api/hrm/attendance/devices/{m.PushDevice}", Json(new { model = "Probe model", rowVersion = m.PushDeviceVersion })),
+            "POST /api/hrm/attendance/devices/{id:guid}/sync" => ($"/api/hrm/attendance/devices/{m.PullDevice}/sync", null),
+            "POST /api/hrm/attendance/devices/{id:guid}/push" => ($"/api/hrm/attendance/devices/{m.PushDevice}/push", Json(new { records = new[] { new { userNo = m.MapNo, at = "2030-01-01T08:00:00+05:00", direction = "in" } } })),
+            "GET /api/hrm/attendance/device-maps" => ($"/api/hrm/attendance/device-maps?companyId={m.Org.Company}", null),
+            "POST /api/hrm/attendance/device-maps" => ("/api/hrm/attendance/device-maps", Json(new { companyId = m.Org.Company, deviceId = m.PushDevice, deviceUserNo = "P" + Guid.NewGuid().ToString("N")[..10], employmentId = m.Employment, consentDate = "2024-01-01" })),
+            "POST /api/hrm/attendance/device-maps/{id:guid}/end" => ($"/api/hrm/attendance/device-maps/{m.Map}/end", Json(new { endDate = "2031-01-01", rowVersion = m.MapVersion })),
+            "POST /api/hrm/attendance/device-maps/{id:guid}/removal-done" => ($"/api/hrm/attendance/device-maps/{m.RemovalMap}/removal-done", Json(new { rowVersion = m.RemovalMapVersion })),
+            "GET /api/hrm/attendance/unmapped" => ($"/api/hrm/attendance/unmapped?companyId={m.Org.Company}", null),
+            "POST /api/hrm/attendance/unmapped/{id:guid}/discard" => ($"/api/hrm/attendance/unmapped/{m.Unmapped}/discard", Json(new { rowVersion = m.UnmappedVersion })),
+            "GET /api/hrm/attendance/punch-log" => ($"/api/hrm/attendance/punch-log?companyId={m.Org.Company}", null),
             var key => throw new InvalidOperationException($"No probe target for HR endpoint {key}; extend HrmProbe."),
         };
     }
@@ -522,6 +540,46 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var shift = await PostAsync(host, token, "/api/hrm/shifts", new { companyId = org.Company, code = "SH" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe shift" }, shiftType = "fixed", startTime = "08:00", endTime = "16:00", crossesMidnight = false, minFullDayMinutes = 420 }, ct);
         var roster = await PostAsync(host, token, "/api/hrm/rosters", new { companyId = org.Company, name = "Probe week", orgUnitId = org.OrgUnit, periodStart = "2030-03-04", periodEnd = "2030-03-10" }, ct);
         await PutAsync(host, token, $"/api/hrm/rosters/{roster.GetProperty("id").GetGuid()}/days", new { changes = new[] { new { employmentId = employment, workDate = "2030-03-04", dayType = "working", shiftId = shift.GetProperty("id").GetGuid() } } }, ct);
+        // S1.27b: the biometric switch of the company, a pushing and a pulling device at A's location, a consented mapping, a mapping with a removal task and an unmapped punch.
+        await PutAsync(host, token, "/api/cfg/settings/hrm.att.biometric_enabled", new { layer = "company", scopeId = org.Company, value = true, reason = "probe" }, ct);
+        var pushDevice = await PostAsync(host, token, "/api/hrm/attendance/devices", new { companyId = org.Company, locationId = location, serialNo = "SN" + Guid.NewGuid().ToString("N")[..10], provider = "generic_push", credentials = PushSecret }, ct);
+        var pullDevice = await PostAsync(host, token, "/api/hrm/attendance/devices", new { companyId = org.Company, locationId = location, serialNo = "SN" + Guid.NewGuid().ToString("N")[..10], provider = "zkteco", host = "127.0.0.1", port = 9, protocol = "tcp", credentials = "123456" }, ct);
+        var mapNo = "M" + Guid.NewGuid().ToString("N")[..10];
+        var map = await PostAsync(host, token, "/api/hrm/attendance/device-maps", new { companyId = org.Company, deviceId = pushDevice.GetProperty("id").GetGuid(), deviceUserNo = mapNo, employmentId = employment, consentDate = "2024-01-01" }, ct);
+        var mapRow = map.GetProperty("map");
+        var removalMap = Guid.CreateVersion7();
+        var unmapped = Guid.CreateVersion7();
+        await using (var c = await fx.OpenAdminAsync(code, ct))
+        {
+            await using (var command = new NpgsqlCommand("""
+                insert into hrm.device_user_maps (id, company_id, device_id, device_user_no, employment_id, consent_at, valid_from, valid_to, removal_due_at, created_at, created_by, updated_at, updated_by)
+                values ($1, $2, $3, $4, $5, '2023-01-01', '2023-01-01', '2024-01-01', now(), now(), $6, now(), $6)
+                """, c))
+            {
+                command.Parameters.Add(new NpgsqlParameter { Value = removalMap });
+                command.Parameters.Add(new NpgsqlParameter { Value = org.Company });
+                command.Parameters.Add(new NpgsqlParameter { Value = pushDevice.GetProperty("id").GetGuid() });
+                command.Parameters.Add(new NpgsqlParameter { Value = "R" + Guid.NewGuid().ToString("N")[..10] });
+                command.Parameters.Add(new NpgsqlParameter { Value = employment });
+                command.Parameters.Add(new NpgsqlParameter { Value = BaselineSeed.SystemUserId });
+                await command.ExecuteNonQueryAsync(ct);
+            }
+
+            await using (var command = new NpgsqlCommand("""
+                insert into hrm.unmapped_punches (id, company_id, device_id, device_user_no, punched_at, direction, idempotency_key, received_at, status, created_at, created_by, updated_at, updated_by)
+                values ($1, $2, $3, $4, '2030-01-01T03:00:00Z', 'in', $5, now(), 'open', now(), $6, now(), $6)
+                """, c))
+            {
+                command.Parameters.Add(new NpgsqlParameter { Value = unmapped });
+                command.Parameters.Add(new NpgsqlParameter { Value = org.Company });
+                command.Parameters.Add(new NpgsqlParameter { Value = pushDevice.GetProperty("id").GetGuid() });
+                command.Parameters.Add(new NpgsqlParameter { Value = "U" + Guid.NewGuid().ToString("N")[..10] });
+                command.Parameters.Add(new NpgsqlParameter { Value = "probe-" + Guid.NewGuid().ToString("N") });
+                command.Parameters.Add(new NpgsqlParameter { Value = BaselineSeed.SystemUserId });
+                await command.ExecuteNonQueryAsync(ct);
+            }
+        }
+
         return new Material(person, created.GetProperty("rowVersion").GetInt64(), into, identifier.Id, identifier.Version, contact.Id, contact.Version,
             address.Id, address.Version, relation.Id, relation.Version, qualification.Id, qualification.Version,
             match.GetProperty("id").GetGuid(), match.GetProperty("rowVersion").GetInt64(), created.GetProperty("personNo").GetString()!,
@@ -533,7 +591,9 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             punching.GetProperty("id").GetGuid(), location, shown.GetProperty("code").GetString()!, badge,
             groupId, group.GetProperty("rowVersion").GetInt64(), period.GetProperty("id").GetGuid(), period.GetProperty("rowVersion").GetInt64(), period.GetProperty("cutOffDate").GetString()!,
             shift.GetProperty("id").GetGuid(), shift.GetProperty("rowVersion").GetInt64(), roster.GetProperty("id").GetGuid(), roster.GetProperty("rowVersion").GetInt64(),
-            component.GetProperty("id").GetGuid(), component.GetProperty("rowVersion").GetInt64(), structure.GetProperty("id").GetGuid(), structure.GetProperty("rowVersion").GetInt64());
+            component.GetProperty("id").GetGuid(), component.GetProperty("rowVersion").GetInt64(), structure.GetProperty("id").GetGuid(), structure.GetProperty("rowVersion").GetInt64(),
+            pushDevice.GetProperty("id").GetGuid(), pushDevice.GetProperty("rowVersion").GetInt64(), pullDevice.GetProperty("id").GetGuid(), mapRow.GetProperty("id").GetGuid(), mapRow.GetProperty("rowVersion").GetInt64(),
+            removalMap, 1, unmapped, 1, mapNo);
     }
 
     private async Task OkAsync(string host, string token, string path, object body, CancellationToken ct)
@@ -611,6 +671,12 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         if (body is not null)
         {
             request.Content = new StringContent(body, Encoding.UTF8, new MediaTypeHeaderValue("application/json"));
+        }
+
+        if (body is not null && pathAndQuery.Contains("/attendance/devices/", StringComparison.Ordinal) && pathAndQuery.Contains("/push", StringComparison.Ordinal)
+            && pushSecrets.TryGetValue(Guid.Parse(pathAndQuery.Split('/')[5]), out var secret))
+        {
+            request.Headers.Add("X-Erp-Signature", Erp.Hrm.Application.Attendance.DeviceRules.SignatureHeader(secret, DateTimeOffset.UtcNow.ToUnixTimeSeconds(), body));
         }
 
         if (hints)

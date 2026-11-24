@@ -125,5 +125,6 @@ public static class HrmAuditCatalog
         new(typeof(global::Erp.Hrm.Domain.Generated.TaxDeclaration), "hrm.tax_declarations", true, null, "id", "company_id", null, "employment_id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.TrainingBond), "hrm.training_bonds", true, null, "id", "company_id", null, "employment_id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.TrainingRequirement), "hrm.training_requirements", true, null, "id", "company_id", null, "employment_id", null),
+        new(typeof(global::Erp.Hrm.Domain.Generated.UnmappedPunch), "hrm.unmapped_punches", true, null, "id", "company_id", null, null, null),
     ];
 }

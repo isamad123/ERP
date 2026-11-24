@@ -91,6 +91,8 @@ export interface AttendanceDevice
     lastSeenAt: string | null;
     lastSyncAt: string | null;
     lastError: string | null;
+    syncCursorAt: string | null;
+    syncRequestedAt: string | null;
     status: 'active' | 'offline' | 'retired';
     isDeleted: boolean;
     deletedAt: string | null;
@@ -100,21 +102,6 @@ export interface AttendanceDevice
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface AttendanceDeviceWrite
-{
-    companyId: string;
-    locationId: string;
-    connectorId: string;
-    serialNo: string;
-    model?: string | null;
-    connection: unknown;
-    credentialsRef?: string | null;
-    lastSeenAt?: string | null;
-    lastSyncAt?: string | null;
-    lastError?: string | null;
-    status: 'active' | 'offline' | 'retired';
 }
 
 export interface AttendanceDeviceListQuery
@@ -133,9 +120,6 @@ export const attendanceDevices =
 {
     list: (query: AttendanceDeviceListQuery = {}) => request<PagedResult<AttendanceDevice>>('GET', '/api/hrm/attendance-devices', { query }),
     get: (id: string) => request<AttendanceDevice>('GET', `/api/hrm/attendance-devices/${id}`),
-    create: (body: AttendanceDeviceWrite) => request<AttendanceDevice>('POST', '/api/hrm/attendance-devices', { body }),
-    update: (id: string, body: AttendanceDeviceWrite & { rowVersion: number }) => request<AttendanceDevice>('PUT', `/api/hrm/attendance-devices/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/attendance-devices/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.attendance_events: Raw punches from web check-in, biometric import, kiosk and HR entry (spec name 'punches'). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -1025,6 +1009,8 @@ export interface DeviceUserMap
     deviceUserNo: string;
     employmentId: string;
     consentAt: string | null;
+    removalDueAt: string | null;
+    removalDoneAt: string | null;
     validFrom: string;
     validTo: string | null;
     createdAt: string;
@@ -1032,17 +1018,6 @@ export interface DeviceUserMap
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface DeviceUserMapWrite
-{
-    companyId: string;
-    deviceId?: string | null;
-    deviceUserNo: string;
-    employmentId: string;
-    consentAt?: string | null;
-    validFrom: string;
-    validTo?: string | null;
 }
 
 export interface DeviceUserMapListQuery
@@ -1060,8 +1035,6 @@ export const deviceUserMaps =
 {
     list: (query: DeviceUserMapListQuery = {}) => request<PagedResult<DeviceUserMap>>('GET', '/api/hrm/device-user-maps', { query }),
     get: (id: string) => request<DeviceUserMap>('GET', `/api/hrm/device-user-maps/${id}`),
-    create: (body: DeviceUserMapWrite) => request<DeviceUserMap>('POST', '/api/hrm/device-user-maps', { body }),
-    update: (id: string, body: DeviceUserMapWrite & { rowVersion: number }) => request<DeviceUserMap>('PUT', `/api/hrm/device-user-maps/${id}`, { body }),
 };
 
 /** hrm.duty_requests: On-duty, official visit and work-from-home requests (ATT-14). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -5394,4 +5367,45 @@ export const trainingRequirements =
     get: (id: string) => request<TrainingRequirement>('GET', `/api/hrm/training-requirements/${id}`),
     create: (body: TrainingRequirementWrite) => request<TrainingRequirement>('POST', '/api/hrm/training-requirements', { body }),
     update: (id: string, body: TrainingRequirementWrite & { rowVersion: number }) => request<TrainingRequirement>('PUT', `/api/hrm/training-requirements/${id}`, { body }),
+};
+
+/** hrm.unmapped_punches: Device punches whose user number maps to no employment yet, kept until mapped or discarded (ATT-03). Field rules (S1.06) may leave a field out or mask it as text. */
+export interface UnmappedPunch
+{
+    id: string;
+    companyId: string;
+    deviceId: string;
+    deviceUserNo: string;
+    punchedAt: string;
+    direction: 'in' | 'out' | 'break_out' | 'break_in' | 'unknown';
+    idempotencyKey: string;
+    receivedAt: string;
+    employmentId: string | null;
+    resolvedAt: string | null;
+    resolvedBy: string | null;
+    status: 'open' | 'resolved' | 'discarded';
+    createdAt: string;
+    createdBy: string;
+    updatedAt: string;
+    updatedBy: string;
+    rowVersion: number;
+}
+
+export interface UnmappedPunchListQuery
+{
+    after?: string;
+    limit?: number;
+    companyId?: string;
+    deviceId?: string;
+    employmentId?: string;
+    resolvedBy?: string;
+    status?: 'open' | 'resolved' | 'discarded';
+    /** deviceUserNo, idempotencyKey, status; a leading minus sorts descending. */
+    sort?: 'deviceUserNo' | '-deviceUserNo' | 'idempotencyKey' | '-idempotencyKey' | 'status' | '-status';
+}
+
+export const unmappedPunches =
+{
+    list: (query: UnmappedPunchListQuery = {}) => request<PagedResult<UnmappedPunch>>('GET', '/api/hrm/unmapped-punches', { query }),
+    get: (id: string) => request<UnmappedPunch>('GET', `/api/hrm/unmapped-punches/${id}`),
 };

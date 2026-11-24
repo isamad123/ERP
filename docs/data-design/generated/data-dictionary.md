@@ -2,14 +2,14 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 225 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 226 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
 | customer | aud | 7 |
 | customer | cfg | 20 |
 | customer | doc | 7 |
-| customer | hrm | 114 |
+| customer | hrm | 115 |
 | customer | iam | 24 |
 | customer | itg | 12 |
 | customer | job | 5 |
@@ -1063,6 +1063,8 @@ Biometric and kiosk devices by site (ATT-02). Requirements: ATT-02, ATT-03. Sour
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| sync_cursor_at | timestamp with time zone | yes |  | S1.27b: the latest punch time read from the device; the next pull starts a day before it (the keys remove repeats) |
+| sync_requested_at | timestamp with time zone | yes |  | S1.27b: when HR asked for a sync now; the device sync job takes it and clears it |
 
 Constraints:
 
@@ -1793,6 +1795,8 @@ Device user number to employee (ATT-03); biometric templates never stored (ATT-2
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| removal_due_at | timestamp with time zone | yes |  | S1.27b: when the mapping ended and the user is to be removed from the device (ATT-20) |
+| removal_done_at | timestamp with time zone | yes |  | S1.27b: when HR confirmed the user was removed from the device |
 
 Constraints:
 
@@ -5464,6 +5468,47 @@ Indexes:
 - `ix_training_requirements_company_id_employment_id` CREATE INDEX ix_training_requirements_company_id_employment_id ON hrm.training_requirements USING btree (company_id, employment_id)
 - `ix_training_requirements_company_id_learning_record_id` CREATE INDEX ix_training_requirements_company_id_learning_record_id ON hrm.training_requirements USING btree (company_id, learning_record_id)
 - `ix_training_requirements_company_id_rule_id` CREATE INDEX ix_training_requirements_company_id_rule_id ON hrm.training_requirements USING btree (company_id, rule_id)
+
+### hrm.unmapped_punches
+
+Device punches whose user number maps to no employment yet, kept until mapped or discarded (ATT-03). Requirements: ATT-03. Source: hrm-time.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| company_id | uuid | no |  |  |
+| device_id | uuid | no |  | fk hrm.attendance_devices |
+| device_user_no | text | no |  |  |
+| punched_at | timestamp with time zone | no |  | the device's time of the punch |
+| direction | text | no |  |  |
+| idempotency_key | text | no |  | the key the punch gets in the event store |
+| received_at | timestamp with time zone | no |  | server receipt time |
+| employment_id | uuid | yes |  | fk hrm.employments; set when the punch was brought into the event store |
+| resolved_at | timestamp with time zone | yes |  |  |
+| resolved_by | uuid | yes |  | fk iam.users |
+| status | text | no |  |  |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `ck_unmapped_punches_direction` CHECK ((direction = ANY (ARRAY['in'::text, 'out'::text, 'break_out'::text, 'break_in'::text, 'unknown'::text])))
+- `ck_unmapped_punches_status` CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'discarded'::text])))
+- `fk_unmapped_punches_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
+- `fk_unmapped_punches_device_id` FOREIGN KEY (company_id, device_id) REFERENCES hrm.attendance_devices(company_id, id)
+- `fk_unmapped_punches_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
+- `fk_unmapped_punches_resolved_by` FOREIGN KEY (resolved_by) REFERENCES iam.users(id)
+- `pk_unmapped_punches` PRIMARY KEY (id)
+- `uq_unmapped_punches_company_id_idempotency_key` UNIQUE (company_id, idempotency_key)
+
+Indexes:
+
+- `ix_unmapped_punches_company_id_device_id_device_user_no_status` CREATE INDEX ix_unmapped_punches_company_id_device_id_device_user_no_status ON hrm.unmapped_punches USING btree (company_id, device_id, device_user_no, status)
+- `ix_unmapped_punches_company_id_employment_id` CREATE INDEX ix_unmapped_punches_company_id_employment_id ON hrm.unmapped_punches USING btree (company_id, employment_id)
+- `ix_unmapped_punches_resolved_by` CREATE INDEX ix_unmapped_punches_resolved_by ON hrm.unmapped_punches USING btree (resolved_by)
 
 ### iam.api_clients
 
