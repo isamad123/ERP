@@ -73,6 +73,15 @@ public static class HrmSettingKeys
 
     /// <summary>The month (1 = January to 12 = December) in which the leave year starts.</summary>
     public const string HrmLeaveYearStartMonth = "hrm.leave.year_start_month";
+
+    /// <summary>Moves the Hijri date shown beside each holiday by one day earlier or later, to follow the moon sighting.</summary>
+    public const string HrmAttHijriOffsetDays = "hrm.att.hijri_offset_days";
+
+    /// <summary>How many optional holidays each employee may choose in a year; 0 means employees cannot choose any.</summary>
+    public const string HrmAttOptionalHolidaysPerYear = "hrm.att.optional_holidays_per_year";
+
+    /// <summary>A choice can be made or changed until this many days before the holiday.</summary>
+    public const string HrmAttOptionalHolidayCutoffDays = "hrm.att.optional_holiday_cutoff_days";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

@@ -1,0 +1,70 @@
+/* The roster grid (slice S1.28b). Tokens and logical properties only; the grid scrolls inside its own region. */
+.erp-ros-scroll {
+  overflow-x: auto;
+  max-inline-size: 100%;
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+}
+
+.erp-ros-grid {
+  border-collapse: collapse;
+  min-inline-size: max-content;
+}
+
+.erp-ros-grid th,
+.erp-ros-grid td {
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  text-align: center;
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+  border-inline-end: var(--border-width) solid var(--color-border-subtle);
+  white-space: nowrap;
+}
+
+.erp-ros-grid th[scope='row'] {
+  position: sticky;
+  inset-inline-start: 0;
+  text-align: start;
+  background: var(--color-surface-raised);
+}
+
+.erp-ros-holiday {
+  background: var(--color-neutral-subtle);
+}
+
+.erp-ros-cell {
+  min-inline-size: calc(var(--space-7) + var(--space-3));
+  min-block-size: var(--touch-target);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-2);
+  background: transparent;
+  color: inherit;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font: inherit;
+}
+
+.erp-ros-cell:hover {
+  border-color: var(--color-border);
+}
+
+.erp-ros-cell:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.erp-ros-off {
+  color: var(--color-text-muted);
+}
+
+.erp-ros-check-error {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-strong);
+}
+
+.erp-ros-controls {
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

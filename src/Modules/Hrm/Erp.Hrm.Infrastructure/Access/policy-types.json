@@ -1,5 +1,5 @@
 {
-  "_comment": "Policy types of the HR module (slice S1.23a Build item 1, ruling Q2, D-10). Each type: code, names, a JSON Schema of its parameters (the subset PolicySchema checks: object, array, string, integer, number, boolean; required, properties, additionalProperties false, enum, minimum, maximum, minLength, maxLength, minItems, maxItems, items), the employee attributes its assignment rules may use, whether one policy or several may apply (cardinality one or many) and whether every current employee should match an assignment (required: the activation check warns otherwise). probation and notice_period replace the S1.20 settings (ruling Q3); their values are the customer's choices, never statutory values (AS-4, R-002). Later slices add their types here (leave S1.32, attendance S1.29, shifts S1.28 (registered by S1.28a), leave S1.32 (registered by S1.32a: one policy holds the rules of each leave type it covers, CR-086 S1.32a detail), pay S1.34 (bonus definitions, FR-HRM-PAY-08: the type bonus, registered by S1.34b; its tax treatment is a label of the pack, never a rate), loans S1.41, expenses S1.42, performance S1.49). Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "Policy types of the HR module (slice S1.23a Build item 1, ruling Q2, D-10). Each type: code, names, a JSON Schema of its parameters (the subset PolicySchema checks: object, array, string, integer, number, boolean; required, properties, additionalProperties false, enum, minimum, maximum, minLength, maxLength, minItems, maxItems, items), the employee attributes its assignment rules may use, whether one policy or several may apply (cardinality one or many) and whether every current employee should match an assignment (required: the activation check warns otherwise). probation and notice_period replace the S1.20 settings (ruling Q3); their values are the customer's choices, never statutory values (AS-4, R-002). Later slices add their types here (leave S1.32, attendance S1.29, shifts S1.28 (registered by S1.28a; seasonal_timing registered by S1.28b: Ramzan and seasonal times by date range or Hijri month, FR-HRM-ATT-16), leave S1.32 (registered by S1.32a: one policy holds the rules of each leave type it covers, CR-086 S1.32a detail), pay S1.34 (bonus definitions, FR-HRM-PAY-08: the type bonus, registered by S1.34b; its tax treatment is a label of the pack, never a rate), loans S1.41, expenses S1.42, performance S1.49). Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "types": [
     {
@@ -189,6 +189,100 @@
             "minimum": 0,
             "maximum": 1440,
             "title": "hrm.policy.param.shift.min_rest_minutes"
+          }
+        }
+      }
+    },
+    {
+      "code": "seasonal_timing",
+      "name": {
+        "en": "Ramzan and seasonal timings",
+        "ur": "رمضان اور موسمی اوقات"
+      },
+      "description": {
+        "en": "Changes the times of the shifts of the employees it covers for a date range or a Hijri month, such as Ramzan or summer: new start and end times, or a percentage shortening of the day, and the break minutes. The shifts themselves are not copied or edited. No dates or hours are filled in for you",
+        "ur": "متعلقہ ملازمین کی شفٹوں کے اوقات کسی تاریخی مدت یا ہجری مہینے (جیسے رمضان یا گرمی) کے لیے بدلتی ہے: نئے آغاز اور اختتام کے اوقات، یا دن کی فیصد کمی، اور وقفے کے منٹ۔ شفٹیں خود نقل یا تبدیل نہیں ہوتیں۔ کوئی تاریخ یا گھنٹے خود سے نہیں بھرے جاتے"
+      },
+      "cardinality": "one",
+      "required": false,
+      "attributes": [
+        "location",
+        "branch",
+        "grade",
+        "employee_type",
+        "unit",
+        "custom"
+      ],
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "seasons"
+        ],
+        "properties": {
+          "seasons": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 24,
+            "title": "hrm.policy.param.seasonal.seasons",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name"
+              ],
+              "title": "hrm.policy.param.seasonal.season",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80,
+                  "title": "hrm.policy.param.seasonal.name"
+                },
+                "from": {
+                  "type": "string",
+                  "minLength": 10,
+                  "maxLength": 10,
+                  "title": "hrm.policy.param.seasonal.from"
+                },
+                "to": {
+                  "type": "string",
+                  "minLength": 10,
+                  "maxLength": 10,
+                  "title": "hrm.policy.param.seasonal.to"
+                },
+                "hijriMonth": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12,
+                  "title": "hrm.policy.param.seasonal.hijri_month"
+                },
+                "startTime": {
+                  "type": "string",
+                  "minLength": 5,
+                  "maxLength": 5,
+                  "title": "hrm.policy.param.seasonal.start_time"
+                },
+                "endTime": {
+                  "type": "string",
+                  "minLength": 5,
+                  "maxLength": 5,
+                  "title": "hrm.policy.param.seasonal.end_time"
+                },
+                "breakMinutes": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 480,
+                  "title": "hrm.policy.param.seasonal.break_minutes"
+                },
+                "shortenPercent": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 90,
+                  "title": "hrm.policy.param.seasonal.shorten_percent"
+                }
+              }
+            }
           }
         }
       }

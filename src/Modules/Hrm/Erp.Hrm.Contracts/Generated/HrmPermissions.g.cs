@@ -159,6 +159,7 @@ public static class HrmPermissions
         new("hrm.mandatory_training_rules.create", "hrm", "permissions.hrm.mandatory_training_rules.create", false),
         new("hrm.mandatory_training_rules.update", "hrm", "permissions.hrm.mandatory_training_rules.update", false),
         new("hrm.nominations.read", "hrm", "permissions.hrm.nominations.read", false),
+        new("hrm.optional_holiday_choices.read", "hrm", "permissions.hrm.optional_holiday_choices.read", false),
         new("hrm.overtime_entries.read", "hrm", "permissions.hrm.overtime_entries.read", false),
         new("hrm.overtime_entries.create", "hrm", "permissions.hrm.overtime_entries.create", false),
         new("hrm.overtime_entries.update", "hrm", "permissions.hrm.overtime_entries.update", false),
