@@ -313,7 +313,9 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
     /// <summary>A fresh org unit row (with its company) and that company's default branch (rule SC-2).</summary>
     private async Task<Hire> OrgAsync(string code, CancellationToken ct)
     {
-        var unit = await fx.RowAsync(code, IsolationFixture.Table("org.org_units"), ct);
+        // The probe's own unit (not the shared seeded row the kernel suite deletes as its positive control): positions and people sit in it,
+        // and a unit in use cannot be switched off (S1.22b).
+        var unit = await fx.SeedAsync(code, IsolationFixture.Table("org.org_units"), ct);
         var company = (Guid)unit["company_id"]!;
         await using var c = await fx.OpenAdminAsync(code, ct);
         Guid branch;
