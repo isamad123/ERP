@@ -57,9 +57,9 @@ public sealed class SystemHealthService(
         await using (var cp = new NpgsqlConnection(controlPlane.ConnectionString))
         {
             await cp.OpenAsync(cancellationToken).ConfigureAwait(false);
-            await using var command = new NpgsqlCommand("select last_backup_at, last_restore_test_at from cp.tenant_databases where tenant_id = $1 and env_type = 'production'", cp)
+            await using var command = new NpgsqlCommand("select last_backup_at, last_restore_test_at from cp.tenant_databases where id = $1", cp)
             {
-                Parameters = { new NpgsqlParameter { Value = tenant.Tenant.TenantId } },
+                Parameters = { new NpgsqlParameter { Value = tenant.Tenant.TenantDatabaseId } },
             };
             await using var r = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
             if (await r.ReadAsync(cancellationToken).ConfigureAwait(false))
