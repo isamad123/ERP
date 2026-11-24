@@ -353,11 +353,12 @@ public sealed class PackTests(TenancyFixture fx) : IAsyncLifetime
         var policyId = Guid.Parse((await TextAsync(code, "select id::text from hrm.policies where source = 'pack'"))!);
         Assert.Equal("{\"days\": 10}", await TextAsync(code, "select parameters::text from hrm.policy_versions where policy_id = $1 and status = 'active'", policyId));
 
-        // HR overrides the pack's value with a version of their own (S1.23a: is_overridden), from tomorrow.
+        // HR overrides the pack's value with a version of their own (S1.23a: is_overridden), from the day after tomorrow (UTC): the pack's version
+        // starts on the company's date (Asia/Karachi), which is already tomorrow's UTC date between 19:00 and midnight UTC (found by the S1.29a session).
         var draft = await _h.PostAsync(hr, $"/api/hrm/policies/{policyId}/versions", new { parameters = new { days = 15 } }, Ct, code);
         Assert.True(draft.Status == HttpStatusCode.Created, draft.Body);
         var activated = await _h.PostAsync(hr, $"/api/hrm/policy-versions/{draft.Json.GetProperty("id").GetGuid()}/activate",
-            new { effectiveFrom = Policies.PolicyTestSupport.Iso(_h.Today.AddDays(1)), rowVersion = draft.Json.GetProperty("rowVersion").GetInt64() }, Ct, code);
+            new { effectiveFrom = Policies.PolicyTestSupport.Iso(_h.Today.AddDays(2)), rowVersion = draft.Json.GetProperty("rowVersion").GetInt64() }, Ct, code);
         Assert.True(activated.Status == HttpStatusCode.OK, activated.Body);
         _h.Clock.Advance(TimeSpan.FromDays(2));
         try

@@ -139,7 +139,7 @@ public sealed class PackReviewTests(TenancyFixture fx) : IAsyncLifetime
         await InstallAsync(code, admin, id);
         var policy = await ScalarAsync<Guid>(code, "select id from hrm.policies where source = 'pack'");
         var company = await ScalarAsync<Guid>(code, "select company_id from hrm.policies where id = $1", policy);
-        await HrVersionAsync(code, hr, policy, 15, _h.Today.AddDays(1));
+        await HrVersionAsync(code, hr, policy, 15, _h.Today.AddDays(2)); // after the pack version, which starts on the company's (Karachi) date
         var item = await ScalarAsync<Guid>(code, "select id from cfg.pack_items where pack_id = $1", id);
 
         // The tenant administrator holds the pack permissions but not HR's: refused.
