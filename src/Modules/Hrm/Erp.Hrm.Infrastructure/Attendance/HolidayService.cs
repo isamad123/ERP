@@ -28,7 +28,6 @@ internal sealed class HolidayService(
     IPermissionChecker permissions,
     IDataScopeFilter scope,
     IHolidayCalendars calendars,
-    IOrgStructure org,
     AttendanceSettingReader settings) : IHolidayService
 {
     public const string YearInvalid = "errors.hrm.holiday.year_invalid";
@@ -54,11 +53,6 @@ internal sealed class HolidayService(
         if (year is < 1900 or > 2200)
         {
             return PeopleResult.Fields(new Dictionary<string, string[]> { ["year"] = [YearInvalid] });
-        }
-
-        if ((await org.FindAsync(OrgRecordKind.Company, [companyId], cancellationToken).ConfigureAwait(false)).Count == 0)
-        {
-            return PeopleResult.NotFound;
         }
 
         var calendar = calendarId ?? await calendars.CalendarOfAsync(companyId, locationId, cancellationToken).ConfigureAwait(false);

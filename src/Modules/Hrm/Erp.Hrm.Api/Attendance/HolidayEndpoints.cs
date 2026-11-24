@@ -31,7 +31,7 @@ public static class HolidayEndpoints
         Tag(app.MapPut("/api/hrm/employments/{id:guid}/optional-holidays", async (Guid id, OptionalHolidayRequest body, IHolidayService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.ChooseAsync(id, body, ct).ConfigureAwait(false))), "record_action", Employments, HolidayPermissions.OptionalHolidaysChoose);
         Tag(app.MapGet("/api/hrm/shifts/effective", async ([FromQuery] Guid employment, [FromQuery] DateOnly date, IEffectiveShiftService s, CancellationToken ct) =>
-            PersonEndpoints.Answer(await s.EffectiveAsync(employment, date, ct).ConfigureAwait(false))), "catalog", Employments, HolidayPermissions.EffectiveShiftRead);
+            PersonEndpoints.Answer(await s.EffectiveAsync(employment, date, ct).ConfigureAwait(false))), "record_action", Employments, HolidayPermissions.EffectiveShiftRead);
         return app;
     }
 
