@@ -20,5 +20,12 @@
   "permissions.hrm.positions.create": "عہدے بنانا",
   "permissions.hrm.positions.update": "عہدوں کو کسی تاریخ سے تبدیل، منجمد یا دوبارہ کھولنا",
   "permissions.hrm.positions.close": "عہدے بند کرنا",
-  "permissions.hrm.strength_exceptions.create": "افرادی قوت کے استثنا کی درخواست (بجٹ سے زیادہ تعیناتی)"
+  "permissions.hrm.strength_exceptions.create": "افرادی قوت کے استثنا کی درخواست (بجٹ سے زیادہ تعیناتی)",
+  "errors.hrm.strength.company_required": "طاقت کی رپورٹ کے لیے کمپنی منتخب کریں۔",
+  "errors.hrm.strength.group_by": "رپورٹ صرف یونٹ، گریڈ اور مقام کے لحاظ سے گروپ کی جا سکتی ہے۔",
+  "errors.hrm.chart.company_required": "تنظیمی چارٹ کے لیے کمپنی منتخب کریں۔",
+  "errors.hrm.chart.bad_format": "چارٹ صرف پی ڈی ایف یا سی ایس وی میں ایکسپورٹ ہوتا ہے۔",
+  "errors.hrm.chart.too_large_for_pdf": "چارٹ میں پی ڈی ایف کے لیے بہت زیادہ خانے ہیں۔ رپورٹنگ لائنیں سی ایس وی میں ایکسپورٹ کریں یا یونٹ یا مقام سے فلٹر کریں۔",
+  "errors.hrm.org_unit.has_positions": "اس یونٹ میں ابھی فعال عہدے ہیں۔ پہلے انہیں منتقل یا بند کریں۔",
+  "errors.hrm.org_unit.has_people": "اس یونٹ میں ابھی لوگ کام کر رہے ہیں۔ پہلے انہیں دوسرے یونٹ میں منتقل کریں۔"
 }

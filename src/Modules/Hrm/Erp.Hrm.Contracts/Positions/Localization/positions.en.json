@@ -20,5 +20,12 @@
   "permissions.hrm.positions.create": "Create positions",
   "permissions.hrm.positions.update": "Change, freeze or reopen positions from a date",
   "permissions.hrm.positions.close": "Close positions",
-  "permissions.hrm.strength_exceptions.create": "Ask for a strength exception (a placement beyond a budget)"
+  "permissions.hrm.strength_exceptions.create": "Ask for a strength exception (a placement beyond a budget)",
+  "errors.hrm.strength.company_required": "Choose a company for the strength report.",
+  "errors.hrm.strength.group_by": "The report can be grouped by unit, grade and location only.",
+  "errors.hrm.chart.company_required": "Choose a company for the org chart.",
+  "errors.hrm.chart.bad_format": "The chart exports as PDF or CSV only.",
+  "errors.hrm.chart.too_large_for_pdf": "The chart has too many boxes for a PDF. Export the reporting lines as CSV, or filter by unit or location.",
+  "errors.hrm.org_unit.has_positions": "This unit still has active positions. Move or close them first.",
+  "errors.hrm.org_unit.has_people": "People still work in this unit. Move them to another unit first."
 }

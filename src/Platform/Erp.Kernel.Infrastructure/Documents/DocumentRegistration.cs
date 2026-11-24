@@ -48,6 +48,7 @@ public static class DocumentRegistration
         services.AddSingleton(pdf);
         services.AddSingleton<IDocumentRenderer, ChromiumPdfRenderer>();
         services.AddScoped<ITemplateService, TemplateService>();
+        services.AddSingleton<Erp.Kernel.Contracts.Documents.IPrintedPages, PrintedPages>();
         return services;
     }
 

@@ -160,6 +160,11 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "POST /api/hrm/positions/{id:guid}/close" => ($"/api/hrm/positions/{m.Position}/close", Json(new { effectiveDate = "2030-01-01", rowVersion = m.PositionVersion })),
             "GET /api/hrm/positions/{id:guid}/holders" => ($"/api/hrm/positions/{m.Position}/holders", null),
             "GET /api/hrm/org-model" => ("/api/hrm/org-model", null),
+            "GET /api/hrm/strength-report" => ($"/api/hrm/strength-report?companyId={m.Org.Company}", null),
+            "GET /api/hrm/strength-report/drill" => ($"/api/hrm/strength-report/drill?companyId={m.Org.Company}&unitId={m.Org.OrgUnit}", null),
+            "GET /api/hrm/strength-report/export" => ($"/api/hrm/strength-report/export?companyId={m.Org.Company}", null),
+            "GET /api/hrm/org-chart" => ($"/api/hrm/org-chart?companyId={m.Org.Company}", null),
+            "POST /api/hrm/org-chart/export" => ("/api/hrm/org-chart/export", Json(new { companyId = m.Org.Company, format = "csv" })),
             "POST /api/hrm/strength-exceptions" => ("/api/hrm/strength-exceptions", Json(new { employmentId = m.Employment, orgUnitId = m.Org.OrgUnit, effectiveDate = "2025-06-01", reason = "Probe cover" })),
             // S1.20c: a transfer of A's employment to A's second company, a rehire from A's former employment, contracts and probation.
             "POST /api/hrm/employments/{id:guid}/transfer" => ($"/api/hrm/employments/{m.Employment}/transfer", Json(Transfer(m))),
