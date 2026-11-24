@@ -13,7 +13,6 @@ Tests fail if the database and this register disagree, or if an owning slice has
 | S1.31 | hrm.attendance_periods | `hrm.todo_attendance_periods_lock()` | A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments. |
 | S1.32 | hrm.leave_ledger | `hrm.todo_leave_ledger_transfer()` | Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30). |
 | S1.32 | hrm.leave_request_days | `hrm.todo_leave_request_days_daily_total()` | trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave) |
-| S1.34 | hrm.pay_component_versions | `hrm.todo_pay_component_versions_base_cycle()` | base_component_ids: cycle check on save |
 | S1.36 | hrm.statutory_table_rows | `hrm.todo_statutory_table_rows_lock()` | Immutable by trigger once the parent version is effective or referenced by any run; change by a new table version. |
 | S1.38 | hrm.pay_periods | `hrm.todo_pay_periods_closed_period_guard()` | Trigger refuses new pay_inputs, retro_adjustments or installments targeting a closed period. |
 | S1.38 | hrm.pay_result_lines | `hrm.todo_pay_result_lines_lock()` | Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). |
@@ -32,4 +31,4 @@ Tests fail if the database and this register disagree, or if an owning slice has
 | S1.44 | hrm.provident_fund_accounts | `hrm.todo_provident_fund_accounts_transfer()` | On intra-group transfer the old account closes with a transfer entry and the new account opens with the balance (employment_events.carry_over). |
 | S1.49 | hrm.goals | `hrm.todo_goals_parent_cycle()` | Cycle check trigger on parent_goal_id. |
 
-23 placeholders.
+22 placeholders.

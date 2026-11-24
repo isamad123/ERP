@@ -129,8 +129,9 @@ public sealed class GeneratorTests
         var stubs = Model.Value.Stubs.ToList();
         // 30 from S1.02; S1.03 implemented SC-2 (org.branches), S1.10a FR-XM-32 (wf.workflow_tasks), S1.14b the unit link cycle check
         // (org.org_unit_links), S1.20b the manager cycle and the cost allocation of hrm.employment_assignments, S1.20d the bank fields
-        // of hrm.employee_bank_accounts, S1.22a the position reporting cycle (hrm.positions).
-        Assert.Equal(23, stubs.Count);
+        // of hrm.employee_bank_accounts, S1.22a the position reporting cycle (hrm.positions), S1.34b the component base cycle
+        // (hrm.pay_component_versions).
+        Assert.Equal(22, stubs.Count);
         Assert.Equal(30, Model.Value.AllStubs.Count());
         Assert.Equal(["employment_assignments_cost_allocation_sum", "employment_assignments_manager_cycle"],
             Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.20b").Select(s => s.Name).Order(StringComparer.Ordinal));
@@ -138,6 +139,8 @@ public sealed class GeneratorTests
             Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.20d").Select(s => s.Name));
         Assert.Equal(["positions_reporting_cycle"],
             Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.22a").Select(s => s.Name));
+        Assert.Equal(["pay_component_versions_base_cycle"],
+            Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.34b").Select(s => s.Name));
         Assert.All(stubs, s => Assert.Matches(@"^S1\.\d{2}$", s.Owner));
         Assert.Contains(stubs, s => s.Name == "attendance_periods_lock" && s.Owner == "S1.31"); // FR-XM-26
         Assert.Contains(Model.Value.ImplementedStubs, s => s.Name == "workflow_tasks_no_self_approval" && s.Owner == "S1.10"); // FR-XM-32

@@ -20,6 +20,7 @@ public sealed class PayComponentVersionResponse
     public global::System.Guid[] BaseComponentIds { get; init; } = [];
     public string? StatutoryTableCode { get; init; }
     public string ProRataRule { get; init; } = null!;
+    public global::System.Text.Json.JsonElement? ProRataParams { get; init; }
     public global::System.Text.Json.JsonElement StatutoryFlags { get; init; }
     public string? TaxTreatment { get; init; }
     public global::System.DateOnly ValidFrom { get; init; }
@@ -29,24 +30,6 @@ public sealed class PayComponentVersionResponse
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for hrm.pay_component_versions. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class PayComponentVersionWriteRequest
-{
-    public global::System.Guid? ComponentId { get; init; }
-    public string? Method { get; init; }
-    public string? Formula { get; init; }
-    public global::System.Guid[]? BaseComponentIds { get; init; }
-    public string? StatutoryTableCode { get; init; }
-    public string? ProRataRule { get; init; }
-    public global::System.Text.Json.JsonElement? StatutoryFlags { get; init; }
-    public string? TaxTreatment { get; init; }
-    public global::System.DateOnly? ValidFrom { get; init; }
-    public global::System.DateOnly? ValidTo { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for hrm.pay_component_versions.</summary>
@@ -62,7 +45,7 @@ public sealed class PayComponentVersionListQuery
     public global::System.DateOnly? AsOf { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.pay_component_versions: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.pay_component_versions: read. Answers pass through field security (S1.06).</summary>
 internal static class PayComponentVersionEndpoints
 {
     private const string Resource = "hrm.pay_component_versions";
@@ -72,8 +55,6 @@ internal static class PayComponentVersionEndpoints
         var group = app.MapGroup("/api/hrm/pay-component-versions").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.pay_component_versions.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.pay_component_versions.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.pay_component_versions.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.pay_component_versions.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.pay_component_versions.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.pay_component_versions.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.pay_component_versions.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.pay_component_versions.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PayComponentVersionListQuery query, global::Erp.Hrm.Application.Generated.IPayComponentVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -92,53 +73,6 @@ internal static class PayComponentVersionEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PayComponentVersionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PayComponentVersionWriteRequest request, global::Erp.Hrm.Application.Generated.IPayComponentVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_component_versions.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PayComponentVersionAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.PayComponentVersion();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/pay-component-versions/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PayComponentVersionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PayComponentVersionWriteRequest request, global::Erp.Hrm.Application.Generated.IPayComponentVersionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_component_versions.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.PayComponentVersionAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PayComponentVersionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static PayComponentVersionResponse ToResponse(global::Erp.Hrm.Domain.Generated.PayComponentVersion row) => new()
     {
         Id = row.Id,
@@ -148,6 +82,7 @@ internal static class PayComponentVersionEndpoints
         BaseComponentIds = row.BaseComponentIds,
         StatutoryTableCode = row.StatutoryTableCode,
         ProRataRule = row.ProRataRule,
+        ProRataParams = row.ProRataParams?.RootElement.Clone(),
         StatutoryFlags = row.StatutoryFlags.RootElement.Clone(),
         TaxTreatment = row.TaxTreatment,
         ValidFrom = row.ValidFrom,
@@ -158,127 +93,6 @@ internal static class PayComponentVersionEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(PayComponentVersionWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.ComponentId is null && (!update || access.CanEdit("component_id")))
-        {
-            errors.Add("componentId");
-        }
-        if (request.Method is null && (!update || access.CanEdit("method")))
-        {
-            errors.Add("method");
-        }
-        if (request.ProRataRule is null && (!update || access.CanEdit("pro_rata_rule")))
-        {
-            errors.Add("proRataRule");
-        }
-        if (request.StatutoryFlags is null && (!update || access.CanEdit("statutory_flags")))
-        {
-            errors.Add("statutoryFlags");
-        }
-        if (request.ValidFrom is null && (!update || access.CanEdit("valid_from")))
-        {
-            errors.Add("validFrom");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(PayComponentVersionWriteRequest request, global::Erp.Hrm.Domain.Generated.PayComponentVersion row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("component_id"))
-        {
-            row.ComponentId = request.ComponentId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ComponentId, row.ComponentId, update))
-        {
-            denied.Add("componentId");
-        }
-        if (access.CanEdit("method"))
-        {
-            row.Method = request.Method!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Method, row.Method, update))
-        {
-            denied.Add("method");
-        }
-        if (access.CanEdit("formula"))
-        {
-            row.Formula = request.Formula;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Formula, row.Formula, update))
-        {
-            denied.Add("formula");
-        }
-        if (access.CanEdit("base_component_ids"))
-        {
-            if (request.BaseComponentIds is not null)
-            {
-                row.BaseComponentIds = request.BaseComponentIds ?? [];
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.BaseComponentIds, row.BaseComponentIds, update))
-        {
-            denied.Add("baseComponentIds");
-        }
-        if (access.CanEdit("statutory_table_code"))
-        {
-            row.StatutoryTableCode = request.StatutoryTableCode;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StatutoryTableCode, row.StatutoryTableCode, update))
-        {
-            denied.Add("statutoryTableCode");
-        }
-        if (access.CanEdit("pro_rata_rule"))
-        {
-            row.ProRataRule = request.ProRataRule!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ProRataRule, row.ProRataRule, update))
-        {
-            denied.Add("proRataRule");
-        }
-        if (access.CanEdit("statutory_flags"))
-        {
-            row.StatutoryFlags = GeneratedEndpointSupport.ToDocument(request.StatutoryFlags)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StatutoryFlags, row.StatutoryFlags, update))
-        {
-            denied.Add("statutoryFlags");
-        }
-        if (access.CanEdit("tax_treatment"))
-        {
-            row.TaxTreatment = request.TaxTreatment;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TaxTreatment, row.TaxTreatment, update))
-        {
-            denied.Add("taxTreatment");
-        }
-        if (access.CanEdit("valid_from"))
-        {
-            row.ValidFrom = request.ValidFrom!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidFrom, row.ValidFrom, update))
-        {
-            denied.Add("validFrom");
-        }
-        if (access.CanEdit("valid_to"))
-        {
-            row.ValidTo = request.ValidTo;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidTo, row.ValidTo, update))
-        {
-            denied.Add("validTo");
-        }
-        return denied;
-    }
 
     /// <summary>Reads pages of hrm.pay_component_versions for an export through the list's own rules (S1.16b).</summary>
     internal sealed class ExportReader(global::System.IServiceProvider services) : global::Erp.Kernel.Contracts.Itg.IExportRowReader

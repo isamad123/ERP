@@ -1,42 +1,83 @@
 {
-  "_comment": "Policy types of the HR module (slice S1.23a Build item 1, ruling Q2, D-10). Each type: code, names, a JSON Schema of its parameters (the subset PolicySchema checks: object, array, string, integer, number, boolean; required, properties, additionalProperties false, enum, minimum, maximum, minLength, maxLength, minItems, maxItems, items), the employee attributes its assignment rules may use, whether one policy or several may apply (cardinality one or many) and whether every current employee should match an assignment (required: the activation check warns otherwise). probation and notice_period replace the S1.20 settings (ruling Q3); their values are the customer's choices, never statutory values (AS-4, R-002). Later slices add their types here (leave S1.32, attendance S1.29, shifts S1.28 (registered by S1.28a), leave S1.32 (registered by S1.32a: one policy holds the rules of each leave type it covers, CR-086 S1.32a detail), pay S1.34, loans S1.41, expenses S1.42, performance S1.49). Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "Policy types of the HR module (slice S1.23a Build item 1, ruling Q2, D-10). Each type: code, names, a JSON Schema of its parameters (the subset PolicySchema checks: object, array, string, integer, number, boolean; required, properties, additionalProperties false, enum, minimum, maximum, minLength, maxLength, minItems, maxItems, items), the employee attributes its assignment rules may use, whether one policy or several may apply (cardinality one or many) and whether every current employee should match an assignment (required: the activation check warns otherwise). probation and notice_period replace the S1.20 settings (ruling Q3); their values are the customer's choices, never statutory values (AS-4, R-002). Later slices add their types here (leave S1.32, attendance S1.29, shifts S1.28 (registered by S1.28a), leave S1.32 (registered by S1.32a: one policy holds the rules of each leave type it covers, CR-086 S1.32a detail), pay S1.34 (bonus definitions, FR-HRM-PAY-08: the type bonus, registered by S1.34b; its tax treatment is a label of the pack, never a rate), loans S1.41, expenses S1.42, performance S1.49). Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "types": [
     {
       "code": "probation",
-      "name": { "en": "Probation", "ur": "آزمائشی مدت" },
+      "name": {
+        "en": "Probation",
+        "ur": "آزمائشی مدت"
+      },
       "description": {
         "en": "How long a new employee's probation lasts, how far it may be extended and who reviews it",
         "ur": "نئے ملازم کی آزمائشی مدت کتنی ہے، کتنی بڑھائی جا سکتی ہے اور اس کا جائزہ کون لیتا ہے"
       },
       "cardinality": "one",
       "required": false,
-      "attributes": ["location", "branch", "grade", "employee_type", "unit", "custom"],
+      "attributes": [
+        "location",
+        "branch",
+        "grade",
+        "employee_type",
+        "unit",
+        "custom"
+      ],
       "schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["months"],
+        "required": [
+          "months"
+        ],
         "properties": {
-          "months": { "type": "integer", "minimum": 1, "maximum": 24, "title": "hrm.policy.param.probation.months" },
-          "extensionMonthsMax": { "type": "integer", "minimum": 0, "maximum": 24, "title": "hrm.policy.param.probation.extension_months_max" },
-          "reviewer": { "type": "string", "enum": ["line_manager_and_hr", "hr"], "title": "hrm.policy.param.probation.reviewer" }
+          "months": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24,
+            "title": "hrm.policy.param.probation.months"
+          },
+          "extensionMonthsMax": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 24,
+            "title": "hrm.policy.param.probation.extension_months_max"
+          },
+          "reviewer": {
+            "type": "string",
+            "enum": [
+              "line_manager_and_hr",
+              "hr"
+            ],
+            "title": "hrm.policy.param.probation.reviewer"
+          }
         }
       }
     },
     {
       "code": "notice_period",
-      "name": { "en": "Notice period", "ur": "نوٹس کی مدت" },
+      "name": {
+        "en": "Notice period",
+        "ur": "نوٹس کی مدت"
+      },
       "description": {
         "en": "Days of notice by length of service; employee types are chosen by the assignment rules",
         "ur": "ملازمت کی مدت کے لحاظ سے نوٹس کے دن؛ ملازمین کی اقسام تفویض کے اصولوں سے منتخب ہوتی ہیں"
       },
       "cardinality": "one",
       "required": true,
-      "attributes": ["location", "branch", "grade", "employee_type", "unit", "custom"],
+      "attributes": [
+        "location",
+        "branch",
+        "grade",
+        "employee_type",
+        "unit",
+        "custom"
+      ],
       "schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["bands"],
+        "required": [
+          "bands"
+        ],
         "properties": {
           "bands": {
             "type": "array",
@@ -46,10 +87,23 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["serviceMonthsFrom", "days"],
+              "required": [
+                "serviceMonthsFrom",
+                "days"
+              ],
               "properties": {
-                "serviceMonthsFrom": { "type": "integer", "minimum": 0, "maximum": 600, "title": "hrm.policy.param.notice_period.service_months_from" },
-                "days": { "type": "integer", "minimum": 0, "maximum": 365, "title": "hrm.policy.param.notice_period.days" }
+                "serviceMonthsFrom": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 600,
+                  "title": "hrm.policy.param.notice_period.service_months_from"
+                },
+                "days": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 365,
+                  "title": "hrm.policy.param.notice_period.days"
+                }
               }
             }
           }
@@ -58,43 +112,113 @@
     },
     {
       "code": "shift",
-      "name": { "en": "Shifts and weekly off", "ur": "شفٹیں اور ہفتہ وار چھٹی" },
+      "name": {
+        "en": "Shifts and weekly off",
+        "ur": "شفٹیں اور ہفتہ وار چھٹی"
+      },
       "description": {
         "en": "The weekly off days of the employees it covers (fixed days, a rotating cycle or alternating weeks), the grace minutes shown beside their shifts and, only if you set one, the least rest between two shifts",
         "ur": "متعلقہ ملازمین کے ہفتہ وار چھٹی کے دن (مقررہ دن، گھومتا چکر یا ایک ہفتہ چھوڑ کر)، شفٹوں کے ساتھ دکھائے جانے والے رعایتی منٹ اور، اگر آپ مقرر کریں، دو شفٹوں کے درمیان کم سے کم آرام"
       },
       "cardinality": "one",
       "required": false,
-      "attributes": ["location", "branch", "grade", "employee_type", "unit", "custom"],
+      "attributes": [
+        "location",
+        "branch",
+        "grade",
+        "employee_type",
+        "unit",
+        "custom"
+      ],
       "schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["weeklyOffKind"],
+        "required": [
+          "weeklyOffKind"
+        ],
         "properties": {
-          "weeklyOffKind": { "type": "string", "enum": ["fixed", "alternating_weeks", "rotating"], "title": "hrm.policy.param.shift.weekly_off_kind" },
-          "offDays": { "type": "array", "maxItems": 31, "items": { "type": "integer", "minimum": 1, "maximum": 31 }, "title": "hrm.policy.param.shift.off_days" },
-          "altOffDays": { "type": "array", "maxItems": 7, "items": { "type": "integer", "minimum": 1, "maximum": 7 }, "title": "hrm.policy.param.shift.alt_off_days" },
-          "cycleDays": { "type": "integer", "minimum": 2, "maximum": 31, "title": "hrm.policy.param.shift.cycle_days" },
-          "anchorDate": { "type": "string", "minLength": 10, "maxLength": 10, "title": "hrm.policy.param.shift.anchor_date" },
-          "graceMinutes": { "type": "integer", "minimum": 0, "maximum": 240, "title": "hrm.policy.param.shift.grace_minutes" },
-          "minRestMinutes": { "type": "integer", "minimum": 0, "maximum": 1440, "title": "hrm.policy.param.shift.min_rest_minutes" }
+          "weeklyOffKind": {
+            "type": "string",
+            "enum": [
+              "fixed",
+              "alternating_weeks",
+              "rotating"
+            ],
+            "title": "hrm.policy.param.shift.weekly_off_kind"
+          },
+          "offDays": {
+            "type": "array",
+            "maxItems": 31,
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 31
+            },
+            "title": "hrm.policy.param.shift.off_days"
+          },
+          "altOffDays": {
+            "type": "array",
+            "maxItems": 7,
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7
+            },
+            "title": "hrm.policy.param.shift.alt_off_days"
+          },
+          "cycleDays": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 31,
+            "title": "hrm.policy.param.shift.cycle_days"
+          },
+          "anchorDate": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 10,
+            "title": "hrm.policy.param.shift.anchor_date"
+          },
+          "graceMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 240,
+            "title": "hrm.policy.param.shift.grace_minutes"
+          },
+          "minRestMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1440,
+            "title": "hrm.policy.param.shift.min_rest_minutes"
+          }
         }
       }
     },
     {
       "code": "leave",
-      "name": { "en": "Leave", "ur": "رخصت" },
+      "name": {
+        "en": "Leave",
+        "ur": "رخصت"
+      },
       "description": {
         "en": "The rules of each leave type for the employees it covers: how leave is granted or accrued, pro-rata for joiners and leavers, carry-forward, encashment, negative balance, notice, longest leave, who may take it, sandwich days and types that cannot be combined. A leave type the policy does not list cannot be taken by them. No number is filled in for you",
         "ur": "متعلقہ ملازمین کے لیے رخصت کی ہر قسم کے اصول: رخصت کیسے عطا یا جمع ہوتی ہے، نئے اور جانے والے ملازمین کا تناسب، آگے منتقلی، نقد ادائیگی، منفی بقایا، پیشگی اطلاع، طویل ترین رخصت، کون لے سکتا ہے، درمیانی چھٹیاں اور وہ اقسام جو ساتھ نہیں لی جا سکتیں۔ جو قسم پالیسی میں درج نہ ہو وہ یہ ملازمین نہیں لے سکتے۔ کوئی عدد خود سے نہیں بھرا جاتا"
       },
       "cardinality": "one",
       "required": false,
-      "attributes": ["location", "branch", "grade", "employee_type", "unit", "custom"],
+      "attributes": [
+        "location",
+        "branch",
+        "grade",
+        "employee_type",
+        "unit",
+        "custom"
+      ],
       "schema": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["types"],
+        "required": [
+          "types"
+        ],
         "properties": {
           "types": {
             "type": "array",
@@ -104,20 +228,64 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["leaveType", "entitlement"],
+              "required": [
+                "leaveType",
+                "entitlement"
+              ],
               "properties": {
-                "leaveType": { "type": "string", "minLength": 1, "maxLength": 40, "title": "hrm.policy.param.leave.leave_type" },
-                "yearStartMonth": { "type": "integer", "minimum": 1, "maximum": 12, "title": "hrm.policy.param.leave.year_start_month" },
+                "leaveType": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40,
+                  "title": "hrm.policy.param.leave.leave_type"
+                },
+                "yearStartMonth": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12,
+                  "title": "hrm.policy.param.leave.year_start_month"
+                },
                 "entitlement": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["model"],
+                  "required": [
+                    "model"
+                  ],
                   "title": "hrm.policy.param.leave.entitlement",
                   "properties": {
-                    "model": { "type": "string", "enum": ["fixed_yearly", "monthly_accrual", "per_days_worked", "per_hours_worked", "tenure_tiers", "grade_tiers", "manual"], "title": "hrm.policy.param.leave.model" },
-                    "quantity": { "type": "number", "minimum": 0, "maximum": 9999, "title": "hrm.policy.param.leave.quantity" },
-                    "per": { "type": "number", "minimum": 0, "maximum": 9999, "title": "hrm.policy.param.leave.per" },
-                    "frequency": { "type": "string", "enum": ["yearly", "monthly"], "title": "hrm.policy.param.leave.frequency" },
+                    "model": {
+                      "type": "string",
+                      "enum": [
+                        "fixed_yearly",
+                        "monthly_accrual",
+                        "per_days_worked",
+                        "per_hours_worked",
+                        "tenure_tiers",
+                        "grade_tiers",
+                        "manual"
+                      ],
+                      "title": "hrm.policy.param.leave.model"
+                    },
+                    "quantity": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 9999,
+                      "title": "hrm.policy.param.leave.quantity"
+                    },
+                    "per": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 9999,
+                      "title": "hrm.policy.param.leave.per"
+                    },
+                    "frequency": {
+                      "type": "string",
+                      "enum": [
+                        "yearly",
+                        "monthly"
+                      ],
+                      "title": "hrm.policy.param.leave.frequency"
+                    },
                     "tiers": {
                       "type": "array",
                       "minItems": 1,
@@ -126,17 +294,57 @@
                       "items": {
                         "type": "object",
                         "additionalProperties": false,
-                        "required": ["quantity"],
+                        "required": [
+                          "quantity"
+                        ],
                         "properties": {
-                          "serviceMonthsFrom": { "type": "integer", "minimum": 0, "maximum": 600, "title": "hrm.policy.param.leave.service_months_from" },
-                          "grade": { "type": "string", "minLength": 1, "maxLength": 40, "title": "hrm.policy.param.leave.grade" },
-                          "quantity": { "type": "number", "minimum": 0, "maximum": 9999, "title": "hrm.policy.param.leave.quantity" }
+                          "serviceMonthsFrom": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 600,
+                            "title": "hrm.policy.param.leave.service_months_from"
+                          },
+                          "grade": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 40,
+                            "title": "hrm.policy.param.leave.grade"
+                          },
+                          "quantity": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 9999,
+                            "title": "hrm.policy.param.leave.quantity"
+                          }
                         }
                       }
                     },
-                    "proRata": { "type": "string", "enum": ["none", "days", "months_started", "months_completed"], "title": "hrm.policy.param.leave.pro_rata" },
-                    "rounding": { "type": "string", "enum": ["none", "up", "down", "nearest"], "title": "hrm.policy.param.leave.rounding" },
-                    "roundingStep": { "type": "number", "minimum": 0, "maximum": 1, "title": "hrm.policy.param.leave.rounding_step" }
+                    "proRata": {
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "days",
+                        "months_started",
+                        "months_completed"
+                      ],
+                      "title": "hrm.policy.param.leave.pro_rata"
+                    },
+                    "rounding": {
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "up",
+                        "down",
+                        "nearest"
+                      ],
+                      "title": "hrm.policy.param.leave.rounding"
+                    },
+                    "roundingStep": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "title": "hrm.policy.param.leave.rounding_step"
+                    }
                   }
                 },
                 "carryForward": {
@@ -144,8 +352,18 @@
                   "additionalProperties": false,
                   "title": "hrm.policy.param.leave.carry_forward",
                   "properties": {
-                    "cap": { "type": "number", "minimum": 0, "maximum": 9999, "title": "hrm.policy.param.leave.carry_forward_cap" },
-                    "expiryMonths": { "type": "integer", "minimum": 1, "maximum": 120, "title": "hrm.policy.param.leave.carry_forward_expiry_months" }
+                    "cap": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 9999,
+                      "title": "hrm.policy.param.leave.carry_forward_cap"
+                    },
+                    "expiryMonths": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 120,
+                      "title": "hrm.policy.param.leave.carry_forward_expiry_months"
+                    }
                   }
                 },
                 "encashment": {
@@ -153,27 +371,193 @@
                   "additionalProperties": false,
                   "title": "hrm.policy.param.leave.encashment",
                   "properties": {
-                    "cap": { "type": "number", "minimum": 0, "maximum": 9999, "title": "hrm.policy.param.leave.encashment_cap" },
-                    "rateBasis": { "type": "string", "minLength": 1, "maxLength": 40, "title": "hrm.policy.param.leave.encashment_rate_basis" }
+                    "cap": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 9999,
+                      "title": "hrm.policy.param.leave.encashment_cap"
+                    },
+                    "rateBasis": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40,
+                      "title": "hrm.policy.param.leave.encashment_rate_basis"
+                    }
                   }
                 },
-                "negativeLimit": { "type": "number", "minimum": 0, "maximum": 9999, "title": "hrm.policy.param.leave.negative_limit" },
-                "minNoticeDays": { "type": "integer", "minimum": 0, "maximum": 365, "title": "hrm.policy.param.leave.min_notice_days" },
-                "maxConsecutiveDays": { "type": "number", "minimum": 0, "maximum": 9999, "title": "hrm.policy.param.leave.max_consecutive_days" },
+                "negativeLimit": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 9999,
+                  "title": "hrm.policy.param.leave.negative_limit"
+                },
+                "minNoticeDays": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 365,
+                  "title": "hrm.policy.param.leave.min_notice_days"
+                },
+                "maxConsecutiveDays": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 9999,
+                  "title": "hrm.policy.param.leave.max_consecutive_days"
+                },
                 "eligibility": {
                   "type": "object",
                   "additionalProperties": false,
                   "title": "hrm.policy.param.leave.eligibility",
                   "properties": {
-                    "genders": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "type": "string", "enum": ["male", "female", "other", "unspecified"] }, "title": "hrm.policy.param.leave.genders" },
-                    "minServiceMonths": { "type": "integer", "minimum": 0, "maximum": 600, "title": "hrm.policy.param.leave.min_service_months" },
-                    "duringProbation": { "type": "boolean", "title": "hrm.policy.param.leave.during_probation" }
+                    "genders": {
+                      "type": "array",
+                      "minItems": 1,
+                      "maxItems": 4,
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "male",
+                          "female",
+                          "other",
+                          "unspecified"
+                        ]
+                      },
+                      "title": "hrm.policy.param.leave.genders"
+                    },
+                    "minServiceMonths": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 600,
+                      "title": "hrm.policy.param.leave.min_service_months"
+                    },
+                    "duringProbation": {
+                      "type": "boolean",
+                      "title": "hrm.policy.param.leave.during_probation"
+                    }
                   }
                 },
-                "sandwich": { "type": "string", "enum": ["off", "holidays", "weekly_off", "both"], "title": "hrm.policy.param.leave.sandwich" },
-                "notCombinedWith": { "type": "array", "maxItems": 50, "items": { "type": "string", "minLength": 1, "maxLength": 40 }, "title": "hrm.policy.param.leave.not_combined_with" }
+                "sandwich": {
+                  "type": "string",
+                  "enum": [
+                    "off",
+                    "holidays",
+                    "weekly_off",
+                    "both"
+                  ],
+                  "title": "hrm.policy.param.leave.sandwich"
+                },
+                "notCombinedWith": {
+                  "type": "array",
+                  "maxItems": 50,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "title": "hrm.policy.param.leave.not_combined_with"
+                }
               }
             }
+          }
+        }
+      }
+    },
+    {
+      "code": "bonus",
+      "name": {
+        "en": "Bonus",
+        "ur": "بونس"
+      },
+      "description": {
+        "en": "A bonus (Eid, annual, performance or ad hoc): which component pays it, how it is worked out, who is eligible and how its tax is treated; paid in a regular or an off-cycle run. Who it covers is chosen by the assignment rules",
+        "ur": "ایک بونس (عید، سالانہ، کارکردگی یا ایڈہاک): کون سا جزو اسے ادا کرتا ہے، اس کا حساب کیسے ہوتا ہے، کون اہل ہے اور اس کے ٹیکس کا کیا طریقہ ہے؛ باقاعدہ یا الگ رن میں ادا ہوتا ہے۔ کن ملازمین کو ملتا ہے یہ تفویض کے اصول طے کرتے ہیں"
+      },
+      "cardinality": "many",
+      "required": false,
+      "attributes": [
+        "location",
+        "branch",
+        "grade",
+        "employee_type",
+        "unit",
+        "custom"
+      ],
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "bonusKind",
+          "componentCode",
+          "basis",
+          "runKind"
+        ],
+        "properties": {
+          "bonusKind": {
+            "type": "string",
+            "enum": [
+              "eid",
+              "annual",
+              "performance",
+              "ad_hoc"
+            ],
+            "title": "hrm.policy.param.bonus.bonus_kind"
+          },
+          "componentCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "title": "hrm.policy.param.bonus.component_code"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "fixed_amount",
+              "percent_of_component",
+              "multiple_of_component"
+            ],
+            "title": "hrm.policy.param.bonus.basis"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0,
+            "title": "hrm.policy.param.bonus.amount"
+          },
+          "percent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000,
+            "title": "hrm.policy.param.bonus.percent"
+          },
+          "multiple": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "title": "hrm.policy.param.bonus.multiple"
+          },
+          "basisComponentCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "title": "hrm.policy.param.bonus.basis_component_code"
+          },
+          "minServiceMonths": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 600,
+            "title": "hrm.policy.param.bonus.min_service_months"
+          },
+          "taxTreatment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "title": "hrm.policy.param.bonus.tax_treatment"
+          },
+          "runKind": {
+            "type": "string",
+            "enum": [
+              "regular",
+              "off_cycle"
+            ],
+            "title": "hrm.policy.param.bonus.run_kind"
           }
         }
       }

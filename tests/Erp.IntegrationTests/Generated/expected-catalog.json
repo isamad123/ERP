@@ -10840,7 +10840,9 @@
         "ix_compensation_assignments_company_id_event_id",
         "ix_compensation_assignments_company_id_increment_proposal_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_compensation_assignments_fixed"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.compensation_assignments"
@@ -11030,7 +11032,10 @@
         "ix_compensation_lines_company_id_assignment_id",
         "ix_compensation_lines_company_id_component_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_compensation_lines_fixed",
+        "tg_compensation_lines_insert"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.compensation_lines"
@@ -22121,6 +22126,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "pro_rata_params",
+          "kind": "Json",
+          "type": "jsonb",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [],
@@ -22149,7 +22164,9 @@
       "indexes": [
         "ix_pay_component_versions_component_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_pay_component_versions_bases"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.pay_component_versions"
@@ -46487,13 +46504,6 @@
       "table": "hrm.nominations",
       "owner": "S1.20",
       "rule": "deferred: shares per (person_id, scheme) on any date sum to 1"
-    },
-    {
-      "schema": "hrm",
-      "function": "todo_pay_component_versions_base_cycle",
-      "table": "hrm.pay_component_versions",
-      "owner": "S1.34",
-      "rule": "base_component_ids: cycle check on save"
     },
     {
       "schema": "hrm",

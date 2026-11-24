@@ -40,6 +40,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         Guid Punching, Guid Location, string QrCode, string Badge,
         Guid PayGroup, long PayGroupVersion, Guid Period, long PeriodVersion, string PeriodCutOff,
         Guid Shift, long ShiftVersion, Guid Roster, long RosterVersion,
+        Guid Component, long ComponentVersion, Guid Structure, long StructureVersion,
         Guid PushDevice, long PushDeviceVersion, Guid PullDevice, Guid Map, long MapVersion, Guid RemovalMap, long RemovalMapVersion, Guid Unmapped, long UnmappedVersion, string MapNo,
         Guid LeaveType, long LeaveTypeVersion, Guid LeaveEntry);
 
@@ -54,7 +55,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.LeaveType, a.LeaveEntry }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.LeaveType, a.LeaveEntry, a.Component, a.Structure }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         pushSecrets[a.PushDevice] = PushSecret;
@@ -236,6 +237,17 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "PUT /api/hrm/pay-periods/{id:guid}" => ($"/api/hrm/pay-periods/{m.Period}", Json(new { cutOffDate = m.PeriodCutOff, rowVersion = m.PeriodVersion })),
             "GET /api/hrm/pay-calendar" => ("/api/hrm/pay-calendar", null),
             "GET /api/hrm/pay-periods/{id:guid}/readiness" => ($"/api/hrm/pay-periods/{m.Period}/readiness", null),
+            // S1.34b: components with versions, formula check, salary structures, and the compensation of A's employment.
+            "POST /api/hrm/pay-components" => ("/api/hrm/pay-components", Json(new { companyId = m.Org.Company, code = "C" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe component" }, kind = "earning", payslipOrder = 1 })),
+            "PUT /api/hrm/pay-components/{id:guid}" => ($"/api/hrm/pay-components/{m.Component}", Json(new { nameI18n = new { en = "Renamed probe component" }, rowVersion = m.ComponentVersion })),
+            "POST /api/hrm/pay-components/{id:guid}/versions" => ($"/api/hrm/pay-components/{m.Component}/versions", Json(new { validFrom = "2030-01-01", method = "fixed", proRataRule = "none", statutoryFlags = new { taxable = true } })),
+            "GET /api/hrm/pay-components/{id:guid}/detail" => ($"/api/hrm/pay-components/{m.Component}/detail", null),
+            "POST /api/hrm/pay-formulas/check" => ("/api/hrm/pay-formulas/check", Json(new { companyId = m.Org.Company, formula = "1 + 1" })),
+            "POST /api/hrm/salary-structures" => ("/api/hrm/salary-structures", Json(new { companyId = m.Org.Company, code = "S" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe structure" } })),
+            "PUT /api/hrm/salary-structures/{id:guid}" => ($"/api/hrm/salary-structures/{m.Structure}", Json(new { nameI18n = new { en = "Renamed probe structure" }, rowVersion = m.StructureVersion })),
+            "GET /api/hrm/salary-structures/{id:guid}/detail" => ($"/api/hrm/salary-structures/{m.Structure}/detail", null),
+            "POST /api/hrm/employments/{id:guid}/compensation" => ($"/api/hrm/employments/{m.Employment}/compensation", Json(new { structureId = m.Structure, validFrom = "2030-01-01", reasonCode = "initial_pay", lines = new[] { new { componentId = m.Component, amount = 1m } } })),
+            "GET /api/hrm/employments/{id:guid}/compensation" => ($"/api/hrm/employments/{m.Employment}/compensation", null),
             // S1.28a: shifts, the weekly-off days of A's employment, and A's draft roster with one working day.
             "POST /api/hrm/shifts" => ("/api/hrm/shifts", Json(new
             {
@@ -518,6 +530,24 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var groupId = group.GetProperty("id").GetGuid();
         await PostAsync(host, token, $"/api/hrm/pay-groups/{groupId}/periods/generate", new { taxYear = 2024 }, ct);
         var period = (await GetAsync(host, token, $"/api/hrm/pay-periods?payGroupId={groupId}", ct)).GetProperty("items")[0];
+        // S1.34b: a component and a salary structure of the probe's company.
+        var component = await PostAsync(host, token, "/api/hrm/pay-components", new { companyId = org.Company, code = "C" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe component" }, kind = "earning", payslipOrder = 1 }, ct);
+        var structure = await PostAsync(host, token, "/api/hrm/salary-structures", new { companyId = org.Company, code = "S" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe structure" } }, ct);
+        // The component list of a structure is held for a second person by default, so the one component of the probe's structure is written directly.
+        await using (var c = await fx.OpenAdminAsync(code, ct))
+        {
+            await using var insert = new NpgsqlCommand("""
+                insert into hrm.salary_structure_components (id, structure_id, component_id, evaluation_order, is_mandatory, currency_code, valid_from, created_at, created_by, updated_at, updated_by)
+                select $1, $2, $3, 1, false, base_currency_code, date '2020-01-01', now(), $4, now(), $4 from org.companies where id = $5
+                """, c);
+            insert.Parameters.Add(new NpgsqlParameter { Value = Guid.CreateVersion7() });
+            insert.Parameters.Add(new NpgsqlParameter { Value = structure.GetProperty("id").GetGuid() });
+            insert.Parameters.Add(new NpgsqlParameter { Value = component.GetProperty("id").GetGuid() });
+            insert.Parameters.Add(new NpgsqlParameter { Value = BaselineSeed.SystemUserId });
+            insert.Parameters.Add(new NpgsqlParameter { Value = org.Company });
+            await insert.ExecuteNonQueryAsync(ct);
+        }
+
         // S1.28a: a shift and a draft roster of the week of 4 March 2030 with one working day of the first employment.
         var shift = await PostAsync(host, token, "/api/hrm/shifts", new { companyId = org.Company, code = "SH" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe shift" }, shiftType = "fixed", startTime = "08:00", endTime = "16:00", crossesMidnight = false, minFullDayMinutes = 420 }, ct);
         var roster = await PostAsync(host, token, "/api/hrm/rosters", new { companyId = org.Company, name = "Probe week", orgUnitId = org.OrgUnit, periodStart = "2030-03-04", periodEnd = "2030-03-10" }, ct);
@@ -580,6 +610,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             punching.GetProperty("id").GetGuid(), location, shown.GetProperty("code").GetString()!, badge,
             groupId, group.GetProperty("rowVersion").GetInt64(), period.GetProperty("id").GetGuid(), period.GetProperty("rowVersion").GetInt64(), period.GetProperty("cutOffDate").GetString()!,
             shift.GetProperty("id").GetGuid(), shift.GetProperty("rowVersion").GetInt64(), roster.GetProperty("id").GetGuid(), roster.GetProperty("rowVersion").GetInt64(),
+            component.GetProperty("id").GetGuid(), component.GetProperty("rowVersion").GetInt64(), structure.GetProperty("id").GetGuid(), structure.GetProperty("rowVersion").GetInt64(),
             pushDevice.GetProperty("id").GetGuid(), pushDevice.GetProperty("rowVersion").GetInt64(), pullDevice.GetProperty("id").GetGuid(), mapRow.GetProperty("id").GetGuid(), mapRow.GetProperty("rowVersion").GetInt64(),
             removalMap, 1, unmapped, 1, mapNo,
             leaveType.GetProperty("id").GetGuid(), leaveType.GetProperty("rowVersion").GetInt64(), leaveEntry.GetProperty("id").GetGuid());

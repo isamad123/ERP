@@ -66,7 +66,7 @@ public sealed class ProvisioningAndMigrationTests(TenancyFixture fx)
         var counts = await TenantRowCountsAsync(code, ct);
         Assert.Equal(1, counts["org.companies"]);
         Assert.Equal(1, counts["org.branches"]);
-        Assert.Equal(10, counts["iam.roles"]); // baseline roles: 6 kernel (spec 02 section 23, HRM-ROL-06) + 4 HR (spec 06a 28.1), slice S1.06
+        Assert.Equal(11, counts["iam.roles"]); // baseline roles: 6 kernel (spec 02 section 23, HRM-ROL-06) + 4 HR (spec 06a 28.1), slice S1.06, + payroll_manager (S1.34b, CR-087 a: the maker and checker of salary changes)
         Assert.Equal(2, counts["iam.users"]); // reserved system user and the invited first administrator
         Assert.Equal(1, counts["iam.user_roles"]);
         Assert.Equal(1, counts["meta.local_entitlement"]);
@@ -90,7 +90,7 @@ public sealed class ProvisioningAndMigrationTests(TenancyFixture fx)
             where u.email = $1 and u.status = 'invited' and r.code = 'tenant_admin' and ur.company_id is null
             """, ct, "admin@" + fx.CodeA + ".example.test"));
         Assert.Equal(0, await TenancyFixture.CountAsync(db, "select count(*) from iam.user_credentials", ct)); // no password before S1.05
-        Assert.Equal(10, await TenancyFixture.CountAsync(db, "select count(*) from iam.roles where source = 'module' and code = baseline_code", ct));
+        Assert.Equal(11, await TenancyFixture.CountAsync(db, "select count(*) from iam.roles where source = 'module' and code = baseline_code", ct));
         Assert.Equal(1, await TenancyFixture.CountAsync(db, "select count(*) from org.companies where code = $1 and country_code = 'PK' and base_currency_code = 'PKR'", ct, fx.CodeA));
 
         await using var cp = await fx.OpenControlPlaneAsync(ct);

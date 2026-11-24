@@ -56,6 +56,8 @@
   unique: [[company_id, lower(code)]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.34b (CR-087, slice S1.34 Q5): generated writes closed; the component service checks kinds, orders and versions.
+  api_actions: [read]
   reqs: [PAY-02, PAY-03, PAY-05, PAY-08, PAY-18, CMP-03]
 
 - table: hrm.pay_component_versions
@@ -69,8 +71,12 @@
     - [base_component_ids, "uuid[]", req, cycle check on save]
     - [statutory_table_code, code, opt]
     - [pro_rata_rule, "enum(none,calendar_days,working_days,fixed_30,custom)", req]
+    - [pro_rata_params, json, opt, "parameters of the custom rule: the divisor and which days count (S1.34b, PAY-05)"]
     - [statutory_flags, json, req, "taxable, eobi_base, social_security_base, pf_base, gratuity_base ... set by pack"]
     - [tax_treatment, code, opt, "regular, irregular, exempt"]
+  # S1.34b: generated writes closed; a version is added by the component service (method rules, names exist, no cycle).
+  added_in: {S1.34b: [pro_rata_params]}
+  api_actions: [read]
   reqs: [PAY-02, PAY-03, PAY-05, PAY-18, PAY-31]
 
 - table: hrm.salary_structures
@@ -80,6 +86,8 @@
   unique: [[company_id, lower(code)]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.34b: generated writes closed; structure changes are held for a second person while hrm.pay.change_approval is on (Q5).
+  api_actions: [read]
   reqs: [PAY-04]
 
 - table: hrm.salary_structure_components
@@ -93,6 +101,9 @@
     - [default_percent, pct, opt]
     - [is_mandatory, bool, req]
     - [currency_code, char(3), req]
+  # S1.34b (slice S1.34 Q5): amounts are restricted data (GHR-06); generated writes closed.
+  field_class: {default_amount: salary, default_percent: salary}
+  api_actions: [read]
   reqs: [PAY-04]
 
 - table: hrm.compensation_assignments
@@ -110,6 +121,8 @@
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   field_class: {gross_amount: salary}
+  # S1.34b: generated writes closed; assignments and revisions are written by the compensation service.
+  api_actions: [read]
   reqs: [PAY-04, PAY-06, CMP-02]
 
 - table: hrm.compensation_lines
@@ -124,7 +137,8 @@
   unique: [[assignment_id, component_id]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
-  field_class: {amount: salary}
+  field_class: {amount: salary, percent: salary}
+  api_actions: [read]
   reqs: [PAY-04, CMP-03]
 
 - table: hrm.statutory_tables

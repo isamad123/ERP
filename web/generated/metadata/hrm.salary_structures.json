@@ -11,18 +11,6 @@
     {
       "action": "read",
       "permission": "hrm.salary_structures.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.salary_structures.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.salary_structures.update"
-    },
-    {
-      "action": "delete",
-      "permission": "hrm.salary_structures.delete"
     }
   ],
   "companyScoped": true,
