@@ -107,7 +107,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         {
             failures.Add($"{endpoint}: positive control failed: A was not served on its own host ({(int)own.Status}). {Short(own.Body)}");
         }
-        else if (endpoint.Pattern == "/api/hrm/duplicates" && !own.Body.Contains(a.Case.ToString(), StringComparison.OrdinalIgnoreCase))
+        else if (endpoint.Pattern == "/api/hrm/duplicates" && !await QueueListsAsync(fx.HostA, tokenA, own.Body, a.Case, ct))
         {
             failures.Add($"{endpoint}: positive control failed: A's review queue does not list A's case {a.Case}.");
         }
@@ -381,8 +381,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var person = created.GetProperty("id").GetGuid();
         var into = (await PostAsync(host, token, "/api/hrm/persons", new { firstName = "Into" + first, gender = "male" }, ct)).GetProperty("id").GetGuid();
         await PostAsync(host, token, "/api/hrm/persons", new { firstName = first, lastName = "Probe", gender = "female", dateOfBirth = birth, duplicates = "review" }, ct);
-        var cases = await GetAsync(host, token, "/api/hrm/duplicates?limit=200", ct);
-        var match = cases.GetProperty("items").EnumerateArray().Last(c => c.GetProperty("other").GetProperty("id").GetGuid() == person);
+        var match = (await OpenCasesAsync(host, token, null, ct)).Last(c => c.GetProperty("other").GetProperty("id").GetGuid() == person);
         async Task<(Guid Id, long Version)> FirstOf(string list)
         {
             var row = (await GetAsync(host, token, $"{list}?personId={person}", ct)).GetProperty("items")[0];
@@ -548,6 +547,40 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         if (reply.Status != HttpStatusCode.OK)
         {
             throw new InvalidOperationException($"HR probe material {path}: {(int)reply.Status} {Short(reply.Body)}");
+        }
+    }
+
+    /// <summary>
+    /// The positive control of <c>GET /api/hrm/duplicates</c>: <paramref name="firstPage"/> is the endpoint's own answer to A; the case is
+    /// looked for on it and then on the following pages (<c>next</c>). Every probe run adds an open case, so after 50 runs a case
+    /// is no longer on the first page (the S1.23b review saw this fail locally).
+    /// </summary>
+    private async Task<bool> QueueListsAsync(string host, string token, string firstPage, Guid caseId, CancellationToken ct)
+    {
+        var first = JsonDocument.Parse(firstPage).RootElement.Clone();
+        var cases = first.GetProperty("items").EnumerateArray().ToList();
+        if (first.TryGetProperty("next", out var next) && next.ValueKind == JsonValueKind.String)
+        {
+            cases.AddRange(await OpenCasesAsync(host, token, next.GetGuid(), ct));
+        }
+
+        return cases.Exists(c => c.GetProperty("id").GetGuid() == caseId);
+    }
+
+    /// <summary>Every open duplicate case of the customer from <paramref name="after"/> on, following <c>next</c> page by page.</summary>
+    private async Task<List<JsonElement>> OpenCasesAsync(string host, string token, Guid? after, CancellationToken ct)
+    {
+        var cases = new List<JsonElement>();
+        while (true)
+        {
+            var page = await GetAsync(host, token, "/api/hrm/duplicates?limit=200" + (after is { } a ? "&after=" + a : string.Empty), ct);
+            cases.AddRange(page.GetProperty("items").EnumerateArray());
+            if (!page.TryGetProperty("next", out var next) || next.ValueKind != JsonValueKind.String)
+            {
+                return cases;
+            }
+
+            after = next.GetGuid();
         }
     }
 
