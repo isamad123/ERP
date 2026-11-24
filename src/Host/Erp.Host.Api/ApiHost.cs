@@ -125,6 +125,7 @@ public static class ApiHost
         // field definitions through its Contracts (D-10).
         services.AddHrmPoliciesApi();
         services.AddScoped<Erp.Kernel.Contracts.Org.IOrgStructure, Erp.Kernel.Infrastructure.Org.OrgStructure>();
+        services.AddScoped<Erp.Kernel.Contracts.Org.IHolidayCalendars, Erp.Kernel.Infrastructure.Org.HolidayCalendars>(); // S1.28b: holidays for HR (D-10)
         services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldCatalog, Erp.Kernel.Infrastructure.Metadata.CustomFieldCatalog>();
         services.AddHrmAttendance().AddHrmAttendanceApi().AddHrmRostering(); // S1.27a attendance capture, S1.28a shifts and rosters
         services.AddSingleton<Erp.Kernel.Contracts.Workflow.IWorkflowDocumentTypeSource>(new WorkflowManifestSource(EmploymentServices.WorkflowManifest));
@@ -288,6 +289,7 @@ public static class ApiHost
         api.MapHrmAttendanceEndpoints(); // S1.27a
         api.MapHrmDeviceEndpoints(); // S1.27b
         api.MapHrmRosterEndpoints(); // S1.28a
+        api.MapHrmHolidayEndpoints(); // S1.28b
         api.MapHrmPayEndpoints(); // S1.34a pay groups, calendar and readiness
         Erp.Hrm.Api.Leave.LeaveEndpoints.MapHrmLeaveEndpoints(api); // S1.32a leave types, ledger, balances and recompute
         return app;

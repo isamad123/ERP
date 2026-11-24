@@ -69,5 +69,8 @@ public static class DayTypes
     public const string WeeklyOff = "weekly_off";
     public const string Holiday = "holiday";
 
+    /// <summary>Only in the effective-shift answer: nothing says what the day is (no roster day, no weekly off, no holiday).</summary>
+    public const string None = "none";
+
     public static IReadOnlyList<string> All { get; } = [Working, WeeklyOff, Holiday];
 }

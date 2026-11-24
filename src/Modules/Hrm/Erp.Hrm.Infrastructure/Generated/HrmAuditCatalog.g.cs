@@ -68,6 +68,7 @@ public static class HrmAuditCatalog
         new(typeof(global::Erp.Hrm.Domain.Generated.Loan), "hrm.loans", true, null, "id", "company_id", null, "employment_id", new global::System.Collections.Generic.Dictionary<string, string>(global::System.StringComparer.Ordinal) { ["principal"] = "salary" }),
         new(typeof(global::Erp.Hrm.Domain.Generated.MandatoryTrainingRule), "hrm.mandatory_training_rules", true, null, "id", "company_id", null, null, null),
         new(typeof(global::Erp.Hrm.Domain.Generated.Nomination), "hrm.nominations", true, null, "id", null, "person_id", null, null),
+        new(typeof(global::Erp.Hrm.Domain.Generated.OptionalHolidayChoice), "hrm.optional_holiday_choices", true, null, "id", "company_id", null, "employment_id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.OutboxMessage), "hrm.outbox_messages", false, "machinery: transactional outbox and inbox (S1.07 Q4)", "id", null, null, null, null),
         new(typeof(global::Erp.Hrm.Domain.Generated.OvertimeEntry), "hrm.overtime_entries", true, null, "id", "company_id", null, "employment_id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.ParallelRunLine), "hrm.parallel_run_lines", true, null, "id", "company_id", null, "employment_id", null),

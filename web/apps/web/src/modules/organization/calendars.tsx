@@ -3,7 +3,7 @@
 // moon-sighting dates and the action that confirms them), the copy of a year forward and where the calendar is used (companies
 // and locations). Calendars of a country pack are read-only here (S1.23 installs them). The server decides everything.
 import './organization.css';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Route, Routes, useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Copy, Pencil, Plus } from 'lucide-react';
@@ -11,16 +11,18 @@ import { DataGrid, EngineProvider, FormPage, ListPage, nameIn, type EngineApi, t
 import { companies as companyApi, locations as locationApi } from '@erp/generated/api/org';
 import { calendars as calendarApi, holidays as holidayApi, type Holiday } from '@erp/generated/api/ref';
 import { Banner, Button, DateField, Dialog, EmptyState, ErrorPanel, Link, SelectField, StatusChip, SwitchField, TextField, useToast, type Option } from '@erp/ui';
-import { useLocaleSettings, useText } from '@erp/i18n';
+import { useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import metadataJson from '@erp/generated/metadata/ref.calendars.json';
 import schemaJson from '@erp/generated/validation/ref.calendars.json';
 import { parseDate } from '@internationalized/date';
 import { ApiProblem, sendText } from '../../api/client';
 import { org } from '../../api/org';
+import { holidayApi as hijriApi } from '../../api/rosters';
 import { systemClock } from '../../session/clock';
 import { useShell } from '../../shell/context';
 import { useProblemText } from '../admin/users-parts';
 import { useDates } from './org-parts';
+import '../hrm/rosters-messages';
 
 const metadata = metadataJson as TableMetadata;
 const schema = schemaJson as ValidationSchema;
@@ -121,6 +123,15 @@ function HolidaysPanel({ calendarId, editable, creatable }: { calendarId: string
   const all = useMemo(() => list.data?.items ?? [], [list.data]);
   const years = useMemo(() => [...new Set([thisYear, thisYear + 1, ...all.map((h) => Number(h.holidayDate.slice(0, 4)))])].sort((a, b) => a - b), [all, thisYear]);
   const rows = useMemo(() => all.filter((h) => h.holidayDate.startsWith(String(year))), [all, year]);
+  // S1.28b (FR-HRM-ATT-15): the Hijri date of each holiday, worked out by HR from the company's correction; shown only to people who may see holidays there.
+  const { can, activeCompany } = useShell();
+  const hijri = useQuery({
+    queryKey: ['org', 'holidays-hijri', calendarId, year, activeCompany?.id],
+    queryFn: ({ signal }) => hijriApi.list(activeCompany?.id ?? '', year, calendarId, signal),
+    enabled: can('hrm.holidays.read') && !!activeCompany, retry: false,
+  });
+  const hijriOf = useMemo(() => new Map((hijri.data?.holidays ?? []).map((h) => [h.id, h.hijri] as const)), [hijri.data]);
+  const hijriText = useCallback((id: string) => { const h = hijriOf.get(id); return h ? t('ros.hijri', { day: String(h.day), month: t(`ros.hijri.month.${h.month}` as MessageKey), year: String(h.year) }) : ''; }, [hijriOf, t]);
   const copy = useMutation({
     mutationFn: () => org.copyYear(calendarId, year, year + 1),
     onSuccess: async (result) => {
@@ -132,6 +143,7 @@ function HolidaysPanel({ calendarId, editable, creatable }: { calendarId: string
   });
   const columns = useMemo<GridColumn<Holiday>[]>(() => [
     { id: 'date', header: t('calendars.holiday.date'), width: 190, cell: (h) => <bdi>{date(h.holidayDate)}</bdi> },
+    ...(hijriOf.size > 0 ? [{ id: 'hijri', header: t('ros.optional.col.hijri'), width: 200, cell: (h: Holiday) => <bdi>{hijriText(h.id)}</bdi> }] : []),
     { id: 'name', header: t('calendars.holiday.name'), width: 260, cell: (h) => <bdi>{h.nameI18n[locale] ?? h.nameI18n.en ?? ''}</bdi> },
     { id: 'kind', header: t('calendars.holiday.kind'), width: 140, cell: (h) => t(`calendars.kind.${h.kind}`) },
     { id: 'state', header: t('calendars.holiday.state'), width: 160, cell: (h) => <StatusChip status={h.isTentative ? 'pending' : 'active'} label={t(h.isTentative ? 'calendars.tentative' : 'calendars.confirmed')} /> },
@@ -140,7 +152,7 @@ function HolidaysPanel({ calendarId, editable, creatable }: { calendarId: string
         {h.isTentative && <Button variant="quiet" icon={<Check size={16} aria-hidden="true" />} onPress={() => setDialog(h)}>{t('calendars.confirm')}</Button>}
         <Button variant="quiet" icon={<Pencil size={16} aria-hidden="true" />} onPress={() => setDialog(h)}>{t('org.edit')}</Button>
       </span>) : null },
-  ], [t, date, locale, editable]);
+  ], [t, date, locale, editable, hijriOf, hijriText]);
   return (
     <section className="erp-section" aria-labelledby="cal-holidays">
       <div className="erp-row erp-section-head">

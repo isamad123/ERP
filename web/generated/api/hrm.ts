@@ -2784,6 +2784,39 @@ export const nominations =
     get: (id: string) => request<Nomination>('GET', `/api/hrm/nominations/${id}`),
 };
 
+/** hrm.optional_holiday_choices: The optional holidays an employee chose for a year (S1.28b, CR-085, FR-HRM-ATT-15). Field rules (S1.06) may leave a field out or mask it as text. */
+export interface OptionalHolidayChoice
+{
+    id: string;
+    companyId: string;
+    employmentId: string;
+    holidayId: string;
+    holidayYear: number;
+    chosenAt: string;
+    createdAt: string;
+    createdBy: string;
+    updatedAt: string;
+    updatedBy: string;
+    rowVersion: number;
+}
+
+export interface OptionalHolidayChoiceListQuery
+{
+    after?: string;
+    limit?: number;
+    companyId?: string;
+    employmentId?: string;
+    holidayId?: string;
+    /** holidayYear; a leading minus sorts descending. */
+    sort?: 'holidayYear' | '-holidayYear';
+}
+
+export const optionalHolidayChoices =
+{
+    list: (query: OptionalHolidayChoiceListQuery = {}) => request<PagedResult<OptionalHolidayChoice>>('GET', '/api/hrm/optional-holiday-choices', { query }),
+    get: (id: string) => request<OptionalHolidayChoice>('GET', `/api/hrm/optional-holiday-choices/${id}`),
+};
+
 /** hrm.overtime_entries: OvertimeEntry. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface OvertimeEntry
 {
