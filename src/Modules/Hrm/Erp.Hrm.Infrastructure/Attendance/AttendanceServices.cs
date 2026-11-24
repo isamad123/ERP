@@ -23,6 +23,15 @@ public static class AttendanceServices
         return services;
     }
 
+    /// <summary>The shift and roster services (slice S1.28a), for the API host: shifts, rosters and the shift policy reader.</summary>
+    public static IServiceCollection AddHrmRostering(this IServiceCollection services)
+    {
+        services.AddScoped<ShiftPolicyReader>();
+        services.AddScoped<IShiftService, ShiftService>();
+        services.AddScoped<IRosterService, RosterService>();
+        return services;
+    }
+
     /// <summary>The attendance job of the worker host.</summary>
     public static IServiceCollection AddHrmAttendanceWorker(this IServiceCollection services)
     {
