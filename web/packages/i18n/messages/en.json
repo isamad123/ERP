@@ -146,6 +146,7 @@
   "nav.document": "Document",
   "nav.people": "People",
   "nav.punch": "My attendance",
+  "nav.devices": "Attendance devices",
   "nav.kiosk": "Attendance kiosk",
   "nav.qr": "Gate QR code",
   "nav.attendance": "Attendance",
