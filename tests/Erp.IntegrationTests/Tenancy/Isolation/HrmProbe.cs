@@ -16,7 +16,7 @@ namespace Erp.IntegrationTests.Tenancy.Isolation;
 /// employments, the first linked to a user; from S1.20c a second company, a former employment, a contract and a probation; from S1.20d a
 /// payment account and a statutory registration of the first employment; from S1.23a a probation policy assigned to permanent employees
 /// (made before the hires, so the first employment's probation comes from it) and a second policy with a draft; from S1.34a a pay group
-/// with the periods of a tax year. Then, as for
+/// with the periods of a tax year; from S1.32a a leave type and an opening balance of the first employment. Then, as for
 /// the other probes:
 /// <list type="number">
 /// <item>B's host and token aimed at A's ids, with and without headers naming A: actions on A's records are 404; creates and lists
@@ -41,7 +41,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         Guid PayGroup, long PayGroupVersion, Guid Period, long PeriodVersion, string PeriodCutOff,
         Guid Shift, long ShiftVersion, Guid Roster, long RosterVersion,
         Guid Component, long ComponentVersion, Guid Structure, long StructureVersion,
-        Guid PushDevice, long PushDeviceVersion, Guid PullDevice, Guid Map, long MapVersion, Guid RemovalMap, long RemovalMapVersion, Guid Unmapped, long UnmappedVersion, string MapNo);
+        Guid PushDevice, long PushDeviceVersion, Guid PullDevice, Guid Map, long MapVersion, Guid RemovalMap, long RemovalMapVersion, Guid Unmapped, long UnmappedVersion, string MapNo,
+        Guid LeaveType, long LeaveTypeVersion, Guid LeaveEntry);
 
     /// <summary>Where the probe hires (slice S1.20b): an org unit of a company and that company's branch.</summary>
     private sealed record Hire(Guid Company, Guid OrgUnit, Guid Branch);
@@ -54,7 +55,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.Component, a.Structure }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.LeaveType, a.LeaveEntry, a.Component, a.Structure }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         pushSecrets[a.PushDevice] = PushSecret;
@@ -274,6 +275,17 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "GET /api/hrm/attendance/unmapped" => ($"/api/hrm/attendance/unmapped?companyId={m.Org.Company}", null),
             "POST /api/hrm/attendance/unmapped/{id:guid}/discard" => ($"/api/hrm/attendance/unmapped/{m.Unmapped}/discard", Json(new { rowVersion = m.UnmappedVersion })),
             "GET /api/hrm/attendance/punch-log" => ($"/api/hrm/attendance/punch-log?companyId={m.Org.Company}", null),
+            "POST /api/hrm/leave-types" => ("/api/hrm/leave-types", Json(new
+            {
+                companyId = m.Org.Company, code = "LT" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe leave", ur = "آزمائشی رخصت" }, isPaid = true,
+                counting = "working_days", unit = "day", requiresDocument = false, isCompOff = false, isUnpaidDeduction = false,
+            })),
+            "PUT /api/hrm/leave-types/{id:guid}" => ($"/api/hrm/leave-types/{m.LeaveType}", Json(new { requiresDocument = true, rowVersion = m.LeaveTypeVersion })),
+            "POST /api/hrm/employments/{id:guid}/leave-ledger" => ($"/api/hrm/employments/{m.Employment}/leave-ledger", Json(new { leaveTypeId = m.LeaveType, kind = "grant", quantity = 1, entryDate = "2025-03-01", reason = "Probe grant" })),
+            "POST /api/hrm/leave-ledger/{id:guid}/reverse" => ($"/api/hrm/leave-ledger/{m.LeaveEntry}/reverse", Json(new { reason = "Probe reversal" })),
+            "GET /api/hrm/employments/{id:guid}/leave-balances" => ($"/api/hrm/employments/{m.Employment}/leave-balances?asOf=2024-06-30", null),
+            "GET /api/hrm/my/leave-balances" => ("/api/hrm/my/leave-balances", null),
+            "GET /api/hrm/employments/{id:guid}/leave-recompute" => ($"/api/hrm/employments/{m.Employment}/leave-recompute", null),
             var key => throw new InvalidOperationException($"No probe target for HR endpoint {key}; extend HrmProbe."),
         };
     }
@@ -580,6 +592,13 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             }
         }
 
+        // S1.32a: a leave type of the probe's company and an opening balance of the first employment.
+        var leaveType = await PostAsync(host, token, "/api/hrm/leave-types", new
+        {
+            companyId = org.Company, code = "LV" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe annual", ur = "آزمائشی سالانہ" }, isPaid = true,
+            counting = "working_days", unit = "day", requiresDocument = false, isCompOff = false, isUnpaidDeduction = false,
+        }, ct);
+        var leaveEntry = await PostAsync(host, token, $"/api/hrm/employments/{employment}/leave-ledger", new { leaveTypeId = leaveType.GetProperty("id").GetGuid(), kind = "opening", quantity = 2, entryDate = "2024-01-01", reason = "Probe opening" }, ct);
         return new Material(person, created.GetProperty("rowVersion").GetInt64(), into, identifier.Id, identifier.Version, contact.Id, contact.Version,
             address.Id, address.Version, relation.Id, relation.Version, qualification.Id, qualification.Version,
             match.GetProperty("id").GetGuid(), match.GetProperty("rowVersion").GetInt64(), created.GetProperty("personNo").GetString()!,
@@ -593,7 +612,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             shift.GetProperty("id").GetGuid(), shift.GetProperty("rowVersion").GetInt64(), roster.GetProperty("id").GetGuid(), roster.GetProperty("rowVersion").GetInt64(),
             component.GetProperty("id").GetGuid(), component.GetProperty("rowVersion").GetInt64(), structure.GetProperty("id").GetGuid(), structure.GetProperty("rowVersion").GetInt64(),
             pushDevice.GetProperty("id").GetGuid(), pushDevice.GetProperty("rowVersion").GetInt64(), pullDevice.GetProperty("id").GetGuid(), mapRow.GetProperty("id").GetGuid(), mapRow.GetProperty("rowVersion").GetInt64(),
-            removalMap, 1, unmapped, 1, mapNo);
+            removalMap, 1, unmapped, 1, mapNo,
+            leaveType.GetProperty("id").GetGuid(), leaveType.GetProperty("rowVersion").GetInt64(), leaveEntry.GetProperty("id").GetGuid());
     }
 
     private async Task OkAsync(string host, string token, string path, object body, CancellationToken ct)

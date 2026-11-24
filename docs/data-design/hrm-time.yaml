@@ -302,6 +302,9 @@
   unique: [[company_id, lower(code)]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.32a (CR-086 S1.32a detail; slice S1.32 Build item 1): generated writes closed; the HR leave type service writes (code, counting and unit fixed once
+  # the type has ledger entries; retire, never delete; rules.yaml function hrm.tg_leave_types_rules).
+  api_actions: [read]
   reqs: [LVE-01, LVE-12]
   notes: "Entitlement, accrual, carry-forward, encashment, eligibility and sandwich rules are a leave policy (hrm.policies type leave) assigned per leave type."
 
@@ -327,6 +330,10 @@
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
   audit: false
   audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
+  # S1.32a (CR-086 S1.32a detail; Build item 4): generated writes closed; entries are posted by the HR leave services and the accrual job only (opening,
+  # grant, adjustment and reversal by HR; grant and accrual by the job, once per employment, type and period); a reversal negates its entry
+  # (rules.yaml function hrm.tg_leave_ledger_reversal). Update, delete and truncate were already refused (tg_leave_ledger_append_only).
+  api_actions: [read]
   reqs: [LVE-02, LVE-03, LVE-08, LVE-10, LVE-14]
   unique: [[source_type, source_id, kind, leave_type_id, where source_id is not null], [reverses_entry_id, where reverses_entry_id is not null]]
   notes: Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30).

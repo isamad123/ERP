@@ -12,18 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.leave_types.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.leave_types.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.leave_types.update"
-    },
-    {
-      "action": "delete",
-      "permission": "hrm.leave_types.delete"
     }
   ],
   "companyScoped": true,
