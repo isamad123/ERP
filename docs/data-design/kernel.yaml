@@ -1211,7 +1211,12 @@
     - [format, "enum(csv,xlsx)", req]
     - [mapping, json, req]
     - [version, int, req]
+    - [mode, "enum(create,create_or_update)", req, "default create; S1.16a (CR-072 addendum): what a row whose key exists means; update batches cannot be rolled back (Q5)"]
+    - [is_default, bool, req, "default false; S1.16a: the shipped template of an import type (one per type)"]
   unique: [[lower(code)]]
+  added_in: {S1.16a: [mode, is_default]}
+  # S1.16a review finding 1 (CR-072 review detail): templates change only through /api/itg/imports/templates (mapping and mode are checked against the type).
+  api_actions: [read]
   reqs: [KRN-INT-03, ADM-INT-04]
 
 - table: itg.import_batches
@@ -1224,8 +1229,20 @@
     - [ok_rows, int, opt]
     - [error_rows, int, opt]
     - [job_run_id, uuid, opt, fk job.runs]
+    - [file_name, text, opt, "S1.16a (CR-072 addendum): the uploaded file's name, shown in the import centre"]
+    - [mode, "enum(create,create_or_update)", req, "default create; S1.16a: copied from the template at upload (a later template change does not alter a running batch)"]
+    - [created_rows, int, opt, "S1.16a: rows created by the commit"]
+    - [updated_rows, int, opt, "S1.16a: rows updated by the commit (a batch with updates cannot be rolled back)"]
+    - [validated_at, ts, opt]
+    - [committed_at, ts, opt]
+    - [rolled_back_at, ts, opt]
+    - [mapping, json, opt, "S1.16a review finding 4: the template's mapping as it was at upload; the check, the commit and the error file read this copy, so a later template change cannot alter what a batch writes"]
+    - [template_version, int, opt, "S1.16a review finding 4: the template version the mapping was copied from"]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  added_in: {S1.16a: [file_name, mode, created_rows, updated_rows, validated_at, committed_at, rolled_back_at, mapping, template_version]}
+  # S1.16a review finding 1 (CR-072 review detail): a batch changes only through the import service (status, counts, file and mapping are the engine's).
+  api_actions: [read]
   reqs: [KRN-INT-04, ADM-DAT-01]
 
 - table: itg.import_batch_errors
@@ -1235,11 +1252,36 @@
     - [row_no, int, req]
     - [field, text, opt]
     - [message, text, req]
+    - [phase, "enum(validate,commit)", req, "default validate; S1.16a: whether the problem came from the validation run or from the commit"]
   indexes: [[batch_id, row_no]]
+  added_in: {S1.16a: [phase]}
+  # S1.16a review finding 1 (CR-072 review detail): problems are written only by the engine.
+  api_actions: [read]
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
   audit: false
   audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   reqs: [ADM-DAT-01]
+
+# S1.16a (CR-072 addendum, ruling Q5): which record each row of a committed batch created or updated, so a batch that only
+# created rows can be rolled back while none of those rows changed (the row version after the commit is kept).
+- table: itg.import_batch_rows
+  purpose: Records created or updated by each row of an import batch (rollback check, FR-KRN-INT-03)
+  traits: [app]
+  columns:
+    - [batch_id, uuid, req, fk itg.import_batches]
+    - [row_no, int, req]
+    - [table_name, text, req]
+    - [record_id, uuid, req]
+    - [action, "enum(created,updated)", req]
+    - [record_version, int, opt, "the record row_version right after the import wrote it"]
+  indexes: [[batch_id, row_no], [table_name, record_id]]
+  unique: [[batch_id, row_no, table_name, record_id]]
+  added_in: S1.16a
+  # S1.16a review finding 1 (CR-072 review detail): the rollback list is written only by the commit job; a forged row would make a rollback delete any record.
+  api_actions: [read]
+  audit: false
+  audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
+  reqs: [KRN-INT-03, KRN-INT-04]
 
 - table: itg.export_jobs
   traits: [std, co]

@@ -86,6 +86,7 @@ public sealed class EntitlementApplier(ControlPlaneOptions options, ISecretStore
                 await Workflow.WorkflowSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
                 await Jobs.JobSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
                 await Notifications.NotificationSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
+                await Itg.ImportSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
                 await Setup.SetupTaskSetup.EnsureAsync(owner, null, migrations.AccessFolders(modules), now, cancellationToken).ConfigureAwait(false);
             }
 

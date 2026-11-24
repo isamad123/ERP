@@ -50,6 +50,16 @@
       "minimum": -2147483648,
       "maximum": 2147483647
     },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "create",
+        "create_or_update"
+      ]
+    },
+    "isDefault": {
+      "type": "boolean"
+    },
     "isActive": {
       "type": "boolean"
     }

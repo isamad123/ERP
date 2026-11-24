@@ -38,6 +38,7 @@ public static class ImportBatchErrorAccess
         new("row_no", "RowNo", null),
         new("field", "Field", null),
         new("message", "Message", null),
+        new("phase", "Phase", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
     ]);

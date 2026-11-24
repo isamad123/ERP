@@ -6,6 +6,8 @@ using Erp.Hrm.Infrastructure.Access;
 using Erp.Hrm.Infrastructure.Employments;
 using Erp.Hrm.Infrastructure.Attendance;
 using Erp.Hrm.Infrastructure.Generated;
+using Erp.Kernel.Api.Generated;
+using Erp.Kernel.Infrastructure.Itg;
 using Erp.Hrm.Infrastructure.Positions;
 using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Erp.Kernel.Contracts.Entitlements;
@@ -62,10 +64,15 @@ public static class WorkerHost
             .AddInterceptors(sp.GetRequiredService<CompanyLimitInterceptor>(), sp.GetRequiredService<OrgUnitUseInterceptor>()));
         services.AddDbContext<HrmDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp));
         services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
+        services.AddKernelImportEngine().AddKernelImportWriters();
+        services.AddLogging(); // the generated import writers run the endpoints' results, which log (S1.16a)
 
         // Field encryption of the customer (S1.05 P7): generated repositories encrypt enc columns on write.
         services.AddSingleton<FieldKeyCache>();
         services.AddScoped<IFieldEncryptorProvider, TenantFieldEncryptorProvider>();
+        // The invitation e-mail an import of users sends after its records are saved (S1.16a).
+        services.AddSingleton<Erp.Kernel.Application.Identity.IPasswordHasher, Argon2idPasswordHasher>();
+        services.AddScoped<Erp.Kernel.Application.Identity.IIdentityEmailService, IdentityEmailService>();
         services.AddKernelAccess();
         services.AddHrmAccess();
         services.AddSingleton(new ResourceCatalog([.. KernelResourceCatalog.All, .. HrmResourceCatalog.All]));

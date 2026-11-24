@@ -1,0 +1,506 @@
+{
+  "_comment": "Kernel import types (slice S1.16a, Build item 1, CR-072). Columns: name (the template header), field (the write request's property; a dot builds an object, for example nameI18n.en), type, label (English and Urdu; Urdu needs a native speaker's review), lookup (a table whose code the cell holds; the field then receives its id). keyColumns find an existing record for create-or-update. permission: the write permission of the table, checked for the caller and again for every row by the writer.",
+  "module": "kernel",
+  "types": [
+    {
+      "code": "users",
+      "table": "iam.users",
+      "name": {
+        "en": "Users",
+        "ur": "صارفین"
+      },
+      "permission": "iam.users.create",
+      "keyColumns": [
+        "username"
+      ],
+      "canUpdate": false,
+      "writer": "users",
+      "postCommit": "invite",
+      "columns": [
+        {
+          "name": "username",
+          "field": "username",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Username",
+            "ur": "صارف نام"
+          },
+          "example": "a.khan"
+        },
+        {
+          "name": "email",
+          "field": "email",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "E-mail",
+            "ur": "ای میل"
+          },
+          "example": "a.khan@example.com"
+        },
+        {
+          "name": "display_name",
+          "field": "displayName",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Name",
+            "ur": "نام"
+          },
+          "example": "Ayesha Khan"
+        },
+        {
+          "name": "company",
+          "field": "defaultCompanyId",
+          "type": "text",
+          "required": false,
+          "label": {
+            "en": "Default company code",
+            "ur": "ڈیفالٹ کمپنی کا کوڈ"
+          },
+          "lookup": "org.companies",
+          "example": "MAIN"
+        },
+        {
+          "name": "language",
+          "field": "language",
+          "type": "option",
+          "required": false,
+          "label": {
+            "en": "Language",
+            "ur": "زبان"
+          },
+          "options": [
+            "en",
+            "ur"
+          ],
+          "example": "en"
+        },
+        {
+          "name": "time_zone",
+          "field": "timeZone",
+          "type": "text",
+          "required": false,
+          "label": {
+            "en": "Time zone",
+            "ur": "ٹائم زون"
+          },
+          "example": "Asia/Karachi"
+        },
+        {
+          "name": "access_valid_to",
+          "field": "accessValidTo",
+          "type": "date",
+          "required": false,
+          "label": {
+            "en": "Access ends on",
+            "ur": "رسائی ختم ہونے کی تاریخ"
+          },
+          "example": "2027-12-31"
+        }
+      ],
+      "readPermission": "iam.users.read",
+      "rollbackPermission": "iam.users.change_status",
+      "uniqueColumns": [
+        "email"
+      ],
+      "rollbackDependents": [
+        "iam.one_time_tokens",
+        "ntf.outbound_messages",
+        "ntf.in_app_items",
+        "ntf.preferences"
+      ]
+    },
+    {
+      "code": "org_units",
+      "table": "org.org_units",
+      "name": {
+        "en": "Organization units",
+        "ur": "تنظیمی یونٹ"
+      },
+      "permission": "org.org_units.create",
+      "keyColumns": [
+        "company",
+        "code"
+      ],
+      "canUpdate": true,
+      "writer": "org_units",
+      "columns": [
+        {
+          "name": "company",
+          "field": "companyId",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Company code",
+            "ur": "کمپنی کا کوڈ"
+          },
+          "lookup": "org.companies",
+          "example": "MAIN"
+        },
+        {
+          "name": "code",
+          "field": "code",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Unit code",
+            "ur": "یونٹ کا کوڈ"
+          },
+          "example": "FIN"
+        },
+        {
+          "name": "name_en",
+          "field": "nameI18n.en",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Name in English",
+            "ur": "انگریزی میں نام"
+          },
+          "example": "Finance"
+        },
+        {
+          "name": "name_ur",
+          "field": "nameI18n.ur",
+          "type": "text",
+          "required": false,
+          "label": {
+            "en": "Name in Urdu",
+            "ur": "اردو میں نام"
+          },
+          "example": "مالیات"
+        },
+        {
+          "name": "unit_type",
+          "field": "unitTypeId",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Unit type code",
+            "ur": "یونٹ کی قسم کا کوڈ"
+          },
+          "lookup": "org.org_unit_types",
+          "example": "DEPT"
+        },
+        {
+          "name": "hierarchy",
+          "field": "hierarchy",
+          "type": "text",
+          "required": false,
+          "label": {
+            "en": "Hierarchy code",
+            "ur": "درجہ بندی کا کوڈ"
+          },
+          "lookup": "org.org_hierarchies",
+          "example": "REPORTING"
+        },
+        {
+          "name": "parent",
+          "field": "parent",
+          "type": "text",
+          "required": false,
+          "label": {
+            "en": "Parent unit code (empty: top level)",
+            "ur": "بالائی یونٹ کا کوڈ (خالی: سب سے اوپر)"
+          },
+          "example": "HQ"
+        },
+        {
+          "name": "valid_from",
+          "field": "validFrom",
+          "type": "date",
+          "required": false,
+          "label": {
+            "en": "Place in the hierarchy from",
+            "ur": "درجہ بندی میں جگہ کی تاریخ"
+          },
+          "example": "2026-01-01"
+        }
+      ],
+      "readPermission": "org.org_units.read",
+      "rollbackPermission": "org.org_units.delete",
+      "writes": [
+        "org.org_units",
+        "org.org_unit_links"
+      ]
+    },
+    {
+      "code": "holidays",
+      "table": "ref.holidays",
+      "name": {
+        "en": "Holidays",
+        "ur": "تعطیلات"
+      },
+      "permission": "ref.holidays.create",
+      "keyColumns": [
+        "calendar",
+        "holiday_date"
+      ],
+      "canUpdate": true,
+      "columns": [
+        {
+          "name": "calendar",
+          "field": "calendarId",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Calendar code",
+            "ur": "کیلنڈر کا کوڈ"
+          },
+          "lookup": "ref.calendars",
+          "example": "PK"
+        },
+        {
+          "name": "holiday_date",
+          "field": "holidayDate",
+          "type": "date",
+          "required": true,
+          "label": {
+            "en": "Date",
+            "ur": "تاریخ"
+          },
+          "example": "2027-03-23"
+        },
+        {
+          "name": "name_en",
+          "field": "nameI18n.en",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Name in English",
+            "ur": "انگریزی میں نام"
+          },
+          "example": "Pakistan Day"
+        },
+        {
+          "name": "name_ur",
+          "field": "nameI18n.ur",
+          "type": "text",
+          "required": false,
+          "label": {
+            "en": "Name in Urdu",
+            "ur": "اردو میں نام"
+          },
+          "example": "یومِ پاکستان"
+        },
+        {
+          "name": "kind",
+          "field": "kind",
+          "type": "option",
+          "required": true,
+          "label": {
+            "en": "Kind",
+            "ur": "قسم"
+          },
+          "options": [
+            "public",
+            "religious",
+            "optional",
+            "restricted"
+          ],
+          "example": "public"
+        },
+        {
+          "name": "is_tentative",
+          "field": "isTentative",
+          "type": "bool",
+          "required": false,
+          "label": {
+            "en": "Date not yet confirmed",
+            "ur": "تاریخ کی تصدیق باقی"
+          },
+          "example": "no"
+        }
+      ],
+      "readPermission": "ref.holidays.read",
+      "rollbackPermission": "ref.holidays.update"
+    },
+    {
+      "code": "locations",
+      "table": "org.locations",
+      "name": {
+        "en": "Locations",
+        "ur": "مقامات"
+      },
+      "permission": "org.locations.create",
+      "keyColumns": [
+        "company",
+        "code"
+      ],
+      "canUpdate": true,
+      "columns": [
+        {
+          "name": "company",
+          "field": "companyId",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Company code",
+            "ur": "کمپنی کا کوڈ"
+          },
+          "lookup": "org.companies",
+          "example": "MAIN"
+        },
+        {
+          "name": "code",
+          "field": "code",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Location code",
+            "ur": "مقام کا کوڈ"
+          },
+          "example": "LHR-HQ"
+        },
+        {
+          "name": "name_en",
+          "field": "nameI18n.en",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Name in English",
+            "ur": "انگریزی میں نام"
+          },
+          "example": "Lahore head office"
+        },
+        {
+          "name": "name_ur",
+          "field": "nameI18n.ur",
+          "type": "text",
+          "required": false,
+          "label": {
+            "en": "Name in Urdu",
+            "ur": "اردو میں نام"
+          },
+          "example": "لاہور ہیڈ آفس"
+        },
+        {
+          "name": "branch",
+          "field": "branchId",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Branch code",
+            "ur": "برانچ کا کوڈ"
+          },
+          "lookup": "org.branches",
+          "example": "LHR"
+        },
+        {
+          "name": "address_line1",
+          "field": "address.line1",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Address line 1",
+            "ur": "پتہ، سطر 1"
+          },
+          "example": "12 Mall Road"
+        },
+        {
+          "name": "address_line2",
+          "field": "address.line2",
+          "type": "text",
+          "required": false,
+          "label": {
+            "en": "Address line 2",
+            "ur": "پتہ، سطر 2"
+          }
+        },
+        {
+          "name": "city",
+          "field": "address.city",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "City",
+            "ur": "شہر"
+          },
+          "example": "Lahore"
+        },
+        {
+          "name": "postal_code",
+          "field": "address.postalCode",
+          "type": "text",
+          "required": false,
+          "label": {
+            "en": "Postal code",
+            "ur": "پوسٹل کوڈ"
+          },
+          "example": "54000"
+        },
+        {
+          "name": "country",
+          "field": "address.country",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Country (2 letters)",
+            "ur": "ملک (2 حروف)"
+          },
+          "example": "PK"
+        },
+        {
+          "name": "region_code",
+          "field": "regionCode",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Province or state code",
+            "ur": "صوبے یا ریاست کا کوڈ"
+          },
+          "example": "PB"
+        },
+        {
+          "name": "time_zone",
+          "field": "timeZone",
+          "type": "text",
+          "required": true,
+          "label": {
+            "en": "Time zone",
+            "ur": "ٹائم زون"
+          },
+          "example": "Asia/Karachi"
+        },
+        {
+          "name": "latitude",
+          "field": "latitude",
+          "type": "number",
+          "required": false,
+          "label": {
+            "en": "Latitude",
+            "ur": "عرض بلد"
+          },
+          "example": "31.5497"
+        },
+        {
+          "name": "longitude",
+          "field": "longitude",
+          "type": "number",
+          "required": false,
+          "label": {
+            "en": "Longitude",
+            "ur": "طول بلد"
+          },
+          "example": "74.3436"
+        },
+        {
+          "name": "holiday_calendar",
+          "field": "holidayCalendarId",
+          "type": "text",
+          "required": false,
+          "label": {
+            "en": "Holiday calendar code",
+            "ur": "تعطیلات کے کیلنڈر کا کوڈ"
+          },
+          "lookup": "ref.calendars",
+          "example": "PK"
+        }
+      ],
+      "readPermission": "org.locations.read",
+      "rollbackPermission": "org.locations.delete"
+    }
+  ]
+}

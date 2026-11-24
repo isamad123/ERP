@@ -45,6 +45,54 @@
       "format": "uuid",
       "nullable": true
     },
+    "fileName": {
+      "type": "string",
+      "nullable": true
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "create",
+        "create_or_update"
+      ]
+    },
+    "createdRows": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647,
+      "nullable": true
+    },
+    "updatedRows": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647,
+      "nullable": true
+    },
+    "validatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
+    "committedAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
+    "rolledBackAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
+    "mapping": {
+      "readOnly": true,
+      "nullable": true
+    },
+    "templateVersion": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647,
+      "nullable": true
+    },
     "status": {
       "type": "string",
       "enum": [

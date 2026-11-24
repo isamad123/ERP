@@ -23,6 +23,8 @@ internal sealed class ImportTemplateConfiguration : IEntityTypeConfiguration<glo
         builder.Property(e => e.Format).HasColumnName("format").HasColumnType("text").IsRequired();
         builder.Property(e => e.Mapping).HasColumnName("mapping").HasColumnType("jsonb").IsRequired();
         builder.Property(e => e.Version).HasColumnName("version").HasColumnType("integer");
+        builder.Property(e => e.Mode).HasColumnName("mode").HasColumnType("text").IsRequired();
+        builder.Property(e => e.IsDefault).HasColumnName("is_default").HasColumnType("boolean");
         builder.Property(e => e.IsActive).HasColumnName("is_active").HasColumnType("boolean");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");

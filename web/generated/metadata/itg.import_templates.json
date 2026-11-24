@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "itg.import_templates.read"
-    },
-    {
-      "action": "create",
-      "permission": "itg.import_templates.create"
-    },
-    {
-      "action": "update",
-      "permission": "itg.import_templates.update"
     }
   ],
   "companyScoped": false,
@@ -33,6 +25,8 @@
     "entityType",
     "format",
     "version",
+    "mode",
+    "isDefault",
     "isActive"
   ],
   "search": [
@@ -42,6 +36,7 @@
   "constraints": {
     "ck_import_templates_code_code": "code",
     "ck_import_templates_format": "format",
+    "ck_import_templates_mode": "mode",
     "ck_import_templates_name_i18n_object": "nameI18n",
     "uq_import_templates_code": "code"
   },
@@ -127,6 +122,36 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.itg.import_templates.version"
+    },
+    {
+      "column": "mode",
+      "field": "mode",
+      "kind": "Enum",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.import_templates.mode",
+      "options": [
+        {
+          "value": "create",
+          "labelKey": "options.itg.import_templates.mode.create"
+        },
+        {
+          "value": "create_or_update",
+          "labelKey": "options.itg.import_templates.mode.create_or_update"
+        }
+      ]
+    },
+    {
+      "column": "is_default",
+      "field": "isDefault",
+      "kind": "Bool",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.import_templates.is_default"
     },
     {
       "column": "is_active",

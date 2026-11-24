@@ -272,4 +272,29 @@ internal static class AccountingEventEndpoints
         }
         return denied;
     }
+
+    /// <summary>Applies imported rows of itg.accounting_events (create, or update of an existing record) through the endpoint's own rules (S1.16a).</summary>
+    internal sealed class ImportWriter(global::System.IServiceProvider services) : global::Erp.Kernel.Application.Itg.IImportRowWriter
+    {
+        public string Code => "itg.accounting_events";
+
+        public async global::System.Threading.Tasks.Task<global::Erp.Kernel.Application.Itg.ImportRowOutcome> WriteAsync(global::Erp.Kernel.Application.Itg.ImportRow row, global::System.Guid? existingId, global::System.Threading.CancellationToken cancellationToken)
+        {
+            var repository = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.Kernel.Application.Generated.Itg.IAccountingEventRepository>(services);
+            var permissions = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IPermissionChecker>(services);
+            var fields = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(services);
+            var accessLog = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog>(services);
+            IResult result;
+            if (existingId is null)
+            {
+                var request = global::System.Text.Json.JsonSerializer.Deserialize<AccountingEventWriteRequest>(row.Values.ToJsonString(), global::System.Text.Json.JsonSerializerOptions.Web)!;
+                result = await CreateAsync(request, repository, permissions, fields, accessLog, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                return global::Erp.Kernel.Application.Itg.ImportRowOutcome.Failed(new global::Erp.Kernel.Application.Itg.ImportRowError(null, "errors.import.update_not_supported"));
+            }
+            return await GeneratedImportSupport.ReadAsync(result, "itg.accounting_events", services, existingId is null ? "created" : "updated").ConfigureAwait(false);
+        }
+    }
 }
