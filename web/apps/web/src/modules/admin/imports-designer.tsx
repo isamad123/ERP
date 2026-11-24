@@ -100,7 +100,7 @@ export function TemplateDesigner() {
                     <td>{x.format === 'csv' ? 'CSV' : 'Excel'}</td>
                     <td>{t(x.mode === 'create' ? 'imp.mode.create' : 'imp.mode.update')}</td>
                     <td><StatusChip status={x.isActive ? 'active' : 'inactive'} label={t(x.isActive ? 'imp.template.active' : 'imp.template.inactive')} /> <span className="erp-small erp-muted">{t('imp.template.version', { version: formatInteger(x.version) })}</span></td>
-                    <td><Button variant="secondary" aria-label={t('imp.designer.edit.aria', { name: nameOf(x.name, x.code) })} onPress={() => setEditing(x.id)}>{t(canDesign ? 'imp.designer.edit' : 'imp.designer.view')}</Button></td>
+                    <td><Button variant="secondary" aria-label={t(canDesign ? 'imp.designer.edit.aria' : 'imp.designer.view.aria', { name: nameOf(x.name, x.code) })} onPress={() => setEditing(x.id)}>{t(canDesign ? 'imp.designer.edit' : 'imp.designer.view')}</Button></td>
                   </tr>
                 ))}
               </tbody>

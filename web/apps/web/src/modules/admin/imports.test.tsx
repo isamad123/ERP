@@ -270,7 +270,7 @@ describe('FR-ADM-INT-04 template designer', () => {
       return undefined;
     });
     show('/admin/imports/templates');
-    await userEvent.click(await screen.findByRole('button', { name: 'Open template Standard locations' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit template Standard locations' }));
     expect(await screen.findByRole('heading', { name: 'Template Standard locations' })).toBeTruthy();
     const source = screen.getAllByLabelText(/^Column heading in the file/)[1] as HTMLInputElement;
     await userEvent.clear(source);

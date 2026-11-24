@@ -104,7 +104,7 @@
   "imp.designer.editTitle": "ٹیمپلیٹ {name}",
   "imp.designer.edit": "ترمیم",
   "imp.designer.view": "دیکھیں",
-  "imp.designer.edit.aria": "ٹیمپلیٹ {name} کھولیں",
+  "imp.designer.edit.aria": "ٹیمپلیٹ {name} کی ترمیم",
   "imp.designer.save": "نئے ورژن کے طور پر محفوظ کریں",
   "imp.designer.create": "ٹیمپلیٹ بنائیں",
   "imp.designer.created": "ٹیمپلیٹ بن گیا۔",
@@ -150,5 +150,6 @@
   "imp.test.result": "{total} قطاریں پڑھی گئیں، {errors} میں مسائل",
   "imp.test.sample": "پہلی قطاریں جیسی درآمد ہوتیں",
   "imp.refused.rollbackInUse": "یہ درآمد واپس نہیں ہو سکتی کیونکہ اس سے بنے ریکارڈ پر اب دوسرے ریکارڈ منحصر ہیں۔",
-  "imp.refused.rollbackForbidden": "آپ اس درآمد کو واپس نہیں کر سکتے: اس سے بنے ریکارڈ ہٹانے کے لیے ایک اجازت درکار ہے جو آپ کے پاس نہیں۔"
+  "imp.refused.rollbackForbidden": "آپ اس درآمد کو واپس نہیں کر سکتے: اس سے بنے ریکارڈ ہٹانے کے لیے ایک اجازت درکار ہے جو آپ کے پاس نہیں۔",
+  "imp.designer.view.aria": "ٹیمپلیٹ {name} — دیکھیں"
 }

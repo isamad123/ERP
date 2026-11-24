@@ -104,7 +104,7 @@
   "imp.designer.editTitle": "Template {name}",
   "imp.designer.edit": "Edit",
   "imp.designer.view": "View",
-  "imp.designer.edit.aria": "Open template {name}",
+  "imp.designer.edit.aria": "Edit template {name}",
   "imp.designer.save": "Save as a new version",
   "imp.designer.create": "Create the template",
   "imp.designer.created": "The template was created.",
@@ -150,5 +150,6 @@
   "imp.test.result": "{total} rows read, {errors} with problems",
   "imp.test.sample": "First rows as they would be imported",
   "imp.refused.rollbackInUse": "This import cannot be rolled back because other records now depend on what it created.",
-  "imp.refused.rollbackForbidden": "You may not roll back this import: removing what it created needs a permission you do not hold."
+  "imp.refused.rollbackForbidden": "You may not roll back this import: removing what it created needs a permission you do not hold.",
+  "imp.designer.view.aria": "View template {name}"
 }
