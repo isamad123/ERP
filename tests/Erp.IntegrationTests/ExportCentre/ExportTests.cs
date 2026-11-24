@@ -362,6 +362,30 @@ public sealed class ExportTests(TenancyFixture fx) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task S116b_FR_ADM_USR_09_the_user_list_is_exported_with_its_own_search_and_status_filter()
+    {
+        var invited = await _rig.Docs.UserAsync(Ct);
+        await _rig.ExecAsync("update iam.users set status = 'invited', username = 'expinv' || substr(id::text, 1, 8) where id = $1", Ct, invited);
+        object Body(string status) => new
+        {
+            source = "iam.user_overview", query = new { status }, search = "expinv", format = "csv", companyId = Company, language = "en",
+            columns = new[] { new { field = "username", label = "Username" }, new { field = "status", label = "Status" }, new { field = "roles", label = "Roles" } },
+        };
+        var (id, view) = await ExportAsync(Body("invited"));
+        Assert.True("done" == view.GetProperty("status").GetString(), view + await _rig.Jobs.DumpAsync(Ct, _rig.Code));
+        var lines = (await DownloadTextAsync(id)).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(3, lines.Length);
+        Assert.StartsWith("expinv", lines[2], StringComparison.Ordinal);
+        Assert.Contains(",invited,", lines[2], StringComparison.Ordinal);
+        var (otherId, other) = await ExportAsync(Body("active"));
+        Assert.Equal("done", other.GetProperty("status").GetString());
+        Assert.Equal(2, (await DownloadTextAsync(otherId)).Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Length);
+        // A person who may not read users cannot export them.
+        var noUsers = await PersonAsync(["itg.exports.run"]);
+        Assert.Equal(HttpStatusCode.Forbidden, (await _rig.PostJsonAsync(Exports, Body("invited"), Ct, noUsers)).Status);
+    }
+
+    [Fact]
     public async Task S116b_FR_ADM_DAT_04_a_request_for_an_unknown_list_column_format_or_company_is_refused_with_its_key()
     {
         async Task<string> TitleAsync(object body) => (await _rig.PostJsonAsync(Exports, body, Ct)).Json.GetProperty("title").GetString()!;
