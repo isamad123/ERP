@@ -158,14 +158,18 @@ public sealed class ImportProbe(IsolationFixture fx, WebApplication app)
         var uploaded = JsonDocument.Parse(body).RootElement.GetProperty("id").GetGuid();
         var (validated, committed, calendar) = (Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7());
         await using var d = await fx.OpenAdminAsync(code, ct);
-        await ExecAsync(d, "insert into ref.calendars (id, code, name_i18n, source, created_at, created_by, updated_at, updated_by) values ($1, $2, '{\"en\":\"Probe import calendar\"}', 'tenant', now(), $3, now(), $3)", ct, calendar, "PIMP" + Guid.NewGuid().ToString("N")[..8], system);
+        // The record the committed batch "created" is a user, the table the users type writes (a rollback deletes only tables the type declares, review finding 1).
+        await ExecAsync(d, """
+            insert into iam.users (id, username, email, display_name, language, time_zone, is_system, status, created_at, created_by, updated_at, updated_by)
+            values ($1, $2, $2 || '@probe.test', $2, 'en', 'Asia/Karachi', false, 'invited', now(), $3, now(), $3)
+            """, ct, calendar, "pimp" + Guid.NewGuid().ToString("N")[..8], system);
         await ExecAsync(d, """
             insert into itg.import_batches (id, company_id, template_id, file_id, total_rows, ok_rows, error_rows, status, file_name, mode, created_rows, updated_rows, validated_at, committed_at, created_at, created_by, updated_at, updated_by)
             select $1, company_id, template_id, file_id, 1, 1, 0, 'validated', file_name, mode, null, null, now(), null, now(), created_by, now(), created_by from itg.import_batches where id = $3
             union all
             select $2, company_id, template_id, file_id, 1, 1, 0, 'committed', file_name, mode, 1, 0, now(), now(), now(), created_by, now(), created_by from itg.import_batches where id = $3
             """, ct, validated, committed, uploaded);
-        await ExecAsync(d, "insert into itg.import_batch_rows (id, batch_id, row_no, table_name, record_id, action, record_version, created_at, created_by) values ($1, $2, 2, 'ref.calendars', $3, 'created', 1, now(), $4)", ct, Guid.CreateVersion7(), committed, calendar, system);
+        await ExecAsync(d, "insert into itg.import_batch_rows (id, batch_id, row_no, table_name, record_id, action, record_version, created_at, created_by) values ($1, $2, 2, 'iam.users', $3, 'created', 1, now(), $4)", ct, Guid.CreateVersion7(), committed, calendar, system);
         return new Material(admin, template, uploaded, validated, committed, fileName);
     }
 
