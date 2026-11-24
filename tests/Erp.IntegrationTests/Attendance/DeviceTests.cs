@@ -27,6 +27,11 @@ public sealed class DeviceTests(TenancyFixture fx) : IAsyncLifetime
     private static readonly string Secret = "dev-" + Guid.NewGuid().ToString("N");
     private static readonly string Other = "other-" + Guid.NewGuid().ToString("N");
     private AccessHarness _h = null!;
+    private static readonly TimeZoneInfo Karachi = TimeZoneInfo.FindSystemTimeZoneById("Asia/Karachi");
+
+    /// <summary>The company's date (Asia/Karachi) on the harness clock; the harness's own <c>Today</c> is the UTC date, a day behind after 19:00 UTC.</summary>
+    private DateOnly CompanyToday => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_h.Clock.UtcNow, Karachi).DateTime);
+
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -54,7 +59,7 @@ public sealed class DeviceTests(TenancyFixture fx) : IAsyncLifetime
         var person = (Guid)(await _h.RowAsync("hrm.persons", Guid.Empty, null, Ct))["id"]!;
         var hired = await _h.PostAsync(hr, "/api/hrm/employments", new
         {
-            personId = person, companyId = company, employeeType = "permanent", joiningDate = Iso(_h.Today.AddDays(-90)),
+            personId = person, companyId = company, employeeType = "permanent", joiningDate = Iso(CompanyToday.AddDays(-90)),
             assignment = new { orgUnitId = place.OrgUnit, branchId = place.Branch, title = "Officer" },
         }, Ct);
         Assert.True(hired.Status == HttpStatusCode.Created, hired.Body);
@@ -89,6 +94,7 @@ public sealed class DeviceTests(TenancyFixture fx) : IAsyncLifetime
     private async Task<Answer> MapAsync(World w, Guid? device, string number, string? consent = null, string? employeeNo = null)
     {
         var body = new Dictionary<string, object?> { ["companyId"] = w.Company, ["deviceUserNo"] = number, ["employeeNo"] = employeeNo ?? w.EmployeeNo };
+        body["validFrom"] = Iso(CompanyToday.AddDays(-1)); // a map starts on the company's day by default; punches of the last hours may fall on the day before
         if (device is { } d)
         {
             body["deviceId"] = d;
@@ -128,7 +134,7 @@ public sealed class DeviceTests(TenancyFixture fx) : IAsyncLifetime
     private async Task<Guid> UserWithAsync(Guid? company, params string[] permissions)
     {
         var user = await _h.UserAsync(Ct);
-        await _h.AssignAsync(user, await _h.RoleAsync(Ct, permissions), company, _h.Today.AddDays(-1), null, Ct);
+        await _h.AssignAsync(user, await _h.RoleAsync(Ct, permissions), company, CompanyToday.AddDays(-1), null, Ct);
         return user;
     }
 
@@ -366,14 +372,14 @@ public sealed class DeviceTests(TenancyFixture fx) : IAsyncLifetime
         var none = await MapAsync(w, device, "31");
         Assert.Equal(HttpStatusCode.BadRequest, none.Status);
         Assert.Contains("errors.hrm.device.consent_required", none.Body, StringComparison.Ordinal);
-        var future = await MapAsync(w, device, "31", Iso(_h.Today.AddDays(3)));
+        var future = await MapAsync(w, device, "31", Iso(CompanyToday.AddDays(3)));
         Assert.Contains("errors.hrm.device.consent_in_future", future.Body, StringComparison.Ordinal);
         Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.device_user_maps where company_id = $1", Ct, w.Company));
 
-        var ok = await MapAsync(w, device, "31", Iso(_h.Today.AddDays(-2)));
+        var ok = await MapAsync(w, device, "31", Iso(CompanyToday.AddDays(-2)));
         Assert.Equal(HttpStatusCode.Created, ok.Status);
-        Assert.Equal(Iso(_h.Today.AddDays(-2)), await _h.ScalarAsync<string>("select consent_at::date::text from hrm.device_user_maps where company_id = $1", Ct, w.Company));
-        Assert.Equal(HttpStatusCode.Conflict, (await MapAsync(w, device, "31", Iso(_h.Today))).Status); // the number is taken
+        Assert.Equal(Iso(CompanyToday.AddDays(-2)), await _h.ScalarAsync<string>("select consent_at::date::text from hrm.device_user_maps where company_id = $1", Ct, w.Company));
+        Assert.Equal(HttpStatusCode.Conflict, (await MapAsync(w, device, "31", Iso(CompanyToday))).Status); // the number is taken
         // A badge or PIN number for all devices (the kiosk's) involves no biometrics and needs no consent.
         Assert.Equal(HttpStatusCode.Created, (await MapAsync(w, null, "BADGE-1")).Status);
         Assert.Equal(HttpStatusCode.BadRequest, (await MapAsync(w, device, "32", "2024-01-01", employeeNo: "NO-SUCH")).Status);
@@ -390,7 +396,7 @@ public sealed class DeviceTests(TenancyFixture fx) : IAsyncLifetime
         var mapId = mapped.Json.GetProperty("map").GetProperty("id").GetGuid();
 
         // The employment ends on the 10th: the event of S1.20c/S1.25 reaches the dispatcher, which ends the mappings from the day after the last day.
-        var lastDay = _h.Today.AddDays(10);
+        var lastDay = CompanyToday.AddDays(10);
         await _h.ExecAsync("""
             insert into hrm.outbox_messages (id, occurred_at, event_type, aggregate_type, aggregate_id, payload, headers)
             values ($1, now(), 'hrm.employee_separated', 'hrm.employment', $2, $3::jsonb, '{}'::jsonb)
@@ -432,10 +438,10 @@ public sealed class DeviceTests(TenancyFixture fx) : IAsyncLifetime
         var (device, _) = await PushDeviceAsync(w);
         var mapped = await MapAsync(w, device, "51", "2024-01-01");
         var map = mapped.Json.GetProperty("map");
-        var ended = await _h.PostAsync(w.Hr, $"{Base}/device-maps/{map.GetProperty("id").GetGuid()}/end", new { endDate = Iso(_h.Today.AddDays(1)), rowVersion = map.GetProperty("rowVersion").GetInt64() }, Ct);
+        var ended = await _h.PostAsync(w.Hr, $"{Base}/device-maps/{map.GetProperty("id").GetGuid()}/end", new { endDate = Iso(CompanyToday.AddDays(1)), rowVersion = map.GetProperty("rowVersion").GetInt64() }, Ct);
         Assert.Equal(HttpStatusCode.OK, ended.Status);
         Assert.Equal(JsonValueKind.String, ended.Json.GetProperty("removalDueAt").ValueKind);
-        Assert.Equal(HttpStatusCode.BadRequest, (await _h.PostAsync(w.Hr, $"{Base}/device-maps/{map.GetProperty("id").GetGuid()}/end", new { endDate = Iso(_h.Today.AddDays(1)), rowVersion = ended.Json.GetProperty("rowVersion").GetInt64() }, Ct)).Status);
+        Assert.Equal(HttpStatusCode.BadRequest, (await _h.PostAsync(w.Hr, $"{Base}/device-maps/{map.GetProperty("id").GetGuid()}/end", new { endDate = Iso(CompanyToday.AddDays(1)), rowVersion = ended.Json.GetProperty("rowVersion").GetInt64() }, Ct)).Status);
         var pusher = await PusherAsync(w.Company);
         _h.Clock.Advance(TimeSpan.FromDays(3));
         var after = await PushAsync(pusher, device, Records(("51", _h.Clock.UtcNow.AddMinutes(-5), "in")));
@@ -600,7 +606,7 @@ public sealed class DeviceTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(JsonValueKind.Null, page2.Json.GetProperty("next").ValueKind);
         Assert.Empty((await _h.GetAsync(w.Hr, $"{Base}/punch-log?companyId={w.Company}&source=web", Ct)).Json.GetProperty("events").EnumerateArray());
         Assert.Empty((await _h.GetAsync(w.Hr, $"{Base}/punch-log?companyId={w.Company}&employeeNo=NOBODY", Ct)).Json.GetProperty("events").EnumerateArray());
-        Assert.Equal(3, (await _h.GetAsync(w.Hr, $"{Base}/punch-log?companyId={w.Company}&employeeNo={w.EmployeeNo}&from={Iso(_h.Today.AddDays(-2))}&to={Iso(_h.Today.AddDays(1))}", Ct)).Json.GetProperty("events").GetArrayLength());
+        Assert.Equal(3, (await _h.GetAsync(w.Hr, $"{Base}/punch-log?companyId={w.Company}&employeeNo={w.EmployeeNo}&from={Iso(CompanyToday.AddDays(-2))}&to={Iso(CompanyToday.AddDays(1))}", Ct)).Json.GetProperty("events").GetArrayLength());
         Assert.Equal(HttpStatusCode.BadRequest, (await _h.GetAsync(w.Hr, $"{Base}/punch-log?source=bogus", Ct)).Status);
         Assert.Equal(device, (await _h.GetAsync(w.Hr, $"{Base}/punch-log?companyId={w.Company}", Ct)).Json.GetProperty("events")[0].GetProperty("deviceId").GetGuid());
     }
