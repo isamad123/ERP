@@ -2,7 +2,7 @@
 // catalogue (S1.11b1: /settings/licence, /admin/jobs/runs, /admin/jobs/health, /admin/audit, /admin/documents/quarantine,
 // /documents/{id}); screens of later slices open "not available yet" until their slice adds the component.
 import { lazy } from 'react';
-import { Activity, BarChart3, Bell, Building2, CalendarDays, ClipboardCheck, Download, EyeOff, FileText, Filter, Flag, House, ImagePlus, ListChecks, KeyRound, Landmark, MapPin, Network, ScrollText, Settings, ShieldAlert, ShieldCheck, UserCog, Users, UsersRound, Workflow } from 'lucide-react';
+import { Activity, BarChart3, Bell, Building2, CalendarDays, ClipboardCheck, Download, EyeOff, FileText, Filter, Flag, House, ImagePlus, ListChecks, KeyRound, Landmark, MapPin, Network, Package, ScrollText, Settings, ShieldAlert, ShieldCheck, UserCog, Users, UsersRound, Workflow } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
 import { HomePage } from '../pages/home';
 
@@ -44,6 +44,8 @@ const NotifyScreen = lazy(() => import('./admin/notify'));
 const DocumentTemplatesScreen = lazy(() => import('./admin/doctemplates'));
 // S1.18b: the first-run set-up guide and the readiness checklist.
 const SetupScreen = lazy(() => import('./admin/setup'));
+// S1.23b: the pack manager (country and industry packs; the wizard's pack step links here).
+const PacksScreen = lazy(() => import('./admin/packs'));
 
 export const kernelScreens: ScreenDeclaration[] = [
   { id: 'home', path: '/', labelKey: 'nav.home', icon: House, group: 'home', allowedWhenLocked: false, component: HomePage },
@@ -81,6 +83,7 @@ export const kernelScreens: ScreenDeclaration[] = [
   // S1.15c (ruling Q1): "Numbering" and "Approval routes" after "Custom fields".
   { id: 'numbering', path: '/settings/numbering', labelKey: 'nav.numbering', icon: ClipboardCheck, group: 'administration', permission: 'cfg.numbering_schemes.read', component: NumberingScreen },
   { id: 'approval-routes', path: '/settings/approval-routes', labelKey: 'nav.approvalRoutes', icon: Workflow, group: 'administration', permission: 'wf.workflow_definitions.read', component: RoutesScreen },
+  { id: 'packs', path: '/settings/packs', labelKey: 'nav.packs', icon: Package, group: 'administration', permission: 'cfg.installed_packs.read', component: PacksScreen },
   // S1.15d (ruling Q1): "Notification texts" and "Document templates" after "Approval routes".
   { id: 'notification-texts', path: '/settings/notification-texts', labelKey: 'nav.notificationTexts', icon: Bell, group: 'administration', permission: 'ntf.templates.read', component: NotifyScreen },
   { id: 'document-templates', path: '/settings/document-templates', labelKey: 'nav.documentTemplates', icon: FileText, group: 'administration', permission: 'doc.templates.read', component: DocumentTemplatesScreen },
