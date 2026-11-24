@@ -46,7 +46,7 @@ internal static class LeaveJobWalk
                 var policies = new LeavePolicyReader(resolver);
                 var years = new LeaveYearSetting(settings);
                 var planner = new EntitlementPlanner(db, policies, years, locks, new WorkedTimeReader(db));
-                var recompute = new LeaveRecompute(db, planner, policies);
+                var recompute = new LeaveRecompute(db, planner, policies, years);
                 var applier = new EmploymentApplier(db, settings, resolver);
                 var query = db.Set<Employment>().AsNoTracking().Where(e => e.Status != "cancelled" && (e.SeparationDate == null || e.SeparationDate >= oldest));
                 if (job.CompanyId is { } company)
@@ -152,14 +152,16 @@ internal sealed class LeaveRecomputeJob(IClock clock) : IJobHandler
             var report = await recompute.RunAsync(e, types, today, ct).ConfigureAwait(false);
             differences += report.Differences.Count;
             employments++;
-            lines.AddRange(report.Differences.Select(d => LeaveRecomputeService.Line(e, d)));
+            // Only the first lines are kept (memory stays small however large the customer); the rest are counted (review S1.32a finding 12).
+            lines.AddRange(report.Differences.Take(MostLines - lines.Count).Select(d => LeaveRecomputeService.Line(e, d)));
         }, cancellationToken).ConfigureAwait(false);
-        foreach (var line in lines.Take(MostLines))
+        foreach (var line in lines)
         {
             await job.LogAsync("warning", line, cancellationToken).ConfigureAwait(false);
         }
 
         await job.LogAsync(differences > 0 ? "warning" : "info",
-            string.Create(CultureInfo.InvariantCulture, $"{differences} differences in the leave balances of {employments} employments; nothing was changed."), cancellationToken).ConfigureAwait(false);
+            string.Create(CultureInfo.InvariantCulture, $"{differences} differences in the leave balances of {employments} employments ({differences - lines.Count} not listed here; the recompute endpoint shows each employee's); nothing was changed."),
+            cancellationToken).ConfigureAwait(false);
     }
 }

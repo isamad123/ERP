@@ -31,6 +31,7 @@ public static class LeaveServices
         services.AddScoped<ILeaveTypeService, LeaveTypeService>();
         services.AddScoped<ILeaveLedgerService, LeaveLedgerService>();
         services.AddScoped<ILeaveRecomputeService, LeaveRecomputeService>();
+        services.AddScoped<Kernel.Contracts.Settings.ISettingChangeGuard, LeaveYearStartGuard>(); // review S1.32a finding 3
         return services;
     }
 

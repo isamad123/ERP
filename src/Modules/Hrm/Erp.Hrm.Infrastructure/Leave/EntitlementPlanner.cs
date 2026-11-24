@@ -28,9 +28,10 @@ internal sealed record EmploymentPlan(DateOnly Today, DateOnly HorizonFrom, IRea
 /// <list type="bullet">
 /// <item>Horizon: from the start of the previous leave year (company setting) to today; nothing before it is posted automatically. A type's
 /// latest opening balance is a cut-in: postings due before its date are part of the opening and are not due again.</item>
-/// <item>Yearly grants (fixed, or tenure or grade tiers yearly) are due on the first day of the leave year or the joining date when later,
-/// under the policy in force that day; the quantity is the year's quantity times the pro-rata share of the year the employment covers (its
-/// last day included when known).</item>
+/// <item>Yearly grants (fixed, or tenure or grade tiers yearly) are due on the first day of the first employed month of the leave year whose
+/// model is yearly (the joining date when later); the quantity is the year's quantity times the share of employed months under a yearly
+/// model (a mid-year change of model or policy gives each model its own months, review S1.32a finding 4) times the pro-rata share of the
+/// year the employment covers (its last day included when known).</item>
 /// <item>Monthly accruals (monthly, tiers monthly, per days or hours worked) are due on the month's last day (the employment's last day in its
 /// final month) under the policy in force that day; worked-time accruals only once the month's attendance is locked.</item>
 /// <item>Tenure counts whole months of service from the service start date; the grade is the assignment's grade on the due date.</item>
@@ -81,45 +82,22 @@ internal sealed class EntitlementPlanner(HrmDbContext db, LeavePolicyReader poli
             }
         }
 
-        // The yearly due dates of every leave-year start month in use (the company's and any a policy gives a type).
-        var startMonths = new SortedSet<int> { settingMonth };
-        foreach (var month in at.Values.SelectMany(a => a.Rules.Values).Select(r => r.YearStartMonth).OfType<int>())
-        {
-            startMonths.Add(month);
-        }
-
-        if (await policies.AtAsync(e.Id, lastDue, ct).ConfigureAwait(false) is { } current)
-        {
-            foreach (var month in current.Rules.Values.Select(r => r.YearStartMonth).OfType<int>())
-            {
-                startMonths.Add(month);
-            }
-        }
-
-        var yearDue = new SortedSet<DateOnly>();
-        foreach (var sm in startMonths)
-        {
-            for (var ly = LeaveYears.Of(first, sm); ly.Start <= lastDue; ly = LeaveYears.For(ly.Year + 1, sm))
-            {
-                var due = ly.Start > span.Joining ? ly.Start : span.Joining;
-                if (due >= first && due <= lastDue)
-                {
-                    yearDue.Add(due);
-                }
-            }
-        }
-
-        foreach (var d in yearDue.Where(d => !at.ContainsKey(d)))
-        {
-            if (await policies.AtAsync(e.Id, d, ct).ConfigureAwait(false) is { } p)
-            {
-                at[d] = p;
-            }
-        }
-
+        var current = await policies.AtAsync(e.Id, lastDue, ct).ConfigureAwait(false);
         var postings = new List<PlannedPosting>();
         foreach (var type in types.Where(t => t.IsActive && !t.IsDeleted))
         {
+            // Yearly grants, one per leave year: under the model in force at each month's end (review S1.32a finding 4), the year's quantity
+            // times the share of the employed months whose model is yearly, times the pro-rata share of the year the employment covers. A
+            // policy that starts, or turns monthly, in the middle of a year so gives the yearly grant only for its own months.
+            var sm = current?.For(type.Code)?.YearStartMonth ?? settingMonth;
+            for (var ly = LeaveYears.Of(first, sm); ly.Start <= lastDue; ly = LeaveYears.For(ly.Year + 1, sm))
+            {
+                if (await YearlyAsync(e, type, ly, span, first, lastDue, today, ct).ConfigureAwait(false) is { } grant)
+                {
+                    postings.Add(grant);
+                }
+            }
+
             foreach (var (d, policy) in at)
             {
                 if (policy.For(type.Code) is not { } rules || policy.Resolution.Policy is not { } match)
@@ -129,22 +107,7 @@ internal sealed class EntitlementPlanner(HrmDbContext db, LeavePolicyReader poli
 
                 var rule = rules.Entitlement;
                 var ly = LeaveYears.Of(d, rules.YearStartMonth ?? settingMonth);
-                if (rule.IsYearly && yearDue.Contains(d) && d == (ly.Start > span.Joining ? ly.Start : span.Joining))
-                {
-                    var service = EntitlementRules.ServiceMonths(span.ServiceStart, d);
-                    var grade = await GradeAsync(policy.Resolution.Attributes.GradeId, ct).ConfigureAwait(false);
-                    if (EntitlementRules.TierQuantity(rule, service, grade) is { } full)
-                    {
-                        var fraction = EntitlementRules.Fraction(rule.ProRata, ly.Start, ly.End, span);
-                        var q = EntitlementRules.Earned(rule, full, ly.Start, ly.End, span);
-                        var leaver = span.LastDay is { } end && ly.Contains(end) && end <= today ? end : (DateOnly?)null;
-                        postings.Add(new PlannedPosting(type.Id, type.Code, EntitlementRules.YearKey(ly.Year), "grant", ly.Year, d, q, match.PolicyId, match.VersionId, match.Version,
-                            rule.Model, Inputs(("fullQuantity", full), ("fraction", decimal.Round(fraction, 6)), ("proRata", rule.ProRata), ("serviceMonths", service), ("grade", grade),
-                                ("yearStart", ly.Start), ("yearEnd", ly.End)), leaver));
-                    }
-                }
-
-                if (rule.IsMonthly && monthDue.Contains(d))
+                if (rule.IsMonthly)
                 {
                     var mStart = new DateOnly(d.Year, d.Month, 1);
                     var mEnd = mStart.AddMonths(1).AddDays(-1);
@@ -184,6 +147,61 @@ internal sealed class EntitlementPlanner(HrmDbContext db, LeavePolicyReader poli
             .ToDictionaryAsync(x => x.Key, x => x.Date, ct).ConfigureAwait(false);
         return new EmploymentPlan(today, horizon,
             [.. postings.Where(p => p.Quantity != 0m && !(openings.TryGetValue(p.LeaveTypeId, out var o) && p.EntryDate < o)).OrderBy(p => p.EntryDate).ThenBy(p => p.LeaveTypeCode, StringComparer.Ordinal)]);
+    }
+
+    /// <summary>
+    /// The yearly grant of one leave year, or null: due on the first day of the first employed month whose model is yearly (the joining date
+    /// when later), under that month's policy; the quantity is the year's (tier by service on the due date, grade of that month) times the
+    /// share of employed months under a yearly model, times the pro-rata share of the year (the employment's last day included when known).
+    /// </summary>
+    private async Task<PlannedPosting?> YearlyAsync(Employment e, LeaveType type, LeaveYearSpan ly, EmploymentSpan span, DateOnly first, DateOnly lastDue, DateOnly today, CancellationToken ct)
+    {
+        var employed = 0;
+        var yearly = new List<(DateOnly Month, LeaveTypeRules Rules, LeavePolicyAt Policy)>();
+        for (var m = ly.Start; m <= ly.End; m = m.AddMonths(1))
+        {
+            var mEnd = m.AddMonths(1).AddDays(-1);
+            if (mEnd < span.Joining || (span.LastDay is { } last && m > last))
+            {
+                continue; // a month without the employment counts for neither model (pro-rata takes care of it)
+            }
+
+            employed++;
+            var probe = span.LastDay is { } end && end < mEnd ? end : mEnd;
+            if (await policies.AtAsync(e.Id, probe, ct).ConfigureAwait(false) is { } p && p.For(type.Code) is { Entitlement.IsYearly: true } r && p.Resolution.Policy is not null)
+            {
+                yearly.Add((m, r, p));
+            }
+        }
+
+        if (yearly.Count == 0)
+        {
+            return null;
+        }
+
+        var (month, rules, policy) = yearly[0];
+        var due = month > span.Joining ? month : span.Joining;
+        if (due < first || due > lastDue)
+        {
+            return null;
+        }
+
+        var rule = rules.Entitlement;
+        var match = policy.Resolution.Policy!;
+        var service = EntitlementRules.ServiceMonths(span.ServiceStart, due);
+        var grade = await GradeAsync(policy.Resolution.Attributes.GradeId, ct).ConfigureAwait(false);
+        if (EntitlementRules.TierQuantity(rule, service, grade) is not { } full)
+        {
+            return null;
+        }
+
+        var share = (decimal)yearly.Count / employed;
+        var fraction = EntitlementRules.Fraction(rule.ProRata, ly.Start, ly.End, span);
+        var q = EntitlementRules.Round(full * share * fraction, rule.Rounding, rule.RoundingStep);
+        var leaver = span.LastDay is { } leaving && ly.Contains(leaving) && leaving <= today ? leaving : (DateOnly?)null;
+        return new PlannedPosting(type.Id, type.Code, EntitlementRules.YearKey(ly.Year), "grant", ly.Year, due, q, match.PolicyId, match.VersionId, match.Version,
+            rule.Model, Inputs(("fullQuantity", full), ("yearlyMonths", yearly.Count), ("employedMonths", employed), ("fraction", decimal.Round(fraction, 6)), ("proRata", rule.ProRata),
+                ("serviceMonths", service), ("grade", grade), ("yearStart", ly.Start), ("yearEnd", ly.End)), leaver);
     }
 
     private async Task<string?> GradeAsync(Guid? gradeId, CancellationToken ct)

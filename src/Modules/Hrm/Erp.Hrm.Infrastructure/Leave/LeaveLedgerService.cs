@@ -22,7 +22,7 @@ namespace Erp.Hrm.Infrastructure.Leave;
 /// zero, or below the negative limit the policy allows, on its date or later in the leave year (one step under the employment and type lock,
 /// ruling Q8). A date in a locked attendance period is refused (FR-XM-26). Balances are sums of the leave year's entries up to a date.
 /// </summary>
-internal sealed class LeaveLedgerService(
+internal sealed partial class LeaveLedgerService(
     HrmDbContext db,
     IClock clock,
     ICurrentActor actor,
@@ -48,6 +48,7 @@ internal sealed class LeaveLedgerService(
     public const string NotReversible = "errors.hrm.leave.not_reversible";
     public const string AlreadyReversed = "errors.hrm.leave.already_reversed";
     public const string ReversalDate = "errors.hrm.leave.reversal_date";
+    public const string SettlesPeriod = "errors.hrm.leave.settles_period";
 
     /// <summary>The answer when no leave policy covers a type for the employee (S1.23 ruling): requests are refused with it (S1.32b).</summary>
     public const string NoPolicy = "errors.hrm.leave.no_policy";
@@ -60,6 +61,10 @@ internal sealed class LeaveLedgerService(
     private static readonly string[] OwnStatuses = ["pre_joining", "active", "on_notice"];
 
     private DbContextScopeSource Source => new(db);
+
+    /// <summary>A period key as the recompute lists it: a yearly grant <c>Y2026</c> or a monthly accrual <c>M2026-03</c>.</summary>
+    [System.Text.RegularExpressions.GeneratedRegex("^(Y[0-9]{4}|M[0-9]{4}-(0[1-9]|1[0-2]))$")]
+    private static partial System.Text.RegularExpressions.Regex PeriodKey();
 
     public async Task<PeopleResult> PostAsync(Guid employmentId, LeavePostRequest request, CancellationToken cancellationToken)
     {
@@ -128,6 +133,13 @@ internal sealed class LeaveLedgerService(
             errors["expiresOn"] = [ExpiryOrder];
         }
 
+        // An adjustment may settle one automatic period the recompute listed (review S1.32a finding 1).
+        var settles = request.SettlesPeriod?.Trim();
+        if (settles is { Length: > 0 } && (request.Kind != "adjustment" || !PeriodKey().IsMatch(settles)))
+        {
+            errors["settlesPeriod"] = [SettlesPeriod];
+        }
+
         var reason = request.Reason?.Trim();
         if (string.IsNullOrEmpty(reason))
         {
@@ -155,7 +167,7 @@ internal sealed class LeaveLedgerService(
         var row = new LeaveLedger
         {
             Id = Guid.CreateVersion7(now), CompanyId = e.CompanyId, EmploymentId = e.Id, LeaveTypeId = type!.Id, LeaveYear = year.Year, EntryDate = date, Kind = request.Kind!,
-            Quantity = quantity, ExpiresOn = request.ExpiresOn, SourceType = LeaveLedgerStore.Manual, PolicyVersionId = policy?.Resolution.Policy?.VersionId,
+            Quantity = quantity, ExpiresOn = request.ExpiresOn, SourceType = settles is { Length: > 0 } ? LeaveLedgerStore.SettlementPrefix + settles : LeaveLedgerStore.Manual, PolicyVersionId = policy?.Resolution.Policy?.VersionId,
             Reason = reason, CreatedAt = now, CreatedBy = actor.UserId,
         };
         return await WriteAsync(row, rules, async ct =>
@@ -204,6 +216,18 @@ internal sealed class LeaveLedgerService(
         if (date < entry.EntryDate || date > span.End)
         {
             return PeopleResult.Fields(new Dictionary<string, string[]> { ["entryDate"] = [ReversalDate] });
+        }
+
+        // As for a new entry: nothing on a cancelled employment or after its last day (review S1.32a finding 11).
+        var employment = await db.Set<Employment>().AsNoTracking().FirstAsync(x => x.Id == entry.EmploymentId, cancellationToken).ConfigureAwait(false);
+        if (employment.Status == "cancelled")
+        {
+            return PeopleResult.Conflict(EmploymentCancelled);
+        }
+
+        if (employment.SeparationDate is { } lastDay && date > lastDay)
+        {
+            return PeopleResult.Fields(new Dictionary<string, string[]> { ["entryDate"] = [AfterLeaving] });
         }
 
         if (await locks.IsLockedAsync(entry.EmploymentId, date, cancellationToken).ConfigureAwait(false))
@@ -381,8 +405,9 @@ internal sealed class LeaveLedgerService(
         ["reversesEntryId"] = x.ReversesEntryId,
         ["reversedById"] = reversedById,
         ["reason"] = x.SourceType == LeaveLedgerStore.Automatic ? null : x.Reason,
-        ["period"] = x.SourceType == LeaveLedgerStore.Automatic ? x.Reason : null,
-        ["explanation"] = "hrm.leave.entry." + (x.ReversesEntryId is not null ? "reversal" : x.SourceType == LeaveLedgerStore.Automatic ? "automatic_" + x.Kind : x.Kind),
+        ["period"] = x.SourceType == LeaveLedgerStore.Automatic ? x.Reason : LeaveLedgerStore.SettledPeriod(x.SourceType),
+        ["explanation"] = "hrm.leave.entry." + (x.ReversesEntryId is not null ? "reversal" : x.SourceType == LeaveLedgerStore.Automatic ? "automatic_" + x.Kind
+            : LeaveLedgerStore.SettledPeriod(x.SourceType) is not null ? "settlement" : x.Kind),
         ["createdAt"] = x.CreatedAt,
         ["createdBy"] = x.CreatedBy,
     };

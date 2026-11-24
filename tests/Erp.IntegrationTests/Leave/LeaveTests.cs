@@ -131,6 +131,24 @@ public sealed class LeaveTests(TenancyFixture fx) : IAsyncLifetime
         public Task<bool> IsLockedAsync(Guid employmentId, DateOnly day, CancellationToken cancellationToken) => Task.FromResult(true);
     }
 
+    /// <summary>A new version of a leave policy with these types, activated from a date (after the version in force started).</summary>
+    private async Task NewVersionAsync(Org o, Guid policy, object types, DateOnly from)
+    {
+        var draft = await _h.PostAsync(o.Admin, $"{PolicyTestSupport.Policies}/{policy}/versions", new { parameters = new { types } }, Ct);
+        Assert.True(draft.Status is HttpStatusCode.OK or HttpStatusCode.Created, draft.Body);
+        var draftId = await _h.ScalarAsync<Guid>("select id from hrm.policy_versions where policy_id = $1 and status = 'draft'", Ct, policy);
+        var draftVersion = await _h.ScalarAsync<long>("select row_version from hrm.policy_versions where id = $1", Ct, draftId);
+        var activated = await _h.PostAsync(o.Admin, $"/api/hrm/policy-versions/{draftId}/activate", new { effectiveFrom = Iso(from), rowVersion = draftVersion }, Ct);
+        Assert.True(activated.Status == HttpStatusCode.OK, activated.Body);
+    }
+
+    private async Task<List<JsonElement>> RecomputeAsync(Org o, Guid e)
+    {
+        var report = await _h.GetAsync(o.Admin, $"{Employments}/{e}/leave-recompute", Ct);
+        Assert.True(report.Status == HttpStatusCode.OK, report.Body);
+        return [.. report.Json.GetProperty("differences").EnumerateArray()];
+    }
+
     /// <summary>Month ends from the first month to today (the accruals due).</summary>
     private int MonthEndsFrom(DateOnly firstMonth)
     {
@@ -466,6 +484,10 @@ public sealed class LeaveTests(TenancyFixture fx) : IAsyncLifetime
         await RunJobAsync("hrm.leave_accrual", e);
         Assert.Equal(count, await CountAsync(e));
 
+        // Nothing is reversed after the employee's last day (review S1.32a finding 11).
+        var grantId = await _h.ScalarAsync<Guid>("select id from hrm.leave_ledger where employment_id = $1 and reason = $2", Ct, e, "Y" + Today.Year);
+        Assert.Contains("errors.hrm.leave.after_leaving", (await _h.PostAsync(o.Admin, $"/api/hrm/leave-ledger/{grantId}/reverse", new { reason = "left last year" }, Ct)).Body, StringComparison.Ordinal);
+
         // This year's grant was given before the end was recorded: the job never takes it back by itself; the recompute shows it for HR.
         Assert.Equal(12m, await SumAsync(e, annual, Today.Year));
         var report = await _h.GetAsync(o.Admin, $"{Employments}/{e}/leave-recompute", Ct);
@@ -501,13 +523,22 @@ public sealed class LeaveTests(TenancyFixture fx) : IAsyncLifetime
     {
         var o = await OrgAsync();
         var (casual, _) = await TypeAsync(o, "CASUAL");
-        await PolicyAsync(o, new[] { new { leaveType = "CASUAL", entitlement = new { model = "monthly_accrual", quantity = 1, proRata = "none" } } });
+        var (annual, _) = await TypeAsync(o, "ANNUAL");
+        await PolicyAsync(o, new object[]
+        {
+            new { leaveType = "CASUAL", entitlement = new { model = "monthly_accrual", quantity = 1, proRata = "none" } },
+            new { leaveType = "ANNUAL", entitlement = new { model = "fixed_yearly", quantity = 12, proRata = "none" } },
+        });
         var e = await HireAsync(o, new DateOnly(Prev - 3, 1, 1));
         var cutIn = new DateOnly(Today.Year, 1, 1);
         Assert.Equal(HttpStatusCode.Created, (await PostEntryAsync(o.Admin, e, casual, "opening", 9m, cutIn)).Status);
+        Assert.Equal(HttpStatusCode.Created, (await PostEntryAsync(o.Admin, e, annual, "opening", 4m, cutIn)).Status);
         await RunJobAsync("hrm.leave_accrual", e);
         Assert.Equal(0m, await SumAsync(e, casual, Prev)); // the previous year is inside the opening
         Assert.Equal(9m + MonthEndsFrom(cutIn), await SumAsync(e, casual, Today.Year));
+        // An opening is the balance before its own day's entitlements: the yearly grant due that day is added (review S1.32a finding 6).
+        Assert.Equal(0m, await SumAsync(e, annual, Prev));
+        Assert.Equal(16m, await SumAsync(e, annual, Today.Year));
     }
 
     [Fact]
@@ -582,6 +613,82 @@ public sealed class LeaveTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(before, await CountAsync(e));
 
         Assert.Equal(HttpStatusCode.Forbidden, (await _h.GetAsync(await _h.UserAsync(Ct), $"{Employments}/{e}/leave-recompute", Ct)).Status);
+
+        // HR settles July by an adjustment naming the period: the difference is gone, the others stay (review S1.32a finding 1).
+        var settle = await _h.PostAsync(o.Admin, $"{Employments}/{e}/leave-ledger", new { leaveTypeId = casual, kind = "adjustment", quantity = 1, entryDate = Iso(new DateOnly(Today.Year, 1, 1)), reason = "July at the new rate", settlesPeriod = $"M{Prev}-07" }, Ct);
+        Assert.True(settle.Status == HttpStatusCode.Created, settle.Body);
+        Assert.Equal($"M{Prev}-07", settle.Json.GetProperty("period").GetString());
+        Assert.Equal("hrm.leave.entry.settlement", settle.Json.GetProperty("explanation").GetString());
+        var after = await RecomputeAsync(o, e);
+        Assert.DoesNotContain(after, d => d.GetProperty("period").GetString() == $"M{Prev}-07");
+        Assert.Contains(after, d => d.GetProperty("period").GetString() == $"M{Prev}-08" && d.GetProperty("kind").GetString() == "differs");
+        Assert.Contains("errors.hrm.leave.settles_period", (await _h.PostAsync(o.Admin, $"{Employments}/{e}/leave-ledger", new { leaveTypeId = casual, kind = "grant", quantity = 1, entryDate = Iso(new DateOnly(Today.Year, 1, 1)), reason = "x", settlesPeriod = $"M{Prev}-08" }, Ct)).Body, StringComparison.Ordinal);
+        Assert.Contains("errors.hrm.leave.settles_period", (await _h.PostAsync(o.Admin, $"{Employments}/{e}/leave-ledger", new { leaveTypeId = casual, kind = "adjustment", quantity = 1, entryDate = Iso(new DateOnly(Today.Year, 1, 1)), reason = "x", settlesPeriod = "July" }, Ct)).Body, StringComparison.Ordinal);
+
+        // The job leaves a settled period to HR: rerunning it posts nothing for July.
+        var count = await CountAsync(e);
+        await RunJobAsync("hrm.leave_accrual", e);
+        Assert.Equal(count, await CountAsync(e));
+    }
+
+    [Fact]
+    public async Task FR_HRM_LVE_14_a_retired_type_keeps_its_entries_without_being_reported_as_unexpected()
+    {
+        var o = await OrgAsync();
+        var (casual, version) = await TypeAsync(o, "CASUAL");
+        await PolicyAsync(o, new[] { new { leaveType = "CASUAL", entitlement = new { model = "monthly_accrual", quantity = 1, proRata = "none" } } });
+        var e = await HireAsync(o, new DateOnly(Prev, 1, 1));
+        await RunJobAsync("hrm.leave_accrual", e);
+        Assert.Empty(await RecomputeAsync(o, e));
+        Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(o.Admin, $"{Types}/{casual}", new { isActive = false, rowVersion = version }, Ct)).Status);
+        Assert.Empty(await RecomputeAsync(o, e)); // review S1.32a finding 2
+        Assert.True((await BalanceAsync(o.Admin, e, casual)).GetProperty("balance").GetDecimal() > 0m); // the balance stays readable
+    }
+
+    [Fact]
+    public async Task FR_HRM_LVE_02_the_leave_year_start_cannot_move_once_entries_exist_and_a_moved_policy_year_is_listed()
+    {
+        var o = await OrgAsync();
+        var tenantAdmin = await _h.UserAsync(Ct, null, "tenant_admin");
+        const string setting = "/api/cfg/settings/hrm.leave.year_start_month";
+        var free = await _h.PutAsync(tenantAdmin, setting, new { layer = "company", scopeId = o.Company, value = 1, reason = "before the first entry" }, Ct);
+        Assert.True(free.Status == HttpStatusCode.OK, free.Body); // no entries yet: allowed
+        var (annual, _) = await TypeAsync(o, "ANNUAL");
+        var policy = await PolicyAsync(o, new[] { new { leaveType = "ANNUAL", entitlement = new { model = "fixed_yearly", quantity = 12, proRata = "none" } } });
+        var e = await HireAsync(o, new DateOnly(Prev, 1, 1));
+        await RunJobAsync("hrm.leave_accrual", e);
+        var refused = await _h.PutAsync(tenantAdmin, setting, new { layer = "company", scopeId = o.Company, value = 7, reason = "fiscal year" }, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.Status); // review S1.32a finding 3
+        Assert.Equal("errors.hrm.leave.year_start_fixed", refused.Text("title"));
+        Assert.Equal(12m, await SumAsync(e, annual, Today.Year));
+
+        // A policy version giving the type another start month from this year: this year's grant now falls in another year, and the check says so.
+        await NewVersionAsync(o, policy, new[] { new { leaveType = "ANNUAL", yearStartMonth = 7, entitlement = new { model = "fixed_yearly", quantity = 12, proRata = "none" } } }, new DateOnly(Today.Year, 1, 1));
+        Assert.Contains(await RecomputeAsync(o, e), d => d.GetProperty("kind").GetString() == "year_moved" && d.GetProperty("leaveYear").GetInt32() == Today.Year);
+    }
+
+    [Fact]
+    public async Task FR_HRM_LVE_02_a_change_from_a_yearly_grant_to_monthly_accrual_in_mid_year_gives_each_model_its_months()
+    {
+        var o = await OrgAsync();
+        var (annual, _) = await TypeAsync(o, "ANNUAL");
+        var policy = await PolicyAsync(o, new[] { new { leaveType = "ANNUAL", entitlement = new { model = "fixed_yearly", quantity = 12, proRata = "none" } } });
+        await NewVersionAsync(o, policy, new[] { new { leaveType = "ANNUAL", entitlement = new { model = "monthly_accrual", quantity = 1, proRata = "none" } } }, new DateOnly(Prev, 7, 1));
+        var e = await HireAsync(o, new DateOnly(Prev - 1, 1, 1));
+        await RunJobAsync("hrm.leave_accrual", e);
+        Assert.Equal(6m, await _h.ScalarAsync<decimal>("select quantity from hrm.leave_ledger where employment_id = $1 and reason = $2", Ct, e, "Y" + Prev)); // January to June yearly
+        Assert.Equal(12m, await SumAsync(e, annual, Prev)); // plus July to December monthly: 12, not 18 (review S1.32a finding 4)
+        Assert.Empty(await RecomputeAsync(o, e));
+
+        // The other way round: monthly until June, yearly from July gives the yearly grant for July to December only, due on 1 July.
+        var o2 = await OrgAsync();
+        var (annual2, _) = await TypeAsync(o2, "ANNUAL");
+        var policy2 = await PolicyAsync(o2, new[] { new { leaveType = "ANNUAL", entitlement = new { model = "monthly_accrual", quantity = 1, proRata = "none" } } });
+        await NewVersionAsync(o2, policy2, new[] { new { leaveType = "ANNUAL", entitlement = new { model = "fixed_yearly", quantity = 12, proRata = "none" } } }, new DateOnly(Prev, 7, 1));
+        var e2 = await HireAsync(o2, new DateOnly(Prev - 1, 1, 1));
+        await RunJobAsync("hrm.leave_accrual", e2);
+        Assert.Equal(new DateOnly(Prev, 7, 1), await _h.ScalarAsync<DateOnly>("select entry_date from hrm.leave_ledger where employment_id = $1 and reason = $2", Ct, e2, "Y" + Prev));
+        Assert.Equal(12m, await SumAsync(e2, annual2, Prev));
     }
 
     // ------------------------------------------------------------------ who sees and changes what (permissions and scopes)

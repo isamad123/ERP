@@ -603,8 +603,8 @@
         "ur": "وہ مہینہ (1 = جنوری سے 12 = دسمبر) جس سے رخصت کا سال شروع ہوتا ہے"
       },
       "help": {
-        "en": "Leave balances are counted per leave year. A yearly grant is given at the start of the leave year (or on joining), and the year-end carries forward, lapses or pays out what is left. A leave policy can give one leave type a different start month.",
-        "ur": "رخصت کا بقایا ہر رخصتی سال کے حساب سے گنا جاتا ہے۔ سالانہ عطا رخصتی سال کے آغاز پر (یا شمولیت پر) دی جاتی ہے، اور سال کے اختتام پر بچی ہوئی رخصت آگے منتقل، ختم یا ادا کی جاتی ہے۔ رخصت کی پالیسی کسی ایک قسم کے لیے آغاز کا دوسرا مہینہ مقرر کر سکتی ہے۔"
+        "en": "Leave balances are counted per leave year. A yearly grant is given at the start of the leave year (or on joining), and the year-end carries forward, lapses or pays out what is left. A leave policy can give one leave type a different start month. Choose it before the first leave is granted: once a company has leave entries the month can no longer change, because past balances would move to other years.",
+        "ur": "رخصت کا بقایا ہر رخصتی سال کے حساب سے گنا جاتا ہے۔ سالانہ عطا رخصتی سال کے آغاز پر (یا شمولیت پر) دی جاتی ہے، اور سال کے اختتام پر بچی ہوئی رخصت آگے منتقل، ختم یا ادا کی جاتی ہے۔ رخصت کی پالیسی کسی ایک قسم کے لیے آغاز کا دوسرا مہینہ مقرر کر سکتی ہے۔ پہلی رخصت عطا ہونے سے پہلے اسے منتخب کریں: کمپنی میں رخصت کے اندراجات ہونے کے بعد مہینہ نہیں بدلا جا سکتا، کیونکہ پچھلا بقایا دوسرے سالوں میں چلا جائے گا۔"
       }
     }
   ],

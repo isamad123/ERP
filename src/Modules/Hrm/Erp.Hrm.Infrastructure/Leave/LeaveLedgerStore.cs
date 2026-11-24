@@ -22,16 +22,32 @@ internal static class LeaveLedgerStore
     /// <summary>Source type of a reversal (source id: the reversed entry).</summary>
     public const string Reversal = "hrm.leave_reversal";
 
+    /// <summary>
+    /// Source type prefix of HR's adjustment that settles a difference of one automatic period: the period key follows (<c>…:M2026-03</c>), so
+    /// the recompute counts it with that period (review S1.32a finding 1).
+    /// </summary>
+    public const string SettlementPrefix = "hrm.leave_settlement:";
+
     /// <summary>The kinds HR posts by hand.</summary>
     public static readonly string[] ManualKinds = ["opening", "grant", "adjustment"];
 
     /// <summary>The kinds a reversal may undo here; usage, year-end, transfer and comp-off entries are undone by their own processes (S1.32b).</summary>
     public static readonly string[] ReversibleKinds = ["opening", "grant", "accrual", "adjustment"];
 
-    /// <summary>Serializes the writes of one employment and leave type until the transaction ends.</summary>
-    public static Task LockAsync(HrmDbContext db, Guid employmentId, Guid leaveTypeId, CancellationToken ct) =>
-        db.Database.ExecuteSqlInterpolatedAsync(
-            $"select pg_advisory_xact_lock(hashtextextended({"hrm.leave:" + employmentId.ToString("D", CultureInfo.InvariantCulture) + ":" + leaveTypeId.ToString("D", CultureInfo.InvariantCulture)}, 0))", ct);
+    /// <summary>
+    /// Serializes the writes of one employment and leave type until the transaction ends, and holds the type row for share, so a change of the
+    /// type's code, counting or unit waits for the entry and then sees it (review S1.32a finding 9).
+    /// </summary>
+    public static async Task LockAsync(HrmDbContext db, Guid employmentId, Guid leaveTypeId, CancellationToken ct)
+    {
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"select pg_advisory_xact_lock(hashtextextended({"hrm.leave:" + employmentId.ToString("D", CultureInfo.InvariantCulture) + ":" + leaveTypeId.ToString("D", CultureInfo.InvariantCulture)}, 0))", ct).ConfigureAwait(false);
+        await db.Database.ExecuteSqlInterpolatedAsync($"select 1 from hrm.leave_types where id = {leaveTypeId} for share", ct).ConfigureAwait(false);
+    }
+
+    /// <summary>The period key of a settlement's source type, or null.</summary>
+    public static string? SettledPeriod(string? sourceType) =>
+        sourceType is not null && sourceType.StartsWith(SettlementPrefix, StringComparison.Ordinal) ? sourceType[SettlementPrefix.Length..] : null;
 
     /// <summary>Adds an automatic posting once; false when it was already there.</summary>
     public static async Task<bool> InsertAutomaticAsync(

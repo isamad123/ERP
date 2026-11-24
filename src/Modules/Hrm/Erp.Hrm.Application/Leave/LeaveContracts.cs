@@ -21,9 +21,11 @@ public sealed record LeaveTypeRequest(
 
 /// <summary>
 /// A manual ledger entry (Build item 4): an opening balance, a grant or an adjustment of one leave type, dated, with a reason. The quantity is
-/// in the type's unit; positive adds, negative takes away.
+/// in the type's unit; positive adds, negative takes away. An adjustment may name the automatic period it settles (<c>Y2026</c> or
+/// <c>M2026-03</c>, as the recompute lists it): the recompute then counts it with that period, so a settled difference disappears (review
+/// S1.32a finding 1).
 /// </summary>
-public sealed record LeavePostRequest(Guid? LeaveTypeId, string? Kind, decimal? Quantity, DateOnly? EntryDate, DateOnly? ExpiresOn, string? Reason);
+public sealed record LeavePostRequest(Guid? LeaveTypeId, string? Kind, decimal? Quantity, DateOnly? EntryDate, DateOnly? ExpiresOn, string? Reason, string? SettlesPeriod = null);
 
 /// <summary>The reversal of one entry (FR-XM-06): dated on the entry's own date unless another date of the same leave year is given.</summary>
 public sealed record LeaveReverseRequest(DateOnly? EntryDate, string? Reason);
