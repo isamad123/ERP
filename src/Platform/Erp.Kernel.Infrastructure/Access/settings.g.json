@@ -1789,6 +1789,35 @@
         "en": "Plain text, up to 2000 characters. Leave empty to show the English notice.",
         "ur": "سادہ متن، زیادہ سے زیادہ 2000 حروف۔ خالی ہو تو انگریزی اطلاع دکھائی جاتی ہے۔"
       }
+    },
+    {
+      "key": "cfg.packs.requires_approval",
+      "module": "cfg",
+      "type": "bool",
+      "default": false,
+      "validation": {},
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": true,
+      "area": "general",
+      "unit": null,
+      "name": {
+        "en": "Approval of pack installs",
+        "ur": "پیک کی تنصیب کی منظوری"
+      },
+      "description": {
+        "en": "Installing or upgrading a country or industry pack needs a second person's approval",
+        "ur": "ملکی یا صنعتی پیک کی تنصیب یا اپ گریڈ کے لیے دوسرے شخص کی منظوری درکار"
+      },
+      "help": {
+        "en": "An install, an upgrade or taking a pack value is applied only after another person with the approval permission approves it. The person who asked can never approve it.",
+        "ur": "تنصیب، اپ گریڈ یا پیک کی قدر اپنانا اسی وقت لاگو ہوتا ہے جب منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔"
+      }
     }
   ],
   "flags": []

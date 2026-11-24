@@ -27,6 +27,30 @@
     },
     "isOverridden": {
       "type": "boolean"
+    },
+    "contentHash": {
+      "type": "string",
+      "nullable": true
+    },
+    "appliedHash": {
+      "type": "string",
+      "nullable": true
+    },
+    "packValue": {
+      "readOnly": true,
+      "nullable": true
+    },
+    "conflictVersion": {
+      "type": "string",
+      "nullable": true
+    },
+    "conflictValue": {
+      "readOnly": true,
+      "nullable": true
+    },
+    "retiredIn": {
+      "type": "string",
+      "nullable": true
     }
   }
 }

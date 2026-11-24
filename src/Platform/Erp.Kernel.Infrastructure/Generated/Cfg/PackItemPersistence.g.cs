@@ -22,6 +22,12 @@ internal sealed class PackItemConfiguration : IEntityTypeConfiguration<global::E
         builder.Property(e => e.ObjectKey).HasColumnName("object_key").HasColumnType("text").IsRequired();
         builder.Property(e => e.Version).HasColumnName("version").HasColumnType("text").IsRequired();
         builder.Property(e => e.IsOverridden).HasColumnName("is_overridden").HasColumnType("boolean");
+        builder.Property(e => e.ContentHash).HasColumnName("content_hash").HasColumnType("text");
+        builder.Property(e => e.AppliedHash).HasColumnName("applied_hash").HasColumnType("text");
+        builder.Property(e => e.PackValue).HasColumnName("pack_value").HasColumnType("jsonb");
+        builder.Property(e => e.ConflictVersion).HasColumnName("conflict_version").HasColumnType("text");
+        builder.Property(e => e.ConflictValue).HasColumnName("conflict_value").HasColumnType("jsonb");
+        builder.Property(e => e.RetiredIn).HasColumnName("retired_in").HasColumnType("text");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");

@@ -18,6 +18,7 @@ public static class SetupRegistration
         services.AddScoped<IReadinessCheck, NumberingCheck>();
         services.AddScoped<IReadinessCheck, ApprovalRoutesCheck>();
         services.AddScoped<IReadinessCheck, OtherAdministratorCheck>();
+        services.AddScoped<IReadinessCheck, PacksCheck>(); // S1.23b
         services.AddScoped<IReadinessService, ReadinessService>();
         services.AddScoped<IGoLiveGate, GoLiveGate>();
         return services;

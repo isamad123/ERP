@@ -24,6 +24,15 @@ public sealed partial class InstalledPack : global::Erp.BuildingBlocks.Domain.En
     /// <summary>installed_at</summary>
     public global::System.DateTimeOffset InstalledAt { get; set; }
 
+    /// <summary>manifest: S1.23b: the manifest of the installed version (titles, kind, country, compatible product versions, release notes, objects)</summary>
+    public global::System.Text.Json.JsonDocument? Manifest { get; set; }
+
+    /// <summary>previous_version: S1.23b: the version before the last upgrade</summary>
+    public string? PreviousVersion { get; set; }
+
+    /// <summary>upgraded_at: S1.23b: when the last upgrade was installed</summary>
+    public global::System.DateTimeOffset? UpgradedAt { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

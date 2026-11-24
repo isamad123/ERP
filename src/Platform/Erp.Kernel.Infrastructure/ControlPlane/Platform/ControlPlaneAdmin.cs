@@ -88,7 +88,8 @@ public sealed class ControlPlaneAdmin(ControlPlaneOptions options, ISecretStore 
 
     /// <summary>The control-plane tables the API host reads (tenant resolution, licence and usage pages); it writes none.</summary>
     public static readonly IReadOnlyList<string> ApiTables =
-        ["cp.tenants", "cp.tenant_domains", "cp.tenant_databases", "cp.db_clusters", "cp.entitlements", "cp.tenant_module_versions", "cp.usage_meters"];
+        ["cp.tenants", "cp.tenant_domains", "cp.tenant_databases", "cp.db_clusters", "cp.entitlements", "cp.tenant_module_versions", "cp.usage_meters",
+            "cp.pack_catalog", "cp.signing_keys"]; // S1.23b: the pack manager lists the catalogue and checks signatures again
 
     /// <summary>
     /// S1.03 review finding 11: the API host need not use the migrator's login. <see cref="ApiRole"/> may connect and read

@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "cfg.pack_items.read"
-    },
-    {
-      "action": "create",
-      "permission": "cfg.pack_items.create"
-    },
-    {
-      "action": "update",
-      "permission": "cfg.pack_items.update"
     }
   ],
   "companyScoped": false,
@@ -32,7 +24,10 @@
     "objectType",
     "objectKey",
     "version",
-    "isOverridden"
+    "isOverridden",
+    "contentHash",
+    "appliedHash",
+    "conflictVersion"
   ],
   "search": [],
   "constraints": {
@@ -102,6 +97,66 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.cfg.pack_items.is_overridden"
+    },
+    {
+      "column": "content_hash",
+      "field": "contentHash",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.cfg.pack_items.content_hash"
+    },
+    {
+      "column": "applied_hash",
+      "field": "appliedHash",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.cfg.pack_items.applied_hash"
+    },
+    {
+      "column": "pack_value",
+      "field": "packValue",
+      "kind": "Json",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.cfg.pack_items.pack_value"
+    },
+    {
+      "column": "conflict_version",
+      "field": "conflictVersion",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.cfg.pack_items.conflict_version"
+    },
+    {
+      "column": "conflict_value",
+      "field": "conflictValue",
+      "kind": "Json",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.cfg.pack_items.conflict_value"
+    },
+    {
+      "column": "retired_in",
+      "field": "retiredIn",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.cfg.pack_items.retired_in"
     },
     {
       "column": "created_at",

@@ -156,7 +156,13 @@
     - [signature, bytea, req]
     - [released_at, ts, req]
     - [release_notes, text, opt]
+    - [key_id, text, opt, "S1.23b: the cp.signing_keys key (purpose pack) the manifest was signed with; always set by pack publish"]
+    - [manifest, json, opt, "S1.23b: the signed manifest (id, kind, version, country, titles, compatible product versions, dependencies, merge rules, objects with hashes); always set by pack publish"]
+    - [content, bytea, opt, "S1.23b: the signed pack file (zip) as published; installs read it from here and check it again"]
   unique: [[pack_id, version]]
+  # S1.23b (CR-079 S1.23b detail): pack publish verifies the signature and stores the whole signed pack; customers install from
+  # here (ruling Q8). Columns are optional only because they come after the first migration; publish always fills them.
+  added_in: {S1.23b: [key_id, manifest, content]}
   reqs: [KRN-CFG-01]
 
 - table: cp.platform_users

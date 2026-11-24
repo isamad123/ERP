@@ -36,6 +36,15 @@ public sealed partial class PackCatalog : global::Erp.BuildingBlocks.Domain.Enti
     /// <summary>release_notes</summary>
     public string? ReleaseNotes { get; set; }
 
+    /// <summary>key_id: S1.23b: the cp.signing_keys key (purpose pack) the manifest was signed with; always set by pack publish</summary>
+    public string? KeyId { get; set; }
+
+    /// <summary>manifest: S1.23b: the signed manifest (id, kind, version, country, titles, compatible product versions, dependencies, merge rules, objects with hashes); always set by pack publish</summary>
+    public global::System.Text.Json.JsonDocument? Manifest { get; set; }
+
+    /// <summary>content: S1.23b: the signed pack file (zip) as published; installs read it from here and check it again</summary>
+    public byte[]? Content { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 
