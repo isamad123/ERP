@@ -19,6 +19,11 @@ public sealed class PackReviewTests(TenancyFixture fx) : IAsyncLifetime
 {
     private const string Packs = "/api/cfg/packs";
     private AccessHarness _h = null!;
+    private static readonly TimeZoneInfo Karachi = TimeZoneInfo.FindSystemTimeZoneById("Asia/Karachi");
+
+    /// <summary>The company's date (Asia/Karachi) on the harness clock; the harness's own <c>Today</c> is the UTC date, a day behind after 19:00 UTC.</summary>
+    private DateOnly CompanyToday => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_h.Clock.UtcNow, Karachi).DateTime);
+
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -96,7 +101,7 @@ public sealed class PackReviewTests(TenancyFixture fx) : IAsyncLifetime
         Assert.True(draft.Status == HttpStatusCode.Created, draft.Body);
         Assert.Equal(0, await ChangedAsync(code, admin, id)); // a draft is not a version
         var activated = await _h.PostAsync(hr, $"/api/hrm/policy-versions/{draft.Json.GetProperty("id").GetGuid()}/activate",
-            new { effectiveFrom = Iso(_h.Today.AddDays(30)), rowVersion = draft.Json.GetProperty("rowVersion").GetInt64() }, Ct, code);
+            new { effectiveFrom = Iso(CompanyToday.AddDays(30)), rowVersion = draft.Json.GetProperty("rowVersion").GetInt64() }, Ct, code);
         Assert.True(activated.Status == HttpStatusCode.OK, activated.Body);
         Assert.Equal(1, await ChangedAsync(code, admin, id)); // HR's version from day +30 is the customer's value today
 
@@ -139,7 +144,7 @@ public sealed class PackReviewTests(TenancyFixture fx) : IAsyncLifetime
         await InstallAsync(code, admin, id);
         var policy = await ScalarAsync<Guid>(code, "select id from hrm.policies where source = 'pack'");
         var company = await ScalarAsync<Guid>(code, "select company_id from hrm.policies where id = $1", policy);
-        await HrVersionAsync(code, hr, policy, 15, _h.Today.AddDays(1));
+        await HrVersionAsync(code, hr, policy, 15, CompanyToday.AddDays(1));
         var item = await ScalarAsync<Guid>(code, "select id from cfg.pack_items where pack_id = $1", id);
 
         // The tenant administrator holds the pack permissions but not HR's: refused.
@@ -220,8 +225,8 @@ public sealed class PackReviewTests(TenancyFixture fx) : IAsyncLifetime
         var id = NewId();
         var cal = Code(id) + "-cal";
         var key = PolicyKey(id);
-        var future = _h.Today.AddYears(2);
-        var past = _h.Today.AddYears(-2);
+        var future = CompanyToday.AddYears(2);
+        var past = CompanyToday.AddYears(-2);
         await PublishAsync(fx, id, "1.0.0",
         [
             new("setting", "cfg.numbering.fiscal_year_start_month", new { value = 7 }),
@@ -237,7 +242,7 @@ public sealed class PackReviewTests(TenancyFixture fx) : IAsyncLifetime
         var company = await ScalarAsync<Guid>(code, "select company_id from hrm.policies where id = $1", policy);
         var set = await _h.PostAsync(hr, $"{Sets}/activate", new
         {
-            companyId = company, policyType = "test_leave", effectiveFrom = Iso(_h.Today), basedOn = (string?)null,
+            companyId = company, policyType = "test_leave", effectiveFrom = Iso(CompanyToday), basedOn = (string?)null,
             assignments = new[] { new { policyId = policy, precedence = 1, rule = new { conditions = Array.Empty<object>() } } },
         }, Ct, code);
         Assert.True(set.Status == HttpStatusCode.OK, set.Body);
