@@ -2,7 +2,7 @@
 Sonnet 5.5, medium effort. Register R-291; R-267, R-272 and R-274 closed by it. No feature, test or budget changed (the budget stays 300 KB).
 
 ## What was wrong and what changed
-The shell (the scripts `index.html` loads: `index`, `context`, runtime) was 299.8 of 300 KB compressed. Measured with a source map: the biggest parts were React DOM, React Aria, the router and the **two** core catalogues. Both languages were bundled: Urdu web texts (22.7 KB) and Urdu platform server texts (14.7 KB) were in the shell although only English-speaking sessions never read them.
+The shell (the scripts `index.html` loads: `index`, `context`, runtime) was 299.8 of 300 KB compressed. Measured with a source map: the biggest parts were React DOM, React Aria, the router and the **two** core catalogues. Both languages were bundled: Urdu web texts (22.7 KB) and Urdu platform server texts (14.7 KB) were in the shell although an English session never reads them.
 Now only English is in the shell. `@erp/i18n` `loadLocale('ur')` fetches three lazy chunks (web texts, platform server texts, module server texts). `I18nRoot` draws nothing until the start-up language is in memory (no flash of keys); `setDisplay` (language switch) awaits the load first, so the open screen keeps its state. Tests that read Urdu texts directly call `await loadLocale('ur')` (only `i18n.test.ts` needed it).
 
 | Size, compressed | Before | After |
