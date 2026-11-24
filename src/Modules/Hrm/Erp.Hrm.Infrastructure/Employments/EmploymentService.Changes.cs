@@ -6,6 +6,7 @@ using Erp.Hrm.Application.Generated;
 using Erp.Hrm.Application.People;
 using Erp.Hrm.Contracts.Employments;
 using Erp.Hrm.Domain.Generated;
+using Erp.Hrm.Infrastructure.Positions;
 using Erp.Kernel.Contracts.Settings;
 using Erp.Kernel.Contracts.Workflow;
 using Microsoft.EntityFrameworkCore;
@@ -235,6 +236,11 @@ internal sealed partial class EmploymentService
             return PeopleResult.Fields(errors.ToDictionary());
         }
 
+        if (await PayGroupProblemAsync(employment.CompanyId, delta, ct).ConfigureAwait(false) is { } payGroupProblem)
+        {
+            return payGroupProblem;
+        }
+
         // A correction carries the changes of the event it replaces, overridden by its own (FR-XM-05: never edited in place).
         var targetAssignment = target is null ? null : EmploymentApplier.Section(target.Changes, "assignment");
         var assignment = targetAssignment is null ? delta : EmploymentTimeline.Apply(targetAssignment, delta);
@@ -292,11 +298,22 @@ internal sealed partial class EmploymentService
             return invalid;
         }
 
+        // The vacancy rule (S1.22a, BR-04): a new placement beyond a budget needs an approved strength exception, named on the event.
+        if (await StrengthGuard.EnforceAsync(db, settings, employment.CompanyId, employment.Id, planned, target is not null && target.EffectiveDate < date ? target.EffectiveDate : date, changes, ct).ConfigureAwait(false) is { } overBudget)
+        {
+            return overBudget;
+        }
+
         // Data scope and field security of every job-details row the change touches (review S1.20b finding 3): a change carries
         // forward until a later event sets the same field, so it can rewrite later rows too. Each stored row it removes, shortens or
         // changes must be in the caller's records, with the changed fields editable; each row it puts in force must be too.
         var earliest = EmploymentApplier.EarliestAffected(date, target?.Id, events); // along the whole chain (follow-up B)
         var stored = await db.Set<EmploymentAssignment>().AsNoTracking().Where(a => a.EmploymentId == employment.Id).ToListAsync(ct).ConfigureAwait(false);
+        if (await OpenRunProblemAsync(stored, planned, ct).ConfigureAwait(false) is { } openRun)
+        {
+            return openRun;
+        }
+
         var denied = new List<string>();
         foreach (var row in stored)
         {
@@ -371,6 +388,7 @@ internal sealed partial class EmploymentService
             // FR-XM-32 (ruling Q11): the change waits for the route; the requester and the employee never approve it.
             e.Status = "pending_approval";
             db.Add(e);
+            await StrengthGuard.UseAsync(db, changes, e.Id, now, actor.UserId, ct).ConfigureAwait(false);
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
             var started = await workflow.StartAsync(new WorkflowStartRequest(DocumentType, e.Id, employment.CompanyId,
                 employment.UserRef is { } subject ? [subject] : [], RouteValues(employment, e, EmploymentTimeline.On(planned, date))), Transaction, ct).ConfigureAwait(false);
@@ -382,6 +400,7 @@ internal sealed partial class EmploymentService
 
         EmploymentApplier.SetApplied(e, events, today, now, actor.UserId);
         db.Add(e);
+        await StrengthGuard.UseAsync(db, changes, e.Id, now, actor.UserId, ct).ConfigureAwait(false);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
         List<EmploymentEvent> all = [.. events, e];
         if (await applier.SyncRowsAsync(employment, all, now, actor.UserId, ct).ConfigureAwait(false) is { } refused)
@@ -477,6 +496,49 @@ internal sealed partial class EmploymentService
         {
             delta["expected_end_date"] = null;
         }
+    }
+
+    /// <summary>
+    /// The pay group an event or a hire sets (slice S1.34a, FR-HRM-PAY-01): it must be a switched-on group of the employment's company.
+    /// (The composite foreign key refuses another company's group; this adds the switched-off case with a clear answer.)
+    /// </summary>
+    private async Task<PeopleResult?> PayGroupProblemAsync(Guid company, JsonObject delta, CancellationToken ct)
+    {
+        if (delta[AssignmentKeys.PayGroup] is not { } node)
+        {
+            return null;
+        }
+
+        var group = Guid.Parse(node.GetValue<string>());
+        return await db.Set<PayGroup>().AsNoTracking().AnyAsync(g => g.Id == group && g.CompanyId == company && g.IsActive && !g.IsDeleted, ct).ConfigureAwait(false)
+            ? null
+            : Field("assignment.payGroupId", "errors.hrm.pay.group_not_found");
+    }
+
+    /// <summary>
+    /// A move out of a pay group is refused while the group has a payroll run that has not finished (slice S1.34a, FR-HRM-PAY-01): a
+    /// stored row whose group the planned rows change names the old group; a run of it in any status but closed or cancelled blocks.
+    /// </summary>
+    private async Task<PeopleResult?> OpenRunProblemAsync(IReadOnlyList<EmploymentAssignment> stored, IReadOnlyList<PlannedRow> planned, CancellationToken ct)
+    {
+        var leaving = new HashSet<Guid>();
+        foreach (var plan in planned)
+        {
+            // The stored row in force on the planned row's first day names the group the employee is in then.
+            var covering = stored.LastOrDefault(a => a.ValidFrom <= plan.ValidFrom && (a.ValidTo == null || a.ValidTo > plan.ValidFrom));
+            if (covering?.PayGroupId is { } old && plan.Values[AssignmentKeys.PayGroup]?.GetValue<string>() != old.ToString())
+            {
+                leaving.Add(old);
+            }
+        }
+
+        if (leaving.Count > 0
+            && await db.Set<PayRun>().AsNoTracking().AnyAsync(r => leaving.Contains(r.PayGroupId) && r.Status != "closed" && r.Status != "cancelled", ct).ConfigureAwait(false))
+        {
+            return Field("assignment.payGroupId", "errors.hrm.pay.group_open_run");
+        }
+
+        return null;
     }
 
     /// <summary>

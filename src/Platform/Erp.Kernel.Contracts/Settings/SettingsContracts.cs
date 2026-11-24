@@ -31,6 +31,20 @@ public interface ISettings
 }
 
 /// <summary>
+/// A module's rule on changing one of its settings (slice S1.22a, CR-078 S1.22a detail f): the settings service asks the guards of a
+/// key before it writes or holds a change, and refuses with the localization key a guard answers. The guard sees the layer's company
+/// (null for the tenant layer, which can reach every company) and the new value (null for a reset to the inherited value).
+/// </summary>
+public interface ISettingChangeGuard
+{
+    /// <summary>The setting key the guard watches.</summary>
+    string Key { get; }
+
+    /// <summary>The localization key of the reason the change is refused, or null when it may go ahead.</summary>
+    Task<string?> ProblemAsync(Guid? companyId, JsonElement? newValue, CancellationToken cancellationToken);
+}
+
+/// <summary>
 /// Feature flags (FR-KRN-SET-05, ruling Q14): whether a capability is switched on for the company and the signed-in caller.
 /// A flag whose entitlement key is not licensed is always off.
 /// </summary>

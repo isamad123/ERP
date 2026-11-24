@@ -93,7 +93,7 @@
     - [event_date, date, req, local date at the location]
     - [event_at, ts, req]
     - [direction, "enum(in,out,break_out,break_in,unknown)", req]
-    - [source, "enum(web,biometric,kiosk,hr_entry,import)", req]
+    - [source, "enum(web,biometric,kiosk,hr_entry,import,qr)", req]
     - [device_id, uuid, opt, fk hrm.attendance_devices]
     - [received_at, ts, req, server receipt time (GHR-13)]
     - [idempotency_key, text, req]
@@ -107,6 +107,10 @@
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
   audit: false
   audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
+  # S1.27a (CR-088; slice S1.27 Build items 1 to 4): a punch scanned from a gate's QR code is source qr; generated writes closed, the
+  # HR attendance services append events (idempotency, duplicate marking, future tolerance, time zone date).
+  enum_added_in: {S1.27a: {source: [qr]}}
+  api_actions: [read]
   reqs: [ATT-01, ATT-03, DAT-01, DAT-02, DAT-04]
 
 - table: hrm.attendance_periods

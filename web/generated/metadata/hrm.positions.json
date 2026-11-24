@@ -15,14 +15,6 @@
     {
       "action": "read",
       "permission": "hrm.positions.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.positions.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.positions.update"
     }
   ],
   "companyScoped": true,

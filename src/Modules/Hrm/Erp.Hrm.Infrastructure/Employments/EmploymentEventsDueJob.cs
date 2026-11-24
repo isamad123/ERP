@@ -42,7 +42,7 @@ internal sealed class EmploymentEventsDueJob(IClock clock) : IJobHandler
                 await using var db = new HrmDbContext(job.Services.GetRequiredService<DbContextOptions<HrmDbContext>>());
                 db.Database.SetDbConnection(connection, contextOwnsConnection: false);
                 await db.Database.UseTransactionAsync(transaction, ct).ConfigureAwait(false);
-                var applier = new EmploymentApplier(db, settings);
+                var applier = new EmploymentApplier(db, settings, Policies.PolicyResolver.For(db, job.Services));
                 var now = clock.UtcNow;
 
                 // A day ahead of UTC at most: the company's own date decides below.

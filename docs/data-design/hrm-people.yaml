@@ -451,6 +451,9 @@
   indexes: [[org_unit_id], [reports_to_position_id]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, org_unit: org_unit_id}
+  # S1.22a (CR-078 S1.22a detail a; slice S1.22 Build item 3): generated writes closed; the HR position service creates, changes
+  # from a date, freezes and closes a position (a change adds a row, so the generated update would rewrite history).
+  api_actions: [read]
   reqs: [POS-01, POS-02, POS-03, POS-04, POS-08]
   notes: Cycle check trigger on reports_to_position_id.
 
@@ -466,6 +469,28 @@
   scope: {company: company_id, org_unit: org_unit_id}
   reqs: [POS-01, POS-03]
 
+# S1.22a (CR-078 S1.22a detail d; slice S1.22 Build item 5, ruling Q5, BR-04): the permission to place one person beyond a position's
+# budgeted FTE or a unit and grade's sanctioned count. Requested through the HR service, decided through the workflow engine
+# (document type hrm.strength_exception), used by one placement: the employment event that places the person names it.
+- table: hrm.strength_exceptions
+  purpose: "Approved exception to the position budget or sanctioned count for one placement (BR-04)"
+  traits: [std, co]
+  status: [pending_approval, approved, rejected, cancelled, used]
+  added_in: S1.22a
+  columns:
+    - [employment_id, uuid, req, "fk hrm.employments; the person to place"]
+    - [org_unit_id, uuid, req, "fk org.org_units; the unit of the placement"]
+    - [grade_id, uuid, opt, "fk hrm.grades; the grade of the placement"]
+    - [position_id, uuid, opt, "fk hrm.positions; the position of the placement (a row of it; positions are matched by code)"]
+    - [effective_date, date, req, "the day the placement starts"]
+    - [reason, text, req]
+    - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+    - [used_event_id, uuid, opt, "fk hrm.employment_events; the event that used the exception"]
+  indexes: [[employment_id, status]]
+  scope: {company: company_id, employment: employment_id, org_unit: org_unit_id}
+  api_actions: [read]
+  reqs: [POS-01, POS-02]
+
 - table: hrm.policies
   purpose: "Named policies by type (leave, attendance, shift, overtime, pay, expense, loan, benefits, performance)"
   traits: [std, co, soft, name]
@@ -475,6 +500,12 @@
   unique: [[company_id, policy_type, lower(code)]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.23a (CR-079 S1.23a detail; slice S1.23 Build items 1 and 2, ruling Q1): generated writes closed; the HR policy service writes
+  # (type from a registered manifest, parameters checked against its schema, versions activated from a date).
+  checks_added_in:
+    S1.23a:
+      - "a policy type is lower-case letters, digits and underscores and starts with a letter"
+  api_actions: [read]
   reqs: [POL-02, POL-04]
 
 - table: hrm.policy_versions
@@ -487,6 +518,14 @@
     - [parameters, json, req, validated against the policy type schema]
     - [is_overridden, bool, req, tenant changed a pack value]
   unique: [[policy_id, version]]
+  # S1.23a (CR-079 S1.23a detail; slice S1.23 Build item 2): one draft per policy at a time; a version in force is never edited
+  # (rules.yaml function hrm.tg_policy_versions_fixed); generated writes closed.
+  uniques_added_in: {S1.23a: [[policy_id, "where status = 'draft'"]]}
+  checks_added_in:
+    S1.23a:
+      - "parameters are a JSON object"
+      - "version numbers start at 1"
+  api_actions: [read]
   reqs: [POL-04, POL-06]
   notes: "Exclusion on policy_id applies where status <> 'draft'; dates assigned on activation."
 
@@ -500,6 +539,14 @@
   indexes: [[policy_id], [company_id, precedence]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.23a (CR-079 S1.23a detail; slice S1.23 Build items 3 and 5, ruling Q4): assignments of one policy type in one company are
+  # replaced as a set from a date; precedence is unique per type and company on every date (rules.yaml function
+  # hrm.tg_policy_assignments_precedence); generated writes closed.
+  checks_added_in:
+    S1.23a:
+      - "a rule is a JSON object"
+      - "precedence is between 1 and 9999"
+  api_actions: [read]
   reqs: [POL-02, POL-03]
   eff_key: [policy_id, precedence]
 

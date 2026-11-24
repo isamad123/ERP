@@ -171,6 +171,11 @@ internal sealed partial class EmploymentService : IEmploymentMoves
             return (null, PeopleResult.Fields(errors.ToDictionary()));
         }
 
+        if (await PayGroupProblemAsync(r.ToCompanyId!.Value, delta, ct).ConfigureAwait(false) is { } payGroupProblem)
+        {
+            return (null, payGroupProblem);
+        }
+
         var day = r.EffectiveDate!.Value;
         var target = r.ToCompanyId!.Value;
 

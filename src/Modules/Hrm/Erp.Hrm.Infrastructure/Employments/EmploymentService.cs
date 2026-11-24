@@ -12,6 +12,7 @@ using Erp.Hrm.Contracts.Employments;
 using Erp.Hrm.Domain.Generated;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Hrm.Infrastructure.People;
+using Erp.Hrm.Infrastructure.Positions;
 using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Contracts.Identity;
 using Erp.Kernel.Contracts.Metadata;
@@ -193,6 +194,11 @@ internal sealed partial class EmploymentService(
             return PeopleResult.Fields(errors.ToDictionary());
         }
 
+        if (await PayGroupProblemAsync(company, delta, cancellationToken).ConfigureAwait(false) is { } payGroupProblem)
+        {
+            return payGroupProblem;
+        }
+
         Stamp(employment);
         var hire = Stamp(new EmploymentEvent
         {
@@ -328,9 +334,18 @@ internal sealed partial class EmploymentService(
             return PeopleResult.Conflict(LimitReachedException.ErrorKey, new Dictionary<string, object?> { ["limit"] = ex.Decision.LimitKey, ["max"] = ex.Decision.Max, ["used"] = ex.Decision.Used });
         }
 
+        // The vacancy rule (S1.22a, BR-04): a hire beyond a budget needs an approved strength exception, named on the hire event.
+        var hireChanges = StrengthGuard.ChangesOf(hire.Changes);
+        if (await StrengthGuard.EnforceAsync(db, settings, employment.CompanyId, employment.Id, [StrengthGuard.HireRow(hire, hireChanges["assignment"]!.AsObject())], hire.EffectiveDate, hireChanges, ct).ConfigureAwait(false) is { } overBudget)
+        {
+            return overBudget;
+        }
+
+        hire.Changes = JsonSerializer.SerializeToDocument(hireChanges);
         db.Add(employment);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
         db.Add(hire);
+        await StrengthGuard.UseAsync(db, hireChanges, hire.Id, clock.UtcNow, actor.UserId, ct).ConfigureAwait(false);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
         if (await applier.SyncRowsAsync(employment, [hire], clock.UtcNow, actor.UserId, ct).ConfigureAwait(false) is { } problem)
         {
@@ -427,6 +442,7 @@ internal sealed partial class EmploymentService(
         Id(a.PositionId, AssignmentKeys.Position, required: false);
         Id(a.GradeId, AssignmentKeys.Grade, required: false);
         Id(a.ManagerEmploymentId, AssignmentKeys.Manager, required: false);
+        Id(a.PayGroupId, AssignmentKeys.PayGroup, required: false);
         if (a.Title is not null || hire)
         {
             if (Text(a.Title, "assignment.title", TitleLength, errors) is { } title)
@@ -640,6 +656,7 @@ internal sealed partial class EmploymentService(
         "fk_employment_assignments_position_id" => Field("assignment.positionId", NotInCompany),
         "fk_employment_assignments_grade_id" => Field("assignment.gradeId", NotInCompany),
         "fk_employment_assignments_manager_employment_id" => Field("assignment.managerEmploymentId", NotInCompany),
+        "fk_employment_assignments_pay_group_id" => Field("assignment.payGroupId", "errors.hrm.pay.group_not_found"),
         "fk_employments_company_id" => Field("companyId", "errors.data.not_found"),
         "uq_employments_company_id_employee_no" => Field("employeeNo", "errors.hrm.employment.employee_no_taken"),
         "uq_employments_person_id" => PeopleResult.Conflict(AlreadyEmployed),

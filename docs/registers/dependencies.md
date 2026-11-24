@@ -86,3 +86,5 @@ major version (9). The form engine checks values straight from the generated val
 (`web/generated/validation/<table>.json`), so there is no second schema language to keep in step. Either can still be
 added later under the Q1 approval.
 
+
+S1.27a (2026-11-23, CR-088): `qrcode-generator` 2.0.4, MIT, runtime (browser), zero dependencies. Draws the rotating QR code of a location on the gate screen (`/time/qr`); loaded only with that screen. The npm licence gate passes.

@@ -147,7 +147,7 @@ export interface AttendanceEvent
     eventDate: string;
     eventAt: string;
     direction: 'in' | 'out' | 'break_out' | 'break_in' | 'unknown';
-    source: 'web' | 'biometric' | 'kiosk' | 'hr_entry' | 'import';
+    source: 'web' | 'biometric' | 'kiosk' | 'hr_entry' | 'import' | 'qr';
     deviceId: string | null;
     receivedAt: string;
     idempotencyKey: string;
@@ -156,22 +156,6 @@ export interface AttendanceEvent
     supersedesEventId: string | null;
     createdAt: string;
     createdBy: string;
-}
-
-export interface AttendanceEventWrite
-{
-    companyId: string;
-    employmentId: string;
-    eventDate: string;
-    eventAt: string;
-    direction: 'in' | 'out' | 'break_out' | 'break_in' | 'unknown';
-    source: 'web' | 'biometric' | 'kiosk' | 'hr_entry' | 'import';
-    deviceId?: string | null;
-    receivedAt: string;
-    idempotencyKey: string;
-    ipAddress?: string | null;
-    isDuplicate?: boolean;
-    supersedesEventId?: string | null;
 }
 
 export interface AttendanceEventListQuery
@@ -189,7 +173,6 @@ export const attendanceEvents =
 {
     list: (query: AttendanceEventListQuery = {}) => request<PagedResult<AttendanceEvent>>('GET', '/api/hrm/attendance-events', { query }),
     get: (id: string) => request<AttendanceEvent>('GET', `/api/hrm/attendance-events/${id}`),
-    create: (body: AttendanceEventWrite) => request<AttendanceEvent>('POST', '/api/hrm/attendance-events', { body }),
 };
 
 /** hrm.attendance_exceptions: AttendanceException. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3174,7 +3157,7 @@ export interface PayGroup
     cutOffDay: number | null;
     paymentDay: number | null;
     companyBankAccountId: string | null;
-    approvalThreshold: number | null;
+    approvalThreshold?: number | string | null;
     isActive: boolean;
     isDeleted: boolean;
     deletedAt: string | null;
@@ -3184,21 +3167,6 @@ export interface PayGroup
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface PayGroupWrite
-{
-    companyId: string;
-    code: string;
-    nameI18n: Record<string, string>;
-    frequency: 'monthly' | 'semi_monthly' | 'bi_weekly' | 'weekly';
-    currencyCode: string;
-    taxYearStartMonth: number;
-    cutOffDay?: number | null;
-    paymentDay?: number | null;
-    companyBankAccountId?: string | null;
-    approvalThreshold?: number | null;
-    isActive?: boolean;
 }
 
 export interface PayGroupListQuery
@@ -3218,9 +3186,6 @@ export const payGroups =
 {
     list: (query: PayGroupListQuery = {}) => request<PagedResult<PayGroup>>('GET', '/api/hrm/pay-groups', { query }),
     get: (id: string) => request<PayGroup>('GET', `/api/hrm/pay-groups/${id}`),
-    create: (body: PayGroupWrite) => request<PayGroup>('POST', '/api/hrm/pay-groups', { body }),
-    update: (id: string, body: PayGroupWrite & { rowVersion: number }) => request<PayGroup>('PUT', `/api/hrm/pay-groups/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/pay-groups/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.pay_inputs: One-time inputs to a period (bonus, incentive, deduction, adjustment, imported file rows). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3305,19 +3270,6 @@ export interface PayPeriod
     rowVersion: number;
 }
 
-export interface PayPeriodWrite
-{
-    companyId: string;
-    payGroupId: string;
-    periodNo: number;
-    taxYear: number;
-    startDate: string;
-    endDate: string;
-    cutOffDate: string;
-    paymentDate: string;
-    status: 'future' | 'open' | 'processing' | 'closed';
-}
-
 export interface PayPeriodListQuery
 {
     after?: string;
@@ -3333,8 +3285,6 @@ export const payPeriods =
 {
     list: (query: PayPeriodListQuery = {}) => request<PagedResult<PayPeriod>>('GET', '/api/hrm/pay-periods', { query }),
     get: (id: string) => request<PayPeriod>('GET', `/api/hrm/pay-periods/${id}`),
-    create: (body: PayPeriodWrite) => request<PayPeriod>('POST', '/api/hrm/pay-periods', { body }),
-    update: (id: string, body: PayPeriodWrite & { rowVersion: number }) => request<PayPeriod>('PUT', `/api/hrm/pay-periods/${id}`, { body }),
 };
 
 /** hrm.pay_result_lines: PayResultLine. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4016,16 +3966,6 @@ export interface Policy
     rowVersion: number;
 }
 
-export interface PolicyWrite
-{
-    companyId: string;
-    code: string;
-    nameI18n: Record<string, string>;
-    policyType: string;
-    source: 'pack' | 'tenant';
-    isActive?: boolean;
-}
-
 export interface PolicyListQuery
 {
     after?: string;
@@ -4041,9 +3981,6 @@ export const policies =
 {
     list: (query: PolicyListQuery = {}) => request<PagedResult<Policy>>('GET', '/api/hrm/policies', { query }),
     get: (id: string) => request<Policy>('GET', `/api/hrm/policies/${id}`),
-    create: (body: PolicyWrite) => request<Policy>('POST', '/api/hrm/policies', { body }),
-    update: (id: string, body: PolicyWrite & { rowVersion: number }) => request<Policy>('PUT', `/api/hrm/policies/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/policies/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.policy_acknowledgements: PolicyAcknowledgement. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4099,16 +4036,6 @@ export interface PolicyAssignment
     rowVersion: number;
 }
 
-export interface PolicyAssignmentWrite
-{
-    companyId: string;
-    policyId: string;
-    precedence: number;
-    rule: unknown;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface PolicyAssignmentListQuery
 {
     after?: string;
@@ -4125,8 +4052,6 @@ export const policyAssignments =
 {
     list: (query: PolicyAssignmentListQuery = {}) => request<PagedResult<PolicyAssignment>>('GET', '/api/hrm/policy-assignments', { query }),
     get: (id: string) => request<PolicyAssignment>('GET', `/api/hrm/policy-assignments/${id}`),
-    create: (body: PolicyAssignmentWrite) => request<PolicyAssignment>('POST', '/api/hrm/policy-assignments', { body }),
-    update: (id: string, body: PolicyAssignmentWrite & { rowVersion: number }) => request<PolicyAssignment>('PUT', `/api/hrm/policy-assignments/${id}`, { body }),
 };
 
 /** hrm.policy_publications: Policy documents published to populations for acknowledgement. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4195,17 +4120,6 @@ export interface PolicyVersion
     rowVersion: number;
 }
 
-export interface PolicyVersionWrite
-{
-    policyId: string;
-    version: number;
-    parameters: unknown;
-    isOverridden?: boolean;
-    status: 'draft' | 'active' | 'retired';
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface PolicyVersionListQuery
 {
     after?: string;
@@ -4222,8 +4136,6 @@ export const policyVersions =
 {
     list: (query: PolicyVersionListQuery = {}) => request<PagedResult<PolicyVersion>>('GET', '/api/hrm/policy-versions', { query }),
     get: (id: string) => request<PolicyVersion>('GET', `/api/hrm/policy-versions/${id}`),
-    create: (body: PolicyVersionWrite) => request<PolicyVersion>('POST', '/api/hrm/policy-versions', { body }),
-    update: (id: string, body: PolicyVersionWrite & { rowVersion: number }) => request<PolicyVersion>('PUT', `/api/hrm/policy-versions/${id}`, { body }),
 };
 
 /** hrm.positions: Position. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4251,23 +4163,6 @@ export interface Position
     rowVersion: number;
 }
 
-export interface PositionWrite
-{
-    companyId: string;
-    positionCode: string;
-    title: string;
-    orgUnitId: string;
-    gradeId?: string | null;
-    reportsToPositionId?: string | null;
-    locationId?: string | null;
-    costCenterRef?: string | null;
-    budgetedFte: number;
-    status: 'planned' | 'open' | 'filled' | 'frozen' | 'closed';
-    validFrom: string;
-    validTo?: string | null;
-    custom?: unknown;
-}
-
 export interface PositionListQuery
 {
     after?: string;
@@ -4286,8 +4181,6 @@ export const positions =
 {
     list: (query: PositionListQuery = {}) => request<PagedResult<Position>>('GET', '/api/hrm/positions', { query }),
     get: (id: string) => request<Position>('GET', `/api/hrm/positions/${id}`),
-    create: (body: PositionWrite) => request<Position>('POST', '/api/hrm/positions', { body }),
-    update: (id: string, body: PositionWrite & { rowVersion: number }) => request<Position>('PUT', `/api/hrm/positions/${id}`, { body }),
 };
 
 /** hrm.previous_employer_income: PreviousEmployerIncome. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -5400,6 +5293,49 @@ export const statutoryTables =
     get: (id: string) => request<StatutoryTable>('GET', `/api/hrm/statutory-tables/${id}`),
     create: (body: StatutoryTableWrite) => request<StatutoryTable>('POST', '/api/hrm/statutory-tables', { body }),
     update: (id: string, body: StatutoryTableWrite & { rowVersion: number }) => request<StatutoryTable>('PUT', `/api/hrm/statutory-tables/${id}`, { body }),
+};
+
+/** hrm.strength_exceptions: Approved exception to the position budget or sanctioned count for one placement (BR-04). Field rules (S1.06) may leave a field out or mask it as text. */
+export interface StrengthException
+{
+    id: string;
+    companyId: string;
+    employmentId: string;
+    orgUnitId: string;
+    gradeId: string | null;
+    positionId: string | null;
+    effectiveDate: string;
+    reason: string;
+    workflowInstanceId: string | null;
+    usedEventId: string | null;
+    status: 'pending_approval' | 'approved' | 'rejected' | 'cancelled' | 'used';
+    createdAt: string;
+    createdBy: string;
+    updatedAt: string;
+    updatedBy: string;
+    rowVersion: number;
+}
+
+export interface StrengthExceptionListQuery
+{
+    after?: string;
+    limit?: number;
+    companyId?: string;
+    employmentId?: string;
+    orgUnitId?: string;
+    gradeId?: string;
+    positionId?: string;
+    workflowInstanceId?: string;
+    usedEventId?: string;
+    status?: 'pending_approval' | 'approved' | 'rejected' | 'cancelled' | 'used';
+    /** status; a leading minus sorts descending. */
+    sort?: 'status' | '-status';
+}
+
+export const strengthExceptions =
+{
+    list: (query: StrengthExceptionListQuery = {}) => request<PagedResult<StrengthException>>('GET', '/api/hrm/strength-exceptions', { query }),
+    get: (id: string) => request<StrengthException>('GET', `/api/hrm/strength-exceptions/${id}`),
 };
 
 /** hrm.tax_declaration_lines: TaxDeclarationLine. Field rules (S1.06) may leave a field out or mask it as text. */

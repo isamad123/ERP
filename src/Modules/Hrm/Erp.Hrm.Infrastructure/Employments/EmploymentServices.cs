@@ -1,4 +1,6 @@
 using Erp.Hrm.Application.Employments;
+using Erp.Hrm.Infrastructure.Policies;
+using Erp.Hrm.Infrastructure.Payroll;
 using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Contracts.Jobs;
 using Erp.Kernel.Contracts.Workflow;
@@ -28,6 +30,7 @@ public static class EmploymentServices
     /// </summary>
     public static IServiceCollection AddHrmEmployment(this IServiceCollection services)
     {
+        services.AddHrmPolicyCore(); // S1.23a: the applier opens probations through the policy resolver
         services.AddScoped<EmploymentApplier>();
         services.AddScoped<EmploymentChangeCheck>();
         services.AddScoped<IWorkflowOutcomeHandler, EmploymentEventHandler>();
@@ -48,6 +51,7 @@ public static class EmploymentServices
         services.AddScoped<IEmployeeBankAccountService, EmployeeBankAccountService>(); // S1.20d payment accounts
         services.AddScoped<IStatutoryRegistrationService, StatutoryRegistrationService>();
         services.AddScoped<Erp.Kernel.Contracts.Access.IHeldChangeHandler, BankAccountChangeHandler>(); // approval of held account changes
+        services.AddHrmPayrollApi(); // S1.34a pay groups, calendar and readiness
         return services;
     }
 
@@ -56,6 +60,7 @@ public static class EmploymentServices
     {
         services.AddSingleton<IJobHandler, EmploymentEventsDueJob>();
         services.AddSingleton<IJobHandler, EmploymentTermsDueJob>();
+        services.AddHrmPayrollWorker(); // S1.34a cut-off reminders
         return services;
     }
 

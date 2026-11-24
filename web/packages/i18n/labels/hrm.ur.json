@@ -1,3 +1,20 @@
 {
-  "_note": "Urdu labels of the HR tables on screens (slice S1.12c Build item 15). Kept by hand; HR screen slices add theirs (R-062)."
+  "_note": "Urdu labels of the HR tables on screens (slice S1.12c Build item 15). Kept by hand; HR screen slices add theirs (R-062).",
+  "entities.hrm.pay_groups": "تنخواہ گروپ",
+  "entities.hrm.pay_groups.one": "تنخواہ گروپ",
+  "fields.hrm.pay_groups.company_id": "کمپنی",
+  "fields.hrm.pay_groups.code": "کوڈ",
+  "fields.hrm.pay_groups.name_i18n": "نام",
+  "fields.hrm.pay_groups.frequency": "تعدد",
+  "options.hrm.pay_groups.frequency.monthly": "ماہانہ",
+  "options.hrm.pay_groups.frequency.semi_monthly": "مہینے میں دو بار",
+  "options.hrm.pay_groups.frequency.bi_weekly": "ہر دو ہفتے",
+  "options.hrm.pay_groups.frequency.weekly": "ہفتہ وار",
+  "fields.hrm.pay_groups.currency_code": "کرنسی",
+  "fields.hrm.pay_groups.tax_year_start_month": "ٹیکس سال کا آغازی مہینہ",
+  "fields.hrm.pay_groups.cut_off_day": "کٹ آف کے دن",
+  "fields.hrm.pay_groups.payment_day": "ادائیگی کے دن",
+  "fields.hrm.pay_groups.company_bank_account_id": "کمپنی کا بینک کھاتا",
+  "fields.hrm.pay_groups.approval_threshold": "منظوری کی حد",
+  "fields.hrm.pay_groups.is_active": "فعال"
 }
