@@ -1,5 +1,5 @@
 {
-  "_comment": "Policy types of the HR module (slice S1.23a Build item 1, ruling Q2, D-10). Each type: code, names, a JSON Schema of its parameters (the subset PolicySchema checks: object, array, string, integer, number, boolean; required, properties, additionalProperties false, enum, minimum, maximum, minLength, maxLength, minItems, maxItems, items), the employee attributes its assignment rules may use, whether one policy or several may apply (cardinality one or many) and whether every current employee should match an assignment (required: the activation check warns otherwise). probation and notice_period replace the S1.20 settings (ruling Q3); their values are the customer's choices, never statutory values (AS-4, R-002). Later slices add their types here (leave S1.32, attendance S1.29, shifts S1.28 (registered by S1.28a), pay S1.34, loans S1.41, expenses S1.42, performance S1.49). Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "Policy types of the HR module (slice S1.23a Build item 1, ruling Q2, D-10). Each type: code, names, a JSON Schema of its parameters (the subset PolicySchema checks: object, array, string, integer, number, boolean; required, properties, additionalProperties false, enum, minimum, maximum, minLength, maxLength, minItems, maxItems, items), the employee attributes its assignment rules may use, whether one policy or several may apply (cardinality one or many) and whether every current employee should match an assignment (required: the activation check warns otherwise). probation and notice_period replace the S1.20 settings (ruling Q3); their values are the customer's choices, never statutory values (AS-4, R-002). Later slices add their types here (leave S1.32, attendance S1.29, shifts S1.28 (registered by S1.28a), pay S1.34 (bonus definitions, FR-HRM-PAY-08: the type bonus, registered by S1.34b; its tax treatment is a label of the pack, never a rate), loans S1.41, expenses S1.42, performance S1.49). Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "types": [
     {
@@ -78,6 +78,34 @@
           "anchorDate": { "type": "string", "minLength": 10, "maxLength": 10, "title": "hrm.policy.param.shift.anchor_date" },
           "graceMinutes": { "type": "integer", "minimum": 0, "maximum": 240, "title": "hrm.policy.param.shift.grace_minutes" },
           "minRestMinutes": { "type": "integer", "minimum": 0, "maximum": 1440, "title": "hrm.policy.param.shift.min_rest_minutes" }
+        }
+      }
+    },
+    {
+      "code": "bonus",
+      "name": { "en": "Bonus", "ur": "بونس" },
+      "description": {
+        "en": "A bonus (Eid, annual, performance or ad hoc): which component pays it, how it is worked out, who is eligible and how its tax is treated; paid in a regular or an off-cycle run. Who it covers is chosen by the assignment rules",
+        "ur": "ایک بونس (عید، سالانہ، کارکردگی یا ایڈہاک): کون سا جزو اسے ادا کرتا ہے، اس کا حساب کیسے ہوتا ہے، کون اہل ہے اور اس کے ٹیکس کا کیا طریقہ ہے؛ باقاعدہ یا الگ رن میں ادا ہوتا ہے۔ کن ملازمین کو ملتا ہے یہ تفویض کے اصول طے کرتے ہیں"
+      },
+      "cardinality": "many",
+      "required": false,
+      "attributes": ["location", "branch", "grade", "employee_type", "unit", "custom"],
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bonusKind", "componentCode", "basis", "runKind"],
+        "properties": {
+          "bonusKind": { "type": "string", "enum": ["eid", "annual", "performance", "ad_hoc"], "title": "hrm.policy.param.bonus.bonus_kind" },
+          "componentCode": { "type": "string", "minLength": 1, "maxLength": 40, "title": "hrm.policy.param.bonus.component_code" },
+          "basis": { "type": "string", "enum": ["fixed_amount", "percent_of_component", "multiple_of_component"], "title": "hrm.policy.param.bonus.basis" },
+          "amount": { "type": "number", "minimum": 0, "title": "hrm.policy.param.bonus.amount" },
+          "percent": { "type": "number", "minimum": 0, "maximum": 1000, "title": "hrm.policy.param.bonus.percent" },
+          "multiple": { "type": "number", "minimum": 0, "maximum": 100, "title": "hrm.policy.param.bonus.multiple" },
+          "basisComponentCode": { "type": "string", "minLength": 1, "maxLength": 40, "title": "hrm.policy.param.bonus.basis_component_code" },
+          "minServiceMonths": { "type": "integer", "minimum": 0, "maximum": 600, "title": "hrm.policy.param.bonus.min_service_months" },
+          "taxTreatment": { "type": "string", "minLength": 1, "maxLength": 40, "title": "hrm.policy.param.bonus.tax_treatment" },
+          "runKind": { "type": "string", "enum": ["regular", "off_cycle"], "title": "hrm.policy.param.bonus.run_kind" }
         }
       }
     }

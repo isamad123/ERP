@@ -297,7 +297,15 @@
         "hrm.pay_groups.update",
         "hrm.pay_periods.generate",
         "hrm.pay_periods.update",
-        "hrm.pay_readiness.read"
+        "hrm.pay_readiness.read",
+        "hrm.pay_components.create",
+        "hrm.pay_components.update",
+        "hrm.salary_structures.create",
+        "hrm.salary_structures.update",
+        "hrm.salary_structure_components.update",
+        "hrm.compensation_assignments.create",
+        "hrm.compensation_lines.create",
+        "hrm.pay.compensation.read"
       ],
       "scopes": {
         "*": "all"

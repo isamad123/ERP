@@ -1,5 +1,5 @@
 {
-  "_comment": "Hand-written permissions of the HR module's purpose-built services (slice S1.20a, CR-076): the generated writes of these tables are closed (ruling Q1; S1.20a closes the person tables, S1.20b to d the employment tables), so their actions are declared here. Registered with permissions.g.json by migrate and provisioning (AccessSetup). Keep in step with Erp.Hrm.Contracts.People.PeoplePermissions and (S1.20b) Erp.Hrm.Contracts.Employment.EmploymentPermissions. S1.20c adds transfers between companies, contracts and probation. S1.20d adds removal, reveal and approval of payment accounts and removal and reveal of statutory registrations (create and update are generated with the field view of their encrypted columns). S1.34a (CR-087) adds the pay set-up services: pay groups (create and update keep the codes the generated ones had), generating and changing pay periods, and the readiness checklist. S1.27a (CR-088) adds appending punches for others (hrm.attendance_events.create, generated create closed), the employee's own web and QR punch (hrm.attendance.punch), the kiosk station (hrm.attendance.kiosk) and showing a location's QR code (hrm.attendance.qr_display). S1.23a adds the policy framework's manage and approve (the generated writes of hrm.policies, hrm.policy_versions and hrm.policy_assignments are closed). S1.28a (CR-085 S1.28a detail) adds the shift and roster services: creating and changing shifts, creating, editing, publishing and amending rosters (amending a published roster is sensitive: it changes what people were told) and reading the weekly-off days of an employee's shift policy (the generated writes of hrm.shifts, hrm.rosters and hrm.roster_lines are closed).",
+  "_comment": "Hand-written permissions of the HR module's purpose-built services (slice S1.20a, CR-076): the generated writes of these tables are closed (ruling Q1; S1.20a closes the person tables, S1.20b to d the employment tables), so their actions are declared here. Registered with permissions.g.json by migrate and provisioning (AccessSetup). Keep in step with Erp.Hrm.Contracts.People.PeoplePermissions and (S1.20b) Erp.Hrm.Contracts.Employment.EmploymentPermissions. S1.20c adds transfers between companies, contracts and probation. S1.20d adds removal, reveal and approval of payment accounts and removal and reveal of statutory registrations (create and update are generated with the field view of their encrypted columns). S1.34a (CR-087) adds the pay set-up services: pay groups (create and update keep the codes the generated ones had), generating and changing pay periods, and the readiness checklist. S1.34b (CR-087 S1.34b detail) adds the pay component, salary structure and compensation services (their generated writes are closed; the codes the generated ones had are kept), reading an employee's compensation (hrm.pay.compensation.read) and approving a held change of a structure or of compensation (hrm.pay.change.approve). S1.27a (CR-088) adds appending punches for others (hrm.attendance_events.create, generated create closed), the employee's own web and QR punch (hrm.attendance.punch), the kiosk station (hrm.attendance.kiosk) and showing a location's QR code (hrm.attendance.qr_display). S1.23a adds the policy framework's manage and approve (the generated writes of hrm.policies, hrm.policy_versions and hrm.policy_assignments are closed). S1.28a (CR-085 S1.28a detail) adds the shift and roster services: creating and changing shifts, creating, editing, publishing and amending rosters (amending a published roster is sensitive: it changes what people were told) and reading the weekly-off days of an employee's shift policy (the generated writes of hrm.shifts, hrm.rosters and hrm.roster_lines are closed).",
   "module": "hrm",
   "permissions": [
     {
@@ -325,6 +325,60 @@
       "module": "hrm",
       "descriptionKey": "permissions.hrm.shift_patterns.read",
       "sensitive": false
+    },
+    {
+      "code": "hrm.pay_components.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.pay_components.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.pay_components.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.pay_components.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.salary_structures.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.salary_structures.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.salary_structures.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.salary_structures.update",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.salary_structure_components.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.salary_structure_components.update",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.compensation_assignments.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.compensation_assignments.create",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.compensation_lines.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.compensation_lines.create",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.pay.compensation.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.pay.compensation.read",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.pay.change.approve",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.pay.change.approve",
+      "sensitive": true
     }
   ]
 }
