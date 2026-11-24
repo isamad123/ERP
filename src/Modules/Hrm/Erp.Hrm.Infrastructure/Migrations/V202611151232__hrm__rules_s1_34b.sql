@@ -16,6 +16,8 @@ begin
         return new;
     end if;
     select company_id into v_company from hrm.pay_components where id = new.component_id;
+    -- one writer of versions per company at a time, so two writes cannot each pass the loop check and make a loop together
+    perform pg_advisory_xact_lock(hashtextextended(v_company::text, 0));
     if new.component_id = any (new.base_component_ids) then
         raise exception 'pay component %: a component cannot be based on itself', new.component_id
             using errcode = '23514', constraint = 'ck_pay_component_versions_bases';
@@ -34,7 +36,7 @@ begin
               from walk w
               join hrm.pay_component_versions v on v.component_id = w.id
                and v.id <> new.id
-               and v.valid_from <= new.valid_from and (v.valid_to is null or v.valid_to > new.valid_from)
+               and (v.valid_to is null or v.valid_to > new.valid_from)
         )
         select 1 from walk where id = new.component_id) then
         raise exception 'pay component %: its base components lead back to it', new.component_id

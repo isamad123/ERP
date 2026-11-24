@@ -33,10 +33,13 @@ internal static class StructurePlanner
     public const string DefaultBoth = "errors.hrm.pay.default_both";
     public const string EmptyList = "errors.hrm.pay.structure_empty";
     public const string TooMany = "errors.hrm.pay.structure_too_many";
+    public const string DatePast = "errors.hrm.pay.structure_date_past";
+    public const string InUse = "errors.hrm.pay.structure_component_in_use";
+    public const string CurrencyMixed = "errors.hrm.pay.structure_currency_mixed";
     public const int MaxComponents = 200;
 
     /// <summary>Checks the whole plan against the database as it stands; returns field to error keys (empty when the plan can be applied).</summary>
-    public static async Task<Dictionary<string, string[]>> CheckAsync(HrmDbContext db, StructurePlan plan, Erp.Hrm.Contracts.Payroll.IFormulaValidator formulas, CancellationToken ct)
+    public static async Task<Dictionary<string, string[]>> CheckAsync(HrmDbContext db, StructurePlan plan, Erp.Hrm.Contracts.Payroll.IFormulaValidator formulas, DateOnly? notBefore, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(db);
         ArgumentNullException.ThrowIfNull(plan);
@@ -81,6 +84,34 @@ internal static class StructurePlanner
         if (plan.Lines.Any(l => l.DefaultAmount is not null && l.DefaultPercent is not null))
         {
             Fail("components.items", DefaultBoth);
+        }
+
+        var hasList = await db.Set<SalaryStructureComponent>().AsNoTracking().AnyAsync(r => r.StructureId == plan.StructureId, ct).ConfigureAwait(false);
+        if (hasList && notBefore is { } earliest && from < earliest)
+        {
+            // A change to an existing list dated in the past would alter what was already paid with no record for arrears (review S1.34b M5): the salary
+            // revision is the dated, recorded way to change what people were paid.
+            Fail("components.validFrom", DatePast);
+        }
+
+        if (plan.Lines.Select(l => l.CurrencyCode).Distinct(StringComparer.Ordinal).Count() > 1)
+        {
+            Fail("components.items", CurrencyMixed);
+        }
+
+        // A component the structure drops may not be one that salaries on the structure still use.
+        var removed = await db.Set<SalaryStructureComponent>().AsNoTracking()
+            .Where(r => r.StructureId == plan.StructureId && r.ValidFrom <= from && (r.ValidTo == null || r.ValidTo > from))
+            .Select(r => r.ComponentId).ToListAsync(ct).ConfigureAwait(false);
+        removed = [.. removed.Where(c => plan.Lines.All(l => l.ComponentId != c))];
+        var day = from;
+        if (removed.Count > 0
+            && await (from l in db.Set<CompensationLine>().AsNoTracking()
+                      join a in db.Set<CompensationAssignment>().AsNoTracking() on l.AssignmentId equals a.Id
+                      where a.StructureId == plan.StructureId && (a.ValidTo == null || a.ValidTo > day) && removed.Contains(l.ComponentId)
+                      select l.Id).AnyAsync(ct).ConfigureAwait(false))
+        {
+            Fail("components.items", InUse);
         }
 
         var ids = plan.Lines.Select(l => l.ComponentId).Distinct().ToList();

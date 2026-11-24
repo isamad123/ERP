@@ -100,5 +100,10 @@
   "permissions.hrm.compensation_assignments.create": "Assign or revise an employee's salary structure",
   "permissions.hrm.compensation_lines.create": "Enter the amounts of an employee's salary",
   "permissions.hrm.pay.compensation.read": "See employees' salary arrangements",
-  "permissions.hrm.pay.change.approve": "Approve changes of salary structures and salaries"
+  "permissions.hrm.pay.change.approve": "Approve changes of salary structures and salaries",
+  "errors.hrm.pay.approver_cannot_see_amounts": "You cannot approve this change because you may not see the amounts in it.",
+  "errors.hrm.pay.compensation_after_end": "The date is on or after the employee's recorded end of employment.",
+  "errors.hrm.pay.structure_date_past": "A change to a structure that already has components cannot start in the past. To change what people were paid, record a salary revision.",
+  "errors.hrm.pay.structure_component_in_use": "A component cannot be dropped while salaries on this structure still use it.",
+  "errors.hrm.pay.structure_currency_mixed": "All components of a structure must be in one currency."
 }

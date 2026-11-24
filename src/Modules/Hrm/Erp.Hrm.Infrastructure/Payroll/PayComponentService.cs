@@ -210,13 +210,22 @@ internal sealed class PayComponentService(
 
         try
         {
+            await using var tx = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
             var result = await AddVersionCoreAsync(component, request, cancellationToken).ConfigureAwait(false);
             if (result.Outcome is not PeopleOutcome.Created)
             {
                 db.ChangeTracker.Clear();
+                await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
+                return result;
             }
 
+            await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
             return result;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.ChangeTracker.Clear();
+            return PeopleResult.Conflict(PersonService.Concurrency); // two people added a version to the component at once (review S1.34b L3)
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
         {
@@ -275,6 +284,10 @@ internal sealed class PayComponentService(
             Fail("validFrom", ValidFromRequired);
             return PeopleResult.Fields(errors);
         }
+
+        // One writer of versions per company at a time, so two requests cannot each pass the loop check and together make a loop
+        // (review S1.34b H3). The lock ends with the transaction.
+        await db.Database.ExecuteSqlInterpolatedAsync($"select pg_advisory_xact_lock(hashtextextended({component.CompanyId.ToString()}, 0))", ct).ConfigureAwait(false);
 
         var versions = await db.Set<PayComponentVersion>().Where(v => v.ComponentId == component.Id).OrderBy(v => v.ValidFrom).ToListAsync(ct).ConfigureAwait(false);
         if (versions.Count > 0 && from <= versions[^1].ValidFrom)
@@ -398,13 +411,16 @@ internal sealed class PayComponentService(
     private async Task<Dictionary<string, Guid>> CodesAsync(Guid companyId, CancellationToken ct) =>
         await db.Set<PayComponent>().AsNoTracking().Where(c => c.CompanyId == companyId && !c.IsDeleted).ToDictionaryAsync(c => c.Code, c => c.Id, StringComparer.Ordinal, ct).ConfigureAwait(false);
 
-    /// <summary>"Component uses components" on a date, from the versions in force then (bases and the names in formulas).</summary>
+    /// <summary>
+    /// "Component uses components" from a date onward: every version that is in force on that date or starts later (bases and the names
+    /// in formulas). A loop that starts at a later date is a loop too (review S1.34b H3).
+    /// </summary>
     private async Task<Dictionary<string, IReadOnlySet<string>>> GraphAsync(Guid companyId, DateOnly day, Dictionary<string, Guid> known, CancellationToken ct)
     {
         var byId = known.ToDictionary(k => k.Value, k => k.Key);
         var inForce = await (from v in db.Set<PayComponentVersion>().AsNoTracking()
                              join c in db.Set<PayComponent>().AsNoTracking() on v.ComponentId equals c.Id
-                             where c.CompanyId == companyId && !c.IsDeleted && v.ValidFrom <= day && (v.ValidTo == null || v.ValidTo > day)
+                             where c.CompanyId == companyId && !c.IsDeleted && (v.ValidTo == null || v.ValidTo > day)
                              select new { c.Code, v.BaseComponentIds, v.Formula }).ToListAsync(ct).ConfigureAwait(false);
         var codes = known.Keys.ToHashSet(StringComparer.Ordinal);
         var graph = new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal);
@@ -416,7 +432,7 @@ internal sealed class PayComponentService(
                 uses.UnionWith(formulas.Check(v.Formula, codes).Components);
             }
 
-            graph[v.Code] = uses;
+            graph[v.Code] = graph.TryGetValue(v.Code, out var earlier) ? new HashSet<string>(earlier.Concat(uses), StringComparer.Ordinal) : uses;
         }
 
         return graph;

@@ -294,7 +294,7 @@ public sealed class PayCompensationTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(Enumerable.Range(1, 10), order); // listed in the order of evaluation
 
         // A second version from a later date: unchanged components keep their row, a changed one is closed and re-opened, a left-out one ends.
-        var later = from.AddDays(40);
+        var later = Today.AddDays(30); // a change to an existing list cannot start in the past (review S1.34b M5)
         var items = parts.Take(9).Select((p, i) => (p, 10 - i, (decimal?)(i + 1) * 1000m, (decimal?)null, i == 0)).ToList();
         items[2] = (items[2].p, items[2].Item2, 9999m, null, false);
         var second = await SetComponentsAsync(rig.Admin, structure, later, [.. items]);
@@ -570,5 +570,192 @@ public sealed class PayCompensationTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NotFound, (await _h.GetAsync(scoped, $"{Components}/{component.Id}/detail", Ct)).Status);
         Assert.Equal(HttpStatusCode.NotFound, (await _h.GetAsync(scoped, $"{Structures}/{structure}/detail", Ct)).Status);
         Assert.Equal(HttpStatusCode.NotFound, (await _h.GetAsync(scoped, $"{Employments}/{employment}/compensation", Ct)).Status);
+    }
+
+    // ------------------------------------------------------------------ review S1.34b (docs/reviews/S1.34b-review.md)
+
+    private async Task<Guid> AssignedAsync(Rig rig, DateOnly from, decimal amount = 50_000m)
+    {
+        var s = await BasicStructureAsync(rig, from);
+        var employment = await HireAsync(rig);
+        var done = await _h.PostAsync(rig.Admin, $"{Employments}/{employment}/compensation", new { structureId = s.Structure, validFrom = Iso(from), reasonCode = "initial_pay", lines = new object[] { new { componentId = s.Basic, amount } } }, Ct);
+        Assert.True(done.Status is HttpStatusCode.Created or HttpStatusCode.Accepted, done.Body);
+        if (done.Status == HttpStatusCode.Accepted)
+        {
+            Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(rig.Second, $"/api/iam/maker-checker-requests/{done.Json.GetProperty("requestId").GetGuid()}/approve", new { reason = "ok" }, Ct)).Status);
+        }
+
+        return employment;
+    }
+
+    [Fact]
+    public async Task FR_XM_32_a_data_correction_cannot_target_a_salary_revision_so_job_details_never_skip_the_approval_of_promotions()
+    {
+        var rig = await RigAsync(approval: false);
+        var employment = await AssignedAsync(rig, Today.AddDays(-100));
+        var eventId = await _h.ScalarAsync<Guid>("select event_id from hrm.compensation_assignments where employment_id = $1", Ct, employment);
+        var correction = await _h.PostAsync(rig.Hr, $"{Employments}/{employment}/events", new
+        {
+            kind = "data_correction",
+            reasonCode = "entry_error",
+            effectiveDate = Iso(Today),
+            correctsEventId = eventId,
+            assignment = new { title = "Director (via correction)" },
+            rowVersion = await _h.ScalarAsync<long>("select row_version from hrm.employments where id = $1", Ct, employment),
+        }, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, correction.Status);
+        Assert.Contains("correctsEventId", correction.Body, StringComparison.Ordinal);
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.employment_assignments where employment_id = $1 and title = 'Director (via correction)'", Ct, employment));
+    }
+
+    [Fact]
+    public async Task GHR_06_a_held_salary_is_sealed_in_the_kernels_request_table_and_no_amount_is_readable_there()
+    {
+        var rig = await RigAsync(approval: true);
+        var from = Today.AddDays(-100);
+        var s = await BasicStructureAsync(rig, from);
+        var employment = await HireAsync(rig);
+        var held = await _h.PostAsync(rig.Admin, $"{Employments}/{employment}/compensation", new { structureId = s.Structure, validFrom = Iso(from), reasonCode = "initial_pay", lines = new object[] { new { componentId = s.Basic, amount = 123456.78m } } }, Ct);
+        Assert.Equal(HttpStatusCode.Accepted, held.Status);
+        var requestId = held.Json.GetProperty("requestId").GetGuid();
+        Assert.DoesNotContain("123456", await _h.ScalarAsync<string>("select payload::text from iam.maker_checker_requests where id = $1", Ct, requestId), StringComparison.Ordinal);
+
+        var tenantAdmin = await _h.UserAsync(Ct, null, "tenant_admin"); // a baseline role with no salary class
+        Assert.Equal(HttpStatusCode.Forbidden, (await _h.GetAsync(tenantAdmin, $"{Employments}/{employment}/compensation", Ct)).Status);
+        var read = await _h.GetAsync(tenantAdmin, $"/api/iam/maker-checker-requests/{requestId}", Ct);
+        Assert.DoesNotContain("123456", read.Body, StringComparison.Ordinal);
+
+        // The sealed plan is still applied when the second person approves.
+        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(rig.Second, $"/api/iam/maker-checker-requests/{requestId}/approve", new { reason = "agreed" }, Ct)).Status);
+        Assert.Equal(123456.78m, await _h.ScalarAsync<decimal>("select l.amount from hrm.compensation_lines l join hrm.compensation_assignments a on a.id = l.assignment_id where a.employment_id = $1", Ct, employment));
+        Assert.DoesNotContain("123456", await _h.ScalarAsync<string>("select payload::text from iam.maker_checker_requests where id = $1", Ct, requestId), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FR_HRM_PAY_03_a_loop_that_starts_at_a_later_date_is_refused()
+    {
+        var rig = await RigAsync(approval: false);
+        var from = Today.AddDays(-60);
+        var a = await ComponentAsync(rig, version: Fixed(from));
+        var b = await ComponentAsync(rig, version: Fixed(from));
+        Assert.Equal(HttpStatusCode.Created, (await VersionAsync(rig.Admin, b.Id, new { validFrom = Iso(Today.AddDays(30)), method = "percent_of", baseComponentIds = new[] { a.Id }, proRataRule = "none", statutoryFlags = new { } })).Status);
+        var loop = await VersionAsync(rig.Admin, a.Id, new { validFrom = Iso(Today.AddDays(10)), method = "percent_of", baseComponentIds = new[] { b.Id }, proRataRule = "none", statutoryFlags = new { } });
+        Assert.Equal("errors.hrm.pay.formula_cycle", FieldError(loop, "baseComponentIds"));
+        var viaFormula = await VersionAsync(rig.Admin, a.Id, new { validFrom = Iso(Today.AddDays(10)), method = "formula", formula = b.Code + " * 2", proRataRule = "none", statutoryFlags = new { } });
+        Assert.Equal("errors.hrm.pay.formula_cycle", FieldError(viaFormula, "formula"));
+        Assert.Equal(1L, await _h.ScalarAsync<long>("select count(*) from hrm.pay_component_versions where component_id = $1", Ct, a.Id));
+
+        // The function names of the formula grammar cannot be component codes.
+        var reserved = await _h.PostAsync(rig.Admin, Components, new { companyId = rig.Company, code = "Max", nameI18n = new { en = "x" }, kind = "earning", payslipOrder = 1 }, Ct);
+        Assert.Equal("errors.hrm.pay.component_code", FieldError(reserved, "code"));
+    }
+
+    [Fact]
+    public async Task GHR_06_a_user_with_read_only_salary_access_cannot_wipe_amounts_or_defaults_by_leaving_them_out()
+    {
+        var rig = await RigAsync(approval: false);
+        var from = Today.AddDays(-100);
+        var s = await BasicStructureAsync(rig, from);
+        var employment = await HireAsync(rig);
+        Assert.Equal(HttpStatusCode.Created, (await _h.PostAsync(rig.Admin, $"{Employments}/{employment}/compensation", new { structureId = s.Structure, validFrom = Iso(from), reasonCode = "initial_pay", lines = new object[] { new { componentId = s.Basic, amount = 500m } } }, Ct)).Status);
+
+        var reader = await _h.UserAsync(Ct);
+        await _h.AssignAsync(reader, await _h.RoleAsync(Ct, PayPermissions, [("*", "all")], [("*", "class:salary", "read_only")]), null, Today.AddDays(-1), null, Ct);
+        var wipe = await _h.PostAsync(reader, $"{Employments}/{employment}/compensation", new { structureId = s.Structure, validFrom = Iso(from.AddDays(30)), reasonCode = "increment", lines = new object[] { new { componentId = s.Basic, units = 1m } } }, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, wipe.Status);
+        Assert.Equal("errors.access.field_not_editable", wipe.Json.GetProperty("errors").GetProperty("amount")[0].GetString());
+        Assert.Equal(1L, await _h.ScalarAsync<long>("select count(*) from hrm.compensation_assignments where employment_id = $1", Ct, employment));
+
+        // A structure list sent without defaults by someone who cannot edit them keeps the defaults in force.
+        var structure = await StructureAsync(rig);
+        var comp = await ComponentAsync(rig, version: Fixed(from));
+        Assert.Equal(HttpStatusCode.OK, (await SetComponentsAsync(rig.Admin, structure, from, (comp.Id, 1, 500m, null, false))).Status);
+        var again = await SetComponentsAsync(reader, structure, Today.AddDays(5), (comp.Id, 1, null, null, true));
+        Assert.Equal(HttpStatusCode.OK, again.Status);
+        Assert.Equal(500m, await _h.ScalarAsync<decimal>("select default_amount from hrm.salary_structure_components where structure_id = $1 and valid_to is null", Ct, structure));
+        var set = await SetComponentsAsync(reader, structure, Today.AddDays(9), (comp.Id, 1, 999m, null, true));
+        Assert.Equal(HttpStatusCode.BadRequest, set.Status);
+    }
+
+    [Fact]
+    public async Task FR_XM_32_an_approver_who_may_not_see_the_amounts_cannot_approve_them()
+    {
+        var rig = await RigAsync(approval: true);
+        var from = Today.AddDays(-100);
+        var s = await BasicStructureAsync(rig, from);
+        var employment = await HireAsync(rig);
+        var held = await _h.PostAsync(rig.Admin, $"{Employments}/{employment}/compensation", new { structureId = s.Structure, validFrom = Iso(from), reasonCode = "initial_pay", lines = new object[] { new { componentId = s.Basic, amount = 70_000m } } }, Ct);
+        Assert.Equal(HttpStatusCode.Accepted, held.Status);
+        var blind = await _h.UserAsync(Ct);
+        await _h.AssignAsync(blind, await _h.RoleAsync(Ct, [.. PayPermissions, "hrm.pay.change.approve"], [("*", "all")], [("*", "class:salary", "hidden")]), null, Today.AddDays(-1), null, Ct);
+        var refused = await _h.PostAsync(blind, $"/api/iam/maker-checker-requests/{held.Json.GetProperty("requestId").GetGuid()}/approve", new { reason = "blind" }, Ct);
+        Assert.Equal(HttpStatusCode.Forbidden, refused.Status);
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.compensation_assignments where employment_id = $1", Ct, employment));
+    }
+
+    [Fact]
+    public async Task FR_HRM_PAY_04_a_change_to_an_existing_list_cannot_start_in_the_past_nor_drop_a_component_salaries_use_and_a_list_has_one_currency()
+    {
+        var rig = await RigAsync(approval: false);
+        var from = Today.AddDays(-100);
+        var s = await BasicStructureAsync(rig, from);
+        var employment = await HireAsync(rig);
+        Assert.Equal(HttpStatusCode.Created, (await _h.PostAsync(rig.Admin, $"{Employments}/{employment}/compensation", new { structureId = s.Structure, validFrom = Iso(from), reasonCode = "initial_pay", lines = new object[] { new { componentId = s.Basic, amount = 500m }, new { componentId = s.Tax, amount = 5m } } }, Ct)).Status);
+
+        var past = await SetComponentsAsync(rig.Admin, s.Structure, Today.AddDays(-30), (s.Basic, 1, null, null, true));
+        Assert.Equal("errors.hrm.pay.structure_date_past", FieldError(past, "components.validFrom"));
+        var dropped = await SetComponentsAsync(rig.Admin, s.Structure, Today.AddDays(5), (s.Basic, 1, null, null, true));
+        Assert.Equal("errors.hrm.pay.structure_component_in_use", FieldError(dropped, "components.items"));
+
+        var other = await StructureAsync(rig);
+        var c1 = await ComponentAsync(rig, version: Fixed(from));
+        var c2 = await ComponentAsync(rig, version: Fixed(from));
+        var mixed = await _h.PutAsync(rig.Admin, $"{Structures}/{other}", new
+        {
+            rowVersion = await StructureVersionAsync(other),
+            components = new { validFrom = Iso(from), items = new object[] { new { componentId = c1.Id, evaluationOrder = 1, currencyCode = "PKR" }, new { componentId = c2.Id, evaluationOrder = 2, currencyCode = "USD" } } },
+        }, Ct);
+        Assert.Equal("errors.hrm.pay.structure_currency_mixed", FieldError(mixed, "components.items"));
+    }
+
+    [Fact]
+    public async Task FR_XM_32_nobody_sets_their_own_pay_and_no_salary_starts_after_a_recorded_end()
+    {
+        var rig = await RigAsync(approval: false);
+        var from = Today.AddDays(-100);
+        var s = await BasicStructureAsync(rig, from);
+        var employment = await HireAsync(rig);
+        var company = rig.Company;
+        await _h.ExecAsync("""
+            insert into hrm.employment_events (id, company_id, employment_id, kind, reason_code, effective_date, status, created_at, created_by, updated_at, updated_by, row_version)
+            values (gen_random_uuid(), $1, $2, 'separation', 'transfer', $3, 'effective', now(), $4, now(), $4, 1)
+            """, Ct, company, employment, Today.AddDays(10), rig.Admin);
+        var after = await _h.PostAsync(rig.Admin, $"{Employments}/{employment}/compensation", new { structureId = s.Structure, validFrom = Iso(Today.AddDays(20)), reasonCode = "initial_pay", lines = new object[] { new { componentId = s.Basic, amount = 1m } } }, Ct);
+        Assert.Equal("errors.hrm.pay.compensation_after_end", FieldError(after, "validFrom"));
+
+        var mine = await HireAsync(rig);
+        await _h.ExecAsync("update hrm.employments set user_ref = $1 where id = $2", Ct, rig.Admin, mine);
+        var own = await _h.PostAsync(rig.Admin, $"{Employments}/{mine}/compensation", new { structureId = s.Structure, validFrom = Iso(from), reasonCode = "initial_pay", lines = new object[] { new { componentId = s.Basic, amount = 1m } } }, Ct);
+        Assert.Equal(HttpStatusCode.Forbidden, own.Status);
+    }
+
+    [Fact]
+    public async Task FR_HRM_PAY_06_the_database_refuses_lines_for_an_ended_row_and_a_change_of_the_row_in_forces_employee_or_structure()
+    {
+        var rig = await RigAsync(approval: false);
+        var from = Today.AddDays(-100);
+        var s = await BasicStructureAsync(rig, from);
+        var employment = await HireAsync(rig);
+        Assert.Equal(HttpStatusCode.Created, (await _h.PostAsync(rig.Admin, $"{Employments}/{employment}/compensation", new { structureId = s.Structure, validFrom = Iso(from), reasonCode = "initial_pay", lines = new object[] { new { componentId = s.Basic, amount = 1m } } }, Ct)).Status);
+        var first = await _h.ScalarAsync<Guid>("select id from hrm.compensation_assignments where employment_id = $1", Ct, employment);
+        var s2 = await BasicStructureAsync(rig, from.AddDays(50));
+        Assert.Equal(HttpStatusCode.Created, (await _h.PostAsync(rig.Admin, $"{Employments}/{employment}/compensation", new { structureId = s2.Structure, validFrom = Iso(from.AddDays(60)), reasonCode = "increment", lines = new object[] { new { componentId = s2.Basic, amount = 2m } } }, Ct)).Status);
+        var late = await Assert.ThrowsAnyAsync<Exception>(() => _h.ExecAsync(
+            "insert into hrm.compensation_lines (id, company_id, assignment_id, component_id, amount, created_at, created_by, updated_at, updated_by) values (gen_random_uuid(), $1, $2, $3, 9, now(), $4, now(), $4)",
+            Ct, rig.Company, first, s.House, rig.Admin));
+        Assert.Contains("an ended compensation_assignments row never changes", late.Message, StringComparison.Ordinal);
+        var current = await _h.ScalarAsync<Guid>("select id from hrm.compensation_assignments where employment_id = $1 and valid_to is null", Ct, employment);
+        var move = await Assert.ThrowsAnyAsync<Exception>(() => _h.ExecAsync("update hrm.compensation_assignments set structure_id = $1 where id = $2", Ct, s.Structure, current));
+        Assert.Contains("keeps its employee, structure, event and start", move.Message, StringComparison.Ordinal);
     }
 }

@@ -46,6 +46,7 @@ internal static class CompensationPlanner
     public const string MandatoryMissing = "errors.hrm.pay.compensation_mandatory_missing";
     public const string CurrencyMismatch = "errors.hrm.pay.compensation_currency";
     public const string ReasonUnknown = "errors.hrm.pay.compensation_reason";
+    public const string AfterEnd = "errors.hrm.pay.compensation_after_end";
     public const string NotesTooLong = "errors.hrm.field.too_long";
     public const int NotesLength = 2000;
 
@@ -64,6 +65,13 @@ internal static class CompensationPlanner
         if (plan.ValidFrom < employment.JoiningDate)
         {
             Fail("validFrom", BeforeJoining);
+        }
+
+        // Nothing starts on or after a recorded end (as the employment change service refuses, review S1.34b M6).
+        if (await db.Set<EmploymentEvent>().AsNoTracking().AnyAsync(e => e.EmploymentId == employment.Id && e.Kind == EmploymentApplier.SeparationKind
+                && (e.Status == "pending_approval" || e.Status == "approved" || e.Status == "effective") && e.EffectiveDate <= plan.ValidFrom, ct).ConfigureAwait(false))
+        {
+            Fail("validFrom", AfterEnd);
         }
 
         if (!EmploymentCatalogue.Default.IsReason("salary_revision", plan.ReasonCode))

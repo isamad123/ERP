@@ -408,7 +408,8 @@ tables:
         stub: { name: pay_component_versions_base_cycle, owner: S1.34 }
         # S1.34b (CR-087 S1.34b detail; FR-HRM-PAY-03): the components a version is a percentage of (or a formula names) exist, belong to
         # the component's company, never include the component itself and never lead back to it: the walk follows the base lists of
-        # the versions in force on the new version's start date. The component service checks the same first to give a clear message
+        # every version in force on the new version's start date or starting later (a loop that begins later is a loop, review H3),
+        # under a per-company lock. The component service checks the same first to give a clear message
         # (and also reads the names in a formula); the trigger stops any other path.
         implemented:
           slice: S1.34b
@@ -425,6 +426,8 @@ tables:
                     return new;
                 end if;
                 select company_id into v_company from hrm.pay_components where id = new.component_id;
+                -- one writer of versions per company at a time, so two writes cannot each pass the loop check and make a loop together
+                perform pg_advisory_xact_lock(hashtextextended(v_company::text, 0));
                 if new.component_id = any (new.base_component_ids) then
                     raise exception 'pay component %: a component cannot be based on itself', new.component_id
                         using errcode = '23514', constraint = 'ck_pay_component_versions_bases';
@@ -443,7 +446,7 @@ tables:
                           from walk w
                           join hrm.pay_component_versions v on v.component_id = w.id
                            and v.id <> new.id
-                           and v.valid_from <= new.valid_from and (v.valid_to is null or v.valid_to > new.valid_from)
+                           and (v.valid_to is null or v.valid_to > new.valid_from)
                     )
                     select 1 from walk where id = new.component_id) then
                     raise exception 'pay component %: its base components lead back to it', new.component_id
@@ -1656,14 +1659,17 @@ functions:
           for each row execute function hrm.tg_pay_periods_fixed();
 
   # S1.34b (CR-087 S1.34b detail; FR-HRM-PAY-06, FR-XM-05): a compensation assignment that a revision has ended (it has an end date) is a
-  # record of what was agreed and never changes or disappears, nor do its lines; the revision service is the only writer of the current
-  # row (the generated writes are closed) and ends it by setting its end date. Refused with constraint ck_compensation_fixed.
+  # record of what was agreed and never changes or disappears, nor do its lines, and no line is added to it; the row in force keeps its
+  # employee, structure, event and start. The revision service is the only writer of the current row (the generated writes are closed)
+  # and ends it by setting its end date. The audit coverage test changes and deletes fresh rows of every audited table, so the rows in
+  # force and their lines cannot be locked further here (review S1.34b M2, ruled in its Response). Refused with constraint ck_compensation_fixed.
   - slice: S1.34b
     name: hrm.tg_compensation_fixed
     purpose: "A compensation assignment that a revision has ended never changes or is deleted, and neither are its lines (FR-HRM-PAY-06, FR-XM-05); refused with constraint ck_compensation_fixed."
     triggers:
       - [hrm.compensation_assignments, tg_compensation_assignments_fixed]
       - [hrm.compensation_lines, tg_compensation_lines_fixed]
+      - [hrm.compensation_lines, tg_compensation_lines_insert]
     sql: |
       create or replace function hrm.tg_compensation_fixed() returns trigger
       language plpgsql as $fn$
@@ -1672,6 +1678,12 @@ functions:
       begin
           if tg_table_name = 'compensation_assignments' then
               v_ended := old.valid_to is not null;
+              if not v_ended and tg_op = 'UPDATE'
+                 and (new.employment_id, new.structure_id, new.event_id, new.valid_from, new.company_id)
+                     is distinct from (old.employment_id, old.structure_id, old.event_id, old.valid_from, old.company_id) then
+                  raise exception 'a compensation assignment keeps its employee, structure, event and start: record a revision'
+                      using errcode = '23514', constraint = 'ck_compensation_fixed';
+              end if;
           else
               select a.valid_to is not null into v_ended from hrm.compensation_assignments a where a.id = old.assignment_id;
           end if;
@@ -1685,6 +1697,19 @@ functions:
           return new;
       end
       $fn$;
+      create or replace function hrm.tg_compensation_lines_insert() returns trigger
+      language plpgsql as $fn$
+      begin
+          if exists (select 1 from hrm.compensation_assignments a where a.id = new.assignment_id and a.valid_to is not null) then
+              raise exception 'an ended compensation_assignments row never changes: record a revision'
+                  using errcode = '23514', constraint = 'ck_compensation_fixed';
+          end if;
+          return new;
+      end
+      $fn$;
+      drop trigger if exists tg_compensation_lines_insert on hrm.compensation_lines;
+      create trigger tg_compensation_lines_insert before insert on hrm.compensation_lines
+          for each row execute function hrm.tg_compensation_lines_insert();
       drop trigger if exists tg_compensation_assignments_fixed on hrm.compensation_assignments;
       create trigger tg_compensation_assignments_fixed before update or delete on hrm.compensation_assignments
           for each row execute function hrm.tg_compensation_fixed();

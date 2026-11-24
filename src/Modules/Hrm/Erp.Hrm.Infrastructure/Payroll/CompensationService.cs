@@ -36,6 +36,7 @@ internal sealed class CompensationService(
     IFieldAccess fields,
     ISettings settings,
     IHeldChanges held,
+    IFieldEncryptorProvider keys,
     EmploymentApplier applier) : ICompensationService
 {
     private DbContextScopeSource Source => new(db);
@@ -53,6 +54,12 @@ internal sealed class CompensationService(
         if (employment is null || !await scope.AllowsAsync(employment, EmploymentAccess.Scope, "read", Source, cancellationToken).ConfigureAwait(false))
         {
             return PeopleResult.NotFound;
+        }
+
+        // Nobody sets their own pay (FR-XM-32; the approval handler refuses it as well, review S1.34b L7).
+        if (employment.UserRef is { } own && own == actor.UserId)
+        {
+            return PeopleResult.Forbidden(CompensationChangeHandler.OwnPay);
         }
 
         var probe = new CompensationAssignment { CompanyId = employment.CompanyId, EmploymentId = employment.Id, CurrencyCode = string.Empty };
@@ -92,17 +99,10 @@ internal sealed class CompensationService(
 
         // Amounts are salary-class data: the caller needs edit access to them (GHR-06).
         var map = await fields.ForAsync(CompensationLineAccess.Fields, "create", employment.CompanyId, cancellationToken).ConfigureAwait(false);
-        var touched = new List<string>();
-        if (request.Lines!.Any(l => l.Amount is not null))
-        {
-            touched.Add("amount");
-        }
 
-        if (request.Lines!.Any(l => l.Percent is not null))
-        {
-            touched.Add("percent");
-        }
-
+        // Every new row writes amount and percent (empty is a value too), so both need edit access whatever the lines carry: a revision
+        // with units only would otherwise wipe the amounts of someone who cannot edit them (review S1.34b M1).
+        string[] touched = ["amount", "percent"];
         if (touched.Where(k => !map.CanEdit(k)).ToList() is { Count: > 0 } denied)
         {
             return new PeopleResult(PeopleOutcome.Invalid, FieldShaping.NotEditable, FieldErrors: denied.ToDictionary(f => f, _ => new[] { FieldShaping.NotEditable }, StringComparer.Ordinal));
@@ -144,7 +144,7 @@ internal sealed class CompensationService(
             var approval = await settings.GetAsync(HrmSettingKeys.HrmPayChangeApproval, (Guid?)employment.CompanyId, cancellationToken).ConfigureAwait(false);
             if (approval.Value.ValueKind != JsonValueKind.False)
             {
-                var payload = JsonSerializer.Serialize(plan, JsonSerializerOptions.Web);
+                var payload = PayHeldChanges.Seal(await keys.GetAsync(cancellationToken).ConfigureAwait(false), plan);
                 var requestId = await held.SubmitAsync(
                     new HeldChangeRequest(PayHeldChanges.CompensationKind, EmploymentAccess.Scope.Resource, employment.Id, payload, string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim()),
                     tx.GetDbTransaction(), cancellationToken).ConfigureAwait(false);

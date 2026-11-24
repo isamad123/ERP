@@ -100,5 +100,10 @@
   "permissions.hrm.compensation_assignments.create": "ملازم کا تنخواہی ڈھانچہ تفویض یا نظرثانی کرنا",
   "permissions.hrm.compensation_lines.create": "ملازم کی تنخواہ کی رقوم درج کرنا",
   "permissions.hrm.pay.compensation.read": "ملازمین کے تنخواہی انتظامات دیکھنا",
-  "permissions.hrm.pay.change.approve": "تنخواہی ڈھانچوں اور تنخواہوں کی تبدیلیوں کی منظوری"
+  "permissions.hrm.pay.change.approve": "تنخواہی ڈھانچوں اور تنخواہوں کی تبدیلیوں کی منظوری",
+  "errors.hrm.pay.approver_cannot_see_amounts": "آپ اس تبدیلی کی منظوری نہیں دے سکتے کیونکہ آپ اس میں شامل رقوم نہیں دیکھ سکتے۔",
+  "errors.hrm.pay.compensation_after_end": "تاریخ ملازم کی درج شدہ ملازمت کے اختتام کے دن یا اس کے بعد کی ہے۔",
+  "errors.hrm.pay.structure_date_past": "جس ڈھانچے میں اجزا پہلے سے ہوں اس کی تبدیلی ماضی کی تاریخ سے شروع نہیں ہو سکتی۔ جو تنخواہ دی جا چکی اسے بدلنے کے لیے تنخواہ پر نظرثانی درج کریں۔",
+  "errors.hrm.pay.structure_component_in_use": "جب تک اس ڈھانچے پر تنخواہیں کسی جزو کو استعمال کر رہی ہوں اسے ہٹایا نہیں جا سکتا۔",
+  "errors.hrm.pay.structure_currency_mixed": "ڈھانچے کے تمام اجزا ایک ہی کرنسی میں ہوں۔"
 }

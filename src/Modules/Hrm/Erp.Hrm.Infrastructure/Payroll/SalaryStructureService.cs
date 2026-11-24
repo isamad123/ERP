@@ -38,6 +38,7 @@ internal sealed partial class SalaryStructureService(
     ISettings settings,
     IHeldChanges held,
     IFormulaValidator formulas,
+    IFieldEncryptorProvider keys,
     EmploymentApplier applier) : ISalaryStructureService
 {
     public const string CodeInvalid = "errors.hrm.pay.structure_code";
@@ -179,6 +180,14 @@ internal sealed partial class SalaryStructureService(
         {
             var lines = new List<StructureLine>();
             var currency = await CompanyCurrencyAsync(row.CompanyId, cancellationToken).ConfigureAwait(false);
+
+            // Defaults are salary-class data (GHR-06): a caller without edit access keeps what is in force (it cannot see it, so
+            // sending nothing never wipes it) and cannot set a different value (review S1.34b M1).
+            var fieldMap = await fields.ForAsync(SalaryStructureComponentAccess.Fields, "update", row.CompanyId, cancellationToken).ConfigureAwait(false);
+            var inForce = set.ValidFrom is { } start
+                ? await db.Set<SalaryStructureComponent>().AsNoTracking().Where(r => r.StructureId == row.Id && r.ValidFrom <= start && (r.ValidTo == null || r.ValidTo > start)).ToListAsync(cancellationToken).ConfigureAwait(false)
+                : [];
+            var denied = new List<string>();
             foreach (var item in set.Items ?? [])
             {
                 if (item.ComponentId is not { } componentId)
@@ -187,13 +196,42 @@ internal sealed partial class SalaryStructureService(
                     continue;
                 }
 
+                var current = inForce.FirstOrDefault(r => r.ComponentId == componentId);
+                var amount = item.DefaultAmount is { } a ? ComponentRules.Money(a) : (decimal?)null;
+                var percent = item.DefaultPercent;
+                if (!fieldMap.CanEdit("default_amount"))
+                {
+                    if (amount is not null && amount != current?.DefaultAmount)
+                    {
+                        denied.Add("default_amount");
+                    }
+
+                    amount = current?.DefaultAmount;
+                }
+
+                if (!fieldMap.CanEdit("default_percent"))
+                {
+                    if (percent is not null && percent != current?.DefaultPercent)
+                    {
+                        denied.Add("default_percent");
+                    }
+
+                    percent = current?.DefaultPercent;
+                }
+
                 lines.Add(new StructureLine(
                     componentId,
                     item.EvaluationOrder ?? 0,
-                    item.DefaultAmount is { } a ? ComponentRules.Money(a) : null,
-                    item.DefaultPercent,
+                    amount,
+                    percent,
                     item.IsMandatory ?? false,
                     (item.CurrencyCode ?? currency).Trim().ToUpperInvariant()));
+            }
+
+            if (denied.Count > 0)
+            {
+                db.ChangeTracker.Clear();
+                return new PeopleResult(PeopleOutcome.Invalid, FieldShaping.NotEditable, FieldErrors: denied.Distinct(StringComparer.Ordinal).ToDictionary(f => f, _ => new[] { FieldShaping.NotEditable }, StringComparer.Ordinal));
             }
 
             plan = new StructurePlan(row.Id, row.CompanyId, ruleJson, set.ValidFrom, lines);
@@ -203,7 +241,7 @@ internal sealed partial class SalaryStructureService(
             plan = new StructurePlan(row.Id, row.CompanyId, ruleJson, null, null);
         }
 
-        foreach (var (field, keys) in await StructurePlanner.CheckAsync(db, plan, formulas, cancellationToken).ConfigureAwait(false))
+        foreach (var (field, keys) in await StructurePlanner.CheckAsync(db, plan, formulas, await applier.TodayAsync(row.CompanyId, clock.UtcNow, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false))
         {
             errors[field] = keys;
         }
@@ -222,24 +260,6 @@ internal sealed partial class SalaryStructureService(
             {
                 db.ChangeTracker.Clear();
                 return PeopleResult.Forbidden();
-            }
-
-            var map = await fields.ForAsync(SalaryStructureComponentAccess.Fields, "update", row.CompanyId, cancellationToken).ConfigureAwait(false);
-            var touched = new List<string>();
-            if (plan.Lines!.Any(l => l.DefaultAmount is not null))
-            {
-                touched.Add("default_amount");
-            }
-
-            if (plan.Lines!.Any(l => l.DefaultPercent is not null))
-            {
-                touched.Add("default_percent");
-            }
-
-            if (touched.Where(k => !map.CanEdit(k)).ToList() is { Count: > 0 } denied)
-            {
-                db.ChangeTracker.Clear();
-                return new PeopleResult(PeopleOutcome.Invalid, FieldShaping.NotEditable, FieldErrors: denied.ToDictionary(f => f, _ => new[] { FieldShaping.NotEditable }, StringComparer.Ordinal));
             }
         }
 
@@ -276,7 +296,7 @@ internal sealed partial class SalaryStructureService(
         {
             EmploymentApplier.Bump(row, now, actor.UserId);
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            var payload = JsonSerializer.Serialize(plan, JsonSerializerOptions.Web);
+            var payload = PayHeldChanges.Seal(await keys.GetAsync(cancellationToken).ConfigureAwait(false), plan);
             var requestId = await held.SubmitAsync(
                 new HeldChangeRequest(PayHeldChanges.StructureKind, SalaryStructureAccess.Scope.Resource, row.Id, payload, string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim()),
                 held_.GetDbTransaction(), cancellationToken).ConfigureAwait(false);

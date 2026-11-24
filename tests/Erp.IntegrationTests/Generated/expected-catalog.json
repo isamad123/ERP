@@ -11013,7 +11013,8 @@
         "ix_compensation_lines_company_id_component_id"
       ],
       "triggers": [
-        "tg_compensation_lines_fixed"
+        "tg_compensation_lines_fixed",
+        "tg_compensation_lines_insert"
       ],
       "append_only_updatable": [],
       "has_api": true,

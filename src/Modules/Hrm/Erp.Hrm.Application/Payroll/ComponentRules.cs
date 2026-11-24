@@ -43,7 +43,10 @@ public static partial class ComponentRules
     private static partial Regex LabelPattern();
 
     /// <summary>A component code is an identifier, so a formula can name it.</summary>
-    public static bool IsComponentCode(string? code) => code is not null && ComponentCodePattern().IsMatch(code);
+    public static bool IsComponentCode(string? code) => code is not null && ComponentCodePattern().IsMatch(code) && !Reserved.Contains(code, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The function names of the formula grammar cannot be component codes (review S1.34b L9).</summary>
+    public static readonly string[] Reserved = ["min", "max", "round"];
 
     public static bool IsFlagCode(string? code) => code is not null && FlagCodePattern().IsMatch(code);
 

@@ -12,6 +12,12 @@ declare
 begin
     if tg_table_name = 'compensation_assignments' then
         v_ended := old.valid_to is not null;
+        if not v_ended and tg_op = 'UPDATE'
+           and (new.employment_id, new.structure_id, new.event_id, new.valid_from, new.company_id)
+               is distinct from (old.employment_id, old.structure_id, old.event_id, old.valid_from, old.company_id) then
+            raise exception 'a compensation assignment keeps its employee, structure, event and start: record a revision'
+                using errcode = '23514', constraint = 'ck_compensation_fixed';
+        end if;
     else
         select a.valid_to is not null into v_ended from hrm.compensation_assignments a where a.id = old.assignment_id;
     end if;
@@ -25,6 +31,19 @@ begin
     return new;
 end
 $fn$;
+create or replace function hrm.tg_compensation_lines_insert() returns trigger
+language plpgsql as $fn$
+begin
+    if exists (select 1 from hrm.compensation_assignments a where a.id = new.assignment_id and a.valid_to is not null) then
+        raise exception 'an ended compensation_assignments row never changes: record a revision'
+            using errcode = '23514', constraint = 'ck_compensation_fixed';
+    end if;
+    return new;
+end
+$fn$;
+drop trigger if exists tg_compensation_lines_insert on hrm.compensation_lines;
+create trigger tg_compensation_lines_insert before insert on hrm.compensation_lines
+    for each row execute function hrm.tg_compensation_lines_insert();
 drop trigger if exists tg_compensation_assignments_fixed on hrm.compensation_assignments;
 create trigger tg_compensation_assignments_fixed before update or delete on hrm.compensation_assignments
     for each row execute function hrm.tg_compensation_fixed();

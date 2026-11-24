@@ -1575,6 +1575,7 @@ Indexes:
 Triggers:
 
 - `tg_compensation_lines_fixed` CREATE TRIGGER tg_compensation_lines_fixed BEFORE DELETE OR UPDATE ON hrm.compensation_lines FOR EACH ROW EXECUTE FUNCTION hrm.tg_compensation_fixed()
+- `tg_compensation_lines_insert` CREATE TRIGGER tg_compensation_lines_insert BEFORE INSERT ON hrm.compensation_lines FOR EACH ROW EXECUTE FUNCTION hrm.tg_compensation_lines_insert()
 
 ### hrm.compliance_obligations
 
@@ -7727,6 +7728,7 @@ Constraints:
 - `doc.tg_refuse_change` 
 - `hrm.drop_expired_attendance_partitions` 
 - `hrm.tg_compensation_fixed` 
+- `hrm.tg_compensation_lines_insert` 
 - `hrm.tg_employee_bank_accounts_bank_fields_required` 
 - `hrm.tg_employee_bank_accounts_split` 
 - `hrm.tg_employment_assignments_cost_allocation_sum` 
