@@ -100,7 +100,7 @@ public sealed class DeviceUnitTests
         Assert.Equal((ushort)64535, ZkProtocol.Checksum(new byte[] { 0xE8, 0x03, 0, 0, 0, 0, 0xFE, 0xFF }));
         var time = new DateTime(2026, 11, 24, 8, 5, 9, DateTimeKind.Unspecified);
         Assert.Equal(time, ZkProtocol.DecodeTime(ZkProtocol.EncodeTime(time)));
-        Assert.Equal(DateTime.MinValue, ZkProtocol.DecodeTime(uint.MaxValue)); // an impossible date is dropped, not guessed
+        Assert.Equal(DateTime.MinValue, ZkProtocol.DecodeTime(5_270_400)); // 31 February // an impossible date is dropped, not guessed
         Assert.Equal(4, ZkProtocol.CommKey(0, 0).Length);
         Assert.NotEqual(ZkProtocol.CommKey(1, 7), ZkProtocol.CommKey(2, 7));
     }
