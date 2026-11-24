@@ -14,6 +14,7 @@ import { access, downloadChangeExport, type AuditChange, type ChangeFilters } fr
 import type { SecurityEvent } from '../../api/users';
 import { useShell } from '../../shell/context';
 import { PersonPicker, useProblemText } from './users-parts';
+import './reports-messages';
 import './users.css';
 
 export const AUDIT_PATH = '/admin/audit';
