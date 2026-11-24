@@ -747,12 +747,6 @@
       "sensitive": false
     },
     {
-      "code": "hrm.leave_ledger.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_ledger.create",
-      "sensitive": false
-    },
-    {
       "code": "hrm.leave_request_days.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.leave_request_days.read",
@@ -792,24 +786,6 @@
       "code": "hrm.leave_types.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.leave_types.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.leave_types.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_types.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.leave_types.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_types.update",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.leave_types.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.leave_types.delete",
       "sensitive": false
     },
     {

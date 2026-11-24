@@ -67,6 +67,9 @@ public static class HrmSettingKeys
 
     /// <summary>How often the platform reads punches from devices it connects to.</summary>
     public const string HrmAttDevicePullMinutes = "hrm.att.device_pull_minutes";
+
+    /// <summary>The month (1 = January to 12 = December) in which the leave year starts.</summary>
+    public const string HrmLeaveYearStartMonth = "hrm.leave.year_start_month";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

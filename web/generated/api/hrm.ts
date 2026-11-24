@@ -2244,23 +2244,6 @@ export interface LeaveLedger
     createdBy: string;
 }
 
-export interface LeaveLedgerWrite
-{
-    companyId: string;
-    employmentId: string;
-    leaveTypeId: string;
-    leaveYear: number;
-    entryDate: string;
-    kind: 'opening' | 'accrual' | 'grant' | 'usage' | 'usage_reversal' | 'adjustment' | 'carry_forward' | 'lapse' | 'encashment' | 'comp_off_earned' | 'comp_off_expired' | 'transfer_in' | 'transfer_out';
-    quantity: number;
-    expiresOn?: string | null;
-    sourceType?: string | null;
-    sourceId?: string | null;
-    policyVersionId?: string | null;
-    reversesEntryId?: string | null;
-    reason?: string | null;
-}
-
 export interface LeaveLedgerListQuery
 {
     after?: string;
@@ -2278,7 +2261,6 @@ export const leaveLedger =
 {
     list: (query: LeaveLedgerListQuery = {}) => request<PagedResult<LeaveLedger>>('GET', '/api/hrm/leave-ledger', { query }),
     get: (id: string) => request<LeaveLedger>('GET', `/api/hrm/leave-ledger/${id}`),
-    create: (body: LeaveLedgerWrite) => request<LeaveLedger>('POST', '/api/hrm/leave-ledger', { body }),
 };
 
 /** hrm.leave_request_days: Day-by-day breakdown used by attendance and payroll. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2425,21 +2407,6 @@ export interface LeaveType
     rowVersion: number;
 }
 
-export interface LeaveTypeWrite
-{
-    companyId: string;
-    code: string;
-    nameI18n: Record<string, string>;
-    isPaid?: boolean;
-    counting: 'calendar_days' | 'working_days' | 'hours';
-    unit: 'day' | 'half_day' | 'hour';
-    requiresDocument?: boolean;
-    isCompOff?: boolean;
-    isUnpaidDeduction?: boolean;
-    source: 'pack' | 'tenant';
-    isActive?: boolean;
-}
-
 export interface LeaveTypeListQuery
 {
     after?: string;
@@ -2455,9 +2422,6 @@ export const leaveTypes =
 {
     list: (query: LeaveTypeListQuery = {}) => request<PagedResult<LeaveType>>('GET', '/api/hrm/leave-types', { query }),
     get: (id: string) => request<LeaveType>('GET', `/api/hrm/leave-types/${id}`),
-    create: (body: LeaveTypeWrite) => request<LeaveType>('POST', '/api/hrm/leave-types', { body }),
-    update: (id: string, body: LeaveTypeWrite & { rowVersion: number }) => request<LeaveType>('PUT', `/api/hrm/leave-types/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/leave-types/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.leave_year_end_runs: Carry-forward, lapse and encashment with preview and rollback (LVE-11). Field rules (S1.06) may leave a field out or mask it as text. */

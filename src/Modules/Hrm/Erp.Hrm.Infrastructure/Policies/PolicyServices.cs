@@ -25,7 +25,8 @@ public static class PolicyServices
         }
 
         services.AddSingleton(new PolicyTypeSource(TypeManifest));
-        services.AddSingleton(sp => new PolicyTypeCatalog(sp.GetServices<PolicyTypeSource>()));
+        services.AddSingleton<IPolicyParameterCheck, Erp.Hrm.Application.Leave.LeavePolicyCheck>(); // S1.32a: what the leave schema cannot say
+        services.AddSingleton(sp => new PolicyTypeCatalog(sp.GetServices<PolicyTypeSource>(), sp.GetServices<IPolicyParameterCheck>()));
         services.AddScoped<PolicyResolver>();
         services.TryAddScoped<IPolicyResolver>(sp => sp.GetRequiredService<PolicyResolver>());
         return services;

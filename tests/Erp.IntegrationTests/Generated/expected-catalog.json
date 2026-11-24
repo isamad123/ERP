@@ -18488,7 +18488,8 @@
       ],
       "triggers": [
         "tg_leave_ledger_append_only",
-        "tg_leave_ledger_no_truncate"
+        "tg_leave_ledger_no_truncate",
+        "tg_leave_ledger_reversal"
       ],
       "append_only_updatable": [],
       "has_api": true,
@@ -19318,7 +19319,9 @@
         }
       ],
       "indexes": [],
-      "triggers": [],
+      "triggers": [
+        "tg_leave_types_rules"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.leave_types"
