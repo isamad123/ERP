@@ -5,10 +5,10 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Plus, ShieldCheck } from 'lucide-react';
-import { ColumnsChooser, DataGrid, LazyExportButton, orderedChoices, SavedViews, useDocumentTitle, type GridColumn, type ViewDefinition } from '@erp/engine';
+import { ColumnsChooser, DataGrid, EngineProvider, LazyExportButton, type EngineApi, orderedChoices, SavedViews, useDocumentTitle, type GridColumn, type ViewDefinition } from '@erp/engine';
 import { Banner, Button, EmptyState, ErrorPanel, Link, PageHeader, SelectField, TextField } from '@erp/ui';
 import { formatDateTime, formatInteger, useLocaleSettings, useText } from '@erp/i18n';
-import { ApiProblem } from '../../api/client';
+import { ApiProblem, sendText } from '../../api/client';
 import { seatsOf, USER_STATUSES, users, type UserRow } from '../../api/users';
 import { nameOf } from '../../api/workflow';
 import { companyName, useShell } from '../../shell/context';
@@ -17,6 +17,7 @@ import { BulkUsers } from './users-bulk';
 
 export const USERS_PATH = '/admin/users';
 const PAGE = 100;
+const exportApi: EngineApi = { send: sendText };
 const VIEW_KEY = 'iam.users.overview';
 
 export function UserList() {
@@ -80,7 +81,7 @@ export function UserList() {
       <PageHeader title={t('users.title')} description={t('users.description')}
         actions={(
           <>
-            {can('itg.exports.run') && <LazyExportButton source="iam.user_overview" title={t('users.title')} columns={exportColumns} query={exportQuery} search={definition.search ?? null} companyId={activeCompany?.id ?? null} />}
+            {can('itg.exports.run') && <EngineProvider api={exportApi}><LazyExportButton source="iam.user_overview" title={t('users.title')} columns={exportColumns} query={exportQuery} search={definition.search ?? null} companyId={activeCompany?.id ?? null} /></EngineProvider>}
             {canCreate && <Button variant="primary" icon={<Plus size={18} aria-hidden="true" />} onPress={create}>{t('users.create')}</Button>}
           </>
         )} />
