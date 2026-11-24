@@ -4,6 +4,7 @@
  "go_live_actions": [],
  "tasks": [
   { "key": "step_company_profile", "title_key": "setup.steps.company_profile", "kind": "step", "required": false, "level": "company", "order": 10, "link": "/organization/companies", "check": "kernel.company_profile" },
+  { "key": "step_packs", "title_key": "setup.steps.packs", "kind": "step", "required": false, "level": "customer", "order": 15, "link": "/settings/packs", "check": "kernel.packs" },
   { "key": "step_languages_formats", "title_key": "setup.steps.languages_formats", "kind": "step", "required": false, "level": "company", "order": 20, "link": "/settings" },
   { "key": "step_modules", "title_key": "setup.steps.modules", "kind": "step", "required": false, "level": "customer", "order": 30, "link": "/settings/flags" },
   { "key": "step_structure", "title_key": "setup.steps.structure", "kind": "step", "required": false, "level": "company", "order": 40, "link": "/organization/org-units", "check": "kernel.unit_structure" },
