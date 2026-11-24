@@ -23,8 +23,8 @@ Every `Tenancy__HostCacheSeconds` the API reloads the list of registered host na
 
 **Control-plane login of the API (S1.03 review finding 11).** Do not give the API the migrator's login. `M migrate` creates
 the group role `cp_api` (no login). It may connect to the control-plane database and read `cp.tenants`,
-`cp.tenant_domains`, `cp.tenant_databases`, `cp.db_clusters`, `cp.entitlements`, `cp.tenant_module_versions` and
-`cp.usage_meters`, and nothing else. Create the API's login once, as a server administrator, and use it in
+`cp.tenant_domains`, `cp.tenant_databases`, `cp.db_clusters`, `cp.entitlements`, `cp.tenant_module_versions`,
+`cp.usage_meters`, `cp.pack_catalog` and `cp.signing_keys` (the pack manager, S1.23b), and nothing else. Create the API's login once, as a server administrator, and use it in
 `ConnectionStrings__ControlPlane`:
 `create role erp_cp_api login password '<from the vault>' in role cp_api;`
 If the migrator's login cannot create roles, `migrate` skips the role. Then create it as an administrator:
@@ -233,3 +233,20 @@ The operator commands `licence refresh`, `workflow escalate`, `audit anchors-pub
 ## Customer list (FR-ADM-PLT-01)
 `M tenant list`: code, status, database status, region, cluster, edition, entitlement state, modules, schema version, legal
 hold, last backup and last restore test.
+
+## Country and industry packs (S1.23b)
+
+Packs are built from `packs/<pack-id>/` in the repository, signed offline with the vendor's pack key and published into the
+control plane; customers then see them in the pack manager (`/settings/packs`) and install them there, or provisioning installs them.
+
+1. Once per key: register the public key with `M signing-key add --key-id <id> --public-key <file.pem> --purpose pack`. The private
+   key stays with the person who signs packs (never in the repository, the control plane or the secret store).
+2. `M pack build --folder packs/<pack-id> --out <pack.zip>` checks every object with its module's handler (statutory object types
+   are refused, AS-4), writes `packs/<pack-id>/manifest.json` and the unsigned pack.
+3. `M pack sign --pack <pack.zip> --key-id <id> --private-key <file.pem> --out <signed.zip>` (offline).
+4. `M pack publish --file <signed.zip>` verifies the signature and every hash and stores the pack (`cp.pack_catalog`, platform
+   audit `pack.publish`). A published version is never replaced: publish a newer version instead. `M pack list` shows the catalogue.
+5. New customers: `M tenant provision ... --packs country-pk` (or `country-pk@1.0.0`) installs the pack after the seed; the
+   entitlement must license it (`claims.packs`, e.g. `pack.country.pk`).
+6. To stop a pack's versions everywhere, revoke its key (`update cp.signing_keys set revoked_at = now() where key_id = ...` as the
+   migrator's login): installs and upgrades re-check the signature and refuse it.
