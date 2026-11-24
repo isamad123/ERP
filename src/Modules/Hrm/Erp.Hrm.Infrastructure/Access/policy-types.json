@@ -1,5 +1,5 @@
 {
-  "_comment": "Policy types of the HR module (slice S1.23a Build item 1, ruling Q2, D-10). Each type: code, names, a JSON Schema of its parameters (the subset PolicySchema checks: object, array, string, integer, number, boolean; required, properties, additionalProperties false, enum, minimum, maximum, minLength, maxLength, minItems, maxItems, items), the employee attributes its assignment rules may use, whether one policy or several may apply (cardinality one or many) and whether every current employee should match an assignment (required: the activation check warns otherwise). probation and notice_period replace the S1.20 settings (ruling Q3); their values are the customer's choices, never statutory values (AS-4, R-002). Later slices add their types here (leave S1.32, attendance S1.29, shifts S1.28, pay S1.34, loans S1.41, expenses S1.42, performance S1.49). Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "Policy types of the HR module (slice S1.23a Build item 1, ruling Q2, D-10). Each type: code, names, a JSON Schema of its parameters (the subset PolicySchema checks: object, array, string, integer, number, boolean; required, properties, additionalProperties false, enum, minimum, maximum, minLength, maxLength, minItems, maxItems, items), the employee attributes its assignment rules may use, whether one policy or several may apply (cardinality one or many) and whether every current employee should match an assignment (required: the activation check warns otherwise). probation and notice_period replace the S1.20 settings (ruling Q3); their values are the customer's choices, never statutory values (AS-4, R-002). Later slices add their types here (leave S1.32, attendance S1.29, shifts S1.28 (registered by S1.28a), pay S1.34, loans S1.41, expenses S1.42, performance S1.49). Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "types": [
     {
@@ -53,6 +53,31 @@
               }
             }
           }
+        }
+      }
+    },
+    {
+      "code": "shift",
+      "name": { "en": "Shifts and weekly off", "ur": "شفٹیں اور ہفتہ وار چھٹی" },
+      "description": {
+        "en": "The weekly off days of the employees it covers (fixed days, a rotating cycle or alternating weeks), the grace minutes shown beside their shifts and, only if you set one, the least rest between two shifts",
+        "ur": "متعلقہ ملازمین کے ہفتہ وار چھٹی کے دن (مقررہ دن، گھومتا چکر یا ایک ہفتہ چھوڑ کر)، شفٹوں کے ساتھ دکھائے جانے والے رعایتی منٹ اور، اگر آپ مقرر کریں، دو شفٹوں کے درمیان کم سے کم آرام"
+      },
+      "cardinality": "one",
+      "required": false,
+      "attributes": ["location", "branch", "grade", "employee_type", "unit", "custom"],
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["weeklyOffKind"],
+        "properties": {
+          "weeklyOffKind": { "type": "string", "enum": ["fixed", "alternating_weeks", "rotating"], "title": "hrm.policy.param.shift.weekly_off_kind" },
+          "offDays": { "type": "array", "maxItems": 31, "items": { "type": "integer", "minimum": 1, "maximum": 31 }, "title": "hrm.policy.param.shift.off_days" },
+          "altOffDays": { "type": "array", "maxItems": 7, "items": { "type": "integer", "minimum": 1, "maximum": 7 }, "title": "hrm.policy.param.shift.alt_off_days" },
+          "cycleDays": { "type": "integer", "minimum": 2, "maximum": 31, "title": "hrm.policy.param.shift.cycle_days" },
+          "anchorDate": { "type": "string", "minLength": 10, "maxLength": 10, "title": "hrm.policy.param.shift.anchor_date" },
+          "graceMinutes": { "type": "integer", "minimum": 0, "maximum": 240, "title": "hrm.policy.param.shift.grace_minutes" },
+          "minRestMinutes": { "type": "integer", "minimum": 0, "maximum": 1440, "title": "hrm.policy.param.shift.min_rest_minutes" }
         }
       }
     }
