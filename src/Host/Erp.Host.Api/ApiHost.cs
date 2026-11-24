@@ -282,6 +282,7 @@ public static class ApiHost
         api.MapHrmPositionEndpoints();
         api.MapHrmPolicyEndpoints();
         api.MapHrmAttendanceEndpoints(); // S1.27a
+        api.MapHrmDeviceEndpoints(); // S1.27b
         api.MapHrmRosterEndpoints(); // S1.28a
         api.MapHrmPayEndpoints(); // S1.34a pay groups, calendar and readiness
         return app;

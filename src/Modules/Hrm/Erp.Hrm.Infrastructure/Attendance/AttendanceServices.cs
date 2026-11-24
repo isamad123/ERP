@@ -1,5 +1,6 @@
 using Erp.Hrm.Application.Attendance;
 using Erp.Hrm.Contracts.Attendance;
+using Erp.Hrm.Infrastructure.Devices;
 using Erp.Kernel.Contracts.Jobs;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,6 +14,10 @@ public static class AttendanceServices
     {
         services.AddScoped<AttendanceSettingReader>();
         services.AddScoped<IAttendanceEventStore, AttendanceEventStore>();
+        services.AddSingleton<IAttendanceDeviceDriver, GenericPushDriver>(); // S1.27b device drivers (the extension point of ATT-03)
+        services.AddSingleton<IAttendanceDeviceDriver, ZkTecoDriver>();
+        services.AddScoped<DeviceRuntime>();
+        services.AddScoped<DeviceIngestion>();
         return services;
     }
 
@@ -20,6 +25,9 @@ public static class AttendanceServices
     public static IServiceCollection AddHrmAttendanceApi(this IServiceCollection services)
     {
         services.AddScoped<IAttendanceCaptureService, AttendanceCaptureService>();
+        services.AddScoped<IDeviceService, DeviceService>(); // S1.27b
+        services.AddScoped<IDeviceMappingService, DeviceMappingService>();
+        services.AddScoped<IDevicePushService, DevicePushService>();
         return services;
     }
 
@@ -35,7 +43,10 @@ public static class AttendanceServices
     /// <summary>The attendance job of the worker host.</summary>
     public static IServiceCollection AddHrmAttendanceWorker(this IServiceCollection services)
     {
+        services.AddHrmAttendance(); // the event store and the device drivers the sync job uses
         services.AddSingleton<IJobHandler, AttendancePurgeJob>();
+        services.AddSingleton<IJobHandler, DeviceSyncJob>(); // S1.27b
+        services.AddScoped<IEventConsumer, DeviceSeparationConsumer>();
         return services;
     }
 }

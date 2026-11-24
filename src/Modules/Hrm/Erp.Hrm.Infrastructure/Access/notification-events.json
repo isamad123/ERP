@@ -81,6 +81,26 @@
     "en": {"title": "Roster {roster_name} published or changed", "body": "The roster {roster_name} ({period_start} to {period_end}) has days that concern employee {employee_no}. Open the roster to see the shifts. {reason}"},
     "ur": {"title": "روسٹر {roster_name} شائع یا تبدیل ہوا", "body": "روسٹر {roster_name} ({period_start} تا {period_end}) میں ملازم {employee_no} سے متعلق دن ہیں۔ شفٹیں دیکھنے کے لیے روسٹر کھولیں۔ {reason}"}
    }
+  },
+  {
+   "code": "hrm.device_user.removal_due",
+   "source": "hrm.device_user.removal_due",
+   "group": "system",
+   "mandatory": false,
+   "audited": true,
+   "link": "link",
+   "company": "company_id",
+   "fields": [
+    {"name": "device_serial", "type": "text", "class": "general"},
+    {"name": "device_user_no", "type": "text", "class": "general"},
+    {"name": "employee_no", "type": "text", "class": "general"},
+    {"name": "company_id", "type": "company", "class": "general"}
+   ],
+   "audience": {"roles": ["hr_admin"]},
+   "texts": {
+    "en": {"title": "Remove a user from device {device_serial}", "body": "Employee {employee_no} (device user {device_user_no}) has left or the mapping was ended. Remove the user from device {device_serial}, then confirm it in the device list."},
+    "ur": {"title": "آلہ {device_serial} سے صارف ہٹائیں", "body": "ملازم {employee_no} (آلے کا صارف {device_user_no}) رخصت ہو گیا ہے یا جوڑ ختم کیا گیا ہے۔ صارف کو آلہ {device_serial} سے ہٹائیں، پھر آلات کی فہرست میں اس کی تصدیق کریں۔"}
+   }
   }
  ]
 }

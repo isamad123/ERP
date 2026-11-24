@@ -225,7 +225,15 @@
         "wf.workflow_tasks.update",
         "hrm.attendance_events.create",
         "hrm.attendance.kiosk",
-        "hrm.attendance.qr_display"
+        "hrm.attendance.qr_display",
+        "hrm.attendance_devices.create",
+        "hrm.attendance_devices.update",
+        "hrm.attendance_devices.sync",
+        "hrm.device_user_maps.create",
+        "hrm.device_user_maps.end",
+        "hrm.device_user_maps.removal",
+        "hrm.unmapped_punches.discard",
+        "hrm.unmapped_punches.read"
       ],
       "scopes": {
         "*": "all",
