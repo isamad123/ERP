@@ -4,23 +4,23 @@
 -- </auto-generated>
 -- Database functions of slice S1.34b (tools/Erp.CodeGen/rules.yaml, functions)
 
--- hrm.tg_compensation_fixed: A compensation assignment changes only its end date and is never deleted; its lines are never updated or deleted (FR-HRM-PAY-06); refused with constraint ck_compensation_fixed.
+-- hrm.tg_compensation_fixed: A compensation assignment that a revision has ended never changes or is deleted, and neither are its lines (FR-HRM-PAY-06, FR-XM-05); refused with constraint ck_compensation_fixed.
 create or replace function hrm.tg_compensation_fixed() returns trigger
 language plpgsql as $fn$
+declare
+    v_ended boolean;
 begin
+    if tg_table_name = 'compensation_assignments' then
+        v_ended := old.valid_to is not null;
+    else
+        select a.valid_to is not null into v_ended from hrm.compensation_assignments a where a.id = old.assignment_id;
+    end if;
+    if coalesce(v_ended, false) then
+        raise exception 'an ended % row never changes: record a revision', tg_table_name
+            using errcode = '23514', constraint = 'ck_compensation_fixed';
+    end if;
     if tg_op = 'DELETE' then
-        raise exception '% rows are never deleted: a revision supersedes them', tg_table_name
-            using errcode = '23514', constraint = 'ck_compensation_fixed';
-    end if;
-    if tg_table_name = 'compensation_lines' then
-        raise exception 'compensation lines never change: record a revision'
-            using errcode = '23514', constraint = 'ck_compensation_fixed';
-    end if;
-    if (new.employment_id, new.structure_id, new.event_id, new.currency_code, new.valid_from, new.gross_amount, new.increment_proposal_id, new.company_id)
-       is distinct from
-       (old.employment_id, old.structure_id, old.event_id, old.currency_code, old.valid_from, old.gross_amount, old.increment_proposal_id, old.company_id) then
-        raise exception 'a compensation assignment changes only its end date: record a revision'
-            using errcode = '23514', constraint = 'ck_compensation_fixed';
+        return old;
     end if;
     return new;
 end

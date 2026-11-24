@@ -397,11 +397,11 @@ public sealed class PayCompensationTests(TenancyFixture fx) : IAsyncLifetime
 
         // Never an edit: the database refuses to change a line or a fixed field of an assignment, or to delete either.
         var line = await Assert.ThrowsAnyAsync<Exception>(() => _h.ExecAsync("update hrm.compensation_lines set amount = 1 where assignment_id = $1", Ct, firstId));
-        Assert.Contains("compensation lines never change", line.Message, StringComparison.Ordinal);
+        Assert.Contains("an ended compensation_lines row never changes", line.Message, StringComparison.Ordinal);
         var edit = await Assert.ThrowsAnyAsync<Exception>(() => _h.ExecAsync("update hrm.compensation_assignments set gross_amount = 1 where id = $1", Ct, firstId));
-        Assert.Contains("changes only its end date", edit.Message, StringComparison.Ordinal);
+        Assert.Contains("an ended compensation_assignments row never changes", edit.Message, StringComparison.Ordinal);
         var gone = await Assert.ThrowsAnyAsync<Exception>(() => _h.ExecAsync("delete from hrm.compensation_assignments where id = $1", Ct, firstId));
-        Assert.Contains("are never deleted", gone.Message, StringComparison.Ordinal);
+        Assert.Contains("an ended compensation_assignments row never changes", gone.Message, StringComparison.Ordinal);
 
         // The history and the current arrangement.
         var read = await _h.GetAsync(rig.Admin, $"{Employments}/{employment}/compensation", Ct);

@@ -1655,32 +1655,32 @@ functions:
       create trigger tg_pay_periods_fixed before update or delete on hrm.pay_periods
           for each row execute function hrm.tg_pay_periods_fixed();
 
-  # S1.34b (CR-087 S1.34b detail; FR-HRM-PAY-06, FR-XM-05): a compensation assignment is a record of what was agreed from a date: a revision
-  # closes the old row (only its end date changes) and opens a new one; a row is never deleted and its lines never change (a correction is
-  # a new revision). Refused with constraint ck_compensation_fixed.
+  # S1.34b (CR-087 S1.34b detail; FR-HRM-PAY-06, FR-XM-05): a compensation assignment that a revision has ended (it has an end date) is a
+  # record of what was agreed and never changes or disappears, nor do its lines; the revision service is the only writer of the current
+  # row (the generated writes are closed) and ends it by setting its end date. Refused with constraint ck_compensation_fixed.
   - slice: S1.34b
     name: hrm.tg_compensation_fixed
-    purpose: "A compensation assignment changes only its end date and is never deleted; its lines are never updated or deleted (FR-HRM-PAY-06); refused with constraint ck_compensation_fixed."
+    purpose: "A compensation assignment that a revision has ended never changes or is deleted, and neither are its lines (FR-HRM-PAY-06, FR-XM-05); refused with constraint ck_compensation_fixed."
     triggers:
       - [hrm.compensation_assignments, tg_compensation_assignments_fixed]
       - [hrm.compensation_lines, tg_compensation_lines_fixed]
     sql: |
       create or replace function hrm.tg_compensation_fixed() returns trigger
       language plpgsql as $fn$
+      declare
+          v_ended boolean;
       begin
+          if tg_table_name = 'compensation_assignments' then
+              v_ended := old.valid_to is not null;
+          else
+              select a.valid_to is not null into v_ended from hrm.compensation_assignments a where a.id = old.assignment_id;
+          end if;
+          if coalesce(v_ended, false) then
+              raise exception 'an ended % row never changes: record a revision', tg_table_name
+                  using errcode = '23514', constraint = 'ck_compensation_fixed';
+          end if;
           if tg_op = 'DELETE' then
-              raise exception '% rows are never deleted: a revision supersedes them', tg_table_name
-                  using errcode = '23514', constraint = 'ck_compensation_fixed';
-          end if;
-          if tg_table_name = 'compensation_lines' then
-              raise exception 'compensation lines never change: record a revision'
-                  using errcode = '23514', constraint = 'ck_compensation_fixed';
-          end if;
-          if (new.employment_id, new.structure_id, new.event_id, new.currency_code, new.valid_from, new.gross_amount, new.increment_proposal_id, new.company_id)
-             is distinct from
-             (old.employment_id, old.structure_id, old.event_id, old.currency_code, old.valid_from, old.gross_amount, old.increment_proposal_id, old.company_id) then
-              raise exception 'a compensation assignment changes only its end date: record a revision'
-                  using errcode = '23514', constraint = 'ck_compensation_fixed';
+              return old;
           end if;
           return new;
       end
