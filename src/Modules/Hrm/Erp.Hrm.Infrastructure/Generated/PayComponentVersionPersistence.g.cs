@@ -23,6 +23,7 @@ internal sealed class PayComponentVersionConfiguration : IEntityTypeConfiguratio
         builder.Property(e => e.BaseComponentIds).HasColumnName("base_component_ids").HasColumnType("uuid[]").IsRequired();
         builder.Property(e => e.StatutoryTableCode).HasColumnName("statutory_table_code").HasColumnType("text");
         builder.Property(e => e.ProRataRule).HasColumnName("pro_rata_rule").HasColumnType("text").IsRequired();
+        builder.Property(e => e.ProRataParams).HasColumnName("pro_rata_params").HasColumnType("jsonb");
         builder.Property(e => e.StatutoryFlags).HasColumnName("statutory_flags").HasColumnType("jsonb").IsRequired();
         builder.Property(e => e.TaxTreatment).HasColumnName("tax_treatment").HasColumnType("text");
         builder.Property(e => e.ValidFrom).HasColumnName("valid_from").HasColumnType("date");

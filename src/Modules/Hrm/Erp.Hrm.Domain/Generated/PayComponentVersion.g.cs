@@ -33,6 +33,9 @@ public sealed partial class PayComponentVersion : global::Erp.BuildingBlocks.Dom
     /// <summary>pro_rata_rule</summary>
     public string ProRataRule { get; set; } = null!;
 
+    /// <summary>pro_rata_params: parameters of the custom rule: the divisor and which days count (S1.34b, PAY-05)</summary>
+    public global::System.Text.Json.JsonDocument? ProRataParams { get; set; }
+
     /// <summary>statutory_flags: taxable, eobi_base, social_security_base, pf_base, gratuity_base ... set by pack</summary>
     public global::System.Text.Json.JsonDocument StatutoryFlags { get; set; } = null!;
 

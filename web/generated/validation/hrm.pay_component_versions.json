@@ -56,6 +56,10 @@
         "custom"
       ]
     },
+    "proRataParams": {
+      "readOnly": true,
+      "nullable": true
+    },
     "statutoryFlags": {
       "readOnly": true
     },

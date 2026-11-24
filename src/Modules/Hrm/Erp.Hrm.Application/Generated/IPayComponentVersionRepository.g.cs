@@ -37,6 +37,7 @@ public static class PayComponentVersionAccess
         new("base_component_ids", "BaseComponentIds", null),
         new("statutory_table_code", "StatutoryTableCode", null),
         new("pro_rata_rule", "ProRataRule", null),
+        new("pro_rata_params", "ProRataParams", null),
         new("statutory_flags", "StatutoryFlags", null),
         new("tax_treatment", "TaxTreatment", null),
         new("valid_from", "ValidFrom", null),

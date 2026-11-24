@@ -1151,6 +1151,7 @@
   "fields.hrm.pay_component_versions.formula": "Formula",
   "fields.hrm.pay_component_versions.id": "ID",
   "fields.hrm.pay_component_versions.method": "Method",
+  "fields.hrm.pay_component_versions.pro_rata_params": "Pro rata params",
   "fields.hrm.pay_component_versions.pro_rata_rule": "Pro rata rule",
   "fields.hrm.pay_component_versions.row_version": "Row version",
   "fields.hrm.pay_component_versions.statutory_flags": "Statutory flags",

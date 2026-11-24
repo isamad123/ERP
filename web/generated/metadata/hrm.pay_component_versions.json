@@ -15,14 +15,6 @@
     {
       "action": "read",
       "permission": "hrm.pay_component_versions.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.pay_component_versions.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.pay_component_versions.update"
     }
   ],
   "companyScoped": false,
@@ -175,6 +167,16 @@
           "labelKey": "options.hrm.pay_component_versions.pro_rata_rule.custom"
         }
       ]
+    },
+    {
+      "column": "pro_rata_params",
+      "field": "proRataParams",
+      "kind": "Json",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.pay_component_versions.pro_rata_params"
     },
     {
       "column": "statutory_flags",

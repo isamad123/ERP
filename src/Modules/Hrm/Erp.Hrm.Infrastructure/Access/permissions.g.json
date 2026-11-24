@@ -207,33 +207,9 @@
       "sensitive": true
     },
     {
-      "code": "hrm.compensation_assignments.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.compensation_assignments.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.compensation_assignments.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.compensation_assignments.update",
-      "sensitive": true
-    },
-    {
       "code": "hrm.compensation_lines.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.compensation_lines.read",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.compensation_lines.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.compensation_lines.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.compensation_lines.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.compensation_lines.update",
       "sensitive": true
     },
     {
@@ -939,39 +915,9 @@
       "sensitive": false
     },
     {
-      "code": "hrm.pay_component_versions.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_component_versions.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.pay_component_versions.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_component_versions.update",
-      "sensitive": false
-    },
-    {
       "code": "hrm.pay_components.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay_components.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.pay_components.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_components.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.pay_components.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_components.update",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.pay_components.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_components.delete",
       "sensitive": false
     },
     {
@@ -1419,39 +1365,9 @@
       "sensitive": true
     },
     {
-      "code": "hrm.salary_structure_components.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.salary_structure_components.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.salary_structure_components.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.salary_structure_components.update",
-      "sensitive": true
-    },
-    {
       "code": "hrm.salary_structures.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.salary_structures.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.salary_structures.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.salary_structures.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.salary_structures.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.salary_structures.update",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.salary_structures.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.salary_structures.delete",
       "sensitive": false
     },
     {
