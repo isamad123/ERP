@@ -397,7 +397,12 @@ public sealed class DeviceTests(TenancyFixture fx) : IAsyncLifetime
             """, Ct, Guid.CreateVersion7(), w.Employment, JsonSerializer.Serialize(new { employmentId = w.Employment, personId = Guid.NewGuid(), companyId = w.Company, eventId = Guid.NewGuid(), reasonCode = "resign", separationDate = Iso(lastDay) }));
         await using var rig = await JobRig.ForExistingAsync(fx, _h.Code, _h.Clock, Ct);
         var dispatcher = rig.Provider().GetRequiredService<EventDispatcher>();
-        await dispatcher.DispatchOnceAsync(_h.Code, Ct);
+        // The outbox is shared with the other tests of this customer: dispatch until this event has been handled.
+        for (var pass = 0; pass < 40 && await _h.ScalarAsync<bool>("select valid_to is null from hrm.device_user_maps where id = $1", Ct, mapId); pass++)
+        {
+            await dispatcher.DispatchOnceAsync(_h.Code, Ct);
+        }
+
 
         Assert.Equal(Iso(lastDay.AddDays(1)), await _h.ScalarAsync<string>("select valid_to::text from hrm.device_user_maps where id = $1", Ct, mapId));
         Assert.Equal(Iso(lastDay.AddDays(1)), await _h.ScalarAsync<string>("select valid_to::text from hrm.device_user_maps where device_user_no = 'BADGE-2'", Ct));
