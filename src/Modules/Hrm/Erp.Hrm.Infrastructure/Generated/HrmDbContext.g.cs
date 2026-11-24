@@ -124,6 +124,7 @@ public sealed partial class HrmDbContext(DbContextOptions<HrmDbContext> options)
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.StatutoryReturnConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.StatutoryTableRowConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.StatutoryTableConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.StrengthExceptionConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.TaxDeclarationLineConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.TaxDeclarationConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.TrainingBondConfiguration());
@@ -242,6 +243,7 @@ public static class HrmGeneratedServices
         services.AddScoped<global::Erp.Hrm.Application.Generated.IStatutoryReturnRepository, global::Erp.Hrm.Infrastructure.Generated.StatutoryReturnRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IStatutoryTableRowRepository, global::Erp.Hrm.Infrastructure.Generated.StatutoryTableRowRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IStatutoryTableRepository, global::Erp.Hrm.Infrastructure.Generated.StatutoryTableRepository>();
+        services.AddScoped<global::Erp.Hrm.Application.Generated.IStrengthExceptionRepository, global::Erp.Hrm.Infrastructure.Generated.StrengthExceptionRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.ITaxDeclarationLineRepository, global::Erp.Hrm.Infrastructure.Generated.TaxDeclarationLineRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.ITaxDeclarationRepository, global::Erp.Hrm.Infrastructure.Generated.TaxDeclarationRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.ITrainingBondRepository, global::Erp.Hrm.Infrastructure.Generated.TrainingBondRepository>();

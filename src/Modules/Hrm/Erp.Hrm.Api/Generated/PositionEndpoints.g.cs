@@ -35,27 +35,6 @@ public sealed class PositionResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for hrm.positions. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class PositionWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public string? PositionCode { get; init; }
-    public string? Title { get; init; }
-    public global::System.Guid? OrgUnitId { get; init; }
-    public global::System.Guid? GradeId { get; init; }
-    public global::System.Guid? ReportsToPositionId { get; init; }
-    public global::System.Guid? LocationId { get; init; }
-    public global::System.Guid? CostCenterRef { get; init; }
-    public decimal? BudgetedFte { get; init; }
-    public string? Status { get; init; }
-    public global::System.DateOnly? ValidFrom { get; init; }
-    public global::System.DateOnly? ValidTo { get; init; }
-    public global::System.Text.Json.JsonElement? Custom { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for hrm.positions.</summary>
 public sealed class PositionListQuery
 {
@@ -79,7 +58,7 @@ public sealed class PositionListQuery
     public global::System.DateOnly? AsOf { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.positions: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.positions: read. Answers pass through field security (S1.06).</summary>
 internal static class PositionEndpoints
 {
     private const string Resource = "hrm.positions";
@@ -89,8 +68,6 @@ internal static class PositionEndpoints
         var group = app.MapGroup("/api/hrm/positions").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.positions.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.positions.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.positions.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.positions.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.positions.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.positions.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.positions.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.positions.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PositionListQuery query, global::Erp.Hrm.Application.Generated.IPositionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -107,70 +84,6 @@ internal static class PositionEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PositionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PositionWriteRequest request, global::Erp.Hrm.Application.Generated.IPositionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Metadata.ICustomFieldValidator customFields, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.positions.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PositionAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.Position();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await using var customCheck = await customFields.CheckAsync(new global::Erp.Kernel.Contracts.Metadata.CustomWrite("hrm.positions", null, row.CompanyId, row.Custom, null, key => access.CanEdit(global::Erp.BuildingBlocks.Application.Security.FieldAccessMap.CustomPrefix + key), false), cancellationToken).ConfigureAwait(false);
-            if (customCheck.Errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.InvalidCustom(customCheck.Errors);
-            }
-
-            row.Custom = customCheck.Values;
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/positions/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PositionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PositionWriteRequest request, global::Erp.Hrm.Application.Generated.IPositionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Metadata.ICustomFieldValidator customFields, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.positions.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.PositionAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var storedCustom = row.Custom;
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await using var customCheck = await customFields.CheckAsync(new global::Erp.Kernel.Contracts.Metadata.CustomWrite("hrm.positions", row.Id, row.CompanyId, row.Custom, storedCustom, key => access.CanEdit(global::Erp.BuildingBlocks.Application.Security.FieldAccessMap.CustomPrefix + key), true), cancellationToken).ConfigureAwait(false);
-            if (customCheck.Errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.InvalidCustom(customCheck.Errors);
-            }
-
-            row.Custom = customCheck.Values;
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PositionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static PositionResponse ToResponse(global::Erp.Hrm.Domain.Generated.Position row) => new()
@@ -196,150 +109,4 @@ internal static class PositionEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(PositionWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.PositionCode is null && (!update || access.CanEdit("position_code")))
-        {
-            errors.Add("positionCode");
-        }
-        if (request.Title is null && (!update || access.CanEdit("title")))
-        {
-            errors.Add("title");
-        }
-        if (request.OrgUnitId is null && (!update || access.CanEdit("org_unit_id")))
-        {
-            errors.Add("orgUnitId");
-        }
-        if (request.BudgetedFte is null && (!update || access.CanEdit("budgeted_fte")))
-        {
-            errors.Add("budgetedFte");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (request.ValidFrom is null && (!update || access.CanEdit("valid_from")))
-        {
-            errors.Add("validFrom");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(PositionWriteRequest request, global::Erp.Hrm.Domain.Generated.Position row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("position_code"))
-        {
-            row.PositionCode = request.PositionCode!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PositionCode, row.PositionCode, update))
-        {
-            denied.Add("positionCode");
-        }
-        if (access.CanEdit("title"))
-        {
-            row.Title = request.Title!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Title, row.Title, update))
-        {
-            denied.Add("title");
-        }
-        if (access.CanEdit("org_unit_id"))
-        {
-            row.OrgUnitId = request.OrgUnitId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OrgUnitId, row.OrgUnitId, update))
-        {
-            denied.Add("orgUnitId");
-        }
-        if (access.CanEdit("grade_id"))
-        {
-            row.GradeId = request.GradeId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.GradeId, row.GradeId, update))
-        {
-            denied.Add("gradeId");
-        }
-        if (access.CanEdit("reports_to_position_id"))
-        {
-            row.ReportsToPositionId = request.ReportsToPositionId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReportsToPositionId, row.ReportsToPositionId, update))
-        {
-            denied.Add("reportsToPositionId");
-        }
-        if (access.CanEdit("location_id"))
-        {
-            row.LocationId = request.LocationId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LocationId, row.LocationId, update))
-        {
-            denied.Add("locationId");
-        }
-        if (access.CanEdit("cost_center_ref"))
-        {
-            row.CostCenterRef = request.CostCenterRef;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CostCenterRef, row.CostCenterRef, update))
-        {
-            denied.Add("costCenterRef");
-        }
-        if (access.CanEdit("budgeted_fte"))
-        {
-            row.BudgetedFte = request.BudgetedFte!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.BudgetedFte, row.BudgetedFte, update))
-        {
-            denied.Add("budgetedFte");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        if (access.CanEdit("valid_from"))
-        {
-            row.ValidFrom = request.ValidFrom!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidFrom, row.ValidFrom, update))
-        {
-            denied.Add("validFrom");
-        }
-        if (access.CanEdit("valid_to"))
-        {
-            row.ValidTo = request.ValidTo;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidTo, row.ValidTo, update))
-        {
-            denied.Add("validTo");
-        }
-        row.Custom = global::Erp.BuildingBlocks.Application.Security.FieldShaping.MergeCustom(request.Custom, update ? row.Custom : null, access, denied);
-        return denied;
-    }
 }

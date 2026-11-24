@@ -32,6 +32,9 @@ Longest chain: S1.20 > S1.28/S1.32 > S1.29/S1.35 > S1.36/S1.37 > S1.38 > S1.43 >
 4. Never more than three open build pull requests. Merge as CI turns green (standing instruction); update from `main` first.
 5. Migrations: timestamps come from the slice's reserved range so two lanes never write the same file name.
 
+6. One coordinator (product owner, 2026-11-23): only the coordinator session starts build or review sessions; other sessions report to it.
+   About eight sessions ran at once on 2026-11-23 and the account's 5-hour usage limit stopped all work from about 05:52 to 08:20 UTC.
+
 ## 5. Batch approvals
 - Slice files are written a wave ahead and approved together, in one sitting.
 - Each question carries a recommendation; **silence on an item means the recommendation stands** (recorded as the ruling).

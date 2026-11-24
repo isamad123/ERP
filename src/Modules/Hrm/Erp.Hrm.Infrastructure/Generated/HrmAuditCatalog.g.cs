@@ -120,6 +120,7 @@ public static class HrmAuditCatalog
         new(typeof(global::Erp.Hrm.Domain.Generated.StatutoryReturn), "hrm.statutory_returns", false, "append-only: the row itself is the record and is never changed (S1.07 Q4)", "id", "company_id", null, "employment_id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.StatutoryTableRow), "hrm.statutory_table_rows", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Hrm.Domain.Generated.StatutoryTable), "hrm.statutory_tables", true, null, "id", "company_id", null, null, null),
+        new(typeof(global::Erp.Hrm.Domain.Generated.StrengthException), "hrm.strength_exceptions", true, null, "id", "company_id", null, "employment_id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.TaxDeclarationLine), "hrm.tax_declaration_lines", true, null, "id", null, null, null, new global::System.Collections.Generic.Dictionary<string, string>(global::System.StringComparer.Ordinal) { ["declared_amount"] = "salary", ["verified_amount"] = "salary" }),
         new(typeof(global::Erp.Hrm.Domain.Generated.TaxDeclaration), "hrm.tax_declarations", true, null, "id", "company_id", null, "employment_id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.TrainingBond), "hrm.training_bonds", true, null, "id", "company_id", null, "employment_id", null),

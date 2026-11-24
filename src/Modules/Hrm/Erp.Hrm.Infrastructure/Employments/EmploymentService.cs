@@ -12,6 +12,7 @@ using Erp.Hrm.Contracts.Employments;
 using Erp.Hrm.Domain.Generated;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Hrm.Infrastructure.People;
+using Erp.Hrm.Infrastructure.Positions;
 using Erp.Kernel.Contracts.Entitlements;
 using Erp.Kernel.Contracts.Identity;
 using Erp.Kernel.Contracts.Metadata;
@@ -333,9 +334,18 @@ internal sealed partial class EmploymentService(
             return PeopleResult.Conflict(LimitReachedException.ErrorKey, new Dictionary<string, object?> { ["limit"] = ex.Decision.LimitKey, ["max"] = ex.Decision.Max, ["used"] = ex.Decision.Used });
         }
 
+        // The vacancy rule (S1.22a, BR-04): a hire beyond a budget needs an approved strength exception, named on the hire event.
+        var hireChanges = StrengthGuard.ChangesOf(hire.Changes);
+        if (await StrengthGuard.EnforceAsync(db, settings, employment.CompanyId, employment.Id, [StrengthGuard.HireRow(hire, hireChanges["assignment"]!.AsObject())], hire.EffectiveDate, hireChanges, ct).ConfigureAwait(false) is { } overBudget)
+        {
+            return overBudget;
+        }
+
+        hire.Changes = JsonSerializer.SerializeToDocument(hireChanges);
         db.Add(employment);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
         db.Add(hire);
+        await StrengthGuard.UseAsync(db, hireChanges, hire.Id, clock.UtcNow, actor.UserId, ct).ConfigureAwait(false);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
         if (await applier.SyncRowsAsync(employment, [hire], clock.UtcNow, actor.UserId, ct).ConfigureAwait(false) is { } problem)
         {

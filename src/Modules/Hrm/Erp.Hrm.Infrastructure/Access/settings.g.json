@@ -284,6 +284,41 @@
       }
     },
     {
+      "key": "hrm.org.model",
+      "module": "hrm",
+      "type": "choice",
+      "default": "headcount",
+      "validation": {
+        "choices": [
+          "position",
+          "headcount"
+        ]
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.organization",
+      "unit": null,
+      "name": {
+        "en": "Strength planning model",
+        "ur": "افرادی قوت کی منصوبہ بندی کا طریقہ"
+      },
+      "description": {
+        "en": "Whether the company plans by positions or by headcount per unit and grade",
+        "ur": "کمپنی عہدوں کے حساب سے منصوبہ بندی کرتی ہے یا ہر یونٹ اور گریڈ کی تعداد کے حساب سے"
+      },
+      "help": {
+        "en": "Position: every post is a record with a budgeted FTE and nobody is placed beyond it without an approved exception. Headcount: HR sets the sanctioned number per unit and grade. A change is allowed only when it leaves no one without or with a wrong post (see the check on the positions screen).",
+        "ur": "عہدہ: ہر آسامی ایک ریکارڈ ہے جس کا بجٹ شدہ ایف ٹی ای ہوتا ہے اور منظور شدہ استثنا کے بغیر کسی کو اس سے زیادہ تعینات نہیں کیا جاتا۔ تعداد: ایچ آر ہر یونٹ اور گریڈ کی منظور شدہ تعداد طے کرتا ہے۔ تبدیلی تب ہی ممکن ہے جب وہ کسی کو بغیر آسامی کے یا غلط آسامی پر نہ چھوڑے (عہدوں کی اسکرین پر جانچ دیکھیں)۔"
+      }
+    },
+    {
       "key": "hrm.bank_accounts.requires_approval",
       "module": "hrm",
       "type": "bool",

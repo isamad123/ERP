@@ -4163,23 +4163,6 @@ export interface Position
     rowVersion: number;
 }
 
-export interface PositionWrite
-{
-    companyId: string;
-    positionCode: string;
-    title: string;
-    orgUnitId: string;
-    gradeId?: string | null;
-    reportsToPositionId?: string | null;
-    locationId?: string | null;
-    costCenterRef?: string | null;
-    budgetedFte: number;
-    status: 'planned' | 'open' | 'filled' | 'frozen' | 'closed';
-    validFrom: string;
-    validTo?: string | null;
-    custom?: unknown;
-}
-
 export interface PositionListQuery
 {
     after?: string;
@@ -4198,8 +4181,6 @@ export const positions =
 {
     list: (query: PositionListQuery = {}) => request<PagedResult<Position>>('GET', '/api/hrm/positions', { query }),
     get: (id: string) => request<Position>('GET', `/api/hrm/positions/${id}`),
-    create: (body: PositionWrite) => request<Position>('POST', '/api/hrm/positions', { body }),
-    update: (id: string, body: PositionWrite & { rowVersion: number }) => request<Position>('PUT', `/api/hrm/positions/${id}`, { body }),
 };
 
 /** hrm.previous_employer_income: PreviousEmployerIncome. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -5312,6 +5293,49 @@ export const statutoryTables =
     get: (id: string) => request<StatutoryTable>('GET', `/api/hrm/statutory-tables/${id}`),
     create: (body: StatutoryTableWrite) => request<StatutoryTable>('POST', '/api/hrm/statutory-tables', { body }),
     update: (id: string, body: StatutoryTableWrite & { rowVersion: number }) => request<StatutoryTable>('PUT', `/api/hrm/statutory-tables/${id}`, { body }),
+};
+
+/** hrm.strength_exceptions: Approved exception to the position budget or sanctioned count for one placement (BR-04). Field rules (S1.06) may leave a field out or mask it as text. */
+export interface StrengthException
+{
+    id: string;
+    companyId: string;
+    employmentId: string;
+    orgUnitId: string;
+    gradeId: string | null;
+    positionId: string | null;
+    effectiveDate: string;
+    reason: string;
+    workflowInstanceId: string | null;
+    usedEventId: string | null;
+    status: 'pending_approval' | 'approved' | 'rejected' | 'cancelled' | 'used';
+    createdAt: string;
+    createdBy: string;
+    updatedAt: string;
+    updatedBy: string;
+    rowVersion: number;
+}
+
+export interface StrengthExceptionListQuery
+{
+    after?: string;
+    limit?: number;
+    companyId?: string;
+    employmentId?: string;
+    orgUnitId?: string;
+    gradeId?: string;
+    positionId?: string;
+    workflowInstanceId?: string;
+    usedEventId?: string;
+    status?: 'pending_approval' | 'approved' | 'rejected' | 'cancelled' | 'used';
+    /** status; a leading minus sorts descending. */
+    sort?: 'status' | '-status';
+}
+
+export const strengthExceptions =
+{
+    list: (query: StrengthExceptionListQuery = {}) => request<PagedResult<StrengthException>>('GET', '/api/hrm/strength-exceptions', { query }),
+    get: (id: string) => request<StrengthException>('GET', `/api/hrm/strength-exceptions/${id}`),
 };
 
 /** hrm.tax_declaration_lines: TaxDeclarationLine. Field rules (S1.06) may leave a field out or mask it as text. */

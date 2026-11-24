@@ -1311,18 +1311,6 @@
       "sensitive": false
     },
     {
-      "code": "hrm.positions.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.positions.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.positions.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.positions.update",
-      "sensitive": false
-    },
-    {
       "code": "hrm.previous_employer_income.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.previous_employer_income.read",
@@ -1704,6 +1692,12 @@
       "code": "hrm.statutory_tables.update",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.statutory_tables.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.strength_exceptions.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.strength_exceptions.read",
       "sensitive": false
     },
     {

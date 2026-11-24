@@ -27,7 +27,11 @@ public sealed class PayCalendarTests(TenancyFixture fx) : IAsyncLifetime
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private DateOnly Today => _h.Today;
+    private static readonly TimeZoneInfo Karachi = TimeZoneInfo.FindSystemTimeZoneById("Asia/Karachi");
+
+    /// <summary>The business date the pay services use (the company's time zone, default Asia/Karachi), not the UTC date: from 19:00 UTC
+    /// it is already the next day in Karachi, and the calendar counts days to the cut-off from that date.</summary>
+    private DateOnly Today => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_h.Clock.UtcNow, Karachi).DateTime);
 
     private static string Iso(DateOnly d) => d.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
 

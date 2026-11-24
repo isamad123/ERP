@@ -84,6 +84,18 @@ settings:
     name: {en: "Contract renewal reminder (days before)", ur: "معاہدے کی تجدید کی یاد دہانی (دن پہلے)"}
     description: {en: "How many days before a contract ends the manager and HR are reminded, when the contract gives no number", ur: "معاہدہ ختم ہونے سے کتنے دن پہلے مینیجر اور ایچ آر کو یاد دلایا جائے، جب معاہدے میں تعداد درج نہ ہو"}
     help: {en: "A contract's own renewal notice days come first. Without them, the line manager and HR administrators are reminded this many days before the end date.", ur: "معاہدے کے اپنے تجدیدی نوٹس کے دن پہلے آتے ہیں۔ ان کے بغیر لائن مینیجر اور ایچ آر منتظمین کو اختتامی تاریخ سے اتنے دن پہلے یاد دلایا جاتا ہے۔"}
+  # S1.22a (CR-078 item 1, slice S1.22 Build item 1 and ruling Q2, FR-HRM-POS-01): how the company plans its strength. The default is
+  # headcount; the size-profile presets of the first-run wizard (S1.18, D-40) write position for Mid and Enterprise (CR-078 S1.22a detail e).
+  # A change is refused unless the company's assignments allow it (setting change guard of the HR module, CR-078 S1.22a detail f).
+  - key: hrm.org.model
+    type: choice
+    default: "headcount"
+    validation: {choices: [position, headcount]}
+    layers: [tenant, company]
+    area: hr.organization
+    name: {en: "Strength planning model", ur: "افرادی قوت کی منصوبہ بندی کا طریقہ"}
+    description: {en: "Whether the company plans by positions or by headcount per unit and grade", ur: "کمپنی عہدوں کے حساب سے منصوبہ بندی کرتی ہے یا ہر یونٹ اور گریڈ کی تعداد کے حساب سے"}
+    help: {en: "Position: every post is a record with a budgeted FTE and nobody is placed beyond it without an approved exception. Headcount: HR sets the sanctioned number per unit and grade. A change is allowed only when it leaves no one without or with a wrong post (see the check on the positions screen).", ur: "عہدہ: ہر آسامی ایک ریکارڈ ہے جس کا بجٹ شدہ ایف ٹی ای ہوتا ہے اور منظور شدہ استثنا کے بغیر کسی کو اس سے زیادہ تعینات نہیں کیا جاتا۔ تعداد: ایچ آر ہر یونٹ اور گریڈ کی منظور شدہ تعداد طے کرتا ہے۔ تبدیلی تب ہی ممکن ہے جب وہ کسی کو بغیر آسامی کے یا غلط آسامی پر نہ چھوڑے (عہدوں کی اسکرین پر جانچ دیکھیں)۔"}
   # S1.20d (CR-076 S1.20d detail; slice S1.20 Build item 14, FR-HRM-EMP-06): changes of employees' payment accounts wait for a second
   # person (maker-checker, as for the company's own bank accounts). Changing the setting waits for a second person too, so nobody can
   # switch it off and then change an account alone (FR-XM-32).
