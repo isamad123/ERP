@@ -24,6 +24,9 @@ internal sealed class PackCatalogConfiguration : IEntityTypeConfiguration<global
         builder.Property(e => e.Signature).HasColumnName("signature").HasColumnType("bytea").IsRequired();
         builder.Property(e => e.ReleasedAt).HasColumnName("released_at").HasColumnType("timestamptz");
         builder.Property(e => e.ReleaseNotes).HasColumnName("release_notes").HasColumnType("text");
+        builder.Property(e => e.KeyId).HasColumnName("key_id").HasColumnType("text");
+        builder.Property(e => e.Manifest).HasColumnName("manifest").HasColumnType("jsonb");
+        builder.Property(e => e.Content).HasColumnName("content").HasColumnType("bytea");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");

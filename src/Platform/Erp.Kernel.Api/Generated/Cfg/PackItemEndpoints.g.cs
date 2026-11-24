@@ -19,24 +19,17 @@ public sealed class PackItemResponse
     public string ObjectKey { get; init; } = null!;
     public string Version { get; init; } = null!;
     public bool IsOverridden { get; init; }
+    public string? ContentHash { get; init; }
+    public string? AppliedHash { get; init; }
+    public global::System.Text.Json.JsonElement? PackValue { get; init; }
+    public string? ConflictVersion { get; init; }
+    public global::System.Text.Json.JsonElement? ConflictValue { get; init; }
+    public string? RetiredIn { get; init; }
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for cfg.pack_items. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class PackItemWriteRequest
-{
-    public string? PackId { get; init; }
-    public string? ObjectType { get; init; }
-    public string? ObjectKey { get; init; }
-    public string? Version { get; init; }
-    public bool? IsOverridden { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for cfg.pack_items.</summary>
@@ -50,7 +43,7 @@ public sealed class PackItemListQuery
     public string? Sort { get; init; }
 }
 
-/// <summary>Generated endpoints of cfg.pack_items: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of cfg.pack_items: read. Answers pass through field security (S1.06).</summary>
 internal static class PackItemEndpoints
 {
     private const string Resource = "cfg.pack_items";
@@ -60,8 +53,6 @@ internal static class PackItemEndpoints
         var group = app.MapGroup("/api/cfg/pack-items").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("cfg.pack_items.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.pack_items.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("cfg.pack_items.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.pack_items.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("cfg.pack_items.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "cfg.pack_items.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("cfg.pack_items.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "cfg.pack_items.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PackItemListQuery query, global::Erp.Kernel.Application.Generated.Cfg.IPackItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -80,53 +71,6 @@ internal static class PackItemEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.PackItemAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PackItemWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IPackItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.pack_items.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.PackItemAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Cfg.PackItem();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/pack-items/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.PackItemAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PackItemWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IPackItemRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.pack_items.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Cfg.PackItemAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.PackItemAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static PackItemResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.PackItem row) => new()
     {
         Id = row.Id,
@@ -135,87 +79,16 @@ internal static class PackItemEndpoints
         ObjectKey = row.ObjectKey,
         Version = row.Version,
         IsOverridden = row.IsOverridden,
+        ContentHash = row.ContentHash,
+        AppliedHash = row.AppliedHash,
+        PackValue = row.PackValue?.RootElement.Clone(),
+        ConflictVersion = row.ConflictVersion,
+        ConflictValue = row.ConflictValue?.RootElement.Clone(),
+        RetiredIn = row.RetiredIn,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
         UpdatedAt = row.UpdatedAt,
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(PackItemWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.PackId is null && (!update || access.CanEdit("pack_id")))
-        {
-            errors.Add("packId");
-        }
-        if (request.ObjectType is null && (!update || access.CanEdit("object_type")))
-        {
-            errors.Add("objectType");
-        }
-        if (request.ObjectKey is null && (!update || access.CanEdit("object_key")))
-        {
-            errors.Add("objectKey");
-        }
-        if (request.Version is null && (!update || access.CanEdit("version")))
-        {
-            errors.Add("version");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(PackItemWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.PackItem row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("pack_id"))
-        {
-            row.PackId = request.PackId!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PackId, row.PackId, update))
-        {
-            denied.Add("packId");
-        }
-        if (access.CanEdit("object_type"))
-        {
-            row.ObjectType = request.ObjectType!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ObjectType, row.ObjectType, update))
-        {
-            denied.Add("objectType");
-        }
-        if (access.CanEdit("object_key"))
-        {
-            row.ObjectKey = request.ObjectKey!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ObjectKey, row.ObjectKey, update))
-        {
-            denied.Add("objectKey");
-        }
-        if (access.CanEdit("version"))
-        {
-            row.Version = request.Version!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Version, row.Version, update))
-        {
-            denied.Add("version");
-        }
-        if (access.CanEdit("is_overridden"))
-        {
-            if (request.IsOverridden is not null)
-            {
-                row.IsOverridden = request.IsOverridden!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsOverridden, row.IsOverridden, update))
-        {
-            denied.Add("isOverridden");
-        }
-        return denied;
-    }
 }

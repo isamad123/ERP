@@ -23,6 +23,19 @@
       "type": "string",
       "format": "date-time"
     },
+    "manifest": {
+      "readOnly": true,
+      "nullable": true
+    },
+    "previousVersion": {
+      "type": "string",
+      "nullable": true
+    },
+    "upgradedAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
     "status": {
       "type": "string",
       "enum": [

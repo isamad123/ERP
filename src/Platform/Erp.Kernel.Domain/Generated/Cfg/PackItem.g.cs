@@ -30,6 +30,24 @@ public sealed partial class PackItem : global::Erp.BuildingBlocks.Domain.Entitie
     /// <summary>is_overridden</summary>
     public bool IsOverridden { get; set; }
 
+    /// <summary>content_hash: S1.23b: SHA-256 of the pack's value of the object in the version installed (from the manifest)</summary>
+    public string? ContentHash { get; set; }
+
+    /// <summary>applied_hash: S1.23b: SHA-256 of the object as the installer left it; the customer changed it when its value now hashes differently</summary>
+    public string? AppliedHash { get; set; }
+
+    /// <summary>pack_value: S1.23b: the pack's value in the version installed (the 'pack value' of the diff view)</summary>
+    public global::System.Text.Json.JsonDocument? PackValue { get; set; }
+
+    /// <summary>conflict_version: S1.23b: a later pack version whose value was not applied because the customer had changed the object</summary>
+    public string? ConflictVersion { get; set; }
+
+    /// <summary>conflict_value: S1.23b: that version's value, offered as 'take the pack value' (ruling Q7)</summary>
+    public global::System.Text.Json.JsonDocument? ConflictValue { get; set; }
+
+    /// <summary>retired_in: S1.23b: the pack version that no longer contains the object (retired, never deleted when referenced)</summary>
+    public string? RetiredIn { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

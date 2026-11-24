@@ -20,6 +20,9 @@ internal sealed class InstalledPackConfiguration : IEntityTypeConfiguration<glob
         builder.Property(e => e.PackId).HasColumnName("pack_id").HasColumnType("text").IsRequired();
         builder.Property(e => e.Version).HasColumnName("version").HasColumnType("text").IsRequired();
         builder.Property(e => e.InstalledAt).HasColumnName("installed_at").HasColumnType("timestamptz");
+        builder.Property(e => e.Manifest).HasColumnName("manifest").HasColumnType("jsonb");
+        builder.Property(e => e.PreviousVersion).HasColumnName("previous_version").HasColumnType("text");
+        builder.Property(e => e.UpgradedAt).HasColumnName("upgraded_at").HasColumnType("timestamptz");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
