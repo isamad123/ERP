@@ -15,9 +15,6 @@ public static class HrmPermissions
         new("hrm.attendance_days.create", "hrm", "permissions.hrm.attendance_days.create", false),
         new("hrm.attendance_days.update", "hrm", "permissions.hrm.attendance_days.update", false),
         new("hrm.attendance_devices.read", "hrm", "permissions.hrm.attendance_devices.read", false),
-        new("hrm.attendance_devices.create", "hrm", "permissions.hrm.attendance_devices.create", false),
-        new("hrm.attendance_devices.update", "hrm", "permissions.hrm.attendance_devices.update", false),
-        new("hrm.attendance_devices.delete", "hrm", "permissions.hrm.attendance_devices.delete", false),
         new("hrm.attendance_events.read", "hrm", "permissions.hrm.attendance_events.read", false),
         new("hrm.attendance_exceptions.read", "hrm", "permissions.hrm.attendance_exceptions.read", false),
         new("hrm.attendance_exceptions.create", "hrm", "permissions.hrm.attendance_exceptions.create", false),
@@ -72,8 +69,6 @@ public static class HrmPermissions
         new("hrm.courses.update", "hrm", "permissions.hrm.courses.update", true),
         new("hrm.courses.delete", "hrm", "permissions.hrm.courses.delete", true),
         new("hrm.device_user_maps.read", "hrm", "permissions.hrm.device_user_maps.read", false),
-        new("hrm.device_user_maps.create", "hrm", "permissions.hrm.device_user_maps.create", false),
-        new("hrm.device_user_maps.update", "hrm", "permissions.hrm.device_user_maps.update", false),
         new("hrm.duty_requests.read", "hrm", "permissions.hrm.duty_requests.read", false),
         new("hrm.duty_requests.create", "hrm", "permissions.hrm.duty_requests.create", false),
         new("hrm.duty_requests.update", "hrm", "permissions.hrm.duty_requests.update", false),
@@ -299,5 +294,6 @@ public static class HrmPermissions
         new("hrm.training_requirements.read", "hrm", "permissions.hrm.training_requirements.read", false),
         new("hrm.training_requirements.create", "hrm", "permissions.hrm.training_requirements.create", false),
         new("hrm.training_requirements.update", "hrm", "permissions.hrm.training_requirements.update", false),
+        new("hrm.unmapped_punches.read", "hrm", "permissions.hrm.unmapped_punches.read", false),
     ];
 }

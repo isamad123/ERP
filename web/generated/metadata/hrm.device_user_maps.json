@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.device_user_maps.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.device_user_maps.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.device_user_maps.update"
     }
   ],
   "companyScoped": true,
@@ -37,8 +29,8 @@
     "deviceUserNo",
     "employmentId",
     "consentAt",
-    "validFrom",
-    "validTo"
+    "removalDueAt",
+    "removalDoneAt"
   ],
   "search": [],
   "constraints": {
@@ -119,6 +111,26 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.device_user_maps.consent_at"
+    },
+    {
+      "column": "removal_due_at",
+      "field": "removalDueAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.device_user_maps.removal_due_at"
+    },
+    {
+      "column": "removal_done_at",
+      "field": "removalDoneAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.device_user_maps.removal_done_at"
     },
     {
       "column": "valid_from",

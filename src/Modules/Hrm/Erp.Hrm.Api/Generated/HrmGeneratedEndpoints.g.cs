@@ -125,6 +125,7 @@ public static class HrmGeneratedEndpoints
         global::Erp.Hrm.Api.Generated.TaxDeclarationEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.TrainingBondEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.TrainingRequirementEndpoints.Map(app);
+        global::Erp.Hrm.Api.Generated.UnmappedPunchEndpoints.Map(app);
         return app;
     }
 }

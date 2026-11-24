@@ -27,6 +27,8 @@ internal sealed class AttendanceDeviceConfiguration : IEntityTypeConfiguration<g
         builder.Property(e => e.LastSeenAt).HasColumnName("last_seen_at").HasColumnType("timestamptz");
         builder.Property(e => e.LastSyncAt).HasColumnName("last_sync_at").HasColumnType("timestamptz");
         builder.Property(e => e.LastError).HasColumnName("last_error").HasColumnType("text");
+        builder.Property(e => e.SyncCursorAt).HasColumnName("sync_cursor_at").HasColumnType("timestamptz");
+        builder.Property(e => e.SyncRequestedAt).HasColumnName("sync_requested_at").HasColumnType("timestamptz");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.IsDeleted).HasColumnName("is_deleted").HasColumnType("boolean");
         builder.Property(e => e.DeletedAt).HasColumnName("deleted_at").HasColumnType("timestamptz");
