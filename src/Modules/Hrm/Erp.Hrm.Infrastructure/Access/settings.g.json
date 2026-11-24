@@ -575,6 +575,36 @@
       }
     },
     {
+      "key": "hrm.pay.change_approval",
+      "module": "hrm",
+      "type": "bool",
+      "default": true,
+      "validation": {},
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": true,
+      "area": "hr.payroll",
+      "unit": null,
+      "name": {
+        "en": "Approval of salary structure and compensation changes",
+        "ur": "تنخواہ کے ڈھانچے اور معاوضے کی تبدیلیوں کی منظوری"
+      },
+      "description": {
+        "en": "A change of a salary structure's components or of an employee's salary needs a second person's approval",
+        "ur": "تنخواہ کے ڈھانچے کے اجزا یا ملازم کی تنخواہ کی تبدیلی کے لیے دوسرے شخص کی منظوری درکار"
+      },
+      "help": {
+        "en": "A change of the components of a salary structure, and a new salary arrangement or revision for an employee, waits until another person with the approval permission approves it. The person who asked can never approve it. Switching this off also waits for a second person.",
+        "ur": "تنخواہ کے ڈھانچے کے اجزا کی تبدیلی اور ملازم کے لیے نیا تنخواہی انتظام یا نظرثانی اس وقت تک رکی رہتی ہے جب تک منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور نہ کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔ اسے بند کرنا بھی دوسرے شخص کی منظوری کا منتظر رہتا ہے۔"
+      }
+    },
+    {
       "key": "hrm.att.biometric_enabled",
       "module": "hrm",
       "type": "bool",

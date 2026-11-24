@@ -123,8 +123,10 @@ internal sealed partial class EmploymentService
             {
                 errors.Add("correctsEventId", AlreadyCorrected);
             }
-            else if (kind != "data_correction" || target is null || !EmploymentTimeline.IsApplied(target.Status))
+            else if (kind != "data_correction" || target is null || !EmploymentTimeline.IsApplied(target.Status) || target.Kind == "salary_revision")
             {
+                // A salary revision is put right by a new revision (reason "correction"), never by this service: a correction here would
+                // carry job details past the approval of promotions and grade changes (review S1.34b H1, FR-XM-32).
                 errors.Add("correctsEventId", CorrectionTarget);
             }
             else if (events.Any(e => e.CorrectsEventId == targetId && e.Status is "pending_approval" or "draft"))

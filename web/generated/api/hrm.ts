@@ -687,19 +687,6 @@ export interface CompensationAssignment
     rowVersion: number;
 }
 
-export interface CompensationAssignmentWrite
-{
-    companyId: string;
-    employmentId: string;
-    structureId: string;
-    eventId: string;
-    currencyCode: string;
-    grossAmount?: number | null;
-    incrementProposalId?: string | null;
-    validFrom: string;
-    validTo?: string | null;
-}
-
 export interface CompensationAssignmentListQuery
 {
     after?: string;
@@ -719,8 +706,6 @@ export const compensationAssignments =
 {
     list: (query: CompensationAssignmentListQuery = {}) => request<PagedResult<CompensationAssignment>>('GET', '/api/hrm/compensation-assignments', { query }),
     get: (id: string) => request<CompensationAssignment>('GET', `/api/hrm/compensation-assignments/${id}`),
-    create: (body: CompensationAssignmentWrite) => request<CompensationAssignment>('POST', '/api/hrm/compensation-assignments', { body }),
-    update: (id: string, body: CompensationAssignmentWrite & { rowVersion: number }) => request<CompensationAssignment>('PUT', `/api/hrm/compensation-assignments/${id}`, { body }),
 };
 
 /** hrm.compensation_lines: Amounts per component for an assignment, including allowances and perquisites (CMP-03). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -731,23 +716,13 @@ export interface CompensationLine
     assignmentId: string;
     componentId: string;
     amount?: number | string | null;
-    percent: number | null;
+    percent?: number | string | null;
     units: number | null;
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface CompensationLineWrite
-{
-    companyId: string;
-    assignmentId: string;
-    componentId: string;
-    amount?: number | null;
-    percent?: number | null;
-    units?: number | null;
 }
 
 export interface CompensationLineListQuery
@@ -763,8 +738,6 @@ export const compensationLines =
 {
     list: (query: CompensationLineListQuery = {}) => request<PagedResult<CompensationLine>>('GET', '/api/hrm/compensation-lines', { query }),
     get: (id: string) => request<CompensationLine>('GET', `/api/hrm/compensation-lines/${id}`),
-    create: (body: CompensationLineWrite) => request<CompensationLine>('POST', '/api/hrm/compensation-lines', { body }),
-    update: (id: string, body: CompensationLineWrite & { rowVersion: number }) => request<CompensationLine>('PUT', `/api/hrm/compensation-lines/${id}`, { body }),
 };
 
 /** hrm.compliance_obligations: Statutory deadlines per company (CPL-01), from pack and tenant. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2983,6 +2956,7 @@ export interface PayComponentVersion
     baseComponentIds: string[];
     statutoryTableCode: string | null;
     proRataRule: 'none' | 'calendar_days' | 'working_days' | 'fixed_30' | 'custom';
+    proRataParams: unknown | null;
     statutoryFlags: unknown;
     taxTreatment: string | null;
     validFrom: string;
@@ -2992,20 +2966,6 @@ export interface PayComponentVersion
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface PayComponentVersionWrite
-{
-    componentId: string;
-    method: 'fixed' | 'percent_of' | 'formula' | 'table_lookup' | 'per_day' | 'per_hour' | 'attendance_linked' | 'manual';
-    formula?: string | null;
-    baseComponentIds?: string[];
-    statutoryTableCode?: string | null;
-    proRataRule: 'none' | 'calendar_days' | 'working_days' | 'fixed_30' | 'custom';
-    statutoryFlags: unknown;
-    taxTreatment?: string | null;
-    validFrom: string;
-    validTo?: string | null;
 }
 
 export interface PayComponentVersionListQuery
@@ -3021,8 +2981,6 @@ export const payComponentVersions =
 {
     list: (query: PayComponentVersionListQuery = {}) => request<PagedResult<PayComponentVersion>>('GET', '/api/hrm/pay-component-versions', { query }),
     get: (id: string) => request<PayComponentVersion>('GET', `/api/hrm/pay-component-versions/${id}`),
-    create: (body: PayComponentVersionWrite) => request<PayComponentVersion>('POST', '/api/hrm/pay-component-versions', { body }),
-    update: (id: string, body: PayComponentVersionWrite & { rowVersion: number }) => request<PayComponentVersion>('PUT', `/api/hrm/pay-component-versions/${id}`, { body }),
 };
 
 /** hrm.pay_components: PayComponent. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3048,19 +3006,6 @@ export interface PayComponent
     rowVersion: number;
 }
 
-export interface PayComponentWrite
-{
-    companyId: string;
-    code: string;
-    nameI18n: Record<string, string>;
-    kind: 'earning' | 'deduction' | 'employer_contribution' | 'reimbursement' | 'informational';
-    payslipOrder: number;
-    isRecurring?: boolean;
-    isOneTimeAllowed?: boolean;
-    source: 'pack' | 'tenant';
-    isActive?: boolean;
-}
-
 export interface PayComponentListQuery
 {
     after?: string;
@@ -3076,9 +3021,6 @@ export const payComponents =
 {
     list: (query: PayComponentListQuery = {}) => request<PagedResult<PayComponent>>('GET', '/api/hrm/pay-components', { query }),
     get: (id: string) => request<PayComponent>('GET', `/api/hrm/pay-components/${id}`),
-    create: (body: PayComponentWrite) => request<PayComponent>('POST', '/api/hrm/pay-components', { body }),
-    update: (id: string, body: PayComponentWrite & { rowVersion: number }) => request<PayComponent>('PUT', `/api/hrm/pay-components/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/pay-components/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.pay_groups: PayGroup. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4744,8 +4686,8 @@ export interface SalaryStructureComponent
     structureId: string;
     componentId: string;
     evaluationOrder: number;
-    defaultAmount: number | null;
-    defaultPercent: number | null;
+    defaultAmount?: number | string | null;
+    defaultPercent?: number | string | null;
     isMandatory: boolean;
     currencyCode: string;
     validFrom: string;
@@ -4755,19 +4697,6 @@ export interface SalaryStructureComponent
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface SalaryStructureComponentWrite
-{
-    structureId: string;
-    componentId: string;
-    evaluationOrder: number;
-    defaultAmount?: number | null;
-    defaultPercent?: number | null;
-    isMandatory?: boolean;
-    currencyCode: string;
-    validFrom: string;
-    validTo?: string | null;
 }
 
 export interface SalaryStructureComponentListQuery
@@ -4784,8 +4713,6 @@ export const salaryStructureComponents =
 {
     list: (query: SalaryStructureComponentListQuery = {}) => request<PagedResult<SalaryStructureComponent>>('GET', '/api/hrm/salary-structure-components', { query }),
     get: (id: string) => request<SalaryStructureComponent>('GET', `/api/hrm/salary-structure-components/${id}`),
-    create: (body: SalaryStructureComponentWrite) => request<SalaryStructureComponent>('POST', '/api/hrm/salary-structure-components', { body }),
-    update: (id: string, body: SalaryStructureComponentWrite & { rowVersion: number }) => request<SalaryStructureComponent>('PUT', `/api/hrm/salary-structure-components/${id}`, { body }),
 };
 
 /** hrm.salary_structures: SalaryStructure. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4807,15 +4734,6 @@ export interface SalaryStructure
     rowVersion: number;
 }
 
-export interface SalaryStructureWrite
-{
-    companyId: string;
-    code: string;
-    nameI18n: Record<string, string>;
-    assignRule?: unknown | null;
-    isActive?: boolean;
-}
-
 export interface SalaryStructureListQuery
 {
     after?: string;
@@ -4831,9 +4749,6 @@ export const salaryStructures =
 {
     list: (query: SalaryStructureListQuery = {}) => request<PagedResult<SalaryStructure>>('GET', '/api/hrm/salary-structures', { query }),
     get: (id: string) => request<SalaryStructure>('GET', `/api/hrm/salary-structures/${id}`),
-    create: (body: SalaryStructureWrite) => request<SalaryStructure>('POST', '/api/hrm/salary-structures', { body }),
-    update: (id: string, body: SalaryStructureWrite & { rowVersion: number }) => request<SalaryStructure>('PUT', `/api/hrm/salary-structures/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/salary-structures/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.separations: Separation. Field rules (S1.06) may leave a field out or mask it as text. */

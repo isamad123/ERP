@@ -499,9 +499,20 @@ public sealed class PayCalendarTests(TenancyFixture fx) : IAsyncLifetime
 
         // The payroll officers get it as a notification (ids and dates only in the event; the text comes from the catalogue).
         var dispatcher = rig.Provider().GetRequiredService<Erp.Kernel.Infrastructure.Jobs.EventDispatcher>();
-        foreach (var outcome in await dispatcher.DispatchOnceAsync(_h.Code, Ct))
+        // The dispatcher reads 100 events per pass, oldest first, and the tenant's outbox holds the events of every test that ran before
+        // (and of this one): pass again until this event has been handled.
+        for (var pass = 0; pass < 200; pass++)
         {
-            Assert.True(outcome.Error is null, outcome.Error);
+            var outcomes = await dispatcher.DispatchOnceAsync(_h.Code, Ct);
+            foreach (var outcome in outcomes)
+            {
+                Assert.True(outcome.Error is null, outcome.Error);
+            }
+
+            if (outcomes.Count == 0 || await _h.ScalarAsync<long>("select count(*) from ntf.in_app_items where user_id = $1 and event_code = 'hrm.pay.cutoff_due'", Ct, payroll) >= 1)
+            {
+                break;
+            }
         }
 
         Assert.True(await _h.ScalarAsync<long>("select count(*) from ntf.in_app_items where user_id = $1 and event_code = 'hrm.pay.cutoff_due'", Ct, payroll) >= 1);

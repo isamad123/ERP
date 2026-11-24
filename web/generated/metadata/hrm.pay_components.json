@@ -16,18 +16,6 @@
     {
       "action": "read",
       "permission": "hrm.pay_components.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.pay_components.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.pay_components.update"
-    },
-    {
-      "action": "delete",
-      "permission": "hrm.pay_components.delete"
     }
   ],
   "companyScoped": true,
