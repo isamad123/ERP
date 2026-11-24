@@ -45,6 +45,10 @@ export default function JobsScreen() {
 type Tab = 'jobs' | 'runs' | 'messages' | 'health';
 const TAB_PATH: Record<Tab, string> = { jobs: JOBS, runs: `${JOBS}/runs`, messages: `${JOBS}/messages`, health: `${JOBS}/health` };
 
+/** The notification log and system health as screens of their own (their menu entries): the job centre opened on that tab. */
+export function MessagesScreen() { return <JobCentre tab="messages" />; }
+export function HealthScreen() { return <JobCentre tab="health" />; }
+
 function JobCentre({ tab }: { tab: Tab }) {
   const { t } = useText();
   const { can } = useShell();

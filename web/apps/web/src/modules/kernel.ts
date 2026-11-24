@@ -52,6 +52,8 @@ const SetupScreen = lazy(() => import('./admin/setup'));
 const PacksScreen = lazy(() => import('./admin/packs'));
 // S1.16c: the job centre (its runs, notification log and system health are also tabs of it) and the licence page.
 const JobsScreen = lazy(() => import('./admin/jobs'));
+const MessagesScreen = lazy(() => import('./admin/jobs').then((m) => ({ default: m.MessagesScreen })));
+const HealthScreen = lazy(() => import('./admin/jobs').then((m) => ({ default: m.HealthScreen })));
 const LicenceScreen = lazy(() => import('./admin/licence'));
 
 export const kernelScreens: ScreenDeclaration[] = [
@@ -99,8 +101,8 @@ export const kernelScreens: ScreenDeclaration[] = [
   // S1.16c (ruling Q1): "Licence", "Background jobs", "Notification log" and "System health" in the Administration group; the last two open the job centre's tabs
   // (the health path is the one the notification catalogue links to). The licence page answers in the locked state.
   { id: 'licence', path: '/settings/licence', labelKey: 'nav.licence', icon: KeyRound, group: 'administration', permission: 'cfg.licence.read', allowedWhenLocked: true, component: LicenceScreen },
-  { id: 'notification-log', path: '/admin/jobs/messages', labelKey: 'nav.notificationLog', icon: Bell, group: 'administration', permission: 'ntf.outbound_messages.read', component: JobsScreen },
-  { id: 'system-health', path: '/admin/jobs/health', labelKey: 'nav.systemHealth', icon: Activity, group: 'administration', permission: 'job.runs.read', component: JobsScreen },
+  { id: 'notification-log', path: '/admin/jobs/messages', labelKey: 'nav.notificationLog', icon: Bell, group: 'administration', permission: 'ntf.outbound_messages.read', component: MessagesScreen },
+  { id: 'system-health', path: '/admin/jobs/health', labelKey: 'nav.systemHealth', icon: Activity, group: 'administration', permission: 'job.runs.read', component: HealthScreen },
   { id: 'jobs', path: '/admin/jobs/*', labelKey: 'nav.jobs', icon: Activity, group: 'administration', permission: 'job.runs.read', component: JobsScreen },
   { id: 'audit', path: '/admin/audit/*', labelKey: 'nav.audit', icon: ScrollText, group: 'administration', permission: 'aud.changes.view', component: AuditScreen },
   { id: 'exports', path: '/admin/exports', labelKey: 'nav.exports', icon: Download, group: 'administration', permission: 'itg.exports.run', allowedWhenLocked: true, component: ExportsScreen },
