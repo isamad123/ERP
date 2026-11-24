@@ -52,6 +52,16 @@
       "type": "string",
       "nullable": true
     },
+    "syncCursorAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
+    "syncRequestedAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
     "status": {
       "type": "string",
       "enum": [

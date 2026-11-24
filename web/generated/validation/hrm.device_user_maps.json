@@ -31,6 +31,16 @@
       "format": "date-time",
       "nullable": true
     },
+    "removalDueAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
+    "removalDoneAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
     "validFrom": {
       "type": "string",
       "format": "date"

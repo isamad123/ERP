@@ -33,6 +33,12 @@ public sealed partial class DeviceUserMap : global::Erp.BuildingBlocks.Domain.En
     /// <summary>consent_at: biometric consent (ATT-20)</summary>
     public global::System.DateTimeOffset? ConsentAt { get; set; }
 
+    /// <summary>removal_due_at: S1.27b: when the mapping ended and the user is to be removed from the device (ATT-20)</summary>
+    public global::System.DateTimeOffset? RemovalDueAt { get; set; }
+
+    /// <summary>removal_done_at: S1.27b: when HR confirmed the user was removed from the device</summary>
+    public global::System.DateTimeOffset? RemovalDoneAt { get; set; }
+
     /// <summary>valid_from</summary>
     public global::System.DateOnly ValidFrom { get; set; }
 

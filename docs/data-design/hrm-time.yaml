@@ -19,9 +19,14 @@
     - [last_seen_at, ts, opt]
     - [last_sync_at, ts, opt]
     - [last_error, text, opt]
+    - [sync_cursor_at, ts, opt, "S1.27b: the latest punch time read from the device; the next pull starts a day before it (the keys remove repeats)"]
+    - [sync_requested_at, ts, opt, "S1.27b: when HR asked for a sync now; the device sync job takes it and clears it"]
   unique: [[company_id, serial_no]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.27b (CR-088 S1.27b detail): the device registry service checks the connection and keeps the secret out of the row; the generated writes are closed.
+  added_in: {S1.27b: [sync_cursor_at, sync_requested_at]}
+  api_actions: [read]
   reqs: [ATT-02, ATT-03]
 
 - table: hrm.device_user_maps
@@ -33,11 +38,39 @@
     - [device_user_no, text, req]
     - [employment_id, uuid, req, fk hrm.employments]
     - [consent_at, ts, opt, biometric consent (ATT-20)]
+    - [removal_due_at, ts, opt, "S1.27b: when the mapping ended and the user is to be removed from the device (ATT-20)"]
+    - [removal_done_at, ts, opt, "S1.27b: when HR confirmed the user was removed from the device"]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.27b (CR-088 S1.27b detail): mapping is written by the device mapping service (consent, ending on leaving, removal task); the generated writes are closed.
+  added_in: {S1.27b: [removal_due_at, removal_done_at]}
+  api_actions: [read]
   reqs: [ATT-03, ATT-20]
   eff_key: [company_id, device_scope, device_user_no]
   notes: Punches resolve the employee by mapping valid on the punch date.
+
+# S1.27b (CR-088 S1.27b detail): punches of a device user number that maps to nobody (yet) wait here, so a late mapping brings them
+# into the event store with their original times and nothing is lost (FR-HRM-ATT-03).
+- table: hrm.unmapped_punches
+  purpose: Device punches whose user number maps to no employment yet, kept until mapped or discarded (ATT-03)
+  traits: [std, co]
+  status: [open, resolved, discarded]
+  added_in: S1.27b
+  columns:
+    - [device_id, uuid, req, fk hrm.attendance_devices]
+    - [device_user_no, text, req]
+    - [punched_at, ts, req, the device's time of the punch]
+    - [direction, "enum(in,out,break_out,break_in,unknown)", req]
+    - [idempotency_key, text, req, "the key the punch gets in the event store"]
+    - [received_at, ts, req, server receipt time]
+    - [employment_id, uuid, opt, "fk hrm.employments; set when the punch was brought into the event store"]
+    - [resolved_at, ts, opt]
+    - [resolved_by, uuid, opt, fk iam.users]
+  unique: [[company_id, idempotency_key]]
+  indexes: [[company_id, device_id, device_user_no, status]]
+  scope: {company: company_id}
+  api_actions: [read]
+  reqs: [ATT-03]
 
 - table: hrm.shifts
   traits: [std, co, soft, name]

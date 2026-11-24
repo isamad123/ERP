@@ -23,6 +23,8 @@ internal sealed class DeviceUserMapConfiguration : IEntityTypeConfiguration<glob
         builder.Property(e => e.DeviceUserNo).HasColumnName("device_user_no").HasColumnType("text").IsRequired();
         builder.Property(e => e.EmploymentId).HasColumnName("employment_id").HasColumnType("uuid");
         builder.Property(e => e.ConsentAt).HasColumnName("consent_at").HasColumnType("timestamptz");
+        builder.Property(e => e.RemovalDueAt).HasColumnName("removal_due_at").HasColumnType("timestamptz");
+        builder.Property(e => e.RemovalDoneAt).HasColumnName("removal_done_at").HasColumnType("timestamptz");
         builder.Property(e => e.ValidFrom).HasColumnName("valid_from").HasColumnType("date");
         builder.Property(e => e.ValidTo).HasColumnName("valid_to").HasColumnType("date");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");

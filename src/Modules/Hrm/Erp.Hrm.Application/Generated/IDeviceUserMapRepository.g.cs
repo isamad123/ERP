@@ -45,6 +45,8 @@ public static class DeviceUserMapAccess
         new("device_user_no", "DeviceUserNo", null),
         new("employment_id", "EmploymentId", null),
         new("consent_at", "ConsentAt", null),
+        new("removal_due_at", "RemovalDueAt", null),
+        new("removal_done_at", "RemovalDoneAt", null),
         new("valid_from", "ValidFrom", null),
         new("valid_to", "ValidTo", null),
         new("created_at", "CreatedAt", null),

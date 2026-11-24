@@ -45,6 +45,12 @@ public sealed partial class AttendanceDevice : global::Erp.BuildingBlocks.Domain
     /// <summary>last_error</summary>
     public string? LastError { get; set; }
 
+    /// <summary>sync_cursor_at: S1.27b: the latest punch time read from the device; the next pull starts a day before it (the keys remove repeats)</summary>
+    public global::System.DateTimeOffset? SyncCursorAt { get; set; }
+
+    /// <summary>sync_requested_at: S1.27b: when HR asked for a sync now; the device sync job takes it and clears it</summary>
+    public global::System.DateTimeOffset? SyncRequestedAt { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 
