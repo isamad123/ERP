@@ -13,14 +13,6 @@
     {
       "action": "read",
       "permission": "cfg.installed_packs.read"
-    },
-    {
-      "action": "create",
-      "permission": "cfg.installed_packs.create"
-    },
-    {
-      "action": "update",
-      "permission": "cfg.installed_packs.update"
     }
   ],
   "companyScoped": false,
@@ -32,6 +24,8 @@
     "packId",
     "version",
     "installedAt",
+    "previousVersion",
+    "upgradedAt",
     "status"
   ],
   "search": [],
@@ -82,6 +76,36 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.cfg.installed_packs.installed_at"
+    },
+    {
+      "column": "manifest",
+      "field": "manifest",
+      "kind": "Json",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.cfg.installed_packs.manifest"
+    },
+    {
+      "column": "previous_version",
+      "field": "previousVersion",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.cfg.installed_packs.previous_version"
+    },
+    {
+      "column": "upgraded_at",
+      "field": "upgradedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.cfg.installed_packs.upgraded_at"
     },
     {
       "column": "status",

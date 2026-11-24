@@ -2,6 +2,7 @@ using System.Text.Json;
 using Erp.BuildingBlocks.Application.Tenancy;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.Kernel.Application.ControlPlane.Tenancy;
+using Erp.Kernel.Contracts.Packs;
 using Erp.Kernel.Domain.Entitlements;
 using Erp.Kernel.Infrastructure.ControlPlane.Entitlements;
 using Erp.Kernel.Infrastructure.ControlPlane.Migration;
@@ -9,6 +10,7 @@ using Erp.Kernel.Infrastructure.ControlPlane.Platform;
 using Erp.Kernel.Infrastructure.ControlPlane.Secrets;
 using Erp.Kernel.Infrastructure.ControlPlane.Tenancy;
 using Erp.Kernel.Infrastructure.Entitlements;
+using Erp.Kernel.Infrastructure.Packs;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -29,7 +31,8 @@ public sealed record ProvisioningRequest(
     string AdminDisplayName,
     string SignedEntitlementJson,
     string DeploymentType = "saas",
-    string DefaultLanguage = "en");
+    string DefaultLanguage = "en",
+    IReadOnlyList<string>? Packs = null);
 
 /// <summary>Progress of a provisioning run, reported after each completed step (FR-ADM-PLT-02 "progress").</summary>
 public interface IProvisioningProgress
@@ -44,16 +47,22 @@ public sealed record ProvisioningResult(Guid TenantId, string Code, string Datab
 
 /// <summary>
 /// Creates a customer: control-plane records, its own database and logins, kernel and licensed module migrations,
-/// the signed entitlement, baseline data, the first administrator (invited), a smoke test, then activation
-/// (FR-KRN-TEN-01, 02, 03). Each step checks what is already there, so running it again after a failure resumes
+/// the signed entitlement, baseline data, the first administrator (invited), the selected country and industry packs (slice
+/// S1.23b), a smoke test, then activation (FR-KRN-TEN-01, 02, 03). Each step checks what is already there, so running it again after a failure resumes
 /// and never creates duplicates. Runs for the same customer take turns (<see cref="ProvisioningLock"/>, R-031).
 /// Every step is recorded in cp.platform_audit (FR-ADM-PLT-10).
 /// </summary>
 public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore secrets, IClock clock, MigrationSet migrations)
 {
-    public static readonly IReadOnlyList<string> Steps = ["register", "database", "migrate", "entitlement", "seed", "smoke_test", "activate"];
+    public static readonly IReadOnlyList<string> Steps = ["register", "database", "migrate", "entitlement", "seed", "packs", "smoke_test", "activate"];
 
     private readonly ClusterAdministrator _clusters = new(secrets);
+
+    /// <summary>
+    /// The pack object handlers of the installed modules (D-10; slice S1.23b). The host that provisions passes every module's handlers;
+    /// the default is the kernel's only.
+    /// </summary>
+    public IReadOnlyList<IPackObjectHandler> PackHandlers { get; init; } = KernelPackHandlers.All;
 
     public async Task<ProvisioningResult> ProvisionAsync(PlatformActor actor, ProvisioningRequest request, IProvisioningProgress? progress, CancellationToken cancellationToken)
     {
@@ -106,6 +115,10 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
 
             step = "seed";
             await SeedAsync(registration, request, modules, cancellationToken).ConfigureAwait(false);
+            await CompletedAsync(actor, registration, step, progress, customerLock, cancellationToken).ConfigureAwait(false);
+
+            step = "packs";
+            await InstallPacksAsync(actor, registration, request.Packs ?? [], entitlement, cancellationToken).ConfigureAwait(false);
             await CompletedAsync(actor, registration, step, progress, customerLock, cancellationToken).ConfigureAwait(false);
 
             step = "smoke_test";
@@ -390,7 +403,53 @@ public sealed class TenantProvisioner(ControlPlaneOptions options, ISecretStore 
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    // ------------------------------------------------------------------ steps 6 and 7: smoke test and activation
+    // ------------------------------------------------------------------ step 6: packs (FR-KRN-TEN-02 "install selected country and industry packs")
+
+    /// <summary>
+    /// Installs each selected pack (<c>id</c> or <c>id@version</c>; the latest compatible version by default) from the catalogue, in
+    /// the order given, one transaction per pack, as the system user. A pack must be licensed by the entitlement (<c>claims.packs</c>);
+    /// a pack already installed (a resumed run) is skipped. The pack's signature is checked again against the keys as they are now.
+    /// </summary>
+    private async Task InstallPacksAsync(PlatformActor actor, Registration registration, IReadOnlyList<string> packs, SignedEntitlement entitlement, CancellationToken cancellationToken)
+    {
+        if (packs.Count == 0)
+        {
+            return;
+        }
+
+        var licensed = EntitlementCatalogs.Parse(entitlement.Payload.Claims).Packs;
+        var installer = new PackInstaller(PackHandlers);
+        foreach (var selection in packs)
+        {
+            var at = selection.IndexOf('@', StringComparison.Ordinal);
+            var (id, version) = at > 0 ? (selection[..at], selection[(at + 1)..]) : (selection, null);
+            PackArchive pack;
+            await using (var cp = await OpenControlPlaneAsync(cancellationToken).ConfigureAwait(false))
+            {
+                pack = await PackCatalog.LoadAsync(cp, id, version, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (!licensed.Contains(pack.Manifest.Entitlement, StringComparer.Ordinal))
+            {
+                throw new InvalidOperationException($"Pack {id} needs the licence key {pack.Manifest.Entitlement}, which the entitlement does not grant.");
+            }
+
+            await using var tenant = await OpenTenantAsync(registration.Tenant, TenantLogins.Owner, cancellationToken).ConfigureAwait(false);
+            await using var tx = await tenant.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+            if (await PackInstaller.InstalledVersionAsync(tenant, tx, id, cancellationToken).ConfigureAwait(false) is not null)
+            {
+                continue;
+            }
+
+            var report = await installer.ApplyAsync(tenant, tx, pack, upgrade: false, BaselineSeed.SystemUserId, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+            await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+            await using var audit = await OpenControlPlaneAsync(cancellationToken).ConfigureAwait(false);
+            await PlatformAudit.WriteAsync(audit, null, clock, actor, "pack.install", registration.TenantId,
+                new { code = registration.Tenant.Code, pack_id = id, version = pack.Manifest.Version, added = report.Added, kept = report.Kept }, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    // ------------------------------------------------------------------ steps 7 and 8: smoke test and activation
 
     /// <summary>Connects as the application login (app_rw) and reads what provisioning must have created.</summary>
     private async Task SmokeTestAsync(ResolvedTenant tenant, CancellationToken cancellationToken)

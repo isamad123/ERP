@@ -17,24 +17,15 @@ public sealed class InstalledPackResponse
     public string PackId { get; init; } = null!;
     public string Version { get; init; } = null!;
     public global::System.DateTimeOffset InstalledAt { get; init; }
+    public global::System.Text.Json.JsonElement? Manifest { get; init; }
+    public string? PreviousVersion { get; init; }
+    public global::System.DateTimeOffset? UpgradedAt { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for cfg.installed_packs. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class InstalledPackWriteRequest
-{
-    public string? PackId { get; init; }
-    public string? Version { get; init; }
-    public global::System.DateTimeOffset? InstalledAt { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for cfg.installed_packs.</summary>
@@ -50,7 +41,7 @@ public sealed class InstalledPackListQuery
     public string? Sort { get; init; }
 }
 
-/// <summary>Generated endpoints of cfg.installed_packs: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of cfg.installed_packs: read. Answers pass through field security (S1.06).</summary>
 internal static class InstalledPackEndpoints
 {
     private const string Resource = "cfg.installed_packs";
@@ -60,8 +51,6 @@ internal static class InstalledPackEndpoints
         var group = app.MapGroup("/api/cfg/installed-packs").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("cfg.installed_packs.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.installed_packs.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("cfg.installed_packs.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "cfg.installed_packs.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("cfg.installed_packs.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "cfg.installed_packs.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("cfg.installed_packs.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "cfg.installed_packs.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] InstalledPackListQuery query, global::Erp.Kernel.Application.Generated.Cfg.IInstalledPackRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -80,59 +69,15 @@ internal static class InstalledPackEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(InstalledPackWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IInstalledPackRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.installed_packs.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, "create", null, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Cfg.InstalledPack();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/cfg/installed-packs/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, InstalledPackWriteRequest request, global::Erp.Kernel.Application.Generated.Cfg.IInstalledPackRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "cfg.installed_packs.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Cfg.InstalledPackAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static InstalledPackResponse ToResponse(global::Erp.Kernel.Domain.Generated.Cfg.InstalledPack row) => new()
     {
         Id = row.Id,
         PackId = row.PackId,
         Version = row.Version,
         InstalledAt = row.InstalledAt,
+        Manifest = row.Manifest?.RootElement.Clone(),
+        PreviousVersion = row.PreviousVersion,
+        UpgradedAt = row.UpgradedAt,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -140,70 +85,4 @@ internal static class InstalledPackEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(InstalledPackWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (request.PackId is null && (!update || access.CanEdit("pack_id")))
-        {
-            errors.Add("packId");
-        }
-        if (request.Version is null && (!update || access.CanEdit("version")))
-        {
-            errors.Add("version");
-        }
-        if (request.InstalledAt is null && (!update || access.CanEdit("installed_at")))
-        {
-            errors.Add("installedAt");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(InstalledPackWriteRequest request, global::Erp.Kernel.Domain.Generated.Cfg.InstalledPack row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (access.CanEdit("pack_id"))
-        {
-            row.PackId = request.PackId!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PackId, row.PackId, update))
-        {
-            denied.Add("packId");
-        }
-        if (access.CanEdit("version"))
-        {
-            row.Version = request.Version!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Version, row.Version, update))
-        {
-            denied.Add("version");
-        }
-        if (access.CanEdit("installed_at"))
-        {
-            row.InstalledAt = request.InstalledAt!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.InstalledAt, row.InstalledAt, update))
-        {
-            denied.Add("installedAt");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
 }

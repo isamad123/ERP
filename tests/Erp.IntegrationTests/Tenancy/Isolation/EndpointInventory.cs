@@ -114,10 +114,22 @@ public enum EndpointKind
 
     /// <summary>A tick, skip, re-open or go-live naming a company (S1.18a): A's company on B's host is 404 and nothing changes in A.</summary>
     SetupAction,
+
+    /// <summary>The pack manager of the bound customer (S1.23b): B's answer is B's own and shows nothing of A's.</summary>
+    PackCatalog,
+
+    /// <summary>The objects of one installed pack by pack id (S1.23b): B's answer is B's own and shows nothing of A's.</summary>
+    PackQuery,
+
+    /// <summary>Install or upgrade by pack id (S1.23b): B's call acts on B only; nothing changes in A.</summary>
+    PackAction,
+
+    /// <summary>"Take the pack value" of a pack item (S1.23b): A's item on B's host is 404 and nothing changes in A.</summary>
+    PackRecordAction,
 }
 
 /// <summary>One API endpoint as the API host maps it: method, route and the table it serves.</summary>
-public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null, string? AuditKind = null, string? NumberingKind = null, string? SettingsKind = null, string? LicenceKind = null, string? WorkflowKind = null, string? JobKind = null, string? NotificationKind = null, string? HrmKind = null, string? SetupKind = null)
+public sealed record ApiEndpoint(string Method, string Pattern, string? Resource, bool Anonymous, string? IdentityKind = null, string? AccessKind = null, string? AuditKind = null, string? NumberingKind = null, string? SettingsKind = null, string? LicenceKind = null, string? WorkflowKind = null, string? JobKind = null, string? NotificationKind = null, string? HrmKind = null, string? SetupKind = null, string? PackKind = null)
 {
     private const string IdSegment = "/{id:guid}";
 
@@ -172,6 +184,15 @@ public sealed record ApiEndpoint(string Method, string Pattern, string? Resource
                 case "read": return EndpointKind.SettingsRead;
                 case "write": return EndpointKind.SettingsWrite;
                 case "self": return EndpointKind.SettingsSelf;
+                case not null: return EndpointKind.Unclassified;
+            }
+
+            switch (PackKind)
+            {
+                case "catalog": return EndpointKind.PackCatalog;
+                case "query": return EndpointKind.PackQuery;
+                case "action": return EndpointKind.PackAction;
+                case "record_action": return EndpointKind.PackRecordAction;
                 case not null: return EndpointKind.Unclassified;
             }
 
@@ -311,13 +332,14 @@ public static class EndpointInventory
             var notification = endpoint.Metadata.GetMetadata<NotificationEndpointMetadata>();
             var hrm = endpoint.Metadata.GetMetadata<Erp.Hrm.Contracts.HrmEndpointMetadata>();
             var setup = endpoint.Metadata.GetMetadata<SetupEndpointMetadata>();
-            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource ?? audit?.Resource ?? numbering?.Resource ?? settings?.Resource ?? workflow?.Resource ?? job?.Resource ?? notification?.Resource ?? hrm?.Resource ?? setup?.Resource
+            var pack = endpoint.Metadata.GetMetadata<PackEndpointMetadata>();
+            var resource = endpoint.Metadata.GetMetadata<GeneratedEndpointMetadata>()?.Resource ?? access?.Resource ?? audit?.Resource ?? numbering?.Resource ?? settings?.Resource ?? workflow?.Resource ?? job?.Resource ?? notification?.Resource ?? hrm?.Resource ?? setup?.Resource ?? pack?.Resource
                 ?? (licence is null ? null : "cp.entitlements");
             var identity = endpoint.Metadata.GetMetadata<IdentityEndpointMetadata>()?.Kind;
             var anonymous = endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null || endpoint.Metadata.GetMetadata<IAuthorizeData>() is null;
             foreach (var method in methods is { Count: > 0 } ? methods : ["*"])
             {
-                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind, audit?.Kind, numbering?.Kind, settings?.Kind, licence?.Kind, workflow?.Kind, job?.Kind, notification?.Kind, hrm?.Kind, setup?.Kind));
+                list.Add(new ApiEndpoint(method, "/" + endpoint.RoutePattern.RawText!.TrimStart('/'), resource, anonymous, identity, access?.Kind, audit?.Kind, numbering?.Kind, settings?.Kind, licence?.Kind, workflow?.Kind, job?.Kind, notification?.Kind, hrm?.Kind, setup?.Kind, pack?.Kind));
             }
         }
 

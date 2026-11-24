@@ -27,18 +27,6 @@
       "sensitive": false
     },
     {
-      "code": "cfg.installed_packs.create",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.installed_packs.create",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.installed_packs.update",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.installed_packs.update",
-      "sensitive": false
-    },
-    {
       "code": "cfg.labels.read",
       "module": "cfg",
       "descriptionKey": "permissions.cfg.labels.read",
@@ -60,18 +48,6 @@
       "code": "cfg.pack_items.read",
       "module": "cfg",
       "descriptionKey": "permissions.cfg.pack_items.read",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.pack_items.create",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.pack_items.create",
-      "sensitive": false
-    },
-    {
-      "code": "cfg.pack_items.update",
-      "module": "cfg",
-      "descriptionKey": "permissions.cfg.pack_items.update",
       "sensitive": false
     },
     {

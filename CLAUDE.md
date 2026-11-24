@@ -248,6 +248,12 @@ Pay set-up (S1.34a): pay group and calendar services `src/Modules/Hrm/Erp.Hrm.In
 the generated writes of `hrm.pay_groups` and `hrm.pay_periods` are closed and their hand-written permissions are in `permissions.json`. A new readiness item is a line in `pay-readiness.json` plus a class implementing `IPayReadinessCheck` with the same code, registered in `PayServices.AddHrmPayrollApi`; an item without a check shows "not available", never passed.
 `payGroupId` is an assignment field of employment events (never edited directly). Tests: `tests/Erp.IntegrationTests/PaySetup`, `tests/Erp.UnitTests/Payroll`; web `web/apps/web/src/modules/payroll/` (pay groups by the engine, calendar and readiness screen, texts `packages/i18n/messages/pay.{en,ur}.json`).
 
+Packs (S1.23b): format, signing and catalogue `src/Platform/Erp.Kernel.Infrastructure/Packs/` (`PackManifest`, `PackArchive`, `PackCatalog`), installer `PackInstaller` (keeps the customer's changes, found by comparing each object with
+what the installer left; conflicts with both values; retire, never delete), pack manager `PackManager` (endpoints `Erp.Kernel.Api/Packs/PackEndpoints.cs` under `/api/cfg/packs`, held kind `cfg.pack.change`
+while `cfg.packs.requires_approval` is on). Each module handles its own object types (`IPackObjectHandler`, Kernel.Contracts `Packs/PackContracts.cs`): kernel `KernelPackHandlers`, HR `HrmPackHandlers` (policies per company of the
+pack's country); a host that installs packs registers every module's handlers. Operator commands `pack build|sign|publish|list`, `tenant provision --packs` (runbook `docs/runbooks/tenant-operations.md`); pack sources in `packs/<id>/`.
+Tests: `tests/Erp.IntegrationTests/Packs` (`PackTestSupport` builds, signs and publishes test packs with the fixture's pack key), `tests/Erp.UnitTests/Packs`; web `web/apps/web/src/modules/admin/packs.tsx`.
+
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.
 Slices: `docs/slices`. Handoff notes: `docs/handoff`.

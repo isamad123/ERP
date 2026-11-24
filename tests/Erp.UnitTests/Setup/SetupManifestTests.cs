@@ -21,7 +21,8 @@ public sealed partial class SetupManifestTests
     {
         var kernel = SetupManifest.Parse(SetupManifest.KernelJson);
         Assert.Empty(SetupManifest.Check(kernel));
-        Assert.Equal(7, kernel.Tasks.Count(t => t.Kind == SetupTaskKinds.Step));
+        Assert.Equal(8, kernel.Tasks.Count(t => t.Kind == SetupTaskKinds.Step)); // S1.23b adds the pack step (S1.18 ruling Q3)
+        Assert.Contains(kernel.Tasks, t => t is { Key: "step_packs", Check: "kernel.packs", Link: "/settings/packs" });
         Assert.Contains(kernel.Tasks, t => t is { Key: "numbering", Required: true, Link: "/settings/numbering" });
         Assert.All(kernel.Tasks.Where(t => t.Check is not null), t => Assert.StartsWith("kernel.", t.Check, StringComparison.Ordinal));
         _ = new SetupCatalog(Array.Empty<SetupManifestSource>()); // the kernel's manifest alone builds a catalogue
