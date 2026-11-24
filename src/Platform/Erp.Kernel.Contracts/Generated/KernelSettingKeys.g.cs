@@ -143,6 +143,18 @@ public static class KernelSettingKeys
     /// <summary>Most data rows one import file may hold.</summary>
     public const string ItgImportMaxRows = "itg.import.max_rows";
 
+    /// <summary>Most rows one export file may hold.</summary>
+    public const string ItgExportMaxRows = "itg.export.max_rows";
+
+    /// <summary>An export with more rows than this waits for a second person when approval of exports is on.</summary>
+    public const string ItgExportApprovalRows = "itg.export.approval_rows";
+
+    /// <summary>Days after which an export file is deleted from the file store.</summary>
+    public const string ItgExportKeepDays = "itg.export.keep_days";
+
+    /// <summary>An export above the row limit for approval, or with salary, personal or restricted fields, waits for a second person's approval.</summary>
+    public const string ItgExportRequiresApproval = "itg.export.requires_approval";
+
     /// <summary>The kinds of file that may be attached.</summary>
     public const string DocUploadAllowedTypes = "doc.upload.allowed_types";
 

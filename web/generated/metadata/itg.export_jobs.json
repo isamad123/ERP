@@ -11,14 +11,6 @@
     {
       "action": "read",
       "permission": "itg.export_jobs.read"
-    },
-    {
-      "action": "create",
-      "permission": "itg.export_jobs.create"
-    },
-    {
-      "action": "update",
-      "permission": "itg.export_jobs.update"
     }
   ],
   "companyScoped": true,
@@ -34,14 +26,17 @@
     "format",
     "rowCount",
     "fileId",
-    "status"
+    "fileName",
+    "reason",
+    "jobRunId"
   ],
   "search": [],
   "constraints": {
     "ck_export_jobs_format": "format",
     "ck_export_jobs_status": "status",
     "fk_export_jobs_company_id": "companyId",
-    "fk_export_jobs_file_id": "fileId"
+    "fk_export_jobs_file_id": "fileId",
+    "fk_export_jobs_job_run_id": "jobRunId"
   },
   "fields": [
     {
@@ -131,6 +126,107 @@
       "references": "doc.files"
     },
     {
+      "column": "file_name",
+      "field": "fileName",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.export_jobs.file_name"
+    },
+    {
+      "column": "reason",
+      "field": "reason",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.export_jobs.reason"
+    },
+    {
+      "column": "sensitive_classes",
+      "field": "sensitiveClasses",
+      "kind": "TextArray",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.export_jobs.sensitive_classes"
+    },
+    {
+      "column": "job_run_id",
+      "field": "jobRunId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": true,
+      "labelKey": "fields.itg.export_jobs.job_run_id",
+      "references": "job.runs"
+    },
+    {
+      "column": "held_request_id",
+      "field": "heldRequestId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.export_jobs.held_request_id"
+    },
+    {
+      "column": "size_bytes",
+      "field": "sizeBytes",
+      "kind": "Int4",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.export_jobs.size_bytes"
+    },
+    {
+      "column": "error_key",
+      "field": "errorKey",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.export_jobs.error_key"
+    },
+    {
+      "column": "expires_at",
+      "field": "expiresAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.export_jobs.expires_at"
+    },
+    {
+      "column": "started_at",
+      "field": "startedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.export_jobs.started_at"
+    },
+    {
+      "column": "finished_at",
+      "field": "finishedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.itg.export_jobs.finished_at"
+    },
+    {
       "column": "status",
       "field": "status",
       "kind": "Enum",
@@ -159,6 +255,14 @@
         {
           "value": "expired",
           "labelKey": "options.itg.export_jobs.status.expired"
+        },
+        {
+          "value": "awaiting_approval",
+          "labelKey": "options.itg.export_jobs.status.awaiting_approval"
+        },
+        {
+          "value": "rejected",
+          "labelKey": "options.itg.export_jobs.status.rejected"
         }
       ]
     },

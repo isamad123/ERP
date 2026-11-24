@@ -5,10 +5,10 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Plus, ShieldCheck } from 'lucide-react';
-import { ColumnsChooser, DataGrid, SavedViews, useDocumentTitle, type GridColumn, type ViewDefinition } from '@erp/engine';
+import { ColumnsChooser, DataGrid, EngineProvider, ExportButton, type EngineApi, orderedChoices, SavedViews, useDocumentTitle, type GridColumn, type ViewDefinition } from '@erp/engine';
 import { Banner, Button, EmptyState, ErrorPanel, Link, PageHeader, SelectField, TextField } from '@erp/ui';
 import { formatDateTime, formatInteger, useLocaleSettings, useText } from '@erp/i18n';
-import { ApiProblem } from '../../api/client';
+import { ApiProblem, sendText } from '../../api/client';
 import { seatsOf, USER_STATUSES, users, type UserRow } from '../../api/users';
 import { nameOf } from '../../api/workflow';
 import { companyName, useShell } from '../../shell/context';
@@ -17,13 +17,14 @@ import { BulkUsers } from './users-bulk';
 
 export const USERS_PATH = '/admin/users';
 const PAGE = 100;
+const exportApi: EngineApi = { send: sendText };
 const VIEW_KEY = 'iam.users.overview';
 
 export function UserList() {
   const { t } = useText();
   const { locale, timeZone, numbers } = useLocaleSettings();
   const navigate = useNavigate();
-  const { me, can, writable } = useShell();
+  const { me, can, writable, activeCompany } = useShell();
   useDocumentTitle(t('users.title'));
   const [definition, setDefinition] = useState<ViewDefinition>({});
   const [viewId, setViewId] = useState('standard');
@@ -65,6 +66,10 @@ export function UserList() {
     { id: 'hasMfa', header: t('users.col.mfa'), width: 140, cell: (r) => r.hasMfa ? <span><ShieldCheck size={14} aria-hidden="true" /> {t('users.mfa.on')}</span> : <span className="erp-muted">{t('users.mfa.off')}</span> },
   ], [t, locale, timeZone, numbers, companyNames]);
 
+  // The bulk export of the list as it is now (S1.16b, FR-ADM-USR-09): the shown columns in order and the same search and filters.
+  const exportColumns = useMemo(() => orderedChoices(columns, definition.columns).filter((c) => !c.hidden)
+    .map((c) => ({ field: c.id === 'companies' ? 'companyIds' : c.id, label: columns.find((x) => x.id === c.id)?.header ?? c.id })), [columns, definition.columns]);
+  const exportQuery = useMemo(() => ({ status: filters.status, roleId: filters.roleId, companyId: filters.companyId, mfa: filters.mfa === undefined ? undefined : filters.mfa === 'yes' }), [filters.status, filters.roleId, filters.companyId, filters.mfa]);
   const problem = list.error instanceof ApiProblem ? list.error : null;
   const filtered = !!definition.search || Object.keys(filters).length > 0;
   const canCreate = writable && can('iam.users.create');
@@ -74,7 +79,12 @@ export function UserList() {
   return (
     <div className="erp-page">
       <PageHeader title={t('users.title')} description={t('users.description')}
-        actions={canCreate ? <Button variant="primary" icon={<Plus size={18} aria-hidden="true" />} onPress={create}>{t('users.create')}</Button> : undefined} />
+        actions={(
+          <>
+            {can('itg.exports.run') && <EngineProvider api={exportApi}><ExportButton source="iam.user_overview" title={t('users.title')} columns={exportColumns} query={exportQuery} search={definition.search ?? null} companyId={activeCompany?.id ?? null} /></EngineProvider>}
+            {canCreate && <Button variant="primary" icon={<Plus size={18} aria-hidden="true" />} onPress={create}>{t('users.create')}</Button>}
+          </>
+        )} />
       {seats && (
         <div className="erp-seats" role="group" aria-label={t('users.seats.label')}>
           <p><strong>{t('users.seats', { used: formatInteger(seats.used, numbers), max: formatInteger(seats.max, numbers) })}</strong></p>

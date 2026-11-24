@@ -157,7 +157,7 @@ public static class TenantResolution
 
     /// <summary>Sign-in steps (S1.05) still work in read-only mode, so users can reach the data the mode keeps visible.</summary>
     private static bool AllowedWhenReadOnly(Endpoint endpoint) =>
-        endpoint.Metadata.GetMetadata<IdentityEndpointMetadata>() is { AllowedWhenReadOnly: true };
+        endpoint.Metadata.GetMetadata<IdentityEndpointMetadata>() is { AllowedWhenReadOnly: true } || endpoint.Metadata.GetMetadata<AllowedWhenReadOnlyMetadata>() is not null;
 
     /// <summary>Locked (ruling Q5): sign-in steps, and the licence page, capabilities and exports marked allowed when locked.</summary>
     private static bool AllowedWhenLocked(Endpoint endpoint) =>

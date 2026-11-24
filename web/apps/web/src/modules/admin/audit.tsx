@@ -7,9 +7,9 @@ import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { parseDate, type CalendarDate } from '@internationalized/date';
 import { Download } from 'lucide-react';
 import { Button, DateField, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, TextField, Tabs, useToast, type Option } from '@erp/ui';
-import { useDocumentTitle } from '@erp/engine';
+import { EngineProvider, ExportButton, type EngineApi, useDocumentTitle } from '@erp/engine';
 import { formatDateTime, formatInteger, useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
-import { ApiProblem } from '../../api/client';
+import { ApiProblem, sendText } from '../../api/client';
 import { access, downloadChangeExport, type AuditChange, type ChangeFilters } from '../../api/access';
 import type { SecurityEvent } from '../../api/users';
 import { useShell } from '../../shell/context';
@@ -17,6 +17,7 @@ import { PersonPicker, useProblemText } from './users-parts';
 import './reports-messages';
 import './users.css';
 
+const exportApi: EngineApi = { send: sendText };
 export const AUDIT_PATH = '/admin/audit';
 const PAGE = 50;
 const ACTIONS = ['create', 'update', 'delete', 'status'] as const;
@@ -49,7 +50,7 @@ const dayAfter = (d: CalendarDate | null) => (d ? `${d.add({ days: 1 }).toString
 function Changes() {
   const { t } = useText();
   const { locale, timeZone, numbers } = useLocaleSettings();
-  const { can } = useShell();
+  const { can, activeCompany } = useShell();
   const toast = useToast();
   const problemText = useProblemText();
   const [search] = useSearchParams();
@@ -106,6 +107,14 @@ function Changes() {
         <Button type="submit" variant="primary">{t('audit.search')}</Button>
         <Button variant="quiet" onPress={reset}>{t('rep.clear')}</Button>
         {can('aud.export') && <Button variant="secondary" icon={<Download size={16} aria-hidden="true" />} isPending={exporting} onPress={() => { void exportNow(); }}>{t('audit.export')}</Button>}
+        {can('aud.export') && can('itg.exports.run') && (
+          <EngineProvider api={exportApi}><ExportButton source="aud.change_log" title={t('audit.tab.changes')} companyId={activeCompany?.id ?? null}
+            query={{ userId: applied.userId, entityType: applied.entityType, entityId: applied.entityId, from: applied.from, to: applied.to, action: applied.action, source: applied.source }}
+            columns={[
+              { field: 'occurredAt', label: t('rep.col.when') }, { field: 'actorName', label: t('rep.col.who') }, { field: 'entityType', label: t('audit.table') }, { field: 'entityId', label: t('audit.record') },
+              { field: 'action', label: t('rep.col.action') }, { field: 'source', label: t('audit.source') }, { field: 'changes', label: t('rep.col.fields') },
+            ]} /></EngineProvider>
+        )}
       </form>
       {list.isPending ? <Skeleton lines={6} /> : list.isError && rows.length === 0 ? (
         <ErrorPanel message={problem?.status === 403 ? t('audit.denied') : t('audit.loadError')} reference={problem?.reference ?? null}

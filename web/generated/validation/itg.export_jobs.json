@@ -40,6 +40,56 @@
       "format": "uuid",
       "nullable": true
     },
+    "fileName": {
+      "type": "string",
+      "nullable": true
+    },
+    "reason": {
+      "type": "string",
+      "nullable": true
+    },
+    "sensitiveClasses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "nullable": true
+    },
+    "jobRunId": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
+    "heldRequestId": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
+    "sizeBytes": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647,
+      "nullable": true
+    },
+    "errorKey": {
+      "type": "string",
+      "nullable": true
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
+    "finishedAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -47,7 +97,9 @@
         "running",
         "done",
         "failed",
-        "expired"
+        "expired",
+        "awaiting_approval",
+        "rejected"
       ]
     }
   }

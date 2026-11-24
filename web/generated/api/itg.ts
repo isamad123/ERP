@@ -159,23 +159,22 @@ export interface ExportJob
     format: 'csv' | 'xlsx' | 'pdf';
     rowCount: number | null;
     fileId: string | null;
-    status: 'queued' | 'running' | 'done' | 'failed' | 'expired';
+    fileName: string | null;
+    reason: string | null;
+    sensitiveClasses: string[] | null;
+    jobRunId: string | null;
+    heldRequestId: string | null;
+    sizeBytes: number | null;
+    errorKey: string | null;
+    expiresAt: string | null;
+    startedAt: string | null;
+    finishedAt: string | null;
+    status: 'queued' | 'running' | 'done' | 'failed' | 'expired' | 'awaiting_approval' | 'rejected';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface ExportJobWrite
-{
-    companyId: string;
-    entityType: string;
-    filter: unknown;
-    format: 'csv' | 'xlsx' | 'pdf';
-    rowCount?: number | null;
-    fileId?: string | null;
-    status: 'queued' | 'running' | 'done' | 'failed' | 'expired';
 }
 
 export interface ExportJobListQuery
@@ -184,15 +183,14 @@ export interface ExportJobListQuery
     limit?: number;
     companyId?: string;
     fileId?: string;
-    status?: 'queued' | 'running' | 'done' | 'failed' | 'expired';
+    jobRunId?: string;
+    status?: 'queued' | 'running' | 'done' | 'failed' | 'expired' | 'awaiting_approval' | 'rejected';
 }
 
 export const exportJobs =
 {
     list: (query: ExportJobListQuery = {}) => request<PagedResult<ExportJob>>('GET', '/api/itg/export-jobs', { query }),
     get: (id: string) => request<ExportJob>('GET', `/api/itg/export-jobs/${id}`),
-    create: (body: ExportJobWrite) => request<ExportJob>('POST', '/api/itg/export-jobs', { body }),
-    update: (id: string, body: ExportJobWrite & { rowVersion: number }) => request<ExportJob>('PUT', `/api/itg/export-jobs/${id}`, { body }),
 };
 
 /** itg.import_batch_errors: ImportBatchError. Field rules (S1.06) may leave a field out or mask it as text. */
