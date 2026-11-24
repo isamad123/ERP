@@ -381,12 +381,6 @@ tables:
       - text: "a working day has a shift and any other day has none"
         check: { name: ck_roster_lines_shift, sql: "(day_type = 'working') = (shift_id is not null)" }
 
-  hrm.optional_holiday_choices:
-    checks:
-      # S1.28b (CR-085 S1.28b detail; slice S1.28 Build item 7): the year is the calendar year of the holiday.
-      - text: "the year is a plausible calendar year"
-        check: { name: ck_optional_holiday_choices_year, sql: "holiday_year between 1900 and 2200" }
-
   hrm.form_definitions:
     notes:
       - text: "active_version_id uses composite FK (id, active_version_id) -> hrm.form_versions (parent_id, id)."

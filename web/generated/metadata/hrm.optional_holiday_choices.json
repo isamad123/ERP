@@ -30,7 +30,6 @@
   ],
   "search": [],
   "constraints": {
-    "ck_optional_holiday_choices_year": "holidayYear",
     "fk_optional_holiday_choices_company_id": "companyId",
     "fk_optional_holiday_choices_employment_id": "employmentId",
     "fk_optional_holiday_choices_holiday_id": "holidayId"

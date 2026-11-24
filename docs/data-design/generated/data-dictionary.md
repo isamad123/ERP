@@ -3296,7 +3296,6 @@ The optional holidays an employee chose for a year (S1.28b, CR-085, FR-HRM-ATT-1
 
 Constraints:
 
-- `ck_optional_holiday_choices_year` CHECK (((holiday_year >= 1900) AND (holiday_year <= 2200)))
 - `fk_optional_holiday_choices_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_optional_holiday_choices_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
 - `fk_optional_holiday_choices_holiday_id` FOREIGN KEY (holiday_id) REFERENCES ref.holidays(id)

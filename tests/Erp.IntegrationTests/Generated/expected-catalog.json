@@ -21187,9 +21187,7 @@
       "uniques": [
         "uq_optional_holiday_choices_employment_id_holiday_id"
       ],
-      "checks": [
-        "ck_optional_holiday_choices_year"
-      ],
+      "checks": [],
       "exclusions": [],
       "foreign_keys": [
         {

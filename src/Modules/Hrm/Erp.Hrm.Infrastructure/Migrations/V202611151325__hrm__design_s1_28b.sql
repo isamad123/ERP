@@ -18,8 +18,7 @@ create table if not exists hrm.optional_holiday_choices (
     updated_by uuid not null,
     row_version bigint not null default 1,
     constraint pk_optional_holiday_choices primary key (id),
-    constraint uq_optional_holiday_choices_employment_id_holiday_id unique (employment_id, holiday_id),
-    constraint ck_optional_holiday_choices_year check (holiday_year between 1900 and 2200)
+    constraint uq_optional_holiday_choices_employment_id_holiday_id unique (employment_id, holiday_id)
 );
 create index if not exists ix_optional_holiday_choices_employment_id_holiday_year on hrm.optional_holiday_choices (employment_id, holiday_year); -- listed in the data design
 create index if not exists ix_optional_holiday_choices_company_id on hrm.optional_holiday_choices (company_id); -- foreign key fk_optional_holiday_choices_company_id
