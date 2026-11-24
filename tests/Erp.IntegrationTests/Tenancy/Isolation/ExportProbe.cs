@@ -86,7 +86,7 @@ public sealed class ExportProbe(IsolationFixture fx, WebApplication app)
 
     private static Plan Target(ApiEndpoint endpoint, Material m)
     {
-        var key = endpoint.Method + " " + endpoint.Pattern;
+        var key = endpoint.Method + " " + endpoint.Pattern.TrimEnd('/');
         const string Base = "/api/itg/exports";
         object Body(string reason) => new { source = "org.branches", query = new { }, format = "csv", reason, companyId = m.Company, language = "en", columns = new[] { new { field = "code", label = "Code" } } };
         return key switch
