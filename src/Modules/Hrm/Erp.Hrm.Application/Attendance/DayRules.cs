@@ -27,16 +27,22 @@ public sealed record DayPlan(string Source, string DayType, DayShift? Shift)
     public static DayPlan None { get; } = new(Unplanned, Working, null);
 }
 
-/// <summary>An approved leave day (contract <c>IApprovedLeaveDays</c>): the request, the part of a day (1 = whole day) and which half.</summary>
-public sealed record DayLeave(Guid LeaveRequestId, decimal Quantity, string Part)
+/// <summary>
+/// An approved leave day (contract <c>IApprovedLeaveDays</c>): the request, the part of a day (1 = whole day) and which half; hourly leave gives
+/// <see cref="Minutes"/> instead (quantity 0), which the day's full-day and absence minutes shrink by (review S1.29a finding 4).
+/// </summary>
+public sealed record DayLeave(Guid LeaveRequestId, decimal Quantity, string Part, int? Minutes = null)
 {
     public const string Full = "full";
     public const string FirstHalf = "first_half";
     public const string SecondHalf = "second_half";
 }
 
-/// <summary>An approved duty request covering the day (contract <c>IApprovedDutyDays</c>).</summary>
-public sealed record DayDuty(Guid DutyRequestId, string Kind);
+/// <summary>
+/// An approved duty request touching the day (contract <c>IApprovedDutyDays</c>) with its time. It decides the day only when it covers the whole
+/// shift (or the day has no shift); a shorter duty counts as time at work, as if punched in and out at its start and end (CR-089 S1.29a detail m).
+/// </summary>
+public sealed record DayDuty(Guid DutyRequestId, string Kind, DateTimeOffset? Start = null, DateTimeOffset? End = null);
 
 /// <summary>The attendance policy version that decided (stored on the day as <c>policy_version_id</c> and named in the explanation).</summary>
 public sealed record DayPolicyRef(Guid VersionId, string Code, int Version);
@@ -175,6 +181,15 @@ public static class DayRules
     public const string StepRestWorkIgnored = "hrm.att.step.rest_work_ignored";
     public const string StepPunchesIgnored = "hrm.att.step.punches_ignored";
     public const string StepPolicy = "hrm.att.step.policy";
+    public const string StepDutyPart = "hrm.att.step.duty_part";
+    public const string StepHourLeave = "hrm.att.step.hour_leave";
+
+    /// <summary>Prefix of the keys of coded values inside an explanation (a day type, a half, a duty kind), translated at display (review S1.29a finding 6).</summary>
+    public const string ValuePrefix = "hrm.att.value.";
+
+    /// <summary>The codes an explanation may carry as values; each has a text <c>hrm.att.value.&lt;code&gt;</c> in both languages.</summary>
+    public static IReadOnlyList<string> ValueCodes { get; } =
+        ["working", "weekly_off", "holiday", "full", "first_half", "second_half", "shift", "policy", "up", "down", "nearest", "on_duty", "official_visit", "work_from_home", "field_duty"];
 
     /// <summary>Every key an explanation can hold (the text files must have each, in English and Urdu).</summary>
     public static IReadOnlyList<string> Keys { get; } =
@@ -183,6 +198,7 @@ public static class DayRules
         ExplainUnscheduled, ExplainHalfDayWorked, ExplainHalfDayLate, ExplainHalfDayEarly, ExplainLate, ExplainPresent, ExplainPresentLeftEarly,
         StepShift, StepRosterDay, StepPattern, StepPunches, StepNotCounted, StepOutsideWindow, StepBreakFixed, StepBreakPunches, StepRounded, StepWithinGrace,
         StepEarly, StepEarlyWithinGrace, StepFullDay, StepPartLeave, StepOddCount, StepRestWorkRecorded, StepRestWorkIgnored, StepPunchesIgnored, StepPolicy,
+        StepDutyPart, StepHourLeave,
     ];
 
     /// <summary>Local start and end of a shift on a date (a shift that crosses midnight ends the next day; a continuous one lasts 24 hours).</summary>
@@ -201,12 +217,13 @@ public static class DayRules
 
     /// <summary>
     /// The local time range whose punches belong to <paramref name="date"/> (ruling Q3): from midnight, or from the end of the previous day's
-    /// night shift plus its window; to midnight, or to the end of this day's night shift plus the window. Consecutive days never overlap.
+    /// shift plus its window when that reaches past midnight; to midnight, or to the end of this day's shift plus the window when that reaches past
+    /// midnight (a night shift, or a 15:00 to 23:00 shift whose window ends at 01:00; review S1.29a finding 3). Consecutive days never overlap.
     /// </summary>
     public static (DateTime From, DateTime To) OwnedRange(DateOnly date, DayShift? shift, int windowMinutes, DayShift? previousShift, int previousWindowMinutes)
     {
         var from = date.ToDateTime(TimeOnly.MinValue);
-        if (previousShift is { CrossesMidnight: true })
+        if (previousShift is not null)
         {
             var (_, prevEnd) = ShiftTimes(date.AddDays(-1), previousShift);
             var cut = prevEnd.AddMinutes(previousWindowMinutes);
@@ -217,7 +234,7 @@ public static class DayRules
         }
 
         var to = date.AddDays(1).ToDateTime(TimeOnly.MinValue);
-        if (shift is { CrossesMidnight: true })
+        if (shift is not null)
         {
             var (_, end) = ShiftTimes(date, shift);
             var cut = end.AddMinutes(windowMinutes);
@@ -251,7 +268,7 @@ public static class DayRules
 
         if (plan.Source == DayPlan.FromRoster)
         {
-            steps.Add(Line(StepRosterDay, ("dayType", plan.DayType)));
+            steps.Add(Line(StepRosterDay, ("dayType", Value(plan.DayType))));
         }
         else if (plan.Source == DayPlan.FromPattern)
         {
@@ -295,8 +312,10 @@ public static class DayRules
 
         // 2. Approved leave of a whole day.
         var leaveQuantity = input.Leave.Sum(l => l.Quantity);
+        var leaveMinutes = input.Leave.Sum(l => l.Minutes ?? 0);
         var leaveId = input.Leave.OrderBy(l => l.LeaveRequestId).Select(l => (Guid?)l.LeaveRequestId).FirstOrDefault();
-        if (leaveQuantity >= 1m)
+        var baseFullDay = shift is null ? (int?)null : policy.FullDayMinutes ?? shift.MinFullDayMinutes;
+        if (leaveQuantity >= 1m || (baseFullDay is { } whole && leaveMinutes >= whole))
         {
             if (punches.Count > 0)
             {
@@ -306,15 +325,17 @@ public static class DayRules
             return Done(DayResults.OnLeave, "on_leave", Line(ExplainOnLeave), leaveId: leaveId);
         }
 
-        // 3. Approved duty (on duty, official visit, work from home).
-        if (input.Duty is { } duty)
+        // 3. Approved duty (on duty, official visit, work from home) covering the whole shift, or any duty on a day without a shift.
+        var dutyCovers = input.Duty is { } d && (shift is null || d.Start is null || d.End is null
+            || (LocalTime(d.Start.Value, input.Zone) <= ShiftTimes(input.Date, shift).Start && LocalTime(d.End.Value, input.Zone) >= ShiftTimes(input.Date, shift).End));
+        if (input.Duty is { } duty && dutyCovers)
         {
             if (punches.Count > 0)
             {
                 steps.Add(Line(StepPunchesIgnored, ("count", punches.Count)));
             }
 
-            return Done(DayResults.OnDuty, "on_duty", Line(ExplainOnDuty, ("kind", duty.Kind)), leaveId: leaveId, dutyId: duty.DutyRequestId);
+            return Done(DayResults.OnDuty, "on_duty", Line(ExplainOnDuty, ("kind", Value(duty.Kind))), leaveId: leaveId, dutyId: duty.DutyRequestId);
         }
 
         // 4. Punches on a day nothing planned (the caller does not process an unplanned day without punches).
@@ -336,6 +357,21 @@ public static class DayRules
         {
             exceptions.Add(DayResults.OutsideTolerance);
             steps.Add(Line(StepOutsideWindow, ("count", punches.Count - inside.Count), ("window", policy.ShiftWindowMinutes)));
+        }
+
+        // A duty shorter than the shift counts as time at work: an in and an out punch at its start and end, inside the window.
+        if (input.Duty is { Start: { } dutyStart, End: { } dutyEnd } partDuty)
+        {
+            var zoneOffset = (DateTime t) => new DateTimeOffset(t, input.Zone.GetUtcOffset(t));
+            var from = dutyStart > zoneOffset(windowFrom) ? dutyStart : zoneOffset(windowFrom);
+            var to = dutyEnd < zoneOffset(windowTo) ? dutyEnd : zoneOffset(windowTo);
+            if (from < to)
+            {
+                inside.Add(new DayPunch(partDuty.DutyRequestId, from, "in"));
+                inside.Add(new DayPunch(DutyOutId(partDuty.DutyRequestId), to, "out"));
+                inside = [.. inside.OrderBy(p => p.At).ThenBy(p => p.Id)];
+                steps.Add(Line(StepDutyPart, ("kind", Value(partDuty.Kind)), ("from", Local(from)), ("to", Local(to))));
+            }
         }
 
         var startText = shiftStart.ToString("HH:mm", CultureInfo.InvariantCulture);
@@ -365,17 +401,28 @@ public static class DayRules
         var secondHalfOff = part.Exists(l => l.Part == DayLeave.SecondHalf);
         if (part.Count > 0)
         {
-            steps.Add(Line(StepPartLeave, ("quantity", leaveQuantity), ("part", firstHalfOff ? DayLeave.FirstHalf : secondHalfOff ? DayLeave.SecondHalf : DayLeave.Full)));
+            steps.Add(Line(StepPartLeave, ("quantity", leaveQuantity), ("part", Value(firstHalfOff ? DayLeave.FirstHalf : secondHalfOff ? DayLeave.SecondHalf : DayLeave.Full))));
+        }
+
+        if (leaveMinutes > 0)
+        {
+            steps.Add(Line(StepHourLeave, ("minutes", leaveMinutes)));
         }
 
         var fullDaySource = policy.FullDayMinutes is null ? "shift" : "policy";
-        var fullDay = (int)Math.Floor((policy.FullDayMinutes ?? shift.MinFullDayMinutes) * share);
-        var absentBelow = (int)Math.Floor(policy.AbsentBelowMinutes * share);
+        var fullDay = Math.Max(0, (int)Math.Floor((policy.FullDayMinutes ?? shift.MinFullDayMinutes) * share) - leaveMinutes);
+        var absentBelow = Math.Max(0, (int)Math.Floor(policy.AbsentBelowMinutes * share) - leaveMinutes);
 
         var lateReference = Reference(input.Date, shift, shift.ShiftType == "flexible" ? shift.CoreStart : null, shiftStart);
         var earlyReference = Reference(input.Date, shift, shift.ShiftType == "flexible" ? shift.CoreEnd : null, shiftEnd);
         var lateRaw = firstHalfOff ? 0 : Math.Max(0, WholeMinutes(LocalTime(first!.Value, input.Zone) - lateReference));
         var earlyRaw = secondHalfOff ? 0 : Math.Max(0, WholeMinutes(earlyReference - LocalTime(last!.Value, input.Zone)));
+
+        // Hourly leave says how long, not when: its minutes excuse lateness first, then early leaving (CR-089 S1.29a detail n).
+        var excuse = leaveMinutes;
+        var excusedLate = Math.Min(lateRaw, excuse);
+        lateRaw -= excusedLate;
+        earlyRaw -= Math.Min(earlyRaw, excuse - excusedLate);
         var late = lateRaw > policy.LateGraceMinutes ? lateRaw : 0;
         var early = earlyRaw > policy.EarlyGraceMinutes ? earlyRaw : 0;
         var refStart = lateReference.ToString("HH:mm", CultureInfo.InvariantCulture);
@@ -394,8 +441,8 @@ public static class DayRules
             steps.Add(Line(StepEarly, ("early", early), ("end", refEnd), ("lastOut", Local(last!.Value)), ("grace", policy.EarlyGraceMinutes)));
         }
 
-        steps.Add(Line(StepFullDay, ("minutes", fullDay), ("source", fullDaySource), ("absentBelow", absentBelow)));
-        DayOutcome Worked(string result, string rule, ExplanationLine summary) => Done(result, rule, summary, first, last, workedMinutes, late, early, leaveId);
+        steps.Add(Line(StepFullDay, ("minutes", fullDay), ("source", Value(fullDaySource)), ("absentBelow", absentBelow)));
+        DayOutcome Worked(string result, string rule, ExplanationLine summary) => Done(result, rule, summary, first, last, workedMinutes, late, early, leaveId, input.Duty?.DutyRequestId);
 
         if (workedMinutes < absentBelow)
         {
@@ -469,7 +516,7 @@ public static class DayRules
         var rounded = policy.Round(worked);
         if (rounded != worked)
         {
-            steps.Add(Line(StepRounded, ("mode", policy.RoundingMode), ("step", policy.RoundingStepMinutes ?? 0), ("from", worked), ("to", rounded)));
+            steps.Add(Line(StepRounded, ("mode", Value(policy.RoundingMode)), ("step", policy.RoundingStepMinutes ?? 0), ("from", worked), ("to", rounded)));
         }
 
         return (first, last, rounded);
@@ -489,6 +536,17 @@ public static class DayRules
 
     private static DateTime LocalTime(DateTimeOffset at, TimeZoneInfo zone) => TimeZoneInfo.ConvertTime(at, zone).DateTime;
 
+    /// <summary>A coded value as the key of its text.</summary>
+    private static string Value(string code) => ValuePrefix + code;
+
+    /// <summary>A stable id for the out punch a part-day duty stands for (the same duty always gives the same id, so results repeat).</summary>
+    private static Guid DutyOutId(Guid dutyId)
+    {
+        var bytes = dutyId.ToByteArray();
+        bytes[0] ^= 0xFF;
+        return new Guid(bytes);
+    }
+
     /// <summary>Whole minutes of a time span, cut towards zero (09:10:59 after 09:00 is 10 minutes).</summary>
     public static int WholeMinutes(TimeSpan span) => (int)Math.Truncate(span.TotalMinutes);
 
@@ -506,7 +564,13 @@ public static class DayRules
             {
                 foreach (var p in ps.EnumerateObject())
                 {
-                    template = template.Replace("{" + p.Name + "}", p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString() : p.Value.GetRawText(), StringComparison.Ordinal);
+                    var value = p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString()! : p.Value.GetRawText();
+                    if (value.StartsWith(ValuePrefix, StringComparison.Ordinal) && texts.TryGetValue(value, out var text))
+                    {
+                        value = text;
+                    }
+
+                    template = template.Replace("{" + p.Name + "}", value, StringComparison.Ordinal);
                 }
             }
 

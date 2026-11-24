@@ -153,17 +153,24 @@ internal sealed class AttendanceEventStore(HrmDbContext db, IClock clock, ICurre
     }
 
     /// <summary>
-    /// A punch that arrives for a day already processed re-queues that day and the day before (whose night shift may own it), and only those
-    /// (slice S1.29 Build item 6): an outbox event in this transaction, handled by the engine's consumer. Days not processed yet need nothing.
+    /// A punch that arrives for a day already processed re-queues that day, and the day before when that day is processed and had a shift (its
+    /// window may reach past midnight and own the punch), and only those (slice S1.29 Build item 6): an outbox event in this transaction, handled
+    /// by the engine's consumer. A day not processed yet needs nothing: the nightly run works it out once it has ended, so an ordinary punch of
+    /// today re-queues nothing of today (review S1.29a finding 1).
     /// </summary>
     private async Task RequeueLateAsync(DateTimeOffset now, CancellationToken ct)
     {
         foreach (var (employmentId, date) in touched.OrderBy(t => t.EmploymentId).ThenBy(t => t.Date))
         {
-            var from = date.AddDays(-1);
-            if (await db.Set<AttendanceDay>().AsNoTracking().AnyAsync(d => d.EmploymentId == employmentId && d.WorkDate >= from && d.WorkDate <= date && d.SupersededAt == null, ct).ConfigureAwait(false))
+            var before = date.AddDays(-1);
+            var processed = await db.Set<AttendanceDay>().AsNoTracking()
+                .Where(d => d.EmploymentId == employmentId && d.WorkDate >= before && d.WorkDate <= date && d.SupersededAt == null)
+                .Select(d => new { d.WorkDate, d.ShiftId }).ToListAsync(ct).ConfigureAwait(false);
+            var self = processed.Exists(d => d.WorkDate == date);
+            var previous = processed.Exists(d => d.WorkDate == before && d.ShiftId != null);
+            if (self || previous)
             {
-                AttendanceReprocessing.Add(db, employmentId, from, date, "late_punch", now, actor.UserId);
+                AttendanceReprocessing.Add(db, employmentId, previous ? before : date, self ? date : before, "late_punch", now, actor.UserId);
             }
         }
 

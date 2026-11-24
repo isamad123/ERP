@@ -17,6 +17,7 @@ public sealed class AttendanceEngineUnitTests
     private static readonly DayPolicyRef Ref = new(Guid.Parse("01900000-0000-7000-8000-000000000001"), "ATT-STD", 3);
     private static readonly DayShift DayShift9To6 = new(Guid.Parse("01900000-0000-7000-8000-0000000000d1"), "DAY", "fixed", new(9, 0), new(18, 0), null, null, false, 420);
     private static readonly DayShift Night = new(Guid.Parse("01900000-0000-7000-8000-0000000000e1"), "NIGHT", "night", new(22, 0), new(6, 0), null, null, true, 390);
+    private static readonly DayShift Evening = new(Guid.Parse("01900000-0000-7000-8000-0000000000c1"), "EVENING", "fixed", new(15, 0), new(23, 0), null, null, false, 420);
     private static readonly DayShift Flexible = new(Guid.Parse("01900000-0000-7000-8000-0000000000f1"), "FLEX", "flexible", new(8, 0), new(19, 0), new(10, 0), new(16, 0), false, 420);
 
     /// <summary>The customer's numbers of the test policy (none of them is a product default).</summary>
@@ -95,6 +96,11 @@ public sealed class AttendanceEngineUnitTests
             S("29 punch far outside the shift's window", Input(day, [P("05:00"), P("09:00"), P("18:00", "out")]), "present", "present", 480, 0, 0, "outside_tolerance"),
             S("30 punches on a day with no shift", Input(DayPlan.None, [P("09:00"), P("18:00", "out")]), "incomplete", "unscheduled", 480, 0, 0, "unscheduled"),
             S("31 flexible shift: late against the core start", Input(Working(Flexible), [P("10:20"), P("19:00", "out")]), "late", "late", 460, 20),
+            S("32 an evening shift's out punch after midnight inside the window", Input(Working(Evening), [P("15:00"), P("00:10", "out", 1)]), "present", "present", 490),
+            S("33 two hours of hourly leave excuse two hours of lateness", Input(day, [P("11:00"), P("18:00", "out")], leave: [new DayLeave(LeaveRequest, 0m, DayLeave.Full, 120)]), "present", "present", 360),
+            S("34 hourly leave as long as a full day is a day on leave", Input(day, [], leave: [new DayLeave(LeaveRequest, 0m, DayLeave.Full, 420)]), "on_leave", "on_leave"),
+            S("35 a duty covering the whole shift", Input(day, [], duty: new DayDuty(DutyRequest, "official_visit", At("08:30"), At("18:30"))), "on_duty", "on_duty"),
+            S("36 a two-hour duty in the morning counts as time at work", Input(day, [P("11:05"), P("18:00", "out")], duty: new DayDuty(DutyRequest, "official_visit", At("09:00"), At("11:00"))), "present", "present", 480),
         };
     }
 
@@ -149,6 +155,27 @@ public sealed class AttendanceEngineUnitTests
         var (s, e) = DayRules.ShiftTimes(Day, Night);
         Assert.Equal(Day.ToDateTime(new TimeOnly(22, 0)), s);
         Assert.Equal(Day.AddDays(1).ToDateTime(new TimeOnly(6, 0)), e);
+    }
+
+    [Fact]
+    public void Q3_review_finding_3_a_shift_that_ends_before_midnight_owns_the_punches_its_window_reaches_after_midnight()
+    {
+        var (_, to) = DayRules.OwnedRange(Day, Evening, 120, null, 0);
+        Assert.Equal(Day.AddDays(1).ToDateTime(new TimeOnly(1, 0)), to);
+        var (nextFrom, _) = DayRules.OwnedRange(Day.AddDays(1), DayShift9To6, 120, Evening, 120);
+        Assert.Equal(to, nextFrom);
+        var (_, dayTo) = DayRules.OwnedRange(Day, DayShift9To6, 120, null, 0);
+        Assert.Equal(Day.AddDays(1).ToDateTime(new TimeOnly(0, 0)), dayTo); // a window that ends before midnight keeps the day to midnight
+    }
+
+    [Fact]
+    public void Q7_review_finding_6_coded_values_in_an_explanation_are_translated_in_both_languages()
+    {
+        var outcome = DayRules.Evaluate(Input(new DayPlan(DayPlan.FromRoster, DayPlan.WeeklyOff, null), []));
+        using var doc = JsonDocument.Parse(outcome.Explanation.ToJson().ToJsonString());
+        Assert.DoesNotContain("weekly_off", DayRules.Render(doc.RootElement, Texts("ur")), StringComparison.Ordinal);
+        Assert.Contains("a weekly off", DayRules.Render(doc.RootElement, Texts("en")), StringComparison.Ordinal);
+        Assert.All(DayRules.ValueCodes, c => Assert.True(Texts("en").ContainsKey(DayRules.ValuePrefix + c) && Texts("ur").ContainsKey(DayRules.ValuePrefix + c), c));
     }
 
     [Fact]

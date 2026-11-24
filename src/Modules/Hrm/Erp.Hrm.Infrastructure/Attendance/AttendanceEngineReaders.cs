@@ -20,11 +20,15 @@ internal sealed class ApprovedLeaveDaysReader(HrmDbContext db) : IApprovedLeaveD
     {
         var rows = await (from d in db.Set<LeaveRequestDay>().AsNoTracking()
                           join r in db.Set<LeaveRequest>().AsNoTracking() on d.LeaveRequestId equals r.Id
+                          join t in db.Set<LeaveType>().AsNoTracking() on r.LeaveTypeId equals t.Id
                           where d.EmploymentId == employmentId && d.LeaveDate >= firstDay && d.LeaveDate <= lastDay && r.Status == "approved" && d.Quantity > 0m
-                          select new { d.LeaveDate, d.LeaveRequestId, d.Quantity, r.StartDate, r.EndDate, r.StartPart, r.EndPart })
+                          select new { d.LeaveDate, d.LeaveRequestId, d.Quantity, r.StartDate, r.EndDate, r.StartPart, r.EndPart, Hours = t.Counting == "hours" })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
-        return [.. rows.Select(r => new ApprovedLeaveDay(r.LeaveDate, r.LeaveRequestId, Math.Min(r.Quantity, 1m),
-                r.LeaveDate == r.StartDate && r.StartPart != DayLeave.Full ? r.StartPart : r.LeaveDate == r.EndDate && r.EndPart != DayLeave.Full ? r.EndPart : DayLeave.Full))
+        // A type counted in hours stores hours (data design check "<= 1 day (or shift hours for hourly leave)"): minutes, not a share of the day.
+        return [.. rows.Select(r => r.Hours
+                ? new ApprovedLeaveDay(r.LeaveDate, r.LeaveRequestId, 0m, DayLeave.Full, (int)Math.Round(r.Quantity * 60m, MidpointRounding.AwayFromZero))
+                : new ApprovedLeaveDay(r.LeaveDate, r.LeaveRequestId, Math.Min(r.Quantity, 1m),
+                    r.LeaveDate == r.StartDate && r.StartPart != DayLeave.Full ? r.StartPart : r.LeaveDate == r.EndDate && r.EndPart != DayLeave.Full ? r.EndPart : DayLeave.Full))
             .OrderBy(r => r.Date).ThenBy(r => r.LeaveRequestId)];
     }
 }
@@ -58,7 +62,7 @@ internal sealed class ApprovedDutyDaysReader(HrmDbContext db, EmploymentApplier 
                 var dayEnd = Instant(d.AddDays(1), zone);
                 if (r.StartAt < dayEnd && r.EndAt > dayStart && !days.Exists(x => x.Date == d))
                 {
-                    days.Add(new ApprovedDutyDay(d, r.Id, r.Kind));
+                    days.Add(new ApprovedDutyDay(d, r.Id, r.Kind, r.StartAt, r.EndAt));
                 }
             }
         }
@@ -176,10 +180,16 @@ internal sealed class AttendancePeriodLocator(HrmDbContext db)
             return known;
         }
 
-        // One writer per pay period until the transaction ends, so two processors never open the same period twice; saved through the
-        // context so the change log records it.
-        await db.Database.ExecuteSqlInterpolatedAsync($"select pg_advisory_xact_lock(hashtextextended({"hrm.attendance_period:" + payPeriod.Id.ToString("D")}, 0))", ct).ConfigureAwait(false);
+        // An existing period is read without a lock; only opening one takes the pay period's lock (one writer until the transaction ends, so two
+        // processors never open it twice; review S1.29a finding 7: no lock held across employments that a waiting processor might hold). Saved
+        // through the context so the change log records it.
         var period = await db.Set<AttendancePeriod>().AsNoTracking().Where(p => p.PayPeriodId == payPeriod.Id).Select(p => (Guid?)p.Id).FirstOrDefaultAsync(ct).ConfigureAwait(false);
+        if (period is null)
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync($"select pg_advisory_xact_lock(hashtextextended({"hrm.attendance_period:" + payPeriod.Id.ToString("D")}, 0))", ct).ConfigureAwait(false);
+            period = await db.Set<AttendancePeriod>().AsNoTracking().Where(p => p.PayPeriodId == payPeriod.Id).Select(p => (Guid?)p.Id).FirstOrDefaultAsync(ct).ConfigureAwait(false);
+        }
+
         if (period is null)
         {
             var row = new AttendancePeriod

@@ -40,6 +40,7 @@ internal sealed class AttendanceDayProcessor(HrmDbContext db, IPolicyResolver re
     public const string NoRoster = "hrm.att.skip.no_roster";
     public const string Locked = "hrm.att.skip.locked";
     public const string NotEmployed = "hrm.att.skip.not_employed";
+    public const string NotFinished = "hrm.att.skip.not_finished";
 
     /// <summary>Statuses of an exception that stand for "this exception is known": a new one of the same kind is not raised beside them.</summary>
     private static readonly string[] Known = ["open", "accepted", "rejected"];
@@ -78,17 +79,30 @@ internal sealed class AttendanceDayProcessor(HrmDbContext db, IPolicyResolver re
             lines.TryGetValue(date, out var l) && l.DayType == DayPlan.Working && l.ShiftId is { } id && shifts.TryGetValue(id, out var s) ? ToDayShift(s) : null;
 
         var runs = new List<DayRun>();
+
+        // A day that is not processed now keeps its last result (S1.31 decides about stale results, R-159), but its open exceptions no longer
+        // stand for anything the engine says, so they are closed (review S1.29a finding 8); a locked or unfinished day is left as it is.
+        async Task SkipAsync(DateOnly date, string? reason)
+        {
+            var existing = current.GetValueOrDefault(date);
+            runs.Add(new DayRun(date, DayRun.Skipped, reason, existing?.Id, existing?.Result));
+            if (save && existing is not null && reason is not (Locked or NotFinished))
+            {
+                await ExceptionsAsync(e, date, existing.Id, [], now, actor, ct).ConfigureAwait(false);
+            }
+        }
+
         for (var date = from; date <= to; date = date.AddDays(1))
         {
             if (e.Status == "cancelled" || date < e.JoiningDate || (e.SeparationDate is { } last && date > last))
             {
-                runs.Add(new DayRun(date, DayRun.Skipped, NotEmployed, null, null));
+                await SkipAsync(date, NotEmployed).ConfigureAwait(false);
                 continue;
             }
 
             if (await locks.IsLockedAsync(e.Id, date, ct).ConfigureAwait(false))
             {
-                runs.Add(new DayRun(date, DayRun.Skipped, Locked, current.GetValueOrDefault(date)?.Id, current.GetValueOrDefault(date)?.Result));
+                await SkipAsync(date, Locked).ConfigureAwait(false);
                 continue;
             }
 
@@ -99,31 +113,40 @@ internal sealed class AttendanceDayProcessor(HrmDbContext db, IPolicyResolver re
             var answer = await policies.AtAsync(e.Id, date, shiftRow?.PolicyId, ct).ConfigureAwait(false);
             if (answer.Policy is not { } policy)
             {
-                runs.Add(new DayRun(date, DayRun.Skipped, answer.SkipKey, current.GetValueOrDefault(date)?.Id, current.GetValueOrDefault(date)?.Result));
+                await SkipAsync(date, answer.SkipKey).ConfigureAwait(false);
                 continue;
             }
 
-            // The punches this day owns: the previous day's night shift keeps its early-morning punches (its own policy's window).
+            // The punches this day owns: the previous day's shift keeps the punches its window reaches past midnight (its own policy's window).
             var previous = ShiftOf(date.AddDays(-1));
             var previousWindow = policy.ShiftWindowMinutes;
-            if (previous is { CrossesMidnight: true })
+            if (previous is not null)
             {
                 var prevRow = shifts[previous.Id];
                 previousWindow = (await policies.AtAsync(e.Id, date.AddDays(-1), prevRow.PolicyId, ct).ConfigureAwait(false)).Policy?.ShiftWindowMinutes ?? policy.ShiftWindowMinutes;
             }
 
             var (ownFrom, ownTo) = DayRules.OwnedRange(date, plan.Shift, policy.ShiftWindowMinutes, previous, previousWindow);
+
+            // A day is stored only once its owned range has ended (its shift and window are over): an unfinished day would show a false
+            // "missing out punch" (review S1.29a findings 1 and 2). The nightly run covers the last two days, so it is stored the night after.
+            if (save && now < new DateTimeOffset(ownTo, zone.GetUtcOffset(ownTo)))
+            {
+                await SkipAsync(date, NotFinished).ConfigureAwait(false);
+                continue;
+            }
+
             var owned = events.Where(p => Local(p.At, zone) >= ownFrom && Local(p.At, zone) < ownTo).ToList();
             var counted = DayRules.Counted(owned, superseded);
             if (plan.Source == DayPlan.Unplanned && counted.Count == 0)
             {
-                runs.Add(new DayRun(date, DayRun.Skipped, NoRoster, current.GetValueOrDefault(date)?.Id, current.GetValueOrDefault(date)?.Result));
+                await SkipAsync(date, NoRoster).ConfigureAwait(false);
                 continue;
             }
 
             var outcome = DayRules.Evaluate(new DayInput(date, zone, plan, policy, answer.Reference!,
-                [.. leave.GetValueOrDefault(date, []).Select(l => new DayLeave(l.LeaveRequestId, l.Quantity, l.Part))],
-                duty.TryGetValue(date, out var d) ? new DayDuty(d.DutyRequestId, d.Kind) : null, counted));
+                [.. leave.GetValueOrDefault(date, []).Select(l => new DayLeave(l.LeaveRequestId, l.Quantity, l.Part, l.Minutes))],
+                duty.TryGetValue(date, out var d) ? new DayDuty(d.DutyRequestId, d.Kind, d.StartAt, d.EndAt) : null, counted));
             if (owned.Count > counted.Count)
             {
                 // Repeated and corrected punches are named, not counted (the explanation says how many).
@@ -145,7 +168,7 @@ internal sealed class AttendanceDayProcessor(HrmDbContext db, IPolicyResolver re
             var period = await periods.PeriodAsync(e.Id, e.CompanyId, date, now, actor, ct).ConfigureAwait(false);
             if (period is not { } periodId)
             {
-                runs.Add(new DayRun(date, DayRun.Skipped, AttendancePeriodLocator.NoPayPeriod, current.GetValueOrDefault(date)?.Id, current.GetValueOrDefault(date)?.Result));
+                await SkipAsync(date, AttendancePeriodLocator.NoPayPeriod).ConfigureAwait(false);
                 continue;
             }
 

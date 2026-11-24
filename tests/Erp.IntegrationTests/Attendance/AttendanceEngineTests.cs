@@ -379,6 +379,46 @@ public sealed class AttendanceEngineTests(TenancyFixture fx) : IAsyncLifetime
         Assert.NotEqual(JsonValueKind.Null, history.Json.GetProperty("days")[0].GetProperty("supersededAt").ValueKind);
     }
 
+    [Fact]
+    public async Task FR_HRM_ATT_11_review_findings_1_and_8_an_ordinary_punch_of_today_raises_nothing_and_an_unprocessed_day_closes_its_exceptions()
+    {
+        var o = await OrgAsync();
+        var e = await HireAsync(o);
+        var yesterday = Today.AddDays(-1);
+        await RosterAsync(o, (e, yesterday, "working", o.Day), (e, Today, "working", o.Night));
+        await PunchAsync(o, e, (At(yesterday, "09:00"), "in"), (At(yesterday, "18:00"), "out"));
+        var processed = await _h.PostAsync(o.Hr, $"{Employments}/{e}/attendance-days/process", new { from = Iso(yesterday), to = Iso(yesterday) }, Ct);
+        Assert.Equal("written", processed.Json.GetProperty("days")[0].GetProperty("status").GetString());
+
+        // Today's first punch: yesterday had a shift and a result, so only yesterday is looked at again (it may own the punch); today is not
+        // worked out, so no exception and no event appear.
+        await PunchAsync(o, e, (_h.Clock.UtcNow.AddMinutes(-1), "in"));
+        var payload = await _h.ScalarAsync<string>("select payload::text from hrm.outbox_messages where event_type = 'hrm.attendance.days_requeued' and aggregate_id = $1", Ct, e);
+        using (var requeued = JsonDocument.Parse(payload))
+        {
+            Assert.Equal(Iso(yesterday), requeued.RootElement.GetProperty("from").GetString());
+            Assert.Equal(Iso(yesterday), requeued.RootElement.GetProperty("to").GetString());
+        }
+
+        // Today's night shift has not ended: processing it stores nothing.
+        var today = await _h.PostAsync(o.Hr, $"{Employments}/{e}/attendance-days/process", new { from = Iso(Today), to = Iso(Today) }, Ct);
+        Assert.Equal("hrm.att.skip.not_finished", today.Json.GetProperty("days")[0].GetProperty("reason").GetString());
+        Assert.Equal(0, await CountAsync("select count(*) from hrm.attendance_days where employment_id = $1 and work_date = $2", e, Today));
+        Assert.Equal(0, await CountAsync("select count(*) from hrm.attendance_exceptions where employment_id = $1", e));
+
+        // A day with an open exception that is no longer processed (its policy no longer applies) keeps its result but not the exception.
+        var missing = o.Monday.AddDays(1);
+        await RosterAsync(o, (e, missing, "working", o.Day));
+        await PunchAsync(o, e, (At(missing, "09:00"), "in"));
+        await _h.PostAsync(o.Hr, $"{Employments}/{e}/attendance-days/process", new { from = Iso(missing), to = Iso(missing) }, Ct);
+        Assert.Equal("open", await _h.ScalarAsync<string>("select status from hrm.attendance_exceptions where employment_id = $1 and work_date = $2", Ct, e, missing));
+        await _h.ExecAsync("update hrm.employments set status = 'cancelled' where id = $1", Ct, e);
+        var gone = await _h.PostAsync(o.Hr, $"{Employments}/{e}/attendance-days/process", new { from = Iso(missing), to = Iso(missing) }, Ct);
+        Assert.Equal("hrm.att.skip.not_employed", gone.Json.GetProperty("days")[0].GetProperty("reason").GetString());
+        Assert.Equal("closed", await _h.ScalarAsync<string>("select status from hrm.attendance_exceptions where employment_id = $1 and work_date = $2", Ct, e, missing));
+        Assert.Equal(1, await CountAsync("select count(*) from hrm.attendance_days where employment_id = $1 and work_date = $2 and superseded_at is null", e, missing));
+    }
+
     // ------------------------------------------------------------------ FR-XM-26: locked days; resumed runs
 
     [Fact]

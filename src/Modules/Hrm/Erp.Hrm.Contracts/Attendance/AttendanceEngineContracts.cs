@@ -41,9 +41,10 @@ public static class AttendanceEngineEvents
 
 /// <summary>
 /// An approved leave day as the attendance engine needs it (slice S1.29 Build item 2): the request, the share of the day it takes (1 is the
-/// whole day) and which half (<c>full</c>, <c>first_half</c>, <c>second_half</c>).
+/// whole day) and which half (<c>full</c>, <c>first_half</c>, <c>second_half</c>); for a leave type counted in hours, <paramref name="Minutes"/>
+/// holds the leave's minutes on the day and <paramref name="Quantity"/> is 0 (review S1.29a finding 4).
 /// </summary>
-public sealed record ApprovedLeaveDay(DateOnly Date, Guid LeaveRequestId, decimal Quantity, string Part);
+public sealed record ApprovedLeaveDay(DateOnly Date, Guid LeaveRequestId, decimal Quantity, string Part, int? Minutes = null);
 
 /// <summary>
 /// The approved leave of an employment by day (contract of S1.29a; the leave requests are S1.32b's). The HR module answers it from
@@ -55,8 +56,11 @@ public interface IApprovedLeaveDays
     Task<IReadOnlyList<ApprovedLeaveDay>> ForAsync(Guid employmentId, DateOnly firstDay, DateOnly lastDay, CancellationToken cancellationToken);
 }
 
-/// <summary>An approved duty request covering a day (<c>on_duty</c>, <c>official_visit</c>, <c>work_from_home</c>; S1.30 adds <c>field_duty</c>).</summary>
-public sealed record ApprovedDutyDay(DateOnly Date, Guid DutyRequestId, string Kind);
+/// <summary>
+/// An approved duty request touching a day (<c>on_duty</c>, <c>official_visit</c>, <c>work_from_home</c>; S1.30 adds <c>field_duty</c>) with its time:
+/// it decides the day when it covers the whole shift, otherwise its time counts as time at work (CR-089 S1.29a detail m).
+/// </summary>
+public sealed record ApprovedDutyDay(DateOnly Date, Guid DutyRequestId, string Kind, DateTimeOffset? StartAt = null, DateTimeOffset? EndAt = null);
 
 /// <summary>
 /// The approved duty of an employment by day (contract of S1.29a; the duty requests are S1.30's). The HR module answers it from approved

@@ -59,7 +59,7 @@ internal static class AttendanceEngine
 
 /// <summary>
 /// The job <c>hrm.attendance_process</c> (slice S1.29 Build item 5, ruling Q5): every night (02:00 company time, editable in the job centre) the
-/// previous day of every current employment, and on demand a range of dates (parameters <c>from</c>, <c>to</c>, at most 62 days, never after
+/// last two days of every current employment (a day not yet ended is left for the next night), and on demand a range of dates (parameters <c>from</c>, <c>to</c>, at most 62 days, never after
 /// today) for the company of the run, a unit (<c>org_unit_id</c>, with its sub-units unless <c>sub_units</c> is false) or one employment
 /// (<c>employment_id</c>). Employments are walked in id order in chunks; each chunk is one transaction with the checkpoint, so a stopped run
 /// continues after the last employment it finished, and the engine writes a day only when its result changed: a repeated or resumed run adds
@@ -157,8 +157,10 @@ internal sealed class AttendanceProcessJob(IClock clock) : IJobHandler
                         todays[e.CompanyId] = today = await applier.TodayAsync(e.CompanyId, now, ct).ConfigureAwait(false);
                     }
 
-                    // The nightly run (and an on-demand run without dates) works out yesterday; a range never reaches past today.
-                    var first = from ?? today.AddDays(-1);
+                    // The nightly run (and an on-demand run without dates) works out the last two days, so a day whose shift and window end after
+                    // the run (a night shift) is stored the night after, and a missed night is caught up once (review S1.29a finding 2); a day
+                    // already stored and unchanged costs a comparison and writes nothing. A range never reaches past today.
+                    var first = from ?? today.AddDays(-2);
                     var lastDate = to ?? today.AddDays(-1);
                     if (lastDate > today)
                     {
