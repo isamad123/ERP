@@ -107,9 +107,11 @@ public sealed class Column
 /// <see cref="ReplacedIn"/> and <see cref="BaseWhere"/> (design key <c>uniques_replaced_in</c>, S1.09b): the frozen file
 /// created the partial key with <see cref="BaseWhere"/>; the slice's design migration recreates it with <see cref="Where"/>.
 /// </remarks>
-public sealed record UniqueKey(string Name, IReadOnlyList<string> Items, string? Where, bool NullsNotDistinct, string? AddedIn = null, string? BaseWhere = null, string? ReplacedIn = null)
+/// <see cref="BasePlain"/> (S1.29a, CR-089): the frozen file created the key as a plain constraint; the slice's design migration drops
+/// the constraint and creates the partial unique index.
+public sealed record UniqueKey(string Name, IReadOnlyList<string> Items, string? Where, bool NullsNotDistinct, string? AddedIn = null, string? BaseWhere = null, string? ReplacedIn = null, bool BasePlain = false)
 {
-    public bool IsPlain => Where is null && BaseWhere is null && Items.All(Naming.IsIdentifier);
+    public bool IsPlain => Where is null && BaseWhere is null && !BasePlain && Items.All(Naming.IsIdentifier);
 }
 
 /// <summary>An index. <see cref="AddedIn"/>: slice whose design migration creates it (design key <c>indexes_added_in</c>, S1.07).</summary>

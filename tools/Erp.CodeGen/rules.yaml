@@ -1722,3 +1722,33 @@ functions:
       drop trigger if exists tg_leave_ledger_reversal on hrm.leave_ledger;
       create trigger tg_leave_ledger_reversal before insert on hrm.leave_ledger
           for each row execute function hrm.tg_leave_ledger_reversal();
+
+  # S1.29a (CR-089 S1.29a detail; slice S1.29 Build item 6, FR-HRM-ATT-10, FR-XM-05): a processed day is never edited in place. A row is only
+  # added; the one change allowed is to mark the current row as replaced (superseded_at from null to a time, once), done in the transaction that
+  # adds the newer row; no row is deleted. The lock of a payroll period (S1.31, stub attendance_days_lock) is a separate trigger.
+  - slice: S1.29a
+    name: hrm.tg_attendance_days_versions
+    purpose: "An attendance day result is never changed or deleted; the only update marks the current row as replaced by a newer one (superseded_at set once, nothing else changes); refused with constraint ck_attendance_days_versions."
+    triggers:
+      - [hrm.attendance_days, tg_attendance_days_versions]
+    sql: |
+      create or replace function hrm.tg_attendance_days_versions() returns trigger
+      language plpgsql as $fn$
+      begin
+          if tg_op = 'DELETE' then
+              raise exception 'attendance day %: a result is never deleted; a newer result replaces it', old.id
+                  using errcode = '23514', constraint = 'ck_attendance_days_versions';
+          end if;
+          if old.superseded_at is not null
+             or new.superseded_at is null
+             or (to_jsonb(new) - array['superseded_at', 'updated_at', 'updated_by', 'row_version'])
+                <> (to_jsonb(old) - array['superseded_at', 'updated_at', 'updated_by', 'row_version']) then
+              raise exception 'attendance day %: a result is never changed; only the current result is marked as replaced', old.id
+                  using errcode = '23514', constraint = 'ck_attendance_days_versions';
+          end if;
+          return new;
+      end
+      $fn$;
+      drop trigger if exists tg_attendance_days_versions on hrm.attendance_days;
+      create trigger tg_attendance_days_versions before update or delete on hrm.attendance_days
+          for each row execute function hrm.tg_attendance_days_versions();
