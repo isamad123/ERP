@@ -24,6 +24,7 @@ internal sealed class RosterLineConfiguration : IEntityTypeConfiguration<global:
         builder.Property(e => e.ShiftId).HasColumnName("shift_id").HasColumnType("uuid");
         builder.Property(e => e.DayType).HasColumnName("day_type").HasColumnType("text").IsRequired();
         builder.Property(e => e.RosterStatus).HasColumnName("roster_status").HasColumnType("text").IsRequired();
+        builder.Property(e => e.Reason).HasColumnName("reason").HasColumnType("text");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");
@@ -74,5 +75,11 @@ internal sealed class RosterLineRepository(
     {
         var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
         return await query.Where(e => e.EmploymentId == employmentId && e.WorkDate == workDate).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.RosterLine>> FindByRosterIdAndEmploymentIdAndWorkDateAsync(global::System.Guid rosterId, global::System.Guid employmentId, global::System.DateOnly workDate, global::System.Threading.CancellationToken cancellationToken)
+    {
+        var query = await QueryAsync(cancellationToken).ConfigureAwait(false);
+        return await query.Where(e => e.RosterId == rosterId && e.EmploymentId == employmentId && e.WorkDate == workDate).OrderBy(e => e.Id).Take(global::Erp.BuildingBlocks.Application.Data.PageRequest.MaxLimit).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 }

@@ -51,9 +51,21 @@
     - [segments, json, req, split shifts and breaks]
     - [min_full_day_minutes, int, req]
     - [policy_id, uuid, opt, "fk hrm.policies (attendance policy: grace, thresholds, rounding)"]
+    - [valid_from, date, opt, "first day this version applies; null means from the beginning (S1.28a)"]
+    - [valid_to, date, opt, "last day this version applies; null means open-ended (S1.28a)"]
+    - [previous_shift_id, uuid, opt, "fk hrm.shifts; the version this one replaced (S1.28a)"]
   unique: [[company_id, lower(code)]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.28a (CR-085 S1.28a detail; slice S1.28 Build item 1, FR-HRM-ATT-06): a change from a date is a new row that replaces the one in
+  # force (the old row is kept with its end date), so the code is unique among the versions still open-ended; generated writes closed,
+  # the HR shift service checks the type's times.
+  added_in: {S1.28a: [valid_from, valid_to, previous_shift_id]}
+  uniques_replaced_in: {S1.28a: [[company_id, "lower(code)", "where valid_to is null"]]}
+  checks_added_in:
+    S1.28a:
+      - "a version ends on or after the day it starts"
+  api_actions: [read]
   reqs: [ATT-06, ATT-09, ATT-16]
 
 - table: hrm.rosters
@@ -64,8 +76,18 @@
     - [org_unit_id, uuid, opt, fk org.org_units]
     - [period_start, date, req]
     - [period_end, date, req]
+    - [published_at, ts, opt, "when the roster was published (S1.28a)"]
+    - [published_by, uuid, opt, "the user who published it (S1.28a)"]
+    - [copied_from_roster_id, uuid, opt, "fk hrm.rosters; the roster this one was copied forward from (S1.28a)"]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, org_unit: org_unit_id}
+  # S1.28a (CR-085 S1.28a detail; slice S1.28 Build items 4 and 5, FR-HRM-ATT-07): generated writes closed; the HR roster service builds,
+  # copies forward, checks and publishes.
+  added_in: {S1.28a: [published_at, published_by, copied_from_roster_id]}
+  checks_added_in:
+    S1.28a:
+      - "a roster ends on or after the day it starts"
+  api_actions: [read]
   reqs: [ATT-07]
 
 - table: hrm.roster_lines
@@ -78,10 +100,20 @@
     - [shift_id, uuid, opt, fk hrm.shifts; null means weekly off]
     - [day_type, "enum(working,weekly_off,holiday)", req]
     - [roster_status, text, req, copy of rosters.status]
+    - [reason, text, opt, "why a day is worked on a rest day, or why a published day was changed (S1.28a)"]
   unique: [[employment_id, work_date, "where roster_status = 'published'"]]
   indexes: [[employment_id, work_date]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.28a (CR-085 S1.28a detail; slice S1.28 Build items 4 and 5, FR-HRM-ATT-07): a person has one line per roster and day; a working
+  # day names a shift, any other day none; a line of a published roster changes only with a reason (rules.yaml function
+  # hrm.tg_roster_lines_published); generated writes closed.
+  added_in: {S1.28a: [reason]}
+  uniques_added_in: {S1.28a: [[roster_id, employment_id, work_date]]}
+  checks_added_in:
+    S1.28a:
+      - "a working day has a shift and any other day has none"
+  api_actions: [read]
   reqs: [ATT-07]
 
 - table: hrm.attendance_events

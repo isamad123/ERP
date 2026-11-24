@@ -121,6 +121,8 @@ public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction tr
         ["hrm.pay_groups.tax_year_start_month"] = _ => 7,
         ["hrm.pay_groups.cut_off_day"] = _ => 3,
         ["hrm.pay_groups.payment_day"] = _ => 5,
+        // S1.28a: a working day names a shift, any other day none (ck_roster_lines_shift); the generated row has no shift, so it is a weekly off.
+        ["hrm.roster_lines.day_type"] = _ => "weekly_off",
     };
 
     private int _formatted;

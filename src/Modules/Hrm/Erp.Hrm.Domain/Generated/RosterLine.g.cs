@@ -36,6 +36,9 @@ public sealed partial class RosterLine : global::Erp.BuildingBlocks.Domain.Entit
     /// <summary>roster_status: copy of rosters.status</summary>
     public string RosterStatus { get; set; } = null!;
 
+    /// <summary>reason: why a day is worked on a rest day, or why a published day was changed (S1.28a)</summary>
+    public string? Reason { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

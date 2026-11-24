@@ -4639,22 +4639,12 @@ export interface RosterLine
     shiftId: string | null;
     dayType: 'working' | 'weekly_off' | 'holiday';
     rosterStatus: string;
+    reason: string | null;
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface RosterLineWrite
-{
-    companyId: string;
-    rosterId: string;
-    employmentId: string;
-    workDate: string;
-    shiftId?: string | null;
-    dayType: 'working' | 'weekly_off' | 'holiday';
-    rosterStatus: string;
 }
 
 export interface RosterLineListQuery
@@ -4673,8 +4663,6 @@ export const rosterLines =
 {
     list: (query: RosterLineListQuery = {}) => request<PagedResult<RosterLine>>('GET', '/api/hrm/roster-lines', { query }),
     get: (id: string) => request<RosterLine>('GET', `/api/hrm/roster-lines/${id}`),
-    create: (body: RosterLineWrite) => request<RosterLine>('POST', '/api/hrm/roster-lines', { body }),
-    update: (id: string, body: RosterLineWrite & { rowVersion: number }) => request<RosterLine>('PUT', `/api/hrm/roster-lines/${id}`, { body }),
 };
 
 /** hrm.rosters: Roster. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4686,6 +4674,9 @@ export interface Roster
     orgUnitId: string | null;
     periodStart: string;
     periodEnd: string;
+    publishedAt: string | null;
+    publishedBy: string | null;
+    copiedFromRosterId: string | null;
     status: 'draft' | 'published' | 'archived';
     createdAt: string;
     createdBy: string;
@@ -4694,22 +4685,13 @@ export interface Roster
     rowVersion: number;
 }
 
-export interface RosterWrite
-{
-    companyId: string;
-    name: string;
-    orgUnitId?: string | null;
-    periodStart: string;
-    periodEnd: string;
-    status: 'draft' | 'published' | 'archived';
-}
-
 export interface RosterListQuery
 {
     after?: string;
     limit?: number;
     companyId?: string;
     orgUnitId?: string;
+    copiedFromRosterId?: string;
     status?: 'draft' | 'published' | 'archived';
     search?: string;
 }
@@ -4718,8 +4700,6 @@ export const rosters =
 {
     list: (query: RosterListQuery = {}) => request<PagedResult<Roster>>('GET', '/api/hrm/rosters', { query }),
     get: (id: string) => request<Roster>('GET', `/api/hrm/rosters/${id}`),
-    create: (body: RosterWrite) => request<Roster>('POST', '/api/hrm/rosters', { body }),
-    update: (id: string, body: RosterWrite & { rowVersion: number }) => request<Roster>('PUT', `/api/hrm/rosters/${id}`, { body }),
 };
 
 /** hrm.salary_bands: SalaryBand. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -5101,6 +5081,9 @@ export interface Shift
     segments: unknown;
     minFullDayMinutes: number;
     policyId: string | null;
+    validFrom: string | null;
+    validTo: string | null;
+    previousShiftId: string | null;
     isActive: boolean;
     isDeleted: boolean;
     deletedAt: string | null;
@@ -5112,29 +5095,13 @@ export interface Shift
     rowVersion: number;
 }
 
-export interface ShiftWrite
-{
-    companyId: string;
-    code: string;
-    nameI18n: Record<string, string>;
-    shiftType: 'fixed' | 'flexible' | 'rotating' | 'split' | 'night' | 'continuous';
-    startTime?: string | null;
-    endTime?: string | null;
-    coreStart?: string | null;
-    coreEnd?: string | null;
-    crossesMidnight?: boolean;
-    segments: unknown;
-    minFullDayMinutes: number;
-    policyId?: string | null;
-    isActive?: boolean;
-}
-
 export interface ShiftListQuery
 {
     after?: string;
     limit?: number;
     companyId?: string;
     policyId?: string;
+    previousShiftId?: string;
     isActive?: boolean;
     /** code; a leading minus sorts descending. */
     sort?: 'code' | '-code';
@@ -5145,9 +5112,6 @@ export const shifts =
 {
     list: (query: ShiftListQuery = {}) => request<PagedResult<Shift>>('GET', '/api/hrm/shifts', { query }),
     get: (id: string) => request<Shift>('GET', `/api/hrm/shifts/${id}`),
-    create: (body: ShiftWrite) => request<Shift>('POST', '/api/hrm/shifts', { body }),
-    update: (id: string, body: ShiftWrite & { rowVersion: number }) => request<Shift>('PUT', `/api/hrm/shifts/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/shifts/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.statutory_returns: Generated registers and returns (EOBI, social security, withholding statements, tax certificates). Field rules (S1.06) may leave a field out or mask it as text. */

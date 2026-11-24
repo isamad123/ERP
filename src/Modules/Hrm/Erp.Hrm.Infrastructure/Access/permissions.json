@@ -1,5 +1,5 @@
 {
-  "_comment": "Hand-written permissions of the HR module's purpose-built services (slice S1.20a, CR-076): the generated writes of these tables are closed (ruling Q1; S1.20a closes the person tables, S1.20b to d the employment tables), so their actions are declared here. Registered with permissions.g.json by migrate and provisioning (AccessSetup). Keep in step with Erp.Hrm.Contracts.People.PeoplePermissions and (S1.20b) Erp.Hrm.Contracts.Employment.EmploymentPermissions. S1.20c adds transfers between companies, contracts and probation. S1.20d adds removal, reveal and approval of payment accounts and removal and reveal of statutory registrations (create and update are generated with the field view of their encrypted columns). S1.34a (CR-087) adds the pay set-up services: pay groups (create and update keep the codes the generated ones had), generating and changing pay periods, and the readiness checklist. S1.27a (CR-088) adds appending punches for others (hrm.attendance_events.create, generated create closed), the employee's own web and QR punch (hrm.attendance.punch), the kiosk station (hrm.attendance.kiosk) and showing a location's QR code (hrm.attendance.qr_display). S1.23a adds the policy framework's manage and approve (the generated writes of hrm.policies, hrm.policy_versions and hrm.policy_assignments are closed).",
+  "_comment": "Hand-written permissions of the HR module's purpose-built services (slice S1.20a, CR-076): the generated writes of these tables are closed (ruling Q1; S1.20a closes the person tables, S1.20b to d the employment tables), so their actions are declared here. Registered with permissions.g.json by migrate and provisioning (AccessSetup). Keep in step with Erp.Hrm.Contracts.People.PeoplePermissions and (S1.20b) Erp.Hrm.Contracts.Employment.EmploymentPermissions. S1.20c adds transfers between companies, contracts and probation. S1.20d adds removal, reveal and approval of payment accounts and removal and reveal of statutory registrations (create and update are generated with the field view of their encrypted columns). S1.34a (CR-087) adds the pay set-up services: pay groups (create and update keep the codes the generated ones had), generating and changing pay periods, and the readiness checklist. S1.27a (CR-088) adds appending punches for others (hrm.attendance_events.create, generated create closed), the employee's own web and QR punch (hrm.attendance.punch), the kiosk station (hrm.attendance.kiosk) and showing a location's QR code (hrm.attendance.qr_display). S1.23a adds the policy framework's manage and approve (the generated writes of hrm.policies, hrm.policy_versions and hrm.policy_assignments are closed). S1.28a (CR-085 S1.28a detail) adds the shift and roster services: creating and changing shifts, creating, editing, publishing and amending rosters (amending a published roster is sensitive: it changes what people were told) and reading the weekly-off days of an employee's shift policy (the generated writes of hrm.shifts, hrm.rosters and hrm.roster_lines are closed).",
   "module": "hrm",
   "permissions": [
     {
@@ -282,6 +282,48 @@
       "code": "hrm.attendance.qr_display",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.attendance.qr_display",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.shifts.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.shifts.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.shifts.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.shifts.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.rosters.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.rosters.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.rosters.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.rosters.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.rosters.publish",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.rosters.publish",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.rosters.amend",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.rosters.amend",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.shift_patterns.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.shift_patterns.read",
       "sensitive": false
     }
   ]

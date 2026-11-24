@@ -11,14 +11,6 @@
     {
       "action": "read",
       "permission": "hrm.rosters.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.rosters.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.rosters.update"
     }
   ],
   "companyScoped": true,
@@ -35,7 +27,9 @@
     "orgUnitId",
     "periodStart",
     "periodEnd",
-    "status"
+    "publishedAt",
+    "publishedBy",
+    "copiedFromRosterId"
   ],
   "search": [
     "name"
@@ -43,6 +37,7 @@
   "constraints": {
     "ck_rosters_status": "status",
     "fk_rosters_company_id": "companyId",
+    "fk_rosters_copied_from_roster_id": "copiedFromRosterId",
     "fk_rosters_org_unit_id": "orgUnitId",
     "uq_rosters_company_id_id": "id"
   },
@@ -108,6 +103,37 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.rosters.period_end"
+    },
+    {
+      "column": "published_at",
+      "field": "publishedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.rosters.published_at"
+    },
+    {
+      "column": "published_by",
+      "field": "publishedBy",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.rosters.published_by"
+    },
+    {
+      "column": "copied_from_roster_id",
+      "field": "copiedFromRosterId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": true,
+      "labelKey": "fields.hrm.rosters.copied_from_roster_id",
+      "references": "hrm.rosters"
     },
     {
       "column": "status",

@@ -11,6 +11,7 @@ public sealed record ShiftFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? PolicyId { get; init; }
+    public global::System.Guid? PreviousShiftId { get; init; }
     public bool? IsActive { get; init; }
     /// <summary>Sort key: code; a leading minus sorts descending. Empty: by id (creation order).</summary>
     public string? Sort { get; init; }
@@ -55,6 +56,9 @@ public static class ShiftAccess
         new("segments", "Segments", null),
         new("min_full_day_minutes", "MinFullDayMinutes", null),
         new("policy_id", "PolicyId", null),
+        new("valid_from", "ValidFrom", null),
+        new("valid_to", "ValidTo", null),
+        new("previous_shift_id", "PreviousShiftId", null),
         new("is_active", "IsActive", null),
         new("is_deleted", "IsDeleted", null),
         new("deleted_at", "DeletedAt", null),

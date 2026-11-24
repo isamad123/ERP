@@ -26,6 +26,9 @@ public interface IRosterLineRepository : global::Erp.BuildingBlocks.Application.
 
     /// <summary>Rows matching (employment_id, work_date); at most PageRequest.MaxLimit rows.</summary>
     global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.RosterLine>> FindByEmploymentIdAndWorkDateAsync(global::System.Guid employmentId, global::System.DateOnly workDate, global::System.Threading.CancellationToken cancellationToken);
+
+    /// <summary>Rows matching (roster_id, employment_id, work_date); at most PageRequest.MaxLimit rows.</summary>
+    global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.RosterLine>> FindByRosterIdAndEmploymentIdAndWorkDateAsync(global::System.Guid rosterId, global::System.Guid employmentId, global::System.DateOnly workDate, global::System.Threading.CancellationToken cancellationToken);
 }
 
 /// <summary>How data scopes locate rows of hrm.roster_lines and which fields its API shows (slice S1.06, CR-018).</summary>
@@ -50,6 +53,7 @@ public static class RosterLineAccess
         new("shift_id", "ShiftId", null),
         new("day_type", "DayType", null),
         new("roster_status", "RosterStatus", null),
+        new("reason", "Reason", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
         new("updated_at", "UpdatedAt", null),
