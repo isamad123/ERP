@@ -12,9 +12,11 @@ import { isProblem, queryString, tableClient, useEngineApi, type Row } from './d
 import { decimalFields, fieldOf, type TableMetadata } from './metadata';
 import { useLabel } from './labels';
 import { Value } from './values';
+import ExportButton from './ExportButton';
 import { CustomValue, CUSTOM_PREFIX, customOf, useCustomFields } from './custom';
 
 export const PAGE_SIZE = 100;
+
 
 /** What a saved view keeps (cfg.saved_views.definition). */
 export interface ViewDefinition {
@@ -43,6 +45,8 @@ export interface ListPageProps {
   companies?: { activeId: string | null; options: Option[] };
   canCreate: boolean;
   canShare: boolean;
+  /** The person may export (permission itg.exports.run); the button then offers the list as it is now (S1.16b, FR-ADM-NAV-02). */
+  canExport?: boolean;
   onCreate?: () => void;
   onOpen: (row: Row) => void;
   rowLabel: (row: Row) => string;
@@ -56,7 +60,7 @@ export interface ListPageProps {
 export const sortParam = (sort: GridSort | null) => (sort ? (sort.descending ? '-' : '') + sort.column : null);
 export const sortOf = (param: string | null | undefined): GridSort | null => (param ? { column: param.replace(/^-/, ''), descending: param.startsWith('-') } : null);
 
-export function ListPage({ metadata, columns, companies, canCreate, canShare, onCreate, onOpen, rowLabel, cells, description }: ListPageProps) {
+export function ListPage({ metadata, columns, companies, canCreate, canShare, canExport, onCreate, onOpen, rowLabel, cells, description }: ListPageProps) {
   const { t } = useText();
   const label = useLabel();
   const api = useEngineApi();
@@ -113,6 +117,10 @@ export function ListPage({ metadata, columns, companies, canCreate, canShare, on
     }];
   }), ...customColumns], [columns, metadata, label, cells, companyNames, customColumns]);
 
+  // What an export of this view asks for: the columns as shown, in order, and the list's own filters (S1.16b).
+  const exportColumns = useMemo(() => orderedChoices(gridColumns, definition.columns).filter((c) => !c.hidden).map((c) => ({ field: c.id, label: gridColumns.find((x) => x.id === c.id)?.header ?? c.id })), [gridColumns, definition.columns]);
+  const exportQuery = useMemo(() => ({ companyId: params.companyId, ...(definition.filters ?? {}) }), [params.companyId, definition.filters]);
+
   const apply = (next: ViewDefinition, id = 'custom') => {
     setDefinition(next);
     setViewId(id);
@@ -132,6 +140,7 @@ export function ListPage({ metadata, columns, companies, canCreate, canShare, on
         <SavedViews listKey={metadata.table} current={viewId} definition={definition} canShare={canShare}
           onApply={(view) => { setDraft(view?.definition.search ?? ''); apply(view?.definition ?? { companies: 'active' }, view?.id ?? 'standard'); }} />
         <ColumnsChooser columns={gridColumns} choices={definition.columns} onChange={(columnsChoice) => apply({ ...definition, columns: columnsChoice }, viewId)} />
+        {canExport && <ExportButton source={metadata.table} title={title} columns={exportColumns} query={exportQuery} search={definition.search ?? null} sort={definition.sort ?? null} companyId={companies?.activeId ?? null} />}
       </div>
       <form className="erp-filters" role="search" aria-label={t('engine.list.filters', { list: title })} onSubmit={submit}>
         {metadata.search && metadata.search.length > 0 && (
@@ -177,14 +186,19 @@ export function useDocumentTitle(title: string) {
   useEffect(() => { document.title = `${title} – ${t('product.name')}`; }, [title, t]);
 }
 
+/** The columns in the person's order with their shown or hidden choice: chosen ones first, the others after, hidden by default as declared. */
+export function orderedChoices<Row>(columns: GridColumn<Row>[], choices: ColumnChoice[] | undefined): ColumnChoice[] {
+  return [
+    ...(choices ?? []).filter((c) => columns.some((x) => x.id === c.id)),
+    ...columns.filter((c) => !(choices ?? []).some((x) => x.id === c.id)).map((c) => ({ id: c.id, ...(c.hiddenByDefault ? { hidden: true } : {}) })),
+  ];
+}
+
 /** Column choice and order (FR-UX-GRD-02): a checkbox per column and buttons to move it, all by keyboard. */
 export function ColumnsChooser<Row>({ columns, choices, onChange }: { columns: GridColumn<Row>[]; choices: ColumnChoice[] | undefined; onChange: (choices: ColumnChoice[]) => void }) {
   const { t } = useText();
   const [open, setOpen] = useState(false);
-  const ordered: ColumnChoice[] = [
-    ...(choices ?? []).filter((c) => columns.some((x) => x.id === c.id)),
-    ...columns.filter((c) => !(choices ?? []).some((x) => x.id === c.id)).map((c) => ({ id: c.id, ...(c.hiddenByDefault ? { hidden: true } : {}) })),
-  ];
+  const ordered = orderedChoices(columns, choices);
   const header = (id: string) => columns.find((c) => c.id === id)?.header ?? id;
   const moveBy = (index: number, by: number) => {
     const next = [...ordered];

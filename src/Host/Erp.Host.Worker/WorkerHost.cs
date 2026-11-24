@@ -5,6 +5,7 @@ using Erp.BuildingBlocks.Infrastructure.Time;
 using Erp.Hrm.Infrastructure.Access;
 using Erp.Hrm.Infrastructure.Employments;
 using Erp.Hrm.Infrastructure.Attendance;
+using Erp.Hrm.Api.Generated;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Kernel.Api.Generated;
 using Erp.Kernel.Infrastructure.Itg;
@@ -65,6 +66,9 @@ public static class WorkerHost
         services.AddDbContext<HrmDbContext>((sp, o) => o.UseNpgsql(sp.GetRequiredService<ITenantConnectionProvider>().DataSource).UseErpAudit(sp));
         services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
         services.AddKernelImportEngine().AddKernelImportWriters();
+        services.AddKernelExportEngine().AddKernelExportReaders().AddHrmExportReaders(); // S1.16b
+        services.AddScoped<Erp.Kernel.Application.Audit.IAuditQueryService, Erp.Kernel.Infrastructure.Audit.AuditQueryService>(); // the audit export reader
+        services.AddScoped<Erp.Kernel.Application.Access.IUserConsoleService, Erp.Kernel.Infrastructure.Access.UserConsoleService>(); // the user list export reader
         services.AddLogging(); // the generated import writers run the endpoints' results, which log (S1.16a)
 
         // Field encryption of the customer (S1.05 P7): generated repositories encrypt enc columns on write.

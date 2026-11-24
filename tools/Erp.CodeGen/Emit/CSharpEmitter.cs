@@ -1036,8 +1036,64 @@ public static class CSharpEmitter
             ImportWriter(w, t);
         }
 
+        ExportReader(w, t, filterInit);
         w.Close();
         return w.ToString();
+    }
+
+    /// <summary>
+    /// The export reader of a table (slice S1.16b, FR-ADM-DAT-04): the list endpoint's own filter, sort, search, data scope and field
+    /// security, read page by page for the export job, so an export can never show what the list does not. Nested in the endpoints
+    /// class to reach its private response mapper.
+    /// </summary>
+    private static void ExportReader(CodeWriter w, Table t, string filterInit)
+    {
+        var entity = N.Entity(t);
+        var repo = N.RepositoryInterfaceFull(t);
+        var access = AccessFull(t);
+        const string svc = "global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions";
+        const string ct = "cancellationToken";
+        const string sec = "global::Erp.BuildingBlocks.Application.Security";
+        const string itg = "global::Erp.Kernel.Contracts.Itg";
+        var init = filterInit;
+        if (SortColumns(t).Count > 0)
+        {
+            init = init.Replace("Sort = query.Sort", "Sort = export.Sort ?? query.Sort", StringComparison.Ordinal);
+        }
+
+        if (SearchColumns(t).Count > 0)
+        {
+            init = init.Replace("Search = query.Search", "Search = export.Search ?? query.Search", StringComparison.Ordinal);
+        }
+
+        w.Line();
+        w.Line($"/// <summary>Reads pages of {CodeWriter.Xml(t.FullName)} for an export through the list's own rules (S1.16b).</summary>");
+        w.Open($"internal sealed class ExportReader(global::System.IServiceProvider services) : {itg}.IExportRowReader");
+        w.Line($"public string Code => {CodeWriter.CSharpString(t.FullName)};");
+        w.Line();
+        w.Line($"public string ReadPermission => {CodeWriter.CSharpString(N.Permission(t, "read"))};");
+        w.Line();
+        w.Open($"public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<({itg}.ExportColumn Column, string Access)>> ColumnsAsync(global::System.Guid? companyId, global::System.Threading.CancellationToken {ct})");
+        w.Line($"var fields = {svc}.GetRequiredService<{sec}.IFieldAccess>(services);");
+        w.Line($"var map = await fields.ForAsync({access}.Fields, \"read\", companyId, {ct}).ConfigureAwait(false);");
+        w.Line("return " + access + ".Fields.Fields.Select(f => (new " + itg + ".ExportColumn(f.Key, f.JsonName, f.FieldClass, f.IsCustom), map.Of(f.Key) switch { " + sec + ".FieldAccessLevel.Hidden => \"hidden\", " + sec + ".FieldAccessLevel.Masked => \"masked\", _ => \"visible\" })).ToList();");
+        w.Close();
+        w.Line();
+        w.Open($"public async global::System.Threading.Tasks.Task<{itg}.ExportPage> ReadPageAsync({itg}.ExportQuery export, string? after, int limit, global::System.Threading.CancellationToken {ct})");
+        w.Line($"var repository = {svc}.GetRequiredService<{repo}>(services);");
+        w.Line($"var fields = {svc}.GetRequiredService<{sec}.IFieldAccess>(services);");
+        w.Line("var query = export.Filter.ValueKind == global::System.Text.Json.JsonValueKind.Object ? global::System.Text.Json.JsonSerializer.Deserialize<" + entity + "ListQuery>(export.Filter.GetRawText(), global::System.Text.Json.JsonSerializerOptions.Web) ?? new " + entity + "ListQuery() : new " + entity + "ListQuery();");
+        w.Line("var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(after is null ? null : global::System.Guid.Parse(after), limit);");
+        w.Line("var rows = await repository.ListAsync(new " + N.FilterFull(t) + " { " + init + " }, page, " + ct + ").ConfigureAwait(false);");
+        w.Line($"var maps = await repository.FieldAccessAsync(rows, {access}.Fields, fields, \"read\", {ct}).ConfigureAwait(false);");
+        w.Line("var shaped = new global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>(rows.Count);");
+        w.Open("for (var i = 0; i < rows.Count; i++)");
+        w.Line($"var node = global::System.Text.Json.JsonSerializer.SerializeToNode(ToResponse(rows[i]), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();");
+        w.Line($"shaped.Add({sec}.FieldShaping.Shape(node, {access}.Fields, maps[i]));");
+        w.Close();
+        w.Line($"return new {itg}.ExportPage(shaped, rows.Count == page.Limit ? rows[^1].Id.ToString() : null, {sec}.FieldShaping.SensitiveShown(shaped, {access}.Fields, maps));");
+        w.Close();
+        w.Close();
     }
 
     /// <summary>
@@ -1247,6 +1303,20 @@ public static class CSharpEmitter
         {
             ImportSupport(w, tables);
         }
+
+        w.Line();
+        w.Line($"/// <summary>Registers the export reader of every generated {project} table (S1.16b).</summary>");
+        w.Open($"public static class {project}ExportReaders");
+        w.Open($"public static global::Microsoft.Extensions.DependencyInjection.IServiceCollection Add{project}ExportReaders(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)");
+        foreach (var t in tables)
+        {
+            w.Line($"global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Contracts.Itg.IExportRowReader, global::{N.Namespace(t, "Api")}.{N.Entity(t)}Endpoints.ExportReader>());");
+        }
+
+        w.Line("return services;");
+        w.Close();
+        w.Close();
+        w.Line();
 
         return w.ToString();
     }

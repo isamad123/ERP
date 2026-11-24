@@ -52,7 +52,7 @@ function LocationList() {
   return (
     <ListPage metadata={metadata} columns={['code', 'nameI18n', 'companyId', 'regionCode', 'timeZone', 'isActive']}
       companies={{ activeId: activeCompany?.id ?? null, options }}
-      canCreate={writable && can('org.locations.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')} description={t('locations.description')}
+      canCreate={writable && can('org.locations.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')} canExport={can('itg.exports.run')} description={t('locations.description')}
       onCreate={() => { void navigate(`${LOCATIONS_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${LOCATIONS_PATH}/${row.id}`); }} rowLabel={(row) => title(row)} />
   );
 }
