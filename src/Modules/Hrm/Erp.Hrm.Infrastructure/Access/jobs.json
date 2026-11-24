@@ -1,5 +1,5 @@
 {
-  "_comment": "HR background jobs (slice S1.11a format). S1.20b (CR-076 item 9, slice S1.20 ruling Q12): approved employment events take effect on their date. S1.20c (CR-076 S1.20c detail, Build item 13): contracts past their end expire, and contract and probation reminders go out. S1.34a (CR-087, slice S1.34 Build item 3): the cut-off reminder of the payroll calendar (FR-HRM-PAY-38). S1.27b (CR-088 S1.27b detail, FR-HRM-ATT-02, ATT-03): hrm.device_sync, every minute, reads the devices that are due. Seeded into job.definitions by migrate and provisioning, keyed by code; a customer's schedule and on/off choice are kept on upgrade. Times are in the customer's time zone (org.time_zone). The job writes through the HR module's own code and checks no permissions, so it declares none (R-009). Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "HR background jobs (slice S1.11a format). S1.20b (CR-076 item 9, slice S1.20 ruling Q12): approved employment events take effect on their date. S1.20c (CR-076 S1.20c detail, Build item 13): contracts past their end expire, and contract and probation reminders go out. S1.34a (CR-087, slice S1.34 Build item 3): the cut-off reminder of the payroll calendar (FR-HRM-PAY-38). S1.27b (CR-088 S1.27b detail, FR-HRM-ATT-02, ATT-03): hrm.device_sync, every minute, reads the devices that are due. S1.32a (CR-086, slice S1.32 Build items 3 and 6): leave entitlements are granted and accrued by policy once per employment, leave type and period (hrm.leave_accrual), and balances are recomputed from the ledger and the policies with the differences logged, nothing changed (hrm.leave_recompute). Seeded into job.definitions by migrate and provisioning, keyed by code; a customer's schedule and on/off choice are kept on upgrade. Times are in the customer's time zone (org.time_zone). The job writes through the HR module's own code and checks no permissions, so it declares none (R-009). Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "jobs": [
     {
@@ -80,6 +80,40 @@
       "entitlement": "hrm.core",
       "manual": true,
       "request_permission": "job.runs.create",
+      "schedule_editable": true
+    },
+    {
+      "code": "hrm.leave_accrual",
+      "name": {"en": "Leave grants and accruals", "ur": "رخصت کی عطا اور جمع"},
+      "description": {"en": "Gives each employee the leave their leave policy grants or accrues (yearly grants, monthly accruals, accruals by days or hours worked once attendance is locked, tenure and grade tiers, with joiner and leaver pro-rata). Each employee, leave type and period is credited once, so a run can be repeated or resumed.", "ur": "ہر ملازم کو وہ رخصت دیتا ہے جو اس کی رخصت کی پالیسی عطا یا جمع کرتی ہے (سالانہ عطا، ماہانہ جمع، حاضری بند ہونے کے بعد کام کے دنوں یا گھنٹوں کے حساب سے جمع، مدتِ ملازمت اور گریڈ کے درجے، نئے اور جانے والے ملازمین کے لیے تناسب)۔ ہر ملازم، رخصت کی قسم اور مدت کے لیے ایک ہی بار جمع ہوتا ہے، اس لیے کام دہرایا یا دوبارہ شروع کیا جا سکتا ہے۔"},
+      "schedule": {"monthly": {"day": 1, "at": "01:30"}},
+      "parameters": [{"name": "employment_id", "type": "uuid", "required": false}],
+      "permissions": [],
+      "retry": {"max_attempts": 3, "backoff_seconds": [300, 1800]},
+      "timeout_seconds": 3600,
+      "priority": 40,
+      "concurrency": 1,
+      "runs_in": ["full"],
+      "entitlement": "hrm.core",
+      "manual": true,
+      "request_permission": "hrm.leave_ledger.post",
+      "schedule_editable": true
+    },
+    {
+      "code": "hrm.leave_recompute",
+      "name": {"en": "Leave balance check", "ur": "رخصت کے بقایا کی جانچ"},
+      "description": {"en": "Works out again from the ledger and the leave policies what each employee should have been granted and accrued, and logs every difference with the entry that explains it. Nothing is changed: HR posts an adjustment where one is needed.", "ur": "لیجر اور رخصت کی پالیسیوں سے دوبارہ حساب لگاتا ہے کہ ہر ملازم کو کتنی رخصت عطا اور جمع ہونی چاہیے تھی، اور ہر فرق اس اندراج کے ساتھ درج کرتا ہے جو اس کی وضاحت کرتا ہے۔ کچھ تبدیل نہیں ہوتا: جہاں ضرورت ہو ایچ آر تصحیحی اندراج کرتا ہے۔"},
+      "schedule": {"monthly": {"day": 2, "at": "02:10"}},
+      "parameters": [{"name": "employment_id", "type": "uuid", "required": false}],
+      "permissions": [],
+      "retry": {"max_attempts": 2, "backoff_seconds": [600]},
+      "timeout_seconds": 3600,
+      "priority": 60,
+      "concurrency": 1,
+      "runs_in": ["full", "read_only"],
+      "entitlement": "hrm.core",
+      "manual": true,
+      "request_permission": "hrm.leave_ledger.recompute",
       "schedule_editable": true
     }
   ]

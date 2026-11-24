@@ -19,14 +19,28 @@ public sealed record PolicyType(
 }
 
 /// <summary>
+/// A module's check of a policy type's parameters beyond the JSON Schema subset (S1.32a, CR-086 S1.32a detail): what a model needs, values
+/// that repeat. Registered as a singleton beside the type's manifest; the catalogue runs it after the schema.
+/// </summary>
+public interface IPolicyParameterCheck
+{
+    string PolicyType { get; }
+
+    /// <summary>Path (as <see cref="PolicySchema.Check"/> writes it) to error keys; empty when valid.</summary>
+    IReadOnlyDictionary<string, string[]> Check(JsonElement parameters);
+}
+
+/// <summary>
 /// Every policy type the modules registered (<see cref="PolicyTypeSource"/>, D-10): read once, checked strictly (a duplicate code, an
 /// unknown attribute or an unsupported schema keyword stops the host), then read-only.
 /// </summary>
 public sealed partial class PolicyTypeCatalog
 {
     private readonly Dictionary<string, PolicyType> types;
+    private readonly Dictionary<string, List<IPolicyParameterCheck>> checks = new(StringComparer.Ordinal);
 
-    public PolicyTypeCatalog(IEnumerable<PolicyTypeSource> sources)
+    /// <summary>The catalogue of the sources, with the modules' checks beyond the schema (S1.32a: the <c>leave</c> type).</summary>
+    public PolicyTypeCatalog(IEnumerable<PolicyTypeSource> sources, IEnumerable<IPolicyParameterCheck>? parameterChecks = null)
     {
         ArgumentNullException.ThrowIfNull(sources);
         types = new Dictionary<string, PolicyType>(StringComparer.Ordinal);
@@ -75,6 +89,40 @@ public sealed partial class PolicyTypeCatalog
                 }
             }
         }
+
+        foreach (var check in parameterChecks ?? [])
+        {
+            if (!types.ContainsKey(check.PolicyType))
+            {
+                throw new InvalidOperationException($"a parameter check names policy type '{check.PolicyType}', which no module registered.");
+            }
+
+            if (!checks.TryGetValue(check.PolicyType, out var list))
+            {
+                checks[check.PolicyType] = list = [];
+            }
+
+            list.Add(check);
+        }
+    }
+
+    /// <summary>
+    /// The problems of a type's parameters, path to error keys (empty when valid): the schema first, then, when the shape is right, the
+    /// module's own checks of what a schema cannot say (S1.32a). Every writer of a policy version asks this.
+    /// </summary>
+    public Dictionary<string, string[]> Check(PolicyType type, JsonElement parameters)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        var errors = PolicySchema.Check(type.Schema, parameters);
+        if (errors.Count == 0 && checks.TryGetValue(type.Code, out var list))
+        {
+            foreach (var (path, keys) in list.SelectMany(c => c.Check(parameters)))
+            {
+                errors[path] = [.. errors.GetValueOrDefault(path, []).Concat(keys).Distinct(StringComparer.Ordinal)];
+            }
+        }
+
+        return errors;
     }
 
     public IReadOnlyList<PolicyType> All => types.Values.OrderBy(t => t.Code, StringComparer.Ordinal).ToList();

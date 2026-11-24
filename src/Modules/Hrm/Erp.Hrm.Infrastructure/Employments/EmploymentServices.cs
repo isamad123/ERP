@@ -52,6 +52,7 @@ public static class EmploymentServices
         services.AddScoped<IStatutoryRegistrationService, StatutoryRegistrationService>();
         services.AddScoped<Erp.Kernel.Contracts.Access.IHeldChangeHandler, BankAccountChangeHandler>(); // approval of held account changes
         services.AddHrmPayrollApi(); // S1.34a pay groups, calendar and readiness
+        Leave.LeaveServices.AddHrmLeaveApi(services); // S1.32a leave types, ledger, balances and recompute
         return services;
     }
 
@@ -61,6 +62,7 @@ public static class EmploymentServices
         services.AddSingleton<IJobHandler, EmploymentEventsDueJob>();
         services.AddSingleton<IJobHandler, EmploymentTermsDueJob>();
         services.AddHrmPayrollWorker(); // S1.34a cut-off reminders
+        Leave.LeaveServices.AddHrmLeaveWorker(services); // S1.32a leave accrual and recompute jobs
         return services;
     }
 
