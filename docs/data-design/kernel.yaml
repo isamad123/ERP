@@ -1285,13 +1285,28 @@
 
 - table: itg.export_jobs
   traits: [std, co]
-  status: [queued, running, done, failed, expired]
+  status: [queued, running, done, failed, expired, awaiting_approval, rejected]
   columns:
     - [entity_type, text, req]
     - [filter, json, req]
     - [format, "enum(csv,xlsx,pdf)", req]
     - [row_count, int, opt]
     - [file_id, uuid, opt, fk doc.files]
+    - [file_name, text, opt, "S1.16b (CR-072 addendum): the name of the file the person downloads"]
+    - [reason, text, opt, "S1.16b: why the export was made; required when a sensitive field class is in it (Q8)"]
+    - [sensitive_classes, "text[]", opt, "S1.16b: the field classes (salary, personal, restricted) of the columns exported, as asked at request time"]
+    - [job_run_id, uuid, opt, fk job.runs]
+    - [held_request_id, uuid, opt, "S1.16b: the maker-checker request while the export waits for a second person (iam.maker_checker_requests; no foreign key across the approval history)"]
+    - [size_bytes, int, opt, "S1.16b: size of the finished file"]
+    - [error_key, text, opt, "S1.16b: localization key of why a failed or rejected export ended"]
+    - [expires_at, ts, opt, "S1.16b: when the file is deleted (itg.export.keep_days after it was made)"]
+    - [started_at, ts, opt]
+    - [finished_at, ts, opt]
+  # S1.16b (CR-072 addendum): a held export waits for a second person (awaiting_approval) or was refused by them (rejected).
+  enum_added_in: {S1.16b: {status: [awaiting_approval, rejected]}}
+  added_in: {S1.16b: [file_name, reason, sensitive_classes, job_run_id, held_request_id, size_bytes, error_key, expires_at, started_at, finished_at]}
+  # S1.16b: an export changes only through the export service (/api/itg/exports): status, file and counts are the engine's.
+  api_actions: [read]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
   reqs: [ADM-DAT-04]

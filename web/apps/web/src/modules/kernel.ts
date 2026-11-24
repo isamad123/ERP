@@ -39,6 +39,8 @@ const CustomFieldsScreen = lazy(() => import('./admin/custom-fields'));
 // S1.15c: numbering schemes and the approval route editor.
 // S1.16a: the import centre and the template designer.
 const ImportsScreen = lazy(() => import('./admin/imports'));
+// S1.16b: the export centre.
+const ExportsScreen = lazy(() => import('./admin/exports'));
 const NumberingScreen = lazy(() => import('./admin/numbering'));
 const RoutesScreen = lazy(() => import('./admin/routes'));
 // S1.15d: notification texts and rules, document templates.
@@ -48,7 +50,7 @@ const DocumentTemplatesScreen = lazy(() => import('./admin/doctemplates'));
 const SetupScreen = lazy(() => import('./admin/setup'));
 // S1.23b: the pack manager (country and industry packs; the wizard's pack step links here).
 const PacksScreen = lazy(() => import('./admin/packs'));
-// S1.16c: the job centre (jobs, runs, notification log and system health as its tabs, R-291: the shell budget has no room for two more menu entries) and the licence page.
+// S1.16c: the job centre (its runs, notification log and system health are also tabs of it) and the licence page.
 const JobsScreen = lazy(() => import('./admin/jobs'));
 const LicenceScreen = lazy(() => import('./admin/licence'));
 
@@ -94,12 +96,14 @@ export const kernelScreens: ScreenDeclaration[] = [
   // S1.15d (ruling Q1): "Notification texts" and "Document templates" after "Approval routes".
   { id: 'notification-texts', path: '/settings/notification-texts', labelKey: 'nav.notificationTexts', icon: Bell, group: 'administration', permission: 'ntf.templates.read', component: NotifyScreen },
   { id: 'document-templates', path: '/settings/document-templates', labelKey: 'nav.documentTemplates', icon: FileText, group: 'administration', permission: 'doc.templates.read', component: DocumentTemplatesScreen },
-  // S1.16c: "Licence" and "Background jobs" in the Administration group. Under the jobs route: runs, messages (the notification log) and health (the path the
-  // notification catalogue links to, /admin/jobs/health). The licence page answers in the locked state.
+  // S1.16c (ruling Q1): "Licence", "Background jobs", "Notification log" and "System health" in the Administration group; the last two open the job centre's tabs
+  // (the health path is the one the notification catalogue links to). The licence page answers in the locked state.
   { id: 'licence', path: '/settings/licence', labelKey: 'nav.licence', icon: KeyRound, group: 'administration', permission: 'cfg.licence.read', allowedWhenLocked: true, component: LicenceScreen },
+  { id: 'notification-log', path: '/admin/jobs/messages', labelKey: 'nav.notificationLog', icon: Bell, group: 'administration', permission: 'ntf.outbound_messages.read', component: JobsScreen },
+  { id: 'system-health', path: '/admin/jobs/health', labelKey: 'nav.systemHealth', icon: Activity, group: 'administration', permission: 'job.runs.read', component: JobsScreen },
   { id: 'jobs', path: '/admin/jobs/*', labelKey: 'nav.jobs', icon: Activity, group: 'administration', permission: 'job.runs.read', component: JobsScreen },
   { id: 'audit', path: '/admin/audit/*', labelKey: 'nav.audit', icon: ScrollText, group: 'administration', permission: 'aud.changes.view', component: AuditScreen },
-  { id: 'exports', path: '/admin/exports', labelKey: 'nav.exports', icon: Download, permission: 'aud.export', allowedWhenLocked: true, comesWith: 'S1.16' },
+  { id: 'exports', path: '/admin/exports', labelKey: 'nav.exports', icon: Download, group: 'administration', permission: 'itg.exports.run', allowedWhenLocked: true, component: ExportsScreen },
   { id: 'quarantine', path: '/admin/documents/quarantine', labelKey: 'nav.quarantine', icon: ShieldAlert, comesWith: 'S1.16' },
   // A file follows its record (S1.11c1 ruling Q23): the server decides when the screen asks for it.
   { id: 'document', path: '/documents/:id', labelKey: 'nav.document', icon: FileText, comesWith: 'S1.24' },

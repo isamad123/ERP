@@ -42,7 +42,7 @@ function Grades() {
   const { locale } = useLocaleSettings();
   return (
     <ListPage metadata={gradeMeta as TableMetadata} columns={['code', 'nameI18n', 'rank', 'companyId']} companies={{ activeId: activeCompany?.id ?? null, options: useCompanyOptions() }}
-      canCreate={writable && can('hrm.grades.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')} description={t('pos.grades.description')}
+      canCreate={writable && can('hrm.grades.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')} canExport={can('itg.exports.run')} description={t('pos.grades.description')}
       onCreate={() => { void navigate(`${GRADES_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${GRADES_PATH}/${row.id}`); }}
       rowLabel={(row) => `${String(row.code ?? '')} ${nameIn(row.nameI18n, locale)}`.trim()} />
   );
@@ -78,7 +78,7 @@ function Budgets() {
   const { t } = useText();
   return (
     <ListPage metadata={budgetMeta as TableMetadata} columns={['orgUnitId', 'gradeId', 'sanctionedCount', 'validFrom', 'validTo', 'companyId']} companies={{ activeId: activeCompany?.id ?? null, options: useCompanyOptions() }}
-      canCreate={writable && can('hrm.headcount_budgets.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')} description={t('pos.budgets.description')}
+      canCreate={writable && can('hrm.headcount_budgets.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')} canExport={can('itg.exports.run')} description={t('pos.budgets.description')}
       onCreate={() => { void navigate(`${BUDGETS_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${BUDGETS_PATH}/${row.id}`); }} rowLabel={(row) => String(row.sanctionedCount ?? '')} />
   );
 }
@@ -112,7 +112,7 @@ function PositionList() {
   const { t } = useText();
   return (
     <ListPage metadata={positionMeta as TableMetadata} columns={['positionCode', 'title', 'orgUnitId', 'gradeId', 'budgetedFte', 'status', 'validFrom', 'companyId']} companies={{ activeId: activeCompany?.id ?? null, options: useCompanyOptions() }}
-      canCreate={writable && can('hrm.positions.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')} description={t('pos.positions.description')}
+      canCreate={writable && can('hrm.positions.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')} canExport={can('itg.exports.run')} description={t('pos.positions.description')}
       onCreate={() => { void navigate(`${POSITIONS_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${POSITIONS_PATH}/${row.id}`); }} rowLabel={(row) => `${String(row.positionCode ?? '')} ${String(row.title ?? '')}`.trim()} />
   );
 }

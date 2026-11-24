@@ -23,6 +23,16 @@ internal sealed class ExportJobConfiguration : IEntityTypeConfiguration<global::
         builder.Property(e => e.Format).HasColumnName("format").HasColumnType("text").IsRequired();
         builder.Property(e => e.RowCount).HasColumnName("row_count").HasColumnType("integer");
         builder.Property(e => e.FileId).HasColumnName("file_id").HasColumnType("uuid");
+        builder.Property(e => e.FileName).HasColumnName("file_name").HasColumnType("text");
+        builder.Property(e => e.Reason).HasColumnName("reason").HasColumnType("text");
+        builder.Property(e => e.SensitiveClasses).HasColumnName("sensitive_classes").HasColumnType("text[]");
+        builder.Property(e => e.JobRunId).HasColumnName("job_run_id").HasColumnType("uuid");
+        builder.Property(e => e.HeldRequestId).HasColumnName("held_request_id").HasColumnType("uuid");
+        builder.Property(e => e.SizeBytes).HasColumnName("size_bytes").HasColumnType("integer");
+        builder.Property(e => e.ErrorKey).HasColumnName("error_key").HasColumnType("text");
+        builder.Property(e => e.ExpiresAt).HasColumnName("expires_at").HasColumnType("timestamptz");
+        builder.Property(e => e.StartedAt).HasColumnName("started_at").HasColumnType("timestamptz");
+        builder.Property(e => e.FinishedAt).HasColumnName("finished_at").HasColumnType("timestamptz");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
@@ -52,6 +62,10 @@ internal sealed class ExportJobRepository(
         if (filter.FileId is { } fileIdFilter)
         {
             query = query.Where(e => e.FileId == fileIdFilter);
+        }
+        if (filter.JobRunId is { } jobRunIdFilter)
+        {
+            query = query.Where(e => e.JobRunId == jobRunIdFilter);
         }
         if (filter.Status is { } statusFilter)
         {
