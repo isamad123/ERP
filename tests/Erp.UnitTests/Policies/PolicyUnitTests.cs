@@ -77,7 +77,7 @@ public sealed partial class PolicyUnitTests
     public void FR_HRM_POL_01_the_HR_manifest_loads_and_a_bad_manifest_stops_the_host()
     {
         var hr = new PolicyTypeCatalog([new PolicyTypeSource(PolicyServices.TypeManifest)]);
-        Assert.Equal(["notice_period", "probation"], hr.All.Select(t => t.Code));
+        Assert.Equal(["notice_period", "probation", "shift"], hr.All.Select(t => t.Code));
         Assert.True(hr.Find("notice_period")!.Required);
         Assert.False(hr.Find("probation")!.IsMany);
         Assert.Throws<InvalidOperationException>(() => new PolicyTypeCatalog([new PolicyTypeSource(Type()), new PolicyTypeSource(Type())])); // twice

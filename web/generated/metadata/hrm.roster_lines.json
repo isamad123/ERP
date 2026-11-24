@@ -11,14 +11,6 @@
     {
       "action": "read",
       "permission": "hrm.roster_lines.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.roster_lines.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.roster_lines.update"
     }
   ],
   "companyScoped": true,
@@ -36,7 +28,8 @@
     "workDate",
     "shiftId",
     "dayType",
-    "rosterStatus"
+    "rosterStatus",
+    "reason"
   ],
   "search": [],
   "constraints": {
@@ -145,6 +138,16 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.roster_lines.roster_status"
+    },
+    {
+      "column": "reason",
+      "field": "reason",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.roster_lines.reason"
     },
     {
       "column": "created_at",

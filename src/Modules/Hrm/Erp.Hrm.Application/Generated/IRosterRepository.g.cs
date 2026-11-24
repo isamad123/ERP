@@ -11,6 +11,7 @@ public sealed record RosterFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? OrgUnitId { get; init; }
+    public global::System.Guid? CopiedFromRosterId { get; init; }
     public string? Status { get; init; }
     /// <summary>Case-insensitive text found in name.</summary>
     public string? Search { get; init; }
@@ -44,6 +45,9 @@ public static class RosterAccess
         new("org_unit_id", "OrgUnitId", null),
         new("period_start", "PeriodStart", null),
         new("period_end", "PeriodEnd", null),
+        new("published_at", "PublishedAt", null),
+        new("published_by", "PublishedBy", null),
+        new("copied_from_roster_id", "CopiedFromRosterId", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

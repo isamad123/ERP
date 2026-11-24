@@ -1461,33 +1461,9 @@
       "sensitive": false
     },
     {
-      "code": "hrm.roster_lines.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.roster_lines.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.roster_lines.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.roster_lines.update",
-      "sensitive": false
-    },
-    {
       "code": "hrm.rosters.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.rosters.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.rosters.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.rosters.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.rosters.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.rosters.update",
       "sensitive": false
     },
     {
@@ -1626,24 +1602,6 @@
       "code": "hrm.shifts.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.shifts.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.shifts.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.shifts.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.shifts.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.shifts.update",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.shifts.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.shifts.delete",
       "sensitive": false
     },
     {

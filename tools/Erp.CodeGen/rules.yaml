@@ -363,6 +363,24 @@ tables:
       - text: "precedence is between 1 and 9999"
         check: { name: ck_policy_assignments_precedence, sql: "precedence between 1 and 9999" }
 
+  hrm.shifts:
+    checks:
+      # S1.28a (CR-085 S1.28a detail; slice S1.28 Build item 1): versions of a shift do not run backwards.
+      - text: "a version ends on or after the day it starts"
+        check: { name: ck_shifts_version_dates, sql: "valid_from is null or valid_to is null or valid_to >= valid_from" }
+
+  hrm.rosters:
+    checks:
+      # S1.28a (CR-085 S1.28a detail; slice S1.28 Build item 4).
+      - text: "a roster ends on or after the day it starts"
+        check: { name: ck_rosters_period, sql: "period_end >= period_start" }
+
+  hrm.roster_lines:
+    checks:
+      # S1.28a (CR-085 S1.28a detail; slice S1.28 Build item 4): a working day names a shift; a weekly off or holiday names none.
+      - text: "a working day has a shift and any other day has none"
+        check: { name: ck_roster_lines_shift, sql: "(day_type = 'working') = (shift_id is not null)" }
+
   hrm.form_definitions:
     notes:
       - text: "active_version_id uses composite FK (id, active_version_id) -> hrm.form_versions (parent_id, id)."
@@ -1587,3 +1605,42 @@ functions:
       drop trigger if exists tg_pay_periods_fixed on hrm.pay_periods;
       create trigger tg_pay_periods_fixed before update or delete on hrm.pay_periods
           for each row execute function hrm.tg_pay_periods_fixed();
+
+  # S1.28a (CR-085 S1.28a detail; slice S1.28 Build item 5, FR-HRM-ATT-07): once a roster is published, a day of it is added, moved to
+  # another shift or day type, or removed only with a reason, and a published day is never deleted (the day is changed to a weekly off
+  # or other day type instead); changing only the status (publishing, archiving) needs none.
+  - slice: S1.28a
+    name: hrm.tg_roster_lines_published
+    purpose: "A line of a published roster is added or changed only with a reason and is never deleted (FR-HRM-ATT-07); refused with constraint ck_roster_lines_published."
+    triggers:
+      - [hrm.roster_lines, tg_roster_lines_published]
+    sql: |
+      create or replace function hrm.tg_roster_lines_published() returns trigger
+      language plpgsql as $fn$
+      begin
+          if tg_op = 'DELETE' then
+              if old.roster_status = 'published' then
+                  raise exception 'roster line % belongs to a published roster and cannot be deleted', old.id
+                      using errcode = '23514', constraint = 'ck_roster_lines_published';
+              end if;
+              return old;
+          end if;
+          if tg_op = 'INSERT' then
+              if new.roster_status = 'published' and (new.reason is null or btrim(new.reason) = '') then
+                  raise exception 'a day added to a published roster needs a reason'
+                      using errcode = '23514', constraint = 'ck_roster_lines_published';
+              end if;
+              return new;
+          end if;
+          if old.roster_status = 'published'
+             and (new.shift_id, new.day_type, new.work_date, new.employment_id) is distinct from (old.shift_id, old.day_type, old.work_date, old.employment_id)
+             and (new.reason is null or btrim(new.reason) = '') then
+              raise exception 'a day of a published roster changes only with a reason'
+                  using errcode = '23514', constraint = 'ck_roster_lines_published';
+          end if;
+          return new;
+      end
+      $fn$;
+      drop trigger if exists tg_roster_lines_published on hrm.roster_lines;
+      create trigger tg_roster_lines_published before insert or update or delete on hrm.roster_lines
+          for each row execute function hrm.tg_roster_lines_published();

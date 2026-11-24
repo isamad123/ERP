@@ -30,6 +30,15 @@ public sealed partial class Roster : global::Erp.BuildingBlocks.Domain.Entities.
     /// <summary>period_end</summary>
     public global::System.DateOnly PeriodEnd { get; set; }
 
+    /// <summary>published_at: when the roster was published (S1.28a)</summary>
+    public global::System.DateTimeOffset? PublishedAt { get; set; }
+
+    /// <summary>published_by: the user who published it (S1.28a)</summary>
+    public global::System.Guid? PublishedBy { get; set; }
+
+    /// <summary>copied_from_roster_id: fk hrm.rosters; the roster this one was copied forward from (S1.28a)</summary>
+    public global::System.Guid? CopiedFromRosterId { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

@@ -26,6 +26,9 @@ public sealed class ShiftResponse
     public global::System.Text.Json.JsonElement Segments { get; init; }
     public int MinFullDayMinutes { get; init; }
     public global::System.Guid? PolicyId { get; init; }
+    public global::System.DateOnly? ValidFrom { get; init; }
+    public global::System.DateOnly? ValidTo { get; init; }
+    public global::System.Guid? PreviousShiftId { get; init; }
     public bool IsActive { get; init; }
     public bool IsDeleted { get; init; }
     public global::System.DateTimeOffset? DeletedAt { get; init; }
@@ -35,27 +38,6 @@ public sealed class ShiftResponse
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for hrm.shifts. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class ShiftWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public string? Code { get; init; }
-    public global::System.Text.Json.JsonElement? NameI18n { get; init; }
-    public string? ShiftType { get; init; }
-    public global::System.TimeOnly? StartTime { get; init; }
-    public global::System.TimeOnly? EndTime { get; init; }
-    public global::System.TimeOnly? CoreStart { get; init; }
-    public global::System.TimeOnly? CoreEnd { get; init; }
-    public bool? CrossesMidnight { get; init; }
-    public global::System.Text.Json.JsonElement? Segments { get; init; }
-    public int? MinFullDayMinutes { get; init; }
-    public global::System.Guid? PolicyId { get; init; }
-    public bool? IsActive { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for hrm.shifts.</summary>
@@ -69,6 +51,8 @@ public sealed class ShiftListQuery
 
     public global::System.Guid? PolicyId { get; init; }
 
+    public global::System.Guid? PreviousShiftId { get; init; }
+
     public bool? IsActive { get; init; }
 
     /// <summary>Sort key: code; a leading minus sorts descending. Empty: by id (creation order).</summary>
@@ -78,7 +62,7 @@ public sealed class ShiftListQuery
     public string? Search { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.shifts: read, create, update, delete. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.shifts: read. Answers pass through field security (S1.06).</summary>
 internal static class ShiftEndpoints
 {
     private const string Resource = "hrm.shifts";
@@ -88,16 +72,13 @@ internal static class ShiftEndpoints
         var group = app.MapGroup("/api/hrm/shifts").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.shifts.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.shifts.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.shifts.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.shifts.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.shifts.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.shifts.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.shifts.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.shifts.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapDelete("/{id:guid}", DeleteAsync).WithName("hrm.shifts.delete").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "delete", "hrm.shifts.delete"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ShiftListQuery query, global::Erp.Hrm.Application.Generated.IShiftRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.shifts.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ShiftFilter { CompanyId = query.CompanyId, PolicyId = query.PolicyId, IsActive = query.IsActive, Sort = query.Sort, Search = query.Search }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ShiftFilter { CompanyId = query.CompanyId, PolicyId = query.PolicyId, PreviousShiftId = query.PreviousShiftId, IsActive = query.IsActive, Sort = query.Sort, Search = query.Search }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ShiftAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
@@ -107,65 +88,6 @@ internal static class ShiftEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ShiftAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ShiftWriteRequest request, global::Erp.Hrm.Application.Generated.IShiftRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.shifts.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ShiftAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.Shift();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/shifts/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ShiftAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ShiftWriteRequest request, global::Erp.Hrm.Application.Generated.IShiftRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.shifts.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.ShiftAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ShiftAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> DeleteAsync(global::System.Guid id, long? rowVersion, global::Erp.Hrm.Application.Generated.IShiftRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.shifts.delete", async () =>
-        {
-            if (rowVersion is null)
-            {
-                return GeneratedEndpointSupport.Invalid(["rowVersion"]);
-            }
-
-            var deleted = await repository.SoftDeleteAsync(id, rowVersion.Value, cancellationToken).ConfigureAwait(false);
-            return deleted ? TypedResults.NoContent() : GeneratedEndpointSupport.NotFound();
         }, cancellationToken);
 
     private static ShiftResponse ToResponse(global::Erp.Hrm.Domain.Generated.Shift row) => new()
@@ -183,6 +105,9 @@ internal static class ShiftEndpoints
         Segments = row.Segments.RootElement.Clone(),
         MinFullDayMinutes = row.MinFullDayMinutes,
         PolicyId = row.PolicyId,
+        ValidFrom = row.ValidFrom,
+        ValidTo = row.ValidTo,
+        PreviousShiftId = row.PreviousShiftId,
         IsActive = row.IsActive,
         IsDeleted = row.IsDeleted,
         DeletedAt = row.DeletedAt,
@@ -193,159 +118,4 @@ internal static class ShiftEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(ShiftWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.Code is null && (!update || access.CanEdit("code")))
-        {
-            errors.Add("code");
-        }
-        if (request.NameI18n is null && (!update || access.CanEdit("name_i18n")))
-        {
-            errors.Add("nameI18n");
-        }
-        if (request.ShiftType is null && (!update || access.CanEdit("shift_type")))
-        {
-            errors.Add("shiftType");
-        }
-        if (request.Segments is null && (!update || access.CanEdit("segments")))
-        {
-            errors.Add("segments");
-        }
-        if (request.MinFullDayMinutes is null && (!update || access.CanEdit("min_full_day_minutes")))
-        {
-            errors.Add("minFullDayMinutes");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(ShiftWriteRequest request, global::Erp.Hrm.Domain.Generated.Shift row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("code"))
-        {
-            row.Code = request.Code!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Code, row.Code, update))
-        {
-            denied.Add("code");
-        }
-        if (access.CanEdit("name_i18n"))
-        {
-            row.NameI18n = GeneratedEndpointSupport.ToDocument(request.NameI18n)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.NameI18n, row.NameI18n, update))
-        {
-            denied.Add("nameI18n");
-        }
-        if (access.CanEdit("shift_type"))
-        {
-            row.ShiftType = request.ShiftType!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ShiftType, row.ShiftType, update))
-        {
-            denied.Add("shiftType");
-        }
-        if (access.CanEdit("start_time"))
-        {
-            row.StartTime = request.StartTime;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StartTime, row.StartTime, update))
-        {
-            denied.Add("startTime");
-        }
-        if (access.CanEdit("end_time"))
-        {
-            row.EndTime = request.EndTime;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EndTime, row.EndTime, update))
-        {
-            denied.Add("endTime");
-        }
-        if (access.CanEdit("core_start"))
-        {
-            row.CoreStart = request.CoreStart;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CoreStart, row.CoreStart, update))
-        {
-            denied.Add("coreStart");
-        }
-        if (access.CanEdit("core_end"))
-        {
-            row.CoreEnd = request.CoreEnd;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CoreEnd, row.CoreEnd, update))
-        {
-            denied.Add("coreEnd");
-        }
-        if (access.CanEdit("crosses_midnight"))
-        {
-            if (request.CrossesMidnight is not null)
-            {
-                row.CrossesMidnight = request.CrossesMidnight!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CrossesMidnight, row.CrossesMidnight, update))
-        {
-            denied.Add("crossesMidnight");
-        }
-        if (access.CanEdit("segments"))
-        {
-            row.Segments = GeneratedEndpointSupport.ToDocument(request.Segments)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Segments, row.Segments, update))
-        {
-            denied.Add("segments");
-        }
-        if (access.CanEdit("min_full_day_minutes"))
-        {
-            row.MinFullDayMinutes = request.MinFullDayMinutes!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.MinFullDayMinutes, row.MinFullDayMinutes, update))
-        {
-            denied.Add("minFullDayMinutes");
-        }
-        if (access.CanEdit("policy_id"))
-        {
-            row.PolicyId = request.PolicyId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PolicyId, row.PolicyId, update))
-        {
-            denied.Add("policyId");
-        }
-        if (access.CanEdit("is_active"))
-        {
-            if (request.IsActive is not null)
-            {
-                row.IsActive = request.IsActive!.Value;
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.IsActive, row.IsActive, update))
-        {
-            denied.Add("isActive");
-        }
-        return denied;
-    }
 }

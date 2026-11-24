@@ -51,6 +51,15 @@ public sealed partial class Shift : global::Erp.BuildingBlocks.Domain.Entities.I
     /// <summary>policy_id: fk hrm.policies (attendance policy: grace, thresholds, rounding)</summary>
     public global::System.Guid? PolicyId { get; set; }
 
+    /// <summary>valid_from: first day this version applies; null means from the beginning (S1.28a)</summary>
+    public global::System.DateOnly? ValidFrom { get; set; }
+
+    /// <summary>valid_to: last day this version applies; null means open-ended (S1.28a)</summary>
+    public global::System.DateOnly? ValidTo { get; set; }
+
+    /// <summary>previous_shift_id: fk hrm.shifts; the version this one replaced (S1.28a)</summary>
+    public global::System.Guid? PreviousShiftId { get; set; }
+
     /// <summary>is_active</summary>
     public bool IsActive { get; set; } = true;
 

@@ -52,8 +52,16 @@
   "hrm.policy.param.probation.extension_months_max": "Longest extension (months)",
   "hrm.policy.param.probation.months": "Probation (months)",
   "hrm.policy.param.probation.reviewer": "Who reviews",
+  "hrm.policy.param.shift.alt_off_days": "Off days in the other week (1 = Monday to 7 = Sunday)",
+  "hrm.policy.param.shift.anchor_date": "Counted from this date (yyyy-mm-dd)",
+  "hrm.policy.param.shift.cycle_days": "Days in the cycle",
+  "hrm.policy.param.shift.grace_minutes": "Grace minutes (shown only)",
+  "hrm.policy.param.shift.min_rest_minutes": "Least rest between two shifts (minutes; leave empty for no check)",
+  "hrm.policy.param.shift.off_days": "Off days (weekdays 1 = Monday to 7 = Sunday; or places in the cycle)",
+  "hrm.policy.param.shift.weekly_off_kind": "Kind of weekly off",
   "hrm.policy.type.notice_period": "Notice period",
   "hrm.policy.type.probation": "Probation",
+  "hrm.policy.type.shift": "Shifts and weekly off",
   "permissions.hrm.policies.approve": "Approve activations of policy versions and assignments made by someone else",
   "permissions.hrm.policies.manage": "Create policies, edit and activate their versions, retire them and activate policy assignments"
 }

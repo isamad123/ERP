@@ -22,6 +22,9 @@ internal sealed class RosterConfiguration : IEntityTypeConfiguration<global::Erp
         builder.Property(e => e.OrgUnitId).HasColumnName("org_unit_id").HasColumnType("uuid");
         builder.Property(e => e.PeriodStart).HasColumnName("period_start").HasColumnType("date");
         builder.Property(e => e.PeriodEnd).HasColumnName("period_end").HasColumnType("date");
+        builder.Property(e => e.PublishedAt).HasColumnName("published_at").HasColumnType("timestamptz");
+        builder.Property(e => e.PublishedBy).HasColumnName("published_by").HasColumnType("uuid");
+        builder.Property(e => e.CopiedFromRosterId).HasColumnName("copied_from_roster_id").HasColumnType("uuid");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
@@ -51,6 +54,10 @@ internal sealed class RosterRepository(
         if (filter.OrgUnitId is { } orgUnitIdFilter)
         {
             query = query.Where(e => e.OrgUnitId == orgUnitIdFilter);
+        }
+        if (filter.CopiedFromRosterId is { } copiedFromRosterIdFilter)
+        {
+            query = query.Where(e => e.CopiedFromRosterId == copiedFromRosterIdFilter);
         }
         if (filter.Status is { } statusFilter)
         {
