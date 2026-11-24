@@ -2,6 +2,7 @@ using System.Data.Common;
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
+using System.Xml;
 using Sylvan.Data.Csv;
 using Sylvan.Data.Excel;
 
@@ -20,7 +21,7 @@ public sealed record ImportLimits(long MaxUnpackedBytes, int MaxPhysicalRows, in
     public const int MaxRatio = 100;
     public const int BlankRowMargin = 10_000;
 
-    /// <summary>The unpacked size of the shared strings and the sheets: ten times the upload limit, at most 200 MB.</summary>
+    /// <summary>The unpacked size of all the parts of a package: ten times the upload limit, at most 200 MB.</summary>
     public static long UnpackedFor(long maxUploadBytes) => Math.Min(maxUploadBytes * 10, 200L * 1024 * 1024);
 
     public static ImportLimits For(long maxUploadBytes, int maxRows) => new(UnpackedFor(maxUploadBytes), maxRows + BlankRowMargin);
@@ -87,7 +88,7 @@ public sealed class ImportSheet : IDisposable
         {
             return _reader.Read();
         }
-        catch (Exception e) when (e is CsvRecordTooLargeException or InvalidDataException or FormatException)
+        catch (Exception e) when (e is CsvRecordTooLargeException or InvalidDataException or FormatException or XmlException or EndOfStreamException)
         {
             throw new ImportFileException("errors.import.unsupported_file");
         }
@@ -95,12 +96,22 @@ public sealed class ImportSheet : IDisposable
 
     private string? Cell(int i)
     {
-        if (_reader.IsDBNull(i))
+        object v;
+        try
         {
-            return null;
+            // An Excel reader loads shared strings when a cell first needs them, so a damaged or cut part shows up here, not in Read.
+            if (_reader.IsDBNull(i))
+            {
+                return null;
+            }
+
+            v = _reader.GetValue(i);
+        }
+        catch (Exception e) when (e is InvalidDataException or FormatException or XmlException or EndOfStreamException)
+        {
+            throw new ImportFileException("errors.import.unsupported_file");
         }
 
-        var v = _reader.GetValue(i);
         return v switch
         {
             // One character over the limit is kept, so the row check can tell "too long" from "exactly at the limit" (errors.import.cell_too_long).
@@ -157,14 +168,14 @@ public static class ImportFileReader
                     throw new ImportFileException("errors.import.too_large");
                 }
 
-                var name = entry.FullName;
-                if (string.Equals(name, "xl/sharedStrings.xml", StringComparison.OrdinalIgnoreCase) || name.StartsWith("xl/worksheets/", StringComparison.OrdinalIgnoreCase))
+                // Every part counts, whatever its name: the package's relationships may give the shared strings or a sheet any path
+                // (xl/strings.xml), so a check by name could be walked round (S1.16a review follow-up). The declared size is enough:
+                // the zip reader stops unpacking a part at its declared size, so a part that declares less than it holds is cut short
+                // (and then refused as unreadable), never unpacked in full.
+                unpacked += entry.Length;
+                if (unpacked > limits.MaxUnpackedBytes)
                 {
-                    unpacked += entry.Length;
-                    if (unpacked > limits.MaxUnpackedBytes)
-                    {
-                        throw new ImportFileException("errors.import.too_large");
-                    }
+                    throw new ImportFileException("errors.import.too_large");
                 }
             }
         }
@@ -210,7 +221,7 @@ public static class ImportFileReader
             var csv = CsvDataReader.Create(text, new CsvDataReaderOptions { Delimiter = delimiter, HasHeaders = true, MaxBufferSize = 1024 * 1024 });
             return new ImportSheet(csv, stream, limits);
         }
-        catch (Exception e) when (e is InvalidDataException or CsvRecordTooLargeException or FormatException or EndOfStreamException)
+        catch (Exception e) when (e is InvalidDataException or CsvRecordTooLargeException or FormatException or EndOfStreamException or XmlException)
         {
             stream.Dispose();
             throw new ImportFileException("errors.import.unsupported_file");
