@@ -13,18 +13,6 @@
     {
       "action": "read",
       "permission": "hrm.shifts.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.shifts.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.shifts.update"
-    },
-    {
-      "action": "delete",
-      "permission": "hrm.shifts.delete"
     }
   ],
   "companyScoped": true,
@@ -54,6 +42,7 @@
     "ck_shifts_shift_type": "shiftType",
     "fk_shifts_company_id": "companyId",
     "fk_shifts_policy_id": "policyId",
+    "fk_shifts_previous_shift_id": "previousShiftId",
     "uq_shifts_company_id_code": "code",
     "uq_shifts_company_id_id": "id"
   },
@@ -217,6 +206,37 @@
       "filter": true,
       "labelKey": "fields.hrm.shifts.policy_id",
       "references": "hrm.policies"
+    },
+    {
+      "column": "valid_from",
+      "field": "validFrom",
+      "kind": "Date",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.shifts.valid_from"
+    },
+    {
+      "column": "valid_to",
+      "field": "validTo",
+      "kind": "Date",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.shifts.valid_to"
+    },
+    {
+      "column": "previous_shift_id",
+      "field": "previousShiftId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": true,
+      "labelKey": "fields.hrm.shifts.previous_shift_id",
+      "references": "hrm.shifts"
     },
     {
       "column": "is_active",

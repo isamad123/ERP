@@ -123,7 +123,7 @@ public static class ApiHost
         services.AddHrmPoliciesApi();
         services.AddScoped<Erp.Kernel.Contracts.Org.IOrgStructure, Erp.Kernel.Infrastructure.Org.OrgStructure>();
         services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldCatalog, Erp.Kernel.Infrastructure.Metadata.CustomFieldCatalog>();
-        services.AddHrmAttendance().AddHrmAttendanceApi(); // S1.27a attendance capture
+        services.AddHrmAttendance().AddHrmAttendanceApi().AddHrmRostering(); // S1.27a attendance capture, S1.28a shifts and rosters
         services.AddSingleton<Erp.Kernel.Contracts.Workflow.IWorkflowDocumentTypeSource>(new WorkflowManifestSource(EmploymentServices.WorkflowManifest));
         services.AddSingleton(new NotificationManifestSource(EmploymentServices.NotificationManifest)); // S1.20c reminders
         services.AddScoped<Erp.Kernel.Contracts.Identity.IUserDirectory, Erp.Kernel.Infrastructure.Identity.UserDirectory>();
@@ -278,6 +278,7 @@ public static class ApiHost
         api.MapHrmPositionEndpoints();
         api.MapHrmPolicyEndpoints();
         api.MapHrmAttendanceEndpoints(); // S1.27a
+        api.MapHrmRosterEndpoints(); // S1.28a
         api.MapHrmPayEndpoints(); // S1.34a pay groups, calendar and readiness
         return app;
     }

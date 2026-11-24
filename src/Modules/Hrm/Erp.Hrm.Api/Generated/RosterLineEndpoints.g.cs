@@ -21,26 +21,12 @@ public sealed class RosterLineResponse
     public global::System.Guid? ShiftId { get; init; }
     public string DayType { get; init; } = null!;
     public string RosterStatus { get; init; } = null!;
+    public string? Reason { get; init; }
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for hrm.roster_lines. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class RosterLineWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public global::System.Guid? RosterId { get; init; }
-    public global::System.Guid? EmploymentId { get; init; }
-    public global::System.DateOnly? WorkDate { get; init; }
-    public global::System.Guid? ShiftId { get; init; }
-    public string? DayType { get; init; }
-    public string? RosterStatus { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for hrm.roster_lines.</summary>
@@ -62,7 +48,7 @@ public sealed class RosterLineListQuery
     public string? Sort { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.roster_lines: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.roster_lines: read. Answers pass through field security (S1.06).</summary>
 internal static class RosterLineEndpoints
 {
     private const string Resource = "hrm.roster_lines";
@@ -72,8 +58,6 @@ internal static class RosterLineEndpoints
         var group = app.MapGroup("/api/hrm/roster-lines").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.roster_lines.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.roster_lines.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.roster_lines.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.roster_lines.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.roster_lines.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.roster_lines.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.roster_lines.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.roster_lines.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] RosterLineListQuery query, global::Erp.Hrm.Application.Generated.IRosterLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -92,53 +76,6 @@ internal static class RosterLineEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.RosterLineAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(RosterLineWriteRequest request, global::Erp.Hrm.Application.Generated.IRosterLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.roster_lines.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.RosterLineAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.RosterLine();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/roster-lines/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.RosterLineAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, RosterLineWriteRequest request, global::Erp.Hrm.Application.Generated.IRosterLineRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.roster_lines.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.RosterLineAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.RosterLineAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static RosterLineResponse ToResponse(global::Erp.Hrm.Domain.Generated.RosterLine row) => new()
     {
         Id = row.Id,
@@ -149,111 +86,11 @@ internal static class RosterLineEndpoints
         ShiftId = row.ShiftId,
         DayType = row.DayType,
         RosterStatus = row.RosterStatus,
+        Reason = row.Reason,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
         UpdatedAt = row.UpdatedAt,
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(RosterLineWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.RosterId is null && (!update || access.CanEdit("roster_id")))
-        {
-            errors.Add("rosterId");
-        }
-        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
-        {
-            errors.Add("employmentId");
-        }
-        if (request.WorkDate is null && (!update || access.CanEdit("work_date")))
-        {
-            errors.Add("workDate");
-        }
-        if (request.DayType is null && (!update || access.CanEdit("day_type")))
-        {
-            errors.Add("dayType");
-        }
-        if (request.RosterStatus is null && (!update || access.CanEdit("roster_status")))
-        {
-            errors.Add("rosterStatus");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(RosterLineWriteRequest request, global::Erp.Hrm.Domain.Generated.RosterLine row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("roster_id"))
-        {
-            row.RosterId = request.RosterId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RosterId, row.RosterId, update))
-        {
-            denied.Add("rosterId");
-        }
-        if (access.CanEdit("employment_id"))
-        {
-            row.EmploymentId = request.EmploymentId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
-        {
-            denied.Add("employmentId");
-        }
-        if (access.CanEdit("work_date"))
-        {
-            row.WorkDate = request.WorkDate!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkDate, row.WorkDate, update))
-        {
-            denied.Add("workDate");
-        }
-        if (access.CanEdit("shift_id"))
-        {
-            row.ShiftId = request.ShiftId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ShiftId, row.ShiftId, update))
-        {
-            denied.Add("shiftId");
-        }
-        if (access.CanEdit("day_type"))
-        {
-            row.DayType = request.DayType!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DayType, row.DayType, update))
-        {
-            denied.Add("dayType");
-        }
-        if (access.CanEdit("roster_status"))
-        {
-            row.RosterStatus = request.RosterStatus!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RosterStatus, row.RosterStatus, update))
-        {
-            denied.Add("rosterStatus");
-        }
-        return denied;
-    }
 }

@@ -19,26 +19,15 @@ public sealed class RosterResponse
     public global::System.Guid? OrgUnitId { get; init; }
     public global::System.DateOnly PeriodStart { get; init; }
     public global::System.DateOnly PeriodEnd { get; init; }
+    public global::System.DateTimeOffset? PublishedAt { get; init; }
+    public global::System.Guid? PublishedBy { get; init; }
+    public global::System.Guid? CopiedFromRosterId { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for hrm.rosters. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class RosterWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public string? Name { get; init; }
-    public global::System.Guid? OrgUnitId { get; init; }
-    public global::System.DateOnly? PeriodStart { get; init; }
-    public global::System.DateOnly? PeriodEnd { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for hrm.rosters.</summary>
@@ -52,13 +41,15 @@ public sealed class RosterListQuery
 
     public global::System.Guid? OrgUnitId { get; init; }
 
+    public global::System.Guid? CopiedFromRosterId { get; init; }
+
     public string? Status { get; init; }
 
     /// <summary>Case-insensitive text found in name.</summary>
     public string? Search { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.rosters: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.rosters: read. Answers pass through field security (S1.06).</summary>
 internal static class RosterEndpoints
 {
     private const string Resource = "hrm.rosters";
@@ -68,15 +59,13 @@ internal static class RosterEndpoints
         var group = app.MapGroup("/api/hrm/rosters").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.rosters.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.rosters.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.rosters.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.rosters.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.rosters.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.rosters.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.rosters.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.rosters.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] RosterListQuery query, global::Erp.Hrm.Application.Generated.IRosterRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.rosters.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.RosterFilter { CompanyId = query.CompanyId, OrgUnitId = query.OrgUnitId, Status = query.Status, Search = query.Search }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.RosterFilter { CompanyId = query.CompanyId, OrgUnitId = query.OrgUnitId, CopiedFromRosterId = query.CopiedFromRosterId, Status = query.Status, Search = query.Search }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.RosterAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
@@ -88,53 +77,6 @@ internal static class RosterEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.RosterAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(RosterWriteRequest request, global::Erp.Hrm.Application.Generated.IRosterRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.rosters.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.RosterAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.Roster();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/rosters/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.RosterAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, RosterWriteRequest request, global::Erp.Hrm.Application.Generated.IRosterRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.rosters.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.RosterAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.RosterAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static RosterResponse ToResponse(global::Erp.Hrm.Domain.Generated.Roster row) => new()
     {
         Id = row.Id,
@@ -143,6 +85,9 @@ internal static class RosterEndpoints
         OrgUnitId = row.OrgUnitId,
         PeriodStart = row.PeriodStart,
         PeriodEnd = row.PeriodEnd,
+        PublishedAt = row.PublishedAt,
+        PublishedBy = row.PublishedBy,
+        CopiedFromRosterId = row.CopiedFromRosterId,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -150,93 +95,4 @@ internal static class RosterEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(RosterWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.Name is null && (!update || access.CanEdit("name")))
-        {
-            errors.Add("name");
-        }
-        if (request.PeriodStart is null && (!update || access.CanEdit("period_start")))
-        {
-            errors.Add("periodStart");
-        }
-        if (request.PeriodEnd is null && (!update || access.CanEdit("period_end")))
-        {
-            errors.Add("periodEnd");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(RosterWriteRequest request, global::Erp.Hrm.Domain.Generated.Roster row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("name"))
-        {
-            row.Name = request.Name!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Name, row.Name, update))
-        {
-            denied.Add("name");
-        }
-        if (access.CanEdit("org_unit_id"))
-        {
-            row.OrgUnitId = request.OrgUnitId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OrgUnitId, row.OrgUnitId, update))
-        {
-            denied.Add("orgUnitId");
-        }
-        if (access.CanEdit("period_start"))
-        {
-            row.PeriodStart = request.PeriodStart!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodStart, row.PeriodStart, update))
-        {
-            denied.Add("periodStart");
-        }
-        if (access.CanEdit("period_end"))
-        {
-            row.PeriodEnd = request.PeriodEnd!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodEnd, row.PeriodEnd, update))
-        {
-            denied.Add("periodEnd");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
 }

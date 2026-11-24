@@ -4783,15 +4783,18 @@ Shift or weekly off per employee per day. Requirements: ATT-07. Source: hrm-time
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| reason | text | yes |  | why a day is worked on a rest day, or why a published day was changed (S1.28a) |
 
 Constraints:
 
 - `ck_roster_lines_day_type` CHECK ((day_type = ANY (ARRAY['working'::text, 'weekly_off'::text, 'holiday'::text])))
+- `ck_roster_lines_shift` CHECK (((day_type = 'working'::text) = (shift_id IS NOT NULL)))
 - `fk_roster_lines_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_roster_lines_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
 - `fk_roster_lines_roster_id` FOREIGN KEY (company_id, roster_id) REFERENCES hrm.rosters(company_id, id)
 - `fk_roster_lines_shift_id` FOREIGN KEY (company_id, shift_id) REFERENCES hrm.shifts(company_id, id)
 - `pk_roster_lines` PRIMARY KEY (id)
+- `uq_roster_lines_roster_id_employment_id_work_date` UNIQUE (roster_id, employment_id, work_date)
 
 Indexes:
 
@@ -4801,6 +4804,10 @@ Indexes:
 - `ix_roster_lines_company_id_shift_id` CREATE INDEX ix_roster_lines_company_id_shift_id ON hrm.roster_lines USING btree (company_id, shift_id)
 - `ix_roster_lines_employment_id_work_date` CREATE INDEX ix_roster_lines_employment_id_work_date ON hrm.roster_lines USING btree (employment_id, work_date)
 - `uq_roster_lines_employment_id_work_date` CREATE UNIQUE INDEX uq_roster_lines_employment_id_work_date ON hrm.roster_lines USING btree (employment_id, work_date) WHERE (roster_status = 'published'::text)
+
+Triggers:
+
+- `tg_roster_lines_published` CREATE TRIGGER tg_roster_lines_published BEFORE INSERT OR DELETE OR UPDATE ON hrm.roster_lines FOR EACH ROW EXECUTE FUNCTION hrm.tg_roster_lines_published()
 
 ### hrm.rosters
 
@@ -4820,17 +4827,23 @@ Requirements: ATT-07. Source: hrm-time.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| published_at | timestamp with time zone | yes |  | when the roster was published (S1.28a) |
+| published_by | uuid | yes |  | the user who published it (S1.28a) |
+| copied_from_roster_id | uuid | yes |  | fk hrm.rosters; the roster this one was copied forward from (S1.28a) |
 
 Constraints:
 
+- `ck_rosters_period` CHECK ((period_end >= period_start))
 - `ck_rosters_status` CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'archived'::text])))
 - `fk_rosters_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
+- `fk_rosters_copied_from_roster_id` FOREIGN KEY (company_id, copied_from_roster_id) REFERENCES hrm.rosters(company_id, id)
 - `fk_rosters_org_unit_id` FOREIGN KEY (company_id, org_unit_id) REFERENCES org.org_units(company_id, id)
 - `pk_rosters` PRIMARY KEY (id)
 - `uq_rosters_company_id_id` UNIQUE (company_id, id)
 
 Indexes:
 
+- `ix_rosters_company_id_copied_from_roster_id` CREATE INDEX ix_rosters_company_id_copied_from_roster_id ON hrm.rosters USING btree (company_id, copied_from_roster_id)
 - `ix_rosters_company_id_org_unit_id` CREATE INDEX ix_rosters_company_id_org_unit_id ON hrm.rosters USING btree (company_id, org_unit_id)
 
 ### hrm.salary_bands
@@ -5124,21 +5137,27 @@ Requirements: ATT-06, ATT-09, ATT-16. Source: hrm-time.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| valid_from | date | yes |  | first day this version applies; null means from the beginning (S1.28a) |
+| valid_to | date | yes |  | last day this version applies; null means open-ended (S1.28a) |
+| previous_shift_id | uuid | yes |  | fk hrm.shifts; the version this one replaced (S1.28a) |
 
 Constraints:
 
 - `ck_shifts_code_code` CHECK ((((length(code) >= 1) AND (length(code) <= 40)) AND (code = btrim(code))))
 - `ck_shifts_name_i18n_object` CHECK ((jsonb_typeof(name_i18n) = 'object'::text))
 - `ck_shifts_shift_type` CHECK ((shift_type = ANY (ARRAY['fixed'::text, 'flexible'::text, 'rotating'::text, 'split'::text, 'night'::text, 'continuous'::text])))
+- `ck_shifts_version_dates` CHECK (((valid_from IS NULL) OR (valid_to IS NULL) OR (valid_to >= valid_from)))
 - `fk_shifts_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_shifts_policy_id` FOREIGN KEY (company_id, policy_id) REFERENCES hrm.policies(company_id, id)
+- `fk_shifts_previous_shift_id` FOREIGN KEY (company_id, previous_shift_id) REFERENCES hrm.shifts(company_id, id)
 - `pk_shifts` PRIMARY KEY (id)
 - `uq_shifts_company_id_id` UNIQUE (company_id, id)
 
 Indexes:
 
 - `ix_shifts_company_id_policy_id` CREATE INDEX ix_shifts_company_id_policy_id ON hrm.shifts USING btree (company_id, policy_id)
-- `uq_shifts_company_id_code` CREATE UNIQUE INDEX uq_shifts_company_id_code ON hrm.shifts USING btree (company_id, lower(code)) WHERE (NOT is_deleted)
+- `ix_shifts_company_id_previous_shift_id` CREATE INDEX ix_shifts_company_id_previous_shift_id ON hrm.shifts USING btree (company_id, previous_shift_id)
+- `uq_shifts_company_id_code` CREATE UNIQUE INDEX uq_shifts_company_id_code ON hrm.shifts USING btree (company_id, lower(code)) WHERE ((valid_to IS NULL) AND (NOT is_deleted))
 
 ### hrm.statutory_returns
 
@@ -7651,6 +7670,7 @@ Constraints:
 - `hrm.tg_positions_reporting_cycle` 
 - `hrm.tg_positions_value_checks` 
 - `hrm.tg_refuse_change` 
+- `hrm.tg_roster_lines_published` 
 - `hrm.todo_attendance_days_lock` Pending rule for hrm.attendance_days, owned by S1.31: Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26).
 - `hrm.todo_attendance_periods_lock` Pending rule for hrm.attendance_periods, owned by S1.31: A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments.
 - `hrm.todo_final_settlements_approval_needs_clearance` Pending rule for hrm.final_settlements, owned by S1.43: status may become approved only when clearance_status in (cleared, waived) (FR-XM-29)

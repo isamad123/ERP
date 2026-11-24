@@ -1,5 +1,5 @@
 {
- "_comment": "Notifiable events of the HR module (slice S1.11b1 format). S1.20c (CR-076 S1.20c detail; slice S1.20 Build item 13, FR-HRM-EMP-09, FR-HRM-EMP-10): reminders before a contract or a probation ends, raised by the daily job hrm.employment_terms_due, for the line manager (through the manager's user link) and the company's HR administrators. S1.34a (CR-087; FR-HRM-PAY-38): the reminder before a pay period's cut-off, raised by the daily job hrm.pay_cutoff_reminders for the company's payroll officers. Seeded into ntf.templates by migrate and provisioning (NotificationSetup); registered in both hosts. Urdu texts to be reviewed by a native speaker (R-062).",
+ "_comment": "Notifiable events of the HR module (slice S1.11b1 format). S1.20c (CR-076 S1.20c detail; slice S1.20 Build item 13, FR-HRM-EMP-09, FR-HRM-EMP-10): reminders before a contract or a probation ends, raised by the daily job hrm.employment_terms_due, for the line manager (through the manager's user link) and the company's HR administrators. S1.28a (CR-085; FR-HRM-ATT-07): hrm.roster.published, one per rostered employee when a roster is published or a day of it changes after publication, for the employee and the line manager (through their user links). S1.34a (CR-087; FR-HRM-PAY-38): the reminder before a pay period's cut-off, raised by the daily job hrm.pay_cutoff_reminders for the company's payroll officers. Seeded into ntf.templates by migrate and provisioning (NotificationSetup); registered in both hosts. Urdu texts to be reviewed by a native speaker (R-062).",
  "module": "hrm",
  "events": [
   {
@@ -58,6 +58,28 @@
    "texts": {
     "en": {"title": "Payroll cut-off on {cut_off_date}", "body": "Period {period_no} of pay group {pay_group_code} reaches its cut-off on {cut_off_date}. Check the readiness list and close the inputs."},
     "ur": {"title": "پے رول کی کٹ آف {cut_off_date} کو", "body": "تنخواہ گروپ {pay_group_code} کا دور {period_no} {cut_off_date} کو کٹ آف پر پہنچ رہا ہے۔ تیاری کی فہرست دیکھیں اور اندراجات بند کریں۔"}
+   }
+  },
+  {
+   "code": "hrm.roster.published",
+   "source": "hrm.roster.published",
+   "group": "system",
+   "mandatory": false,
+   "audited": true,
+   "link": "link",
+   "company": "company_id",
+   "fields": [
+    {"name": "roster_name", "type": "text", "class": "general"},
+    {"name": "period_start", "type": "date", "class": "general"},
+    {"name": "period_end", "type": "date", "class": "general"},
+    {"name": "employee_no", "type": "text", "class": "general"},
+    {"name": "reason", "type": "text", "class": "general"},
+    {"name": "company_id", "type": "company", "class": "general"}
+   ],
+   "audience": {"users": ["employee_user_id", "manager_user_id"]},
+   "texts": {
+    "en": {"title": "Roster {roster_name} published or changed", "body": "The roster {roster_name} ({period_start} to {period_end}) has days that concern employee {employee_no}. Open the roster to see the shifts. {reason}"},
+    "ur": {"title": "روسٹر {roster_name} شائع یا تبدیل ہوا", "body": "روسٹر {roster_name} ({period_start} تا {period_end}) میں ملازم {employee_no} سے متعلق دن ہیں۔ شفٹیں دیکھنے کے لیے روسٹر کھولیں۔ {reason}"}
    }
   }
  ]

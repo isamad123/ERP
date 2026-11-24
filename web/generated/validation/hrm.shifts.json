@@ -83,6 +83,21 @@
       "format": "uuid",
       "nullable": true
     },
+    "validFrom": {
+      "type": "string",
+      "format": "date",
+      "nullable": true
+    },
+    "validTo": {
+      "type": "string",
+      "format": "date",
+      "nullable": true
+    },
+    "previousShiftId": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
     "isActive": {
       "type": "boolean"
     }

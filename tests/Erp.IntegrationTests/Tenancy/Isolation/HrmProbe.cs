@@ -35,7 +35,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         Guid Position, long PositionVersion,
         Guid Policy, long PolicyVersion, Guid DraftPolicy, long DraftPolicyVersion, Guid Draft, long DraftVersion, DateOnly SetFrom,
         Guid Punching, Guid Location, string QrCode, string Badge,
-        Guid PayGroup, long PayGroupVersion, Guid Period, long PeriodVersion, string PeriodCutOff);
+        Guid PayGroup, long PayGroupVersion, Guid Period, long PeriodVersion, string PeriodCutOff,
+        Guid Shift, long ShiftVersion, Guid Roster, long RosterVersion);
 
     /// <summary>Where the probe hires (slice S1.20b): an org unit of a company and that company's branch.</summary>
     private sealed record Hire(Guid Company, Guid OrgUnit, Guid Branch);
@@ -48,7 +49,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
@@ -224,6 +225,20 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "PUT /api/hrm/pay-periods/{id:guid}" => ($"/api/hrm/pay-periods/{m.Period}", Json(new { cutOffDate = m.PeriodCutOff, rowVersion = m.PeriodVersion })),
             "GET /api/hrm/pay-calendar" => ("/api/hrm/pay-calendar", null),
             "GET /api/hrm/pay-periods/{id:guid}/readiness" => ($"/api/hrm/pay-periods/{m.Period}/readiness", null),
+            // S1.28a: shifts, the weekly-off days of A's employment, and A's draft roster with one working day.
+            "POST /api/hrm/shifts" => ("/api/hrm/shifts", Json(new
+            {
+                companyId = m.Org.Company, code = "SH" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe shift" }, shiftType = "fixed", startTime = "08:00", endTime = "16:00", crossesMidnight = false, minFullDayMinutes = 420,
+            })),
+            "PUT /api/hrm/shifts/{id:guid}" => ($"/api/hrm/shifts/{m.Shift}", Json(new { nameI18n = new { en = "Renamed probe shift" }, rowVersion = m.ShiftVersion })),
+            "GET /api/hrm/employments/{id:guid}/weekly-off" => ($"/api/hrm/employments/{m.Employment}/weekly-off?from=2030-03-04&to=2030-03-10", null),
+            "POST /api/hrm/rosters" => ("/api/hrm/rosters", Json(new { companyId = m.Org.Company, name = "Probe roster", orgUnitId = m.Org.OrgUnit, periodStart = "2030-04-01", periodEnd = "2030-04-07" })),
+            "PUT /api/hrm/rosters/{id:guid}" => ($"/api/hrm/rosters/{m.Roster}", Json(new { name = "Renamed probe roster", rowVersion = m.RosterVersion })),
+            "POST /api/hrm/rosters/{id:guid}/assign" => ($"/api/hrm/rosters/{m.Roster}/assign", Json(new { shiftId = m.Shift, employmentIds = new[] { m.Employment } })),
+            "POST /api/hrm/rosters/{id:guid}/copy-forward" => ($"/api/hrm/rosters/{m.Roster}/copy-forward", Json(new { })),
+            "PUT /api/hrm/rosters/{id:guid}/days" => ($"/api/hrm/rosters/{m.Roster}/days", Json(new { changes = new[] { new { employmentId = m.Employment, workDate = "2030-03-05", dayType = "weekly_off" } } })),
+            "GET /api/hrm/rosters/{id:guid}/checks" => ($"/api/hrm/rosters/{m.Roster}/checks", null),
+            "POST /api/hrm/rosters/{id:guid}/publish" => ($"/api/hrm/rosters/{m.Roster}/publish", Json(new { rowVersion = m.RosterVersion })),
             var key => throw new InvalidOperationException($"No probe target for HR endpoint {key}; extend HrmProbe."),
         };
     }
@@ -467,6 +482,10 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var groupId = group.GetProperty("id").GetGuid();
         await PostAsync(host, token, $"/api/hrm/pay-groups/{groupId}/periods/generate", new { taxYear = 2024 }, ct);
         var period = (await GetAsync(host, token, $"/api/hrm/pay-periods?payGroupId={groupId}", ct)).GetProperty("items")[0];
+        // S1.28a: a shift and a draft roster of the week of 4 March 2030 with one working day of the first employment.
+        var shift = await PostAsync(host, token, "/api/hrm/shifts", new { companyId = org.Company, code = "SH" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe shift" }, shiftType = "fixed", startTime = "08:00", endTime = "16:00", crossesMidnight = false, minFullDayMinutes = 420 }, ct);
+        var roster = await PostAsync(host, token, "/api/hrm/rosters", new { companyId = org.Company, name = "Probe week", orgUnitId = org.OrgUnit, periodStart = "2030-03-04", periodEnd = "2030-03-10" }, ct);
+        await PutAsync(host, token, $"/api/hrm/rosters/{roster.GetProperty("id").GetGuid()}/days", new { changes = new[] { new { employmentId = employment, workDate = "2030-03-04", dayType = "working", shiftId = shift.GetProperty("id").GetGuid() } } }, ct);
         return new Material(person, created.GetProperty("rowVersion").GetInt64(), into, identifier.Id, identifier.Version, contact.Id, contact.Version,
             address.Id, address.Version, relation.Id, relation.Version, qualification.Id, qualification.Version,
             match.GetProperty("id").GetGuid(), match.GetProperty("rowVersion").GetInt64(), created.GetProperty("personNo").GetString()!,
@@ -476,7 +495,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             position.GetProperty("id").GetGuid(), position.GetProperty("rowVersion").GetInt64(),
             policyId, policyVersion, draftPolicy.GetProperty("id").GetGuid(), draftPolicy.GetProperty("rowVersion").GetInt64(), draft.GetProperty("id").GetGuid(), draft.GetProperty("rowVersion").GetInt64(), setFrom,
             punching.GetProperty("id").GetGuid(), location, shown.GetProperty("code").GetString()!, badge,
-            groupId, group.GetProperty("rowVersion").GetInt64(), period.GetProperty("id").GetGuid(), period.GetProperty("rowVersion").GetInt64(), period.GetProperty("cutOffDate").GetString()!);
+            groupId, group.GetProperty("rowVersion").GetInt64(), period.GetProperty("id").GetGuid(), period.GetProperty("rowVersion").GetInt64(), period.GetProperty("cutOffDate").GetString()!,
+            shift.GetProperty("id").GetGuid(), shift.GetProperty("rowVersion").GetInt64(), roster.GetProperty("id").GetGuid(), roster.GetProperty("rowVersion").GetInt64());
     }
 
     private async Task OkAsync(string host, string token, string path, object body, CancellationToken ct)
@@ -493,6 +513,15 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var reply = await SendAsync(host, token, HttpMethod.Post, path, Json(body), hints: false, ct);
         return reply.Status == HttpStatusCode.Created ? JsonDocument.Parse(reply.Body).RootElement.Clone()
             : throw new InvalidOperationException($"HR probe material {path}: {(int)reply.Status} {Short(reply.Body)}");
+    }
+
+    private async Task PutAsync(string host, string token, string path, object body, CancellationToken ct)
+    {
+        var reply = await SendAsync(host, token, HttpMethod.Put, path, Json(body), hints: false, ct);
+        if (reply.Status != HttpStatusCode.OK)
+        {
+            throw new InvalidOperationException($"HR probe material {path}: {(int)reply.Status} {Short(reply.Body)}");
+        }
     }
 
     private async Task<JsonElement> GetAsync(string host, string token, string path, CancellationToken ct)

@@ -29991,13 +29991,25 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "reason",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
-        "uq_roster_lines_employment_id_work_date"
+        "uq_roster_lines_employment_id_work_date",
+        "uq_roster_lines_roster_id_employment_id_work_date"
       ],
       "checks": [
-        "ck_roster_lines_day_type"
+        "ck_roster_lines_day_type",
+        "ck_roster_lines_shift"
       ],
       "exclusions": [],
       "foreign_keys": [
@@ -30055,7 +30067,9 @@
         "ix_roster_lines_company_id_employment_id",
         "ix_roster_lines_company_id_shift_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_roster_lines_published"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.roster_lines"
@@ -30200,13 +30214,44 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "published_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "published_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "copied_from_roster_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
         "uq_rosters_company_id_id"
       ],
       "checks": [
-        "ck_rosters_status"
+        "ck_rosters_status",
+        "ck_rosters_period"
       ],
       "exclusions": [],
       "foreign_keys": [
@@ -30231,10 +30276,23 @@
             "company_id",
             "id"
           ]
+        },
+        {
+          "name": "fk_rosters_copied_from_roster_id",
+          "columns": [
+            "company_id",
+            "copied_from_roster_id"
+          ],
+          "target": "hrm.rosters",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
         }
       ],
       "indexes": [
-        "ix_rosters_company_id_org_unit_id"
+        "ix_rosters_company_id_org_unit_id",
+        "ix_rosters_company_id_copied_from_roster_id"
       ],
       "triggers": [],
       "append_only_updatable": [],
@@ -32076,6 +32134,36 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "valid_from",
+          "kind": "Date",
+          "type": "date",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "valid_to",
+          "kind": "Date",
+          "type": "date",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "previous_shift_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -32085,7 +32173,8 @@
       "checks": [
         "ck_shifts_code_code",
         "ck_shifts_name_i18n_object",
-        "ck_shifts_shift_type"
+        "ck_shifts_shift_type",
+        "ck_shifts_version_dates"
       ],
       "exclusions": [],
       "foreign_keys": [
@@ -32110,10 +32199,23 @@
             "company_id",
             "id"
           ]
+        },
+        {
+          "name": "fk_shifts_previous_shift_id",
+          "columns": [
+            "company_id",
+            "previous_shift_id"
+          ],
+          "target": "hrm.shifts",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
         }
       ],
       "indexes": [
-        "ix_shifts_company_id_policy_id"
+        "ix_shifts_company_id_policy_id",
+        "ix_shifts_company_id_previous_shift_id"
       ],
       "triggers": [],
       "append_only_updatable": [],
