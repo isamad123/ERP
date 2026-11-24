@@ -72,6 +72,7 @@ public sealed partial class HrmDbContext(DbContextOptions<HrmDbContext> options)
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.LoanConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.MandatoryTrainingRuleConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.NominationConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.OptionalHolidayChoiceConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.OutboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.OvertimeEntryConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.ParallelRunLineConfiguration());
@@ -194,6 +195,7 @@ public static class HrmGeneratedServices
         services.AddScoped<global::Erp.Hrm.Application.Generated.ILoanRepository, global::Erp.Hrm.Infrastructure.Generated.LoanRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IMandatoryTrainingRuleRepository, global::Erp.Hrm.Infrastructure.Generated.MandatoryTrainingRuleRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.INominationRepository, global::Erp.Hrm.Infrastructure.Generated.NominationRepository>();
+        services.AddScoped<global::Erp.Hrm.Application.Generated.IOptionalHolidayChoiceRepository, global::Erp.Hrm.Infrastructure.Generated.OptionalHolidayChoiceRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IOvertimeEntryRepository, global::Erp.Hrm.Infrastructure.Generated.OvertimeEntryRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IParallelRunLineRepository, global::Erp.Hrm.Infrastructure.Generated.ParallelRunLineRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IParallelRunRepository, global::Erp.Hrm.Infrastructure.Generated.ParallelRunRepository>();

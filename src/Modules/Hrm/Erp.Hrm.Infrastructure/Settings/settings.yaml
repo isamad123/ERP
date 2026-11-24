@@ -225,3 +225,31 @@ settings:
     name: {en: "Leave year starts in month", ur: "رخصت کا سال اس مہینے سے شروع"}
     description: {en: "The month (1 = January to 12 = December) in which the leave year starts", ur: "وہ مہینہ (1 = جنوری سے 12 = دسمبر) جس سے رخصت کا سال شروع ہوتا ہے"}
     help: {en: "Leave balances are counted per leave year. A yearly grant is given at the start of the leave year (or on joining), and the year-end carries forward, lapses or pays out what is left. A leave policy can give one leave type a different start month. Choose it before the first leave is granted: once a company has leave entries the month can no longer change, because past balances would move to other years.", ur: "رخصت کا بقایا ہر رخصتی سال کے حساب سے گنا جاتا ہے۔ سالانہ عطا رخصتی سال کے آغاز پر (یا شمولیت پر) دی جاتی ہے، اور سال کے اختتام پر بچی ہوئی رخصت آگے منتقل، ختم یا ادا کی جاتی ہے۔ رخصت کی پالیسی کسی ایک قسم کے لیے آغاز کا دوسرا مہینہ مقرر کر سکتی ہے۔ پہلی رخصت عطا ہونے سے پہلے اسے منتخب کریں: کمپنی میں رخصت کے اندراجات ہونے کے بعد مہینہ نہیں بدلا جا سکتا، کیونکہ پچھلا بقایا دوسرے سالوں میں چلا جائے گا۔"}
+  # S1.28b (CR-085 S1.28b detail; FR-HRM-ATT-15). Urdu texts to be reviewed by a native speaker (R-062).
+  - key: hrm.att.hijri_offset_days
+    type: int
+    default: 0
+    validation: {min: -1, max: 1}
+    layers: [tenant, company]
+    area: hr.attendance
+    name: {en: "Hijri date correction (days)", ur: "ہجری تاریخ کی تصحیح (دن)"}
+    description: {en: "Moves the Hijri date shown beside each holiday by one day earlier or later, to follow the moon sighting", ur: "ہر چھٹی کے ساتھ دکھائی جانے والی ہجری تاریخ کو چاند دیکھنے کے مطابق ایک دن آگے یا پیچھے کرتا ہے"}
+    help: {en: "Hijri dates are worked out from the Umm al-Qura calendar and shown for information only; they never decide pay or attendance. Where the moon is sighted a day earlier or later, choose -1 or +1. The holiday date itself is never moved.", ur: "ہجری تاریخیں ام القریٰ کیلنڈر سے نکالی جاتی ہیں اور صرف معلومات کے لیے دکھائی جاتی ہیں؛ وہ تنخواہ یا حاضری کا فیصلہ کبھی نہیں کرتیں۔ جہاں چاند ایک دن پہلے یا بعد نظر آئے وہاں -1 یا +1 چنیں۔ چھٹی کی اپنی تاریخ کبھی نہیں بدلتی۔"}
+  - key: hrm.att.optional_holidays_per_year
+    type: int
+    default: 0
+    validation: {min: 0, max: 60}
+    layers: [tenant, company]
+    area: hr.attendance
+    name: {en: "Optional holidays per year", ur: "سال میں اختیاری چھٹیاں"}
+    description: {en: "How many optional holidays each employee may choose in a year; 0 means employees cannot choose any", ur: "ہر ملازم سال میں کتنی اختیاری چھٹیاں چن سکتا ہے؛ 0 کا مطلب ہے کوئی نہیں چن سکتا"}
+    help: {en: "No number is filled in for you: until you set one, optional holidays on the calendar cannot be chosen. The limit counts the holidays of one calendar year for one employment.", ur: "کوئی عدد خود سے نہیں بھرا جاتا: جب تک آپ مقرر نہ کریں، کیلنڈر کی اختیاری چھٹیاں چنی نہیں جا سکتیں۔ حد ایک ملازمت کے لیے ایک کیلنڈر سال کی چھٹیوں پر گنی جاتی ہے۔"}
+  - key: hrm.att.optional_holiday_cutoff_days
+    type: int
+    default: 0
+    validation: {min: 0, max: 365}
+    layers: [tenant, company]
+    area: hr.attendance
+    name: {en: "Optional holiday choice closes (days before)", ur: "اختیاری چھٹی کا انتخاب بند (دن پہلے)"}
+    description: {en: "A choice can be made or changed until this many days before the holiday", ur: "انتخاب چھٹی سے اتنے دن پہلے تک کیا یا بدلا جا سکتا ہے"}
+    help: {en: "With 0 a choice can be changed up to the day of the holiday itself. With 7 it closes seven days before. The rule applies to each holiday on its own.", ur: "0 ہو تو انتخاب چھٹی کے دن تک بدلا جا سکتا ہے۔ 7 ہو تو چھٹی سے سات دن پہلے بند ہو جاتا ہے۔ قاعدہ ہر چھٹی پر الگ لاگو ہوتا ہے۔"}

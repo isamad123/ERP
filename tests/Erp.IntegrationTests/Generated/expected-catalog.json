@@ -21059,6 +21059,186 @@
     {
       "database": "tenant",
       "schema": "hrm",
+      "name": "optional_holiday_choices",
+      "module": "hrm",
+      "traits": [
+        "std",
+        "co"
+      ],
+      "requirements": [
+        "ATT-15"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "company_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "employment_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "holiday_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "holiday_year",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "chosen_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [
+        "uq_optional_holiday_choices_employment_id_holiday_id"
+      ],
+      "checks": [
+        "ck_optional_holiday_choices_year"
+      ],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_optional_holiday_choices_company_id",
+          "columns": [
+            "company_id"
+          ],
+          "target": "org.companies",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "fk_optional_holiday_choices_employment_id",
+          "columns": [
+            "company_id",
+            "employment_id"
+          ],
+          "target": "hrm.employments",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_optional_holiday_choices_holiday_id",
+          "columns": [
+            "holiday_id"
+          ],
+          "target": "ref.holidays",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_optional_holiday_choices_employment_id_holiday_year",
+        "ix_optional_holiday_choices_company_id",
+        "ix_optional_holiday_choices_company_id_employment_id",
+        "ix_optional_holiday_choices_holiday_id"
+      ],
+      "triggers": [],
+      "append_only_updatable": [],
+      "has_api": true,
+      "full_name": "hrm.optional_holiday_choices"
+    },
+    {
+      "database": "tenant",
+      "schema": "hrm",
       "name": "outbox_messages",
       "module": "hrm",
       "traits": [],
