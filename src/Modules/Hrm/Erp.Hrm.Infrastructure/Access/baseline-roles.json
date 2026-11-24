@@ -48,7 +48,11 @@
         "hrm.leave_types.read",
         "hrm.shifts.read",
         "aud.history.view",
-        "hrm.attendance.punch"
+        "hrm.attendance.punch",
+        "hrm.holidays.read",
+        "hrm.optional_holidays.choose",
+        "hrm.optional_holiday_choices.read",
+        "hrm.shift_effective.read"
       ],
       "scopes": {
         "*": "own",
@@ -86,7 +90,9 @@
         "hrm.leave_requests.read",
         "hrm.leave_request_days.read",
         "hrm.leave_ledger.read",
-        "aud.history.view"
+        "aud.history.view",
+        "hrm.holidays.read",
+        "hrm.shift_effective.read"
       ],
       "scopes": {
         "*": "direct_team"
@@ -237,7 +243,11 @@
         "hrm.device_user_maps.end",
         "hrm.device_user_maps.removal",
         "hrm.unmapped_punches.discard",
-        "hrm.unmapped_punches.read"
+        "hrm.unmapped_punches.read",
+        "hrm.holidays.read",
+        "hrm.optional_holidays.choose",
+        "hrm.optional_holiday_choices.read",
+        "hrm.shift_effective.read"
       ],
       "scopes": {
         "*": "all",

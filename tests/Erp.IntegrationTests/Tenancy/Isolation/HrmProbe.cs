@@ -262,6 +262,11 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "PUT /api/hrm/rosters/{id:guid}/days" => ($"/api/hrm/rosters/{m.Roster}/days", Json(new { changes = new[] { new { employmentId = m.Employment, workDate = "2030-03-05", dayType = "weekly_off" } } })),
             "GET /api/hrm/rosters/{id:guid}/checks" => ($"/api/hrm/rosters/{m.Roster}/checks", null),
             "POST /api/hrm/rosters/{id:guid}/publish" => ($"/api/hrm/rosters/{m.Roster}/publish", Json(new { rowVersion = m.RosterVersion })),
+            // S1.28b: holidays with Hijri dates, an employment's holidays and optional-holiday choice, and the effective shift of a day.
+            "GET /api/hrm/holidays" => ($"/api/hrm/holidays?companyId={m.Org.Company}&year=2030", null),
+            "GET /api/hrm/employments/{id:guid}/holidays" => ($"/api/hrm/employments/{m.Employment}/holidays?year=2030", null),
+            "PUT /api/hrm/employments/{id:guid}/optional-holidays" => ($"/api/hrm/employments/{m.Employment}/optional-holidays", Json(new { year = 2030, holidayIds = Array.Empty<Guid>() })),
+            "GET /api/hrm/shifts/effective" => ($"/api/hrm/shifts/effective?employment={m.Employment}&date=2030-03-04", null),
             // S1.27b: devices, the signed push, device-user mapping, removal tasks, unmapped punches and the punch log.
             "GET /api/hrm/attendance/devices" => ($"/api/hrm/attendance/devices?companyId={m.Org.Company}", null),
             "POST /api/hrm/attendance/devices" => ("/api/hrm/attendance/devices", Json(new { companyId = m.Org.Company, locationId = m.Location, serialNo = "SN" + Guid.NewGuid().ToString("N")[..10], provider = "generic_push", credentials = PushSecret })),

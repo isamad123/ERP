@@ -59,11 +59,15 @@ public sealed class ShiftRequest
             .Where(p => p.Value.ValueKind == JsonValueKind.Null && Clearable.Contains(p.Name, StringComparer.OrdinalIgnoreCase))
             .Select(p => Clearable.First(c => string.Equals(c, p.Name, StringComparison.OrdinalIgnoreCase)))
             .ToList();
-        return nulled.Count == 0 ? request : new ShiftRequest
+
+        // The shift form of the screens is the generic one: its "valid from" field names the first day of a new version (S1.28b).
+        DateOnly? alias = request.EffectiveFrom is null && body.TryGetProperty("validFrom", out var valid) && valid.ValueKind == JsonValueKind.String
+            && DateOnly.TryParseExact(valid.GetString(), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var day) ? day : null;
+        return nulled.Count == 0 && alias is null ? request : new ShiftRequest
         {
             CompanyId = request.CompanyId, Code = request.Code, NameI18n = request.NameI18n, ShiftType = request.ShiftType, StartTime = request.StartTime, EndTime = request.EndTime,
             CoreStart = request.CoreStart, CoreEnd = request.CoreEnd, CrossesMidnight = request.CrossesMidnight, Segments = request.Segments, MinFullDayMinutes = request.MinFullDayMinutes,
-            PolicyId = request.PolicyId, IsActive = request.IsActive, EffectiveFrom = request.EffectiveFrom, RowVersion = request.RowVersion,
+            PolicyId = request.PolicyId, IsActive = request.IsActive, EffectiveFrom = request.EffectiveFrom ?? alias, RowVersion = request.RowVersion,
             Clear = [.. (request.Clear ?? []).Concat(nulled).Distinct(StringComparer.Ordinal)],
         };
     }
