@@ -51,7 +51,7 @@ function GroupList() {
   return (
     <ListPage metadata={metadata} columns={['code', 'nameI18n', 'frequency', 'currencyCode', 'companyId', 'isActive']}
       companies={{ activeId: activeCompany?.id ?? null, options }}
-      canCreate={writable && can('hrm.pay_groups.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')}
+      canCreate={writable && can('hrm.pay_groups.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')} canExport={can('itg.exports.run')}
       description={t('pay.groups.description')}
       onCreate={() => { void navigate(`${PAY_GROUPS_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${PAY_GROUPS_PATH}/${row.id}`); }}
       rowLabel={(row) => title(row)} />

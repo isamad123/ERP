@@ -36,6 +36,8 @@
     <!-- Slice S1.11b2: the fixed words of notification e-mails (button, footer) come from the notification texts. -->
     <EmbeddedResource Include="../Erp.Kernel.Contracts/Itg/Localization/import.en.json" LogicalName="Erp.Kernel.Import.en.json" WithCulture="false" />
     <EmbeddedResource Include="../Erp.Kernel.Contracts/Itg/Localization/import.ur.json" LogicalName="Erp.Kernel.Import.ur.json" WithCulture="false" />
+    <EmbeddedResource Include="../Erp.Kernel.Contracts/Itg/Localization/export.en.json" LogicalName="Erp.Kernel.Export.en.json" WithCulture="false" />
+    <EmbeddedResource Include="../Erp.Kernel.Contracts/Itg/Localization/export.ur.json" LogicalName="Erp.Kernel.Export.ur.json" WithCulture="false" />
     <EmbeddedResource Include="../Erp.Kernel.Contracts/Notifications/Localization/notifications.en.json" LogicalName="Erp.Kernel.Notifications.en.json" WithCulture="false" />
     <EmbeddedResource Include="../Erp.Kernel.Contracts/Notifications/Localization/notifications.ur.json" LogicalName="Erp.Kernel.Notifications.ur.json" WithCulture="false" />
     <EmbeddedResource Include="Entitlements/entitlement-keys.json" LogicalName="Erp.Kernel.Infrastructure.Entitlements.entitlement-keys.json" />

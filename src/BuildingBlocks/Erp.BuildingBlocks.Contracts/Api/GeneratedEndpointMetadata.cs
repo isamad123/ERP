@@ -29,6 +29,12 @@ public sealed record EntitlementMetadata(string FeatureKey, string Module)
 /// </summary>
 public sealed record AllowedWhenLockedMetadata;
 
+/// <summary>
+/// Marks an endpoint that changes data but still answers when the customer is read-only or locked: the export of what a person
+/// may read (FR-KRN-ENT-04, slice S1.16b). Its own permission check still applies.
+/// </summary>
+public sealed record AllowedWhenReadOnlyMetadata;
+
 /// <summary>One keyset page of results; <see cref="Next"/> is passed back as <c>after</c> to read the next page.</summary>
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, Guid? Next);
 

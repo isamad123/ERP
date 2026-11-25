@@ -11,6 +11,7 @@ public sealed record ExportJobFilter
 {
     public global::System.Guid? CompanyId { get; init; }
     public global::System.Guid? FileId { get; init; }
+    public global::System.Guid? JobRunId { get; init; }
     public string? Status { get; init; }
 }
 
@@ -42,6 +43,16 @@ public static class ExportJobAccess
         new("format", "Format", null),
         new("row_count", "RowCount", null),
         new("file_id", "FileId", null),
+        new("file_name", "FileName", null),
+        new("reason", "Reason", null),
+        new("sensitive_classes", "SensitiveClasses", null),
+        new("job_run_id", "JobRunId", null),
+        new("held_request_id", "HeldRequestId", null),
+        new("size_bytes", "SizeBytes", null),
+        new("error_key", "ErrorKey", null),
+        new("expires_at", "ExpiresAt", null),
+        new("started_at", "StartedAt", null),
+        new("finished_at", "FinishedAt", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

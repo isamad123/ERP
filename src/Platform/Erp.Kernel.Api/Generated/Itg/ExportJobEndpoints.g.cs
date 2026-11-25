@@ -20,27 +20,22 @@ public sealed class ExportJobResponse
     public string Format { get; init; } = null!;
     public int? RowCount { get; init; }
     public global::System.Guid? FileId { get; init; }
+    public string? FileName { get; init; }
+    public string? Reason { get; init; }
+    public string[]? SensitiveClasses { get; init; }
+    public global::System.Guid? JobRunId { get; init; }
+    public global::System.Guid? HeldRequestId { get; init; }
+    public int? SizeBytes { get; init; }
+    public string? ErrorKey { get; init; }
+    public global::System.DateTimeOffset? ExpiresAt { get; init; }
+    public global::System.DateTimeOffset? StartedAt { get; init; }
+    public global::System.DateTimeOffset? FinishedAt { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for itg.export_jobs. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class ExportJobWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public string? EntityType { get; init; }
-    public global::System.Text.Json.JsonElement? Filter { get; init; }
-    public string? Format { get; init; }
-    public int? RowCount { get; init; }
-    public global::System.Guid? FileId { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for itg.export_jobs.</summary>
@@ -54,10 +49,12 @@ public sealed class ExportJobListQuery
 
     public global::System.Guid? FileId { get; init; }
 
+    public global::System.Guid? JobRunId { get; init; }
+
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of itg.export_jobs: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of itg.export_jobs: read. Answers pass through field security (S1.06).</summary>
 internal static class ExportJobEndpoints
 {
     private const string Resource = "itg.export_jobs";
@@ -67,15 +64,13 @@ internal static class ExportJobEndpoints
         var group = app.MapGroup("/api/itg/export-jobs").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("itg.export_jobs.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "itg.export_jobs.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
         group.MapGet("/{id:guid}", GetAsync).WithName("itg.export_jobs.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "itg.export_jobs.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPost("/", CreateAsync).WithName("itg.export_jobs.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "itg.export_jobs.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("itg.export_jobs.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "itg.export_jobs.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("platform.base", "kernel"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ExportJobListQuery query, global::Erp.Kernel.Application.Generated.Itg.IExportJobRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "itg.export_jobs.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Itg.ExportJobFilter { CompanyId = query.CompanyId, FileId = query.FileId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Itg.ExportJobFilter { CompanyId = query.CompanyId, FileId = query.FileId, JobRunId = query.JobRunId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ExportJobAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
@@ -87,53 +82,6 @@ internal static class ExportJobEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ExportJobAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ExportJobWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IExportJobRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "itg.export_jobs.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Itg.ExportJobAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Kernel.Domain.Generated.Itg.ExportJob();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/itg/export-jobs/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ExportJobAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ExportJobWriteRequest request, global::Erp.Kernel.Application.Generated.Itg.IExportJobRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "itg.export_jobs.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Kernel.Application.Generated.Itg.ExportJobAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Kernel.Application.Generated.Itg.ExportJobAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static ExportJobResponse ToResponse(global::Erp.Kernel.Domain.Generated.Itg.ExportJob row) => new()
     {
         Id = row.Id,
@@ -143,6 +91,16 @@ internal static class ExportJobEndpoints
         Format = row.Format,
         RowCount = row.RowCount,
         FileId = row.FileId,
+        FileName = row.FileName,
+        Reason = row.Reason,
+        SensitiveClasses = row.SensitiveClasses,
+        JobRunId = row.JobRunId,
+        HeldRequestId = row.HeldRequestId,
+        SizeBytes = row.SizeBytes,
+        ErrorKey = row.ErrorKey,
+        ExpiresAt = row.ExpiresAt,
+        StartedAt = row.StartedAt,
+        FinishedAt = row.FinishedAt,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -151,137 +109,35 @@ internal static class ExportJobEndpoints
         RowVersion = row.RowVersion,
     };
 
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(ExportJobWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.EntityType is null && (!update || access.CanEdit("entity_type")))
-        {
-            errors.Add("entityType");
-        }
-        if (request.Filter is null && (!update || access.CanEdit("filter")))
-        {
-            errors.Add("filter");
-        }
-        if (request.Format is null && (!update || access.CanEdit("format")))
-        {
-            errors.Add("format");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(ExportJobWriteRequest request, global::Erp.Kernel.Domain.Generated.Itg.ExportJob row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("entity_type"))
-        {
-            row.EntityType = request.EntityType!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EntityType, row.EntityType, update))
-        {
-            denied.Add("entityType");
-        }
-        if (access.CanEdit("filter"))
-        {
-            row.Filter = GeneratedEndpointSupport.ToDocument(request.Filter)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Filter, row.Filter, update))
-        {
-            denied.Add("filter");
-        }
-        if (access.CanEdit("format"))
-        {
-            row.Format = request.Format!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Format, row.Format, update))
-        {
-            denied.Add("format");
-        }
-        if (access.CanEdit("row_count"))
-        {
-            row.RowCount = request.RowCount;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RowCount, row.RowCount, update))
-        {
-            denied.Add("rowCount");
-        }
-        if (access.CanEdit("file_id"))
-        {
-            row.FileId = request.FileId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FileId, row.FileId, update))
-        {
-            denied.Add("fileId");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
-
-    /// <summary>Applies imported rows of itg.export_jobs (create, or update of an existing record) through the endpoint's own rules (S1.16a).</summary>
-    internal sealed class ImportWriter(global::System.IServiceProvider services) : global::Erp.Kernel.Application.Itg.IImportRowWriter
+    /// <summary>Reads pages of itg.export_jobs for an export through the list's own rules (S1.16b).</summary>
+    internal sealed class ExportReader(global::System.IServiceProvider services) : global::Erp.Kernel.Contracts.Itg.IExportRowReader
     {
         public string Code => "itg.export_jobs";
 
-        public async global::System.Threading.Tasks.Task<global::Erp.Kernel.Application.Itg.ImportRowOutcome> WriteAsync(global::Erp.Kernel.Application.Itg.ImportRow row, global::System.Guid? existingId, global::System.Threading.CancellationToken cancellationToken)
+        public string ReadPermission => "itg.export_jobs.read";
+
+        public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<(global::Erp.Kernel.Contracts.Itg.ExportColumn Column, string Access)>> ColumnsAsync(global::System.Guid? companyId, global::System.Threading.CancellationToken cancellationToken)
+        {
+            var fields = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(services);
+            var map = await fields.ForAsync(global::Erp.Kernel.Application.Generated.Itg.ExportJobAccess.Fields, "read", companyId, cancellationToken).ConfigureAwait(false);
+            return global::Erp.Kernel.Application.Generated.Itg.ExportJobAccess.Fields.Fields.Select(f => (new global::Erp.Kernel.Contracts.Itg.ExportColumn(f.Key, f.JsonName, f.FieldClass, f.IsCustom), map.Of(f.Key) switch { global::Erp.BuildingBlocks.Application.Security.FieldAccessLevel.Hidden => "hidden", global::Erp.BuildingBlocks.Application.Security.FieldAccessLevel.Masked => "masked", _ => "visible" })).ToList();
+        }
+
+        public async global::System.Threading.Tasks.Task<global::Erp.Kernel.Contracts.Itg.ExportPage> ReadPageAsync(global::Erp.Kernel.Contracts.Itg.ExportQuery export, string? after, int limit, global::System.Threading.CancellationToken cancellationToken)
         {
             var repository = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.Kernel.Application.Generated.Itg.IExportJobRepository>(services);
-            var permissions = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IPermissionChecker>(services);
             var fields = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(services);
-            var accessLog = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog>(services);
-            IResult result;
-            if (existingId is null)
+            var query = export.Filter.ValueKind == global::System.Text.Json.JsonValueKind.Object ? global::System.Text.Json.JsonSerializer.Deserialize<ExportJobListQuery>(export.Filter.GetRawText(), global::System.Text.Json.JsonSerializerOptions.Web) ?? new ExportJobListQuery() : new ExportJobListQuery();
+            var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(after is null ? null : global::System.Guid.Parse(after), limit);
+            var rows = await repository.ListAsync(new global::Erp.Kernel.Application.Generated.Itg.ExportJobFilter { CompanyId = query.CompanyId, FileId = query.FileId, JobRunId = query.JobRunId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var maps = await repository.FieldAccessAsync(rows, global::Erp.Kernel.Application.Generated.Itg.ExportJobAccess.Fields, fields, "read", cancellationToken).ConfigureAwait(false);
+            var shaped = new global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>(rows.Count);
+            for (var i = 0; i < rows.Count; i++)
             {
-                var request = global::System.Text.Json.JsonSerializer.Deserialize<ExportJobWriteRequest>(row.Values.ToJsonString(), global::System.Text.Json.JsonSerializerOptions.Web)!;
-                result = await CreateAsync(request, repository, permissions, fields, accessLog, cancellationToken).ConfigureAwait(false);
+                var node = global::System.Text.Json.JsonSerializer.SerializeToNode(ToResponse(rows[i]), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();
+                shaped.Add(global::Erp.BuildingBlocks.Application.Security.FieldShaping.Shape(node, global::Erp.Kernel.Application.Generated.Itg.ExportJobAccess.Fields, maps[i]));
             }
-            else
-            {
-                var current = await repository.GetByIdAsync(existingId.Value, cancellationToken).ConfigureAwait(false);
-                if (current is null)
-                {
-                    return global::Erp.Kernel.Application.Itg.ImportRowOutcome.Failed(new global::Erp.Kernel.Application.Itg.ImportRowError(null, "errors.data.not_found"));
-                }
-                var merged = global::System.Text.Json.JsonSerializer.SerializeToNode(ToResponse(current), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();
-                foreach (var item in row.Values)
-                {
-                    merged[item.Key] = item.Value?.DeepClone();
-                }
-                merged["rowVersion"] = current.RowVersion;
-                var request = global::System.Text.Json.JsonSerializer.Deserialize<ExportJobWriteRequest>(merged, global::System.Text.Json.JsonSerializerOptions.Web)!;
-                result = await UpdateAsync(existingId.Value, request, repository, permissions, fields, accessLog, cancellationToken).ConfigureAwait(false);
-            }
-            return await GeneratedImportSupport.ReadAsync(result, "itg.export_jobs", services, existingId is null ? "created" : "updated").ConfigureAwait(false);
+            return new global::Erp.Kernel.Contracts.Itg.ExportPage(shaped, rows.Count == page.Limit ? rows[^1].Id.ToString() : null, global::Erp.BuildingBlocks.Application.Security.FieldShaping.SensitiveShown(shaped, global::Erp.Kernel.Application.Generated.Itg.ExportJobAccess.Fields, maps));
         }
     }
 }

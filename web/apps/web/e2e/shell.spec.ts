@@ -46,7 +46,7 @@ test('FR-KRN-ENT-03 the menu shows only what is licensed and permitted; an unlic
     // A person without the permissions sees no such entries, and the address says what is missing.
     const basic = await person(browser);
     const plain = await menuEntries(basic.page);
-    expect(plain).toEqual(['Home', 'Notifications', 'Approvals', 'Companies', 'Branches', 'Locations', 'Organization units', 'Holiday calendars']); // S1.14b: and the units it may read; S1.12c: Business User reads branches (org.branches.read); S1.14a: and the organization lists it may read
+    expect(plain).toEqual(['Home', 'Notifications', 'Approvals', 'Companies', 'Branches', 'Locations', 'Organization units', 'Holiday calendars', 'Exports']); // S1.16b: Business User may export what it reads; S1.14b: and the units it may read; S1.12c: Business User reads branches (org.branches.read); S1.14a: and the organization lists it may read
     await basic.page.goto('/settings/licence');
     await expect(basic.page.getByRole('heading', { name: 'You cannot open this page', level: 1 })).toBeVisible();
     await expect(basic.page.getByText('Permission needed: See the licence page and the usage statements')).toBeVisible();

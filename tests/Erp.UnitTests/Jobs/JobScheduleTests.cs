@@ -85,16 +85,16 @@ public sealed class JobScheduleTests
     public void S111a_FR_KRN_JOB_01_the_kernel_manifest_is_valid_and_every_job_has_its_handler_and_texts_in_english_and_urdu()
     {
         var specs = JobManifest.Parse(JobManifest.KernelJson);
-        Assert.Equal(16, specs.Count); // kernel.import_validate and kernel.import_commit of S1.16a, 8 of S1.11a, kernel.email_send and kernel.email_bounces of S1.11b2, kernel.doc_scan, kernel.doc_retention and kernel.doc_expiry of S1.11c1, kernel.doc_generate_batch of S1.11c2
+        Assert.Equal(18, specs.Count); // kernel.export_run and kernel.export_expire of S1.16b, kernel.import_validate and kernel.import_commit of S1.16a, 8 of S1.11a, kernel.email_send and kernel.email_bounces of S1.11b2, kernel.doc_scan, kernel.doc_retention and kernel.doc_expiry of S1.11c1, kernel.doc_generate_batch of S1.11c2
         Assert.All(specs, s => Assert.Empty(JobManifest.Check(s)));
         var handlers = new Microsoft.Extensions.DependencyInjection.ServiceCollection().AddKernelJobHandlers()
             .Select(d => d.ImplementationType!).Select(t => t.Name).ToList();
-        Assert.Equal(16, handlers.Count);
+        Assert.Equal(18, handlers.Count);
 
         // Every permission a manifest names exists in the kernel's permission catalogue (R-009).
         var catalogue = JsonDocument.Parse(File.ReadAllText(Path.Combine(RepositoryRoot(), "src/Platform/Erp.Kernel.Infrastructure/Access/permissions.g.json")))
             .RootElement.GetProperty("permissions").EnumerateArray().Select(p => p.GetProperty("code").GetString()!)
-            .Concat(JobPermissions.All.Select(p => p.Code)).Concat(Erp.Kernel.Contracts.Documents.TemplatePermissions.All.Select(p => p.Code)).Concat(Erp.Kernel.Contracts.Itg.ImportPermissions.All.Select(p => p.Code)).ToHashSet(StringComparer.Ordinal);
+            .Concat(JobPermissions.All.Select(p => p.Code)).Concat(Erp.Kernel.Contracts.Documents.TemplatePermissions.All.Select(p => p.Code)).Concat(Erp.Kernel.Contracts.Itg.ImportPermissions.All.Select(p => p.Code)).Concat(Erp.Kernel.Contracts.Itg.ExportPermissions.All.Select(p => p.Code)).ToHashSet(StringComparer.Ordinal);
         Assert.All(specs.SelectMany(s => s.Permissions.Append(s.RequestPermission!)), p => Assert.Contains(p, catalogue));
     }
 

@@ -225,18 +225,6 @@
       "sensitive": false
     },
     {
-      "code": "itg.export_jobs.create",
-      "module": "itg",
-      "descriptionKey": "permissions.itg.export_jobs.create",
-      "sensitive": false
-    },
-    {
-      "code": "itg.export_jobs.update",
-      "module": "itg",
-      "descriptionKey": "permissions.itg.export_jobs.update",
-      "sensitive": false
-    },
-    {
       "code": "itg.import_batch_errors.read",
       "module": "itg",
       "descriptionKey": "permissions.itg.import_batch_errors.read",

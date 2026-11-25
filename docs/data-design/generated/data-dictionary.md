@@ -6376,19 +6376,31 @@ Requirements: ADM-DAT-04. Source: kernel.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| file_name | text | yes |  | S1.16b (CR-072 addendum): the name of the file the person downloads |
+| reason | text | yes |  | S1.16b: why the export was made; required when a sensitive field class is in it (Q8) |
+| sensitive_classes | text[] | yes |  | S1.16b: the field classes (salary, personal, restricted) of the columns exported, as asked at request time |
+| job_run_id | uuid | yes |  | fk job.runs |
+| held_request_id | uuid | yes |  | S1.16b: the maker-checker request while the export waits for a second person (iam.maker_checker_requests; no foreign key across the approval history) |
+| size_bytes | integer | yes |  | S1.16b: size of the finished file |
+| error_key | text | yes |  | S1.16b: localization key of why a failed or rejected export ended |
+| expires_at | timestamp with time zone | yes |  | S1.16b: when the file is deleted (itg.export.keep_days after it was made) |
+| started_at | timestamp with time zone | yes |  |  |
+| finished_at | timestamp with time zone | yes |  |  |
 
 Constraints:
 
 - `ck_export_jobs_format` CHECK ((format = ANY (ARRAY['csv'::text, 'xlsx'::text, 'pdf'::text])))
-- `ck_export_jobs_status` CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text, 'expired'::text])))
+- `ck_export_jobs_status` CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text, 'expired'::text, 'awaiting_approval'::text, 'rejected'::text])))
 - `fk_export_jobs_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_export_jobs_file_id` FOREIGN KEY (company_id, file_id) REFERENCES doc.files(company_id, id)
+- `fk_export_jobs_job_run_id` FOREIGN KEY (job_run_id) REFERENCES job.runs(id)
 - `pk_export_jobs` PRIMARY KEY (id)
 
 Indexes:
 
 - `ix_export_jobs_company_id` CREATE INDEX ix_export_jobs_company_id ON itg.export_jobs USING btree (company_id)
 - `ix_export_jobs_company_id_file_id` CREATE INDEX ix_export_jobs_company_id_file_id ON itg.export_jobs USING btree (company_id, file_id)
+- `ix_export_jobs_job_run_id` CREATE INDEX ix_export_jobs_job_run_id ON itg.export_jobs USING btree (job_run_id)
 
 ### itg.import_batch_errors
 

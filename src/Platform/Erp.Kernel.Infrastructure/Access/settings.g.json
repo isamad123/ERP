@@ -1457,6 +1457,131 @@
       }
     },
     {
+      "key": "itg.export.max_rows",
+      "module": "itg",
+      "type": "int",
+      "default": 50000,
+      "validation": {
+        "min": 1,
+        "max": 50000
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "integration",
+      "unit": "rows",
+      "name": {
+        "en": "Most rows in one export",
+        "ur": "ایک برآمد میں زیادہ سے زیادہ قطاریں"
+      },
+      "description": {
+        "en": "Most rows one export file may hold",
+        "ur": "ایک برآمدی فائل میں زیادہ سے زیادہ قطاریں"
+      },
+      "help": {
+        "en": "An export with more rows is refused; narrow the list with filters. The product limit is 50,000.",
+        "ur": "اس سے زیادہ قطاروں والی برآمد مسترد ہو جاتی ہے؛ فلٹر سے فہرست کو چھوٹا کریں۔ مصنوعات کی حد 50,000 ہے۔"
+      }
+    },
+    {
+      "key": "itg.export.approval_rows",
+      "module": "itg",
+      "type": "int",
+      "default": 5000,
+      "validation": {
+        "min": 1,
+        "max": 50000
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "integration",
+      "unit": "rows",
+      "name": {
+        "en": "Export rows that need approval",
+        "ur": "منظوری کی ضرورت والی برآمدی قطاریں"
+      },
+      "description": {
+        "en": "An export with more rows than this waits for a second person when approval of exports is on",
+        "ur": "جب برآمدات کی منظوری آن ہو تو اس سے زیادہ قطاروں والی برآمد دوسرے شخص کا انتظار کرتی ہے"
+      },
+      "help": {
+        "en": "Also applies to every export that contains salary, personal or restricted fields, whatever its size.",
+        "ur": "ہر اس برآمد پر بھی لاگو ہوتا ہے جس میں تنخواہ، ذاتی یا محدود فیلڈ ہوں، چاہے اس کا حجم کچھ بھی ہو۔"
+      }
+    },
+    {
+      "key": "itg.export.keep_days",
+      "module": "itg",
+      "type": "int",
+      "default": 7,
+      "validation": {
+        "min": 1,
+        "max": 90
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "integration",
+      "unit": "days",
+      "name": {
+        "en": "Days an export file is kept",
+        "ur": "برآمدی فائل کتنے دن رکھی جاتی ہے"
+      },
+      "description": {
+        "en": "Days after which an export file is deleted from the file store",
+        "ur": "وہ دن جن کے بعد برآمدی فائل فائل اسٹور سے حذف ہو جاتی ہے"
+      },
+      "help": {
+        "en": "After this the export stays in the list as expired; the person can export again.",
+        "ur": "اس کے بعد برآمد فہرست میں منقضی کے طور پر رہتی ہے؛ شخص دوبارہ برآمد کر سکتا ہے۔"
+      }
+    },
+    {
+      "key": "itg.export.requires_approval",
+      "module": "itg",
+      "type": "bool",
+      "default": false,
+      "validation": {},
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": true,
+      "area": "integration",
+      "unit": null,
+      "name": {
+        "en": "Approval of large and sensitive exports",
+        "ur": "بڑی اور حساس برآمدات کی منظوری"
+      },
+      "description": {
+        "en": "An export above the row limit for approval, or with salary, personal or restricted fields, waits for a second person's approval",
+        "ur": "منظوری کی قطار حد سے بڑی برآمد، یا تنخواہ، ذاتی یا محدود فیلڈ والی برآمد، دوسرے شخص کی منظوری کا انتظار کرتی ہے"
+      },
+      "help": {
+        "en": "The export file is made only after another person with the approval permission approves it. The person who asked can never approve it.",
+        "ur": "برآمدی فائل اسی وقت بنتی ہے جب منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔"
+      }
+    },
+    {
       "key": "doc.upload.allowed_types",
       "module": "doc",
       "type": "list",

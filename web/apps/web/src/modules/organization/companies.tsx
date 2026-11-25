@@ -45,7 +45,7 @@ function CompanyList() {
   const title = useCompanyTitle();
   return (
     <ListPage metadata={metadata} columns={['code', 'nameI18n', 'legalName', 'baseCurrencyCode', 'status']}
-      canCreate={writable && can('org.companies.create')} canShare={can('cfg.saved_views.share')} description={t('companies.description')}
+      canCreate={writable && can('org.companies.create')} canShare={can('cfg.saved_views.share')} canExport={can('itg.exports.run')} description={t('companies.description')}
       onCreate={() => { void navigate(`${COMPANIES_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${COMPANIES_PATH}/${row.id}`); }}
       rowLabel={(row) => title(row)} />
   );

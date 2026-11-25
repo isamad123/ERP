@@ -99,4 +99,36 @@ internal static class ContractEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
+
+    /// <summary>Reads pages of hrm.contracts for an export through the list's own rules (S1.16b).</summary>
+    internal sealed class ExportReader(global::System.IServiceProvider services) : global::Erp.Kernel.Contracts.Itg.IExportRowReader
+    {
+        public string Code => "hrm.contracts";
+
+        public string ReadPermission => "hrm.contracts.read";
+
+        public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<(global::Erp.Kernel.Contracts.Itg.ExportColumn Column, string Access)>> ColumnsAsync(global::System.Guid? companyId, global::System.Threading.CancellationToken cancellationToken)
+        {
+            var fields = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(services);
+            var map = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ContractAccess.Fields, "read", companyId, cancellationToken).ConfigureAwait(false);
+            return global::Erp.Hrm.Application.Generated.ContractAccess.Fields.Fields.Select(f => (new global::Erp.Kernel.Contracts.Itg.ExportColumn(f.Key, f.JsonName, f.FieldClass, f.IsCustom), map.Of(f.Key) switch { global::Erp.BuildingBlocks.Application.Security.FieldAccessLevel.Hidden => "hidden", global::Erp.BuildingBlocks.Application.Security.FieldAccessLevel.Masked => "masked", _ => "visible" })).ToList();
+        }
+
+        public async global::System.Threading.Tasks.Task<global::Erp.Kernel.Contracts.Itg.ExportPage> ReadPageAsync(global::Erp.Kernel.Contracts.Itg.ExportQuery export, string? after, int limit, global::System.Threading.CancellationToken cancellationToken)
+        {
+            var repository = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.Hrm.Application.Generated.IContractRepository>(services);
+            var fields = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(services);
+            var query = export.Filter.ValueKind == global::System.Text.Json.JsonValueKind.Object ? global::System.Text.Json.JsonSerializer.Deserialize<ContractListQuery>(export.Filter.GetRawText(), global::System.Text.Json.JsonSerializerOptions.Web) ?? new ContractListQuery() : new ContractListQuery();
+            var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(after is null ? null : global::System.Guid.Parse(after), limit);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ContractFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, FileId = query.FileId, RenewsContractId = query.RenewsContractId, Status = query.Status, Sort = export.Sort ?? query.Sort }, page, cancellationToken).ConfigureAwait(false);
+            var maps = await repository.FieldAccessAsync(rows, global::Erp.Hrm.Application.Generated.ContractAccess.Fields, fields, "read", cancellationToken).ConfigureAwait(false);
+            var shaped = new global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>(rows.Count);
+            for (var i = 0; i < rows.Count; i++)
+            {
+                var node = global::System.Text.Json.JsonSerializer.SerializeToNode(ToResponse(rows[i]), global::System.Text.Json.JsonSerializerOptions.Web)!.AsObject();
+                shaped.Add(global::Erp.BuildingBlocks.Application.Security.FieldShaping.Shape(node, global::Erp.Hrm.Application.Generated.ContractAccess.Fields, maps[i]));
+            }
+            return new global::Erp.Kernel.Contracts.Itg.ExportPage(shaped, rows.Count == page.Limit ? rows[^1].Id.ToString() : null, global::Erp.BuildingBlocks.Application.Security.FieldShaping.SensitiveShown(shaped, global::Erp.Hrm.Application.Generated.ContractAccess.Fields, maps));
+        }
+    }
 }

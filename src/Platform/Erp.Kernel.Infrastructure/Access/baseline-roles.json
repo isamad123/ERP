@@ -71,6 +71,9 @@
       },
       "permissions": [
         "iam.self.manage",
+        "itg.exports.run",
+        "itg.exports.approve",
+        "itg.export_jobs.read",
         "org.*",
         "cfg.numbering_schemes.*",
         "cfg.numbering_voids.*",
@@ -109,6 +112,7 @@
       },
       "permissions": [
         "iam.self.manage",
+        "itg.exports.run",
         "ref.*.read",
         "org.companies.read",
         "org.branches.read",
@@ -181,6 +185,7 @@
       },
       "permissions": [
         "iam.self.manage",
+        "itg.exports.run",
         "cfg.*.read",
         "cfg.numbering.void_report",
         "doc.*.read",

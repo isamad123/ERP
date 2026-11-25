@@ -211,6 +211,38 @@
       "schedule_editable": false
     },
     {
+      "code": "kernel.export_run",
+      "name": {"en": "Make an export file", "ur": "برآمدی فائل بنانا"},
+      "description": {"en": "Reads a list page by page with the rights of the person who asked (permission, data scope and field security as in the list) and keeps the CSV or Excel file for download. Runs in read-only and locked states too.", "ur": "درخواست کرنے والے کے اختیارات کے ساتھ (اجازت، ڈیٹا کی حد اور فیلڈ کی حفاظت فہرست کی طرح) فہرست صفحہ بہ صفحہ پڑھتا ہے اور CSV یا ایکسل فائل ڈاؤن لوڈ کے لیے رکھتا ہے۔ صرف پڑھنے اور مقفل حالتوں میں بھی چلتا ہے۔"},
+      "permissions": [],
+      "retry": {"max_attempts": 2, "backoff_seconds": [30]},
+      "timeout_seconds": 3600,
+      "priority": 30,
+      "concurrency": 2,
+      "runs_in": ["full", "read_only", "locked"],
+      "entitlement": "platform.base",
+      "manual": true,
+      "request_permission": "itg.exports.run",
+      "runs_as": "requester",
+      "schedule_editable": false
+    },
+    {
+      "code": "kernel.export_expire",
+      "name": {"en": "Delete old export files", "ur": "پرانی برآمدی فائلیں حذف کرنا"},
+      "description": {"en": "Deletes export files after their keeping period (setting itg.export.keep_days) and marks the exports expired.", "ur": "رکھنے کی مدت (ترتیب itg.export.keep_days) کے بعد برآمدی فائلیں حذف کرتا ہے اور برآمدات کو منقضی کے طور پر نشان زد کرتا ہے۔"},
+      "schedule": {"daily": {"at": "03:40"}},
+      "permissions": [],
+      "retry": {"max_attempts": 2, "backoff_seconds": [900]},
+      "timeout_seconds": 1800,
+      "priority": 20,
+      "concurrency": 1,
+      "runs_in": ["full", "read_only", "locked"],
+      "entitlement": "platform.base",
+      "manual": true,
+      "request_permission": "job.runs.create",
+      "schedule_editable": false
+    },
+    {
       "code": "kernel.doc_generate_batch",
       "name": {"en": "Produce documents in a batch", "ur": "دستاویزات کی کھیپ تیار کرنا"},
       "description": {"en": "Produces the PDF of one document template for many records, with the rights of the person who asked. A record that cannot be done is listed in the run log.", "ur": "ایک دستاویزی سانچے کا PDF بہت سے ریکارڈز کے لیے تیار کرتا ہے، درخواست کرنے والے کے اختیارات کے ساتھ۔ جو ریکارڈ تیار نہ ہو سکے وہ رن لاگ میں درج ہوتا ہے۔"},

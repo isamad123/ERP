@@ -180,6 +180,9 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
   permission-denied states on every screen. No token or personal data in browser storage.
 - Stay within the budgets (shell under 300 KB, route chunks under 200 KB compressed); lazy-load module routes.
 - Assets are bundled; nothing is fetched from another host. The content security policy allows no inline script or style.
+- Texts and size (R-291, `docs/handoff/2026-11-24-shell-size.md`): only English core texts ship in the shell; the Urdu core catalogue and every screen's own texts are lazy
+  catalogues (`registerMessages`, R-213), never in `en.json`/`ur.json`; a menu text is a core text. Keep the shell under 285 KB (`pnpm build` prints it). Never statically import a screen or
+  its messages from navigation, modules or the shell; a new shared dependency that adds more than 3 KB to the shell: stop and report.
 
 ## Web commands (S1.12a)
 Run from `web/` (Node 22, pnpm through corepack): `pnpm install --frozen-lockfile`, then `pnpm lint`, `pnpm typecheck`,
@@ -264,6 +267,11 @@ pack's country); a host that installs packs registers every module's handlers. O
 Tests: `tests/Erp.IntegrationTests/Packs` (`PackTestSupport` builds, signs and publishes test packs with the fixture's pack key), `tests/Erp.UnitTests/Packs`; web `web/apps/web/src/modules/admin/packs.tsx`.
 
 Positions, strength and chart (S1.22a, S1.22b): position, grade, budget and exception services `src/Modules/Hrm/Erp.Hrm.Infrastructure/Positions/` (`PositionService`, `StrengthGuard`, `StrengthReportService`, `OrgChartService` over `StrengthData`, `OrgStructureCoordination.cs` with the unit-use guard and the `org.unit_moved` consumer; endpoints `Erp.Hrm.Api/Positions/PositionEndpoints.cs`: `/api/hrm/positions`, `/strength-report`, `/org-chart`, all under `hrm.positions.read` for reads). A unit is switched off only when every `IOrgUnitUseGuard` (Kernel.Contracts/Org) agrees: `OrgUnitUseInterceptor` asks on the EF save of the generated unit API; a new hand-written unit writer must ask the guards itself. A module prints its own HTML to PDF through `IPrintedPages` (Kernel.Contracts/Documents). Web `web/apps/web/src/modules/hr/` (`positions.tsx`, `position-form.tsx`, `strength.tsx`, `position-chart*.ts(x)`, `position-picker.tsx` for the employee change dialog), texts `packages/i18n/messages/positions.{en,ur}.json` (lazy; the five menu texts are in the core files, shell budget 299.0 of 300 KB, R-272). Tests: `tests/Erp.IntegrationTests/Positions`, `tests/Erp.UnitTests/People/StrengthUnitTests.cs`, `web/apps/web/src/modules/hr/positions.test.tsx`.
+
+Exports (S1.16b): services `src/Platform/Erp.Kernel.Infrastructure/Itg/` (`ExportService` asks and lists, `ExportRunJob` makes the file as the requester, `ExportExpireJob`, `ExportFiles` file-store keeper, `ExportChangeHandler` held exports, `ExportWriters` CSV and Excel with the watermark and formula neutralising), endpoints `Erp.Kernel.Api/Itg/ExportEndpoints.cs` under `/api/itg/exports`
+(allowed in read-only and locked states). A list is exportable when it has an `IExportRowReader` (Kernel.Contracts `Itg/ExportContracts.cs`): the generator emits one nested in every generated endpoints class (kernel and HR) so it uses the list's own filter, sort, search, scope and field security; a hand-written list adds its own reader
+(`AuditExportReader`, `UserExportReader`) and registers it in both hosts (`AddKernelExportEngine`). Settings `itg.export.*`; permissions `itg.exports.run` and `itg.exports.approve`. Web: `web/packages/engine/src/ExportButton.tsx` (a generated list shows it when its screen passes `canExport`; other screens use `ExportButton`), centre `web/apps/web/src/modules/admin/exports.tsx`, texts `packages/i18n/messages/exports.{en,ur}.json`.
+Tests: `tests/Erp.IntegrationTests/ExportCentre`, `tests/Erp.UnitTests/Itg/ExportUnitTests.cs`, `web/apps/web/src/modules/admin/exports.test.tsx`, browser scenarios `e2e/exports.spec.ts`.
 
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.

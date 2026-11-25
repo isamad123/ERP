@@ -4,13 +4,13 @@
 import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import { IntlProvider, useIntl } from 'react-intl';
 import en from '../messages/en.json';
-import ur from '../messages/ur.json';
 // Texts of the settings, feature-flag and sign-in-page screens (S1.15a), numbering and approval routes (S1.15c), HR policies (S1.23a) live in their own files, loaded with those screens
 // (`registerMessages`), so they do not weigh on the shell's script budget (spec 13 FR-UX-PRF-01). Only the types come from here.
 import type configEn from '../messages/config.en.json';
 import type numberingEn from '../messages/numbering.en.json';
 import type routesEn from '../messages/routes.en.json';
 import type importsEn from '../messages/imports.en.json';
+import type exportsEn from '../messages/exports.en.json';
 import type reportsEn from '../messages/reports.en.json';
 import type attendanceEn from '../messages/attendance.en.json';
 import type devicesEn from '../messages/devices.en.json';
@@ -23,7 +23,6 @@ import type policiesEn from '../messages/policies.en.json';
 import type packsEn from '../messages/packs.en.json';
 import type positionsEn from '../messages/positions.en.json';
 import serverEn from './generated/server.en.json';
-import serverUr from './generated/server.ur.json';
 import { pseudoCatalogue, pseudoText } from './pseudo';
 import { DEFAULT_NUMBERS, directionOf, type Locale, type NumberPreferences } from './format';
 
@@ -36,15 +35,17 @@ export type UiLocale = Locale | 'pseudo';
 
 type Catalogue = Record<string, string>;
 
-const WEB: Record<Locale, Catalogue> = { en: strip(en), ur: strip(ur) };
+// English ships with the shell; the Urdu catalogues (web texts, platform server texts, module server texts) are their own chunk,
+// fetched by `loadLocale('ur')` before the first Urdu screen is drawn (R-291: the shell script budget, spec 13 FR-UX-PRF-01).
+const WEB: Record<Locale, Catalogue> = { en: strip(en), ur: {} };
 // Platform server texts ship with the shell; the business modules' texts arrive as their own chunk right after start-up (below).
-const SERVER: Record<Locale, Catalogue> = { en: { ...serverEn }, ur: { ...serverUr } };
+const SERVER: Record<Locale, Catalogue> = { en: { ...serverEn }, ur: {} };
 
 function strip(catalogue: Record<string, string>): Catalogue {
   return Object.fromEntries(Object.entries(catalogue).filter(([key]) => !key.startsWith('_')));
 }
 
-export type MessageKey = keyof typeof en | keyof typeof configEn | keyof typeof numberingEn | keyof typeof routesEn | keyof typeof notifyEn | keyof typeof doctemplatesEn | keyof typeof payEn | keyof typeof setupEn | keyof typeof attendanceEn | keyof typeof devicesEn | keyof typeof rostersEn | keyof typeof policiesEn | keyof typeof positionsEn | keyof typeof packsEn | keyof typeof importsEn | keyof typeof reportsEn;
+export type MessageKey = keyof typeof en | keyof typeof configEn | keyof typeof numberingEn | keyof typeof routesEn | keyof typeof notifyEn | keyof typeof doctemplatesEn | keyof typeof payEn | keyof typeof setupEn | keyof typeof attendanceEn | keyof typeof devicesEn | keyof typeof rostersEn | keyof typeof policiesEn | keyof typeof positionsEn | keyof typeof packsEn | keyof typeof importsEn | keyof typeof exportsEn | keyof typeof reportsEn;
 
 let registryVersion = 0;
 const listeners = new Set<() => void>();
@@ -64,13 +65,42 @@ const version = () => registryVersion;
  * module growth never weighs on the shell's script budget (spec 13 FR-UX-PRF-01, R-213). Mounted roots pick them up at once;
  * a module answer can only come after the person acts, by which time they are here. `serverTextsReady` resolves once loaded.
  */
-export const serverTextsReady: Promise<void> = Promise.all([import('./generated/modules.en.json'), import('./generated/modules.ur.json')])
-  .then(([moduleEn, moduleUr]) => {
+export const serverTextsReady: Promise<void> = import('./generated/modules.en.json')
+  .then((moduleEn) => {
     Object.assign(SERVER.en, moduleEn.default);
-    Object.assign(SERVER.ur, moduleUr.default);
     registryVersion += 1;
     for (const listener of listeners) listener();
   });
+
+const loaded = new Set<UiLocale>(['en', 'pseudo']);
+const loading = new Map<Locale, Promise<void>>();
+
+/** True once the texts of the language are in memory (English and the pseudo-locale always are). */
+export const isLocaleLoaded = (locale: UiLocale): boolean => loaded.has(locale);
+
+/**
+ * Loads the texts of a language that is not part of the shell (Urdu): web texts, platform server texts and the business
+ * modules' server texts, one lazy chunk each. Safe to call again; resolves at once when the language is in memory. A
+ * language switch awaits it before the screen changes, and `I18nRoot` draws nothing until the start-up language is here,
+ * so a key is never shown instead of a text.
+ */
+export function loadLocale(locale: UiLocale): Promise<void> {
+  if (locale === 'en' || locale === 'pseudo') return Promise.resolve();
+  const existing = loading.get(locale);
+  if (existing) return existing;
+  const started = Promise.all([import('../messages/ur.json'), import('./generated/server.ur.json'), import('./generated/modules.ur.json')])
+    .then(([web, server, modules]) => {
+      // Texts registered earlier by lazy screens (registerMessages) stay; the product's own texts are the base.
+      WEB.ur = { ...strip(web.default), ...WEB.ur };
+      SERVER.ur = { ...server.default, ...modules.default, ...SERVER.ur };
+      loaded.add(locale);
+      registryVersion += 1;
+      for (const listener of listeners) listener();
+    });
+  loading.set(locale, started);
+  started.catch(() => loading.delete(locale));
+  return started;
+}
 
 export function webMessages(locale: UiLocale, overrides: Readonly<Record<string, string>> = NO_OVERRIDES): Catalogue {
   const base = locale === 'pseudo' ? pseudoCatalogue(WEB.en) : WEB[locale];
@@ -134,6 +164,7 @@ export function I18nRoot({ locale, timeZone = 'Asia/Karachi', numbers = DEFAULT_
   const registered = useSyncExternalStore(subscribe, version, version);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const messages = useMemo(() => webMessages(locale, effective), [locale, effective, registered]);
+  if (!isLocaleLoaded(locale)) { void loadLocale(locale); return null; }
   return (
     <LocaleContext.Provider value={settings}>
       <IntlProvider locale={localeTag(locale, numbers)} messages={messages} defaultLocale="en-PK" timeZone={timeZone}
