@@ -13,14 +13,6 @@
     {
       "action": "read",
       "permission": "hrm.attendance_periods.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.attendance_periods.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.attendance_periods.update"
     }
   ],
   "companyScoped": true,
@@ -38,15 +30,18 @@
     "periodEnd",
     "lockedAt",
     "lockedByRunId",
-    "status"
+    "lockKind"
   ],
   "search": [],
   "constraints": {
+    "ck_attendance_periods_lock_kind": "lockKind",
     "ck_attendance_periods_status": "status",
     "fk_attendance_periods_company_id": "companyId",
+    "fk_attendance_periods_lock_workflow_instance_id": "lockWorkflowInstanceId",
     "fk_attendance_periods_locked_by_run_id": "lockedByRunId",
     "fk_attendance_periods_pay_group_id": "payGroupId",
     "fk_attendance_periods_pay_period_id": "payPeriodId",
+    "fk_attendance_periods_reopen_workflow_instance_id": "reopenWorkflowInstanceId",
     "uq_attendance_periods_company_id_id": "id",
     "uq_attendance_periods_pay_period_id": "payPeriodId"
   },
@@ -134,6 +129,138 @@
       "filter": true,
       "labelKey": "fields.hrm.attendance_periods.locked_by_run_id",
       "references": "hrm.pay_runs"
+    },
+    {
+      "column": "lock_kind",
+      "field": "lockKind",
+      "kind": "Enum",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.attendance_periods.lock_kind",
+      "options": [
+        {
+          "value": "payroll",
+          "labelKey": "options.hrm.attendance_periods.lock_kind.payroll"
+        },
+        {
+          "value": "manual",
+          "labelKey": "options.hrm.attendance_periods.lock_kind.manual"
+        }
+      ]
+    },
+    {
+      "column": "locked_by",
+      "field": "lockedBy",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.attendance_periods.locked_by"
+    },
+    {
+      "column": "lock_reason",
+      "field": "lockReason",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.attendance_periods.lock_reason"
+    },
+    {
+      "column": "lock_requested_by",
+      "field": "lockRequestedBy",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.attendance_periods.lock_requested_by"
+    },
+    {
+      "column": "lock_accept_open",
+      "field": "lockAcceptOpen",
+      "kind": "Bool",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.attendance_periods.lock_accept_open"
+    },
+    {
+      "column": "unprocessed_accepted",
+      "field": "unprocessedAccepted",
+      "kind": "Int4",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.attendance_periods.unprocessed_accepted"
+    },
+    {
+      "column": "exceptions_accepted",
+      "field": "exceptionsAccepted",
+      "kind": "Int4",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.attendance_periods.exceptions_accepted"
+    },
+    {
+      "column": "lock_workflow_instance_id",
+      "field": "lockWorkflowInstanceId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": true,
+      "labelKey": "fields.hrm.attendance_periods.lock_workflow_instance_id",
+      "references": "wf.workflow_instances"
+    },
+    {
+      "column": "reopen_workflow_instance_id",
+      "field": "reopenWorkflowInstanceId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": true,
+      "labelKey": "fields.hrm.attendance_periods.reopen_workflow_instance_id",
+      "references": "wf.workflow_instances"
+    },
+    {
+      "column": "reopen_requested_by",
+      "field": "reopenRequestedBy",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.attendance_periods.reopen_requested_by"
+    },
+    {
+      "column": "reopened_at",
+      "field": "reopenedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.attendance_periods.reopened_at"
+    },
+    {
+      "column": "reopen_reason",
+      "field": "reopenReason",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.attendance_periods.reopen_reason"
     },
     {
       "column": "status",

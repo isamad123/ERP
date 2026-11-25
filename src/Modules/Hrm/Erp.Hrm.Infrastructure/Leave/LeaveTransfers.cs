@@ -175,7 +175,9 @@ internal static class LeaveTransfers
 
                 return true;
             case "encash" when balance > 0m:
-                await InsertAsync(db, from.CompanyId, from.Id, item.LeaveTypeId, item.LeaveYear, lastDay, "encashment", -balance, null, Source, item.SourceId, marker, now, actor, ct).ConfigureAwait(false);
+                // Paid out by payroll: dated in the next open payroll period when the last day is locked (S1.31, R-304).
+                await InsertAsync(db, from.CompanyId, from.Id, item.LeaveTypeId, item.LeaveYear, await Attendance.AttendancePeriodQueries.OpenDateAsync(db, from.Id, lastDay, ct).ConfigureAwait(false),
+                    "encashment", -balance, null, Source, item.SourceId, marker, now, actor, ct).ConfigureAwait(false);
                 return true;
             case "lapse" when balance > 0m:
                 await InsertAsync(db, from.CompanyId, from.Id, item.LeaveTypeId, item.LeaveYear, lastDay, "lapse", -balance, null, Source, item.SourceId, marker, now, actor, ct).ConfigureAwait(false);

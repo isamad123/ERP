@@ -42,6 +42,68 @@
       "format": "uuid",
       "nullable": true
     },
+    "lockKind": {
+      "type": "string",
+      "enum": [
+        "payroll",
+        "manual"
+      ],
+      "nullable": true
+    },
+    "lockedBy": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
+    "lockReason": {
+      "type": "string",
+      "nullable": true
+    },
+    "lockRequestedBy": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
+    "lockAcceptOpen": {
+      "type": "boolean",
+      "nullable": true
+    },
+    "unprocessedAccepted": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647,
+      "nullable": true
+    },
+    "exceptionsAccepted": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647,
+      "nullable": true
+    },
+    "lockWorkflowInstanceId": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
+    "reopenWorkflowInstanceId": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
+    "reopenRequestedBy": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
+    "reopenedAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
+    "reopenReason": {
+      "type": "string",
+      "nullable": true
+    },
     "status": {
       "type": "string",
       "enum": [

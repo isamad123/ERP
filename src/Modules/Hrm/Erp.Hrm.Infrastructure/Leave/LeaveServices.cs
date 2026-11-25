@@ -2,7 +2,6 @@ using Erp.Hrm.Application.Leave;
 using Erp.Kernel.Contracts.Attendance;
 using Erp.Kernel.Contracts.Jobs;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Erp.Hrm.Infrastructure.Leave;
 
@@ -10,14 +9,13 @@ namespace Erp.Hrm.Infrastructure.Leave;
 /// Registers the leave engine of slice S1.32 (called from the HR employment registration of each host): the readers, the entitlement planner
 /// and the recompute, the approval outcome handlers, the payroll feeds and the file owner of requests for both hosts; the leave type, ledger,
 /// recompute, request, year-end and transfer services, the held year-end handler and the pack leave types for the API host; the accrual,
-/// recompute, year-end and expiry jobs and the comp-off and transfer consumers for the worker. <see cref="IAttendancePeriodLock"/> is the HR module's reading implementation until S1.31 registers its own (added only when no
-/// other is registered).
+/// recompute, year-end and expiry jobs and the comp-off and transfer consumers for the worker. <see cref="IAttendancePeriodLock"/> is S1.31's lock (added once).
 /// </summary>
 public static class LeaveServices
 {
     public static IServiceCollection AddHrmLeave(this IServiceCollection services)
     {
-        services.TryAddScoped<IAttendancePeriodLock, LockedPeriodReader>();
+        Attendance.AttendanceServices.AddAttendancePeriodLock(services); // S1.31's lock (FR-XM-26)
         services.AddScoped<LeavePolicyReader>();
         services.AddScoped<LeaveYearSetting>();
         services.AddScoped<WorkedTimeReader>();

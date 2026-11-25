@@ -22,7 +22,7 @@ public static class AttendanceServices
         services.AddScoped<DeviceIngestion>();
 
         // S1.29a attendance engine: approved leave and duty by day (S1.32b and S1.30 write the requests), re-queueing, the processor.
-        services.TryAddScoped<IAttendancePeriodLock, Leave.LockedPeriodReader>();
+        services.AddAttendancePeriodLock(); // S1.31: the real lock replaces the reading implementation of S1.32a
         services.TryAddScoped<IApprovedLeaveDays, ApprovedLeaveDaysReader>();
         services.TryAddScoped<IApprovedDutyDays, ApprovedDutyDaysReader>();
         services.TryAddScoped<IAttendanceReprocessing, AttendanceReprocessing>();
@@ -47,6 +47,22 @@ public static class AttendanceServices
         services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, PenaltyWaiverHandler>();
         services.AddScoped<Kernel.Contracts.Documents.IAttachmentOwner, RegularizationAttachmentOwner>(); // S1.30b proof files (R-161, CR-114)
         services.AddScoped<Kernel.Contracts.Documents.IAttachmentOwner, DutyRequestAttachmentOwner>();
+        services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, PeriodLockHandler>(); // S1.31 lock, reopen and adjustment approvals
+        services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, PeriodReopenHandler>();
+        services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, AttendanceAdjustmentHandler>();
+        services.TryAddScoped<IAttendanceAdjustments, AttendanceAdjustmentReader>(); // S1.31 payroll hand-off (S1.35, S1.39 read it)
+        return services;
+    }
+
+    /// <summary>
+    /// The attendance period lock of slice S1.31 (FR-XM-26): <see cref="IAttendancePeriodLock"/> and the payroll runs it asks (<see cref="IPayRunStates"/>, replaced by the
+    /// run service of S1.35/S1.38). Called by every registration that needs the lock (attendance and leave), added once.
+    /// </summary>
+    public static IServiceCollection AddAttendancePeriodLock(this IServiceCollection services)
+    {
+        services.TryAddScoped<AttendancePeriodLocks>();
+        services.TryAddScoped<IAttendancePeriodLock>(sp => sp.GetRequiredService<AttendancePeriodLocks>());
+        services.TryAddScoped<IPayRunStates, PayRunTableStates>();
         return services;
     }
 
@@ -61,6 +77,8 @@ public static class AttendanceServices
         services.AddScoped<IAttendanceRequestService, AttendanceRequestService>(); // S1.30a
         services.AddScoped<IAttendanceConsequenceService, AttendanceConsequenceService>(); // S1.29b
         services.AddScoped<IAttendanceDashboardService, Reports.AttendanceDashboardService>(); // S1.30b live dashboard (the reports are registered for both hosts above)
+        services.AddScoped<IAttendanceLockService, AttendanceLockService>(); // S1.31 lock console and adjustments
+        services.AddScoped<IAttendanceAdjustmentService, AttendanceAdjustmentService>();
         return services;
     }
 

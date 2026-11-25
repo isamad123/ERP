@@ -4,7 +4,6 @@ using Erp.Hrm.Contracts.Generated;
 using Erp.Hrm.Contracts.Policies;
 using Erp.Hrm.Domain.Generated;
 using Erp.Hrm.Infrastructure.Generated;
-using Erp.Kernel.Contracts.Attendance;
 using Erp.Kernel.Contracts.Settings;
 using Microsoft.EntityFrameworkCore;
 
@@ -81,24 +80,6 @@ internal sealed class LeaveYearSetting(ISettings settings)
     /// <summary>The leave year of a date for a leave type: the policy's month for the type when it gives one, else the company's.</summary>
     public async Task<LeaveYearSpan> YearAsync(Guid companyId, LeaveTypeRules? rules, DateOnly date, CancellationToken ct) =>
         LeaveYears.Of(date, rules?.YearStartMonth ?? await StartMonthAsync(companyId, ct).ConfigureAwait(false));
-}
-
-/// <summary>
-/// Reads whether an employment's attendance period is locked (FR-XM-26; contract <see cref="IAttendancePeriodLock"/>, slice S1.32 ruling Q9):
-/// the attendance period of the employment's pay group on the date has the status <c>locked</c>. Nothing locks a period before S1.31, which
-/// adds locking and reopening and replaces this reader with its own implementation (CR-091).
-/// </summary>
-internal sealed class LockedPeriodReader(HrmDbContext db) : IAttendancePeriodLock
-{
-    public async Task<bool> IsLockedAsync(Guid employmentId, DateOnly day, CancellationToken cancellationToken)
-    {
-        var date = day;
-        var payGroup = await db.Set<EmploymentAssignment>().AsNoTracking()
-            .Where(a => a.EmploymentId == employmentId && a.ValidFrom <= date && (a.ValidTo == null || a.ValidTo > date))
-            .OrderByDescending(a => a.ValidFrom).Select(a => a.PayGroupId).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-        return payGroup is { } group && await db.Set<AttendancePeriod>().AsNoTracking()
-            .AnyAsync(p => p.PayGroupId == group && p.Status == "locked" && p.PeriodStart <= date && p.PeriodEnd >= date, cancellationToken).ConfigureAwait(false);
-    }
 }
 
 /// <summary>
