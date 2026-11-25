@@ -123,6 +123,11 @@ public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction tr
         ["hrm.pay_groups.payment_day"] = _ => 5,
         // S1.28a: a working day names a shift, any other day none (ck_roster_lines_shift); the generated row has no shift, so it is a weekly off.
         ["hrm.roster_lines.day_type"] = _ => "weekly_off",
+        // S1.29b: a new penalty is applied, counts from one, and only a leave penalty carries leave units (tg_attendance_penalties_rules).
+        ["hrm.attendance_penalties.status"] = _ => "applied",
+        ["hrm.attendance_penalties.action"] = _ => "warning",
+        ["hrm.attendance_penalties.occurrence"] = n => (n % 30) + 1,
+        ["hrm.attendance_penalties.minutes"] = n => n % 600,
     };
 
     private int _formatted;

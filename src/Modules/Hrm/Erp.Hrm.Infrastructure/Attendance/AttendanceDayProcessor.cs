@@ -34,10 +34,12 @@ internal sealed record DayRun(DateOnly Date, string Status, string? Reason, Guid
 /// new row is added (history kept, never edited in place; the database allows nothing else), so the same inputs never add a row and a
 /// resumed job writes nothing twice. A date in a locked period is never processed again (FR-XM-26). Exceptions follow the newest result:
 /// open ones that no longer apply are closed (or marked regularized when an approved regularization exists for the day), new ones are raised
-/// with the event <c>hrm.attendance.exception_raised</c>. Each employment is processed by one writer at a time (advisory lock).
+/// with the event <c>hrm.attendance.exception_raised</c>. Each employment is processed by one writer at a time (advisory lock). Overtime entries
+/// and lateness penalties then follow the written results (<see cref="AttendanceConsequences"/>, S1.29b).
 /// </summary>
 internal sealed class AttendanceDayProcessor(
-    HrmDbContext db, IPolicyResolver resolver, IEffectiveShiftReader effective, IApprovedLeaveDays leaves, IApprovedDutyDays duties, IAttendancePeriodLock locks, EmploymentApplier applier)
+    HrmDbContext db, IPolicyResolver resolver, IEffectiveShiftReader effective, IApprovedLeaveDays leaves, IApprovedDutyDays duties, IAttendancePeriodLock locks, EmploymentApplier applier,
+    AttendanceConsequences consequences)
 {
     public const string NoRoster = "hrm.att.skip.no_roster";
     public const string Locked = "hrm.att.skip.locked";
@@ -188,6 +190,12 @@ internal sealed class AttendanceDayProcessor(
             runs.Add(new DayRun(date, DayRun.Written, null, dayId, outcome.Result, outcome));
         }
 
+        // S1.29b: overtime entries and lateness penalties follow the written results, in the same transaction.
+        if (save)
+        {
+            await consequences.AfterAsync(e, runs, now, actor, ct).ConfigureAwait(false);
+        }
+
         return runs;
     }
 
@@ -239,7 +247,7 @@ internal sealed class AttendanceDayProcessor(
 
     private static bool Same(AttendanceDay d, DayOutcome o, JsonObject explanation, Guid policyVersionId, Guid periodId) =>
         d.DayType == o.DayType && d.Result == o.Result && d.ShiftId == o.ShiftId && d.FirstIn == o.FirstIn && d.LastOut == o.LastOut
-        && d.WorkedMinutes == o.WorkedMinutes && d.LateMinutes == o.LateMinutes && d.EarlyMinutes == o.EarlyMinutes && d.OvertimeMinutes == 0
+        && d.WorkedMinutes == o.WorkedMinutes && d.LateMinutes == o.LateMinutes && d.EarlyMinutes == o.EarlyMinutes && d.OvertimeMinutes == o.OvertimeMinutes
         && d.LeaveRequestId == o.LeaveRequestId && d.DutyRequestId == o.DutyRequestId && d.PolicyVersionId == policyVersionId && d.PeriodId == periodId
         && JsonNode.DeepEquals(JsonNode.Parse(d.Explanation.RootElement.GetRawText()), explanation);
 
@@ -259,7 +267,7 @@ internal sealed class AttendanceDayProcessor(
         var row = new AttendanceDay
         {
             Id = Guid.CreateVersion7(now), CompanyId = e.CompanyId, EmploymentId = e.Id, WorkDate = date, ShiftId = o.ShiftId, DayType = o.DayType, Result = o.Result,
-            FirstIn = o.FirstIn, LastOut = o.LastOut, WorkedMinutes = o.WorkedMinutes, LateMinutes = o.LateMinutes, EarlyMinutes = o.EarlyMinutes, OvertimeMinutes = 0,
+            FirstIn = o.FirstIn, LastOut = o.LastOut, WorkedMinutes = o.WorkedMinutes, LateMinutes = o.LateMinutes, EarlyMinutes = o.EarlyMinutes, OvertimeMinutes = o.OvertimeMinutes,
             LeaveRequestId = o.LeaveRequestId, DutyRequestId = o.DutyRequestId, Explanation = JsonDocument.Parse(explanation.ToJsonString()), PolicyVersionId = policyVersionId,
             PeriodId = periodId, ProcessedAt = now, CreatedAt = now, CreatedBy = actor, UpdatedAt = now, UpdatedBy = actor,
         };

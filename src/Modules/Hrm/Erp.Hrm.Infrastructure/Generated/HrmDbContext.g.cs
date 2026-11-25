@@ -19,6 +19,7 @@ public sealed partial class HrmDbContext(DbContextOptions<HrmDbContext> options)
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.AttendanceDeviceConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.AttendanceEventConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.AttendanceExceptionConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.AttendancePenaltyConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.AttendancePeriodConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.BenefitClaimConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.BenefitEnrollmentConfiguration());
@@ -143,6 +144,7 @@ public static class HrmGeneratedServices
         services.AddScoped<global::Erp.Hrm.Application.Generated.IAttendanceDeviceRepository, global::Erp.Hrm.Infrastructure.Generated.AttendanceDeviceRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IAttendanceEventRepository, global::Erp.Hrm.Infrastructure.Generated.AttendanceEventRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IAttendanceExceptionRepository, global::Erp.Hrm.Infrastructure.Generated.AttendanceExceptionRepository>();
+        services.AddScoped<global::Erp.Hrm.Application.Generated.IAttendancePenaltyRepository, global::Erp.Hrm.Infrastructure.Generated.AttendancePenaltyRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IAttendancePeriodRepository, global::Erp.Hrm.Infrastructure.Generated.AttendancePeriodRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IBenefitClaimRepository, global::Erp.Hrm.Infrastructure.Generated.BenefitClaimRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IBenefitEnrollmentRepository, global::Erp.Hrm.Infrastructure.Generated.BenefitEnrollmentRepository>();

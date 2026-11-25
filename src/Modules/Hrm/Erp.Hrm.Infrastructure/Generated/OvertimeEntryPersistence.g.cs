@@ -28,6 +28,10 @@ internal sealed class OvertimeEntryConfiguration : IEntityTypeConfiguration<glob
         builder.Property(e => e.AttendanceDayId).HasColumnName("attendance_day_id").HasColumnType("uuid");
         builder.Property(e => e.CompOffEntryId).HasColumnName("comp_off_entry_id").HasColumnType("uuid");
         builder.Property(e => e.WorkflowInstanceId).HasColumnName("workflow_instance_id").HasColumnType("uuid");
+        builder.Property(e => e.RequestedMinutes).HasColumnName("requested_minutes").HasColumnType("integer");
+        builder.Property(e => e.Reason).HasColumnName("reason").HasColumnType("text");
+        builder.Property(e => e.PolicyVersionId).HasColumnName("policy_version_id").HasColumnType("uuid");
+        builder.Property(e => e.CompOffMinutes).HasColumnName("comp_off_minutes").HasColumnType("integer");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
@@ -77,6 +81,10 @@ internal sealed class OvertimeEntryRepository(
         if (filter.WorkflowInstanceId is { } workflowInstanceIdFilter)
         {
             query = query.Where(e => e.WorkflowInstanceId == workflowInstanceIdFilter);
+        }
+        if (filter.PolicyVersionId is { } policyVersionIdFilter)
+        {
+            query = query.Where(e => e.PolicyVersionId == policyVersionIdFilter);
         }
         if (filter.Status is { } statusFilter)
         {

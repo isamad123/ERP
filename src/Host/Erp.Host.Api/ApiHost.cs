@@ -298,6 +298,7 @@ public static class ApiHost
         Erp.Hrm.Api.Attendance.AttendanceDayEndpoints.MapHrmAttendanceDayEndpoints(api); // S1.29a attendance engine: process, days, explanation, exception queue
         Erp.Hrm.Api.Attendance.AttendanceReportEndpoints.MapHrmAttendanceReportEndpoints(api); // S1.30b live dashboard and standard attendance reports
         Erp.Hrm.Api.Attendance.AttendanceRequestEndpoints.MapHrmAttendanceRequestEndpoints(api); // S1.30a regularization and duty requests
+        Erp.Hrm.Api.Attendance.AttendanceConsequenceEndpoints.MapHrmAttendanceConsequenceEndpoints(api); // S1.29b overtime claims and requests, penalty waivers
         return app;
     }
 
