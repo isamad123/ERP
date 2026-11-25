@@ -2,7 +2,7 @@
 // ruling 2026-11-21: People, Time and Payroll show now and open "not available yet" until their slices build them).
 // Features are D-24 keys of the licence; permissions are the read permission of each area's main table.
 import { lazy } from 'react';
-import { Activity, AlertTriangle, Briefcase, BarChart3, ClipboardEdit, CalendarDays, CalendarRange, Clock, FileSearch, GitFork, Grid3x3, LayoutGrid, MonitorSmartphone, QrCode, Router, ScrollText, Sigma, SunMoon, Timer, Users, UsersRound, Wallet } from 'lucide-react';
+import { Activity, AlertTriangle, Briefcase, BarChart3, ClipboardEdit, CalendarDays, CalendarRange, Clock, FilePen, FileSearch, GitFork, Grid3x3, LayoutGrid, Lock, MonitorSmartphone, QrCode, Router, ScrollText, Sigma, SunMoon, Timer, Users, UsersRound, Wallet } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
 
 // S1.23a: the policy framework's screens (policies with versions and assignments; "Which policy applies?"), loaded with their routes.
@@ -29,6 +29,9 @@ const TeamScreen = lazy(() => import('./hrm/team'));
 // S1.34a: the pay groups (made by the engine) and the payroll calendar with its readiness list, loaded with their routes.
 const PayGroupsScreen = lazy(() => import('./payroll/pay-groups'));
 const PayCalendarScreen = lazy(() => import('./payroll/calendar'));
+// S1.31: the attendance lock console (periods with lock and reopen requests, late punches) and the retroactive adjustments, loaded with their routes.
+const PeriodsScreen = lazy(() => import('./hrm/periods'));
+const AdjustmentsScreen = lazy(() => import('./hrm/periods').then((m) => ({ default: m.AdjustmentsScreen })));
 
 // S1.22b: grades, positions, headcount budgets, the strength report and the chart by position, loaded with their routes.
 const GradesScreen = lazy(() => import('./hr/positions').then((m) => ({ default: m.GradesScreen })));
@@ -52,6 +55,9 @@ export const hrmScreens: ScreenDeclaration[] = [
   { id: 'attendance-dashboard', path: '/time/dashboard', labelKey: 'nav.liveAttendance', icon: Activity, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_dashboard.read', component: DashboardScreen },
   { id: 'attendance-team', path: '/time/team', labelKey: 'nav.teamAttendance', icon: UsersRound, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_dashboard.read', component: TeamScreen },
   { id: 'attendance-reports', path: '/time/reports', labelKey: 'nav.attendanceReports', icon: BarChart3, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_reports.read', component: ReportsScreen },
+  // S1.31 (FR-XM-26, FR-HRM-ATT-17, ATT-21, GHR-04): the lock console and the adjustments of locked days.
+  { id: 'attendance-periods', path: '/time/periods/*', labelKey: 'nav.attendancePeriods', icon: Lock, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_periods.read', component: PeriodsScreen },
+  { id: 'attendance-adjustments', path: '/time/adjustments/*', labelKey: 'nav.attendanceAdjustments', icon: FilePen, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_adjustments.read', component: AdjustmentsScreen },
   { id: 'attendance-requests', path: '/time/requests/*', labelKey: 'nav.attendanceRequests', icon: ClipboardEdit, group: 'time', feature: 'hrm.core', permission: 'hrm.regularization_requests.read', component: RequestsScreen },
   { id: 'punch', path: '/time/punch', labelKey: 'nav.punch', icon: Clock, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance.punch', component: PunchScreen },
   { id: 'kiosk', path: '/time/kiosk', labelKey: 'nav.kiosk', icon: MonitorSmartphone, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance.kiosk', component: KioskScreen },

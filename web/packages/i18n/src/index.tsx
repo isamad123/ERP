@@ -24,6 +24,7 @@ import type policiesEn from '../messages/policies.en.json';
 import type packsEn from '../messages/packs.en.json';
 import type positionsEn from '../messages/positions.en.json';
 import type requestsEn from '../messages/requests.en.json';
+import type periodsEn from '../messages/periods.en.json';
 import type attendanceReportsEn from '../messages/attendance-reports.en.json';
 import serverEn from './generated/server.en.json';
 import { pseudoCatalogue, pseudoText } from './pseudo';
@@ -48,7 +49,7 @@ function strip(catalogue: Record<string, string>): Catalogue {
   return Object.fromEntries(Object.entries(catalogue).filter(([key]) => !key.startsWith('_')));
 }
 
-export type MessageKey = keyof typeof en | keyof typeof configEn | keyof typeof numberingEn | keyof typeof routesEn | keyof typeof notifyEn | keyof typeof doctemplatesEn | keyof typeof payEn | keyof typeof setupEn | keyof typeof attendanceEn | keyof typeof devicesEn | keyof typeof rostersEn | keyof typeof policiesEn | keyof typeof positionsEn | keyof typeof packsEn | keyof typeof importsEn | keyof typeof exportsEn | keyof typeof reportsEn | keyof typeof requestsEn | keyof typeof attendanceReportsEn | keyof typeof opsEn;
+export type MessageKey = keyof typeof en | keyof typeof configEn | keyof typeof numberingEn | keyof typeof routesEn | keyof typeof notifyEn | keyof typeof doctemplatesEn | keyof typeof payEn | keyof typeof setupEn | keyof typeof attendanceEn | keyof typeof devicesEn | keyof typeof rostersEn | keyof typeof policiesEn | keyof typeof positionsEn | keyof typeof packsEn | keyof typeof importsEn | keyof typeof exportsEn | keyof typeof reportsEn | keyof typeof requestsEn | keyof typeof attendanceReportsEn | keyof typeof opsEn | keyof typeof periodsEn;
 
 let registryVersion = 0;
 const listeners = new Set<() => void>();

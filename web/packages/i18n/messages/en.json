@@ -151,6 +151,8 @@
   "nav.rosters": "Rosters",
   "nav.optionalHolidays": "Optional holidays",
   "nav.attendanceRequests": "Attendance requests",
+  "nav.attendancePeriods": "Attendance periods",
+  "nav.attendanceAdjustments": "Attendance adjustments",
   "nav.exceptions": "Attendance exceptions",
   "nav.liveAttendance": "Live attendance",
   "nav.attendanceReports": "Attendance reports",
