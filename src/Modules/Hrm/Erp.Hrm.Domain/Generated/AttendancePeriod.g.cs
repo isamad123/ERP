@@ -36,6 +36,42 @@ public sealed partial class AttendancePeriod : global::Erp.BuildingBlocks.Domain
     /// <summary>locked_by_run_id: fk hrm.pay_runs</summary>
     public global::System.Guid? LockedByRunId { get; set; }
 
+    /// <summary>lock_kind: who locked: payroll's calculation (locked_by_run_id) or HR after the cut-off date with approval (S1.31)</summary>
+    public string? LockKind { get; set; }
+
+    /// <summary>locked_by: the user who locked: the payroll run's calculator or the HR requester (S1.31)</summary>
+    public global::System.Guid? LockedBy { get; set; }
+
+    /// <summary>lock_reason: why HR asks to lock, or locked, before payroll (S1.31)</summary>
+    public string? LockReason { get; set; }
+
+    /// <summary>lock_requested_by: who asked HR's lock, waiting or decided (S1.31)</summary>
+    public global::System.Guid? LockRequestedBy { get; set; }
+
+    /// <summary>lock_accept_open: HR's lock request accepts days not processed and open exceptions (S1.31)</summary>
+    public bool? LockAcceptOpen { get; set; }
+
+    /// <summary>unprocessed_accepted: employee days not processed that the lock accepted (S1.31); null when every day was processed</summary>
+    public int? UnprocessedAccepted { get; set; }
+
+    /// <summary>exceptions_accepted: open exceptions the lock accepted (S1.31); null when none was open</summary>
+    public int? ExceptionsAccepted { get; set; }
+
+    /// <summary>lock_workflow_instance_id: fk wf.workflow_instances; HR's lock request, waiting or decided (S1.31)</summary>
+    public global::System.Guid? LockWorkflowInstanceId { get; set; }
+
+    /// <summary>reopen_workflow_instance_id: fk wf.workflow_instances; the request to cancel the locking run and reopen (S1.31)</summary>
+    public global::System.Guid? ReopenWorkflowInstanceId { get; set; }
+
+    /// <summary>reopen_requested_by: who asked to cancel the locking run and reopen (S1.31)</summary>
+    public global::System.Guid? ReopenRequestedBy { get; set; }
+
+    /// <summary>reopened_at: when the period last reopened (S1.31)</summary>
+    public global::System.DateTimeOffset? ReopenedAt { get; set; }
+
+    /// <summary>reopen_reason: why it is asked to reopen, or last reopened (S1.31)</summary>
+    public string? ReopenReason { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

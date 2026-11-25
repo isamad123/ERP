@@ -13,6 +13,8 @@ public sealed record AttendancePeriodFilter
     public global::System.Guid? PayGroupId { get; init; }
     public global::System.Guid? PayPeriodId { get; init; }
     public global::System.Guid? LockedByRunId { get; init; }
+    public global::System.Guid? LockWorkflowInstanceId { get; init; }
+    public global::System.Guid? ReopenWorkflowInstanceId { get; init; }
     public string? Status { get; init; }
 }
 
@@ -48,6 +50,18 @@ public static class AttendancePeriodAccess
         new("period_end", "PeriodEnd", null),
         new("locked_at", "LockedAt", null),
         new("locked_by_run_id", "LockedByRunId", null),
+        new("lock_kind", "LockKind", null),
+        new("locked_by", "LockedBy", null),
+        new("lock_reason", "LockReason", null),
+        new("lock_requested_by", "LockRequestedBy", null),
+        new("lock_accept_open", "LockAcceptOpen", null),
+        new("unprocessed_accepted", "UnprocessedAccepted", null),
+        new("exceptions_accepted", "ExceptionsAccepted", null),
+        new("lock_workflow_instance_id", "LockWorkflowInstanceId", null),
+        new("reopen_workflow_instance_id", "ReopenWorkflowInstanceId", null),
+        new("reopen_requested_by", "ReopenRequestedBy", null),
+        new("reopened_at", "ReopenedAt", null),
+        new("reopen_reason", "ReopenReason", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

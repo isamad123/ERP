@@ -2,7 +2,7 @@
 // ruling 2026-11-21: People, Time and Payroll show now and open "not available yet" until their slices build them).
 // Features are D-24 keys of the licence; permissions are the read permission of each area's main table.
 import { lazy } from 'react';
-import { Activity, AlertTriangle, Briefcase, BarChart3, ClipboardEdit, CalendarDays, CalendarRange, Clock, FileSearch, GitFork, Grid3x3, LayoutGrid, MonitorSmartphone, QrCode, Router, ScrollText, Sigma, SunMoon, Timer, Users, UsersRound, Wallet } from 'lucide-react';
+import { Activity, AlertTriangle, BookOpen, Briefcase, BarChart3, CalendarCheck, ListChecks, ClipboardEdit, CalendarDays, CalendarRange, Clock, FilePen, FileSearch, GitFork, Grid3x3, LayoutGrid, Lock, MonitorSmartphone, QrCode, Router, ScrollText, Sigma, SunMoon, Timer, Users, UsersRound, Wallet } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
 import { registerApprovalCard } from './kernel/approval-cards';
 
@@ -30,6 +30,12 @@ const TeamScreen = lazy(() => import('./hrm/team'));
 // S1.33a: leave (my leave, apply, request page) and the team leave calendar, loaded with their routes.
 const LeaveScreen = lazy(() => import('./hrm/leave'));
 const LeaveTeamScreen = lazy(() => import('./hrm/leave-team'));
+// S1.33b: HR's leave screens (types, rules, ledger with recompute, year-end, reports), loaded with their routes.
+const LeaveTypesScreen = lazy(() => import('./hrm/leave-types'));
+const LeaveRulesScreen = lazy(() => import('./hrm/leave-rules'));
+const LeaveLedgerScreen = lazy(() => import('./hrm/leave-ledger'));
+const LeaveYearEndScreen = lazy(() => import('./hrm/leave-year-end'));
+const LeaveReportsScreen = lazy(() => import('./hrm/leave-reports'));
 // S1.33a: the approvals inbox shows this card under the fields of a leave request or a leave cancellation (lazy, so the shell does not grow).
 const LeaveApprovalCard = lazy(() => import('./hrm/leave-approval-card'));
 registerApprovalCard('hrm.leave_request', LeaveApprovalCard);
@@ -37,6 +43,9 @@ registerApprovalCard('hrm.leave_cancellation', LeaveApprovalCard);
 // S1.34a: the pay groups (made by the engine) and the payroll calendar with its readiness list, loaded with their routes.
 const PayGroupsScreen = lazy(() => import('./payroll/pay-groups'));
 const PayCalendarScreen = lazy(() => import('./payroll/calendar'));
+// S1.31: the attendance lock console (periods with lock and reopen requests, late punches) and the retroactive adjustments, loaded with their routes.
+const PeriodsScreen = lazy(() => import('./hrm/periods'));
+const AdjustmentsScreen = lazy(() => import('./hrm/periods').then((m) => ({ default: m.AdjustmentsScreen })));
 
 // S1.22b: grades, positions, headcount budgets, the strength report and the chart by position, loaded with their routes.
 const GradesScreen = lazy(() => import('./hr/positions').then((m) => ({ default: m.GradesScreen })));
@@ -60,6 +69,9 @@ export const hrmScreens: ScreenDeclaration[] = [
   { id: 'attendance-dashboard', path: '/time/dashboard', labelKey: 'nav.liveAttendance', icon: Activity, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_dashboard.read', component: DashboardScreen },
   { id: 'attendance-team', path: '/time/team', labelKey: 'nav.teamAttendance', icon: UsersRound, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_dashboard.read', component: TeamScreen },
   { id: 'attendance-reports', path: '/time/reports', labelKey: 'nav.attendanceReports', icon: BarChart3, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_reports.read', component: ReportsScreen },
+  // S1.31 (FR-XM-26, FR-HRM-ATT-17, ATT-21, GHR-04): the lock console and the adjustments of locked days.
+  { id: 'attendance-periods', path: '/time/periods/*', labelKey: 'nav.attendancePeriods', icon: Lock, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_periods.read', component: PeriodsScreen },
+  { id: 'attendance-adjustments', path: '/time/adjustments/*', labelKey: 'nav.attendanceAdjustments', icon: FilePen, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_adjustments.read', component: AdjustmentsScreen },
   { id: 'attendance-requests', path: '/time/requests/*', labelKey: 'nav.attendanceRequests', icon: ClipboardEdit, group: 'time', feature: 'hrm.core', permission: 'hrm.regularization_requests.read', component: RequestsScreen },
   { id: 'punch', path: '/time/punch', labelKey: 'nav.punch', icon: Clock, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance.punch', component: PunchScreen },
   { id: 'kiosk', path: '/time/kiosk', labelKey: 'nav.kiosk', icon: MonitorSmartphone, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance.kiosk', component: KioskScreen },
@@ -70,6 +82,12 @@ export const hrmScreens: ScreenDeclaration[] = [
   { id: 'optional-holidays', path: '/time/optional-holidays', labelKey: 'nav.optionalHolidays', icon: SunMoon, group: 'time', feature: 'hrm.core', permission: 'hrm.holidays.read', component: OptionalHolidaysScreen },
   { id: 'leave', path: '/time/leave/*', labelKey: 'nav.leave', icon: CalendarDays, group: 'time', feature: 'hrm.core', permission: 'hrm.leave_requests.read', component: LeaveScreen },
   { id: 'leave-team', path: '/time/leave-team', labelKey: 'nav.leaveTeam', icon: UsersRound, group: 'time', feature: 'hrm.core', permission: 'hrm.leave_requests.read', component: LeaveTeamScreen },
+  // S1.33b (FR-HRM-LVE-01, -03, -10, -11, -14): HR's leave screens; each needs the permission to read what it shows.
+  { id: 'leave-types', path: '/time/leave-admin/types', labelKey: 'nav.leaveTypes', icon: ListChecks, group: 'time', feature: 'hrm.core', permission: 'hrm.leave_types.update', component: LeaveTypesScreen },
+  { id: 'leave-rules', path: '/time/leave-admin/rules', labelKey: 'nav.leaveRules', icon: BookOpen, group: 'time', feature: 'hrm.core', permission: 'hrm.leave_types.update', component: LeaveRulesScreen },
+  { id: 'leave-ledger', path: '/time/leave-admin/ledger', labelKey: 'nav.leaveLedger', icon: ScrollText, group: 'time', feature: 'hrm.core', permission: 'hrm.leave_ledger.post', component: LeaveLedgerScreen },
+  { id: 'leave-year-end', path: '/time/leave-admin/year-end', labelKey: 'nav.leaveYearEnd', icon: CalendarCheck, group: 'time', feature: 'hrm.core', permission: 'hrm.leave_year_end_runs.read', component: LeaveYearEndScreen },
+  { id: 'leave-reports', path: '/time/leave-admin/reports', labelKey: 'nav.leaveReports', icon: BarChart3, group: 'time', feature: 'hrm.core', permission: 'hrm.leave_reports.read', component: LeaveReportsScreen },
   // S1.23a (FR-HRM-POL-02, -03; ruling Q1): HR administrators manage policies; both entries need the permission to read policies.
   { id: 'policies', path: '/hr/policies/*', labelKey: 'nav.policies', icon: ScrollText, group: 'people', feature: 'hrm.core', permission: 'hrm.policies.read', component: PoliciesScreen },
   { id: 'policy-resolution', path: '/hr/policy-resolution', labelKey: 'nav.policyResolution', icon: FileSearch, group: 'people', feature: 'hrm.core', permission: 'hrm.policies.read', component: ResolutionScreen },

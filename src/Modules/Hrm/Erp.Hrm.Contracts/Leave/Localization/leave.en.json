@@ -114,5 +114,9 @@
   "permissions.hrm.leave_types.create": "Create leave types",
   "permissions.hrm.leave_types.update": "Change, retire and bring back leave types",
   "permissions.hrm.leave_year_end_runs.approve": "Approve a confirmation of the leave year-end as the second person",
-  "permissions.hrm.leave_year_end_runs.confirm": "Confirm or roll back the leave year-end"
+  "permissions.hrm.leave_year_end_runs.confirm": "Confirm or roll back the leave year-end",
+  "permissions.hrm.leave_reports.read": "Run the standard leave reports",
+  "errors.hrm.leave.report.range_order": "The end date is before the start date.",
+  "errors.hrm.leave.report.range_too_long": "A leave report covers at most one year.",
+  "errors.hrm.leave.report.unknown": "There is no such leave report."
 }

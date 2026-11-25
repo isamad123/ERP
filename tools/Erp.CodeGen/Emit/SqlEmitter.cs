@@ -122,6 +122,13 @@ public static class SqlEmitter
     private static int RuleSliceOrder(string slice) =>
         int.Parse(slice[(slice.IndexOf('.', StringComparison.Ordinal) + 1)..].TrimEnd(PartLetters), CultureInfo.InvariantCulture) - 3;
 
+    /// <summary>The place of a slice's design file in the sequence (as named above).</summary>
+    private static int DesignSequence(string slice) =>
+        180 + (60 * (slice.Contains("-r", StringComparison.Ordinal) ? int.Parse(slice[^1..], CultureInfo.InvariantCulture) : 0)) + RuleSliceOrder(slice.Split('-')[0]) + LaterPartOffset(slice);
+
+    /// <summary>The place of a slice's rules file of implemented placeholders in the HR sequence (as named above).</summary>
+    private static int RulesSequence(string slice) => 121 + RuleSliceOrder(slice.Split('-')[0]) + LaterPartOffset(slice);
+
     /// <summary>The module whose migrations hold a database function: HR for a function in an HR schema, else the kernel.</summary>
     private static string FunctionModule(Settings s, FunctionDef f) =>
         s.HrmSchemas.Contains(f.Name.Split('.')[0], StringComparer.Ordinal) ? "hrm" : "kernel";
@@ -135,9 +142,16 @@ public static class SqlEmitter
     /// </summary>
     private static int LaterPartOffset(string slice) => Math.Max(0, SlicePart(slice) - 1) * 600;
 
+    /// <summary>
+    /// Slices built in one go whose files must sort after the second parts of the slices they build on, placed as a second part would be
+    /// (S1.31, CR-091 S1.31 detail: its guards cover tables and columns of S1.29b, S1.32b and S1.34b, whose files sort at 12xx and 13xx).
+    /// </summary>
+    private static readonly Dictionary<string, int> PlacedAsPart = new(StringComparer.Ordinal) { ["S1.31"] = 2 };
+
     /// <summary>The part letter of a slice built in parts (S1.09a → 1, S1.09b → 2); 0 for a slice built in one go.</summary>
     private static int SlicePart(string slice) =>
-        slice.Split('-')[0][^1] is var last && char.IsAsciiLetterLower(last) ? last - 'a' + 1 : 0;
+        PlacedAsPart.TryGetValue(slice.Split('-')[0], out var placed) ? placed
+        : slice.Split('-')[0][^1] is var last && char.IsAsciiLetterLower(last) ? last - 'a' + 1 : 0;
 
     /// <summary>Database roles of spec 03 section 3.7 used by the customer database.</summary>
     public static readonly IReadOnlyList<string> GroupRoles = ["app_rw", "app_ro", "app_audit", "backup"];
@@ -346,7 +360,8 @@ public static class SqlEmitter
             // Rules files (V…02xx) run before every design file (V…03xx), so a rule implemented by any slice is already in
             // force here: the comment says so instead of repeating "Pending rule" (S1.10a; no earlier design file touched
             // a table with an implemented rule, so frozen files are unchanged).
-            var implemented = model.ImplementedStubs.Where(st => st.Table == table.FullName).ToList();
+            // A rule whose rules file sorts after this design file (S1.31, placed after the second parts) is still pending here.
+            var implemented = model.ImplementedStubs.Where(st => st.Table == table.FullName && RulesSequence(st.Implementation!.Slice) < DesignSequence(slice)).ToList();
             b.Append(Comments(table, c => implemented.Find(st => c.StartsWith($"Pending rule ({st.Owner}, placeholder {table.Schema}.{st.FunctionName}): ", StringComparison.Ordinal)) is { } st
                 ? $"Rule (implemented in {st.Implementation!.Slice}): {st.Rule}"
                 : c, baseOnly: false, asOfSlice: slice));

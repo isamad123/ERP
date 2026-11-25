@@ -15,6 +15,7 @@ public sealed partial class HrmDbContext(DbContextOptions<HrmDbContext> options)
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         global::System.ArgumentNullException.ThrowIfNull(modelBuilder);
+        modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.AttendanceAdjustmentConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.AttendanceDayConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.AttendanceDeviceConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.AttendanceEventConfiguration());
@@ -140,6 +141,7 @@ public static class HrmGeneratedServices
 {
     public static IServiceCollection AddHrmGeneratedRepositories(this IServiceCollection services)
     {
+        services.AddScoped<global::Erp.Hrm.Application.Generated.IAttendanceAdjustmentRepository, global::Erp.Hrm.Infrastructure.Generated.AttendanceAdjustmentRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IAttendanceDayRepository, global::Erp.Hrm.Infrastructure.Generated.AttendanceDayRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IAttendanceDeviceRepository, global::Erp.Hrm.Infrastructure.Generated.AttendanceDeviceRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IAttendanceEventRepository, global::Erp.Hrm.Infrastructure.Generated.AttendanceEventRepository>();

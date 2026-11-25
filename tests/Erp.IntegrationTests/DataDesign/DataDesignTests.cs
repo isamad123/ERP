@@ -32,8 +32,8 @@ public sealed partial class DataDesignTests(MigratedDatabases db)
         // migration history of CR-054 (slice S1.11f2, CR-006), the remembered browsers of CR-063 (slice S1.12a, data
         // design approved 2026-11-20), the saved list views of CR-063 (slice S1.12c, data design approved 2026-11-22) and the
         // duplicate-person review queue of CR-076 (slice S1.20a detail b), the strength exceptions of CR-078 (slice S1.22a detail d)
-        // the form drafts of CR-077 (slice S1.21a), the import batch rows of CR-072 (slice S1.16a, rollback check) the unmapped device punches of CR-088 (slice S1.27b) and the optional holiday choices of CR-085 (slice S1.28b) and the lateness penalties of CR-089 (slice S1.29b detail c).
-        Assert.Equal(219, design.Count);
+        // the form drafts of CR-077 (slice S1.21a), the import batch rows of CR-072 (slice S1.16a, rollback check) the unmapped device punches of CR-088 (slice S1.27b) and the optional holiday choices of CR-085 (slice S1.28b) and the lateness penalties of CR-089 (slice S1.29b detail c) and the attendance adjustments of CR-091 (slice S1.31 detail a).
+        Assert.Equal(220, design.Count);
         Assert.Contains(design, t => t.Schema == "hrm" && t.Name == "strength_exceptions");
         Assert.Contains(design, t => t.Schema == "itg" && t.Name == "import_batch_rows");
         Assert.Contains(design, t => t.Schema == "cfg" && t.Name == "form_drafts");

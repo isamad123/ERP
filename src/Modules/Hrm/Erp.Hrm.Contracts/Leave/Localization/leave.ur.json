@@ -114,5 +114,9 @@
   "permissions.hrm.leave_types.create": "رخصت کی اقسام بنانا",
   "permissions.hrm.leave_types.update": "رخصت کی اقسام بدلنا، ختم کرنا اور بحال کرنا",
   "permissions.hrm.leave_year_end_runs.approve": "دوسرے شخص کے طور پر رخصت کے سال کے اختتام کی تصدیق منظور کرنا",
-  "permissions.hrm.leave_year_end_runs.confirm": "رخصت کے سال کے اختتام کی تصدیق یا واپسی"
+  "permissions.hrm.leave_year_end_runs.confirm": "رخصت کے سال کے اختتام کی تصدیق یا واپسی",
+  "permissions.hrm.leave_reports.read": "رخصت کی معیاری رپورٹیں چلانا",
+  "errors.hrm.leave.report.range_order": "آخری تاریخ ابتدائی تاریخ سے پہلے ہے۔",
+  "errors.hrm.leave.report.range_too_long": "رخصت کی رپورٹ زیادہ سے زیادہ ایک سال کا احاطہ کرتی ہے۔",
+  "errors.hrm.leave.report.unknown": "ایسی کوئی رخصت کی رپورٹ نہیں ہے۔"
 }

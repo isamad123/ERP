@@ -26,6 +26,7 @@ public static class PayServices
         services.AddScoped<IHeldChangeHandler, CompensationChangeHandler>();
         services.AddScoped<IPayReadinessCheck, BankDataCompleteCheck>();
         services.AddScoped<IPayReadinessCheck, StructuresAssignedCheck>();
+        services.AddScoped<IPayReadinessCheck, Attendance.AttendanceLockedCheck>(); // S1.31 (FR-XM-26)
         return services;
     }
 

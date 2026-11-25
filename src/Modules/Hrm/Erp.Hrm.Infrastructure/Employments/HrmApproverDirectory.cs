@@ -29,7 +29,27 @@ public sealed class HrmApproverDirectory(ITenantConnectionProvider tenant) : IAp
         }
 
         await using var connection = (NpgsqlConnection)await tenant.DataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
-        var current = await IdsAsync(connection, $"select e.id from hrm.employments e where e.user_ref = $1 and {Current}", cancellationToken, userId, asOf).ConfigureAwait(false);
+        var start = await IdsAsync(connection, $"select e.id from hrm.employments e where e.user_ref = $1 and {Current}", cancellationToken, userId, asOf).ConfigureAwait(false);
+        return await ManagerUsersAsync(connection, start, levels, asOf, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The managers of the employment the document is about (R-305, CR-116): the subject is the employment id, so a subject with no user
+    /// still has its own manager. A subject that is not an employment id, an unknown one or one without a manager answers nothing.
+    /// </summary>
+    public async Task<IReadOnlyList<Guid>> ManagersOfSubjectAsync(string subject, int levels, DateOnly asOf, CancellationToken cancellationToken)
+    {
+        if (levels < 1 || !Guid.TryParse(subject, out var employmentId))
+        {
+            return [];
+        }
+
+        await using var connection = (NpgsqlConnection)await tenant.DataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        return await ManagerUsersAsync(connection, [employmentId], levels, asOf, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<IReadOnlyList<Guid>> ManagerUsersAsync(NpgsqlConnection connection, List<Guid> current, int levels, DateOnly asOf, CancellationToken cancellationToken)
+    {
         for (var level = 0; level < levels && current.Count > 0; level++)
         {
             current = await IdsAsync(connection, $"""

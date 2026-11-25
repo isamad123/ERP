@@ -11,14 +11,13 @@ public static class HrmPermissions
 {
     public static global::System.Collections.Generic.IReadOnlyList<global::Erp.BuildingBlocks.Contracts.Security.PermissionDefinition> All { get; } =
     [
+        new("hrm.attendance_adjustments.read", "hrm", "permissions.hrm.attendance_adjustments.read", false),
         new("hrm.attendance_days.read", "hrm", "permissions.hrm.attendance_days.read", false),
         new("hrm.attendance_devices.read", "hrm", "permissions.hrm.attendance_devices.read", false),
         new("hrm.attendance_events.read", "hrm", "permissions.hrm.attendance_events.read", false),
         new("hrm.attendance_exceptions.read", "hrm", "permissions.hrm.attendance_exceptions.read", false),
         new("hrm.attendance_penalties.read", "hrm", "permissions.hrm.attendance_penalties.read", false),
         new("hrm.attendance_periods.read", "hrm", "permissions.hrm.attendance_periods.read", false),
-        new("hrm.attendance_periods.create", "hrm", "permissions.hrm.attendance_periods.create", false),
-        new("hrm.attendance_periods.update", "hrm", "permissions.hrm.attendance_periods.update", false),
         new("hrm.benefit_claims.read", "hrm", "permissions.hrm.benefit_claims.read", true),
         new("hrm.benefit_claims.create", "hrm", "permissions.hrm.benefit_claims.create", true),
         new("hrm.benefit_claims.update", "hrm", "permissions.hrm.benefit_claims.update", true),

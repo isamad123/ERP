@@ -210,9 +210,28 @@
     - [period_end, date, req]
     - [locked_at, ts, opt]
     - [locked_by_run_id, uuid, opt, fk hrm.pay_runs]
+    - [lock_kind, "enum(payroll,manual)", opt, "who locked: payroll's calculation (locked_by_run_id) or HR after the cut-off date with approval (S1.31)"]
+    - [locked_by, uuid, opt, "the user who locked: the payroll run's calculator or the HR requester (S1.31)"]
+    - [lock_reason, text, opt, "why HR asks to lock, or locked, before payroll (S1.31)"]
+    - [lock_requested_by, uuid, opt, "who asked HR's lock, waiting or decided (S1.31)"]
+    - [lock_accept_open, bool, opt, "HR's lock request accepts days not processed and open exceptions (S1.31)"]
+    - [unprocessed_accepted, int, opt, "employee days not processed that the lock accepted (S1.31); null when every day was processed"]
+    - [exceptions_accepted, int, opt, "open exceptions the lock accepted (S1.31); null when none was open"]
+    - [lock_workflow_instance_id, uuid, opt, "fk wf.workflow_instances; HR's lock request, waiting or decided (S1.31)"]
+    - [reopen_workflow_instance_id, uuid, opt, "fk wf.workflow_instances; the request to cancel the locking run and reopen (S1.31)"]
+    - [reopen_requested_by, uuid, opt, "who asked to cancel the locking run and reopen (S1.31)"]
+    - [reopened_at, ts, opt, "when the period last reopened (S1.31)"]
+    - [reopen_reason, text, opt, "why it is asked to reopen, or last reopened (S1.31)"]
   unique: [[pay_period_id]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.31 (CR-091 S1.31 detail; slice S1.31 Build items 1 to 4, FR-XM-26, FR-HRM-ATT-17, ATT-21): the period is locked by payroll's calculation
+  # (locked_by_run_id) or by HR after the cut-off date with approval (lock_kind manual), and reopens only when the run that locked it is cancelled
+  # before it is locked itself (CR-095). The lock records who, why and what it accepted. Generated writes closed (rules.yaml stub
+  # attendance_periods_lock implemented); the changes are made by the HR attendance lock service only. "hrm.retro_adjustments" in the note is the
+  # pay adjustment of S1.39; the attendance side of a change after lock is hrm.attendance_adjustments (CR-091), which S1.39 turns into it.
+  added_in: {S1.31: [lock_kind, locked_by, lock_reason, lock_requested_by, lock_accept_open, unprocessed_accepted, exceptions_accepted, lock_workflow_instance_id, reopen_workflow_instance_id, reopen_requested_by, reopened_at, reopen_reason]}
+  api_actions: [read]
   reqs: [ATT-17, ATT-21, FR-XM-26]
   checks: ["exclusion: (pay_group_id with =, daterange(period_start, period_end, '[]') with &&)"]
   notes: "A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments."
@@ -379,6 +398,39 @@
   added_in: S1.29b
   api_actions: [read]
   reqs: [ATT-13]
+
+- table: hrm.attendance_adjustments
+  purpose: "A change to attendance or leave of a locked period, carried into the next open payroll period; the locked days stay as they were (S1.31, CR-091, FR-XM-26)"
+  traits: [std, co]
+  status: [submitted, approved, rejected, withdrawn, applied]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [period_id, uuid, req, "fk hrm.attendance_periods; the locked period of the dates"]
+    - [from_date, date, req]
+    - [to_date, date, req]
+    - [kind, "enum(attendance,leave_cancellation,overtime)", req, "a day's result, approved leave cancelled, or overtime of a locked day"]
+    - [leave_request_id, uuid, opt, "fk hrm.leave_requests; the approved leave cancelled (kind leave_cancellation)"]
+    - [old_summary, json, req, "the locked result of each day (result, minutes, leave, overtime) as payroll read it"]
+    - [new_summary, json, req, "the corrected result of each day"]
+    - [reason, text, req]
+    - [target_pay_period_id, uuid, req, "fk hrm.pay_periods; the next open payroll period of the employment's pay group, set again on approval"]
+    - [leave_reversal_id, uuid, opt, "fk hrm.leave_ledger; the usage reversal dated in the target period (kind leave_cancellation)"]
+    - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+    - [applied_in_run_id, uuid, opt, "fk hrm.pay_runs; the run that paid or recovered it (S1.39)"]
+    - [status_history, json, req, "every status the adjustment took with who and when; only added to"]
+  indexes: [[employment_id, from_date], [company_id, status], [target_pay_period_id, status]]
+  # S1.31 (CR-091 S1.31 detail; slice S1.31 Build item 5, FR-XM-26, FR-XM-05, FR-XM-06, FR-XM-32): asked for by HR or the employee's manager in scope,
+  # approved through the workflow (document type hrm.attendance_adjustment, never by the requester or the employee); its facts never change and its
+  # status only moves forward, each move added to status_history (rules.yaml function hrm.tg_attendance_adjustments_rules). Read by payroll through
+  # IAttendanceAdjustments. Generated writes closed.
+  scope: {company: company_id, employment: employment_id}
+  added_in: S1.31
+  api_actions: [read]
+  # S1.07 audit key (CR-026), set by S1.31 (CR-091 S1.31 detail): the facts never change and the row is never removed; each status move is added to
+  # status_history with who and when, so the change log skips the table like the other append-only ones.
+  audit: false
+  audit_reason: "append-only status history: the facts never change, each status move is added to status_history with who and when, and the row is never removed (S1.31)"
+  reqs: [ATT-17, FR-XM-26]
 
 - table: hrm.leave_types
   traits: [std, co, soft, name]

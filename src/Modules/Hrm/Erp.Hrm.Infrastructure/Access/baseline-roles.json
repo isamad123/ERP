@@ -1,5 +1,5 @@
 {
-  "_comment": "Baseline HR roles of spec 06a section 28.1 (slice S1.06 ruling Q2): read permissions only; each HR slice adds the business actions of section 28.2. Seeded into every customer with the HR module by provisioning and the migrator's migrate command, then editable by the customer (FR-ADM-ROL-03). Urdu names to be reviewed by a native speaker.",
+  "_comment": "Baseline HR roles of spec 06a section 28.1 (slice S1.06 ruling Q2): read permissions only; each HR slice adds the business actions of section 28.2. Seeded into every customer with the HR module by provisioning and the migrator's migrate command, then editable by the customer (FR-ADM-ROL-03). Urdu names to be reviewed by a native speaker. S1.31 (CR-091 S1.31 detail): payroll managers decide the request to cancel the locking payroll run and reopen its attendance period, so they hold the workflow task rights (their own tasks), like the HR administrators.",
   "module": "hrm",
   "roles": [
     {
@@ -114,6 +114,7 @@
         "hrm.shift_effective.read",
         "hrm.attendance_dashboard.read",
         "hrm.attendance_reports.read",
+        "hrm.leave_reports.read",
         "hrm.attendance_events.read"
       ],
       "scopes": {
@@ -282,7 +283,12 @@
         "hrm.optional_holiday_choices.read",
         "hrm.shift_effective.read",
         "hrm.attendance_dashboard.read",
-        "hrm.attendance_reports.read"
+        "hrm.attendance_reports.read",
+        "hrm.leave_reports.read",
+        "hrm.attendance_periods.lock",
+        "hrm.attendance_periods.reopen",
+        "hrm.attendance_adjustments.read",
+        "hrm.attendance_adjustments.submit"
       ],
       "scopes": {
         "*": "all",
@@ -362,7 +368,9 @@
         "hrm.salary_structure_components.update",
         "hrm.compensation_assignments.create",
         "hrm.compensation_lines.create",
-        "hrm.pay.compensation.read"
+        "hrm.pay.compensation.read",
+        "hrm.attendance_periods.read",
+        "hrm.attendance_adjustments.read"
       ],
       "scopes": {
         "*": "all"
@@ -448,10 +456,16 @@
         "hrm.compensation_assignments.create",
         "hrm.compensation_lines.create",
         "hrm.pay.compensation.read",
-        "hrm.pay.change.approve"
+        "hrm.pay.change.approve",
+        "hrm.attendance_periods.read",
+        "hrm.attendance_periods.reopen",
+        "hrm.attendance_adjustments.read",
+        "wf.workflow_tasks.read",
+        "wf.workflow_tasks.update"
       ],
       "scopes": {
-        "*": "all"
+        "*": "all",
+        "wf.workflow_tasks": "own"
       },
       "fields": [
         {

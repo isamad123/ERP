@@ -367,6 +367,12 @@ public sealed class TestDirectory : IApproverDirectory
         return Task.FromResult(current);
     }
 
+    /// <summary>Managers of a subject employment reference (R-305), by reference text.</summary>
+    public ConcurrentDictionary<string, Guid[]> SubjectManagers { get; } = new(StringComparer.Ordinal);
+
+    public Task<IReadOnlyList<Guid>> ManagersOfSubjectAsync(string subject, int levels, DateOnly asOf, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<Guid>>(SubjectManagers.TryGetValue(subject, out var m) ? m : []);
+
     public Task<IReadOnlyList<Guid>> DepartmentHeadsAsync(Guid userId, Guid companyId, DateOnly asOf, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<Guid>>(Heads.TryGetValue(userId, out var h) ? h : []);
 
