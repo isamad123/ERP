@@ -1,5 +1,5 @@
 {
-  "_comment": "Document types the HR module sends for approval (slice S1.10 format). S1.20b (CR-076 item 8, slice S1.20 ruling Q11): an employment event of a kind the company setting hrm.employment_events.approval_kinds lists waits for this route and applies on approval; the requester and the employee never approve it (FR-XM-32). Changing the route needs a second administrator (requires_approval). S1.20c: a transfer between companies uses kind transfer and gives to_company (review S1.20c finding 9). Seeded by migrate and provisioning with its default route, active at once. S1.22a (CR-078 item 2, slice S1.22 ruling Q5): hrm.strength_exception is the permission to place one person beyond a position's budgeted FTE or a unit and grade's sanctioned count; default route HR Admin; the person placed and the requester never approve it (FR-XM-32). S1.32b (CR-086 S1.32b detail; slice S1.32 Build items 7 and 9, FR-HRM-LVE-05, -06, FR-XM-32): hrm.leave_request is a leave request (default route: the employee's line manager, given by the leave service in the field line_manager so an employee without a sign-in reaches their own manager (review S1.32b finding 2), or the HR administrators when there is none, then HR where the leave policy sets hrApproval for the type); hrm.leave_cancellation the cancellation of approved leave where the policy sets cancellationApproval (default route: the line manager, or the HR administrators). The employee and the person who applied never approve either. The routes are the customer's to change (for example by days or leave type). S1.29b (CR-089 S1.29b detail; slice S1.29 Build items 8 and 9, FR-HRM-ATT-12, ATT-13, FR-XM-32): hrm.overtime is overtime asked for before the day or claimed after it, hrm.attendance_penalty_waiver a waiver of a lateness penalty; both go to the employee's line manager given in the field line_manager (R-305), or the HR administrators when there is none; the employee and the requester never approve. Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "Document types the HR module sends for approval (slice S1.10 format). S1.20b (CR-076 item 8, slice S1.20 ruling Q11): an employment event of a kind the company setting hrm.employment_events.approval_kinds lists waits for this route and applies on approval; the requester and the employee never approve it (FR-XM-32). Changing the route needs a second administrator (requires_approval). S1.20c: a transfer between companies uses kind transfer and gives to_company (review S1.20c finding 9). Seeded by migrate and provisioning with its default route, active at once. S1.22a (CR-078 item 2, slice S1.22 ruling Q5): hrm.strength_exception is the permission to place one person beyond a position's budgeted FTE or a unit and grade's sanctioned count; default route HR Admin; the person placed and the requester never approve it (FR-XM-32). S1.32b (CR-086 S1.32b detail; slice S1.32 Build items 7 and 9, FR-HRM-LVE-05, -06, FR-XM-32): hrm.leave_request is a leave request (default route: the employee's line manager, given by the leave service in the field line_manager so an employee without a sign-in reaches their own manager (review S1.32b finding 2), or the HR administrators when there is none, then HR where the leave policy sets hrApproval for the type); hrm.leave_cancellation the cancellation of approved leave where the policy sets cancellationApproval (default route: the line manager, or the HR administrators). The employee and the person who applied never approve either. The routes are the customer's to change (for example by days or leave type). S1.29b (CR-089 S1.29b detail; slice S1.29 Build items 8 and 9, FR-HRM-ATT-12, ATT-13, FR-XM-32): hrm.overtime is overtime asked for before the day or claimed after it, hrm.attendance_penalty_waiver a waiver of a lateness penalty; both go to the employee's line manager given in the field line_manager (R-305), or the HR administrators when there is none; the employee and the requester never approve.  S1.31 (CR-091 S1.31 detail; slice S1.31 Build items 3 to 5, FR-HRM-ATT-17, ATT-21, FR-XM-26, FR-XM-32): hrm.attendance_period_lock is HR's lock of a pay period after its cut-off date (default route: the HR administrators); hrm.attendance_period_reopen the cancellation of the run that locked a period and its reopening (default route: the payroll managers, or the HR administrators when there are none); hrm.attendance_adjustment a retroactive adjustment of locked dates carried into the next open payroll period (default route: the HR administrators). The requester, and for an adjustment the employee, never approve. Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "document_types": [
     {
@@ -183,6 +183,69 @@
       "bulk_approval": false,
       "requires_approval": true,
       "default_route": {"steps": [{"key": "manager", "name": {"en": "Line manager", "ur": "لائن مینیجر"}, "approver": {"kind": "document_user", "field": "line_manager"}, "fallback": {"kind": "role", "role": "hr_admin"}}]}
+    },
+    {
+      "code": "hrm.attendance_period_lock",
+      "entitlement_key": "hrm.core",
+      "name": {"en": "Lock of an attendance period", "ur": "حاضری کی مدت کا لاک"},
+      "fields": [
+        {"name": "company", "type": "company", "label": {"en": "Company", "ur": "کمپنی"}},
+        {"name": "pay_group", "type": "text", "label": {"en": "Pay group", "ur": "پے گروپ"}},
+        {"name": "period_start", "type": "date", "label": {"en": "Period from", "ur": "مدت از"}},
+        {"name": "period_end", "type": "date", "label": {"en": "Period to", "ur": "مدت تا"}},
+        {"name": "reason", "type": "text", "label": {"en": "Reason", "ur": "وجہ"}},
+        {"name": "accept_open_items", "type": "bool", "label": {"en": "Days not processed and open exceptions accepted", "ur": "غیر پراسیس شدہ دن اور کھلی استثنائیں قبول"}}
+      ],
+      "company_field": "company",
+      "subject_fields": [],
+      "title": {"en": "Lock attendance of {pay_group} from {period_start} to {period_end}", "ur": "{pay_group} کی {period_start} سے {period_end} تک کی حاضری کا لاک"},
+      "link": "/time/periods/{document_id}",
+      "bulk_approval": false,
+      "requires_approval": true,
+      "default_route": {"steps": [{"key": "hr", "name": {"en": "HR Admin", "ur": "ایچ آر ایڈمن"}, "approver": {"kind": "role", "role": "hr_admin"}}]}
+    },
+    {
+      "code": "hrm.attendance_period_reopen",
+      "entitlement_key": "hrm.core",
+      "name": {"en": "Cancel the payroll run and reopen attendance", "ur": "پے رول رن منسوخ کر کے حاضری دوبارہ کھولنا"},
+      "fields": [
+        {"name": "company", "type": "company", "label": {"en": "Company", "ur": "کمپنی"}},
+        {"name": "pay_group", "type": "text", "label": {"en": "Pay group", "ur": "پے گروپ"}},
+        {"name": "period_start", "type": "date", "label": {"en": "Period from", "ur": "مدت از"}},
+        {"name": "period_end", "type": "date", "label": {"en": "Period to", "ur": "مدت تا"}},
+        {"name": "reason", "type": "text", "label": {"en": "Reason", "ur": "وجہ"}},
+        {"name": "run_id", "type": "text", "label": {"en": "Payroll run", "ur": "پے رول رن"}}
+      ],
+      "company_field": "company",
+      "subject_fields": [],
+      "title": {"en": "Reopen attendance of {pay_group} from {period_start} to {period_end}", "ur": "{pay_group} کی {period_start} سے {period_end} تک کی حاضری دوبارہ کھولنا"},
+      "link": "/time/periods/{document_id}",
+      "bulk_approval": false,
+      "requires_approval": true,
+      "default_route": {"steps": [{"key": "payroll", "name": {"en": "Payroll manager", "ur": "پے رول مینیجر"}, "approver": {"kind": "role", "role": "payroll_manager"}, "fallback": {"kind": "role", "role": "hr_admin"}}]}
+    },
+    {
+      "code": "hrm.attendance_adjustment",
+      "entitlement_key": "hrm.core",
+      "name": {"en": "Retroactive attendance adjustment", "ur": "حاضری کی سابقہ تاریخ سے درستی"},
+      "fields": [
+        {"name": "company", "type": "company", "label": {"en": "Company", "ur": "کمپنی"}},
+        {"name": "employee", "type": "user", "label": {"en": "Employee", "ur": "ملازم"}},
+        {"name": "line_manager", "type": "user", "label": {"en": "Line manager of the employee", "ur": "ملازم کا لائن مینیجر"}},
+        {"name": "employee_no", "type": "text", "label": {"en": "Employee number", "ur": "ملازم نمبر"}},
+        {"name": "kind", "type": "choice", "choices": ["attendance", "leave_cancellation", "overtime"], "label": {"en": "Kind of adjustment", "ur": "درستی کی قسم"}},
+        {"name": "from_date", "type": "date", "label": {"en": "From", "ur": "از"}},
+        {"name": "to_date", "type": "date", "label": {"en": "To", "ur": "تا"}},
+        {"name": "target_period_start", "type": "date", "label": {"en": "Carried into the period from", "ur": "اس مدت میں منتقل جو شروع ہوتی ہے"}},
+        {"name": "reason", "type": "text", "label": {"en": "Reason", "ur": "وجہ"}}
+      ],
+      "company_field": "company",
+      "subject_fields": ["employee"],
+      "title": {"en": "Adjustment ({kind}) of {employee_no} for {from_date} to {to_date}", "ur": "{employee_no} کی {from_date} تا {to_date} کی درستی ({kind})"},
+      "link": "/time/adjustments/{document_id}",
+      "bulk_approval": false,
+      "requires_approval": true,
+      "default_route": {"steps": [{"key": "hr", "name": {"en": "HR Admin", "ur": "ایچ آر ایڈمن"}, "approver": {"kind": "role", "role": "hr_admin"}}]}
     }
   ]
 }

@@ -3,6 +3,12 @@
   "module": "hrm",
   "permissions": [
     {
+      "code": "hrm.attendance_adjustments.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.attendance_adjustments.read",
+      "sensitive": false
+    },
+    {
       "code": "hrm.attendance_days.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.attendance_days.read",
@@ -36,18 +42,6 @@
       "code": "hrm.attendance_periods.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.attendance_periods.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.attendance_periods.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.attendance_periods.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.attendance_periods.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.attendance_periods.update",
       "sensitive": false
     },
     {

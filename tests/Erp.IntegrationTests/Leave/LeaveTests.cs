@@ -129,6 +129,11 @@ public sealed class LeaveTests(TenancyFixture fx) : IAsyncLifetime
     private sealed class EverythingLocked : IAttendancePeriodLock
     {
         public Task<bool> IsLockedAsync(Guid employmentId, DateOnly day, CancellationToken cancellationToken) => Task.FromResult(true);
+
+        // Locking and reopening are not part of what this double stands for (the real lock is tested in AttendanceLockTests, S1.31).
+        public Task<PeriodLockResult> LockAsync(PeriodLockRequest request, System.Data.Common.DbTransaction? transaction, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<PeriodLockResult> ReopenAsync(Guid payPeriodId, string reason, PeriodReopenApproval approval, System.Data.Common.DbTransaction? transaction, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
     /// <summary>A new version of a leave policy with these types, activated from a date (after the version in force started).</summary>

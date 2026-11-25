@@ -494,7 +494,7 @@ public sealed class AttendanceConsequenceTests(TenancyFixture fx) : IAsyncLifeti
         var waiting = await _h.PostAsync(user!.Value, $"/api/hrm/attendance/overtime-entries/{entries[1]}/claim", new { reason = "Before the lock" }, Ct);
         Assert.True(waiting.Status == HttpStatusCode.Accepted, waiting.Body);
 
-        await _h.ExecAsync("update hrm.attendance_periods set status = 'locked' where pay_group_id = $1", Ct, o.PayGroup);
+        await _h.ExecAsync("update hrm.attendance_periods set status = 'locked', locked_at = now(), lock_kind = 'manual', locked_by = created_by where pay_group_id = $1", Ct, o.PayGroup);
         var claim = await _h.PostAsync(user.Value, $"/api/hrm/attendance/overtime-entries/{entries[0]}/claim", new { reason = "Late" }, Ct);
         Assert.Equal((HttpStatusCode.Conflict, "errors.hrm.attendance.request.period_locked"), (claim.Status, claim.Text("title")));
         var waiver = await _h.PostAsync(user.Value, $"/api/hrm/attendance/penalties/{penalty}/waiver", new { reason = "Late" }, Ct);

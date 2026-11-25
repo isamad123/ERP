@@ -298,7 +298,7 @@ public sealed class AttendanceRequestTests(TenancyFixture fx) : IAsyncLifetime
     {
         var o = await OrgAsync();
         var (employment, user, day, exception) = await ForgotToPunchAsync(o, 1);
-        await _h.ExecAsync("update hrm.attendance_periods set status = 'locked' where pay_group_id = $1", Ct, o.PayGroup);
+        await _h.ExecAsync("update hrm.attendance_periods set status = 'locked', locked_at = now(), lock_kind = 'manual', locked_by = created_by where pay_group_id = $1", Ct, o.PayGroup);
 
         var refused = await _h.PostAsync(user, Regularizations, new { exceptionId = exception, requestedOut = At(day, "18:00"), reason = "Late" }, Ct);
         Assert.Equal(HttpStatusCode.Conflict, refused.Status);

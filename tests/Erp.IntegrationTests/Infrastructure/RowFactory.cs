@@ -49,7 +49,7 @@ public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction tr
                 continue; // a null column means PostgreSQL does not check the key (MATCH SIMPLE)
             }
 
-            var parent = await InsertAsync(_tables[table.Database + ":" + fk.Target], null, ct, depth + 1).ConfigureAwait(false);
+            var parent = await InsertAsync(_tables[table.Database + ":" + fk.Target], ParentValues.GetValueOrDefault(table.FullName + "." + fk.Columns[^1]), ct, depth + 1).ConfigureAwait(false);
             for (var i = 0; i < fk.Columns.Count; i++)
             {
                 values[fk.Columns[i]] = parent[fk.TargetColumns[i]];
@@ -128,6 +128,17 @@ public sealed class RowFactory(NpgsqlConnection connection, NpgsqlTransaction tr
         ["hrm.attendance_penalties.action"] = _ => "warning",
         ["hrm.attendance_penalties.occurrence"] = n => (n % 30) + 1,
         ["hrm.attendance_penalties.minutes"] = n => n % 600,
+        // S1.31: an adjustment's status history ends with its status (tg_attendance_adjustments_rules).
+        ["hrm.attendance_adjustments.status_history"] = _ => new Json("[{\"status\": \"submitted\", \"at\": \"2026-01-15T00:00:00.000000Z\"}]"),
+    };
+
+    /// <summary>
+    /// Values of the row a reference creates, where the referring row's rule needs a parent of a kind (S1.31: an adjustment is asked for a locked
+    /// attendance period, tg_attendance_adjustments_rules).
+    /// </summary>
+    private static readonly Dictionary<string, IReadOnlyDictionary<string, object?>> ParentValues = new(StringComparer.Ordinal)
+    {
+        ["hrm.attendance_adjustments.period_id"] = new Dictionary<string, object?> { ["status"] = "locked" },
     };
 
     private int _formatted;

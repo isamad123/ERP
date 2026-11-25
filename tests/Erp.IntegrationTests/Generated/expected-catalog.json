@@ -7458,6 +7458,376 @@
     {
       "database": "tenant",
       "schema": "hrm",
+      "name": "attendance_adjustments",
+      "module": "hrm",
+      "traits": [
+        "std",
+        "co"
+      ],
+      "requirements": [
+        "ATT-17",
+        "FR-XM-26"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "company_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "employment_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "period_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "from_date",
+          "kind": "Date",
+          "type": "date",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "to_date",
+          "kind": "Date",
+          "type": "date",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "kind",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "attendance",
+            "leave_cancellation",
+            "overtime"
+          ]
+        },
+        {
+          "name": "leave_request_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "old_summary",
+          "kind": "Json",
+          "type": "jsonb",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "new_summary",
+          "kind": "Json",
+          "type": "jsonb",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "reason",
+          "kind": "Text",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "target_pay_period_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "leave_reversal_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "workflow_instance_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "applied_in_run_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "status_history",
+          "kind": "Json",
+          "type": "jsonb",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "status",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "submitted",
+            "approved",
+            "rejected",
+            "withdrawn",
+            "applied"
+          ]
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [],
+      "checks": [
+        "ck_attendance_adjustments_kind",
+        "ck_attendance_adjustments_status"
+      ],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_attendance_adjustments_company_id",
+          "columns": [
+            "company_id"
+          ],
+          "target": "org.companies",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_adjustments_employment_id",
+          "columns": [
+            "company_id",
+            "employment_id"
+          ],
+          "target": "hrm.employments",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_adjustments_period_id",
+          "columns": [
+            "company_id",
+            "period_id"
+          ],
+          "target": "hrm.attendance_periods",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_adjustments_leave_request_id",
+          "columns": [
+            "company_id",
+            "leave_request_id"
+          ],
+          "target": "hrm.leave_requests",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_adjustments_target_pay_period_id",
+          "columns": [
+            "company_id",
+            "target_pay_period_id"
+          ],
+          "target": "hrm.pay_periods",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_adjustments_leave_reversal_id",
+          "columns": [
+            "company_id",
+            "leave_reversal_id"
+          ],
+          "target": "hrm.leave_ledger",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_adjustments_workflow_instance_id",
+          "columns": [
+            "company_id",
+            "workflow_instance_id"
+          ],
+          "target": "wf.workflow_instances",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_adjustments_applied_in_run_id",
+          "columns": [
+            "company_id",
+            "applied_in_run_id"
+          ],
+          "target": "hrm.pay_runs",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_attendance_adjustments_employment_id_from_date",
+        "ix_attendance_adjustments_company_id_status",
+        "ix_attendance_adjustments_target_pay_period_id_status",
+        "ix_attendance_adjustments_company_id_employment_id",
+        "ix_attendance_adjustments_company_id_period_id",
+        "ix_attendance_adjustments_company_id_leave_request_id",
+        "ix_attendance_adjustments_company_id_target_pay_period_id",
+        "ix_attendance_adjustments_company_id_leave_reversal_id",
+        "ix_attendance_adjustments_company_id_workflow_instance_id",
+        "ix_attendance_adjustments_company_id_applied_in_run_id"
+      ],
+      "triggers": [
+        "tg_attendance_adjustments_rules"
+      ],
+      "append_only_updatable": [],
+      "has_api": true,
+      "full_name": "hrm.attendance_adjustments"
+    },
+    {
+      "database": "tenant",
+      "schema": "hrm",
       "name": "attendance_days",
       "module": "hrm",
       "traits": [
@@ -7843,6 +8213,7 @@
         "ix_attendance_days_company_id_period_id"
       ],
       "triggers": [
+        "tg_attendance_days_lock",
         "tg_attendance_days_versions"
       ],
       "append_only_updatable": [],
@@ -9008,7 +9379,8 @@
         "ix_attendance_penalties_company_id_workflow_instance_id"
       ],
       "triggers": [
-        "tg_attendance_penalties_rules"
+        "tg_attendance_penalties_rules",
+        "tg_attendance_penalties_lock"
       ],
       "append_only_updatable": [],
       "has_api": true,
@@ -9175,6 +9547,129 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "lock_kind",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "payroll",
+            "manual"
+          ]
+        },
+        {
+          "name": "locked_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "lock_reason",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "lock_requested_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "lock_accept_open",
+          "kind": "Bool",
+          "type": "boolean",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "unprocessed_accepted",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "exceptions_accepted",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "lock_workflow_instance_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "reopen_workflow_instance_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "reopen_requested_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "reopened_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "reopen_reason",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -9182,6 +9677,7 @@
         "uq_attendance_periods_company_id_id"
       ],
       "checks": [
+        "ck_attendance_periods_lock_kind",
         "ck_attendance_periods_status"
       ],
       "exclusions": [
@@ -9233,14 +9729,42 @@
             "company_id",
             "id"
           ]
+        },
+        {
+          "name": "fk_attendance_periods_lock_workflow_instance_id",
+          "columns": [
+            "company_id",
+            "lock_workflow_instance_id"
+          ],
+          "target": "wf.workflow_instances",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_periods_reopen_workflow_instance_id",
+          "columns": [
+            "company_id",
+            "reopen_workflow_instance_id"
+          ],
+          "target": "wf.workflow_instances",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
         }
       ],
       "indexes": [
         "ix_attendance_periods_company_id_pay_group_id",
         "ix_attendance_periods_company_id_pay_period_id",
-        "ix_attendance_periods_company_id_locked_by_run_id"
+        "ix_attendance_periods_company_id_locked_by_run_id",
+        "ix_attendance_periods_company_id_lock_workflow_instance_id",
+        "ix_attendance_periods_company_id_reopen_workflow_instance_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_attendance_periods_lock"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.attendance_periods"
@@ -18938,7 +19462,8 @@
         "tg_leave_ledger_append_only",
         "tg_leave_ledger_no_truncate",
         "tg_leave_ledger_transfer",
-        "tg_leave_ledger_reversal"
+        "tg_leave_ledger_reversal",
+        "tg_leave_ledger_lock"
       ],
       "append_only_updatable": [],
       "has_api": true,
@@ -19157,6 +19682,7 @@
         "ix_leave_request_days_company_id_employment_id"
       ],
       "triggers": [
+        "tg_leave_request_days_lock",
         "tg_leave_request_days_daily_total"
       ],
       "append_only_updatable": [],
@@ -22202,6 +22728,7 @@
         "ix_overtime_entries_policy_version_id"
       ],
       "triggers": [
+        "tg_overtime_entries_lock",
         "tg_overtime_entries_rules"
       ],
       "append_only_updatable": [],
@@ -29735,7 +30262,9 @@
         "ix_regularization_requests_company_id_exception_id",
         "ix_regularization_requests_company_id_workflow_instance_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_regularization_requests_lock"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.regularization_requests"
@@ -47147,20 +47676,6 @@
     }
   ],
   "stubs": [
-    {
-      "schema": "hrm",
-      "function": "todo_attendance_days_lock",
-      "table": "hrm.attendance_days",
-      "owner": "S1.31",
-      "rule": "Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26)."
-    },
-    {
-      "schema": "hrm",
-      "function": "todo_attendance_periods_lock",
-      "table": "hrm.attendance_periods",
-      "owner": "S1.31",
-      "rule": "A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments."
-    },
     {
       "schema": "hrm",
       "function": "todo_final_settlements_approval_needs_clearance",
