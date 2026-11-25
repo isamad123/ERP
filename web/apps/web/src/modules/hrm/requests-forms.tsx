@@ -63,7 +63,6 @@ interface FormProps { company: string; isOpen: boolean; onOpenChange: (open: boo
 export function CorrectionDialog({ company, isOpen, onOpenChange, exceptionId, workDate, employmentId: fixedEmployment }: FormProps & { exceptionId?: string; workDate?: string; employmentId?: string }) {
   const { t, server } = useText();
   const { writable } = useShell();
-  const toast = useToast();
   const refusal = useRefusal();
   const queryClient = useQueryClient();
   const [employeeNo, setEmployeeNo] = useState('');
@@ -117,7 +116,6 @@ export function CorrectionDialog({ company, isOpen, onOpenChange, exceptionId, w
 export function DutyDialog({ company, isOpen, onOpenChange }: FormProps) {
   const { t, server } = useText();
   const { writable } = useShell();
-  const toast = useToast();
   const refusal = useRefusal();
   const queryClient = useQueryClient();
   const [employeeNo, setEmployeeNo] = useState('');

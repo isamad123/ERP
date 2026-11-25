@@ -149,7 +149,7 @@ public sealed class AttendanceReportPerformanceTests(TenancyFixture fx) : IAsync
             TestContext.Current.SendDiagnosticMessage($"S1.30b load step {watch.Elapsed.TotalSeconds:0.0}s: {sql.Trim()[..50].ReplaceLineEndings(" ")}");
         }
 
-        Assert.Equal(1, await _h.ScalarAsync<long>("select 1 where " + employment + " is not null", Ct));
+        Assert.Equal(1, await _h.ScalarAsync<int>("select 1 where " + employment + " is not null", Ct));
         Assert.True(await _h.ScalarAsync<long>("select count(*) from hrm.employments where company_id = $1", Ct, o.Company) >= Employees);
     }
 }

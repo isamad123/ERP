@@ -73,6 +73,7 @@ public sealed class AttendanceReportExportTests(TenancyFixture fx) : IAsyncLifet
         Assert.Equal("hrm.rpt_att_muster_daily", catalogue.EnumerateArray().Single(r => r.GetProperty("code").GetString() == "muster_daily").GetProperty("exportType").GetString());
         var query = new { companyId = o.Company, from = ReportOrg.Iso(day), to = ReportOrg.Iso(day) };
 
+        await _h.AssignAsync(o.Hr, await _h.RoleAsync(Ct, ["itg.exports.run"], [("*", "all")]), null, _h.Today.AddDays(-1), null, Ct);
         var all = await ExportAsync(o.Hr, o, "muster_daily", query, columns);
         var onTimeNo = await _h.ScalarAsync<string>("select employee_no from hrm.employments where id = $1", Ct, onTime);
         var outsiderNo = await _h.ScalarAsync<string>("select employee_no from hrm.employments where id = $1", Ct, outsider);
@@ -81,6 +82,7 @@ public sealed class AttendanceReportExportTests(TenancyFixture fx) : IAsyncLifet
         Assert.Contains("present", all, StringComparison.Ordinal);
         Assert.DoesNotContain("salary", all, StringComparison.OrdinalIgnoreCase);
 
+        await _h.AssignAsync(managerUser, await _h.RoleAsync(Ct, ["itg.exports.run"], [("*", "all")]), null, _h.Today.AddDays(-1), null, Ct); // the line manager role has no export right of its own
         var team = await ExportAsync(managerUser, o, "muster_daily", query, columns);
         Assert.Contains(onTimeNo, team, StringComparison.Ordinal);
         Assert.DoesNotContain(outsiderNo, team, StringComparison.Ordinal);

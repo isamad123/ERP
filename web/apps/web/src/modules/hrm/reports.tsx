@@ -100,7 +100,7 @@ export default function ReportsScreen() {
   };
   const data = report.data;
   const exportColumns = columns.map((c) => ({ field: c, label: label(c) }));
-  const exportQuery = Object.fromEntries(Object.entries(filter).filter(([k, v]) => v !== undefined)) as Record<string, string>;
+  const exportQuery = Object.fromEntries(Object.entries(filter).filter(([, v]) => v !== undefined)) as Record<string, string>;
   const shown = data ? { from: offset + 1, to: offset + data.items.length } : null;
   const dateRange = applies.includes('dates');
   return (
