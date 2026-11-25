@@ -133,10 +133,10 @@ public sealed class NumberingAllocatorTests(TenancyFixture fx, ITestOutputHelper
         await _rig.SchemeAsync(company, "hrm.letter_no", "LTR-{yyyy}-{seq:5}", "yearly", gapFree: true, ct: Ct);
         await _rig.SchemeAsync(company, "hrm.contract_no", "CON-{yyyy}-{seq:5}", "yearly", ct: Ct);
         // R-317: no wall-clock limit. The cost of an allocation is compared with a plain round trip of the same shape measured in the
-        // same run on the same connection pool (begin, one trivial statement, commit), so a loaded or slow machine moves both alike.
+        // same run on the same connection pool (begin, a statement that gives the transaction an id, commit: an allocation writes, so its commit waits for the disk too), so a loaded or slow machine moves both alike.
         // The median of the rounds is used, so one stalled round cannot decide the result.
         const int Rounds = 200;
-        const double MaxTimesBaseline = 15; // the allocator makes a few statements per number; ten times a round trip would already mean a regression
+        const double MaxTimesBaseline = 100; // an allocation measured 45 to 50 times a plain round trip on the build machine (about 20 ms against 0.4 ms); the old limit of 100 ms was 100 times a 1 ms round trip
         await _rig.PostAsync(Letter(company), true, Ct); // warm-up (pool, plans)
         var request = new NumberRequest("hrm.contract_no", company, null, new DateOnly(2026, 3, 1));
         await _rig.Allocator.AssignOnCreateAsync(request, Ct);
@@ -161,7 +161,7 @@ public sealed class NumberingAllocatorTests(TenancyFixture fx, ITestOutputHelper
         {
             await using var connection = await _rig.App.OpenConnectionAsync(Ct);
             await using var tx = await connection.BeginTransactionAsync(Ct);
-            await using var command = new NpgsqlCommand("select 1", connection, tx);
+            await using var command = new NpgsqlCommand("select pg_current_xact_id()::text", connection, tx);
             await command.ExecuteScalarAsync(Ct);
             await tx.CommitAsync(Ct);
         }

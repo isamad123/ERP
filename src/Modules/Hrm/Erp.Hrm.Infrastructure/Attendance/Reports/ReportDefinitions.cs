@@ -58,12 +58,22 @@ internal sealed class ReportDef<T>(
         Dictionary<string, long>? sums = null;
         if (summary)
         {
-            total = more || skip > 0 ? await filtered.LongCountAsync(cancellationToken).ConfigureAwait(false) : rows.Count;
             sums = await totals(filtered, cancellationToken).ConfigureAwait(false);
+            if (sums.Remove(RowsKey, out var counted))
+            {
+                total = counted; // the totals query already counted the rows: one run of an expensive view less (R-317)
+            }
+            else
+            {
+                total = more || skip > 0 ? await filtered.LongCountAsync(cancellationToken).ConfigureAwait(false) : rows.Count;
+            }
         }
 
         return new ReportPage([.. rows.Cast<object>()], more, total, sums);
     }
+
+    /// <summary>A totals query may count the filtered rows under this key; it is the answer's <c>total</c>, not a summary figure.</summary>
+    public const string RowsKey = "_rows";
 
     private static string ToSnake(string name) => string.Concat(name.Select((c, i) => i > 0 && char.IsUpper(c) ? "_" + char.ToLowerInvariant(c) : char.ToLowerInvariant(c).ToString()));
 }

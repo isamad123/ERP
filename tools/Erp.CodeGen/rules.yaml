@@ -2012,6 +2012,68 @@ functions:
       group by m.company_id, m.employment_id, m.employee_no, m.first_name, m.last_name, date_trunc('month', m.work_date)::date;
       grant select on hrm.rpt_att_absenteeism to app_rw, app_ro, backup;
 
+  - slice: S1.30b-r1
+    name: hrm.rpt_att_muster_monthly
+    purpose: "The monthly muster, same columns and meaning as before, worked out with one hash aggregate over the day rows and the unit of the month's last day looked up once per person and month (R-317: the ordered array_agg forced a sort of every day row to disk and the daily view's join to every assignment). No pay or salary column."
+    sql: |
+      create or replace view hrm.rpt_att_muster_monthly with (security_invoker = true) as
+      select g.company_id, g.employment_id, g.employee_no, g.first_name, g.last_name,
+             a.org_unit_id, a.branch_id, a.location_id,
+             g.month,
+             g.present_days, g.absent_days, g.late_days, g.half_days, g.leave_days, g.holiday_days, g.weekly_off_days, g.duty_days, g.incomplete_days,
+             g.worked_minutes, g.late_minutes, g.early_minutes, g.overtime_minutes
+      from (
+        select d.company_id, d.employment_id, e.employee_no, p.first_name, p.last_name,
+               date_trunc('month', d.work_date)::date as month, max(d.work_date) as last_day,
+               count(*) filter (where d.result = 'present') as present_days,
+               count(*) filter (where d.result = 'absent') as absent_days,
+               count(*) filter (where d.result = 'late') as late_days,
+               count(*) filter (where d.result = 'half_day') as half_days,
+               count(*) filter (where d.result = 'on_leave') as leave_days,
+               count(*) filter (where d.result = 'holiday') as holiday_days,
+               count(*) filter (where d.result = 'weekly_off') as weekly_off_days,
+               count(*) filter (where d.result = 'on_duty') as duty_days,
+               count(*) filter (where d.result = 'incomplete') as incomplete_days,
+               sum(d.worked_minutes)::bigint as worked_minutes,
+               sum(d.late_minutes)::bigint as late_minutes,
+               sum(d.early_minutes)::bigint as early_minutes,
+               sum(d.overtime_minutes)::bigint as overtime_minutes
+        from hrm.attendance_days d
+        join hrm.employments e on e.id = d.employment_id
+        join hrm.persons p on p.id = e.person_id
+        where d.superseded_at is null
+        group by d.company_id, d.employment_id, e.employee_no, p.first_name, p.last_name, date_trunc('month', d.work_date)::date
+      ) g
+      left join hrm.employment_assignments a
+             on a.employment_id = g.employment_id and a.valid_from <= g.last_day and (a.valid_to is null or a.valid_to > g.last_day);
+      grant select on hrm.rpt_att_muster_monthly to app_rw, app_ro, backup;
+
+  - slice: S1.30b-r1
+    name: hrm.rpt_att_absenteeism
+    purpose: "Absenteeism per employee and month, same columns and meaning as before, worked out like the monthly muster (R-317). No pay or salary column."
+    sql: |
+      create or replace view hrm.rpt_att_absenteeism with (security_invoker = true) as
+      select g.company_id, g.employment_id, g.employee_no, g.first_name, g.last_name,
+             a.org_unit_id, a.branch_id, a.location_id,
+             g.month, g.scheduled_days, g.absent_days, g.half_days, g.late_days,
+             round(100.0 * g.absent_days / nullif(g.scheduled_days, 0), 2) as absence_percent
+      from (
+        select d.company_id, d.employment_id, e.employee_no, p.first_name, p.last_name,
+               date_trunc('month', d.work_date)::date as month, max(d.work_date) as last_day,
+               count(*) filter (where d.day_type = 'working') as scheduled_days,
+               count(*) filter (where d.result = 'absent') as absent_days,
+               count(*) filter (where d.result = 'half_day') as half_days,
+               count(*) filter (where d.result = 'late') as late_days
+        from hrm.attendance_days d
+        join hrm.employments e on e.id = d.employment_id
+        join hrm.persons p on p.id = e.person_id
+        where d.superseded_at is null
+        group by d.company_id, d.employment_id, e.employee_no, p.first_name, p.last_name, date_trunc('month', d.work_date)::date
+      ) g
+      left join hrm.employment_assignments a
+             on a.employment_id = g.employment_id and a.valid_from <= g.last_day and (a.valid_to is null or a.valid_to > g.last_day);
+      grant select on hrm.rpt_att_absenteeism to app_rw, app_ro, backup;
+
   - slice: S1.30b
     name: hrm.rpt_att_late_early
     purpose: "Late and early days: the days with minutes late or early (FR-HRM-ATT-19). Penalties and waivers are S1.29b's. No pay or salary column."
