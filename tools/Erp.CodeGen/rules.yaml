@@ -2014,7 +2014,7 @@ functions:
 
   - slice: S1.30b-r1
     name: hrm.rpt_att_muster_monthly
-    purpose: "The monthly muster, same columns and meaning as before, worked out with one hash aggregate over the day rows and the unit of the month's last day looked up once per person and month (R-317: the ordered array_agg forced a sort of every day row to disk and the daily view's join to every assignment). No pay or salary column."
+    purpose: "The monthly muster, same columns and meaning as before, worked out with one hash aggregate over the day rows and the unit of the month's last day looked up once per person and month (R-318: the ordered array_agg forced a sort of every day row to disk and the daily view's join to every assignment). No pay or salary column."
     sql: |
       create or replace view hrm.rpt_att_muster_monthly with (security_invoker = true) as
       select g.company_id, g.employment_id, g.employee_no, g.first_name, g.last_name,
@@ -2050,7 +2050,7 @@ functions:
 
   - slice: S1.30b-r1
     name: hrm.rpt_att_absenteeism
-    purpose: "Absenteeism per employee and month, same columns and meaning as before, worked out like the monthly muster (R-317). No pay or salary column."
+    purpose: "Absenteeism per employee and month, same columns and meaning as before, worked out like the monthly muster (R-318). No pay or salary column."
     sql: |
       create or replace view hrm.rpt_att_absenteeism with (security_invoker = true) as
       select g.company_id, g.employment_id, g.employee_no, g.first_name, g.last_name,

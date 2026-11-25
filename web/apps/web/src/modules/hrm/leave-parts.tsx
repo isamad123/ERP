@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-317) */
+/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // Pieces shared by the leave screens (slice S1.33a; FR-HRM-LVE-04 to -06): status chips, leave type labels with their colour token, quantities, the day-by-day list with
 // the server's explanation of each day, the ledger entries behind a balance, and the refusal text of the server's answers. Colour is never the only sign: a dot is
 // always next to the name, and status and sandwich marks carry text and an icon.

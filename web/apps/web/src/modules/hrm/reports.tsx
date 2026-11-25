@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-317) */
+/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // The attendance reports (slice S1.30b Build item 6; FR-HRM-ATT-19, FR-HRM-RPT-05): seven reports of the caller's scope with filters, a table of the answer's columns, the
 // summary strip, paging and an export of exactly the filter shown (the export centre makes the file as the person, with the same scope and field security).
 // Nothing here shows pay. Dates left empty mean the server's default (the last 30 days, or this month for the monthly reports).

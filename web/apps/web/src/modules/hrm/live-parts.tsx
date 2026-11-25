@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-317) */
+/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // Shared pieces of the live attendance dashboard and the team view (slice S1.30b; FR-HRM-ATT-18, FR-HRM-SSP-02): the company in hand, unit and location names (the
 // server answers with ids), the count cards, the count tables and the list of people behind a count (paged with "show more").
 import { useMemo, useState } from 'react';

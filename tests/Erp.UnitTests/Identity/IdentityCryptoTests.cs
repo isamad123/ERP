@@ -45,7 +45,7 @@ public sealed class IdentityCryptoTests
     [Fact]
     public void S105_review5_password_hashing_is_capped_and_refuses_with_busy_instead_of_exhausting_memory()
     {
-        // R-317: the old form released eight threads together and hoped that one hash (tens of milliseconds) was still running when the
+        // R-318: the old form released eight threads together and hoped that one hash (tens of milliseconds) was still running when the
         // others asked; on a loaded machine the threads woke up one after the other and all eight answered "ok". Now the one place is
         // held by the test itself, so the refusal is certain, and the cap and its release are checked in order.
         using var hasher = new Argon2idPasswordHasher(maxConcurrent: 1, maxWait: TimeSpan.FromMilliseconds(1));

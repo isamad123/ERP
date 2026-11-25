@@ -112,7 +112,7 @@ export async function nextCode(pages: Page[], secret: string): Promise<string> {
 
 /** No accessibility violation of serious or critical level (Q20: axe-core, development only). */
 export async function accessible(page: Page, label: string): Promise<void> {
-  // R-317: wait until no finite animation or transition is running. Controls fade their background (`--motion-fast`) when they
+  // R-318: wait until no finite animation or transition is running. Controls fade their background (`--motion-fast`) when they
   // become enabled or the pointer rests on them; axe reads the colour it finds at that moment, so a scan in the middle of the
   // fade measured a blend of two colours and reported a contrast finding that vanished on the next run. The condition is
   // read from the page (Web Animations API), not slept for; endless animations (the busy spinner) are not waited for.

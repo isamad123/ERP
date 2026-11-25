@@ -61,7 +61,7 @@ internal sealed class ReportDef<T>(
             sums = await totals(filtered, cancellationToken).ConfigureAwait(false);
             if (sums.Remove(RowsKey, out var counted))
             {
-                total = counted; // the totals query already counted the rows: one run of an expensive view less (R-317)
+                total = counted; // the totals query already counted the rows: one run of an expensive view less (R-318)
             }
             else
             {

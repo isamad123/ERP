@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-317) */
+/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // The manager's team view (slice S1.30b Build item 7; FR-HRM-SSP-02, FR-HRM-ATT-18): today's counts and people of the caller's team (the server limits every answer to the
 // caller's data scope) and this month's days and late minutes per person from the monthly muster. The month comes from the company's date in the dashboard answer,
 // never from the browser's clock.

@@ -75,7 +75,7 @@ public sealed class NumberingAllocatorTests(TenancyFixture fx, ITestOutputHelper
     {
         var company = await _h.CompanyAsync(Ct);
         await _rig.SchemeAsync(company, "hrm.contract_no", "CON-{yyyy}-{seq:5}", "yearly", ct: Ct);
-        // Deterministic instead of a wall-clock limit (R-317): every transaction takes its number and then stays open until all 100 are
+        // Deterministic instead of a wall-clock limit (R-318): every transaction takes its number and then stays open until all 100 are
         // open together. If a gap-allowed allocation made transactions wait on each other, the later ones would never get their
         // number, the rendezvous would never complete and the test would fail by its deadlock guard, however fast the machine is.
         const int Transactions = 100;
@@ -132,7 +132,7 @@ public sealed class NumberingAllocatorTests(TenancyFixture fx, ITestOutputHelper
         var company = await _h.CompanyAsync(Ct);
         await _rig.SchemeAsync(company, "hrm.letter_no", "LTR-{yyyy}-{seq:5}", "yearly", gapFree: true, ct: Ct);
         await _rig.SchemeAsync(company, "hrm.contract_no", "CON-{yyyy}-{seq:5}", "yearly", ct: Ct);
-        // R-317: no wall-clock limit. The cost of an allocation is compared with a plain round trip of the same shape measured in the
+        // R-318: no wall-clock limit. The cost of an allocation is compared with a plain round trip of the same shape measured in the
         // same run on the same connection pool (begin, a statement that gives the transaction an id, commit: an allocation writes, so its commit waits for the disk too), so a loaded or slow machine moves both alike.
         // The median of the rounds is used, so one stalled round cannot decide the result.
         const int Rounds = 200;

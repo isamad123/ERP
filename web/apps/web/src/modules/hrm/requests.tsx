@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-317) */
+/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // Attendance requests (slice S1.30a Build items 1 to 4; FR-HRM-ATT-11, ATT-14, GHR-09): the requests of the signed-in person, of the people they may see (team,
 // company) and the two forms. A request waits for the approval of the line manager (or HR) in the shared approvals inbox; its maker can withdraw it while it waits.
 // A request made by someone else for a person says so. Proof files (S1.30b) are listed under a request and can be deleted while it waits.

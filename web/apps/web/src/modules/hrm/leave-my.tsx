@@ -1,4 +1,4 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-317) */
+/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // My leave (slice S1.33a; FR-HRM-LVE-04, -06, -10 view, FR-HRM-SSP-01): the balance of each leave type with a "why" that opens the ledger entries behind the number, and the
 // person's requests with their status. Buttons follow the rules of S1.32b and only appear when the server would accept them: a draft is finished or cancelled, a waiting
 // request is withdrawn (through the approvals), approved leave is cancelled or changed. The answer of the server is shown as it comes.

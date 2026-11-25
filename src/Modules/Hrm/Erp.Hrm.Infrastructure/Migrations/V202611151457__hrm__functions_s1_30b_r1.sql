@@ -4,7 +4,7 @@
 -- </auto-generated>
 -- Database functions of slice S1.30b-r1 (tools/Erp.CodeGen/rules.yaml, functions)
 
--- hrm.rpt_att_muster_monthly: The monthly muster, same columns and meaning as before, worked out with one hash aggregate over the day rows and the unit of the month's last day looked up once per person and month (R-317: the ordered array_agg forced a sort of every day row to disk and the daily view's join to every assignment). No pay or salary column.
+-- hrm.rpt_att_muster_monthly: The monthly muster, same columns and meaning as before, worked out with one hash aggregate over the day rows and the unit of the month's last day looked up once per person and month (R-318: the ordered array_agg forced a sort of every day row to disk and the daily view's join to every assignment). No pay or salary column.
 create or replace view hrm.rpt_att_muster_monthly with (security_invoker = true) as
 select g.company_id, g.employment_id, g.employee_no, g.first_name, g.last_name,
        a.org_unit_id, a.branch_id, a.location_id,
@@ -37,7 +37,7 @@ left join hrm.employment_assignments a
        on a.employment_id = g.employment_id and a.valid_from <= g.last_day and (a.valid_to is null or a.valid_to > g.last_day);
 grant select on hrm.rpt_att_muster_monthly to app_rw, app_ro, backup;
 
--- hrm.rpt_att_absenteeism: Absenteeism per employee and month, same columns and meaning as before, worked out like the monthly muster (R-317). No pay or salary column.
+-- hrm.rpt_att_absenteeism: Absenteeism per employee and month, same columns and meaning as before, worked out like the monthly muster (R-318). No pay or salary column.
 create or replace view hrm.rpt_att_absenteeism with (security_invoker = true) as
 select g.company_id, g.employment_id, g.employee_no, g.first_name, g.last_name,
        a.org_unit_id, a.branch_id, a.location_id,
