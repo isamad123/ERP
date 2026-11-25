@@ -182,7 +182,10 @@ internal sealed class AttendanceDayService(
         query = kind is { Length: > 0 } k ? query.Where(x => x.Kind == k) : query;
         query = firstDay is { } f ? query.Where(x => x.WorkDate >= f) : query;
         query = lastDay is { } t ? query.Where(x => x.WorkDate <= t) : query;
-        var today = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+        // The company's date, not the UTC one: from 00:00 to 05:00 in Pakistan the UTC date is still yesterday (R-319).
+        var today = companyId is { } zoneOf
+            ? await applier.TodayAsync(zoneOf, clock.UtcNow, cancellationToken).ConfigureAwait(false)
+            : DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
         if (minAgeDays is { } age and > 0)
         {
             var latest = today.AddDays(-age);
