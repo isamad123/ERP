@@ -402,3 +402,8 @@
   color: var(--color-text-muted);
   white-space: pre-line;
 }
+
+/* The catalogue's wide table: wider than any screen, so its region always scrolls (the axe scan of the catalogue then proves it is reachable by keyboard, R-318). */
+.erp-catalogue-wide .erp-table {
+  min-inline-size: 90rem;
+}

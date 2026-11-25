@@ -3,11 +3,7 @@
 // screenshots it in English and Urdu, light, dark and high contrast. Sample texts are catalogue data, not product text.
 import { useState } from 'react';
 import { parseDate } from '@internationalized/date';
-import {
-  ActionMenu, Badge, Banner, Breadcrumbs, Button, CheckboxField, ComboBoxField, DateField, Dialog, EmptyState, ErrorPanel, IconButton,
-  Link, NavList, NumberField, OneTimeCodeField, PageHeader, PopoverPanel, PasswordField, QrCode, RadioGroupField, SelectField, Skeleton, Spinner, STATUSES,
-  StatusChip, SwitchField, Tabs, TextAreaField, TextField, Tooltip, useToast, type Option, type Status,
-} from '@erp/ui';
+import { ActionMenu, Badge, Banner, Breadcrumbs, Button, CheckboxField, ComboBoxField, DateField, Dialog, EmptyState, ErrorPanel, IconButton, Link, NavList, NumberField, OneTimeCodeField, PageHeader, PopoverPanel, PasswordField, QrCode, RadioGroupField, SelectField, Skeleton, Spinner, STATUSES, StatusChip, SwitchField, Tabs, TextAreaField, TextField, Tooltip, useToast, type Option, type Status, ScrollRegion } from '@erp/ui';
 import { formatDecimal, formatMoney, isolate } from '@erp/i18n';
 import { Bell, Building2, House, Settings, Users } from 'lucide-react';
 import { useDisplay } from '../app/display-context';
@@ -24,6 +20,7 @@ export default function CataloguePage() {
   const toast = useToast();
   const [code, setCode] = useState('123');
   const [on, setOn] = useState(true);
+  const wide: string[] = [...s.option, ...s.tabs, s.name, s.code, s.notes];
   const options: Option[] = s.option.map((label, i) => ({ id: String(i), label, detail: `PK-${i + 1}` }));
   const search = async (text: string) => options.filter((o) => o.label.includes(text) || (o.detail ?? '').includes(text.toUpperCase()));
 
@@ -118,6 +115,12 @@ export default function CataloguePage() {
           ]} />
           <NavList label={`${s.menu} 2`} collapsed sections={[{ id: 'c', label: s.people, items: [{ id: 'q', href: '/catalogue', label: s.people, icon: Users, current: true }] }]} />
         </div>
+        <ScrollRegion label={s.title + ' (wide table)'} className="erp-catalogue-wide">
+          <table className="erp-table" aria-label={s.title + ' (wide table)'}>
+            <thead><tr>{wide.map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead>
+            <tbody><tr>{wide.map((h) => <td key={h}>{h}</td>)}</tr></tbody>
+          </table>
+        </ScrollRegion>
         <QrCode value="otpauth://totp/ERP:catalogue?secret=JBSWY3DPEHPK3PXP&issuer=ERP" label="QR" />
       </section>
     </main>

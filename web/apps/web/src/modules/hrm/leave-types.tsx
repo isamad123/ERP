@@ -1,4 +1,3 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // Leave types (slice S1.33b Build item 6; FR-HRM-LVE-01): the company's leave types with how each counts, whether it is paid, and its colour (a design token name, never a raw colour),
 // filters, create and change through the server's purpose-built endpoints, and retire or bring back (a type is never deleted). Every refusal is the server's, shown in plain words.
 // How a type is granted and every limit live in the leave policy ("Leave rules"), never here.
@@ -6,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { useDocumentTitle } from '@erp/engine';
-import { Banner, Button, Dialog, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, TextField, useToast } from '@erp/ui';
+import { Banner, Button, Dialog, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, TextField, useToast, ScrollRegion } from '@erp/ui';
 import { useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { COLOUR_TOKENS, leaveTypesApi, type LeaveTypeRow } from '../../api/leave-types';
 import { nameOf } from '../../api/workflow';
@@ -63,7 +62,7 @@ export default function LeaveTypesScreen() {
           <EmptyState title={(list.data ?? []).length === 0 ? t('lty.empty') : t('lty.empty.filtered')}>{(list.data ?? []).length === 0 ? t('lty.empty.body') : t('lty.empty.filtered.body')}</EmptyState>
         )}
         {list.isSuccess && rows.length > 0 && (
-          <div className="erp-ltype-scroll" role="region" tabIndex={0} aria-label={t('lty.table')}>
+          <ScrollRegion className="erp-ltype-scroll" label={t('lty.table')}>
             <table className="erp-table">
               <caption className="erp-visually-hidden">{t('lty.table')}</caption>
               <thead><tr>
@@ -102,7 +101,7 @@ export default function LeaveTypesScreen() {
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </div>
       {form !== null && <LeaveTypeForm companyId={company} row={form === 'new' ? null : form} onClose={() => setForm(null)} />}

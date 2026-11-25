@@ -7,7 +7,7 @@ import { Route, Routes, useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDocumentTitle } from '@erp/engine';
 import { Plus } from 'lucide-react';
-import { Banner, Button, Dialog, EmptyState, ErrorPanel, Link, PageHeader, SelectField, Skeleton, StatusChip, TextField, useToast, type Option } from '@erp/ui';
+import { Banner, Button, Dialog, EmptyState, ErrorPanel, Link, PageHeader, SelectField, Skeleton, StatusChip, TextField, useToast, type Option, ScrollRegion } from '@erp/ui';
 import { useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { ApiProblem } from '../../api/client';
 import { policiesApi, type JsonObject, type PolicyRow, type PolicyType, type PolicyVersion, type PolicyView } from '../../api/policies';
@@ -69,7 +69,7 @@ function PolicyList() {
       {(list.isError || types.isError) && <Problem error={list.error ?? types.error} retry={() => { void list.refetch(); void types.refetch(); }} />}
       {list.isSuccess && types.isSuccess && rows.length === 0 && <EmptyState title={t('pol.empty')}>{t('pol.empty.body')}</EmptyState>}
       {list.isSuccess && types.isSuccess && rows.length > 0 && (
-        <div className="erp-table-scroll">
+        <ScrollRegion className="erp-table-scroll" label={t('pol.list')}>
           <table className="erp-table" aria-label={t('pol.list')}>
             <thead><tr>
               <th scope="col">{t('pol.col.code')}</th><th scope="col">{t('pol.col.name')}</th><th scope="col">{t('pol.col.type')}</th>
@@ -88,7 +88,7 @@ function PolicyList() {
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       )}
       {creating && types.data && <CreateDialog companyId={companyId} types={types.data.items} initialType={typeFilter} onClose={() => setCreating(false)}
         onCreated={(id) => { setCreating(false); navigate(`${POLICIES_PATH}/${id}?company=${encodeURIComponent(companyId)}`); }} />}
@@ -256,7 +256,7 @@ function Versions({ policy, type, canManage }: { policy: PolicyView; type: Polic
       <h2 id="pol-versions" className="erp-h3">{t('pol.versions')}</h2>
       {draft && type && <DraftCard policy={policy} version={draft} type={type} canManage={canManage} />}
       {done.length === 0 ? <p className="erp-small erp-muted">{t('pol.versions.none')}</p> : (
-        <div className="erp-table-scroll">
+        <ScrollRegion className="erp-table-scroll" label={t('pol.versions')}>
           <table className="erp-table" aria-label={t('pol.versions')}>
             <thead><tr>
               <th scope="col">{t('pol.version.col.version')}</th><th scope="col">{t('pol.version.col.status')}</th><th scope="col">{t('pol.version.col.layer')}</th>
@@ -274,7 +274,7 @@ function Versions({ policy, type, canManage }: { policy: PolicyView; type: Polic
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       )}
       {done[0] && type && (
         <details className="erp-config-card">
@@ -390,7 +390,7 @@ function Compare({ versions }: { versions: PolicyVersion[] }) {
         <SelectField label={t('pol.compare.later')} options={options} value={later} onChange={setLater} />
       </div>
       {lines.length === 0 ? <p className="erp-small erp-muted">{t('pol.compare.same')}</p> : (
-        <div className="erp-table-scroll">
+        <ScrollRegion className="erp-table-scroll" label={t('pol.compare')}>
           <table className="erp-table" aria-label={t('pol.compare')}>
             <thead><tr><th scope="col">{t('pol.compare.value')}</th><th scope="col">{t('pol.compare.before')}</th><th scope="col">{t('pol.compare.after')}</th></tr></thead>
             <tbody>
@@ -403,7 +403,7 @@ function Compare({ versions }: { versions: PolicyVersion[] }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       )}
     </section>
   );

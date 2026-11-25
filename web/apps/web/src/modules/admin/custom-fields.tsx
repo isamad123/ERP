@@ -8,7 +8,7 @@ import { useSearchParams } from 'react-router';
 import { parseDate } from '@internationalized/date';
 import { useDocumentTitle, useLabel } from '@erp/engine';
 import { Plus } from 'lucide-react';
-import { Banner, Button, DateField, Dialog, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, SwitchField, TextField, useToast, type Option } from '@erp/ui';
+import { Banner, Button, DateField, Dialog, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, SwitchField, TextField, useToast, type Option, ScrollRegion } from '@erp/ui';
 import { useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { ApiProblem } from '../../api/client';
 import { CUSTOM_TYPES, customFieldsApi, optionListsApi, type CustomDef, type CustomEntity, type CustomType, type CustomValidation } from '../../api/config';
@@ -98,7 +98,7 @@ function Definitions({ entity, entityName }: { entity: CustomEntity; entityName:
         <EmptyState title={t('cf.empty', { entity: entityName })} action={canCreate ? <Button variant="primary" onPress={() => setEditing('new')}>{t('cf.new')}</Button> : undefined}>{t('cf.empty.body')}</EmptyState>
       )}
       {list.isSuccess && defs.length > 0 && (
-        <div className="erp-table-scroll">
+        <ScrollRegion className="erp-table-scroll" label={t('cf.defs.title', { entity: entityName })}>
           <table className="erp-table" aria-label={t('cf.defs.title', { entity: entityName })}>
           <thead>
             <tr>
@@ -139,7 +139,7 @@ function Definitions({ entity, entityName }: { entity: CustomEntity; entityName:
             })}
           </tbody>
         </table>
-          </div>
+          </ScrollRegion>
       )}
       <p className="erp-small erp-muted">{t('cf.note.noPurge')}</p>
       {editing && (

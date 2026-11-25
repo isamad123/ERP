@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
 import { useDocumentTitle } from '@erp/engine';
 import { ArrowDown, ArrowUp, Plus } from 'lucide-react';
-import { Banner, Button, Dialog, EmptyState, ErrorPanel, IconButton, PageHeader, Skeleton, StatusChip, SwitchField, TextField, useToast } from '@erp/ui';
+import { Banner, Button, Dialog, EmptyState, ErrorPanel, IconButton, PageHeader, Skeleton, StatusChip, SwitchField, TextField, useToast, ScrollRegion } from '@erp/ui';
 import { useLocaleSettings, useText } from '@erp/i18n';
 import { ApiProblem } from '../../api/client';
 import { optionListsApi, type OptionItem, type OptionListDetail, type OptionListSummary } from '../../api/config';
@@ -193,7 +193,7 @@ function ListDetail({ id }: { id: string }) {
       {list.items.length === 0
         ? <EmptyState title={t('lists.items.empty')}>{t('lists.items.empty.body')}</EmptyState>
         : (
-          <div className="erp-table-scroll">
+          <ScrollRegion className="erp-table-scroll" label={t('lists.items.title', { name: nameOf(list.name, locale) })}>
           <table className="erp-table" aria-label={t('lists.items.title', { name: nameOf(list.name, locale) })}>
             <thead>
               <tr>
@@ -233,7 +233,7 @@ function ListDetail({ id }: { id: string }) {
               })}
             </tbody>
           </table>
-          </div>
+          </ScrollRegion>
         )}
       <p className="erp-small erp-muted">{t('lists.note.noDelete')}</p>
       {adding && <ItemDialog listId={id} onClose={() => setAdding(false)} onDone={(answer) => { take(answer); toast.success(t('lists.item.added')); setAdding(false); }} />}

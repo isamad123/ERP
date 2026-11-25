@@ -133,8 +133,15 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
   Backup and restore drill: `docs/runbooks/tenant-backup-restore.md` (needs pg_dump/pg_restore of the server's major version, 16).
   `migrate` records control-plane scripts with checksums in `cp.schema_history` like customer scripts in `meta.schema_history` (S1.11f2, CR-006);
   provisioning holds a per-customer advisory lock in the control-plane database, so a second run for the same customer waits (`ProvisioningLock`, R-031).
-- CI: `.github/workflows/ci.yml` runs restore, build, generator drift, TypeScript type-check, unit, architecture, integration
-  (PostgreSQL 16 service), data-dictionary drift and the licence gate.
+- CI (`.github/workflows/ci.yml`, R-318): the required checks of main are `build-and-test` and `web`, and both are **collectors**: a 3-second job that is green only when its parts are. Parts:
+  `dotnet-checks` (secret scan, build, generator drift, unit, architecture, data dictionary, licence gate), `dotnet-integration` (4 shards by test namespace, each with its own PostgreSQL),
+  `web-checks` (licence, lint, types, unit, contrast, production build), `web-e2e` (4 shards by browser spec file), and `tenant-isolation` (the third required check, also a collector over 3 shards by the endpoint address in the case's display name: `tenant-isolation-shards`; a new HR area lands in shard 2, a new module in shard 3). Never rename or remove `build-and-test` or `web`.
+  Limits: browser test watchdog 40 minutes (`WebEndToEndTests.cs`), `dotnet-integration` 40, `web-e2e` 30, `dotnet-checks` 30, `tenant-isolation` 30; a shard that nears 15 minutes is split.
+  **Browser shards:** a new `web/apps/web/e2e/*.spec.ts` needs its name on one line of the `web-e2e` matrix in ci.yml (`build/e2e-shards-check.py` fails otherwise); run one file with `E2E_FILES=<name>`
+  (and `E2E_GREP` for titles); a scenario must pass alone. **Integration shards:** shards 1 to 3 name test namespaces (`--filter-namespace`), shard 4 runs every other namespace, so a new namespace needs no change; a namespace
+  with heavy tests is added to a lighter shard (and to shard 4's `--filter-not-namespace` list: `build/integration-shards-check.py` fails when they differ). Local run of one shard: add the same filter to the integration command.
+  **Reliable tests:** wait for the populated region and for colour transitions before axe (`accessible()` does the second); give seeded cells, regions and scroll regions (`ScrollRegion`) accessible names; no wall-clock
+  thresholds (count commands or operations, use a rendezvous, hold the resource yourself); company dates come from the Asia/Karachi harness clock, never `DateTime.UtcNow` or `AccessHarness.Today`; a test must pass alone.
 - Tenant-isolation suite (S1.04): `dotnet test --project tests/Erp.IntegrationTests --no-build --filter-trait "Suite=TenantIsolation"`; CI job `tenant-isolation`.
   Every endpoint is found automatically; one the suite cannot probe fails it (see `docs/handoff/2026-11-15-S1.04.md`).
 - Access control (S1.06): `generate` also writes each module's permission manifest (`*/Access/permissions.g.json`); baseline roles are

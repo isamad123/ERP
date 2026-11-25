@@ -451,6 +451,15 @@ test('spec 13 FR-UX-CMP-01 component catalogue in English and Urdu, light, dark 
       await page.goto('/catalogue');
       // Its own heading: a missing catalogue would show the "not found" page, which also has a heading (S1.12b finding).
       await expect(page.getByRole('heading', { name: language === 'en' ? 'Component catalogue' : 'اجزاء کی فہرست', level: 1 })).toBeVisible();
+      // R-318: the catalogue's wide table is wider than the screen, so its region scrolls: it must take the keyboard focus (and axe, next, finds it focusable).
+      const wide = page.locator('.erp-catalogue-wide');
+      expect(await wide.evaluate((e) => e.scrollWidth > e.clientWidth)).toBe(true);
+      // Chromium makes a scroller focusable by itself, so the contract is checked on the markup: a named region with its own tab stop.
+      await expect(wide).toHaveAttribute('tabindex', '0');
+      await expect(wide).toHaveAttribute('role', 'region');
+      await expect(wide).toHaveAttribute('aria-label', /.+/);
+      await wide.focus();
+      await expect(wide).toBeFocused();
       await accessible(page, `catalogue ${language} ${theme}`);
       await shot(page, `catalogue-${language}-${theme}-1280`);
       noProblems(page);

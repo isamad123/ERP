@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDocumentTitle } from '@erp/engine';
-import { Banner, Button, Dialog, EmptyState, ErrorPanel, PageHeader, Skeleton, StatusChip, TextAreaField, useToast } from '@erp/ui';
+import { Banner, Button, Dialog, EmptyState, ErrorPanel, PageHeader, Skeleton, StatusChip, TextAreaField, useToast, ScrollRegion } from '@erp/ui';
 import { formatDate, useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { ApiProblem } from '../../api/client';
 import { describeValue, packsApi, textOf, type AvailablePack, type InstalledPack, type PackActionAnswer, type PackContentCount, type PackItem } from '../../api/packs';
@@ -142,7 +142,7 @@ function ItemsTable({ pack, name, changedOnly, mayTake, onTake }: { pack: Instal
   return (
     <div className="erp-stack">
       {items.data.truncated && <Banner tone="info">{t('packs.items.truncated', { shown: items.data.items.length, total: items.data.total })}</Banner>}
-      <div className="erp-table-scroll">
+      <ScrollRegion className="erp-table-scroll" label={t('packs.items.title', { name })}>
         <table className="erp-table" aria-label={t('packs.items.title', { name })}>
           <thead><tr>
             <th scope="col">{t('packs.items.col.object')}</th><th scope="col">{t('packs.items.col.company')}</th><th scope="col">{t('packs.items.col.pack')}</th>
@@ -174,7 +174,7 @@ function ItemsTable({ pack, name, changedOnly, mayTake, onTake }: { pack: Instal
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
     </div>
   );
 }
@@ -183,7 +183,7 @@ function AvailableTable({ packs, mayInstall, onInstall }: { packs: AvailablePack
   const { t } = useText();
   const { locale, formatDate } = useDates();
   return (
-    <div className="erp-table-scroll">
+    <ScrollRegion className="erp-table-scroll" label={t('packs.available.title')}>
       <table className="erp-table" aria-label={t('packs.available.title')}>
         <thead><tr>
           <th scope="col">{t('packs.title')}</th><th scope="col">{t('packs.field.version')}</th><th scope="col">{t('packs.field.contents')}</th>
@@ -211,7 +211,7 @@ function AvailableTable({ packs, mayInstall, onInstall }: { packs: AvailablePack
           })}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }
 
