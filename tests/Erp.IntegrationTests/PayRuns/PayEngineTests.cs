@@ -189,6 +189,15 @@ public sealed class PayEngineTests(TenancyFixture fx) : IAsyncLifetime
         Assert.True(input.Status == HttpStatusCode.Created, input.Body);
         var inputId = input.Json.GetProperty("items")[0].GetProperty("id").GetGuid();
 
+        // The lock waits for the period's cut-off date, as HR's lock does (review S1.35a finding 2).
+        var cutOff = await _h.ScalarAsync<DateOnly>("select cut_off_date from hrm.pay_periods where id = $1", Ct, rig.Period.Id);
+        await _h.ExecAsync("update hrm.pay_periods set cut_off_date = $1 where id = $2", Ct, Today, rig.Period.Id);
+        var early = await _h.PostAsync(rig.Manager, $"{Runs}/{run}/calculate", new { acceptOpenItems = true }, Ct);
+        Assert.Equal(HttpStatusCode.Conflict, early.Status);
+        Assert.Equal("errors.hrm.pay.run.before_cut_off", early.Json.GetProperty("title").GetString());
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.attendance_periods where pay_period_id = $1 and status = 'locked'", Ct, rig.Period.Id));
+        await _h.ExecAsync("update hrm.pay_periods set cut_off_date = $1 where id = $2", Ct, cutOff, rig.Period.Id);
+
         // FR-XM-26: no attendance is processed, so the lock refuses without the flag and nothing is calculated.
         var refused = await _h.PostAsync(rig.Manager, $"{Runs}/{run}/calculate", new { }, Ct);
         Assert.Equal(HttpStatusCode.Conflict, refused.Status);
@@ -344,9 +353,21 @@ public sealed class PayEngineTests(TenancyFixture fx) : IAsyncLifetime
         await Refused("update hrm.pay_runs set total_net = total_net + 1 where id = $1", run);
         await Refused("delete from hrm.pay_runs where id = $1", run);
 
-        // What may follow a lock: the run moves forward and its employees' copy of the status follows it.
+        // Review S1.35a finding 4: no table of a run can be emptied, the employees' copy of the status only follows the run, and the stage log only grows.
+        foreach (var table in new[] { "hrm.pay_result_lines", "hrm.pay_traces", "hrm.pay_results", "hrm.pay_run_employees", "hrm.pay_runs" })
+        {
+            await Refused($"truncate {table} cascade");
+        }
+
+        await Refused("update hrm.pay_run_employees set run_status = 'cancelled' where pay_run_id = $1", run);
+        await Refused("update hrm.pay_runs set stage_log = '[]'::jsonb where id = $1", run);
+        await Refused("update hrm.pay_runs set stage_log = jsonb_set(stage_log, '{0,by}', '\"someone\"') where id = $1", run);
+        await _h.ExecAsync("update hrm.pay_runs set stage_log = stage_log || '[{\"stage\":\"note\"}]'::jsonb where id = $1", Ct, run); // appending is fine
+
+        // What may follow a lock: the run moves forward and its employees' copy of the status follows it (only to the run's own status).
         await _h.ExecAsync("update hrm.pay_runs set status = 'paid' where id = $1", Ct, run);
         await _h.ExecAsync("update hrm.pay_run_employees set run_status = 'paid' where pay_run_id = $1", Ct, run);
+        await Refused("update hrm.pay_run_employees set run_status = 'closed' where pay_run_id = $1", run);
         await Refused("update hrm.pay_runs set status = 'locked' where id = $1", run);
 
         // A correction is a new result in a later run that names the original (FR-XM-06; S1.39 builds corrections).
@@ -385,6 +406,12 @@ public sealed class PayEngineTests(TenancyFixture fx) : IAsyncLifetime
         var own = await HireAsync(rig, Today.AddDays(-400));
         await _h.ExecAsync("update hrm.employments set user_ref = $1 where id = $2", Ct, rig.Manager, own);
         Assert.Equal("errors.hrm.pay.input.own_pay", Err(await _h.PostAsync(rig.Manager, "/api/hrm/pay-inputs", Item(bonus.Id, who: own), Ct), "employmentId"));
+        var colleague = await _h.UserAsync(Ct);
+        await _h.AssignAsync(colleague, await _h.RoleAsync(Ct, [.. SetUp, .. Engine], [("*", "all")], [("*", "class:salary", "editable")]), null, Today.AddDays(-1), null, Ct);
+        var onMine = await _h.PostAsync(colleague, "/api/hrm/pay-inputs", Item(bonus.Id, who: own), Ct);
+        Assert.True(onMine.Status == HttpStatusCode.Created, onMine.Body);
+        var ownCancel = await _h.PostAsync(rig.Manager, $"/api/hrm/pay-inputs/{onMine.Json.GetProperty("items")[0].GetProperty("id").GetGuid()}/cancel", new { }, Ct);
+        Assert.Equal(HttpStatusCode.Forbidden, ownCancel.Status); // nobody cancels an input to their own pay either (review S1.35a finding 5)
 
         // An officer who may run payroll but only read salary fields cannot enter an amount; units are fine (GHR-06).
         var officer = await _h.UserAsync(Ct);

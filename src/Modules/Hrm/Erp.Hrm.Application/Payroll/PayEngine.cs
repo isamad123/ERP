@@ -77,13 +77,14 @@ public static class PayEngine
     public const string StatutoryCalculatorMissing = P + "statutory_calculator_missing";
     public const string StatutoryCalculatorAmbiguous = P + "statutory_calculator_ambiguous";
     public const string StatutoryNegative = P + "statutory_negative";
+    public const string ProRataNotApplicable = P + "pro_rata_not_applicable";
 
     /// <summary>Every problem key (kept in step with the localization files by a unit test).</summary>
     public static IReadOnlyList<string> ProblemKeys { get; } =
     [
         EngineVersionDiffers, NotEmployed, NoCompensation, CurrencyRateMissing, ComponentMissing, ComponentIncomplete, FormulaInvalid, UsesStatutory, InputUnknown,
         TableMissing, TableNeedsCalculator, TableRowMissing, PlanMissing, NoCountedDays, InputRateMissing, InputOnStatutory, StatutoryCalculatorMissing,
-        StatutoryCalculatorAmbiguous, StatutoryNegative,
+        StatutoryCalculatorAmbiguous, StatutoryNegative, ProRataNotApplicable,
     ];
 
     /// <summary>Whether any of the versions counts working days (so the snapshot must hold the plan).</summary>
@@ -96,6 +97,20 @@ public static class PayEngine
     public static PayCalculation Calculate(PaySnapshot s, IReadOnlyList<IStatutoryCalculator> calculators)
     {
         ArgumentNullException.ThrowIfNull(s);
+        try
+        {
+            return CalculateEmployee(s, calculators);
+        }
+        catch (OverflowException)
+        {
+            // An amount too large for decimal arithmetic (a typing error of many digits): this employee is incomplete, the batch goes on (review S1.35a finding 12).
+            return new PayCalculation(false, [new PayProblem(FormulaLanguage.Overflow)], [], 0m, 0m, 0m, 0m, 0m, 0m, 0m,
+                new Dictionary<string, decimal>(), new Dictionary<string, decimal>(), [], s.EngineVersion);
+        }
+    }
+
+    private static PayCalculation CalculateEmployee(PaySnapshot s, IReadOnlyList<IStatutoryCalculator> calculators)
+    {
         ArgumentNullException.ThrowIfNull(calculators);
         var problems = new List<PayProblem>();
         var trace = new List<PayTraceStep>();
@@ -121,10 +136,12 @@ public static class PayEngine
             inputs[name] = 0m;
         }
 
-        foreach (var item in s.Inputs.Where(i => i.Name is not null && i.Value is not null))
+        // A dated quantity counts only on a day the employee is employed in the run's pay group: after a move to another group in the period
+        // each run counts its own days (review S1.35a finding 3).
+        foreach (var item in s.Inputs.Where(i => i.Name is not null && i.Value is not null && (i.Date is not { } on || employed.Contains(on))))
         {
             inputs[item.Name!] = inputs.GetValueOrDefault(item.Name!) + item.Value!.Value;
-            if (item.Name == PayInputNames.UnpaidLeaveDays && item.Date is { } d && employed.Contains(d))
+            if (item.Name == PayInputNames.UnpaidLeaveDays && item.Date is { } d)
             {
                 unpaid[d] = Math.Min(1m, unpaid.GetValueOrDefault(d) + item.Value.Value);
             }
@@ -468,9 +485,12 @@ public static class PayEngine
                     text = Invariant($"table {table.Code} row {bracket.Seq} for {earnings}: {bracket.FixedAmount ?? 0m} + {bracket.Rate ?? 0m} x ({earnings} - {bracket.Lower ?? 0m}) = {value}");
                     break;
                 case "per_day":
-                    value = PayRounding.Internal((amount ?? 0m) * inputs[PayInputNames.PaidDays]);
+                    // The paid days of this segment at this segment's rate, so a rate change inside the period pays each day at its own rate
+                    // (review S1.35a finding 1); the segments' values are added, never pro-rated again.
+                    var segmentPaid = Days(seg.Start, seg.End).Where(employed.Contains).Sum(d => 1m - unpaid.GetValueOrDefault(d));
+                    value = PayRounding.Internal((amount ?? 0m) * segmentPaid);
                     rateOf[c.ComponentId] = (amount, inputs[PayInputNames.PaidDays]);
-                    text = Invariant($"{amount ?? 0m} x $paid_days {inputs[PayInputNames.PaidDays]} = {value}");
+                    text = Invariant($"{amount ?? 0m} x paid days of the segment {segmentPaid} = {value}");
                     break;
                 case "per_hour":
                     value = PayRounding.Internal((amount ?? 0m) * inputs[PayInputNames.WorkedHours]);
@@ -497,6 +517,21 @@ public static class PayEngine
 
         decimal ProRata(SnapshotComponent c, SnapshotVersion version, Guid id)
         {
+            // A value already counted in days or hours is never cut again by a pro-rata rule (review S1.35a finding 1); a version saved before
+            // the component service refused the combination makes the employee incomplete rather than paid twice short.
+            if (ComponentRules.ProRataProblem(version.Method, version.ProRataRule, version.Formula) is not null)
+            {
+                Add(new PayProblem(ProRataNotApplicable, c.Code));
+                return 0m;
+            }
+
+            if (version.Method == "per_day")
+            {
+                var paid = segments.Sum(g => g.Full.GetValueOrDefault(id));
+                trace.Add(new PayTraceStep(c.Code, "pro_rata", Invariant($"per day, the segments added: {paid}")));
+                return paid;
+            }
+
             if (version.ProRataRule is "none" or null)
             {
                 var full = lastWithPay.Full.GetValueOrDefault(id);

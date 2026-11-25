@@ -24676,7 +24676,8 @@
         "ix_pay_result_lines_company_id_result_id"
       ],
       "triggers": [
-        "tg_pay_result_lines_lock"
+        "tg_pay_result_lines_lock",
+        "tg_pay_result_lines_lock_truncate"
       ],
       "append_only_updatable": [],
       "has_api": true,
@@ -25128,7 +25129,8 @@
         "ix_pay_results_company_id_corrects_result_id"
       ],
       "triggers": [
-        "tg_pay_results_lock"
+        "tg_pay_results_lock",
+        "tg_pay_results_lock_truncate"
       ],
       "append_only_updatable": [],
       "has_api": true,
@@ -25404,7 +25406,8 @@
         "ix_pay_run_employees_company_id_hold_id"
       ],
       "triggers": [
-        "tg_pay_run_employees_lock"
+        "tg_pay_run_employees_lock",
+        "tg_pay_run_employees_lock_truncate"
       ],
       "append_only_updatable": [],
       "has_api": true,
@@ -25745,7 +25748,8 @@
         "ix_pay_runs_company_id_workflow_instance_id"
       ],
       "triggers": [
-        "tg_pay_runs_lock"
+        "tg_pay_runs_lock",
+        "tg_pay_runs_lock_truncate"
       ],
       "append_only_updatable": [],
       "has_api": true,
@@ -25813,7 +25817,8 @@
       ],
       "indexes": [],
       "triggers": [
-        "tg_pay_traces_lock"
+        "tg_pay_traces_lock",
+        "tg_pay_traces_lock_truncate"
       ],
       "append_only_updatable": [],
       "has_api": false,

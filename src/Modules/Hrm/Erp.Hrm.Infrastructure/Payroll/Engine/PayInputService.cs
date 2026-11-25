@@ -237,10 +237,19 @@ internal sealed class PayInputService(
             return PeopleResult.Forbidden();
         }
 
-        var row = await db.Set<PayInput>().FirstOrDefaultAsync(i => i.Id == inputId, cancellationToken).ConfigureAwait(false);
+        // Held for update, so a cancel and a calculation that uses the input never pass each other (review S1.35a finding 5).
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        var row = (await db.Set<PayInput>().FromSqlInterpolated($"select * from hrm.pay_inputs where id = {inputId} for update").ToListAsync(cancellationToken).ConfigureAwait(false)).FirstOrDefault();
         if (row is null || !await scope.AllowsAsync(row, PayInputAccess.Scope, "read", Source, cancellationToken).ConfigureAwait(false))
         {
             return PeopleResult.NotFound;
+        }
+
+        // Nobody changes their own pay, cancelling an input included (FR-XM-32).
+        var owner = await db.Set<Employment>().AsNoTracking().Where(e => e.Id == row.EmploymentId).Select(e => e.UserRef).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (owner is { } own && own == actor.UserId)
+        {
+            return PeopleResult.Forbidden(OwnPay);
         }
 
         switch (row.Status)
@@ -254,6 +263,7 @@ internal sealed class PayInputService(
         row.Status = "cancelled";
         EmploymentApplier.Bump(row, clock.UtcNow, actor.UserId);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
         return new PeopleResult(PeopleOutcome.Done, Body: new { id = row.Id, row.Status, row.RowVersion });
     }
 

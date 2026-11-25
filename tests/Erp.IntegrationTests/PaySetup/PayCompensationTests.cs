@@ -182,7 +182,7 @@ public sealed class PayCompensationTests(TenancyFixture fx) : IAsyncLifetime
         var start = Today.AddDays(-90);
         var (id, _, _) = await ComponentAsync(rig, version: Fixed(start));
         var from = Today.AddDays(30);
-        var second = await VersionAsync(rig.Admin, id, new { validFrom = Iso(from), method = "per_day", proRataRule = "working_days", statutoryFlags = new { taxable = false, pensionable = true } });
+        var second = await VersionAsync(rig.Admin, id, new { validFrom = Iso(from), method = "per_day", proRataRule = "none", statutoryFlags = new { taxable = false, pensionable = true } }); // S1.35a review 1: a day rate takes no pro-rata rule
         Assert.Equal(HttpStatusCode.Created, second.Status);
         var rows = await _h.ScalarAsync<long>("select count(*) from hrm.pay_component_versions where component_id = $1", Ct, id);
         Assert.Equal(2L, rows);

@@ -306,6 +306,10 @@ internal sealed class PayComponentService(
         {
             Fail(r.ProRataRule is null || !ComponentRules.ProRataRules.Contains(r.ProRataRule, StringComparer.Ordinal) ? "proRataRule" : "proRataParams", proRataError);
         }
+        else if (ComponentRules.ProRataProblem(r.Method, r.ProRataRule, r.Formula) is { } countedTwice)
+        {
+            Fail("proRataRule", countedTwice); // S1.35a review finding 1: a value counted in days is never pro-rated again
+        }
 
         var flags = r.StatutoryFlags ?? new Dictionary<string, bool>();
         if (flags.Count > MaxFlags || flags.Keys.Any(k => !ComponentRules.IsFlagCode(k)))

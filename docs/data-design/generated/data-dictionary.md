@@ -3894,6 +3894,7 @@ Indexes:
 Triggers:
 
 - `tg_pay_result_lines_lock` CREATE TRIGGER tg_pay_result_lines_lock BEFORE INSERT OR DELETE OR UPDATE ON hrm.pay_result_lines FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_run_results_lock()
+- `tg_pay_result_lines_lock_truncate` CREATE TRIGGER tg_pay_result_lines_lock_truncate BEFORE TRUNCATE ON hrm.pay_result_lines FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_pay_run_no_truncate()
 
 ### hrm.pay_result_reversals
 
@@ -3978,6 +3979,7 @@ Indexes:
 Triggers:
 
 - `tg_pay_results_lock` CREATE TRIGGER tg_pay_results_lock BEFORE INSERT OR DELETE OR UPDATE ON hrm.pay_results FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_run_results_lock()
+- `tg_pay_results_lock_truncate` CREATE TRIGGER tg_pay_results_lock_truncate BEFORE TRUNCATE ON hrm.pay_results FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_pay_run_no_truncate()
 
 ### hrm.pay_run_employees
 
@@ -4025,6 +4027,7 @@ Indexes:
 Triggers:
 
 - `tg_pay_run_employees_lock` CREATE TRIGGER tg_pay_run_employees_lock BEFORE INSERT OR DELETE OR UPDATE ON hrm.pay_run_employees FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_run_results_lock()
+- `tg_pay_run_employees_lock_truncate` CREATE TRIGGER tg_pay_run_employees_lock_truncate BEFORE TRUNCATE ON hrm.pay_run_employees FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_pay_run_no_truncate()
 
 ### hrm.pay_runs
 
@@ -4080,6 +4083,7 @@ Indexes:
 Triggers:
 
 - `tg_pay_runs_lock` CREATE TRIGGER tg_pay_runs_lock BEFORE DELETE OR UPDATE ON hrm.pay_runs FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_runs_lock()
+- `tg_pay_runs_lock_truncate` CREATE TRIGGER tg_pay_runs_lock_truncate BEFORE TRUNCATE ON hrm.pay_runs FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_pay_run_no_truncate()
 
 ### hrm.pay_traces
 
@@ -4099,6 +4103,7 @@ Constraints:
 Triggers:
 
 - `tg_pay_traces_lock` CREATE TRIGGER tg_pay_traces_lock BEFORE INSERT OR DELETE OR UPDATE ON hrm.pay_traces FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_run_results_lock()
+- `tg_pay_traces_lock_truncate` CREATE TRIGGER tg_pay_traces_lock_truncate BEFORE TRUNCATE ON hrm.pay_traces FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_pay_run_no_truncate()
 
 ### hrm.payment_batches
 
@@ -8053,6 +8058,7 @@ Constraints:
 - `hrm.tg_pay_component_versions_bases` 
 - `hrm.tg_pay_groups_rules` 
 - `hrm.tg_pay_periods_fixed` 
+- `hrm.tg_pay_run_no_truncate` 
 - `hrm.tg_pay_run_results_lock` 
 - `hrm.tg_pay_runs_lock` 
 - `hrm.tg_policy_assignments_checks` 

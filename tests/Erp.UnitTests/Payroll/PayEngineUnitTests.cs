@@ -245,6 +245,63 @@ public sealed class PayEngineUnitTests
         Assert.Equal(2_000m, Line(revisedCalc, "FLAT"));
     }
 
+    [Fact]
+    public void FR_HRM_PAY_05_review_1_a_per_day_component_is_never_prorated_twice_and_a_mid_month_rate_change_pays_each_day_at_its_own_rate()
+    {
+        // A joiner on 16 January on 300 a day: 16 paid days, nothing cut again.
+        var joiner = new Snap().Employed(new DateOnly(2027, 1, 16), End);
+        joiner.Compensation(new DateOnly(2027, 1, 16), null);
+        joiner.Component("DAILY", "earning", 1, "per_day", amount: 300m);
+        Assert.Equal(300m * 16m, Line(PayEngine.Calculate(joiner.Build(), []), "DAILY"));
+
+        // The rate rises from 300 to 350 on 16 January, with a day of unpaid leave on 20 January: 15 days at 300 and 15 at 350.
+        var raised = new Snap();
+        var daily = raised.Component("DAILY", "earning", 1, "per_day", amount: 300m);
+        raised.Revision(new DateOnly(2027, 1, 16), (daily, 350m));
+        raised.Unpaid(new DateOnly(2027, 1, 20), 1m);
+        Assert.Equal((15m * 300m) + (15m * 350m), Line(PayEngine.Calculate(raised.Build(), []), "DAILY"));
+
+        // A version that still carries a pro-rata rule (saved before the rule was refused) makes the employee incomplete, never paid twice short.
+        var old = new Snap();
+        old.Component("DAILY", "earning", 1, "per_day", amount: 300m, rule: "calendar_days");
+        var refused = PayEngine.Calculate(old.Build(), []);
+        Assert.Contains(refused.Problems, p => p.Key == PayEngine.ProRataNotApplicable && p.Subject == "DAILY");
+
+        // The component service refuses the combination when it is defined.
+        Assert.Equal(ComponentRules.ProRataNotApplicable, ComponentRules.ProRataProblem("per_hour", "working_days", null));
+        Assert.Equal(ComponentRules.ProRataNotApplicable, ComponentRules.ProRataProblem("attendance_linked", "fixed_30", null));
+        Assert.Equal(ComponentRules.ProRataNotApplicable, ComponentRules.ProRataProblem("formula", "calendar_days", "BASIC / $period_days * $paid_days"));
+        Assert.Null(ComponentRules.ProRataProblem("formula", "calendar_days", "BASIC * 0.1 + $period_days"));
+        Assert.Null(ComponentRules.ProRataProblem("per_day", "none", null));
+        Assert.Null(ComponentRules.ProRataProblem("fixed", "calendar_days", null));
+        Assert.Equal(PayInputNames.BuiltIn.Except([PayInputNames.PeriodDays, PayInputNames.WorkingDays]).Order(), ComponentRules.CountingInputs.Order());
+    }
+
+    [Fact]
+    public void FR_HRM_PAY_07_review_3_a_dated_quantity_counts_only_on_the_days_the_employee_is_in_the_runs_pay_group()
+    {
+        // In this run's pay group from 15 January (moved in from another group): overtime of the 10th belongs to the other group's run.
+        var moved = new Snap().Employed(new DateOnly(2027, 1, 15), End);
+        moved.Compensation(new DateOnly(2026, 1, 1), null);
+        moved.Component("OT", "earning", 1, "formula", formula: "$overtime_hours * 100");
+        moved.Dated(PayInputNames.OvertimeHours, 4m, new DateOnly(2027, 1, 10)).Dated(PayInputNames.OvertimeHours, 3m, new DateOnly(2027, 1, 20));
+        moved.Dated(PayInputNames.WorkedDays, 1m, new DateOnly(2027, 1, 10)).Dated(PayInputNames.WorkedDays, 1m, new DateOnly(2027, 1, 20));
+        var calc = PayEngine.Calculate(moved.Build(), []);
+        Assert.Equal(3m * 100m, Line(calc, "OT"));
+        Assert.Equal(1m, calc.WorkedDays);
+    }
+
+    [Fact]
+    public void Review_12_an_amount_too_large_for_decimal_arithmetic_makes_the_employee_incomplete_not_the_batch_fail()
+    {
+        var b = new Snap();
+        var basic = b.Component("BASIC", "earning", 1, "fixed", amount: 79_000_000_000_000_000_000_000_000_000m);
+        b.Component("HOUSE", "earning", 2, "percent_of", percent: 900m, bases: [basic]);
+        var calc = PayEngine.Calculate(b.Build(), []);
+        Assert.False(calc.Complete);
+        Assert.Contains(calc.Problems, p => p.Key == FormulaLanguage.Overflow);
+    }
+
     // ------------------------------------------------------------------ rounding (ruling Q3)
 
     [Fact]
@@ -451,6 +508,12 @@ public sealed class PayEngineUnitTests
         public Snap Unpaid(DateOnly day, decimal days)
         {
             _inputs.Add(new PayInputItem(Employment, "attendance", "hrm.leave_requests", Guid.CreateVersion7(), PayInputNames.UnpaidLeaveDays, days, day));
+            return this;
+        }
+
+        public Snap Dated(string name, decimal value, DateOnly day)
+        {
+            _inputs.Add(new PayInputItem(Employment, "test", "test", Guid.CreateVersion7(), name, value, day));
             return this;
         }
 

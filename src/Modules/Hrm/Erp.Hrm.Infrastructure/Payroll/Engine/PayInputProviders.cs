@@ -34,14 +34,26 @@ internal sealed class AttendanceLeaveInputProvider(HrmDbContext db, ILeaveDeduct
         var items = new List<PayInputItem>();
         var days = await db.Set<AttendanceDay>().AsNoTracking()
             .Where(d => ids.Contains(d.EmploymentId) && d.WorkDate >= request.PeriodStart && d.WorkDate <= request.PeriodEnd && d.SupersededAt == null)
-            .Select(d => new { d.EmploymentId, d.Result, d.WorkedMinutes })
+            .Select(d => new { d.EmploymentId, d.WorkDate, d.Result, d.WorkedMinutes })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
-        foreach (var g in days.GroupBy(d => d.EmploymentId).OrderBy(g => g.Key))
+
+        // One dated item per day, so a run counts only the days the employee is in its pay group (review S1.35a finding 3).
+        foreach (var d in days.OrderBy(d => d.EmploymentId).ThenBy(d => d.WorkDate))
         {
-            var worked = g.Sum(d => Worked(d.Result));
-            items.Add(new PayInputItem(g.Key, ProviderCode, "hrm.attendance_days", null, PayInputNames.WorkedDays, worked));
-            items.Add(new PayInputItem(g.Key, ProviderCode, "hrm.attendance_days", null, PayInputNames.AbsentDays, g.Count(d => d.Result == "absent")));
-            items.Add(new PayInputItem(g.Key, ProviderCode, "hrm.attendance_days", null, PayInputNames.WorkedHours, PayRounding.Internal(g.Sum(d => (decimal)d.WorkedMinutes) / 60m)));
+            if (Worked(d.Result) is var worked and > 0m)
+            {
+                items.Add(new PayInputItem(d.EmploymentId, ProviderCode, "hrm.attendance_days", null, PayInputNames.WorkedDays, worked, d.WorkDate));
+            }
+
+            if (d.Result == "absent")
+            {
+                items.Add(new PayInputItem(d.EmploymentId, ProviderCode, "hrm.attendance_days", null, PayInputNames.AbsentDays, 1m, d.WorkDate));
+            }
+
+            if (d.WorkedMinutes > 0)
+            {
+                items.Add(new PayInputItem(d.EmploymentId, ProviderCode, "hrm.attendance_days", null, PayInputNames.WorkedHours, PayRounding.Internal(d.WorkedMinutes / 60m), d.WorkDate));
+            }
         }
 
         foreach (var d in await unpaid.ForAsync(ids, request.PeriodStart, request.PeriodEnd, cancellationToken).ConfigureAwait(false))
@@ -190,8 +202,16 @@ internal sealed class PayInputRowsProvider(HrmDbContext db, IClock clock, ICurre
             return;
         }
 
+        // The rows are taken for update: a cancel that came in after the batch read them makes the batch roll back (the employee is calculated
+        // again on the next call), so a paid input is never left marked cancelled (review S1.35a finding 5).
         var now = clock.UtcNow;
-        foreach (var row in await db.Set<PayInput>().Where(i => ids.Contains(i.Id) && i.Status == "pending").ToListAsync(cancellationToken).ConfigureAwait(false))
+        var rows = await db.Set<PayInput>().FromSqlInterpolated($"select * from hrm.pay_inputs where id = any({ids.ToArray()}) for update").ToListAsync(cancellationToken).ConfigureAwait(false);
+        if (rows.Count != ids.Count || rows.Any(r => !(r.Status == "pending" || (r.Status == "consumed" && r.ConsumedByRunId == consumed.PayRunId))))
+        {
+            throw new PayInputsChangedException();
+        }
+
+        foreach (var row in rows.Where(r => r.Status == "pending"))
         {
             row.Status = "consumed";
             row.ConsumedByRunId = consumed.PayRunId;
@@ -199,3 +219,6 @@ internal sealed class PayInputRowsProvider(HrmDbContext db, IClock clock, ICurre
         }
     }
 }
+
+/// <summary>A one-time input changed (it was cancelled) between the batch's read and its save: the batch rolls back and the caller calculates again.</summary>
+internal sealed class PayInputsChangedException() : Exception(PayRunService.InputsChanged);

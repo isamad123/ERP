@@ -173,5 +173,9 @@
   "hrm.pay.input.adjustment_paid_days": "ردوبدل سے واپس ملے بلا تنخواہ رخصت کے دن",
   "hrm.pay.input.adjustment_worked_days": "ردوبدل سے بدلے کام کے دن",
   "hrm.pay.input.adjustment_overtime_minutes": "ردوبدل سے بدلے اوور ٹائم منٹ",
-  "errors.hrm.pay.run.group_not_found": "یہ پے گروپ موجود نہیں، یا آپ کی کسی کمپنی کا نہیں۔"
+  "errors.hrm.pay.run.group_not_found": "یہ پے گروپ موجود نہیں، یا آپ کی کسی کمپنی کا نہیں۔",
+  "errors.hrm.pay.pro_rata_not_applicable": "یہ طریقہ پہلے ہی ملازم کے دن یا گھنٹے گنتا ہے، اس لیے اس پر تناسب کا قاعدہ نہیں لگتا (کوئی نہیں چنیں)؛ ورنہ دن دو بار گنے جائیں گے۔",
+  "errors.hrm.pay.calc.pro_rata_not_applicable": "دنوں یا گھنٹوں میں گنے جانے والے جزو پر تناسب کا قاعدہ ہے؛ نئے ورژن میں اس کا قاعدہ کوئی نہیں رکھیں۔",
+  "errors.hrm.pay.run.before_cut_off": "دور کی کٹ آف تاریخ گزرنے تک رن کا حساب نہیں ہو سکتا: حساب دور کی حاضری اور رخصت مقفل کر دیتا ہے۔",
+  "errors.hrm.pay.run.inputs_changed": "رن کے حساب کے دوران ایک یک وقتی اندراج بدل گیا۔ دوبارہ حساب کریں۔"
 }

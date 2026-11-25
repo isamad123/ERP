@@ -6,6 +6,14 @@
 
 -- hrm.pay_result_lines: Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33).
 drop function if exists hrm.todo_pay_result_lines_lock();
+-- Row triggers do not see TRUNCATE: the engine's tables are only written row by row, so emptying one is always refused (review S1.35a finding 4a).
+create or replace function hrm.tg_pay_run_no_truncate() returns trigger
+language plpgsql as $fn$
+begin
+    raise exception '%: payroll rows are never removed by truncate (FR-XM-05, PAY-33)', tg_table_name
+        using errcode = '23514', constraint = 'ck_pay_run_locked';
+end
+$fn$;
 create or replace function hrm.tg_pay_run_results_lock() returns trigger
 language plpgsql as $fn$
 declare
@@ -25,8 +33,11 @@ begin
     end if;
     if v_old_run is not null then
         select status into v_status from hrm.pay_runs where id = v_old_run for share;
+        -- On a locked run's employees only the copy of the run's status may change, and only to the run's own status (a copy set to
+        -- cancelled would free the days in the exclusion constraint; review S1.35a finding 4b).
         if v_status = any (v_final) and not (tg_op = 'UPDATE' and tg_table_name = 'pay_run_employees'
-                                           and v_new_run = v_old_run and (to_jsonb(new) - v_free) = (to_jsonb(old) - v_free)) then
+                                           and v_new_run = v_old_run and (to_jsonb(new) - v_free) = (to_jsonb(old) - v_free)
+                                           and (to_jsonb(new) ->> 'run_status') = v_status) then
             raise exception '%: the results of locked pay run % never change (FR-XM-05, PAY-33); correct them in a later run', tg_table_name, v_old_run
                 using errcode = '23514', constraint = 'ck_pay_run_locked';
         end if;
@@ -44,6 +55,9 @@ $fn$;
 drop trigger if exists tg_pay_result_lines_lock on hrm.pay_result_lines;
 create trigger tg_pay_result_lines_lock before insert or update or delete on hrm.pay_result_lines
     for each row execute function hrm.tg_pay_run_results_lock();
+drop trigger if exists tg_pay_result_lines_lock_truncate on hrm.pay_result_lines;
+create trigger tg_pay_result_lines_lock_truncate before truncate on hrm.pay_result_lines
+    for each statement execute function hrm.tg_pay_run_no_truncate();
 comment on table hrm.pay_result_lines is 'Requirements: PAY-06, PAY-29, PAY-30. Partitioning (design): range on pay_period start (yearly) once volume requires; key includes partition column. Not partitioned in this release (rules.yaml). Rule (implemented in S1.35a): Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). Source: hrm-pay.yaml.';
 comment on column hrm.pay_result_lines.result_id is 'fk hrm.pay_results';
 comment on column hrm.pay_result_lines.pay_period_id is 'denormalized';
@@ -57,6 +71,9 @@ drop function if exists hrm.todo_pay_results_lock();
 drop trigger if exists tg_pay_results_lock on hrm.pay_results;
 create trigger tg_pay_results_lock before insert or update or delete on hrm.pay_results
     for each row execute function hrm.tg_pay_run_results_lock();
+drop trigger if exists tg_pay_results_lock_truncate on hrm.pay_results;
+create trigger tg_pay_results_lock_truncate before truncate on hrm.pay_results
+    for each statement execute function hrm.tg_pay_run_no_truncate();
 comment on table hrm.pay_results is 'Net result per employee per run; append-only once the run is locked (PAY-33). Requirements: PAY-12, PAY-28, PAY-33, FR-XM-27. Rule (implemented in S1.35a): Trigger refuses update and delete when the run status is locked or later. Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). Source: hrm-pay.yaml.';
 comment on column hrm.pay_results.pay_run_id is 'fk hrm.pay_runs';
 comment on column hrm.pay_results.employment_id is 'fk hrm.employments';
@@ -68,6 +85,9 @@ drop function if exists hrm.todo_pay_run_employees_lock();
 drop trigger if exists tg_pay_run_employees_lock on hrm.pay_run_employees;
 create trigger tg_pay_run_employees_lock before insert or update or delete on hrm.pay_run_employees
     for each row execute function hrm.tg_pay_run_results_lock();
+drop trigger if exists tg_pay_run_employees_lock_truncate on hrm.pay_run_employees;
+create trigger tg_pay_run_employees_lock_truncate before truncate on hrm.pay_run_employees
+    for each statement execute function hrm.tg_pay_run_no_truncate();
 comment on table hrm.pay_run_employees is 'Who is in a run, the frozen input snapshot, status and validation flags. Requirements: PAY-09, PAY-11, PAY-31. Rule (implemented in S1.35a): Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). Source: hrm-pay.yaml.';
 comment on column hrm.pay_run_employees.pay_run_id is 'fk hrm.pay_runs';
 comment on column hrm.pay_run_employees.employment_id is 'fk hrm.employments';
@@ -92,8 +112,12 @@ begin
         raise exception 'pay run %: a locked run is never deleted (FR-XM-05)', old.id
             using errcode = '23514', constraint = 'ck_pay_run_locked';
     end if;
+    -- The stage log only grows after the lock: who calculated, approved and locked the run stays as it was (review S1.35a finding 4c).
     if not (new.status = any (v_final)) or array_position(v_final, new.status) < array_position(v_final, old.status)
-       or (to_jsonb(new) - v_free) is distinct from (to_jsonb(old) - v_free) then
+       or (to_jsonb(new) - v_free) is distinct from (to_jsonb(old) - v_free)
+       or jsonb_typeof(new.stage_log) <> 'array' or jsonb_array_length(new.stage_log) < jsonb_array_length(old.stage_log)
+       or exists (select 1 from jsonb_array_elements(old.stage_log) with ordinality o(e, i)
+                   where o.e is distinct from new.stage_log -> (o.i::int - 1)) then
         raise exception 'pay run %: a locked run only moves forward through paid, posted and closed (FR-XM-05, PAY-33)', old.id
             using errcode = '23514', constraint = 'ck_pay_run_locked';
     end if;
@@ -103,6 +127,9 @@ $fn$;
 drop trigger if exists tg_pay_runs_lock on hrm.pay_runs;
 create trigger tg_pay_runs_lock before update or delete on hrm.pay_runs
     for each row execute function hrm.tg_pay_runs_lock();
+drop trigger if exists tg_pay_runs_lock_truncate on hrm.pay_runs;
+create trigger tg_pay_runs_lock_truncate before truncate on hrm.pay_runs
+    for each statement execute function hrm.tg_pay_run_no_truncate();
 comment on table hrm.pay_runs is 'Requirements: PAY-10, PAY-14, PAY-15, PAY-34. Rule (implemented in S1.35a): Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33); status column may still advance (paid, posted, closed) through the run service only. Source: hrm-pay.yaml.';
 comment on column hrm.pay_runs.pay_group_id is 'fk hrm.pay_groups';
 comment on column hrm.pay_runs.pay_period_id is 'fk hrm.pay_periods';
@@ -115,6 +142,9 @@ drop function if exists hrm.todo_pay_traces_lock();
 drop trigger if exists tg_pay_traces_lock on hrm.pay_traces;
 create trigger tg_pay_traces_lock before insert or update or delete on hrm.pay_traces
     for each row execute function hrm.tg_pay_run_results_lock();
+drop trigger if exists tg_pay_traces_lock_truncate on hrm.pay_traces;
+create trigger tg_pay_traces_lock_truncate before truncate on hrm.pay_traces
+    for each statement execute function hrm.tg_pay_run_no_truncate();
 comment on table hrm.pay_traces is 'Calculation trace per result (PAY-32). Requirements: PAY-32. Rule (implemented in S1.35a): Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). Source: hrm-pay.yaml.';
 comment on column hrm.pay_traces.result_id is 'pk, fk hrm.pay_results';
 comment on column hrm.pay_traces.trace is 'inputs, formulas, rule and table versions, rounding steps';

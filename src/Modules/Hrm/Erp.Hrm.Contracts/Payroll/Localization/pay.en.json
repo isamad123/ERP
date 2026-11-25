@@ -173,5 +173,9 @@
   "hrm.pay.input.adjustment_paid_days": "Unpaid leave days given back by adjustments",
   "hrm.pay.input.adjustment_worked_days": "Worked days changed by adjustments",
   "hrm.pay.input.adjustment_overtime_minutes": "Overtime minutes changed by adjustments",
-  "errors.hrm.pay.run.group_not_found": "The pay group does not exist, or it is not in a company you work with."
+  "errors.hrm.pay.run.group_not_found": "The pay group does not exist, or it is not in a company you work with.",
+  "errors.hrm.pay.pro_rata_not_applicable": "This method already counts the employee's days or hours, so it takes no pro-rata rule (choose none); otherwise the days would be counted twice.",
+  "errors.hrm.pay.calc.pro_rata_not_applicable": "A component counted in days or hours has a pro-rata rule; set its rule to none in a new version.",
+  "errors.hrm.pay.run.before_cut_off": "The run cannot be calculated until the period's cut-off date has passed: the calculation locks the period's attendance and leave.",
+  "errors.hrm.pay.run.inputs_changed": "A one-time input changed while the run was being calculated. Calculate again."
 }

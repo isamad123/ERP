@@ -54,6 +54,7 @@ tables:
           slice: S1.35a
           triggers:
             - [hrm.pay_runs, tg_pay_runs_lock]
+            - [hrm.pay_runs, tg_pay_runs_lock_truncate]
           sql: |
             create or replace function hrm.tg_pay_runs_lock() returns trigger
             language plpgsql as $fn$
@@ -68,8 +69,12 @@ tables:
                     raise exception 'pay run %: a locked run is never deleted (FR-XM-05)', old.id
                         using errcode = '23514', constraint = 'ck_pay_run_locked';
                 end if;
+                -- The stage log only grows after the lock: who calculated, approved and locked the run stays as it was (review S1.35a finding 4c).
                 if not (new.status = any (v_final)) or array_position(v_final, new.status) < array_position(v_final, old.status)
-                   or (to_jsonb(new) - v_free) is distinct from (to_jsonb(old) - v_free) then
+                   or (to_jsonb(new) - v_free) is distinct from (to_jsonb(old) - v_free)
+                   or jsonb_typeof(new.stage_log) <> 'array' or jsonb_array_length(new.stage_log) < jsonb_array_length(old.stage_log)
+                   or exists (select 1 from jsonb_array_elements(old.stage_log) with ordinality o(e, i)
+                               where o.e is distinct from new.stage_log -> (o.i::int - 1)) then
                     raise exception 'pay run %: a locked run only moves forward through paid, posted and closed (FR-XM-05, PAY-33)', old.id
                         using errcode = '23514', constraint = 'ck_pay_run_locked';
                 end if;
@@ -79,6 +84,9 @@ tables:
             drop trigger if exists tg_pay_runs_lock on hrm.pay_runs;
             create trigger tg_pay_runs_lock before update or delete on hrm.pay_runs
                 for each row execute function hrm.tg_pay_runs_lock();
+            drop trigger if exists tg_pay_runs_lock_truncate on hrm.pay_runs;
+            create trigger tg_pay_runs_lock_truncate before truncate on hrm.pay_runs
+                for each statement execute function hrm.tg_pay_run_no_truncate();
 
   hrm.pay_run_employees:
     checks:
@@ -94,10 +102,14 @@ tables:
           slice: S1.35a
           triggers:
             - [hrm.pay_run_employees, tg_pay_run_employees_lock]
+            - [hrm.pay_run_employees, tg_pay_run_employees_lock_truncate]
           sql: |
             drop trigger if exists tg_pay_run_employees_lock on hrm.pay_run_employees;
             create trigger tg_pay_run_employees_lock before insert or update or delete on hrm.pay_run_employees
                 for each row execute function hrm.tg_pay_run_results_lock();
+            drop trigger if exists tg_pay_run_employees_lock_truncate on hrm.pay_run_employees;
+            create trigger tg_pay_run_employees_lock_truncate before truncate on hrm.pay_run_employees
+                for each statement execute function hrm.tg_pay_run_no_truncate();
 
   hrm.pay_results:
     notes:
@@ -110,10 +122,14 @@ tables:
           slice: S1.35a
           triggers:
             - [hrm.pay_results, tg_pay_results_lock]
+            - [hrm.pay_results, tg_pay_results_lock_truncate]
           sql: |
             drop trigger if exists tg_pay_results_lock on hrm.pay_results;
             create trigger tg_pay_results_lock before insert or update or delete on hrm.pay_results
                 for each row execute function hrm.tg_pay_run_results_lock();
+            drop trigger if exists tg_pay_results_lock_truncate on hrm.pay_results;
+            create trigger tg_pay_results_lock_truncate before truncate on hrm.pay_results
+                for each statement execute function hrm.tg_pay_run_no_truncate();
 
   hrm.pay_result_lines:
     partition: none   # design: "partitioned yearly once volume requires"; not partitioned in Release 1.0
@@ -128,7 +144,16 @@ tables:
           slice: S1.35a
           triggers:
             - [hrm.pay_result_lines, tg_pay_result_lines_lock]
+            - [hrm.pay_result_lines, tg_pay_result_lines_lock_truncate]
           sql: |
+            -- Row triggers do not see TRUNCATE: the engine's tables are only written row by row, so emptying one is always refused (review S1.35a finding 4a).
+            create or replace function hrm.tg_pay_run_no_truncate() returns trigger
+            language plpgsql as $fn$
+            begin
+                raise exception '%: payroll rows are never removed by truncate (FR-XM-05, PAY-33)', tg_table_name
+                    using errcode = '23514', constraint = 'ck_pay_run_locked';
+            end
+            $fn$;
             create or replace function hrm.tg_pay_run_results_lock() returns trigger
             language plpgsql as $fn$
             declare
@@ -148,8 +173,11 @@ tables:
                 end if;
                 if v_old_run is not null then
                     select status into v_status from hrm.pay_runs where id = v_old_run for share;
+                    -- On a locked run's employees only the copy of the run's status may change, and only to the run's own status (a copy set to
+                    -- cancelled would free the days in the exclusion constraint; review S1.35a finding 4b).
                     if v_status = any (v_final) and not (tg_op = 'UPDATE' and tg_table_name = 'pay_run_employees'
-                                                       and v_new_run = v_old_run and (to_jsonb(new) - v_free) = (to_jsonb(old) - v_free)) then
+                                                       and v_new_run = v_old_run and (to_jsonb(new) - v_free) = (to_jsonb(old) - v_free)
+                                                       and (to_jsonb(new) ->> 'run_status') = v_status) then
                         raise exception '%: the results of locked pay run % never change (FR-XM-05, PAY-33); correct them in a later run', tg_table_name, v_old_run
                             using errcode = '23514', constraint = 'ck_pay_run_locked';
                     end if;
@@ -167,6 +195,9 @@ tables:
             drop trigger if exists tg_pay_result_lines_lock on hrm.pay_result_lines;
             create trigger tg_pay_result_lines_lock before insert or update or delete on hrm.pay_result_lines
                 for each row execute function hrm.tg_pay_run_results_lock();
+            drop trigger if exists tg_pay_result_lines_lock_truncate on hrm.pay_result_lines;
+            create trigger tg_pay_result_lines_lock_truncate before truncate on hrm.pay_result_lines
+                for each statement execute function hrm.tg_pay_run_no_truncate();
 
   hrm.pay_traces:
     notes:
@@ -178,10 +209,14 @@ tables:
           slice: S1.35a
           triggers:
             - [hrm.pay_traces, tg_pay_traces_lock]
+            - [hrm.pay_traces, tg_pay_traces_lock_truncate]
           sql: |
             drop trigger if exists tg_pay_traces_lock on hrm.pay_traces;
             create trigger tg_pay_traces_lock before insert or update or delete on hrm.pay_traces
                 for each row execute function hrm.tg_pay_run_results_lock();
+            drop trigger if exists tg_pay_traces_lock_truncate on hrm.pay_traces;
+            create trigger tg_pay_traces_lock_truncate before truncate on hrm.pay_traces
+                for each statement execute function hrm.tg_pay_run_no_truncate();
 
   hrm.pay_result_reversals:
     checks:

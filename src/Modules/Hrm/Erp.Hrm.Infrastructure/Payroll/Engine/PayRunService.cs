@@ -42,6 +42,7 @@ internal sealed class PayRunService(
     INumberAllocator numbers,
     IAttendancePeriodLock locks,
     PaySnapshotBuilder builder,
+    EmploymentApplier applier,
     IEnumerable<IPayInputProvider> providers,
     IEnumerable<IStatutoryCalculator> calculators) : IPayRunService
 {
@@ -53,6 +54,8 @@ internal sealed class PayRunService(
     public const string NotCalculable = "errors.hrm.pay.run.not_calculable";
     public const string LockRefused = "errors.hrm.pay.run.lock_refused";
     public const string EmployeeConflict = "errors.hrm.pay.run.employee_in_other_run";
+    public const string BeforeCutOff = "errors.hrm.pay.run.before_cut_off";
+    public const string InputsChanged = "errors.hrm.pay.run.inputs_changed";
 
     private static readonly string[] Calculable = ["created", "inputs_imported"];
 
@@ -163,6 +166,13 @@ internal sealed class PayRunService(
             return PeopleResult.Conflict(NotCalculable, new Dictionary<string, object?> { ["status"] = run.Status });
         }
 
+        // The lock freezes the period's days, so it waits for the cut-off date as HR's lock does (S1.31; review S1.35a finding 2).
+        var cutOff = await db.Set<PayPeriod>().AsNoTracking().Where(p => p.Id == run.PayPeriodId).Select(p => p.CutOffDate).FirstAsync(cancellationToken).ConfigureAwait(false);
+        if (await applier.TodayAsync(run.CompanyId, clock.UtcNow, cancellationToken).ConfigureAwait(false) <= cutOff)
+        {
+            return PeopleResult.Conflict(BeforeCutOff, new Dictionary<string, object?> { ["cutOffDate"] = cutOff });
+        }
+
         // FR-XM-26: the period's attendance and leave lock first; nothing is calculated when they cannot.
         var user = actor.UserId;
         var locked = await locks.LockAsync(new PeriodLockRequest(run.PayPeriodId, run.Id, request.AcceptOpenItems, user), null, cancellationToken).ConfigureAwait(false);
@@ -198,6 +208,11 @@ internal sealed class PayRunService(
             catch (InvalidOperationException e) when (e.Message == NotCalculable)
             {
                 return PeopleResult.Conflict(NotCalculable);
+            }
+            catch (PayInputsChangedException)
+            {
+                db.ChangeTracker.Clear();
+                return PeopleResult.Conflict(InputsChanged);
             }
         }
 
