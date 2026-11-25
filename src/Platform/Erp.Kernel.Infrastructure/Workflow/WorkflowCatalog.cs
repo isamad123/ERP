@@ -33,7 +33,9 @@ public static class WorkflowManifest
             t.BulkApproval,
             t.RequiresApproval,
             t.DecidePermission,
-            t.DefaultRoute.ValueKind == JsonValueKind.Undefined ? default : t.DefaultRoute.Clone()))];
+            t.DefaultRoute.ValueKind == JsonValueKind.Undefined ? default : t.DefaultRoute.Clone(),
+            t.SubjectEmploymentField,
+            t.SubjectDateField))];
     }
 
     /// <summary>The document types of the manifest folders (one <c>workflow.json</c> per module that has any).</summary>
@@ -73,6 +75,10 @@ public static class WorkflowManifest
         public string? CompanyField { get; init; }
 
         public List<string>? SubjectFields { get; init; }
+
+        public string? SubjectEmploymentField { get; init; }
+
+        public string? SubjectDateField { get; init; }
 
         public Dictionary<string, string>? Title { get; init; }
 
@@ -226,6 +232,16 @@ public sealed partial class WorkflowCatalog
             {
                 problems.Add($"subject field '{subject}' must name a field of type user");
             }
+        }
+
+        if (type.SubjectEmploymentField is { } employment && (!byName.TryGetValue(employment, out var e) || e.Type != FieldTypes.Text))
+        {
+            problems.Add($"subject_employment_field '{employment}' must name a field of type text");
+        }
+
+        if (type.SubjectDateField is { } date && (type.SubjectEmploymentField is null || !byName.TryGetValue(date, out var d) || d.Type != FieldTypes.Date))
+        {
+            problems.Add($"subject_date_field '{date}' must name a field of type date and needs subject_employment_field");
         }
 
         if (string.IsNullOrWhiteSpace(type.Link))

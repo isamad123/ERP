@@ -49,6 +49,21 @@ public sealed class WorkflowStartupCheckTests
         Assert.Throws<InvalidDataException>(provider.VerifyWorkflow);
     }
 
+    [Fact]
+    public void FR_KRN_WFL_02_R305_the_subject_employment_and_date_fields_must_be_declared_text_and_date_fields()
+    {
+        var withFields = Manifest.Replace("\"subject_fields\": []", "\"subject_fields\": [], \"subject_employment_field\": \"employment\", \"subject_date_field\": \"on\"", StringComparison.Ordinal)
+            .Replace("{\"name\": \"company\", \"type\": \"company\", \"label\": {\"en\": \"Company\", \"ur\": \"کمپنی\"}}",
+                "{\"name\": \"company\", \"type\": \"company\", \"label\": {\"en\": \"Company\", \"ur\": \"کمپنی\"}}, {\"name\": \"employment\", \"type\": \"text\", \"label\": {\"en\": \"E\", \"ur\": \"م\"}}, {\"name\": \"on\", \"type\": \"date\", \"label\": {\"en\": \"On\", \"ur\": \"پر\"}}", StringComparison.Ordinal);
+        var good = Assert.Single(WorkflowManifest.Parse(withFields));
+        Assert.Equal("employment", good.SubjectEmploymentField);
+        Assert.Empty(WorkflowCatalog.Check(good));
+
+        Assert.Contains(WorkflowCatalog.Check(good with { SubjectEmploymentField = "company" }), p => p.Contains("subject_employment_field", StringComparison.Ordinal));
+        Assert.Contains(WorkflowCatalog.Check(good with { SubjectDateField = "employment" }), p => p.Contains("subject_date_field", StringComparison.Ordinal));
+        Assert.Contains(WorkflowCatalog.Check(good with { SubjectEmploymentField = null }), p => p.Contains("subject_date_field", StringComparison.Ordinal));
+    }
+
     private static ServiceProvider Provider(bool withHandler)
     {
         var services = new ServiceCollection();

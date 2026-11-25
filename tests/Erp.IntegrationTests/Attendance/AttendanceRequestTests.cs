@@ -310,6 +310,119 @@ public sealed class AttendanceRequestTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(0, await CountAsync("select count(*) from hrm.duty_requests where employment_id = $1", employment));
     }
 
+    // ------------------------------------------------------------------ R-305: the manager step follows the subject's employment
+
+    /// <summary>An employment under <paramref name="manager"/>, with or without a sign-in; a user, when given, holds <paramref name="role"/>.</summary>
+    private async Task<(Guid Employment, Guid? User)> HireUnderAsync(Org o, Guid? manager, bool withUser, string role = "employee")
+    {
+        var person = (Guid)(await _h.RowAsync("hrm.persons", Guid.Empty, null, Ct))["id"]!;
+        var answer = await _h.PostAsync(o.Hr, Employments, new
+        {
+            personId = person, companyId = o.Company, employeeType = "permanent", joiningDate = Iso(o.Monday.AddDays(-30)),
+            assignment = new { orgUnitId = o.Place.OrgUnit, branchId = o.Place.Branch, title = "Officer", payGroupId = o.PayGroup, managerEmploymentId = manager },
+        }, Ct);
+        Assert.True(answer.Status == HttpStatusCode.Created, answer.Body);
+        var employment = answer.Json.GetProperty("id").GetGuid();
+        if (!withUser)
+        {
+            return (employment, null);
+        }
+
+        var user = await _h.UserAsync(Ct, null, role);
+        await _h.ExecAsync("update hrm.employments set user_ref = $1 where id = $2", Ct, user, employment);
+        return (employment, user);
+    }
+
+    private async Task<(Guid Assignee, string Route)> OpenStepAsync(Answer request)
+    {
+        var instance = request.Json.GetProperty("instanceId").GetGuid();
+        var assignee = await _h.ScalarAsync<Guid>("select coalesce(assignee_user_id, '00000000-0000-0000-0000-000000000000'::uuid) from wf.workflow_tasks where instance_id = $1 and status = 'pending' order by created_at limit 1", Ct, instance);
+        var step = await _h.ScalarAsync<string>("select step_key from wf.workflow_tasks where instance_id = $1 and status = 'pending' order by created_at limit 1", Ct, instance);
+        return (assignee, step);
+    }
+
+    private async Task<Guid> LinkRequesterAsync(Org o, Guid? manager)
+    {
+        // HR's own employment sits under its own manager: the person the old rule wrongly asked.
+        var (employment, _) = await HireUnderAsync(o, manager, withUser: false);
+        await _h.ExecAsync("update hrm.employments set user_ref = $1 where id = $2", Ct, o.Hr, employment);
+        return employment;
+    }
+
+    [Fact]
+    public async Task FR_XM_32_FR_KRN_WFL_02_FR_HRM_ATT_11_a_request_hr_enters_for_an_employee_without_a_sign_in_goes_to_that_employees_manager_not_to_hrs_own_manager()
+    {
+        var o = await OrgAsync();
+        var (hrManagerEmployment, hrManagerUser) = await HireUnderAsync(o, null, true, "line_manager");
+        var (managerEmployment, managerUser) = await HireUnderAsync(o, null, true, "line_manager");
+        await LinkRequesterAsync(o, hrManagerEmployment);
+        var (employee, noUser) = await HireUnderAsync(o, managerEmployment, withUser: false);
+        Assert.Null(noUser);
+        var day = o.Monday.AddDays(7);
+
+        var asked = await _h.PostAsync(o.Hr, Duties, new { employmentId = employee, kind = "on_duty", startDate = Iso(day), endDate = Iso(day), purpose = "Entered by HR" }, Ct);
+        Assert.Equal(HttpStatusCode.Accepted, asked.Status);
+        var (assignee, step) = await OpenStepAsync(asked);
+        Assert.Equal("manager", step);
+        Assert.Equal(managerUser, assignee);
+        Assert.NotEqual(hrManagerUser, assignee);
+
+        // The same for a regularization entered for that employee.
+        var regularized = await _h.PostAsync(o.Hr, Regularizations, new { employmentId = employee, workDate = Iso(day), requestedIn = At(day, "09:00"), requestedOut = At(day, "18:00"), reason = "Entered by HR" }, Ct);
+        Assert.Equal(HttpStatusCode.Accepted, regularized.Status);
+        Assert.Equal(managerUser, (await OpenStepAsync(regularized)).Assignee);
+    }
+
+    [Fact]
+    public async Task FR_XM_32_FR_KRN_WFL_02_the_employees_own_request_still_goes_to_the_employees_manager()
+    {
+        var o = await OrgAsync();
+        var (managerEmployment, managerUser) = await HireUnderAsync(o, null, true, "line_manager");
+        var (_, user) = await HireUnderAsync(o, managerEmployment, true);
+        var day = o.Monday.AddDays(7);
+
+        var asked = await _h.PostAsync(user!.Value, Duties, new { kind = "on_duty", startDate = Iso(day), endDate = Iso(day), purpose = "Own request" }, Ct);
+        Assert.Equal(HttpStatusCode.Accepted, asked.Status);
+        Assert.Equal(managerUser, (await OpenStepAsync(asked)).Assignee);
+    }
+
+    [Fact]
+    public async Task FR_XM_32_nobody_is_the_approver_of_their_own_request_even_when_the_subjects_manager_is_the_one_who_entered_it()
+    {
+        var o = await OrgAsync();
+        var (managerEmployment, managerUser) = await HireUnderAsync(o, null, true, "line_manager");
+        var (employee, _) = await HireUnderAsync(o, managerEmployment, withUser: false);
+        var day = o.Monday.AddDays(7);
+
+        // The manager enters the request for their report (they may: HR role for the test); it must not land with the manager.
+        await _h.AssignAsync(managerUser!.Value, await _h.RoleAsync(Ct, ["hrm.duty_requests.create", "hrm.duty_requests.read"], [("*", "all")], []), null, _h.Today.AddDays(-1), null, Ct);
+        var asked = await _h.PostAsync(managerUser.Value, Duties, new { employmentId = employee, kind = "on_duty", startDate = Iso(day), endDate = Iso(day), purpose = "Manager enters it" }, Ct);
+        Assert.Equal(HttpStatusCode.Accepted, asked.Status);
+        var (assignee, step) = await OpenStepAsync(asked);
+        Assert.NotEqual(managerUser, assignee);
+        Assert.Equal("manager", step); // the step stays open, in the HR administrators' queue (the route's fallback)
+        Assert.NotEqual(HttpStatusCode.OK, (await _h.PostAsync(managerUser.Value, $"/api/wf/tasks/{await TaskOfAsync(asked)}/approve", new { comment = "mine" }, Ct)).Status);
+    }
+
+    [Fact]
+    public async Task FR_XM_32_FR_KRN_WFL_02_a_subject_without_a_manager_goes_to_the_routes_fallback_never_to_the_requesters_manager()
+    {
+        var o = await OrgAsync();
+        var (hrManagerEmployment, hrManagerUser) = await HireUnderAsync(o, null, true, "line_manager");
+        await LinkRequesterAsync(o, hrManagerEmployment);
+        var (employee, _) = await HireUnderAsync(o, null, withUser: false);
+        var day = o.Monday.AddDays(7);
+
+        var asked = await _h.PostAsync(o.Hr, Duties, new { employmentId = employee, kind = "on_duty", startDate = Iso(day), endDate = Iso(day), purpose = "No manager" }, Ct);
+        Assert.Equal(HttpStatusCode.Accepted, asked.Status);
+        var instance = asked.Json.GetProperty("instanceId").GetGuid();
+        Assert.NotEqual(hrManagerUser, (await OpenStepAsync(asked)).Assignee);
+        Assert.Equal(1, await CountAsync("select count(*) from wf.workflow_tasks t join iam.roles r on r.id = t.assignee_role_id where t.instance_id = $1 and t.status = 'pending' and lower(r.code) = 'hr_admin'", instance));
+
+        // And the HR administrator (the fallback) can decide it.
+        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(o.Approver, $"/api/wf/tasks/{await TaskOfAsync(asked)}/approve", new { comment = "ok" }, Ct)).Status);
+    }
+
     // ------------------------------------------------------------------ FR-HRM-ATT-14
 
     [Fact]
