@@ -1068,6 +1068,7 @@ export interface DutyRequest
     endAt: string;
     purpose: string;
     workflowInstanceId: string | null;
+    fileIds: string[] | null;
     status: 'submitted' | 'approved' | 'rejected' | 'cancelled';
     createdAt: string;
     createdBy: string;
@@ -1084,6 +1085,8 @@ export interface DutyRequestListQuery
     employmentId?: string;
     workflowInstanceId?: string;
     status?: 'submitted' | 'approved' | 'rejected' | 'cancelled';
+    /** startAt, endAt, status; a leading minus sorts descending. */
+    sort?: 'startAt' | '-startAt' | 'endAt' | '-endAt' | 'status' | '-status';
 }
 
 export const dutyRequests =
@@ -2268,8 +2271,8 @@ export interface LeaveRequestDayListQuery
     companyId?: string;
     leaveRequestId?: string;
     employmentId?: string;
-    /** leaveDate; a leading minus sorts descending. */
-    sort?: 'leaveDate' | '-leaveDate';
+    /** leaveDate, requestStatus; a leading minus sorts descending. */
+    sort?: 'leaveDate' | '-leaveDate' | 'requestStatus' | '-requestStatus';
 }
 
 export const leaveRequestDays =

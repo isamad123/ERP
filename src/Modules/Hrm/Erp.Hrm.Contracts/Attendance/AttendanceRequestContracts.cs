@@ -27,6 +27,12 @@ public static class AttendanceRequestEvents
 
     public const string DutyApproved = "hrm.duty_request.approved";
 
+    /// <summary>Owner type of the proof files of a regularization request (slice S1.30b, R-161; <c>IAttachmentOwner</c>).</summary>
+    public const string RegularizationOwnerType = "hrm.regularization_requests";
+
+    /// <summary>Owner type of the proof files of a duty request (slice S1.30b, R-161; <c>IAttachmentOwner</c>).</summary>
+    public const string DutyOwnerType = "hrm.duty_requests";
+
     public const string RegularizationDocumentType = "hrm.regularization";
 
     public const string DutyDocumentType = "hrm.duty_request";

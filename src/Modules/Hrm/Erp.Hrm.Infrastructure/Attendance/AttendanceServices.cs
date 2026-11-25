@@ -33,11 +33,20 @@ public static class AttendanceServices
         services.TryAddScoped<IOvertimeInputs, OvertimeInputReader>(); // S1.29b payroll hand-off (S1.35 reads both)
         services.TryAddScoped<ILatenessDeductions, LatenessDeductionReader>();
 
+        // S1.30b: the standard attendance reports, and each of them as an exportable list for the export engine (both hosts: the worker makes the file).
+        services.AddScoped<IAttendanceReportService, Reports.AttendanceReportService>();
+        foreach (var code in AttendanceReportCodes.All)
+        {
+            services.AddScoped<Kernel.Contracts.Itg.IExportRowReader>(sp => new Reports.AttendanceReportExportReader(sp, code));
+        }
+
         // S1.30a: the end of an approval of a regularization or duty request (an approval can be decided through either host).
         services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, RegularizationHandler>();
         services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, DutyRequestHandler>();
         services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, OvertimeHandler>(); // S1.29b overtime and waivers
         services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, PenaltyWaiverHandler>();
+        services.AddScoped<Kernel.Contracts.Documents.IAttachmentOwner, RegularizationAttachmentOwner>(); // S1.30b proof files (R-161, CR-114)
+        services.AddScoped<Kernel.Contracts.Documents.IAttachmentOwner, DutyRequestAttachmentOwner>();
         return services;
     }
 
@@ -51,6 +60,7 @@ public static class AttendanceServices
         services.AddScoped<IAttendanceDayService, AttendanceDayService>(); // S1.29a
         services.AddScoped<IAttendanceRequestService, AttendanceRequestService>(); // S1.30a
         services.AddScoped<IAttendanceConsequenceService, AttendanceConsequenceService>(); // S1.29b
+        services.AddScoped<IAttendanceDashboardService, Reports.AttendanceDashboardService>(); // S1.30b live dashboard (the reports are registered for both hosts above)
         return services;
     }
 

@@ -174,5 +174,10 @@
   "errors.hrm.attendance.penalty.leave_year_closed": "کاٹی گئی رخصت کا سال بند ہے، اس لیے سزا معاف نہیں ہو سکتی؛ ایچ آر سے ایڈجسٹمنٹ کے لیے کہیں۔",
   "permissions.hrm.overtime_entries.submit": "کیے گئے اوور ٹائم کا دعویٰ یا دن سے پہلے اوور ٹائم کی درخواست",
   "permissions.hrm.attendance_penalties.waive": "تاخیر کی سزا کی معافی کی درخواست",
-  "errors.hrm.attendance.overtime.changed": "اسی دوران ریکارڈ بدل گیا؛ دوبارہ کوشش کریں۔"
+  "errors.hrm.attendance.overtime.changed": "اسی دوران ریکارڈ بدل گیا؛ دوبارہ کوشش کریں۔",
+  "permissions.hrm.attendance_dashboard.read": "آج کی لائیو حاضری دیکھنا (حاضر، تاخیر، غیر حاضر، چھٹی پر، ابھی پنچ نہیں کیا)",
+  "permissions.hrm.attendance_reports.read": "حاضری کی معیاری رپورٹیں چلانا",
+  "errors.hrm.attendance.report.range_order": "آخری تاریخ ابتدائی تاریخ سے پہلے ہے۔",
+  "errors.hrm.attendance.report.range_too_long": "ایک رپورٹ زیادہ سے زیادہ ایک سال کا احاطہ کرتی ہے۔",
+  "errors.hrm.attendance.report.unknown": "حاضری کی ایسی کوئی رپورٹ نہیں ہے۔"
 }

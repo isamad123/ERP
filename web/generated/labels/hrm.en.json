@@ -589,6 +589,7 @@
   "fields.hrm.duty_requests.created_by": "Created by",
   "fields.hrm.duty_requests.employment_id": "Employment",
   "fields.hrm.duty_requests.end_at": "End at",
+  "fields.hrm.duty_requests.file_ids": "File ids",
   "fields.hrm.duty_requests.id": "ID",
   "fields.hrm.duty_requests.kind": "Kind",
   "fields.hrm.duty_requests.purpose": "Purpose",

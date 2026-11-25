@@ -8377,6 +8377,7 @@
       ],
       "indexes": [
         "ix_attendance_events_employment_id_event_date",
+        "ix_attendance_events_company_id_event_date_employment_id",
         "ix_attendance_events_company_id_employment_id",
         "ix_attendance_events_company_id_device_id"
       ],
@@ -13052,6 +13053,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "file_ids",
+          "kind": "UuidArray",
+          "type": "uuid[]",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -13099,6 +13110,7 @@
         }
       ],
       "indexes": [
+        "ix_duty_requests_status_start_at_end_at",
         "ix_duty_requests_company_id_employment_id",
         "ix_duty_requests_company_id_workflow_instance_id"
       ],
@@ -19139,6 +19151,7 @@
       ],
       "indexes": [
         "ix_leave_request_days_employment_id_leave_date",
+        "ix_leave_request_days_leave_date_company_id_request_status",
         "ix_leave_request_days_company_id",
         "ix_leave_request_days_company_id_leave_request_id",
         "ix_leave_request_days_company_id_employment_id"
@@ -30922,6 +30935,7 @@
       ],
       "indexes": [
         "ix_roster_lines_employment_id_work_date",
+        "ix_roster_lines_work_date_company_id",
         "ix_roster_lines_company_id",
         "ix_roster_lines_company_id_roster_id",
         "ix_roster_lines_company_id_employment_id",

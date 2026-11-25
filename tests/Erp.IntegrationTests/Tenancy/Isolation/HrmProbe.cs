@@ -309,6 +309,10 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "GET /api/hrm/employments/{id:guid}/attendance-days" => ($"/api/hrm/employments/{m.Employment}/attendance-days?from=2024-06-01&to=2024-06-30", null),
             "GET /api/hrm/employments/{id:guid}/attendance-days/{date}/explain" => ($"/api/hrm/employments/{m.Employment}/attendance-days/2024-06-03/explain", null),
             "GET /api/hrm/attendance/exceptions" => ($"/api/hrm/attendance/exceptions?companyId={m.Org.Company}", null),
+            "GET /api/hrm/attendance/dashboard" => ($"/api/hrm/attendance/dashboard?companyId={m.Org.Company}", null),
+            "GET /api/hrm/attendance/dashboard/people" => ($"/api/hrm/attendance/dashboard/people?companyId={m.Org.Company}&status=present", null),
+            "GET /api/hrm/attendance/reports" => ("/api/hrm/attendance/reports", null),
+            "GET /api/hrm/attendance/reports/{code}" => ($"/api/hrm/attendance/reports/muster_daily?companyId={m.Org.Company}&from=2024-06-01&to=2024-06-30", null),
             // S1.30a: requests for a date long past; the probe's company has no policy or lock, so a request that got through would be created.
             "POST /api/hrm/attendance/regularization-requests" => ("/api/hrm/attendance/regularization-requests", Json(new { employmentId = m.Employment, workDate = "2024-06-03", requestedIn = "2024-06-03T09:00:00+05:00", reason = "Probe correction" })),
             "POST /api/hrm/attendance/duty-requests" => ("/api/hrm/attendance/duty-requests", Json(new { employmentId = m.Employment, kind = "field_duty", startDate = "2024-06-03", endDate = "2024-06-04", purpose = "Probe duty" })),

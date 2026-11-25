@@ -1,0 +1,48 @@
+/* The live attendance cards (slice S1.30b). Tokens and logical properties only. */
+.erp-live-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--space-3);
+}
+
+.erp-live-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding-block: var(--space-3);
+  padding-inline: var(--space-4);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  text-align: start;
+  font: inherit;
+}
+
+button.erp-live-card {
+  cursor: pointer;
+}
+
+button.erp-live-card:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.erp-live-card[data-selected] {
+  border-color: var(--color-primary);
+}
+
+.erp-live-card-count {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-strong);
+}
+
+.erp-live-card-label {
+  color: var(--color-text-muted);
+}
+
+.erp-live-scroll {
+  overflow-x: auto;
+  max-inline-size: 100%;
+}

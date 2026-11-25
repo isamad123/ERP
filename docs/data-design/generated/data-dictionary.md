@@ -1124,6 +1124,7 @@ Indexes:
 
 - `ix_attendance_events_company_id_device_id` CREATE INDEX ix_attendance_events_company_id_device_id ON ONLY hrm.attendance_events USING btree (company_id, device_id)
 - `ix_attendance_events_company_id_employment_id` CREATE INDEX ix_attendance_events_company_id_employment_id ON ONLY hrm.attendance_events USING btree (company_id, employment_id)
+- `ix_attendance_events_company_id_event_date_employment_id` CREATE INDEX ix_attendance_events_company_id_event_date_employment_id ON ONLY hrm.attendance_events USING btree (company_id, event_date, employment_id)
 - `ix_attendance_events_employment_id_event_date` CREATE INDEX ix_attendance_events_employment_id_event_date ON ONLY hrm.attendance_events USING btree (employment_id, event_date)
 
 Triggers:
@@ -1904,6 +1905,7 @@ On-duty, official visit and work-from-home requests (ATT-14). Requirements: ATT-
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| file_ids | uuid[] | yes |  | proof files of the request, kept when it is decided (S1.30b, R-161; the files are owned through IAttachmentOwner, type hrm.duty_requests) |
 
 Constraints:
 
@@ -1919,6 +1921,7 @@ Indexes:
 
 - `ix_duty_requests_company_id_employment_id` CREATE INDEX ix_duty_requests_company_id_employment_id ON hrm.duty_requests USING btree (company_id, employment_id)
 - `ix_duty_requests_company_id_workflow_instance_id` CREATE INDEX ix_duty_requests_company_id_workflow_instance_id ON hrm.duty_requests USING btree (company_id, workflow_instance_id)
+- `ix_duty_requests_status_start_at_end_at` CREATE INDEX ix_duty_requests_status_start_at_end_at ON hrm.duty_requests USING btree (status, start_at, end_at)
 
 ### hrm.employee_bank_accounts
 
@@ -2946,6 +2949,7 @@ Indexes:
 - `ix_leave_request_days_company_id_employment_id` CREATE INDEX ix_leave_request_days_company_id_employment_id ON hrm.leave_request_days USING btree (company_id, employment_id)
 - `ix_leave_request_days_company_id_leave_request_id` CREATE INDEX ix_leave_request_days_company_id_leave_request_id ON hrm.leave_request_days USING btree (company_id, leave_request_id)
 - `ix_leave_request_days_employment_id_leave_date` CREATE INDEX ix_leave_request_days_employment_id_leave_date ON hrm.leave_request_days USING btree (employment_id, leave_date)
+- `ix_leave_request_days_leave_date_company_id_request_status` CREATE INDEX ix_leave_request_days_leave_date_company_id_request_status ON hrm.leave_request_days USING btree (leave_date, company_id, request_status)
 
 Triggers:
 
@@ -4956,6 +4960,7 @@ Indexes:
 - `ix_roster_lines_company_id_roster_id` CREATE INDEX ix_roster_lines_company_id_roster_id ON hrm.roster_lines USING btree (company_id, roster_id)
 - `ix_roster_lines_company_id_shift_id` CREATE INDEX ix_roster_lines_company_id_shift_id ON hrm.roster_lines USING btree (company_id, shift_id)
 - `ix_roster_lines_employment_id_work_date` CREATE INDEX ix_roster_lines_employment_id_work_date ON hrm.roster_lines USING btree (employment_id, work_date)
+- `ix_roster_lines_work_date_company_id` CREATE INDEX ix_roster_lines_work_date_company_id ON hrm.roster_lines USING btree (work_date, company_id)
 - `uq_roster_lines_employment_id_work_date` CREATE UNIQUE INDEX uq_roster_lines_employment_id_work_date ON hrm.roster_lines USING btree (employment_id, work_date) WHERE (roster_status = 'published'::text)
 
 Triggers:

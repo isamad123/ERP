@@ -13,6 +13,8 @@ public sealed record DutyRequestFilter
     public global::System.Guid? EmploymentId { get; init; }
     public global::System.Guid? WorkflowInstanceId { get; init; }
     public string? Status { get; init; }
+    /// <summary>Sort key: startAt, endAt, status; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated repository of hrm.duty_requests.</summary>
@@ -45,6 +47,7 @@ public static class DutyRequestAccess
         new("end_at", "EndAt", null),
         new("purpose", "Purpose", null),
         new("workflow_instance_id", "WorkflowInstanceId", null),
+        new("file_ids", "FileIds", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
