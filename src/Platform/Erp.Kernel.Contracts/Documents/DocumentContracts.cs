@@ -108,7 +108,7 @@ public sealed record RetentionReviewItem(Guid FileId, string OwnerType, Guid Own
 public sealed record AttachmentOwnerAccess(Guid CompanyId, bool CanRead, bool CanWrite, bool CanReadSensitive);
 
 /// <summary>
-/// A kind of record that can carry files (KRN-DOC-01). Modules register theirs with the kernel (a module through this contract: S1.32b moved it here from the kernel application layer, CR-086 S1.32b detail); the owner type is the table
+/// A kind of record that can carry files (KRN-DOC-01). Modules register theirs with the kernel (a module through this contract: CR-114 moved it here from the kernel application layer); the owner type is the table
 /// name (for example <c>wf.workflow_tasks</c>). Returns null when the record does not exist.
 /// </summary>
 public interface IAttachmentOwner
@@ -119,7 +119,7 @@ public interface IAttachmentOwner
 }
 
 /// <summary>
-/// The current files of a record (slice S1.32b, CR-086 S1.32b detail): the ids of its attachments that are not deleted, archived, infected or
+/// The current files of a record (CR-114, first used by slice S1.32b): the ids of its attachments that are not deleted, archived, infected or
 /// quarantined (clean, or still waiting for the scan), newest first. For a module that keeps the file ids on its own document (the leave
 /// request's <c>file_ids</c>, FR-HRM-LVE-16). No access check: the caller has its own. Read on the caller's transaction when given.
 /// </summary>
