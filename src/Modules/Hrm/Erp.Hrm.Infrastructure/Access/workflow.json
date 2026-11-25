@@ -42,6 +42,46 @@
       "bulk_approval": false,
       "requires_approval": true,
       "default_route": {"steps": [{"key": "hr", "name": {"en": "HR approval", "ur": "ایچ آر کی منظوری"}, "approver": {"kind": "role", "role": "hr_admin"}}]}
+    },
+    {
+      "code": "hrm.regularization",
+      "entitlement_key": "hrm.core",
+      "name": {"en": "Attendance regularization", "ur": "حاضری کی درستی"},
+      "fields": [
+        {"name": "company", "type": "company", "label": {"en": "Company", "ur": "کمپنی"}},
+        {"name": "work_date", "type": "date", "label": {"en": "Day to correct", "ur": "درست کیا جانے والا دن"}},
+        {"name": "employee", "type": "user", "label": {"en": "Employee", "ur": "ملازم"}},
+        {"name": "employee_no", "type": "text", "label": {"en": "Employee number", "ur": "ملازم نمبر"}},
+        {"name": "requested_in", "type": "text", "label": {"en": "Time in", "ur": "آمد کا وقت"}},
+        {"name": "requested_out", "type": "text", "label": {"en": "Time out", "ur": "روانگی کا وقت"}}
+      ],
+      "company_field": "company",
+      "subject_fields": ["employee"],
+      "title": {"en": "Attendance correction of {employee_no} for {work_date}", "ur": "{employee_no} کی {work_date} کی حاضری کی درستی"},
+      "link": "/time/requests/regularization/{document_id}",
+      "bulk_approval": false,
+      "requires_approval": true,
+      "default_route": {"steps": [{"key": "manager", "name": {"en": "Line manager", "ur": "لائن مینیجر"}, "approver": {"kind": "manager", "levels": 1}, "fallback": {"kind": "role", "role": "hr_admin"}}]}
+    },
+    {
+      "code": "hrm.duty_request",
+      "entitlement_key": "hrm.core",
+      "name": {"en": "Duty request", "ur": "ڈیوٹی کی درخواست"},
+      "fields": [
+        {"name": "company", "type": "company", "label": {"en": "Company", "ur": "کمپنی"}},
+        {"name": "kind", "type": "choice", "choices": ["on_duty", "official_visit", "work_from_home", "field_duty"], "label": {"en": "Kind of duty", "ur": "ڈیوٹی کی قسم"}},
+        {"name": "start_date", "type": "date", "label": {"en": "First day", "ur": "پہلا دن"}},
+        {"name": "end_date", "type": "date", "label": {"en": "Last day", "ur": "آخری دن"}},
+        {"name": "employee", "type": "user", "label": {"en": "Employee", "ur": "ملازم"}},
+        {"name": "employee_no", "type": "text", "label": {"en": "Employee number", "ur": "ملازم نمبر"}}
+      ],
+      "company_field": "company",
+      "subject_fields": ["employee"],
+      "title": {"en": "Duty request ({kind}) of {employee_no} from {start_date} to {end_date}", "ur": "{employee_no} کی ڈیوٹی کی درخواست ({kind})، {start_date} تا {end_date}"},
+      "link": "/time/requests/duty/{document_id}",
+      "bulk_approval": false,
+      "requires_approval": true,
+      "default_route": {"steps": [{"key": "manager", "name": {"en": "Line manager", "ur": "لائن مینیجر"}, "approver": {"kind": "manager", "levels": 1}, "fallback": {"kind": "role", "role": "hr_admin"}}]}
     }
   ]
 }

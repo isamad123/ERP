@@ -32,8 +32,8 @@ public static class AttendanceDayEndpoints
             PersonEndpoints.Answer(await s.DaysAsync(id, from, to, asOf, history ?? false, ct).ConfigureAwait(false))), "record_action", Employments, AttendanceEnginePermissions.DaysRead);
         Tag(app.MapGet("/api/hrm/employments/{id:guid}/attendance-days/{date}/explain", async (Guid id, DateOnly date, IAttendanceDayService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.ExplainAsync(id, date, ct).ConfigureAwait(false))), "record_action", Employments, AttendanceEnginePermissions.DaysRead);
-        Tag(app.MapGet("/api/hrm/attendance/exceptions", async ([FromQuery] Guid? companyId, [FromQuery] string? status, [FromQuery] string? kind, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] int? limit, IAttendanceDayService s, CancellationToken ct) =>
-            PersonEndpoints.Answer(await s.ExceptionsAsync(companyId, status, kind, from, to, limit, ct).ConfigureAwait(false))), "catalog", Exceptions, AttendanceEnginePermissions.ExceptionsRead);
+        Tag(app.MapGet("/api/hrm/attendance/exceptions", async ([FromQuery] Guid? companyId, [FromQuery] string? status, [FromQuery] string? kind, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] int? limit, [FromQuery] Guid? unitId, [FromQuery] int? minAgeDays, IAttendanceDayService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.ExceptionsAsync(companyId, status, kind, from, to, limit, ct, unitId, minAgeDays).ConfigureAwait(false))), "catalog", Exceptions, AttendanceEnginePermissions.ExceptionsRead);
         return app;
     }
 

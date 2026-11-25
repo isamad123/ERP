@@ -225,7 +225,7 @@ public sealed class AttendanceEngineUnitTests
         var type = manifest.RootElement.GetProperty("types").EnumerateArray().Single(t => t.GetProperty("code").GetString() == "attendance");
         var props = type.GetProperty("schema").GetProperty("properties").EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal).ToList();
         Assert.Equal(
-            ["absentBelowMinutes", "breakMinutes", "breakMode", "earlyGraceMinutes", "earlyHalfDayAfterMinutes", "fullDayMinutes", "holidayWork", "lateGraceMinutes", "lateHalfDayAfterMinutes", "roundingMode", "roundingStepMinutes", "shiftWindowMinutes", "weeklyOffWork"],
+            ["absentBelowMinutes", "breakMinutes", "breakMode", "earlyGraceMinutes", "earlyHalfDayAfterMinutes", "fieldDutyCountsAsPresent", "fullDayMinutes", "holidayWork", "lateGraceMinutes", "lateHalfDayAfterMinutes", "officialVisitCountsAsPresent", "onDutyCountsAsPresent", "roundingMode", "roundingStepMinutes", "shiftWindowMinutes", "weeklyOffWork", "workFromHomeCountsAsPresent"],
             props);
         Assert.DoesNotContain("\"default\"", type.GetRawText(), StringComparison.Ordinal);
         using var partial = JsonDocument.Parse("""{"lateGraceMinutes":10}""");
@@ -253,6 +253,30 @@ public sealed class AttendanceEngineUnitTests
         Assert.All(used, k => Assert.True(en.ContainsKey(k), k));
         Assert.All(AttendanceEnginePermissions.HandWritten, c => Assert.True(en.ContainsKey("permissions." + c) && ur.ContainsKey("permissions." + c), c));
         Assert.All(DayRules.Keys.Where(k => k.Contains(".explain.", StringComparison.Ordinal)), k => Assert.Matches(@"\p{IsArabic}", ur[k]));
+    }
+
+    [Theory]
+    [InlineData("on_duty", true)]
+    [InlineData("official_visit", true)]
+    [InlineData("field_duty", true)]
+    [InlineData("work_from_home", false)]
+    public void FR_HRM_ATT_14_a_duty_counts_as_present_by_the_kind_default_until_the_policy_says_otherwise(string kind, bool counts)
+    {
+        var day = Working(DayShift9To6);
+        var duty = new DayDuty(DutyRequest, kind);
+        Assert.Equal(counts ? "on_duty" : "absent", DayRules.Evaluate(Input(day, [], duty: duty)).Result);
+        var flipped = Policy(v => v[AttendancePolicy.DutyFlagName(kind)] = !counts);
+        Assert.Equal(!counts, flipped.CountsAsPresent(kind));
+        Assert.Equal(counts ? "absent" : "on_duty", DayRules.Evaluate(Input(day, [], flipped, duty: duty)).Result);
+    }
+
+    [Fact]
+    public void FR_HRM_ATT_14_a_duty_that_does_not_count_leaves_the_day_to_the_punches()
+    {
+        var day = Working(DayShift9To6);
+        var outcome = DayRules.Evaluate(Input(day, [P("09:00"), P("18:00", "out")], duty: new DayDuty(DutyRequest, "work_from_home", At("09:00"), At("18:30"))));
+        Assert.Equal("present", outcome.Result);
+        Assert.Null(outcome.DutyRequestId);
     }
 
     [Fact]

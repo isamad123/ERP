@@ -23,7 +23,8 @@ public sealed record AttendancePolicy(
     int? RoundingStepMinutes,
     int ShiftWindowMinutes,
     string WeeklyOffWork,
-    string HolidayWork)
+    string HolidayWork,
+    IReadOnlyDictionary<string, bool>? DutyCountsAsPresent = null)
 {
     public const string PolicyType = "attendance";
 
@@ -38,6 +39,28 @@ public sealed record AttendancePolicy(
 
     public const string Record = "record";
     public const string Ignore = "ignore";
+
+    /// <summary>
+    /// The duty kinds of ATT-14 and whether each counts as present when the policy says nothing (slice S1.30 Q1, CR-090): on duty, official visit and
+    /// field duty do; work from home is the customer's choice, so it does not count until the policy says it does.
+    /// </summary>
+    public static IReadOnlyDictionary<string, bool> DutyKinds { get; } = new Dictionary<string, bool>(StringComparer.Ordinal)
+    {
+        ["on_duty"] = true,
+        ["official_visit"] = true,
+        ["work_from_home"] = false,
+        ["field_duty"] = true,
+    };
+
+    /// <summary>The policy's property name of the flag of a duty kind (<c>onDutyCountsAsPresent</c> and so on).</summary>
+    public static string DutyFlagName(string kind) => kind switch
+    {
+        "on_duty" => "onDutyCountsAsPresent",
+        "official_visit" => "officialVisitCountsAsPresent",
+        "work_from_home" => "workFromHomeCountsAsPresent",
+        "field_duty" => "fieldDutyCountsAsPresent",
+        _ => kind,
+    };
 
     public const string BreakMinutesRequired = "errors.hrm.policy.attendance.break_minutes_required";
     public const string BreakMinutesUnused = "errors.hrm.policy.attendance.break_minutes_unused";
@@ -71,8 +94,13 @@ public sealed record AttendancePolicy(
         }
 
         return new AttendancePolicy(lateGrace.Value, earlyGrace.Value, Int(p, "lateHalfDayAfterMinutes"), Int(p, "earlyHalfDayAfterMinutes"), Int(p, "fullDayMinutes"),
-            absent.Value, breakMode, Int(p, "breakMinutes"), rounding, Int(p, "roundingStepMinutes"), window.Value, weeklyOff, holiday);
+            absent.Value, breakMode, Int(p, "breakMinutes"), rounding, Int(p, "roundingStepMinutes"), window.Value, weeklyOff, holiday,
+            DutyKinds.Keys.ToDictionary(k => k, k => Flag(p, DutyFlagName(k)) ?? DutyKinds[k], StringComparer.Ordinal));
     }
+
+    /// <summary>Whether an approved duty of this kind counts as present (CR-090: a flag per kind in the policy; ATT-14).</summary>
+    public bool CountsAsPresent(string kind) =>
+        DutyCountsAsPresent is { } flags && flags.TryGetValue(kind, out var set) ? set : DutyKinds.TryGetValue(kind, out var fallback) && fallback;
 
     /// <summary>What the schema cannot say: a value used only with another choice, and limits that must be in order. Empty when valid.</summary>
     public static IReadOnlyDictionary<string, string[]> Check(JsonElement p)
@@ -139,6 +167,8 @@ public sealed record AttendancePolicy(
             _ => minutes - down >= step - (step / 2) ? down + step : down, // nearest; a half step goes up
         };
     }
+
+    private static bool? Flag(JsonElement p, string name) => p.TryGetProperty(name, out var e) && e.ValueKind is JsonValueKind.True or JsonValueKind.False ? e.GetBoolean() : null;
 
     private static int? Int(JsonElement p, string name) => p.TryGetProperty(name, out var e) && e.ValueKind == JsonValueKind.Number && e.TryGetInt32(out var v) ? v : null;
 

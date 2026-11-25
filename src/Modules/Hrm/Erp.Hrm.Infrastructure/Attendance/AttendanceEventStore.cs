@@ -46,6 +46,20 @@ internal sealed class AttendanceEventStore(HrmDbContext db, IClock clock, ICurre
         var now = clock.UtcNow;
         var ids = events.Select(e => e.EmploymentId).Distinct().ToList();
         var companies = await db.Set<Employment>().AsNoTracking().Where(e => ids.Contains(e.Id)).ToDictionaryAsync(e => e.Id, e => e.CompanyId, cancellationToken).ConfigureAwait(false);
+        if (db.Database.CurrentTransaction is not null)
+        {
+            // Called inside the caller's own transaction (S1.30a: an approved regularization writes its correction punches with the decision, so
+            // the decision and the punches are saved together or not at all): the punches join it and the caller commits.
+            touched.Clear();
+            foreach (var input in events)
+            {
+                results.Add(await AppendOneAsync(input, companies, now, cancellationToken).ConfigureAwait(false));
+            }
+
+            await RequeueLateAsync(now, cancellationToken).ConfigureAwait(false);
+            return results;
+        }
+
         var strategy = db.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {
