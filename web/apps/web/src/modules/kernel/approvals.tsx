@@ -4,7 +4,7 @@
 // "approvals of changes" (pending maker-checker requests in plain words). Only the actions the engine allows for this
 // person and task are offered (FR-XM-32: never on one's own request, nothing approved automatically); every result is the
 // server's answer, shown once it has come.
-import { useMemo, useState, type ReactNode } from 'react';
+import { Suspense, useMemo, useState, type ReactNode } from 'react';
 import { Route, Routes, useNavigate, useParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { type CalendarDate } from '@internationalized/date';
@@ -17,6 +17,7 @@ import { nameOf, workflow, type BulkResult, type FieldValue, type HistoryEntry, 
 import { usePageTitle } from '../../pages/errors';
 import { companyName, useShell } from '../../shell/context';
 import { ChangeApprovals } from './approvals-changes';
+import { approvalCardFor } from './approval-cards';
 import './approvals.css';
 
 export const APPROVALS_PATH = '/approvals';
@@ -275,6 +276,7 @@ function TaskPanel({ taskId, onDone }: { taskId: string; onDone: () => void }) {
         </dl>
         <Link href={request.link}>{t('approvals.detail.openDocument')}</Link>
       </section>
+      <DocumentCard task={data} />
 
       {error && <p role="alert" className="erp-field-error">{error}</p>}
       {allowed.length > 0 ? (
@@ -308,6 +310,17 @@ function TaskPanel({ taskId, onDone }: { taskId: string; onDone: () => void }) {
           }} />
       )}
     </div>
+  );
+}
+
+/** The card a module registered for this document type (lazy: nothing of it ships with the shell); context only, the decisions stay below (FR-XM-32). */
+function DocumentCard({ task }: { task: TaskDetail }) {
+  const Card = approvalCardFor(task.request.documentType);
+  if (!Card) return null;
+  return (
+    <Suspense fallback={<Skeleton lines={3} />}>
+      <Card documentType={task.request.documentType} documentId={task.request.documentId} companyId={task.request.companyId} instanceId={task.request.id} requesterUserId={task.request.requesterUserId} />
+    </Suspense>
   );
 }
 

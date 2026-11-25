@@ -4,6 +4,7 @@
 import { lazy } from 'react';
 import { Activity, AlertTriangle, Briefcase, BarChart3, ClipboardEdit, CalendarDays, CalendarRange, Clock, FileSearch, GitFork, Grid3x3, LayoutGrid, MonitorSmartphone, QrCode, Router, ScrollText, Sigma, SunMoon, Timer, Users, UsersRound, Wallet } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
+import { registerApprovalCard } from './kernel/approval-cards';
 
 // S1.23a: the policy framework's screens (policies with versions and assignments; "Which policy applies?"), loaded with their routes.
 const PoliciesScreen = lazy(() => import('./hr/policies'));
@@ -29,6 +30,10 @@ const TeamScreen = lazy(() => import('./hrm/team'));
 // S1.33a: leave (my leave, apply, request page) and the team leave calendar, loaded with their routes.
 const LeaveScreen = lazy(() => import('./hrm/leave'));
 const LeaveTeamScreen = lazy(() => import('./hrm/leave-team'));
+// S1.33a: the approvals inbox shows this card under the fields of a leave request or a leave cancellation (lazy, so the shell does not grow).
+const LeaveApprovalCard = lazy(() => import('./hrm/leave-approval-card'));
+registerApprovalCard('hrm.leave_request', LeaveApprovalCard);
+registerApprovalCard('hrm.leave_cancellation', LeaveApprovalCard);
 // S1.34a: the pay groups (made by the engine) and the payroll calendar with its readiness list, loaded with their routes.
 const PayGroupsScreen = lazy(() => import('./payroll/pay-groups'));
 const PayCalendarScreen = lazy(() => import('./payroll/calendar'));

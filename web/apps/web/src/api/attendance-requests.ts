@@ -28,7 +28,7 @@ export const attendanceRequestsApi = {
 };
 
 // Proof files of a request (S1.30b, R-161; FR-KRN-DOC-01): the file belongs to the request as its owner, through the kernel's attachment service.
-export const PROOF_OWNER = { correction: 'hrm.regularization_requests', duty: 'hrm.duty_requests' } as const;
+export const PROOF_OWNER = { correction: 'hrm.regularization_requests', duty: 'hrm.duty_requests', leave: 'hrm.leave_requests' } as const;
 export type ProofOwner = (typeof PROOF_OWNER)[keyof typeof PROOF_OWNER];
 export interface ProofFile { id: string; fileName: string; contentType?: string; sizeBytes?: number }
 export const PROOF_ACCEPT = 'image/png,image/jpeg,application/pdf';
