@@ -1,14 +1,4 @@
 /* The loan screens (slice S1.41): schedule and ledger tables, facts and the preview. Tokens and logical properties only. */
-.erp-loan-scroll {
-  overflow-x: auto;
-  max-inline-size: 100%;
-}
-
-.erp-loan-scroll:focus-visible {
-  outline: var(--focus-width) solid var(--color-focus);
-  outline-offset: var(--focus-offset);
-}
-
 .erp-loan-table {
   inline-size: 100%;
   border-collapse: collapse;

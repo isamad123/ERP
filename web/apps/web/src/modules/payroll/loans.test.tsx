@@ -35,12 +35,14 @@ const DETAIL = (o: Record<string, unknown> = {}) => ({
   ],
   ...o,
 });
+const without = (row: Record<string, unknown>, ...keys: string[]) => Object.fromEntries(Object.entries(row).filter(([k]) => !keys.includes(k)));
 const HIDDEN = () => {
   const d = DETAIL() as Record<string, unknown>;
-  delete d.principal; delete d.balance;
-  d.schedule = (d.schedule as Record<string, unknown>[]).map(({ principalAmount: _p, interestAmount: _i, ...rest }) => rest);
-  d.ledger = (d.ledger as Record<string, unknown>[]).map(({ amount: _a, ...rest }) => rest);
-  return d;
+  return {
+    ...without(d, 'principal', 'balance'),
+    schedule: (d.schedule as Record<string, unknown>[]).map((r) => without(r, 'principalAmount', 'interestAmount')),
+    ledger: (d.ledger as Record<string, unknown>[]).map((r) => without(r, 'amount')),
+  };
 };
 
 function apply(preview: object = PREVIEW_OK) {

@@ -1,4 +1,3 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // Loans and advances (slice S1.41 Build items 2, 3, 5 and 7; FR-HRM-LON-02, LON-03, LON-07, GHR-06, GHR-09, FR-XM-32): the list (the generated read, in the caller's data scope), the application
 // with its check (eligibility reasons, warnings and the installments before anything is sent) and the loan page with its schedule, ledger and balance, where the right people record the payout,
 // a repayment received outside payroll (a second person approves it) or cancel an approved loan that was not paid out. Amounts are salary-class data: the server leaves them out for a person
@@ -8,7 +7,7 @@ import { Route, Routes, useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseDate, type CalendarDate } from '@internationalized/date';
 import { EngineProvider, ListPage, useDocumentTitle, type EngineApi, type Row, type TableMetadata } from '@erp/engine';
-import { Banner, Button, CheckboxField, DateField, Dialog, EmptyState, ErrorPanel, NumberField, PageHeader, SelectField, Skeleton, StatusChip, TextAreaField, TextField, useToast, type Status } from '@erp/ui';
+import { Banner, Button, CheckboxField, DateField, Dialog, EmptyState, ErrorPanel, NumberField, PageHeader, ScrollRegion, SelectField, Skeleton, StatusChip, TextAreaField, TextField, useToast, type Status } from '@erp/ui';
 import { formatDate, formatInteger, formatMoney, useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import metadataJson from '@erp/generated/metadata/hrm.loans.json';
 import { loansApi, type LoanDetail, type LoanPreview, type LoanProblemItem } from '../../api/loans';
@@ -84,16 +83,16 @@ export function addDecimal(a: number | string, b: number | string): string {
   return `${text.slice(0, -4)}.${text.slice(-4)}`;
 }
 
-/** A scrolling table that a keyboard can reach and a screen reader can name. */
+/** A table in the design system's scroll region: a keyboard can reach it and a screen reader can name it (R-318). */
 function Region({ label, head, children }: { label: string; head: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="erp-loan-scroll" role="region" tabIndex={0} aria-label={label}>
+    <ScrollRegion label={label}>
       <table className="erp-loan-table">
         <caption className="erp-visually-hidden">{label}</caption>
         <thead><tr>{head}</tr></thead>
         <tbody>{children}</tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }
 

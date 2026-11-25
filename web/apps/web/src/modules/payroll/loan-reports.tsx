@@ -1,11 +1,10 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // The loan reports (slice S1.41 Build items 5 and 6; FR-HRM-LON-05, LON-07, GHR-06): the outstanding loans in the caller's data scope and the reconciliation of the loan ledger with the
 // schedule per company and currency (D-43: no Finance ledger yet, so this report and the outbox events are the feed; Finance's own account is compared once Finance is in use).
 // Amounts are salary-class data: a person without that field class sees the counts and the next installments only.
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useDocumentTitle } from '@erp/engine';
-import { Banner, Button, EmptyState, ErrorPanel, Link, PageHeader, SelectField, Skeleton, Tabs } from '@erp/ui';
+import { Banner, Button, EmptyState, ErrorPanel, Link, PageHeader, ScrollRegion, SelectField, Skeleton, Tabs } from '@erp/ui';
 import { formatDate, formatInteger, formatMoney, useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { loansApi, type OutstandingRow, type ReconciliationCompany } from '../../api/loans';
 import { ApiProblem } from '../../api/client';
@@ -60,7 +59,7 @@ function Outstanding({ company }: { company: string }) {
   return (
     <div className="erp-stack">
       {hidden && <Banner tone="info">{t('loan.amounts.hidden')}</Banner>}
-      <div className="erp-loan-scroll" role="region" tabIndex={0} aria-label={t('loan.rep.outstanding')}>
+      <ScrollRegion label={t('loan.rep.outstanding')}>
         <table className="erp-loan-table">
           <caption className="erp-visually-hidden">{t('loan.rep.outstanding')}</caption>
           <thead><tr>
@@ -78,7 +77,7 @@ function Outstanding({ company }: { company: string }) {
               </tr>))}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
       <div className="erp-row" role="navigation" aria-label={t('loan.rep.tabs')}>
         <Button variant="quiet" isDisabled={offset === 0} onPress={() => setOffset(Math.max(0, offset - PAGE))}>{t('loan.rep.prev')}</Button>
         <span role="status">{t('loan.rep.paging', { from: f.count(offset + 1), to: f.count(offset + items.length), total: f.count(total) })}</span>
