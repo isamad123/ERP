@@ -36,8 +36,7 @@ internal sealed partial class ExpenseClaimService
     {
         var employee = await db.Set<Employment>().AsNoTracking().Where(e => e.Id == claim.EmploymentId).Select(e => e.UserRef).FirstOrDefaultAsync(ct).ConfigureAwait(false);
         var party = employee == actor.UserId || claim.CreatedBy == actor.UserId;
-        var approver = !party && (await approvals.OpenApprovalsOfAsync(actor.UserId, null, ct).ConfigureAwait(false)).TasksToDecide
-            .Any(t => t.DocumentId == claim.Id && t.DocumentType == ExpenseEvents.DocumentType);
+        var approver = !party && await ExpenseApprovers.IsApproverAsync(claim, actor.UserId, permissions, scope, approvals, Source, ct).ConfigureAwait(false);
         var reader = await permissions.HasPermissionAsync(ExpensePermissions.Read, ct).ConfigureAwait(false)
             && await scope.AllowsAsync(claim, ExpenseClaimAccess.Scope, "read", Source, ct).ConfigureAwait(false);
         var open = party || approver;

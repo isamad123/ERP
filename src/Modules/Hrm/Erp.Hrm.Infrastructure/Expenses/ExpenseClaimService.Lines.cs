@@ -275,7 +275,7 @@ internal sealed partial class ExpenseClaimService
             status = claim.Status,
             instanceId = started.InstanceId,
             needsFinance = claim.NeedsFinance,
-            onBehalf = employment.UserRef is { } u && u != actor.UserId,
+            onBehalf = employment.UserRef != actor.UserId,
             flagged = lines.Count(l => l.PolicyFlags.Length > 0),
             rowVersion = claim.RowVersion,
         });

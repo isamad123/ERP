@@ -203,6 +203,7 @@ internal sealed class ExpenseClaimHandler(IServiceProvider services, IClock cloc
             RowVersion = 1,
         };
         db.Add(input);
+        await db.SaveChangesAsync(ct).ConfigureAwait(false); // the input first: the claim refers to it
         claim.PayInputId = input.Id;
         claim.PayPeriodId = period.Id;
     }
@@ -233,8 +234,31 @@ internal sealed class ExpenseClaimAttachmentOwner(HrmDbContext db, ICurrentActor
             && await scope.AllowsAsync(claim, Erp.Hrm.Application.Generated.ExpenseClaimAccess.Scope, "create", source, cancellationToken).ConfigureAwait(false);
         var employee = await db.Set<Employment>().AsNoTracking().Where(x => x.Id == claim.EmploymentId).Select(x => x.UserRef).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         var party = employee == actor.UserId || claim.CreatedBy == actor.UserId;
-        var approver = !party && (await approvals.OpenApprovalsOfAsync(actor.UserId, null, cancellationToken).ConfigureAwait(false)).TasksToDecide
-            .Any(t => t.DocumentId == claim.Id && t.DocumentType == ExpenseEvents.DocumentType);
+        var approver = !party && await ExpenseApprovers.IsApproverAsync(claim, actor.UserId, permissions, scope, approvals, source, cancellationToken).ConfigureAwait(false);
         return new AttachmentOwnerAccess(claim.CompanyId, party || reader || approver, (party || maker) && claim.Status == "draft", party || approver || maker || reader);
+    }
+}
+
+/// <summary>
+/// Who may decide a claim that waits for a decision (slice S1.42; FR-HRM-EXP-03, GHR-06): the person its approval task is assigned to, or anyone who holds the
+/// right to decide claims and whose data scope covers the claim (a manager for the team, HR and finance for the company; a role-queue step has no assigned
+/// person until someone claims it). Never the person the claim is for or who made it (the caller checks), and never a claim that is not waiting.
+/// </summary>
+internal static class ExpenseApprovers
+{
+    public static async Task<bool> IsApproverAsync(ExpenseClaim claim, Guid userId, IPermissionChecker permissions, IDataScopeFilter scope, IWorkflowQueries approvals, IScopeQuerySource source, CancellationToken ct)
+    {
+        if (claim.Status != "submitted")
+        {
+            return false;
+        }
+
+        if ((await approvals.OpenApprovalsOfAsync(userId, null, ct).ConfigureAwait(false)).TasksToDecide.Any(t => t.DocumentId == claim.Id && t.DocumentType == ExpenseEvents.DocumentType))
+        {
+            return true;
+        }
+
+        return await permissions.HasPermissionAsync(ExpensePermissions.Decide, ct).ConfigureAwait(false)
+            && await scope.AllowsAsync(claim, Erp.Hrm.Application.Generated.ExpenseClaimAccess.Scope, "read", source, ct).ConfigureAwait(false);
     }
 }

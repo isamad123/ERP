@@ -1,6 +1,5 @@
 using System.Data.Common;
 using Erp.BuildingBlocks.Domain.Time;
-using Erp.BuildingBlocks.Application.Security;
 using Erp.Hrm.Contracts.Expenses;
 using Erp.Hrm.Contracts.Payroll;
 using Erp.Hrm.Domain.Generated;
@@ -18,7 +17,7 @@ namespace Erp.Hrm.Infrastructure.Expenses;
 /// payment status <c>pending</c> until the pay run that pays it answers through <see cref="IExpensePaymentReturn"/> (S1.38). The generic provider of
 /// one-time inputs leaves this source to this provider.
 /// </summary>
-internal sealed class ExpenseInputProvider(HrmDbContext db, IClock clock, ICurrentActor actor) : IPayInputProvider
+internal sealed class ExpenseInputProvider(HrmDbContext db, IClock clock) : IPayInputProvider
 {
     public const string ProviderCode = "expenses";
 
@@ -56,7 +55,7 @@ internal sealed class ExpenseInputProvider(HrmDbContext db, IClock clock, ICurre
         {
             row.Status = "consumed";
             row.ConsumedByRunId = consumed.PayRunId;
-            EmploymentApplier.Bump(row, now, actor.UserId);
+            EmploymentApplier.Bump(row, now, row.UpdatedBy); // the run records who calculated; the row keeps the person who made it
         }
     }
 }
@@ -66,7 +65,7 @@ internal sealed class ExpenseInputProvider(HrmDbContext db, IClock clock, ICurre
 /// failed keeps it approved with payment status <c>failed</c> so it can be paid again. A claim that is not approved, or that was already paid, is refused;
 /// the same answer twice changes nothing. Called by the pay run that pays it (S1.38) and by the payment batch (S1.40a) in the transaction of the payment.
 /// </summary>
-internal sealed class ExpensePaymentReturnService(HrmDbContext db, IClock clock, ICurrentActor actor) : IExpensePaymentReturn
+internal sealed class ExpensePaymentReturnService(HrmDbContext db, IClock clock) : IExpensePaymentReturn
 {
     public async Task<bool> RecordAsync(ExpensePaymentReturn answer, DbTransaction? transaction, CancellationToken cancellationToken)
     {
@@ -106,7 +105,7 @@ internal sealed class ExpensePaymentReturnService(HrmDbContext db, IClock clock,
             claim.ReimbursedAt = answer.At;
         }
 
-        EmploymentApplier.Bump(claim, clock.UtcNow, actor.UserId);
+        EmploymentApplier.Bump(claim, clock.UtcNow, answer.By ?? claim.UpdatedBy);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return true;
     }
@@ -119,7 +118,7 @@ internal sealed class ExpenseOpenClaimsReader(HrmDbContext db) : IExpenseOpenCla
     {
         var rows = await db.Set<ExpenseClaim>().AsNoTracking()
             .Where(c => c.EmploymentId == employmentId && (c.Status == "draft" || c.Status == "submitted" || (c.Status == "approved" && c.PaymentStatus != "paid")))
-            .OrderBy(c => c.CreatedAt).ThenBy(c => c.Id).Select(c => new { c.Id, c.ClaimNo, c.Status, c.PaymentStatus }).ToListAsync(cancellationToken).ConfigureAwait(false);
+            .OrderBy(c => c.CreatedAt).ThenBy(c => c.ClaimNo).Select(c => new { c.Id, c.ClaimNo, c.Status, c.PaymentStatus }).ToListAsync(cancellationToken).ConfigureAwait(false);
         return [.. rows.Select(r => new OpenExpenseClaim(r.Id, r.ClaimNo, r.Status, r.PaymentStatus))];
     }
 }

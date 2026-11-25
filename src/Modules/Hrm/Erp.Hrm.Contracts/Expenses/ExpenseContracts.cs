@@ -78,8 +78,8 @@ public interface IExpenseOpenClaims
     Task<IReadOnlyList<OpenExpenseClaim>> OpenForAsync(Guid employmentId, CancellationToken cancellationToken);
 }
 
-/// <summary>What a payment says about a claim (FR-HRM-EXP-06): paid or failed, with the payment's own reference.</summary>
-public sealed record ExpensePaymentReturn(Guid ClaimId, string Status, string? Reference, DateTimeOffset At);
+/// <summary>What a payment says about a claim (FR-HRM-EXP-06): paid or failed, with the payment's own reference and, when known, the user whose payment it was.</summary>
+public sealed record ExpensePaymentReturn(Guid ClaimId, string Status, string? Reference, DateTimeOffset At, Guid? By = null);
 
 /// <summary>
 /// The payment's answer to a claim (FR-HRM-EXP-06): the pay run that pays a claim (S1.38) or the payment batch (S1.40a) calls this in the transaction
