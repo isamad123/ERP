@@ -15,14 +15,6 @@
     {
       "action": "read",
       "permission": "hrm.attendance_days.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.attendance_days.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.attendance_days.update"
     }
   ],
   "companyScoped": true,
@@ -306,6 +298,16 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.attendance_days.processed_at"
+    },
+    {
+      "column": "superseded_at",
+      "field": "supersededAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.attendance_days.superseded_at"
     },
     {
       "column": "created_at",

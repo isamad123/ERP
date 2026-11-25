@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.leave_request_days.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.leave_request_days.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.leave_request_days.update"
     }
   ],
   "companyScoped": true,
@@ -37,10 +29,12 @@
     "leaveDate",
     "quantity",
     "isPaid",
-    "requestStatus"
+    "requestStatus",
+    "dayKind"
   ],
   "search": [],
   "constraints": {
+    "ck_leave_request_days_day_kind": "dayKind",
     "fk_leave_request_days_company_id": "companyId",
     "fk_leave_request_days_employment_id": "employmentId",
     "fk_leave_request_days_leave_request_id": "leaveRequestId"
@@ -128,7 +122,28 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.leave_request_days.request_status"
+      "labelKey": "fields.hrm.leave_request_days.request_status",
+      "sortable": true
+    },
+    {
+      "column": "day_kind",
+      "field": "dayKind",
+      "kind": "Enum",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.leave_request_days.day_kind",
+      "options": [
+        {
+          "value": "leave",
+          "labelKey": "options.hrm.leave_request_days.day_kind.leave"
+        },
+        {
+          "value": "sandwich",
+          "labelKey": "options.hrm.leave_request_days.day_kind.sandwich"
+        }
+      ]
     },
     {
       "column": "created_at",

@@ -136,6 +136,8 @@
     - [reason, text, opt, "why a day is worked on a rest day, or why a published day was changed (S1.28a)"]
   unique: [[employment_id, work_date, "where roster_status = 'published'"]]
   indexes: [[employment_id, work_date]]
+  # S1.30b (CR-090 S1.30b detail b): the live dashboard reads one company's published lines of a day.
+  indexes_added_in: {S1.30b: [[work_date, company_id]]}
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   # S1.28a (CR-085 S1.28a detail; slice S1.28 Build items 4 and 5, FR-HRM-ATT-07): a person has one line per roster and day; a working
@@ -175,7 +177,7 @@
     - [event_date, date, req, local date at the location]
     - [event_at, ts, req]
     - [direction, "enum(in,out,break_out,break_in,unknown)", req]
-    - [source, "enum(web,biometric,kiosk,hr_entry,import,qr)", req]
+    - [source, "enum(web,biometric,kiosk,hr_entry,import,qr,regularization)", req]
     - [device_id, uuid, opt, fk hrm.attendance_devices]
     - [received_at, ts, req, server receipt time (GHR-13)]
     - [idempotency_key, text, req]
@@ -184,6 +186,8 @@
     - [supersedes_event_id, uuid, opt, correction of an earlier event]
   unique: [[company_id, idempotency_key, event_date]]
   indexes: [[employment_id, event_date]]
+  # S1.30b (CR-090 S1.30b detail b): the dashboard's first punch of a day and the punch log report read by day.
+  indexes_added_in: {S1.30b: [[company_id, event_date, employment_id]]}
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
@@ -191,7 +195,7 @@
   audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   # S1.27a (CR-088; slice S1.27 Build items 1 to 4): a punch scanned from a gate's QR code is source qr; generated writes closed, the
   # HR attendance services append events (idempotency, duplicate marking, future tolerance, time zone date).
-  enum_added_in: {S1.27a: {source: [qr]}}
+  enum_added_in: {S1.27a: {source: [qr]}, S1.30a: {source: [regularization]}}
   api_actions: [read]
   reqs: [ATT-01, ATT-03, DAT-01, DAT-02, DAT-04]
 
@@ -234,6 +238,7 @@
     - [policy_version_id, uuid, opt, fk hrm.policy_versions]
     - [period_id, uuid, req, fk hrm.attendance_periods; derived from pay group and date on insert]
     - [processed_at, ts, req]
+    - [superseded_at, ts, opt, "when a newer result of the same day replaced this one; null for the current result (S1.29a)"]
   unique: [[employment_id, work_date]]
   indexes: [[company_id, work_date, result]]
   notes: Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26).
@@ -241,6 +246,16 @@
   scope: {company: company_id, employment: employment_id}
   reqs: [ATT-10, ATT-13, ATT-18, ATT-19, FR-XM-26]
   partition: "range (work_date) monthly; key (id, work_date)"
+  # S1.29a (CR-089 S1.29a detail; slice S1.29 Build items 2 and 6, FR-HRM-ATT-10): the attendance engine writes each result; a reprocessed day is
+  # a new row and the row it replaces gets superseded_at (history kept, never edited in place; rules.yaml function hrm.tg_attendance_days_versions),
+  # so one current row per employment and day; generated writes closed.
+  added_in: {S1.29a: [superseded_at]}
+  uniques_replaced_in: {S1.29a: [[employment_id, work_date, "where superseded_at is null"]]}
+  api_actions: [read]
+  # S1.07 audit key (CR-026), set by S1.29a (CR-089 S1.29a detail f): each result is its own row, never changed or deleted; the row says who
+  # processed it and when, and superseded_at when a newer one replaced it, so the change log skips the table like the other append-only ones.
+  audit: false
+  audit_reason: "row versions: each result is a new row that is never changed or deleted; superseded_at records when a newer one replaced it (S1.29a)"
 
 - table: hrm.attendance_exceptions
   traits: [std, co]
@@ -248,12 +263,16 @@
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
     - [work_date, date, req]
-    - [kind, "enum(missing_in,missing_out,late,early,absent,unscheduled)", req]
+    - [kind, "enum(missing_in,missing_out,late,early,absent,unscheduled,odd_count,outside_tolerance)", req]
     - [attendance_day_id, uuid, req, fk hrm.attendance_days]
   indexes: [[employment_id, work_date], [company_id, status]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   reqs: [ATT-11]
+  # S1.29a (CR-089 S1.29a detail; slice S1.29 Build item 4, FR-HRM-ATT-11): the engine raises an odd number of punches and a punch outside the
+  # shift's window as exceptions too, and follows an open exception to the day's newest result; generated writes closed.
+  enum_added_in: {S1.29a: {kind: [odd_count, outside_tolerance]}}
+  api_actions: [read]
 
 - table: hrm.regularization_requests
   traits: [std, co]
@@ -269,6 +288,9 @@
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.30a (CR-090; slice S1.30 Build items 1 and 3, FR-HRM-ATT-11, GHR-09): requests are made, approved and cancelled by the HR attendance
+  # request service (the acting user is created_by, the person it is for is the employment); generated writes closed.
+  api_actions: [read]
   reqs: [ATT-11]
 
 - table: hrm.duty_requests
@@ -277,13 +299,21 @@
   status: [submitted, approved, rejected, cancelled]
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
-    - [kind, "enum(on_duty,official_visit,work_from_home)", req]
+    - [kind, "enum(on_duty,official_visit,work_from_home,field_duty)", req]
     - [start_at, ts, req]
     - [end_at, ts, req]
     - [purpose, text, req]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+    - [file_ids, "uuid[]", opt, "proof files of the request, kept when it is decided (S1.30b, R-161; the files are owned through IAttachmentOwner, type hrm.duty_requests)"]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.30a (CR-090; slice S1.30 Build items 2 and 3, FR-HRM-ATT-14, GHR-09): field duty is a fourth kind; requests are made, approved and
+  # cancelled by the HR attendance request service (the acting user is created_by); generated writes closed.
+  enum_added_in: {S1.30a: {kind: [field_duty]}}
+  # S1.30b (CR-090 S1.30b detail a, R-161): proof files like the regularization request has; an index for the dashboard's "on duty today".
+  added_in: {S1.30b: [file_ids]}
+  indexes_added_in: {S1.30b: [[status, start_at, end_at]]}
+  api_actions: [read]
   reqs: [ATT-14]
 
 - table: hrm.overtime_entries
@@ -305,6 +335,8 @@
   scope: {company: company_id, employment: employment_id}
   reqs: [ATT-12, LVE-08]
   unique: [[employment_id, work_date, "where status <> 'rejected'"]]
+  # S1.29a (CR-089 S1.29a detail): entries are made by the attendance engine and approved through the workflow (S1.29b); generated writes closed.
+  api_actions: [read]
 
 - table: hrm.leave_types
   traits: [std, co, soft, name]
@@ -378,6 +410,10 @@
   scope: {company: company_id, branch: branch_id, employment: employment_id}
   # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
   numbering: {column: request_no, type: hrm.leave_request_no, assign: post, gap_free: yes, default: "LV-{yyyy}-{seq:6}", reset: yearly, date: start_date}
+  # S1.32b (CR-086 S1.32b detail; slice S1.32 Build items 7 and 9): generated writes closed; the HR leave request service writes (the number from
+  # the kernel numbering service when the request is saved, gap-free in its transaction; the approval through the workflow engine; cancellation and
+  # change by reversal).
+  api_actions: [read]
   reqs: [LVE-04, LVE-05, LVE-06, LVE-15, LVE-16]
 
 - table: hrm.leave_request_days
@@ -390,10 +426,17 @@
     - [quantity, qty, req]
     - [is_paid, bool, req]
     - [request_status, text, req, copy of leave_requests.status]
+    - [day_kind, "enum(leave,sandwich)", req, "default leave; sandwich: a holiday or weekly off between two leave days of the request counted as leave (S1.32b, Build item 8)"]
   unique: [[leave_request_id, leave_date]]
   indexes: [[employment_id, leave_date]]
+  # S1.30b (CR-090 S1.30b detail b): the dashboard's "on leave today" reads one day of a company.
+  indexes_added_in: {S1.30b: [[leave_date, company_id, request_status]]}
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.32b (CR-086 S1.32b detail; slice S1.32 Build items 7 and 8): the days are written with their request by the HR leave request service only
+  # (generated writes closed); day_kind shows a sandwich day in the day list.
+  added_in: {S1.32b: [day_kind]}
+  api_actions: [read]
   reqs: [LVE-04, LVE-07]
   checks: ["trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave)"]
 
@@ -408,4 +451,7 @@
   unique: [[company_id, leave_year, "where status='applied'"]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.32b (CR-086 S1.32b detail; slice S1.32 Build item 12): the job hrm.leave_year_end writes the preview; HR confirms or rolls it back through the
+  # leave year-end service (generated writes closed).
+  api_actions: [read]
   reqs: [LVE-11]

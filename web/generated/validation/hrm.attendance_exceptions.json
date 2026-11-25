@@ -32,7 +32,9 @@
         "late",
         "early",
         "absent",
-        "unscheduled"
+        "unscheduled",
+        "odd_count",
+        "outside_tolerance"
       ]
     },
     "attendanceDayId": {

@@ -60,6 +60,8 @@ export const server = {
   /** Removes the customer-level value of a setting (restores the inherited or standard value); for `finally` blocks. */
   clearSetting: (key: string) => call<undefined>('DELETE', `/settings?key=${encodeURIComponent(key)}`),
   settingValue: async (key: string) => (await call<{ value: string | null }>('GET', `/settings/value?key=${encodeURIComponent(key)}`)).value,
+  /** S1.30b: attendance of the named person (own employment, an open exception, a waiting correction and duty request) and three colleagues with a shift today. */
+  attendanceSeed: (username: string) => call<{ company: string; unit: string; me: string; exception: string; correction: string; duty: string }>('POST', '/attendance/seed', { username }),
   facts: (username: string) => call<{ liveSessions: number; reusedSessions: number; trustedDevices: number }>('GET', `/facts?username=${encodeURIComponent(username)}`),
 };
 

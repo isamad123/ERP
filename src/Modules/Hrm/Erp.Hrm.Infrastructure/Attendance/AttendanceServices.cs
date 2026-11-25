@@ -2,7 +2,9 @@ using Erp.Hrm.Application.Attendance;
 using Erp.Hrm.Contracts.Attendance;
 using Erp.Hrm.Infrastructure.Devices;
 using Erp.Kernel.Contracts.Jobs;
+using Erp.Kernel.Contracts.Attendance;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Erp.Hrm.Infrastructure.Attendance;
 
@@ -18,6 +20,28 @@ public static class AttendanceServices
         services.AddSingleton<IAttendanceDeviceDriver, ZkTecoDriver>();
         services.AddScoped<DeviceRuntime>();
         services.AddScoped<DeviceIngestion>();
+
+        // S1.29a attendance engine: approved leave and duty by day (S1.32b and S1.30 write the requests), re-queueing, the processor.
+        services.TryAddScoped<IAttendancePeriodLock, Leave.LockedPeriodReader>();
+        services.TryAddScoped<IApprovedLeaveDays, ApprovedLeaveDaysReader>();
+        services.TryAddScoped<IApprovedDutyDays, ApprovedDutyDaysReader>();
+        services.TryAddScoped<IAttendanceReprocessing, AttendanceReprocessing>();
+        services.AddScoped<EffectiveShiftReader>(); // S1.28b's effective shift is the engine's day plan (R-158); needs IHolidayCalendars from the host
+        services.AddScoped<IEffectiveShiftReader>(sp => sp.GetRequiredService<EffectiveShiftReader>());
+        services.AddScoped<AttendanceDayProcessor>();
+
+        // S1.30b: the standard attendance reports, and each of them as an exportable list for the export engine (both hosts: the worker makes the file).
+        services.AddScoped<IAttendanceReportService, Reports.AttendanceReportService>();
+        foreach (var code in AttendanceReportCodes.All)
+        {
+            services.AddScoped<Kernel.Contracts.Itg.IExportRowReader>(sp => new Reports.AttendanceReportExportReader(sp, code));
+        }
+
+        // S1.30a: the end of an approval of a regularization or duty request (an approval can be decided through either host).
+        services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, RegularizationHandler>();
+        services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, DutyRequestHandler>();
+        services.AddScoped<Kernel.Contracts.Documents.IAttachmentOwner, RegularizationAttachmentOwner>(); // S1.30b proof files (R-161, CR-114)
+        services.AddScoped<Kernel.Contracts.Documents.IAttachmentOwner, DutyRequestAttachmentOwner>();
         return services;
     }
 
@@ -28,6 +52,9 @@ public static class AttendanceServices
         services.AddScoped<IDeviceService, DeviceService>(); // S1.27b
         services.AddScoped<IDeviceMappingService, DeviceMappingService>();
         services.AddScoped<IDevicePushService, DevicePushService>();
+        services.AddScoped<IAttendanceDayService, AttendanceDayService>(); // S1.29a
+        services.AddScoped<IAttendanceRequestService, AttendanceRequestService>(); // S1.30a
+        services.AddScoped<IAttendanceDashboardService, Reports.AttendanceDashboardService>(); // S1.30b live dashboard (the reports are registered for both hosts above)
         return services;
     }
 
@@ -40,17 +67,18 @@ public static class AttendanceServices
         services.AddScoped<IHolidayService, HolidayService>(); // S1.28b: Hijri dates and optional holidays
         services.AddScoped<EffectiveShiftService>();
         services.AddScoped<IEffectiveShiftService>(sp => sp.GetRequiredService<EffectiveShiftService>());
-        services.AddScoped<IEffectiveShiftReader>(sp => sp.GetRequiredService<EffectiveShiftService>());
         return services;
     }
 
-    /// <summary>The attendance job of the worker host.</summary>
+    /// <summary>The attendance jobs and consumers of the worker host.</summary>
     public static IServiceCollection AddHrmAttendanceWorker(this IServiceCollection services)
     {
         services.AddHrmAttendance(); // the event store and the device drivers the sync job uses
         services.AddSingleton<IJobHandler, AttendancePurgeJob>();
         services.AddSingleton<IJobHandler, DeviceSyncJob>(); // S1.27b
         services.AddScoped<IEventConsumer, DeviceSeparationConsumer>();
+        services.AddSingleton<IJobHandler, AttendanceProcessJob>(); // S1.29a nightly and on-demand processing
+        services.AddScoped<IEventConsumer, AttendanceReprocessConsumer>(); // S1.29a re-queued days
         return services;
     }
 }

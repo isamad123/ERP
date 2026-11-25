@@ -1,5 +1,5 @@
 {
-  "_comment": "Hand-written permissions of the HR module's purpose-built services (slice S1.20a, CR-076): the generated writes of these tables are closed (ruling Q1; S1.20a closes the person tables, S1.20b to d the employment tables), so their actions are declared here. Registered with permissions.g.json by migrate and provisioning (AccessSetup). Keep in step with Erp.Hrm.Contracts.People.PeoplePermissions and (S1.20b) Erp.Hrm.Contracts.Employment.EmploymentPermissions. S1.20c adds transfers between companies, contracts and probation. S1.20d adds removal, reveal and approval of payment accounts and removal and reveal of statutory registrations (create and update are generated with the field view of their encrypted columns). S1.34a (CR-087) adds the pay set-up services: pay groups (create and update keep the codes the generated ones had), generating and changing pay periods, and the readiness checklist. S1.34b (CR-087 S1.34b detail) adds the pay component, salary structure and compensation services (their generated writes are closed; the codes the generated ones had are kept), reading an employee's compensation (hrm.pay.compensation.read) and approving a held change of a structure or of compensation (hrm.pay.change.approve). S1.27a (CR-088) adds appending punches for others (hrm.attendance_events.create, generated create closed), the employee's own web and QR punch (hrm.attendance.punch), the kiosk station (hrm.attendance.kiosk) and showing a location's QR code (hrm.attendance.qr_display). S1.23a adds the policy framework's manage and approve (the generated writes of hrm.policies, hrm.policy_versions and hrm.policy_assignments are closed). S1.28a (CR-085 S1.28a detail) adds the shift and roster services: creating and changing shifts, creating, editing, publishing and amending rosters (amending a published roster is sensitive: it changes what people were told) and reading the weekly-off days of an employee's shift policy (the generated writes of hrm.shifts, hrm.rosters and hrm.roster_lines are closed). S1.27b (CR-088 S1.27b detail) adds the device services: registering, changing and retiring attendance devices, asking for a sync, the signed push of a device or its gateway (an integration user's permission, no role holds it), mapping and ending device users, confirming a removal task, and discarding unmapped punches (the generated writes of hrm.attendance_devices, hrm.device_user_maps and hrm.unmapped_punches are closed). S1.32a (CR-086 S1.32a detail) adds the leave services: creating and changing leave types (create and update keep the codes the generated ones had; a type is retired, never deleted), posting opening balances, grants, adjustments and reversals to the leave ledger (sensitive: it changes what an employee may take and what payroll pays or deducts) and the recompute of balances (the generated writes of hrm.leave_types and hrm.leave_ledger are closed; those of the request and year-end tables close in S1.32b).",
+  "_comment": "Hand-written permissions of the HR module's purpose-built services (slice S1.20a, CR-076): the generated writes of these tables are closed (ruling Q1; S1.20a closes the person tables, S1.20b to d the employment tables), so their actions are declared here. Registered with permissions.g.json by migrate and provisioning (AccessSetup). Keep in step with Erp.Hrm.Contracts.People.PeoplePermissions and (S1.20b) Erp.Hrm.Contracts.Employment.EmploymentPermissions. S1.20c adds transfers between companies, contracts and probation. S1.20d adds removal, reveal and approval of payment accounts and removal and reveal of statutory registrations (create and update are generated with the field view of their encrypted columns). S1.34a (CR-087) adds the pay set-up services: pay groups (create and update keep the codes the generated ones had), generating and changing pay periods, and the readiness checklist. S1.34b (CR-087 S1.34b detail) adds the pay component, salary structure and compensation services (their generated writes are closed; the codes the generated ones had are kept), reading an employee's compensation (hrm.pay.compensation.read) and approving a held change of a structure or of compensation (hrm.pay.change.approve). S1.27a (CR-088) adds appending punches for others (hrm.attendance_events.create, generated create closed), the employee's own web and QR punch (hrm.attendance.punch), the kiosk station (hrm.attendance.kiosk) and showing a location's QR code (hrm.attendance.qr_display). S1.23a adds the policy framework's manage and approve (the generated writes of hrm.policies, hrm.policy_versions and hrm.policy_assignments are closed). S1.28a (CR-085 S1.28a detail) adds the shift and roster services: creating and changing shifts, creating, editing, publishing and amending rosters (amending a published roster is sensitive: it changes what people were told) and reading the weekly-off days of an employee's shift policy (the generated writes of hrm.shifts, hrm.rosters and hrm.roster_lines are closed). S1.27b (CR-088 S1.27b detail) adds the device services: registering, changing and retiring attendance devices, asking for a sync, the signed push of a device or its gateway (an integration user's permission, no role holds it), mapping and ending device users, confirming a removal task, and discarding unmapped punches (the generated writes of hrm.attendance_devices, hrm.device_user_maps and hrm.unmapped_punches are closed). S1.32a (CR-086 S1.32a detail) adds the leave services: creating and changing leave types (create and update keep the codes the generated ones had; a type is retired, never deleted), posting opening balances, grants, adjustments and reversals to the leave ledger (sensitive: it changes what an employee may take and what payroll pays or deducts) and the recompute of balances (the generated writes of hrm.leave_types and hrm.leave_ledger are closed; those of the request and year-end tables close in S1.32b). S1.30a (CR-090) adds making attendance regularization and duty requests for oneself or, by data scope, for others (hrm.regularization_requests.create and hrm.duty_requests.create; the generated writes of both tables are closed; approving and cancelling go through the workflow). S1.32b (CR-086 S1.32b detail) adds leave requests: applying (one's own, or for an employee within the scope; create and update keep the codes the generated ones had), changing a draft, submitting it and asking to change approved leave, cancelling (FR-HRM-LVE-04 to -06), and the leave year-end's confirm and roll back and its approval by a second person (both sensitive: they carry forward, pay out and lapse leave; the generated writes of hrm.leave_requests, hrm.leave_request_days and hrm.leave_year_end_runs are closed). S1.30b (CR-090 S1.30b detail) adds the live attendance dashboard and the standard attendance reports (hrm.attendance_dashboard.read and hrm.attendance_reports.read; the rows are the data scope of the caller's grant on the underlying table; no report has a pay or salary column). S1.29a (CR-089 S1.29a detail) adds processing attendance days on demand (hrm.attendance_days.process; the generated writes of hrm.attendance_days, hrm.attendance_exceptions and hrm.overtime_entries are closed: the engine writes them).",
   "module": "hrm",
   "permissions": [
     {
@@ -417,6 +417,36 @@
       "sensitive": false
     },
     {
+      "code": "hrm.leave_requests.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.leave_requests.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.leave_requests.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.leave_requests.update",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.leave_requests.cancel",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.leave_requests.cancel",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.leave_year_end_runs.confirm",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.leave_year_end_runs.confirm",
+      "sensitive": true
+    },
+    {
+      "code": "hrm.leave_year_end_runs.approve",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.leave_year_end_runs.approve",
+      "sensitive": true
+    },
+    {
       "code": "hrm.pay_components.create",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay_components.create",
@@ -469,6 +499,36 @@
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay.change.approve",
       "sensitive": true
+    },
+    {
+      "code": "hrm.attendance_dashboard.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.attendance_dashboard.read",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.attendance_reports.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.attendance_reports.read",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.attendance_days.process",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.attendance_days.process",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.regularization_requests.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.regularization_requests.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.duty_requests.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.duty_requests.create",
+      "sensitive": false
     }
   ]
 }

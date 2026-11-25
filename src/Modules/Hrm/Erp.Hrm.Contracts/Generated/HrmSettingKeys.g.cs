@@ -74,6 +74,12 @@ public static class HrmSettingKeys
     /// <summary>The month (1 = January to 12 = December) in which the leave year starts.</summary>
     public const string HrmLeaveYearStartMonth = "hrm.leave.year_start_month";
 
+    /// <summary>How many hours of work a day has for hourly leave on a day no shift plans; 0 means not set.</summary>
+    public const string HrmLeaveHoursPerDay = "hrm.leave.hours_per_day";
+
+    /// <summary>Confirming the leave year-end needs a second person's approval.</summary>
+    public const string HrmLeaveYearEndRequiresApproval = "hrm.leave.year_end_requires_approval";
+
     /// <summary>Moves the Hijri date shown beside each holiday by one day earlier or later, to follow the moon sighting.</summary>
     public const string HrmAttHijriOffsetDays = "hrm.att.hijri_offset_days";
 
@@ -82,6 +88,9 @@ public static class HrmSettingKeys
 
     /// <summary>A choice can be made or changed until this many days before the holiday.</summary>
     public const string HrmAttOptionalHolidayCutoffDays = "hrm.att.optional_holiday_cutoff_days";
+
+    /// <summary>How often the live attendance dashboard asks the server for new counts while it is open.</summary>
+    public const string HrmAttDashboardRefreshSeconds = "hrm.att.dashboard_refresh_seconds";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

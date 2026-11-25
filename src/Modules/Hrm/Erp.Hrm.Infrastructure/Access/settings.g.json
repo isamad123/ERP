@@ -733,6 +733,69 @@
       }
     },
     {
+      "key": "hrm.leave.hours_per_day",
+      "module": "hrm",
+      "type": "decimal",
+      "default": 0,
+      "validation": {
+        "min": 0,
+        "max": 24
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.leave",
+      "unit": null,
+      "name": {
+        "en": "Hours of a working day (hourly leave)",
+        "ur": "کام کے دن کے گھنٹے (گھنٹہ وار رخصت)"
+      },
+      "description": {
+        "en": "How many hours of work a day has for hourly leave on a day no shift plans; 0 means not set",
+        "ur": "جس دن کوئی شفٹ مقرر نہ ہو اس دن گھنٹہ وار رخصت کے لیے کام کے کتنے گھنٹے ہیں؛ 0 کا مطلب ہے مقرر نہیں"
+      },
+      "help": {
+        "en": "Hourly leave takes at most the hours of work of its day. They come from the employee's shift on that day; this number is used only when no shift names the day. Until you set it, hourly leave is possible only on days a shift plans.",
+        "ur": "گھنٹہ وار رخصت اپنے دن کے کام کے گھنٹوں سے زیادہ نہیں ہو سکتی۔ یہ گھنٹے اس دن ملازم کی شفٹ سے آتے ہیں؛ یہ عدد صرف تب استعمال ہوتا ہے جب کوئی شفٹ اس دن کو مقرر نہ کرے۔ جب تک آپ اسے مقرر نہ کریں، گھنٹہ وار رخصت صرف انہی دنوں ممکن ہے جو کسی شفٹ میں مقرر ہوں۔"
+      }
+    },
+    {
+      "key": "hrm.leave.year_end_requires_approval",
+      "module": "hrm",
+      "type": "bool",
+      "default": true,
+      "validation": {},
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": true,
+      "area": "hr.leave",
+      "unit": null,
+      "name": {
+        "en": "Approval of the leave year-end",
+        "ur": "رخصت کے سال کے اختتام کی منظوری"
+      },
+      "description": {
+        "en": "Confirming the leave year-end needs a second person's approval",
+        "ur": "رخصت کے سال کے اختتام کی تصدیق کے لیے دوسرے شخص کی منظوری درکار"
+      },
+      "help": {
+        "en": "The carry-forward, payout and lapse of a leave year are posted only after another person with the approval permission approves the confirmation. The person who confirmed can never approve it. Until then the preview can still be rolled back.",
+        "ur": "رخصت کے سال کی آگے منتقلی، ادائیگی اور اختتام اسی وقت درج ہوتے ہیں جب منظوری کی اجازت والا کوئی دوسرا شخص تصدیق منظور کرے۔ تصدیق کرنے والا اسے کبھی منظور نہیں کر سکتا۔ تب تک پیش نظارہ واپس لیا جا سکتا ہے۔"
+      }
+    },
+    {
       "key": "hrm.att.hijri_offset_days",
       "module": "hrm",
       "type": "int",
@@ -829,6 +892,38 @@
       "help": {
         "en": "With 0 a choice can be changed up to the day of the holiday itself. With 7 it closes seven days before. The rule applies to each holiday on its own.",
         "ur": "0 ہو تو انتخاب چھٹی کے دن تک بدلا جا سکتا ہے۔ 7 ہو تو چھٹی سے سات دن پہلے بند ہو جاتا ہے۔ قاعدہ ہر چھٹی پر الگ لاگو ہوتا ہے۔"
+      }
+    },
+    {
+      "key": "hrm.att.dashboard_refresh_seconds",
+      "module": "hrm",
+      "type": "int",
+      "default": 60,
+      "validation": {
+        "min": 15,
+        "max": 3600
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.attendance",
+      "unit": null,
+      "name": {
+        "en": "Attendance dashboard refresh (seconds)",
+        "ur": "حاضری ڈیش بورڈ کی تازگی (سیکنڈ)"
+      },
+      "description": {
+        "en": "How often the live attendance dashboard asks the server for new counts while it is open",
+        "ur": "حاضری کا لائیو ڈیش بورڈ کھلا ہونے پر سرور سے نئی گنتی کتنی بار مانگے"
+      },
+      "help": {
+        "en": "The dashboard polls the server on this interval; nothing is pushed. A shorter interval shows punches sooner and asks the server more often. The person can also refresh at once.",
+        "ur": "ڈیش بورڈ اس وقفے سے سرور سے پوچھتا ہے؛ کچھ بھیجا نہیں جاتا۔ کم وقفے سے اندراجات جلد نظر آتے ہیں اور سرور سے زیادہ بار پوچھنا پڑتا ہے۔ شخص فوراً بھی تازہ کر سکتا ہے۔"
       }
     }
   ],

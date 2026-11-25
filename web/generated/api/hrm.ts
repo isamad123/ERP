@@ -25,33 +25,12 @@ export interface AttendanceDay
     policyVersionId: string | null;
     periodId: string;
     processedAt: string;
+    supersededAt: string | null;
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface AttendanceDayWrite
-{
-    companyId: string;
-    employmentId: string;
-    workDate: string;
-    shiftId?: string | null;
-    dayType: 'working' | 'weekly_off' | 'holiday';
-    result: 'present' | 'absent' | 'late' | 'half_day' | 'on_leave' | 'holiday' | 'weekly_off' | 'on_duty' | 'incomplete';
-    firstIn?: string | null;
-    lastOut?: string | null;
-    workedMinutes: number;
-    lateMinutes: number;
-    earlyMinutes: number;
-    overtimeMinutes: number;
-    leaveRequestId?: string | null;
-    dutyRequestId?: string | null;
-    explanation: unknown;
-    policyVersionId?: string | null;
-    periodId: string;
-    processedAt: string;
 }
 
 export interface AttendanceDayListQuery
@@ -73,8 +52,6 @@ export const attendanceDays =
 {
     list: (query: AttendanceDayListQuery = {}) => request<PagedResult<AttendanceDay>>('GET', '/api/hrm/attendance-days', { query }),
     get: (id: string) => request<AttendanceDay>('GET', `/api/hrm/attendance-days/${id}`),
-    create: (body: AttendanceDayWrite) => request<AttendanceDay>('POST', '/api/hrm/attendance-days', { body }),
-    update: (id: string, body: AttendanceDayWrite & { rowVersion: number }) => request<AttendanceDay>('PUT', `/api/hrm/attendance-days/${id}`, { body }),
 };
 
 /** hrm.attendance_devices: Biometric and kiosk devices by site (ATT-02). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -131,7 +108,7 @@ export interface AttendanceEvent
     eventDate: string;
     eventAt: string;
     direction: 'in' | 'out' | 'break_out' | 'break_in' | 'unknown';
-    source: 'web' | 'biometric' | 'kiosk' | 'hr_entry' | 'import' | 'qr';
+    source: 'web' | 'biometric' | 'kiosk' | 'hr_entry' | 'import' | 'qr' | 'regularization';
     deviceId: string | null;
     receivedAt: string;
     idempotencyKey: string;
@@ -166,7 +143,7 @@ export interface AttendanceException
     companyId: string;
     employmentId: string;
     workDate: string;
-    kind: 'missing_in' | 'missing_out' | 'late' | 'early' | 'absent' | 'unscheduled';
+    kind: 'missing_in' | 'missing_out' | 'late' | 'early' | 'absent' | 'unscheduled' | 'odd_count' | 'outside_tolerance';
     attendanceDayId: string;
     status: 'open' | 'regularized' | 'accepted' | 'rejected' | 'closed';
     createdAt: string;
@@ -174,16 +151,6 @@ export interface AttendanceException
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface AttendanceExceptionWrite
-{
-    companyId: string;
-    employmentId: string;
-    workDate: string;
-    kind: 'missing_in' | 'missing_out' | 'late' | 'early' | 'absent' | 'unscheduled';
-    attendanceDayId: string;
-    status: 'open' | 'regularized' | 'accepted' | 'rejected' | 'closed';
 }
 
 export interface AttendanceExceptionListQuery
@@ -203,8 +170,6 @@ export const attendanceExceptions =
 {
     list: (query: AttendanceExceptionListQuery = {}) => request<PagedResult<AttendanceException>>('GET', '/api/hrm/attendance-exceptions', { query }),
     get: (id: string) => request<AttendanceException>('GET', `/api/hrm/attendance-exceptions/${id}`),
-    create: (body: AttendanceExceptionWrite) => request<AttendanceException>('POST', '/api/hrm/attendance-exceptions', { body }),
-    update: (id: string, body: AttendanceExceptionWrite & { rowVersion: number }) => request<AttendanceException>('PUT', `/api/hrm/attendance-exceptions/${id}`, { body }),
 };
 
 /** hrm.attendance_periods: Lock unit for attendance per company and pay group (FR-XM-26). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -1043,29 +1008,18 @@ export interface DutyRequest
     id: string;
     companyId: string;
     employmentId: string;
-    kind: 'on_duty' | 'official_visit' | 'work_from_home';
+    kind: 'on_duty' | 'official_visit' | 'work_from_home' | 'field_duty';
     startAt: string;
     endAt: string;
     purpose: string;
     workflowInstanceId: string | null;
+    fileIds: string[] | null;
     status: 'submitted' | 'approved' | 'rejected' | 'cancelled';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface DutyRequestWrite
-{
-    companyId: string;
-    employmentId: string;
-    kind: 'on_duty' | 'official_visit' | 'work_from_home';
-    startAt: string;
-    endAt: string;
-    purpose: string;
-    workflowInstanceId?: string | null;
-    status: 'submitted' | 'approved' | 'rejected' | 'cancelled';
 }
 
 export interface DutyRequestListQuery
@@ -1076,14 +1030,14 @@ export interface DutyRequestListQuery
     employmentId?: string;
     workflowInstanceId?: string;
     status?: 'submitted' | 'approved' | 'rejected' | 'cancelled';
+    /** startAt, endAt, status; a leading minus sorts descending. */
+    sort?: 'startAt' | '-startAt' | 'endAt' | '-endAt' | 'status' | '-status';
 }
 
 export const dutyRequests =
 {
     list: (query: DutyRequestListQuery = {}) => request<PagedResult<DutyRequest>>('GET', '/api/hrm/duty-requests', { query }),
     get: (id: string) => request<DutyRequest>('GET', `/api/hrm/duty-requests/${id}`),
-    create: (body: DutyRequestWrite) => request<DutyRequest>('POST', '/api/hrm/duty-requests', { body }),
-    update: (id: string, body: DutyRequestWrite & { rowVersion: number }) => request<DutyRequest>('PUT', `/api/hrm/duty-requests/${id}`, { body }),
 };
 
 /** hrm.employee_bank_accounts: EmployeeBankAccount. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2247,22 +2201,12 @@ export interface LeaveRequestDay
     quantity: number;
     isPaid: boolean;
     requestStatus: string;
+    dayKind: 'leave' | 'sandwich';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface LeaveRequestDayWrite
-{
-    companyId: string;
-    leaveRequestId: string;
-    employmentId: string;
-    leaveDate: string;
-    quantity: number;
-    isPaid?: boolean;
-    requestStatus: string;
 }
 
 export interface LeaveRequestDayListQuery
@@ -2272,16 +2216,14 @@ export interface LeaveRequestDayListQuery
     companyId?: string;
     leaveRequestId?: string;
     employmentId?: string;
-    /** leaveDate; a leading minus sorts descending. */
-    sort?: 'leaveDate' | '-leaveDate';
+    /** leaveDate, requestStatus; a leading minus sorts descending. */
+    sort?: 'leaveDate' | '-leaveDate' | 'requestStatus' | '-requestStatus';
 }
 
 export const leaveRequestDays =
 {
     list: (query: LeaveRequestDayListQuery = {}) => request<PagedResult<LeaveRequestDay>>('GET', '/api/hrm/leave-request-days', { query }),
     get: (id: string) => request<LeaveRequestDay>('GET', `/api/hrm/leave-request-days/${id}`),
-    create: (body: LeaveRequestDayWrite) => request<LeaveRequestDay>('POST', '/api/hrm/leave-request-days', { body }),
-    update: (id: string, body: LeaveRequestDayWrite & { rowVersion: number }) => request<LeaveRequestDay>('PUT', `/api/hrm/leave-request-days/${id}`, { body }),
 };
 
 /** hrm.leave_requests: LeaveRequest. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2312,26 +2254,6 @@ export interface LeaveRequest
     rowVersion: number;
 }
 
-export interface LeaveRequestWrite
-{
-    companyId: string;
-    branchId?: string | null;
-    employmentId: string;
-    leaveTypeId: string;
-    startDate: string;
-    endDate: string;
-    startPart: 'full' | 'first_half' | 'second_half';
-    endPart: 'full' | 'first_half' | 'second_half';
-    hours?: number | null;
-    days: number;
-    reason?: string | null;
-    fileIds?: string[];
-    modifiesRequestId?: string | null;
-    workflowInstanceId?: string | null;
-    status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'cancel_requested' | 'cancelled';
-    custom?: unknown;
-}
-
 export interface LeaveRequestListQuery
 {
     after?: string;
@@ -2351,8 +2273,6 @@ export const leaveRequests =
 {
     list: (query: LeaveRequestListQuery = {}) => request<PagedResult<LeaveRequest>>('GET', '/api/hrm/leave-requests', { query }),
     get: (id: string) => request<LeaveRequest>('GET', `/api/hrm/leave-requests/${id}`),
-    create: (body: LeaveRequestWrite) => request<LeaveRequest>('POST', '/api/hrm/leave-requests', { body }),
-    update: (id: string, body: LeaveRequestWrite & { rowVersion: number }) => request<LeaveRequest>('PUT', `/api/hrm/leave-requests/${id}`, { body }),
 };
 
 /** hrm.leave_types: LeaveType. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2413,15 +2333,6 @@ export interface LeaveYearEndRun
     rowVersion: number;
 }
 
-export interface LeaveYearEndRunWrite
-{
-    companyId: string;
-    leaveYear: number;
-    jobRunId?: string | null;
-    summary: unknown;
-    status: 'preview' | 'applied' | 'rolled_back';
-}
-
 export interface LeaveYearEndRunListQuery
 {
     after?: string;
@@ -2437,8 +2348,6 @@ export const leaveYearEndRuns =
 {
     list: (query: LeaveYearEndRunListQuery = {}) => request<PagedResult<LeaveYearEndRun>>('GET', '/api/hrm/leave-year-end-runs', { query }),
     get: (id: string) => request<LeaveYearEndRun>('GET', `/api/hrm/leave-year-end-runs/${id}`),
-    create: (body: LeaveYearEndRunWrite) => request<LeaveYearEndRun>('POST', '/api/hrm/leave-year-end-runs', { body }),
-    update: (id: string, body: LeaveYearEndRunWrite & { rowVersion: number }) => request<LeaveYearEndRun>('PUT', `/api/hrm/leave-year-end-runs/${id}`, { body }),
 };
 
 /** hrm.liability_accruals: Gratuity, leave encashment and similar liabilities computed per period (CMP-07, LVE-13 basis). Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2840,22 +2749,6 @@ export interface OvertimeEntry
     rowVersion: number;
 }
 
-export interface OvertimeEntryWrite
-{
-    companyId: string;
-    employmentId: string;
-    workDate: string;
-    dayType: 'working' | 'weekly_off' | 'holiday';
-    minutes: number;
-    approvedMinutes?: number | null;
-    rateMultiplier: number;
-    payInputId?: string | null;
-    attendanceDayId?: string | null;
-    compOffEntryId?: string | null;
-    workflowInstanceId?: string | null;
-    status: 'calculated' | 'submitted' | 'approved' | 'rejected' | 'paid' | 'converted_to_comp_off';
-}
-
 export interface OvertimeEntryListQuery
 {
     after?: string;
@@ -2876,8 +2769,6 @@ export const overtimeEntries =
 {
     list: (query: OvertimeEntryListQuery = {}) => request<PagedResult<OvertimeEntry>>('GET', '/api/hrm/overtime-entries', { query }),
     get: (id: string) => request<OvertimeEntry>('GET', `/api/hrm/overtime-entries/${id}`),
-    create: (body: OvertimeEntryWrite) => request<OvertimeEntry>('POST', '/api/hrm/overtime-entries', { body }),
-    update: (id: string, body: OvertimeEntryWrite & { rowVersion: number }) => request<OvertimeEntry>('PUT', `/api/hrm/overtime-entries/${id}`, { body }),
 };
 
 /** hrm.parallel_run_lines: ParallelRunLine. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -4290,20 +4181,6 @@ export interface RegularizationRequest
     rowVersion: number;
 }
 
-export interface RegularizationRequestWrite
-{
-    companyId: string;
-    employmentId: string;
-    exceptionId?: string | null;
-    workDate: string;
-    requestedIn?: string | null;
-    requestedOut?: string | null;
-    reason: string;
-    fileIds?: string[];
-    workflowInstanceId?: string | null;
-    status: 'submitted' | 'approved' | 'rejected' | 'cancelled';
-}
-
 export interface RegularizationRequestListQuery
 {
     after?: string;
@@ -4319,8 +4196,6 @@ export const regularizationRequests =
 {
     list: (query: RegularizationRequestListQuery = {}) => request<PagedResult<RegularizationRequest>>('GET', '/api/hrm/regularization-requests', { query }),
     get: (id: string) => request<RegularizationRequest>('GET', `/api/hrm/regularization-requests/${id}`),
-    create: (body: RegularizationRequestWrite) => request<RegularizationRequest>('POST', '/api/hrm/regularization-requests', { body }),
-    update: (id: string, body: RegularizationRequestWrite & { rowVersion: number }) => request<RegularizationRequest>('PUT', `/api/hrm/regularization-requests/${id}`, { body }),
 };
 
 /** hrm.retro_adjustments: Changes discovered after lock (attendance, salary, leave) carried to the next open run (PAY-16, FR-XM-26). Field rules (S1.06) may leave a field out or mask it as text. */

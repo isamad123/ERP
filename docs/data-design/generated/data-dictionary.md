@@ -1011,6 +1011,7 @@ Partitioned by range; 37 partitions.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| superseded_at | timestamp with time zone | yes |  | when a newer result of the same day replaced this one; null for the current result (S1.29a) |
 
 Constraints:
 
@@ -1025,7 +1026,6 @@ Constraints:
 - `fk_attendance_days_shift_id` FOREIGN KEY (company_id, shift_id) REFERENCES hrm.shifts(company_id, id)
 - `pk_attendance_days` PRIMARY KEY (id, work_date)
 - `uq_attendance_days_company_id_id_work_date` UNIQUE (company_id, id, work_date)
-- `uq_attendance_days_employment_id_work_date` UNIQUE (employment_id, work_date)
 
 Indexes:
 
@@ -1036,6 +1036,11 @@ Indexes:
 - `ix_attendance_days_company_id_shift_id` CREATE INDEX ix_attendance_days_company_id_shift_id ON ONLY hrm.attendance_days USING btree (company_id, shift_id)
 - `ix_attendance_days_company_id_work_date_result` CREATE INDEX ix_attendance_days_company_id_work_date_result ON ONLY hrm.attendance_days USING btree (company_id, work_date, result)
 - `ix_attendance_days_policy_version_id` CREATE INDEX ix_attendance_days_policy_version_id ON ONLY hrm.attendance_days USING btree (policy_version_id)
+- `uq_attendance_days_employment_id_work_date` CREATE UNIQUE INDEX uq_attendance_days_employment_id_work_date ON ONLY hrm.attendance_days USING btree (employment_id, work_date) WHERE (superseded_at IS NULL)
+
+Triggers:
+
+- `tg_attendance_days_versions` CREATE TRIGGER tg_attendance_days_versions BEFORE DELETE OR UPDATE ON hrm.attendance_days FOR EACH ROW EXECUTE FUNCTION hrm.tg_attendance_days_versions()
 
 ### hrm.attendance_devices
 
@@ -1108,7 +1113,7 @@ Partitioned by range; 37 partitions.
 Constraints:
 
 - `ck_attendance_events_direction` CHECK ((direction = ANY (ARRAY['in'::text, 'out'::text, 'break_out'::text, 'break_in'::text, 'unknown'::text])))
-- `ck_attendance_events_source` CHECK ((source = ANY (ARRAY['web'::text, 'biometric'::text, 'kiosk'::text, 'hr_entry'::text, 'import'::text, 'qr'::text])))
+- `ck_attendance_events_source` CHECK ((source = ANY (ARRAY['web'::text, 'biometric'::text, 'kiosk'::text, 'hr_entry'::text, 'import'::text, 'qr'::text, 'regularization'::text])))
 - `fk_attendance_events_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_attendance_events_device_id` FOREIGN KEY (company_id, device_id) REFERENCES hrm.attendance_devices(company_id, id)
 - `fk_attendance_events_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
@@ -1119,6 +1124,7 @@ Indexes:
 
 - `ix_attendance_events_company_id_device_id` CREATE INDEX ix_attendance_events_company_id_device_id ON ONLY hrm.attendance_events USING btree (company_id, device_id)
 - `ix_attendance_events_company_id_employment_id` CREATE INDEX ix_attendance_events_company_id_employment_id ON ONLY hrm.attendance_events USING btree (company_id, employment_id)
+- `ix_attendance_events_company_id_event_date_employment_id` CREATE INDEX ix_attendance_events_company_id_event_date_employment_id ON ONLY hrm.attendance_events USING btree (company_id, event_date, employment_id)
 - `ix_attendance_events_employment_id_event_date` CREATE INDEX ix_attendance_events_employment_id_event_date ON ONLY hrm.attendance_events USING btree (employment_id, event_date)
 
 Triggers:
@@ -1147,7 +1153,7 @@ Requirements: ATT-11. Source: hrm-time.yaml.
 
 Constraints:
 
-- `ck_attendance_exceptions_kind` CHECK ((kind = ANY (ARRAY['missing_in'::text, 'missing_out'::text, 'late'::text, 'early'::text, 'absent'::text, 'unscheduled'::text])))
+- `ck_attendance_exceptions_kind` CHECK ((kind = ANY (ARRAY['missing_in'::text, 'missing_out'::text, 'late'::text, 'early'::text, 'absent'::text, 'unscheduled'::text, 'odd_count'::text, 'outside_tolerance'::text])))
 - `ck_attendance_exceptions_status` CHECK ((status = ANY (ARRAY['open'::text, 'regularized'::text, 'accepted'::text, 'rejected'::text, 'closed'::text])))
 - `fk_attendance_exceptions_attendance_day_id` FOREIGN KEY (company_id, attendance_day_id, work_date) REFERENCES hrm.attendance_days(company_id, id, work_date)
 - `fk_attendance_exceptions_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
@@ -1833,10 +1839,11 @@ On-duty, official visit and work-from-home requests (ATT-14). Requirements: ATT-
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| file_ids | uuid[] | yes |  | proof files of the request, kept when it is decided (S1.30b, R-161; the files are owned through IAttachmentOwner, type hrm.duty_requests) |
 
 Constraints:
 
-- `ck_duty_requests_kind` CHECK ((kind = ANY (ARRAY['on_duty'::text, 'official_visit'::text, 'work_from_home'::text])))
+- `ck_duty_requests_kind` CHECK ((kind = ANY (ARRAY['on_duty'::text, 'official_visit'::text, 'work_from_home'::text, 'field_duty'::text])))
 - `ck_duty_requests_status` CHECK ((status = ANY (ARRAY['submitted'::text, 'approved'::text, 'rejected'::text, 'cancelled'::text])))
 - `fk_duty_requests_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_duty_requests_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
@@ -1848,6 +1855,7 @@ Indexes:
 
 - `ix_duty_requests_company_id_employment_id` CREATE INDEX ix_duty_requests_company_id_employment_id ON hrm.duty_requests USING btree (company_id, employment_id)
 - `ix_duty_requests_company_id_workflow_instance_id` CREATE INDEX ix_duty_requests_company_id_workflow_instance_id ON hrm.duty_requests USING btree (company_id, workflow_instance_id)
+- `ix_duty_requests_status_start_at_end_at` CREATE INDEX ix_duty_requests_status_start_at_end_at ON hrm.duty_requests USING btree (status, start_at, end_at)
 
 ### hrm.employee_bank_accounts
 
@@ -2790,7 +2798,7 @@ Indexes:
 
 ### hrm.leave_ledger
 
-Every movement of a leave balance; balances are sums (LVE-10, LVE-14). Requirements: LVE-02, LVE-03, LVE-08, LVE-10, LVE-14. Pending rule (S1.32, placeholder hrm.todo_leave_ledger_transfer): Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30). Source: hrm-time.yaml.
+Every movement of a leave balance; balances are sums (LVE-10, LVE-14). Requirements: LVE-02, LVE-03, LVE-08, LVE-10, LVE-14. Rule (implemented in S1.32b): Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30). Source: hrm-time.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -2837,10 +2845,11 @@ Triggers:
 - `tg_leave_ledger_append_only` CREATE TRIGGER tg_leave_ledger_append_only BEFORE DELETE OR UPDATE ON hrm.leave_ledger FOR EACH ROW EXECUTE FUNCTION hrm.tg_refuse_change()
 - `tg_leave_ledger_no_truncate` CREATE TRIGGER tg_leave_ledger_no_truncate BEFORE TRUNCATE ON hrm.leave_ledger FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_refuse_change()
 - `tg_leave_ledger_reversal` CREATE TRIGGER tg_leave_ledger_reversal BEFORE INSERT ON hrm.leave_ledger FOR EACH ROW EXECUTE FUNCTION hrm.tg_leave_ledger_reversal()
+- `tg_leave_ledger_transfer` CREATE TRIGGER tg_leave_ledger_transfer BEFORE INSERT ON hrm.leave_ledger FOR EACH ROW EXECUTE FUNCTION hrm.tg_leave_ledger_transfer()
 
 ### hrm.leave_request_days
 
-Day-by-day breakdown used by attendance and payroll. Requirements: LVE-04, LVE-07. Pending rule (S1.32, placeholder hrm.todo_leave_request_days_daily_total): trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave) Source: hrm-time.yaml.
+Day-by-day breakdown used by attendance and payroll. Requirements: LVE-04, LVE-07. Rule (implemented in S1.32b): trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave) Source: hrm-time.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -2857,9 +2866,11 @@ Day-by-day breakdown used by attendance and payroll. Requirements: LVE-04, LVE-0
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| day_kind | text | no | 'leave'::text | default leave; sandwich: a holiday or weekly off between two leave days of the request counted as leave (S1.32b, Build item 8) |
 
 Constraints:
 
+- `ck_leave_request_days_day_kind` CHECK ((day_kind = ANY (ARRAY['leave'::text, 'sandwich'::text])))
 - `fk_leave_request_days_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_leave_request_days_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
 - `fk_leave_request_days_leave_request_id` FOREIGN KEY (company_id, leave_request_id) REFERENCES hrm.leave_requests(company_id, id)
@@ -2872,6 +2883,11 @@ Indexes:
 - `ix_leave_request_days_company_id_employment_id` CREATE INDEX ix_leave_request_days_company_id_employment_id ON hrm.leave_request_days USING btree (company_id, employment_id)
 - `ix_leave_request_days_company_id_leave_request_id` CREATE INDEX ix_leave_request_days_company_id_leave_request_id ON hrm.leave_request_days USING btree (company_id, leave_request_id)
 - `ix_leave_request_days_employment_id_leave_date` CREATE INDEX ix_leave_request_days_employment_id_leave_date ON hrm.leave_request_days USING btree (employment_id, leave_date)
+- `ix_leave_request_days_leave_date_company_id_request_status` CREATE INDEX ix_leave_request_days_leave_date_company_id_request_status ON hrm.leave_request_days USING btree (leave_date, company_id, request_status)
+
+Triggers:
+
+- `tg_leave_request_days_daily_total` CREATE TRIGGER tg_leave_request_days_daily_total BEFORE INSERT OR UPDATE ON hrm.leave_request_days FOR EACH ROW EXECUTE FUNCTION hrm.tg_leave_request_days_daily_total()
 
 ### hrm.leave_requests
 
@@ -4868,6 +4884,7 @@ Indexes:
 - `ix_roster_lines_company_id_roster_id` CREATE INDEX ix_roster_lines_company_id_roster_id ON hrm.roster_lines USING btree (company_id, roster_id)
 - `ix_roster_lines_company_id_shift_id` CREATE INDEX ix_roster_lines_company_id_shift_id ON hrm.roster_lines USING btree (company_id, shift_id)
 - `ix_roster_lines_employment_id_work_date` CREATE INDEX ix_roster_lines_employment_id_work_date ON hrm.roster_lines USING btree (employment_id, work_date)
+- `ix_roster_lines_work_date_company_id` CREATE INDEX ix_roster_lines_work_date_company_id ON hrm.roster_lines USING btree (work_date, company_id)
 - `uq_roster_lines_employment_id_work_date` CREATE UNIQUE INDEX uq_roster_lines_employment_id_work_date ON hrm.roster_lines USING btree (employment_id, work_date) WHERE (roster_status = 'published'::text)
 
 Triggers:
@@ -7822,6 +7839,7 @@ Constraints:
 - `cfg.tg_refuse_change` 
 - `doc.tg_refuse_change` 
 - `hrm.drop_expired_attendance_partitions` 
+- `hrm.tg_attendance_days_versions` 
 - `hrm.tg_compensation_fixed` 
 - `hrm.tg_compensation_lines_insert` 
 - `hrm.tg_employee_bank_accounts_bank_fields_required` 
@@ -7832,6 +7850,8 @@ Constraints:
 - `hrm.tg_grades_value_checks` 
 - `hrm.tg_headcount_budgets_value_checks` 
 - `hrm.tg_leave_ledger_reversal` 
+- `hrm.tg_leave_ledger_transfer` 
+- `hrm.tg_leave_request_days_daily_total` 
 - `hrm.tg_leave_types_rules` 
 - `hrm.tg_pay_component_versions_bases` 
 - `hrm.tg_pay_groups_rules` 
@@ -7847,8 +7867,6 @@ Constraints:
 - `hrm.todo_final_settlements_approval_needs_clearance` Pending rule for hrm.final_settlements, owned by S1.43: status may become approved only when clearance_status in (cleared, waived) (FR-XM-29)
 - `hrm.todo_final_settlements_lock` Pending rule for hrm.final_settlements, owned by S1.43: Header and lines locked by trigger from approved onward; correction by cancel and reissue (FR-XM-05).
 - `hrm.todo_goals_parent_cycle` Pending rule for hrm.goals, owned by S1.49: Cycle check trigger on parent_goal_id.
-- `hrm.todo_leave_ledger_transfer` Pending rule for hrm.leave_ledger, owned by S1.32: Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30).
-- `hrm.todo_leave_request_days_daily_total` Pending rule for hrm.leave_request_days, owned by S1.32: trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave)
 - `hrm.todo_loan_installments_freeze` Pending rule for hrm.loan_installments, owned by S1.41: Frozen by trigger once status = deducted.
 - `hrm.todo_loan_transactions_recovery_within_balance` Pending rule for hrm.loan_transactions, owned by S1.41: trigger: a recovery cannot exceed the outstanding balance
 - `hrm.todo_nominations_shares_sum_to_one` Pending rule for hrm.nominations, owned by S1.20: deferred: shares per (person_id, scheme) on any date sum to 1

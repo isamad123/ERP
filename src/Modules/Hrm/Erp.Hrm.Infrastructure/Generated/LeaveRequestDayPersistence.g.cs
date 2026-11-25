@@ -24,6 +24,7 @@ internal sealed class LeaveRequestDayConfiguration : IEntityTypeConfiguration<gl
         builder.Property(e => e.Quantity).HasColumnName("quantity").HasColumnType("numeric(19,6)");
         builder.Property(e => e.IsPaid).HasColumnName("is_paid").HasColumnType("boolean");
         builder.Property(e => e.RequestStatus).HasColumnName("request_status").HasColumnType("text").IsRequired();
+        builder.Property(e => e.DayKind).HasColumnName("day_kind").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");
@@ -61,7 +62,7 @@ internal sealed class LeaveRequestDayRepository(
     }
 
     /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
-    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.LeaveRequestDay> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.LeaveRequestDay>().Key("leaveDate", e => e.LeaveDate);
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.LeaveRequestDay> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.LeaveRequestDay>().Key("leaveDate", e => e.LeaveDate).Key("requestStatus", e => e.RequestStatus);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.LeaveRequestDay>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
         await PageAsync((await QueryAsync(cancellationToken).ConfigureAwait(false)).Where(e => e.CompanyId == companyId), page, cancellationToken).ConfigureAwait(false);

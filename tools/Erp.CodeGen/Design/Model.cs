@@ -107,9 +107,11 @@ public sealed class Column
 /// <see cref="ReplacedIn"/> and <see cref="BaseWhere"/> (design key <c>uniques_replaced_in</c>, S1.09b): the frozen file
 /// created the partial key with <see cref="BaseWhere"/>; the slice's design migration recreates it with <see cref="Where"/>.
 /// </remarks>
-public sealed record UniqueKey(string Name, IReadOnlyList<string> Items, string? Where, bool NullsNotDistinct, string? AddedIn = null, string? BaseWhere = null, string? ReplacedIn = null)
+/// <see cref="BasePlain"/> (S1.29a, CR-089): the frozen file created the key as a plain constraint; the slice's design migration drops
+/// the constraint and creates the partial unique index.
+public sealed record UniqueKey(string Name, IReadOnlyList<string> Items, string? Where, bool NullsNotDistinct, string? AddedIn = null, string? BaseWhere = null, string? ReplacedIn = null, bool BasePlain = false)
 {
-    public bool IsPlain => Where is null && BaseWhere is null && Items.All(Naming.IsIdentifier);
+    public bool IsPlain => Where is null && BaseWhere is null && !BasePlain && Items.All(Naming.IsIdentifier);
 }
 
 /// <summary>An index. <see cref="AddedIn"/>: slice whose design migration creates it (design key <c>indexes_added_in</c>, S1.07).</summary>
@@ -122,7 +124,7 @@ public sealed record ExclusionDef(string Name, IReadOnlyList<string> Elements, s
 /// <see cref="ReplacedIn"/> and <see cref="BaseSql"/> (design key <c>enum_added_in</c>, S1.08): the frozen file created the
 /// check as <see cref="BaseSql"/>; the slice's design migration replaces it with <see cref="Sql"/>.
 /// </remarks>
-public sealed record CheckDef(string Name, string Sql, string? AddedIn = null, string? BaseSql = null, string? ReplacedIn = null);
+public sealed record CheckDef(string Name, string Sql, string? AddedIn = null, string? BaseSql = null, string? ReplacedIn = null, IReadOnlyList<(string Slice, string Sql)>? Steps = null);
 
 /// <remarks>
 /// <see cref="ReplacedIn"/>, <see cref="BaseColumns"/> and <see cref="BaseTargetColumns"/> (design key <c>fks_replaced_in</c>,
@@ -241,7 +243,7 @@ public sealed class Table
     public IEnumerable<string> ChangedIn =>
         new[] { AddedIn }.Concat(Columns.Select(c => c.AddedIn)).Concat(UpdatableAddedIn.Select(u => u.Slice)).Concat(CommentsAddedIn.Select(c => c.Slice))
             .Concat(Indexes.Select(i => i.AddedIn)).Concat(Checks.Select(c => c.AddedIn))
-            .Concat(Columns.Select(c => c.OptionalIn)).Concat(Checks.Select(c => c.ReplacedIn)).Concat(Uniques.Select(u => u.AddedIn)).Concat(Uniques.Select(u => u.ReplacedIn))
+            .Concat(Columns.Select(c => c.OptionalIn)).Concat(Checks.Select(c => c.ReplacedIn)).Concat(Checks.SelectMany(c => (c.Steps ?? []).Select(x => (string?)x.Slice))).Concat(Uniques.Select(u => u.AddedIn)).Concat(Uniques.Select(u => u.ReplacedIn))
             .Concat(ForeignKeys.Select(f => f.ReplacedIn))
             .Where(s => s is not null).Select(s => s!).Distinct(StringComparer.Ordinal);
 

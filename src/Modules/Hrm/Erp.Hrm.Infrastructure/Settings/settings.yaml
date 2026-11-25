@@ -225,6 +225,28 @@ settings:
     name: {en: "Leave year starts in month", ur: "رخصت کا سال اس مہینے سے شروع"}
     description: {en: "The month (1 = January to 12 = December) in which the leave year starts", ur: "وہ مہینہ (1 = جنوری سے 12 = دسمبر) جس سے رخصت کا سال شروع ہوتا ہے"}
     help: {en: "Leave balances are counted per leave year. A yearly grant is given at the start of the leave year (or on joining), and the year-end carries forward, lapses or pays out what is left. A leave policy can give one leave type a different start month. Choose it before the first leave is granted: once a company has leave entries the month can no longer change, because past balances would move to other years.", ur: "رخصت کا بقایا ہر رخصتی سال کے حساب سے گنا جاتا ہے۔ سالانہ عطا رخصتی سال کے آغاز پر (یا شمولیت پر) دی جاتی ہے، اور سال کے اختتام پر بچی ہوئی رخصت آگے منتقل، ختم یا ادا کی جاتی ہے۔ رخصت کی پالیسی کسی ایک قسم کے لیے آغاز کا دوسرا مہینہ مقرر کر سکتی ہے۔ پہلی رخصت عطا ہونے سے پہلے اسے منتخب کریں: کمپنی میں رخصت کے اندراجات ہونے کے بعد مہینہ نہیں بدلا جا سکتا، کیونکہ پچھلا بقایا دوسرے سالوں میں چلا جائے گا۔"}
+  # S1.32b (CR-086 S1.32b detail; slice S1.32 ruling Q4): the hours of a working day for hourly leave when no shift names the day; 0 (the default)
+  # means none is set, and hourly leave is then possible only on days a shift plans. No number is filled in for you.
+  - key: hrm.leave.hours_per_day
+    type: decimal
+    default: 0
+    validation: {min: 0, max: 24}
+    layers: [tenant, company]
+    area: hr.leave
+    name: {en: "Hours of a working day (hourly leave)", ur: "کام کے دن کے گھنٹے (گھنٹہ وار رخصت)"}
+    description: {en: "How many hours of work a day has for hourly leave on a day no shift plans; 0 means not set", ur: "جس دن کوئی شفٹ مقرر نہ ہو اس دن گھنٹہ وار رخصت کے لیے کام کے کتنے گھنٹے ہیں؛ 0 کا مطلب ہے مقرر نہیں"}
+    help: {en: "Hourly leave takes at most the hours of work of its day. They come from the employee's shift on that day; this number is used only when no shift names the day. Until you set it, hourly leave is possible only on days a shift plans.", ur: "گھنٹہ وار رخصت اپنے دن کے کام کے گھنٹوں سے زیادہ نہیں ہو سکتی۔ یہ گھنٹے اس دن ملازم کی شفٹ سے آتے ہیں؛ یہ عدد صرف تب استعمال ہوتا ہے جب کوئی شفٹ اس دن کو مقرر نہ کرے۔ جب تک آپ اسے مقرر نہ کریں، گھنٹہ وار رخصت صرف انہی دنوں ممکن ہے جو کسی شفٹ میں مقرر ہوں۔"}
+  # S1.32b (CR-086 S1.32b detail; slice S1.32 Build item 12, FR-HRM-LVE-11): confirming a leave year-end waits for a second person (maker-checker).
+  # Changing the setting waits for a second person too, so nobody can switch it off and then confirm alone (FR-XM-32).
+  - key: hrm.leave.year_end_requires_approval
+    type: bool
+    default: true
+    layers: [tenant, company]
+    requires_approval: true
+    area: hr.leave
+    name: {en: "Approval of the leave year-end", ur: "رخصت کے سال کے اختتام کی منظوری"}
+    description: {en: "Confirming the leave year-end needs a second person's approval", ur: "رخصت کے سال کے اختتام کی تصدیق کے لیے دوسرے شخص کی منظوری درکار"}
+    help: {en: "The carry-forward, payout and lapse of a leave year are posted only after another person with the approval permission approves the confirmation. The person who confirmed can never approve it. Until then the preview can still be rolled back.", ur: "رخصت کے سال کی آگے منتقلی، ادائیگی اور اختتام اسی وقت درج ہوتے ہیں جب منظوری کی اجازت والا کوئی دوسرا شخص تصدیق منظور کرے۔ تصدیق کرنے والا اسے کبھی منظور نہیں کر سکتا۔ تب تک پیش نظارہ واپس لیا جا سکتا ہے۔"}
   # S1.28b (CR-085 S1.28b detail; FR-HRM-ATT-15). Urdu texts to be reviewed by a native speaker (R-062).
   - key: hrm.att.hijri_offset_days
     type: int
@@ -253,3 +275,12 @@ settings:
     name: {en: "Optional holiday choice closes (days before)", ur: "اختیاری چھٹی کا انتخاب بند (دن پہلے)"}
     description: {en: "A choice can be made or changed until this many days before the holiday", ur: "انتخاب چھٹی سے اتنے دن پہلے تک کیا یا بدلا جا سکتا ہے"}
     help: {en: "With 0 a choice can be changed up to the day of the holiday itself. With 7 it closes seven days before. The rule applies to each holiday on its own.", ur: "0 ہو تو انتخاب چھٹی کے دن تک بدلا جا سکتا ہے۔ 7 ہو تو چھٹی سے سات دن پہلے بند ہو جاتا ہے۔ قاعدہ ہر چھٹی پر الگ لاگو ہوتا ہے۔"}
+  - key: hrm.att.dashboard_refresh_seconds
+    type: int
+    default: 60
+    validation: {min: 15, max: 3600}
+    layers: [tenant]
+    area: hr.attendance
+    name: {en: "Attendance dashboard refresh (seconds)", ur: "حاضری ڈیش بورڈ کی تازگی (سیکنڈ)"}
+    description: {en: "How often the live attendance dashboard asks the server for new counts while it is open", ur: "حاضری کا لائیو ڈیش بورڈ کھلا ہونے پر سرور سے نئی گنتی کتنی بار مانگے"}
+    help: {en: "The dashboard polls the server on this interval; nothing is pushed. A shorter interval shows punches sooner and asks the server more often. The person can also refresh at once.", ur: "ڈیش بورڈ اس وقفے سے سرور سے پوچھتا ہے؛ کچھ بھیجا نہیں جاتا۔ کم وقفے سے اندراجات جلد نظر آتے ہیں اور سرور سے زیادہ بار پوچھنا پڑتا ہے۔ شخص فوراً بھی تازہ کر سکتا ہے۔"}

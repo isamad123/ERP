@@ -481,11 +481,93 @@ tables:
     notes:
       - text: "Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30)."
         stub: { name: leave_ledger_transfer, owner: S1.32 }
+        # S1.32b (CR-086 S1.32b detail; slice S1.32 Build item 14, CR-095): the leave transfer of a transfer between companies posts the pair.
+        # A transfer entry names its transfer (source id); a transfer_in follows the transfer_out of the same source, of the opposite quantity,
+        # on another employment of the same person. The HR leave transfer service posts both in one transaction; the trigger stops any other path.
+        implemented:
+          slice: S1.32b
+          triggers:
+            - [hrm.leave_ledger, tg_leave_ledger_transfer]
+          sql: |
+            create or replace function hrm.tg_leave_ledger_transfer() returns trigger
+            language plpgsql as $fn$
+            begin
+                if new.kind not in ('transfer_in', 'transfer_out') or new.reverses_entry_id is not null then
+                    return new;
+                end if;
+                if new.source_id is null or new.source_type is null then
+                    raise exception 'leave ledger: a transfer entry names its transfer'
+                        using errcode = '23514', constraint = 'ck_leave_ledger_transfer';
+                end if;
+                if new.kind = 'transfer_in' and not exists (
+                       select 1 from hrm.leave_ledger o
+                       join hrm.employments eo on eo.id = o.employment_id
+                       join hrm.employments en on en.id = new.employment_id
+                       where o.source_type = new.source_type and o.source_id = new.source_id and o.kind = 'transfer_out'
+                         and o.quantity = -new.quantity and o.employment_id <> new.employment_id and eo.person_id = en.person_id) then
+                    raise exception 'leave ledger: transfer_in % has no transfer_out of the same transfer and quantity on another employment of the person', new.id
+                        using errcode = '23514', constraint = 'ck_leave_ledger_transfer';
+                end if;
+                return new;
+            end
+            $fn$;
+            drop trigger if exists tg_leave_ledger_transfer on hrm.leave_ledger;
+            create trigger tg_leave_ledger_transfer before insert on hrm.leave_ledger
+                for each row execute function hrm.tg_leave_ledger_transfer();
 
   hrm.leave_request_days:
     checks:
       - text: "trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave)"
         stub: { name: leave_request_days_daily_total, owner: S1.32 }
+        # S1.32b (CR-086 S1.32b detail; slice S1.32 Build item 7): the days of requests that are waiting, approved or waiting for their cancellation
+        # never add up to more than one day per employment and date (types counted in days or half days), nor to more than 24 hours of hourly leave,
+        # nor hourly leave on a day already wholly on leave. The days of a request and of the request it changes (modifies_request_id) are not added
+        # together: one replaces the other when it is approved. The service checks the shift's own hours first and gives a clear message; the
+        # trigger stops any other path, one writer of an employment's leave days at a time.
+        implemented:
+          slice: S1.32b
+          triggers:
+            - [hrm.leave_request_days, tg_leave_request_days_daily_total]
+          sql: |
+            create or replace function hrm.tg_leave_request_days_daily_total() returns trigger
+            language plpgsql as $fn$
+            declare
+                v_days numeric(19,6);
+                v_hours numeric(19,6);
+                v_modifies uuid;
+                v_in_hours boolean;
+            begin
+                if new.request_status not in ('submitted', 'approved', 'cancel_requested') then
+                    return new;
+                end if;
+                perform pg_advisory_xact_lock(hashtextextended('hrm.leave_days:' || new.employment_id::text, 0));
+                select r.modifies_request_id, t.counting = 'hours' into v_modifies, v_in_hours
+                  from hrm.leave_requests r join hrm.leave_types t on t.id = r.leave_type_id where r.id = new.leave_request_id;
+                select coalesce(sum(d.quantity) filter (where t.counting <> 'hours'), 0), coalesce(sum(d.quantity) filter (where t.counting = 'hours'), 0)
+                  into v_days, v_hours
+                  from hrm.leave_request_days d
+                  join hrm.leave_requests r on r.id = d.leave_request_id
+                  join hrm.leave_types t on t.id = r.leave_type_id
+                 where d.employment_id = new.employment_id and d.leave_date = new.leave_date and d.id <> new.id
+                   and d.request_status in ('submitted', 'approved', 'cancel_requested')
+                   and d.leave_request_id <> new.leave_request_id
+                   and (v_modifies is null or d.leave_request_id <> v_modifies)
+                   and r.modifies_request_id is distinct from new.leave_request_id;
+                if coalesce(v_in_hours, false) then
+                    v_hours := v_hours + new.quantity;
+                else
+                    v_days := v_days + new.quantity;
+                end if;
+                if v_days > 1 or v_hours > 24 or (v_days >= 1 and v_hours > 0) then
+                    raise exception 'leave: % is already on leave for employment % (days %, hours %)', new.leave_date, new.employment_id, v_days, v_hours
+                        using errcode = '23514', constraint = 'ck_leave_request_days_daily_total';
+                end if;
+                return new;
+            end
+            $fn$;
+            drop trigger if exists tg_leave_request_days_daily_total on hrm.leave_request_days;
+            create trigger tg_leave_request_days_daily_total before insert or update on hrm.leave_request_days
+                for each row execute function hrm.tg_leave_request_days_daily_total();
 
   iam.sessions:
     notes:
@@ -1833,3 +1915,153 @@ functions:
       drop trigger if exists tg_leave_ledger_reversal on hrm.leave_ledger;
       create trigger tg_leave_ledger_reversal before insert on hrm.leave_ledger
           for each row execute function hrm.tg_leave_ledger_reversal();
+
+  # S1.29a (CR-089 S1.29a detail; slice S1.29 Build item 6, FR-HRM-ATT-10, FR-XM-05): a processed day is never edited in place. A row is only
+  # added; the one change allowed is to mark the current row as replaced (superseded_at from null to a time, once), done in the transaction that
+  # adds the newer row; no row is deleted. The lock of a payroll period (S1.31, stub attendance_days_lock) is a separate trigger.
+  - slice: S1.29a
+    name: hrm.tg_attendance_days_versions
+    purpose: "An attendance day result is never changed or deleted; the only update marks the current row as replaced by a newer one (superseded_at set once, nothing else changes); refused with constraint ck_attendance_days_versions."
+    triggers:
+      - [hrm.attendance_days, tg_attendance_days_versions]
+    sql: |
+      create or replace function hrm.tg_attendance_days_versions() returns trigger
+      language plpgsql as $fn$
+      begin
+          if tg_op = 'DELETE' then
+              raise exception 'attendance day %: a result is never deleted; a newer result replaces it', old.id
+                  using errcode = '23514', constraint = 'ck_attendance_days_versions';
+          end if;
+          if old.superseded_at is not null
+             or new.superseded_at is null
+             or (to_jsonb(new) - array['superseded_at', 'updated_at', 'updated_by', 'row_version'])
+                <> (to_jsonb(old) - array['superseded_at', 'updated_at', 'updated_by', 'row_version']) then
+              raise exception 'attendance day %: a result is never changed; only the current result is marked as replaced', old.id
+                  using errcode = '23514', constraint = 'ck_attendance_days_versions';
+          end if;
+          return new;
+      end
+      $fn$;
+      drop trigger if exists tg_attendance_days_versions on hrm.attendance_days;
+      create trigger tg_attendance_days_versions before update or delete on hrm.attendance_days
+          for each row execute function hrm.tg_attendance_days_versions();
+
+  # S1.30b (CR-090 S1.30b detail a; slice S1.30 Build item 6, FR-HRM-ATT-19, FR-HRM-RPT-05): read-only reporting views of the attendance module, in the HR schema
+  # (CR-113: a view that joined module schemas would break D-10). Expand-only: a column is added, never removed. Every view runs with the rights of the reader
+  # (security_invoker); the data scope is applied by the report service. No view has a pay or salary column (FR-HRM-GHR-06; a test reads the catalogue).
+  - slice: S1.30b
+    name: hrm.rpt_att_muster
+    purpose: "The daily muster (FR-HRM-ATT-19, RPT-05): the current result of every employee and day with the unit, branch and location of that day. No pay or salary column (FR-HRM-GHR-06). Read-only; data scope is applied by the report service."
+    sql: |
+      create or replace view hrm.rpt_att_muster with (security_invoker = true) as
+      select d.id as day_id, d.company_id, d.employment_id, e.employee_no, p.first_name, p.last_name,
+             a.org_unit_id, a.branch_id, a.location_id,
+             d.work_date, d.shift_id, d.day_type, d.result, d.first_in, d.last_out,
+             d.worked_minutes, d.late_minutes, d.early_minutes, d.overtime_minutes
+      from hrm.attendance_days d
+      join hrm.employments e on e.id = d.employment_id
+      join hrm.persons p on p.id = e.person_id
+      left join hrm.employment_assignments a
+             on a.employment_id = d.employment_id and a.valid_from <= d.work_date and (a.valid_to is null or a.valid_to > d.work_date)
+      where d.superseded_at is null;
+      grant select on hrm.rpt_att_muster to app_rw, app_ro, backup;
+
+  - slice: S1.30b
+    name: hrm.rpt_att_muster_monthly
+    purpose: "The monthly muster: per employee and month, the days by result and the minutes (FR-HRM-ATT-19, RPT-05). No pay or salary column."
+    sql: |
+      create or replace view hrm.rpt_att_muster_monthly with (security_invoker = true) as
+      select m.company_id, m.employment_id, m.employee_no, m.first_name, m.last_name,
+             (array_agg(m.org_unit_id order by m.work_date desc))[1] as org_unit_id,
+             (array_agg(m.branch_id order by m.work_date desc))[1] as branch_id,
+             (array_agg(m.location_id order by m.work_date desc))[1] as location_id,
+             date_trunc('month', m.work_date)::date as month,
+             count(*) filter (where m.result = 'present') as present_days,
+             count(*) filter (where m.result = 'absent') as absent_days,
+             count(*) filter (where m.result = 'late') as late_days,
+             count(*) filter (where m.result = 'half_day') as half_days,
+             count(*) filter (where m.result = 'on_leave') as leave_days,
+             count(*) filter (where m.result = 'holiday') as holiday_days,
+             count(*) filter (where m.result = 'weekly_off') as weekly_off_days,
+             count(*) filter (where m.result = 'on_duty') as duty_days,
+             count(*) filter (where m.result = 'incomplete') as incomplete_days,
+             sum(m.worked_minutes)::bigint as worked_minutes,
+             sum(m.late_minutes)::bigint as late_minutes,
+             sum(m.early_minutes)::bigint as early_minutes,
+             sum(m.overtime_minutes)::bigint as overtime_minutes
+      from hrm.rpt_att_muster m
+      group by m.company_id, m.employment_id, m.employee_no, m.first_name, m.last_name, date_trunc('month', m.work_date)::date;
+      grant select on hrm.rpt_att_muster_monthly to app_rw, app_ro, backup;
+
+  - slice: S1.30b
+    name: hrm.rpt_att_absenteeism
+    purpose: "Absenteeism per employee and month: the days that were to be worked, the days absent and half days, and the absence rate (FR-HRM-ATT-19). No pay or salary column."
+    sql: |
+      create or replace view hrm.rpt_att_absenteeism with (security_invoker = true) as
+      select m.company_id, m.employment_id, m.employee_no, m.first_name, m.last_name,
+             (array_agg(m.org_unit_id order by m.work_date desc))[1] as org_unit_id,
+             (array_agg(m.branch_id order by m.work_date desc))[1] as branch_id,
+             (array_agg(m.location_id order by m.work_date desc))[1] as location_id,
+             date_trunc('month', m.work_date)::date as month,
+             count(*) filter (where m.day_type = 'working') as scheduled_days,
+             count(*) filter (where m.result = 'absent') as absent_days,
+             count(*) filter (where m.result = 'half_day') as half_days,
+             count(*) filter (where m.result = 'late') as late_days,
+             round(100.0 * count(*) filter (where m.result = 'absent') / nullif(count(*) filter (where m.day_type = 'working'), 0), 2) as absence_percent
+      from hrm.rpt_att_muster m
+      group by m.company_id, m.employment_id, m.employee_no, m.first_name, m.last_name, date_trunc('month', m.work_date)::date;
+      grant select on hrm.rpt_att_absenteeism to app_rw, app_ro, backup;
+
+  - slice: S1.30b
+    name: hrm.rpt_att_late_early
+    purpose: "Late and early days: the days with minutes late or early (FR-HRM-ATT-19). Penalties and waivers are S1.29b's. No pay or salary column."
+    sql: |
+      create or replace view hrm.rpt_att_late_early with (security_invoker = true) as
+      select m.day_id, m.company_id, m.employment_id, m.employee_no, m.first_name, m.last_name, m.org_unit_id, m.branch_id, m.location_id,
+             m.work_date, m.shift_id, m.result, m.first_in, m.last_out, m.late_minutes, m.early_minutes
+      from hrm.rpt_att_muster m
+      where m.late_minutes > 0 or m.early_minutes > 0;
+      grant select on hrm.rpt_att_late_early to app_rw, app_ro, backup;
+
+  - slice: S1.30b
+    name: hrm.rpt_att_punch_log
+    purpose: "The punch log: every punch with its source and device (FR-HRM-ATT-19). The address a punch came from is not shown. No pay or salary column."
+    sql: |
+      create or replace view hrm.rpt_att_punch_log with (security_invoker = true) as
+      select v.id as event_id, v.company_id, v.employment_id, e.employee_no, p.first_name, p.last_name,
+             a.org_unit_id, a.branch_id, a.location_id,
+             v.event_date, v.event_at, v.direction, v.source, v.device_id, dv.serial_no as device_serial_no, v.received_at, v.is_duplicate,
+             v.supersedes_event_id
+      from hrm.attendance_events v
+      join hrm.employments e on e.id = v.employment_id
+      join hrm.persons p on p.id = e.person_id
+      left join hrm.attendance_devices dv on dv.id = v.device_id
+      left join hrm.employment_assignments a
+             on a.employment_id = v.employment_id and a.valid_from <= v.event_date and (a.valid_to is null or a.valid_to > v.event_date);
+      grant select on hrm.rpt_att_punch_log to app_rw, app_ro, backup;
+
+  - slice: S1.30b
+    name: hrm.rpt_att_device_sync
+    purpose: "Device sync: each device with its state, last contact, last sync, last error and the device punches still waiting to be mapped (FR-HRM-ATT-19). No secret and no pay or salary column."
+    sql: |
+      create or replace view hrm.rpt_att_device_sync with (security_invoker = true) as
+      select d.id as device_id, d.company_id, d.location_id, d.serial_no, d.model, d.status, d.last_seen_at, d.last_sync_at, d.last_error, d.sync_cursor_at,
+             (select count(*) from hrm.unmapped_punches u where u.device_id = d.id and u.status = 'open') as open_unmapped_punches
+      from hrm.attendance_devices d
+      where d.deleted_at is null;
+      grant select on hrm.rpt_att_device_sync to app_rw, app_ro, backup;
+
+  - slice: S1.30b
+    name: hrm.rpt_att_exceptions
+    purpose: "Attendance exceptions with the person and place, for the ageing report (FR-HRM-ATT-19); the age is worked out at read time from the company's date. No pay or salary column."
+    sql: |
+      create or replace view hrm.rpt_att_exceptions with (security_invoker = true) as
+      select x.id as exception_id, x.company_id, x.employment_id, e.employee_no, p.first_name, p.last_name,
+             a.org_unit_id, a.branch_id, a.location_id,
+             x.work_date, x.kind, x.status, x.attendance_day_id, x.created_at, x.updated_at
+      from hrm.attendance_exceptions x
+      join hrm.employments e on e.id = x.employment_id
+      join hrm.persons p on p.id = e.person_id
+      left join hrm.employment_assignments a
+             on a.employment_id = x.employment_id and a.valid_from <= x.work_date and (a.valid_to is null or a.valid_to > x.work_date);
+      grant select on hrm.rpt_att_exceptions to app_rw, app_ro, backup;

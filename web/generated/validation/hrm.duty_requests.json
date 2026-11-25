@@ -26,7 +26,8 @@
       "enum": [
         "on_duty",
         "official_visit",
-        "work_from_home"
+        "work_from_home",
+        "field_duty"
       ]
     },
     "startAt": {
@@ -43,6 +44,14 @@
     "workflowInstanceId": {
       "type": "string",
       "format": "uuid",
+      "nullable": true
+    },
+    "fileIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
       "nullable": true
     },
     "status": {

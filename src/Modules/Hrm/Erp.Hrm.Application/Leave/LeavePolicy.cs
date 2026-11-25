@@ -52,7 +52,10 @@ public sealed record EntitlementRule(
 /// The rules of one leave type in a <c>leave</c> policy (FR-HRM-LVE-02 and -03; slice S1.32 Build item 2, ruling Q1). Every value is the
 /// customer's own entry; nothing has a default number (AS-4, R-002, R-145). Carry-forward, encashment, notice, longest leave, eligibility,
 /// sandwich and combining rules are read by the request and year-end engines of S1.32b; S1.32a uses the entitlement, the leave year and the
-/// negative-balance limit.
+/// negative-balance limit. S1.32b adds whether HR approves after the line manager (<see cref="HrApproval"/>, a field of the approval route),
+/// whether cancelling approved leave waits for approval (<see cref="CancellationApproval"/>) and how many days earned compensatory off stays
+/// usable (<see cref="CompOffExpiryDays"/>; none: it does not expire). <see cref="HasCarryForward"/> and <see cref="HasEncashment"/> say whether the
+/// policy sets carry-forward and encashment at all (without a cap they take the whole balance; not set, nothing is carried or paid out).
 /// </summary>
 public sealed record LeaveTypeRules(
     string LeaveType,
@@ -69,7 +72,12 @@ public sealed record LeaveTypeRules(
     int? MinServiceMonths,
     bool? DuringProbation,
     string Sandwich,
-    IReadOnlyList<string> NotCombinedWith)
+    IReadOnlyList<string> NotCombinedWith,
+    bool HrApproval = false,
+    bool CancellationApproval = false,
+    int? CompOffExpiryDays = null,
+    bool HasCarryForward = false,
+    bool HasEncashment = false)
 {
     /// <summary>The balance may fall to minus this many units; zero (no limit given) means it may not go below zero.</summary>
     public decimal NegativeAllowance => NegativeLimit ?? 0m;
@@ -162,7 +170,12 @@ public static class LeavePolicy
                 Int(eligibility, "minServiceMonths"),
                 eligibility.ValueKind == JsonValueKind.Object && eligibility.TryGetProperty("duringProbation", out var dp) && dp.ValueKind is JsonValueKind.True or JsonValueKind.False ? dp.GetBoolean() : null,
                 Text(t, "sandwich") ?? "off",
-                notCombined);
+                notCombined,
+                Bool(t, "hrApproval") ?? false,
+                Bool(t, "cancellationApproval") ?? false,
+                Int(t, "compOffExpiryDays"),
+                carry.ValueKind == JsonValueKind.Object,
+                encash.ValueKind == JsonValueKind.Object);
             if (!rules.TryAdd(code, typeRules))
             {
                 Fail(path + ".leaveType", DuplicateType);
@@ -284,6 +297,9 @@ public static class LeavePolicy
 
     private static string? Text(JsonElement e, string name) =>
         e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
+    private static bool? Bool(JsonElement e, string name) =>
+        e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False ? v.GetBoolean() : null;
 
     private static int? Int(JsonElement e, string name) =>
         e.ValueKind == JsonValueKind.Object && e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var n) ? n : null;

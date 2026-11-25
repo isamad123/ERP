@@ -7730,6 +7730,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "superseded_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -7832,7 +7842,9 @@
         "ix_attendance_days_policy_version_id",
         "ix_attendance_days_company_id_period_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_attendance_days_versions"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.attendance_days"
@@ -8234,7 +8246,8 @@
             "kiosk",
             "hr_entry",
             "import",
-            "qr"
+            "qr",
+            "regularization"
           ]
         },
         {
@@ -8364,6 +8377,7 @@
       ],
       "indexes": [
         "ix_attendance_events_employment_id_event_date",
+        "ix_attendance_events_company_id_event_date_employment_id",
         "ix_attendance_events_company_id_employment_id",
         "ix_attendance_events_company_id_device_id"
       ],
@@ -8446,7 +8460,9 @@
             "late",
             "early",
             "absent",
-            "unscheduled"
+            "unscheduled",
+            "odd_count",
+            "outside_tolerance"
           ]
         },
         {
@@ -12514,7 +12530,8 @@
           "enum_values": [
             "on_duty",
             "official_visit",
-            "work_from_home"
+            "work_from_home",
+            "field_duty"
           ]
         },
         {
@@ -12621,6 +12638,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "file_ids",
+          "kind": "UuidArray",
+          "type": "uuid[]",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -12668,6 +12695,7 @@
         }
       ],
       "indexes": [
+        "ix_duty_requests_status_start_at_end_at",
         "ix_duty_requests_company_id_employment_id",
         "ix_duty_requests_company_id_workflow_instance_id"
       ],
@@ -18494,6 +18522,7 @@
       "triggers": [
         "tg_leave_ledger_append_only",
         "tg_leave_ledger_no_truncate",
+        "tg_leave_ledger_transfer",
         "tg_leave_ledger_reversal"
       ],
       "append_only_updatable": [],
@@ -18647,12 +18676,27 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "day_kind",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "leave",
+            "sandwich"
+          ]
         }
       ],
       "uniques": [
         "uq_leave_request_days_leave_request_id_leave_date"
       ],
-      "checks": [],
+      "checks": [
+        "ck_leave_request_days_day_kind"
+      ],
       "exclusions": [],
       "foreign_keys": [
         {
@@ -18692,11 +18736,14 @@
       ],
       "indexes": [
         "ix_leave_request_days_employment_id_leave_date",
+        "ix_leave_request_days_leave_date_company_id_request_status",
         "ix_leave_request_days_company_id",
         "ix_leave_request_days_company_id_leave_request_id",
         "ix_leave_request_days_company_id_employment_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_leave_request_days_daily_total"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.leave_request_days"
@@ -30420,6 +30467,7 @@
       ],
       "indexes": [
         "ix_roster_lines_employment_id_work_date",
+        "ix_roster_lines_work_date_company_id",
         "ix_roster_lines_company_id",
         "ix_roster_lines_company_id_roster_id",
         "ix_roster_lines_company_id_employment_id",
@@ -46647,20 +46695,6 @@
       "table": "hrm.goals",
       "owner": "S1.49",
       "rule": "Cycle check trigger on parent_goal_id."
-    },
-    {
-      "schema": "hrm",
-      "function": "todo_leave_ledger_transfer",
-      "table": "hrm.leave_ledger",
-      "owner": "S1.32",
-      "rule": "Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30)."
-    },
-    {
-      "schema": "hrm",
-      "function": "todo_leave_request_days_daily_total",
-      "table": "hrm.leave_request_days",
-      "owner": "S1.32",
-      "rule": "trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave)"
     },
     {
       "schema": "hrm",

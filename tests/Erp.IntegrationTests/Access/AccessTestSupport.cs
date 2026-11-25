@@ -38,30 +38,47 @@ public sealed class AccessHarness
 
     public TestClock Clock { get; }
 
+    /// <summary>The folder of the file store of this customer's host (S1.30b: proof files and exports are written there; a worker over the customer uses the same folder).</summary>
+    public string FilesRoot { get; private init; } = string.Empty;
+
     /// <summary>The customer these tests own.</summary>
     public string Code { get; }
 
     public TenancyFixture Fixture => _fx;
 
     public static Task<AccessHarness> ForAsync(TenancyFixture fx) =>
-        Instances.GetOrAdd(fx, f => new Lazy<Task<AccessHarness>>(() => StartAsync(f))).Value;
+        Instances.GetOrAdd(fx, f => new Lazy<Task<AccessHarness>>(() => StartAsync(f, "s"))).Value;
 
-    private static async Task<AccessHarness> StartAsync(TenancyFixture fx)
+    private static readonly ConcurrentDictionary<TenancyFixture, Lazy<Task<AccessHarness>>> LoadInstances = new();
+
+    /// <summary>
+    /// A customer of its own for tests that write thousands of rows (S1.30b's 10,000 employees): the rows never touch the customer the other access tests share.
+    /// </summary>
+    public static Task<AccessHarness> ForLoadAsync(TenancyFixture fx) =>
+        LoadInstances.GetOrAdd(fx, f => new Lazy<Task<AccessHarness>>(() => StartAsync(f, "pf"))).Value;
+
+    private static async Task<AccessHarness> StartAsync(TenancyFixture fx, string prefix)
     {
         var clock = new TestClock();
-        var code = "s" + fx.Suffix;
+        var code = prefix + fx.Suffix;
+        var filesRoot = Path.Combine(Path.GetTempPath(), "erp-access-" + Guid.NewGuid().ToString("N"));
         await fx.ProvisionAsync(code, CancellationToken.None);
         var app = await fx.StartAppAsync(null, CancellationToken.None, services =>
         {
             services.RemoveAll<IClock>();
             services.AddSingleton<IClock>(clock);
+            // S1.30b (R-161): the proof files of requests are uploaded through the real attachment API: a folder of its own for the files and a scanner that says clean.
+            services.RemoveAll<Erp.Kernel.Infrastructure.Documents.IFileStore>();
+            services.AddSingleton<Erp.Kernel.Infrastructure.Documents.IFileStore>(new Erp.Kernel.Infrastructure.Documents.LocalFolderFileStore(filesRoot));
+            services.RemoveAll<Erp.Kernel.Infrastructure.Documents.IVirusScanner>();
+            services.AddSingleton<Erp.Kernel.Infrastructure.Documents.IVirusScanner>(new Documents.FakeScanner());
             // S1.23a (Build item 1): the policy framework's test types, registered as a module would (tests only).
             services.AddSingleton(new Erp.Hrm.Contracts.Policies.PolicyTypeSource(Policies.PolicyTestSupport.TestTypes));
             // S1.22b: the chart's PDF export prints with Chromium, which needs --no-sandbox when the runner is root (as the template tests do).
             services.RemoveAll<Erp.Kernel.Infrastructure.Documents.Templates.PdfRendererOptions>();
             services.AddSingleton(new Erp.Kernel.Infrastructure.Documents.Templates.PdfRendererOptions(null, NoSandbox: true, TimeoutSeconds: 90, Parallel: 2));
         }, realAccess: true);
-        return new AccessHarness(fx, app, clock, code);
+        return new AccessHarness(fx, app, clock, code) { FilesRoot = filesRoot };
     }
 
     /// <summary>Another customer provisioned for one test (the last-tenant-admin rule needs a known set of admins).</summary>

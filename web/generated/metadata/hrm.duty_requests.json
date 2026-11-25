@@ -11,14 +11,6 @@
     {
       "action": "read",
       "permission": "hrm.duty_requests.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.duty_requests.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.duty_requests.update"
     }
   ],
   "companyScoped": true,
@@ -102,6 +94,10 @@
         {
           "value": "work_from_home",
           "labelKey": "options.hrm.duty_requests.kind.work_from_home"
+        },
+        {
+          "value": "field_duty",
+          "labelKey": "options.hrm.duty_requests.kind.field_duty"
         }
       ]
     },
@@ -113,7 +109,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.duty_requests.start_at"
+      "labelKey": "fields.hrm.duty_requests.start_at",
+      "sortable": true
     },
     {
       "column": "end_at",
@@ -123,7 +120,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.duty_requests.end_at"
+      "labelKey": "fields.hrm.duty_requests.end_at",
+      "sortable": true
     },
     {
       "column": "purpose",
@@ -145,6 +143,16 @@
       "filter": true,
       "labelKey": "fields.hrm.duty_requests.workflow_instance_id",
       "references": "wf.workflow_instances"
+    },
+    {
+      "column": "file_ids",
+      "field": "fileIds",
+      "kind": "UuidArray",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.duty_requests.file_ids"
     },
     {
       "column": "status",
@@ -172,7 +180,8 @@
           "value": "cancelled",
           "labelKey": "options.hrm.duty_requests.status.cancelled"
         }
-      ]
+      ],
+      "sortable": true
     },
     {
       "column": "created_at",

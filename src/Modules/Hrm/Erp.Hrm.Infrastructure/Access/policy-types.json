@@ -1,5 +1,5 @@
 {
-  "_comment": "Policy types of the HR module (slice S1.23a Build item 1, ruling Q2, D-10). Each type: code, names, a JSON Schema of its parameters (the subset PolicySchema checks: object, array, string, integer, number, boolean; required, properties, additionalProperties false, enum, minimum, maximum, minLength, maxLength, minItems, maxItems, items), the employee attributes its assignment rules may use, whether one policy or several may apply (cardinality one or many) and whether every current employee should match an assignment (required: the activation check warns otherwise). probation and notice_period replace the S1.20 settings (ruling Q3); their values are the customer's choices, never statutory values (AS-4, R-002). Later slices add their types here (leave S1.32, attendance S1.29, shifts S1.28 (registered by S1.28a; seasonal_timing registered by S1.28b: Ramzan and seasonal times by date range or Hijri month, FR-HRM-ATT-16), leave S1.32 (registered by S1.32a: one policy holds the rules of each leave type it covers, CR-086 S1.32a detail), pay S1.34 (bonus definitions, FR-HRM-PAY-08: the type bonus, registered by S1.34b; its tax treatment is a label of the pack, never a rate), loans S1.41, expenses S1.42, performance S1.49). Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "Policy types of the HR module (slice S1.23a Build item 1, ruling Q2, D-10). Each type: code, names, a JSON Schema of its parameters (the subset PolicySchema checks: object, array, string, integer, number, boolean; required, properties, additionalProperties false, enum, minimum, maximum, minLength, maxLength, minItems, maxItems, items), the employee attributes its assignment rules may use, whether one policy or several may apply (cardinality one or many) and whether every current employee should match an assignment (required: the activation check warns otherwise). probation and notice_period replace the S1.20 settings (ruling Q3); their values are the customer's choices, never statutory values (AS-4, R-002). Later slices add their types here (leave S1.32, attendance S1.29, shifts S1.28 (registered by S1.28a; seasonal_timing registered by S1.28b: Ramzan and seasonal times by date range or Hijri month, FR-HRM-ATT-16), attendance S1.29 (registered by S1.29a: grace, half-day and absence thresholds, breaks, rounding, the shift window and rest-day work; no number is filled in, CR-089 S1.29a detail), leave S1.32 (registered by S1.32a: one policy holds the rules of each leave type it covers, CR-086 S1.32a detail), pay S1.34 (bonus definitions, FR-HRM-PAY-08: the type bonus, registered by S1.34b; its tax treatment is a label of the pack, never a rate), loans S1.41, expenses S1.42, performance S1.49). Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "types": [
     {
@@ -288,6 +288,41 @@
       }
     },
     {
+      "code": "attendance",
+      "name": { "en": "Attendance rules", "ur": "حاضری کے اصول" },
+      "description": {
+        "en": "How punches become a day's result for the employees it covers: grace minutes for coming late and leaving early, lateness or early leaving that makes a half day, the minutes worked below which a day is a half day or an absence, how breaks are taken off, how worked minutes are rounded, how far from the shift a punch still belongs to it, and whether work on a weekly off or a holiday is recorded. No number is filled in for you; until a policy applies, days are not processed",
+        "ur": "متعلقہ ملازمین کے اندراجات سے دن کا نتیجہ کیسے بنتا ہے: دیر سے آنے اور جلد جانے کے رعایتی منٹ، کتنی دیر یا کتنا جلد جانا آدھا دن بناتا ہے، کام کے کتنے منٹ سے کم پر دن آدھا یا غیر حاضری ہے، وقفہ کیسے منہا ہوتا ہے، کام کے منٹ کیسے گول ہوتے ہیں، شفٹ سے کتنے فاصلے تک اندراج اسی کا ہے، اور ہفتہ وار چھٹی یا تعطیل پر کام درج ہوتا ہے یا نہیں۔ کوئی عدد خود سے نہیں بھرا جاتا؛ جب تک کوئی پالیسی لاگو نہ ہو، دن پراسیس نہیں ہوتے"
+      },
+      "cardinality": "one",
+      "required": true,
+      "attributes": ["location", "branch", "grade", "employee_type", "unit", "custom"],
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["lateGraceMinutes", "earlyGraceMinutes", "absentBelowMinutes", "breakMode", "roundingMode", "shiftWindowMinutes", "weeklyOffWork", "holidayWork"],
+        "properties": {
+          "lateGraceMinutes": { "type": "integer", "minimum": 0, "maximum": 240, "title": "hrm.policy.param.attendance.late_grace_minutes" },
+          "earlyGraceMinutes": { "type": "integer", "minimum": 0, "maximum": 240, "title": "hrm.policy.param.attendance.early_grace_minutes" },
+          "lateHalfDayAfterMinutes": { "type": "integer", "minimum": 1, "maximum": 1440, "title": "hrm.policy.param.attendance.late_half_day_after_minutes" },
+          "earlyHalfDayAfterMinutes": { "type": "integer", "minimum": 1, "maximum": 1440, "title": "hrm.policy.param.attendance.early_half_day_after_minutes" },
+          "fullDayMinutes": { "type": "integer", "minimum": 1, "maximum": 1440, "title": "hrm.policy.param.attendance.full_day_minutes" },
+          "absentBelowMinutes": { "type": "integer", "minimum": 0, "maximum": 1440, "title": "hrm.policy.param.attendance.absent_below_minutes" },
+          "breakMode": { "type": "string", "enum": ["none", "fixed", "by_punches"], "title": "hrm.policy.param.attendance.break_mode" },
+          "breakMinutes": { "type": "integer", "minimum": 1, "maximum": 720, "title": "hrm.policy.param.attendance.break_minutes" },
+          "roundingMode": { "type": "string", "enum": ["none", "up", "down", "nearest"], "title": "hrm.policy.param.attendance.rounding_mode" },
+          "roundingStepMinutes": { "type": "integer", "minimum": 1, "maximum": 60, "title": "hrm.policy.param.attendance.rounding_step_minutes" },
+          "shiftWindowMinutes": { "type": "integer", "minimum": 0, "maximum": 720, "title": "hrm.policy.param.attendance.shift_window_minutes" },
+          "weeklyOffWork": { "type": "string", "enum": ["record", "ignore"], "title": "hrm.policy.param.attendance.weekly_off_work" },
+          "holidayWork": { "type": "string", "enum": ["record", "ignore"], "title": "hrm.policy.param.attendance.holiday_work" },
+          "onDutyCountsAsPresent": { "type": "boolean", "title": "hrm.policy.param.attendance.on_duty_counts_as_present" },
+          "officialVisitCountsAsPresent": { "type": "boolean", "title": "hrm.policy.param.attendance.official_visit_counts_as_present" },
+          "workFromHomeCountsAsPresent": { "type": "boolean", "title": "hrm.policy.param.attendance.work_from_home_counts_as_present" },
+          "fieldDutyCountsAsPresent": { "type": "boolean", "title": "hrm.policy.param.attendance.field_duty_counts_as_present" }
+        }
+      }
+    },
+    {
       "code": "leave",
       "name": {
         "en": "Leave",
@@ -548,6 +583,20 @@
                     "maxLength": 40
                   },
                   "title": "hrm.policy.param.leave.not_combined_with"
+                },
+                "hrApproval": {
+                  "type": "boolean",
+                  "title": "hrm.policy.param.leave.hr_approval"
+                },
+                "cancellationApproval": {
+                  "type": "boolean",
+                  "title": "hrm.policy.param.leave.cancellation_approval"
+                },
+                "compOffExpiryDays": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 3650,
+                  "title": "hrm.policy.param.leave.comp_off_expiry_days"
                 }
               }
             }

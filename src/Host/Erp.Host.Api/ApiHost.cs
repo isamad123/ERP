@@ -295,6 +295,9 @@ public static class ApiHost
         api.MapHrmHolidayEndpoints(); // S1.28b
         api.MapHrmPayEndpoints(); // S1.34a pay groups, calendar and readiness
         Erp.Hrm.Api.Leave.LeaveEndpoints.MapHrmLeaveEndpoints(api); // S1.32a leave types, ledger, balances and recompute
+        Erp.Hrm.Api.Attendance.AttendanceDayEndpoints.MapHrmAttendanceDayEndpoints(api); // S1.29a attendance engine: process, days, explanation, exception queue
+        Erp.Hrm.Api.Attendance.AttendanceReportEndpoints.MapHrmAttendanceReportEndpoints(api); // S1.30b live dashboard and standard attendance reports
+        Erp.Hrm.Api.Attendance.AttendanceRequestEndpoints.MapHrmAttendanceRequestEndpoints(api); // S1.30a regularization and duty requests
         return app;
     }
 

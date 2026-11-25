@@ -33,26 +33,6 @@ public sealed class OvertimeEntryResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for hrm.overtime_entries. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class OvertimeEntryWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public global::System.Guid? EmploymentId { get; init; }
-    public global::System.DateOnly? WorkDate { get; init; }
-    public string? DayType { get; init; }
-    public int? Minutes { get; init; }
-    public int? ApprovedMinutes { get; init; }
-    public decimal? RateMultiplier { get; init; }
-    public global::System.Guid? PayInputId { get; init; }
-    public global::System.Guid? AttendanceDayId { get; init; }
-    public global::System.Guid? CompOffEntryId { get; init; }
-    public global::System.Guid? WorkflowInstanceId { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for hrm.overtime_entries.</summary>
 public sealed class OvertimeEntryListQuery
 {
@@ -80,7 +60,7 @@ public sealed class OvertimeEntryListQuery
     public string? Sort { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.overtime_entries: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.overtime_entries: read. Answers pass through field security (S1.06).</summary>
 internal static class OvertimeEntryEndpoints
 {
     private const string Resource = "hrm.overtime_entries";
@@ -90,8 +70,6 @@ internal static class OvertimeEntryEndpoints
         var group = app.MapGroup("/api/hrm/overtime-entries").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.overtime_entries.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.overtime_entries.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.overtime_entries.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.overtime_entries.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.overtime_entries.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.overtime_entries.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.overtime_entries.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.overtime_entries.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] OvertimeEntryListQuery query, global::Erp.Hrm.Application.Generated.IOvertimeEntryRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -108,53 +86,6 @@ internal static class OvertimeEntryEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.OvertimeEntryAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(OvertimeEntryWriteRequest request, global::Erp.Hrm.Application.Generated.IOvertimeEntryRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.overtime_entries.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.OvertimeEntryAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.OvertimeEntry();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/overtime-entries/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.OvertimeEntryAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, OvertimeEntryWriteRequest request, global::Erp.Hrm.Application.Generated.IOvertimeEntryRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.overtime_entries.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.OvertimeEntryAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.OvertimeEntryAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static OvertimeEntryResponse ToResponse(global::Erp.Hrm.Domain.Generated.OvertimeEntry row) => new()
@@ -178,151 +109,6 @@ internal static class OvertimeEntryEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(OvertimeEntryWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
-        {
-            errors.Add("employmentId");
-        }
-        if (request.WorkDate is null && (!update || access.CanEdit("work_date")))
-        {
-            errors.Add("workDate");
-        }
-        if (request.DayType is null && (!update || access.CanEdit("day_type")))
-        {
-            errors.Add("dayType");
-        }
-        if (request.Minutes is null && (!update || access.CanEdit("minutes")))
-        {
-            errors.Add("minutes");
-        }
-        if (request.RateMultiplier is null && (!update || access.CanEdit("rate_multiplier")))
-        {
-            errors.Add("rateMultiplier");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(OvertimeEntryWriteRequest request, global::Erp.Hrm.Domain.Generated.OvertimeEntry row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("employment_id"))
-        {
-            row.EmploymentId = request.EmploymentId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
-        {
-            denied.Add("employmentId");
-        }
-        if (access.CanEdit("work_date"))
-        {
-            row.WorkDate = request.WorkDate!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkDate, row.WorkDate, update))
-        {
-            denied.Add("workDate");
-        }
-        if (access.CanEdit("day_type"))
-        {
-            row.DayType = request.DayType!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DayType, row.DayType, update))
-        {
-            denied.Add("dayType");
-        }
-        if (access.CanEdit("minutes"))
-        {
-            row.Minutes = request.Minutes!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Minutes, row.Minutes, update))
-        {
-            denied.Add("minutes");
-        }
-        if (access.CanEdit("approved_minutes"))
-        {
-            row.ApprovedMinutes = request.ApprovedMinutes;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ApprovedMinutes, row.ApprovedMinutes, update))
-        {
-            denied.Add("approvedMinutes");
-        }
-        if (access.CanEdit("rate_multiplier"))
-        {
-            row.RateMultiplier = request.RateMultiplier!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RateMultiplier, row.RateMultiplier, update))
-        {
-            denied.Add("rateMultiplier");
-        }
-        if (access.CanEdit("pay_input_id"))
-        {
-            row.PayInputId = request.PayInputId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PayInputId, row.PayInputId, update))
-        {
-            denied.Add("payInputId");
-        }
-        if (access.CanEdit("attendance_day_id"))
-        {
-            row.AttendanceDayId = request.AttendanceDayId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.AttendanceDayId, row.AttendanceDayId, update))
-        {
-            denied.Add("attendanceDayId");
-        }
-        if (access.CanEdit("comp_off_entry_id"))
-        {
-            row.CompOffEntryId = request.CompOffEntryId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CompOffEntryId, row.CompOffEntryId, update))
-        {
-            denied.Add("compOffEntryId");
-        }
-        if (access.CanEdit("workflow_instance_id"))
-        {
-            row.WorkflowInstanceId = request.WorkflowInstanceId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkflowInstanceId, row.WorkflowInstanceId, update))
-        {
-            denied.Add("workflowInstanceId");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
 
     /// <summary>Reads pages of hrm.overtime_entries for an export through the list's own rules (S1.16b).</summary>
     internal sealed class ExportReader(global::System.IServiceProvider services) : global::Erp.Kernel.Contracts.Itg.IExportRowReader

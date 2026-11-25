@@ -162,6 +162,10 @@
         {
           "value": "qr",
           "labelKey": "options.hrm.attendance_events.source.qr"
+        },
+        {
+          "value": "regularization",
+          "labelKey": "options.hrm.attendance_events.source.regularization"
         }
       ]
     },

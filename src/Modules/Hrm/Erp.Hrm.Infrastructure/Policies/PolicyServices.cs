@@ -26,6 +26,7 @@ public static class PolicyServices
 
         services.AddSingleton(new PolicyTypeSource(TypeManifest));
         services.AddSingleton<IPolicyParameterCheck, Erp.Hrm.Application.Leave.LeavePolicyCheck>(); // S1.32a: what the leave schema cannot say
+        services.AddSingleton<IPolicyParameterCheck, Erp.Hrm.Application.Attendance.AttendancePolicyCheck>(); // S1.29a: what the attendance schema cannot say
         services.AddSingleton<IPolicyParameterCheck, Erp.Hrm.Application.Attendance.SeasonalTimingCheck>(); // S1.28b: dates, month and times of a season
         services.AddSingleton(sp => new PolicyTypeCatalog(sp.GetServices<PolicyTypeSource>(), sp.GetServices<IPolicyParameterCheck>()));
         services.AddScoped<PolicyResolver>();

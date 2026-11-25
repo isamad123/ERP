@@ -112,6 +112,11 @@
     "processedAt": {
       "type": "string",
       "format": "date-time"
+    },
+    "supersededAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
     }
   }
 }

@@ -257,21 +257,53 @@ public static partial class DesignLoader
 
         // enum_added_in: {S1.08: {column: [value, ...]}} (S1.08, CR-033): values added to an existing enum; the slice's
         // design migration replaces the column's check, the frozen file keeps the first list.
-        foreach (var (slice, raw) in YamlNode.Map(map.GetValueOrDefault("enum_added_in"), table.FullName + ".enum_added_in"))
+        // A column's enum may widen in several slices (S1.30a, CR-090: source of attendance events got qr in S1.27a and regularization in S1.30a):
+        // the frozen file keeps the first list and each slice's design migration replaces the check with the list as it stands after that slice.
+        var enumSlices = YamlNode.Map(map.GetValueOrDefault("enum_added_in"), table.FullName + ".enum_added_in")
+            .Select(e => (Slice: e.Key, Cols: YamlNode.Map(e.Value, table.FullName + ".enum_added_in").ToList())).ToList();
+        var allAdded = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var (_, cols) in enumSlices)
         {
-            foreach (var (name, values) in YamlNode.Map(raw, table.FullName + ".enum_added_in"))
+            foreach (var (name, values) in cols)
+            {
+                if (!allAdded.TryGetValue(name, out var set))
+                {
+                    allAdded[name] = set = [];
+                }
+
+                set.UnionWith(YamlNode.Texts(values, table.FullName + ".enum_added_in." + name));
+            }
+        }
+
+        var addedSoFar = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var (slice, cols) in enumSlices)
+        {
+            foreach (var (name, values) in cols)
             {
                 var column = table.Column(name);
                 var added = YamlNode.Texts(values, table.FullName + ".enum_added_in." + name).ToList();
-                if (column.Kind != ColumnKind.Enum || column.AddedIn is not null || added.Count == 0 || added.Except(column.EnumValues).Any() || added.Count >= column.EnumValues.Count)
+                if (column.Kind != ColumnKind.Enum || column.AddedIn is not null || added.Count == 0 || added.Except(column.EnumValues).Any() || allAdded[name].Count >= column.EnumValues.Count)
                 {
                     throw new DesignException(table.FullName, $"enum_added_in: {name} must be an enum column of the first migrations listing some of its values");
                 }
 
+                if (!addedSoFar.TryGetValue(name, out var soFar))
+                {
+                    addedSoFar[name] = soFar = [];
+                }
+
+                soFar.UnionWith(added);
                 var check = Naming.DbName("ck", table.Name, [column.Name]);
                 var index = table.Checks.FindIndex(c => c.Name == check);
-                var baseValues = column.EnumValues.Except(added).Select(Naming.SqlString);
-                table.Checks[index] = table.Checks[index] with { BaseSql = $"{column.Name} in ({string.Join(", ", baseValues)})", ReplacedIn = SliceId(slice, table.FullName) };
+                var baseValues = column.EnumValues.Except(allAdded[name]).Select(Naming.SqlString);
+                var sliceId = SliceId(slice, table.FullName);
+                if (table.Checks[index].ReplacedIn is null)
+                {
+                    table.Checks[index] = table.Checks[index] with { BaseSql = $"{column.Name} in ({string.Join(", ", baseValues)})", ReplacedIn = sliceId };
+                }
+
+                var after = column.EnumValues.Where(v => !allAdded[name].Contains(v) || soFar.Contains(v)).Select(Naming.SqlString);
+                table.Checks[index] = table.Checks[index] with { Steps = [.. table.Checks[index].Steps ?? [], (sliceId, $"{column.Name} in ({string.Join(", ", after)})")] };
             }
         }
 
@@ -301,14 +333,15 @@ public static partial class DesignLoader
             {
                 var items = YamlNode.Texts(key, table.FullName + ".uniques_replaced_in").ToList();
                 var where = TrailingWhere(items);
-                var index = table.Uniques.FindIndex(u => u.Items.SequenceEqual(items) && u.Where is not null && u.AddedIn is null && u.ReplacedIn is null);
+                var index = table.Uniques.FindIndex(u => u.Items.SequenceEqual(items) && u.AddedIn is null && u.ReplacedIn is null);
                 if (where is null || index < 0)
                 {
-                    throw new DesignException(table.FullName, "uniques_replaced_in names a partial unique key of the first migrations by its columns and gives its new \"where ...\"");
+                    throw new DesignException(table.FullName, "uniques_replaced_in names a unique key of the first migrations by its columns and gives its new \"where ...\"");
                 }
 
+                // A plain key of the first migrations (a constraint) may become partial too (S1.29a, CR-089: attendance day versions).
                 var old = table.Uniques[index];
-                table.Uniques[index] = old with { Where = AndNotDeleted(table, where), BaseWhere = old.Where, ReplacedIn = SliceId(slice, table.FullName) };
+                table.Uniques[index] = old with { Where = AndNotDeleted(table, where), BaseWhere = old.Where, BasePlain = old.IsPlain, ReplacedIn = SliceId(slice, table.FullName) };
             }
         }
 

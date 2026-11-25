@@ -21,28 +21,13 @@ public sealed class DutyRequestResponse
     public global::System.DateTimeOffset EndAt { get; init; }
     public string Purpose { get; init; } = null!;
     public global::System.Guid? WorkflowInstanceId { get; init; }
+    public global::System.Guid[]? FileIds { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for hrm.duty_requests. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class DutyRequestWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public global::System.Guid? EmploymentId { get; init; }
-    public string? Kind { get; init; }
-    public global::System.DateTimeOffset? StartAt { get; init; }
-    public global::System.DateTimeOffset? EndAt { get; init; }
-    public string? Purpose { get; init; }
-    public global::System.Guid? WorkflowInstanceId { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for hrm.duty_requests.</summary>
@@ -59,9 +44,12 @@ public sealed class DutyRequestListQuery
     public global::System.Guid? WorkflowInstanceId { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Sort key: startAt, endAt, status; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.duty_requests: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.duty_requests: read. Answers pass through field security (S1.06).</summary>
 internal static class DutyRequestEndpoints
 {
     private const string Resource = "hrm.duty_requests";
@@ -71,15 +59,13 @@ internal static class DutyRequestEndpoints
         var group = app.MapGroup("/api/hrm/duty-requests").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.duty_requests.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.duty_requests.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.duty_requests.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.duty_requests.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.duty_requests.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.duty_requests.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.duty_requests.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.duty_requests.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] DutyRequestListQuery query, global::Erp.Hrm.Application.Generated.IDutyRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.duty_requests.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.DutyRequestFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.DutyRequestFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.DutyRequestAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
@@ -89,53 +75,6 @@ internal static class DutyRequestEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.DutyRequestAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(DutyRequestWriteRequest request, global::Erp.Hrm.Application.Generated.IDutyRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.duty_requests.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.DutyRequestAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.DutyRequest();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/duty-requests/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.DutyRequestAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, DutyRequestWriteRequest request, global::Erp.Hrm.Application.Generated.IDutyRequestRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.duty_requests.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.DutyRequestAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.DutyRequestAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static DutyRequestResponse ToResponse(global::Erp.Hrm.Domain.Generated.DutyRequest row) => new()
@@ -148,6 +87,7 @@ internal static class DutyRequestEndpoints
         EndAt = row.EndAt,
         Purpose = row.Purpose,
         WorkflowInstanceId = row.WorkflowInstanceId,
+        FileIds = row.FileIds,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -155,119 +95,6 @@ internal static class DutyRequestEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(DutyRequestWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
-        {
-            errors.Add("employmentId");
-        }
-        if (request.Kind is null && (!update || access.CanEdit("kind")))
-        {
-            errors.Add("kind");
-        }
-        if (request.StartAt is null && (!update || access.CanEdit("start_at")))
-        {
-            errors.Add("startAt");
-        }
-        if (request.EndAt is null && (!update || access.CanEdit("end_at")))
-        {
-            errors.Add("endAt");
-        }
-        if (request.Purpose is null && (!update || access.CanEdit("purpose")))
-        {
-            errors.Add("purpose");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(DutyRequestWriteRequest request, global::Erp.Hrm.Domain.Generated.DutyRequest row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("employment_id"))
-        {
-            row.EmploymentId = request.EmploymentId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
-        {
-            denied.Add("employmentId");
-        }
-        if (access.CanEdit("kind"))
-        {
-            row.Kind = request.Kind!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Kind, row.Kind, update))
-        {
-            denied.Add("kind");
-        }
-        if (access.CanEdit("start_at"))
-        {
-            row.StartAt = request.StartAt!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.StartAt, row.StartAt, update))
-        {
-            denied.Add("startAt");
-        }
-        if (access.CanEdit("end_at"))
-        {
-            row.EndAt = request.EndAt!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EndAt, row.EndAt, update))
-        {
-            denied.Add("endAt");
-        }
-        if (access.CanEdit("purpose"))
-        {
-            row.Purpose = request.Purpose!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Purpose, row.Purpose, update))
-        {
-            denied.Add("purpose");
-        }
-        if (access.CanEdit("workflow_instance_id"))
-        {
-            row.WorkflowInstanceId = request.WorkflowInstanceId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkflowInstanceId, row.WorkflowInstanceId, update))
-        {
-            denied.Add("workflowInstanceId");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
 
     /// <summary>Reads pages of hrm.duty_requests for an export through the list's own rules (S1.16b).</summary>
     internal sealed class ExportReader(global::System.IServiceProvider services) : global::Erp.Kernel.Contracts.Itg.IExportRowReader
@@ -289,7 +116,7 @@ internal static class DutyRequestEndpoints
             var fields = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(services);
             var query = export.Filter.ValueKind == global::System.Text.Json.JsonValueKind.Object ? global::System.Text.Json.JsonSerializer.Deserialize<DutyRequestListQuery>(export.Filter.GetRawText(), global::System.Text.Json.JsonSerializerOptions.Web) ?? new DutyRequestListQuery() : new DutyRequestListQuery();
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(after is null ? null : global::System.Guid.Parse(after), limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.DutyRequestFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.DutyRequestFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status, Sort = export.Sort ?? query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var maps = await repository.FieldAccessAsync(rows, global::Erp.Hrm.Application.Generated.DutyRequestAccess.Fields, fields, "read", cancellationToken).ConfigureAwait(false);
             var shaped = new global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>(rows.Count);
             for (var i = 0; i < rows.Count; i++)

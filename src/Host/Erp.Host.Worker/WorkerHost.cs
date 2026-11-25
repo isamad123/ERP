@@ -105,6 +105,7 @@ public static class WorkerHost
         services.AddHrmPositions(); // the outcome handler of strength exceptions (S1.22a)
         // Policies (S1.23a): the transfer job and the probation reminders resolve the probation policy (the kernel answers unit subtrees).
         services.AddScoped<Erp.Kernel.Contracts.Org.IOrgStructure, Erp.Kernel.Infrastructure.Org.OrgStructure>();
+        services.AddScoped<Erp.Kernel.Contracts.Org.IHolidayCalendars, Erp.Kernel.Infrastructure.Org.HolidayCalendars>(); // S1.29a: the day plan reads holidays (R-158)
         services.AddScoped<Erp.Kernel.Contracts.Metadata.ICustomFieldCatalog, Erp.Kernel.Infrastructure.Metadata.CustomFieldCatalog>();
         services.AddHrmAttendanceWorker(); // S1.27a attendance purge
         services.AddSingleton<Erp.Kernel.Contracts.Workflow.IWorkflowDocumentTypeSource>(new WorkflowManifestSource(EmploymentServices.WorkflowManifest));
