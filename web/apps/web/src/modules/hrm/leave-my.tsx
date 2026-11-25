@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-317) */
 // My leave (slice S1.33a; FR-HRM-LVE-04, -06, -10 view, FR-HRM-SSP-01): the balance of each leave type with a "why" that opens the ledger entries behind the number, and the
 // person's requests with their status. Buttons follow the rules of S1.32b and only appear when the server would accept them: a draft is finished or cancelled, a waiting
 // request is withdrawn (through the approvals), approved leave is cancelled or changed. The answer of the server is shown as it comes.
@@ -69,7 +70,7 @@ export default function MyLeaveScreen() {
             {requests.isPending && <Skeleton lines={4} />}
             {requests.isError && <ErrorPanel title={t('leave.loadError')} message={refusal(requests.error)} action={<Button onPress={() => { void requests.refetch(); }}>{t('leave.retry')}</Button>} />}
             {requests.data && (requests.data.length === 0 ? <EmptyState title={t('leave.requests.empty')}>{t('leave.requests.empty.body')}</EmptyState> : (
-              <div className="erp-leave-scroll"><table className="erp-leave-table">
+              <div className="erp-leave-scroll" role="region" tabIndex={0} aria-label={t('leave.requests')}><table className="erp-leave-table">
                 <caption className="erp-visually-hidden">{t('leave.requests')}</caption>
                 <thead><tr><th scope="col">{t('leave.col.no')}</th><th scope="col">{t('leave.col.type')}</th><th scope="col">{t('leave.col.dates')}</th><th scope="col">{t('leave.col.amount')}</th><th scope="col">{t('leave.col.status')}</th><th scope="col">{t('leave.col.actions')}</th></tr></thead>
                 <tbody>{requests.data.map((r) => <RequestRow key={r.id} request={r} typeName={typeNameOf(typeById.get(r.leaveTypeId), locale)} token={typeById.get(r.leaveTypeId)?.colorToken} unit={unitOf(r.leaveTypeId)} />)}</tbody>
