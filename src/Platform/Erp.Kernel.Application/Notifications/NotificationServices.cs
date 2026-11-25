@@ -120,7 +120,10 @@ public sealed record DeliveryView(Guid Id, DateTimeOffset CreatedAt, string Chan
     string Subject, int Attempts, DateTimeOffset? NextAttemptAt, string? Error, string? ProviderRef, DateTimeOffset UpdatedAt, bool Resendable);
 
 /// <summary>A message with its text (the stored text; a sign-in link or code is never shown).</summary>
-public sealed record DeliveryDetail(DeliveryView Message, string Body, string? Link, string Language, Guid? ResendOf);
+public sealed record DeliveryDetail(DeliveryView Message, string Body, string? Link, string Language, Guid? ResendOf, bool BodyWithheld = false);
+
+/// <summary>One day of the message log: how many messages ended in each status (FR-ADM-OPS-04, "summary per day").</summary>
+public sealed record DeliveryDay(DateOnly Day, int Sent, int Failed, int Dead, int Queued);
 
 public sealed record DeliveryQuery(string? Status = null, Guid? UserId = null, string? EventCode = null, Guid? CompanyId = null, string? Recipient = null,
     DateTimeOffset? From = null, DateTimeOffset? To = null, int? Limit = null, int? Offset = null);
@@ -142,6 +145,9 @@ public interface IDeliveryLog
     Task<DeliveryView> ResendAsync(Guid id, CancellationToken cancellationToken);
 
     Task<DeliverySummary> SummaryAsync(CancellationToken cancellationToken);
+
+    /// <summary>Counts per day (in the customer's time zone) for the last <paramref name="days"/> days (1 to 31, default 14).</summary>
+    Task<IReadOnlyList<DeliveryDay>> DailyAsync(int? days, CancellationToken cancellationToken);
 
     /// <summary>Queues the text as an e-mail to the signed-in person, marked as a test.</summary>
     Task<DeliveryView> TestSendAsync(TestSendRequest request, CancellationToken cancellationToken);

@@ -88,6 +88,8 @@ public static class NotificationEndpoints
             "catalog", Deliveries, NotificationPermissions.DeliveriesRead);
         Tag(g.MapGet("/deliveries/summary", (IDeliveryLog s, CancellationToken ct) =>
             RunAsync(async () => Results.Ok(await s.SummaryAsync(ct).ConfigureAwait(false)))), "catalog", Deliveries, NotificationPermissions.DeliveriesRead);
+        Tag(g.MapGet("/deliveries/daily", ([Microsoft.AspNetCore.Mvc.FromQuery] int? days, IDeliveryLog s, CancellationToken ct) =>
+            RunAsync(async () => Results.Ok(await s.DailyAsync(days, ct).ConfigureAwait(false)))), "catalog", Deliveries, NotificationPermissions.DeliveriesRead);
         Tag(g.MapGet("/deliveries/{id:guid}", (Guid id, IDeliveryLog s, CancellationToken ct) =>
             RunAsync(async () => await s.GetAsync(id, ct).ConfigureAwait(false) is { } found ? Results.Ok(found) : Results.Problem(statusCode: 404, title: NotificationErrors.NotFound))),
             "record_action", Deliveries, NotificationPermissions.DeliveriesRead);

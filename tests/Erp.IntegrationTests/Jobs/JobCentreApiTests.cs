@@ -85,6 +85,33 @@ public sealed class JobCentreApiTests(TenancyFixture fx) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task S116c_FR_ADM_OPS_05_and_FR_ADM_DAT_08_system_health_shows_files_storage_database_and_this_customers_backup_only_to_holders_of_job_runs_read()
+    {
+        var admin = await _h.UserAsync(Ct, _code, "tenant_admin");
+        var user = await _h.UserAsync(Ct, _code, "business_user");
+        var tenant = await fx.TenantAsync(_code, Ct);
+        await using (var cp = await fx.OpenControlPlaneAsync(Ct))
+        {
+            await using var set = new Npgsql.NpgsqlCommand("update cp.tenant_databases set last_backup_at = $2, last_restore_test_at = null where id = $1", cp);
+            set.Parameters.AddWithValue(tenant.TenantDatabaseId);
+            set.Parameters.AddWithValue(new DateTimeOffset(2026, 11, 20, 3, 0, 0, TimeSpan.Zero));
+            await set.ExecuteNonQueryAsync(Ct);
+        }
+
+        var health = await _h.GetAsync(admin, "/api/jobs/system-health", Ct, _code);
+        Assert.True(health.Status == HttpStatusCode.OK, health.Body);
+        Assert.True(health.Json.GetProperty("databaseSizeBytes").GetInt64() > 0);
+        Assert.True(health.Json.GetProperty("storageUsedBytes").GetInt64() >= 0);
+        Assert.True(health.Json.GetProperty("filesNotScanned").GetInt32() >= 0);
+        Assert.Equal(new DateTimeOffset(2026, 11, 20, 3, 0, 0, TimeSpan.Zero), health.Json.GetProperty("lastBackupAt").GetDateTimeOffset());
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, health.Json.GetProperty("lastRestoreTestAt").ValueKind);
+        Assert.True(health.Json.GetProperty("jobs").TryGetProperty("events", out _));
+        Assert.DoesNotContain("secret", health.Body, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await _h.GetAsync(user, "/api/jobs/system-health", Ct, _code)).Status);
+    }
+
+    [Fact]
     public async Task S111a_FR_ADM_OPS_01_only_editable_jobs_change_schedule_the_change_is_audited_and_stale_or_invalid_changes_are_refused()
     {
         var admin = await _h.UserAsync(Ct, _code, "tenant_admin");

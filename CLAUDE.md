@@ -283,6 +283,10 @@ Exports (S1.16b): services `src/Platform/Erp.Kernel.Infrastructure/Itg/` (`Expor
 (`AuditExportReader`, `UserExportReader`) and registers it in both hosts (`AddKernelExportEngine`). Settings `itg.export.*`; permissions `itg.exports.run` and `itg.exports.approve`. Web: `web/packages/engine/src/ExportButton.tsx` (a generated list shows it when its screen passes `canExport`; other screens use `ExportButton`), centre `web/apps/web/src/modules/admin/exports.tsx`, texts `packages/i18n/messages/exports.{en,ur}.json`.
 Tests: `tests/Erp.IntegrationTests/ExportCentre`, `tests/Erp.UnitTests/Itg/ExportUnitTests.cs`, `web/apps/web/src/modules/admin/exports.test.tsx`, browser scenarios `e2e/exports.spec.ts`.
 
+Operations screens (S1.16c): job centre `web/apps/web/src/modules/admin/jobs*.tsx` (`/admin/jobs`, tabs runs, messages = notification log, health; lazy texts `packages/i18n/messages/ops.{en,ur}.json`, client `api/ops.ts`),
+licence and usage page `admin/licence.tsx` (`/settings/licence`, answers when locked). Server additions: `GET /api/jobs/system-health` (`SystemHealthService`: files not scanned, storage, database size, this customer's last backup and restore drill) and `GET /api/ntf/deliveries/daily`;
+message text of `identity.*`, `payroll.*`, `.payslip` and `.salary` e-mails is withheld in `GET /api/ntf/deliveries/{id}` (GHR-06). Job-centre texts are lazy (R-213); the notification log and system health are also menu entries of their own (`/admin/jobs/messages`, `/admin/jobs/health`). Tests: `web/apps/web/src/modules/admin/ops.test.tsx`, `e2e/ops.spec.ts`.
+
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.
 Slices: `docs/slices`. Handoff notes: `docs/handoff`.
