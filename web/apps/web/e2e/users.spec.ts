@@ -72,6 +72,9 @@ test('FR-ADM-USR-02 FR-ADM-USR-08 FR-KRN-IAM-18 an administrator invites a perso
   await shot(page, 'users-record-en-light-1280');
 
   // The person activates from the e-mailed link and signs in (a new browser).
+  // R-318: the console gives a new person no role, so on a customer where nothing else is set they would see "no access yet"; the scenario had only
+  // passed because sign-in.spec leaves the second factor required (they then land on "Protect your account"). It now gives the person a role itself.
+  await server.role(username, ['iam.self.manage']);
   const mail = await server.mail('identity.invitation', username);
   const context = await freshContext(browser);
   const them = await openPage(context);
