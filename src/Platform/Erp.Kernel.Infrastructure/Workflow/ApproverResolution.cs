@@ -31,9 +31,6 @@ internal sealed class ApproverResolution(IApproverDirectory directory)
     /// <summary>The person the document is about (the first subject), else the requester: whose manager is meant.</summary>
     public static Guid AboutPerson(InstanceRow instance) => instance.SubjectUserIds.Length > 0 ? instance.SubjectUserIds[0] : instance.RequesterUserId;
 
-    /// <summary>A document type that is about someone (declares subject fields) but has no subject user: the question has no answer, the requester is not the subject.</summary>
-    private static bool NoSubjectUser(WorkflowDocumentType type, InstanceRow instance) => type.SubjectFields.Count > 0 && instance.SubjectUserIds.Length == 0;
-
     private static DateOnly DocumentDate(WorkflowDocumentType type, IReadOnlyDictionary<string, JsonElement> values, DateOnly today) =>
         type.SubjectDateField is { } field && values.TryGetValue(field, out var v) && v.ValueKind == JsonValueKind.String && DateOnly.TryParse(v.GetString(), System.Globalization.CultureInfo.InvariantCulture, out var date)
             ? date : today;
@@ -62,18 +59,8 @@ internal sealed class ApproverResolution(IApproverDirectory directory)
                     ? new(await ActiveAsync(work, await directory.ManagersOfSubjectAsync(subject.GetString()!, spec.Levels, DocumentDate(type, values, today), today, ct).ConfigureAwait(false), ct).ConfigureAwait(false), null)
                     : ApproverTarget.Nobody;
             case ApproverKinds.Manager when directory.Supports(DirectoryKinds.Manager):
-                if (NoSubjectUser(type, instance))
-                {
-                    return ApproverTarget.Nobody; // review R-305 M2: a subject we cannot name has no manager; never the requester's
-                }
-
                 return new(await ActiveAsync(work, await directory.ManagersAsync(AboutPerson(instance), spec.Levels, today, ct).ConfigureAwait(false), ct).ConfigureAwait(false), null);
             case ApproverKinds.DepartmentHead when directory.Supports(DirectoryKinds.DepartmentHead):
-                if (NoSubjectUser(type, instance))
-                {
-                    return ApproverTarget.Nobody;
-                }
-
                 return new(await ActiveAsync(work, await directory.DepartmentHeadsAsync(AboutPerson(instance), instance.CompanyId, today, ct).ConfigureAwait(false), ct).ConfigureAwait(false), null);
             case ApproverKinds.Position when directory.Supports(DirectoryKinds.Position):
                 return new(await ActiveAsync(work, await directory.PositionHoldersAsync(spec.Position!, instance.CompanyId, today, ct).ConfigureAwait(false), ct).ConfigureAwait(false), null);
