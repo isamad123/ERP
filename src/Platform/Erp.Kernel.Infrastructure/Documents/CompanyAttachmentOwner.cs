@@ -1,6 +1,6 @@
 using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Application.Tenancy;
-using Erp.Kernel.Application.Documents;
+using Erp.Kernel.Contracts.Documents;
 using Npgsql;
 
 namespace Erp.Kernel.Infrastructure.Documents;

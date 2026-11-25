@@ -481,11 +481,93 @@ tables:
     notes:
       - text: "Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30)."
         stub: { name: leave_ledger_transfer, owner: S1.32 }
+        # S1.32b (CR-086 S1.32b detail; slice S1.32 Build item 14, CR-095): the leave transfer of a transfer between companies posts the pair.
+        # A transfer entry names its transfer (source id); a transfer_in follows the transfer_out of the same source, of the opposite quantity,
+        # on another employment of the same person. The HR leave transfer service posts both in one transaction; the trigger stops any other path.
+        implemented:
+          slice: S1.32b
+          triggers:
+            - [hrm.leave_ledger, tg_leave_ledger_transfer]
+          sql: |
+            create or replace function hrm.tg_leave_ledger_transfer() returns trigger
+            language plpgsql as $fn$
+            begin
+                if new.kind not in ('transfer_in', 'transfer_out') or new.reverses_entry_id is not null then
+                    return new;
+                end if;
+                if new.source_id is null or new.source_type is null then
+                    raise exception 'leave ledger: a transfer entry names its transfer'
+                        using errcode = '23514', constraint = 'ck_leave_ledger_transfer';
+                end if;
+                if new.kind = 'transfer_in' and not exists (
+                       select 1 from hrm.leave_ledger o
+                       join hrm.employments eo on eo.id = o.employment_id
+                       join hrm.employments en on en.id = new.employment_id
+                       where o.source_type = new.source_type and o.source_id = new.source_id and o.kind = 'transfer_out'
+                         and o.quantity = -new.quantity and o.employment_id <> new.employment_id and eo.person_id = en.person_id) then
+                    raise exception 'leave ledger: transfer_in % has no transfer_out of the same transfer and quantity on another employment of the person', new.id
+                        using errcode = '23514', constraint = 'ck_leave_ledger_transfer';
+                end if;
+                return new;
+            end
+            $fn$;
+            drop trigger if exists tg_leave_ledger_transfer on hrm.leave_ledger;
+            create trigger tg_leave_ledger_transfer before insert on hrm.leave_ledger
+                for each row execute function hrm.tg_leave_ledger_transfer();
 
   hrm.leave_request_days:
     checks:
       - text: "trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave)"
         stub: { name: leave_request_days_daily_total, owner: S1.32 }
+        # S1.32b (CR-086 S1.32b detail; slice S1.32 Build item 7): the days of requests that are waiting, approved or waiting for their cancellation
+        # never add up to more than one day per employment and date (types counted in days or half days), nor to more than 24 hours of hourly leave,
+        # nor hourly leave on a day already wholly on leave. The days of a request and of the request it changes (modifies_request_id) are not added
+        # together: one replaces the other when it is approved. The service checks the shift's own hours first and gives a clear message; the
+        # trigger stops any other path, one writer of an employment's leave days at a time.
+        implemented:
+          slice: S1.32b
+          triggers:
+            - [hrm.leave_request_days, tg_leave_request_days_daily_total]
+          sql: |
+            create or replace function hrm.tg_leave_request_days_daily_total() returns trigger
+            language plpgsql as $fn$
+            declare
+                v_days numeric(19,6);
+                v_hours numeric(19,6);
+                v_modifies uuid;
+                v_in_hours boolean;
+            begin
+                if new.request_status not in ('submitted', 'approved', 'cancel_requested') then
+                    return new;
+                end if;
+                perform pg_advisory_xact_lock(hashtextextended('hrm.leave_days:' || new.employment_id::text, 0));
+                select r.modifies_request_id, t.counting = 'hours' into v_modifies, v_in_hours
+                  from hrm.leave_requests r join hrm.leave_types t on t.id = r.leave_type_id where r.id = new.leave_request_id;
+                select coalesce(sum(d.quantity) filter (where t.counting <> 'hours'), 0), coalesce(sum(d.quantity) filter (where t.counting = 'hours'), 0)
+                  into v_days, v_hours
+                  from hrm.leave_request_days d
+                  join hrm.leave_requests r on r.id = d.leave_request_id
+                  join hrm.leave_types t on t.id = r.leave_type_id
+                 where d.employment_id = new.employment_id and d.leave_date = new.leave_date and d.id <> new.id
+                   and d.request_status in ('submitted', 'approved', 'cancel_requested')
+                   and d.leave_request_id <> new.leave_request_id
+                   and (v_modifies is null or d.leave_request_id <> v_modifies)
+                   and r.modifies_request_id is distinct from new.leave_request_id;
+                if coalesce(v_in_hours, false) then
+                    v_hours := v_hours + new.quantity;
+                else
+                    v_days := v_days + new.quantity;
+                end if;
+                if v_days > 1 or v_hours > 24 or (v_days >= 1 and v_hours > 0) then
+                    raise exception 'leave: % is already on leave for employment % (days %, hours %)', new.leave_date, new.employment_id, v_days, v_hours
+                        using errcode = '23514', constraint = 'ck_leave_request_days_daily_total';
+                end if;
+                return new;
+            end
+            $fn$;
+            drop trigger if exists tg_leave_request_days_daily_total on hrm.leave_request_days;
+            create trigger tg_leave_request_days_daily_total before insert or update on hrm.leave_request_days
+                for each row execute function hrm.tg_leave_request_days_daily_total();
 
   iam.sessions:
     notes:

@@ -52,6 +52,7 @@ public static class LeaveRequestDayAccess
         new("quantity", "Quantity", null),
         new("is_paid", "IsPaid", null),
         new("request_status", "RequestStatus", null),
+        new("day_kind", "DayKind", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
         new("updated_at", "UpdatedAt", null),

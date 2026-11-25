@@ -38,6 +38,13 @@
     },
     "requestStatus": {
       "type": "string"
+    },
+    "dayKind": {
+      "type": "string",
+      "enum": [
+        "leave",
+        "sandwich"
+      ]
     }
   }
 }

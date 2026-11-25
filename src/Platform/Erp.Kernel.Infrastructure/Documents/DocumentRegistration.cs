@@ -1,4 +1,5 @@
 using Erp.Kernel.Application.Documents;
+using Erp.Kernel.Contracts.Documents;
 using Erp.Kernel.Infrastructure.Documents.Templates;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,6 +27,7 @@ public static class DocumentRegistration
         services.AddScoped<IAttachmentOwner, WorkflowTaskOwner>();
         services.AddScoped<IAttachmentOwner, CompanyAttachmentOwner>(); // S1.14a: the company logo
         services.AddScoped<IAttachmentOwner, BrandingAttachmentOwner>(); // S1.15a: the login logo
+        services.AddScoped<IRecordFiles, RecordFiles>(); // S1.32b: the leave request keeps its file ids
         return services;
     }
 

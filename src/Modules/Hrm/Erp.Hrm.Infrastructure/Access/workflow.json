@@ -1,5 +1,5 @@
 {
-  "_comment": "Document types the HR module sends for approval (slice S1.10 format). S1.20b (CR-076 item 8, slice S1.20 ruling Q11): an employment event of a kind the company setting hrm.employment_events.approval_kinds lists waits for this route and applies on approval; the requester and the employee never approve it (FR-XM-32). Changing the route needs a second administrator (requires_approval). S1.20c: a transfer between companies uses kind transfer and gives to_company (review S1.20c finding 9). Seeded by migrate and provisioning with its default route, active at once. S1.22a (CR-078 item 2, slice S1.22 ruling Q5): hrm.strength_exception is the permission to place one person beyond a position's budgeted FTE or a unit and grade's sanctioned count; default route HR Admin; the person placed and the requester never approve it (FR-XM-32). Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "Document types the HR module sends for approval (slice S1.10 format). S1.20b (CR-076 item 8, slice S1.20 ruling Q11): an employment event of a kind the company setting hrm.employment_events.approval_kinds lists waits for this route and applies on approval; the requester and the employee never approve it (FR-XM-32). Changing the route needs a second administrator (requires_approval). S1.20c: a transfer between companies uses kind transfer and gives to_company (review S1.20c finding 9). Seeded by migrate and provisioning with its default route, active at once. S1.22a (CR-078 item 2, slice S1.22 ruling Q5): hrm.strength_exception is the permission to place one person beyond a position's budgeted FTE or a unit and grade's sanctioned count; default route HR Admin; the person placed and the requester never approve it (FR-XM-32). S1.32b (CR-086 S1.32b detail; slice S1.32 Build items 7 and 9, FR-HRM-LVE-05, -06, FR-XM-32): hrm.leave_request is a leave request (default route: the employee's line manager, or the HR administrators when there is none, then HR where the leave policy sets hrApproval for the type); hrm.leave_cancellation the cancellation of approved leave where the policy sets cancellationApproval (default route: the line manager, or the HR administrators). The employee and the person who applied never approve either. The routes are the customer's to change (for example by days or leave type). Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "document_types": [
     {
@@ -42,6 +42,57 @@
       "bulk_approval": false,
       "requires_approval": true,
       "default_route": {"steps": [{"key": "hr", "name": {"en": "HR approval", "ur": "ایچ آر کی منظوری"}, "approver": {"kind": "role", "role": "hr_admin"}}]}
+    },
+    {
+      "code": "hrm.leave_request",
+      "entitlement_key": "hrm.core",
+      "name": {"en": "Leave request", "ur": "رخصت کی درخواست"},
+      "fields": [
+        {"name": "company", "type": "company", "label": {"en": "Company", "ur": "کمپنی"}},
+        {"name": "employee", "type": "user", "label": {"en": "Employee", "ur": "ملازم"}},
+        {"name": "employee_no", "type": "text", "label": {"en": "Employee number", "ur": "ملازم نمبر"}},
+        {"name": "request_no", "type": "text", "label": {"en": "Request number", "ur": "درخواست نمبر"}},
+        {"name": "leave_type", "type": "text", "label": {"en": "Leave type code", "ur": "رخصت کی قسم کا کوڈ"}},
+        {"name": "start_date", "type": "date", "label": {"en": "First day", "ur": "پہلا دن"}},
+        {"name": "end_date", "type": "date", "label": {"en": "Last day", "ur": "آخری دن"}},
+        {"name": "days", "type": "number", "label": {"en": "Days", "ur": "دن"}},
+        {"name": "is_paid", "type": "bool", "label": {"en": "Paid leave", "ur": "تنخواہ والی رخصت"}},
+        {"name": "hr_approval", "type": "bool", "label": {"en": "HR approval required by the leave policy", "ur": "رخصت کی پالیسی کے مطابق ایچ آر کی منظوری درکار"}},
+        {"name": "on_behalf", "type": "bool", "label": {"en": "Applied by HR for the employee", "ur": "ایچ آر نے ملازم کی طرف سے درخواست دی"}}
+      ],
+      "company_field": "company",
+      "subject_fields": ["employee"],
+      "title": {"en": "Leave {request_no} ({leave_type}) of {employee_no}: {start_date} to {end_date}, {days} days", "ur": "رخصت {request_no} ({leave_type})، {employee_no}: {start_date} تا {end_date}، {days} دن"},
+      "link": "/hrm/leave-requests/{document_id}",
+      "bulk_approval": true,
+      "requires_approval": true,
+      "default_route": {"steps": [{"key": "manager", "name": {"en": "Line manager", "ur": "لائن مینیجر"}, "approver": {"kind": "manager", "levels": 1}, "fallback": {"kind": "role", "role": "hr_admin"}}, {"key": "hr", "name": {"en": "HR approval", "ur": "ایچ آر کی منظوری"}, "condition": {"field": "hr_approval", "op": "eq", "value": true}, "approver": {"kind": "role", "role": "hr_admin"}}]}
+    },
+    {
+      "code": "hrm.leave_cancellation",
+      "entitlement_key": "hrm.core",
+      "name": {"en": "Leave cancellation", "ur": "رخصت کی منسوخی"},
+      "fields": [
+        {"name": "company", "type": "company", "label": {"en": "Company", "ur": "کمپنی"}},
+        {"name": "employee", "type": "user", "label": {"en": "Employee", "ur": "ملازم"}},
+        {"name": "employee_no", "type": "text", "label": {"en": "Employee number", "ur": "ملازم نمبر"}},
+        {"name": "request_no", "type": "text", "label": {"en": "Request number", "ur": "درخواست نمبر"}},
+        {"name": "leave_type", "type": "text", "label": {"en": "Leave type code", "ur": "رخصت کی قسم کا کوڈ"}},
+        {"name": "start_date", "type": "date", "label": {"en": "First day", "ur": "پہلا دن"}},
+        {"name": "end_date", "type": "date", "label": {"en": "Last day", "ur": "آخری دن"}},
+        {"name": "days", "type": "number", "label": {"en": "Days", "ur": "دن"}},
+        {"name": "is_paid", "type": "bool", "label": {"en": "Paid leave", "ur": "تنخواہ والی رخصت"}},
+        {"name": "hr_approval", "type": "bool", "label": {"en": "HR approval required by the leave policy", "ur": "رخصت کی پالیسی کے مطابق ایچ آر کی منظوری درکار"}},
+        {"name": "on_behalf", "type": "bool", "label": {"en": "Applied by HR for the employee", "ur": "ایچ آر نے ملازم کی طرف سے درخواست دی"}},
+        {"name": "reason", "type": "text", "label": {"en": "Reason", "ur": "وجہ"}}
+      ],
+      "company_field": "company",
+      "subject_fields": ["employee"],
+      "title": {"en": "Cancel leave {request_no} ({leave_type}) of {employee_no}: {start_date} to {end_date}", "ur": "رخصت {request_no} ({leave_type}) کی منسوخی، {employee_no}: {start_date} تا {end_date}"},
+      "link": "/hrm/leave-requests/{document_id}",
+      "bulk_approval": false,
+      "requires_approval": true,
+      "default_route": {"steps": [{"key": "manager", "name": {"en": "Line manager", "ur": "لائن مینیجر"}, "approver": {"kind": "manager", "levels": 1}, "fallback": {"kind": "role", "role": "hr_admin"}}]}
     }
   ]
 }

@@ -24,6 +24,7 @@ internal sealed class LeaveRequestDayConfiguration : IEntityTypeConfiguration<gl
         builder.Property(e => e.Quantity).HasColumnName("quantity").HasColumnType("numeric(19,6)");
         builder.Property(e => e.IsPaid).HasColumnName("is_paid").HasColumnType("boolean");
         builder.Property(e => e.RequestStatus).HasColumnName("request_status").HasColumnType("text").IsRequired();
+        builder.Property(e => e.DayKind).HasColumnName("day_kind").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");
