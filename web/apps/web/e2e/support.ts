@@ -115,10 +115,10 @@ export async function accessible(page: Page, label: string): Promise<void> {
   // R-318: wait until no finite animation or transition is running. Controls fade their background (`--motion-fast`) when they
   // become enabled or the pointer rests on them; axe reads the colour it finds at that moment, so a scan in the middle of the
   // fade measured a blend of two colours and reported a contrast finding that vanished on the next run. The condition is
-  // read from the page (Web Animations API), not slept for; endless animations (the busy spinner) are not waited for.
+  // read from the page (Web Animations API), not slept for; timed animations (toasts, the busy spinner) are not waited for.
   await expect.poll(() => page.evaluate(() => document.getAnimations().filter((a) => {
-    const timing = a.effect?.getComputedTiming();
-    return a.playState === 'running' && timing !== undefined && Number.isFinite(timing.endTime);
+    // Only transitions (a control's colour fade): a toast's timed fade-out is an animation that runs for seconds and changes nothing a scan measures.
+    return a instanceof CSSTransition && a.playState === 'running';
   }).length), { message: `${label}: animations did not settle`, timeout: 10_000 }).toBe(0);
   // React Aria's live announcer keeps its last screen-reader notes for a few seconds; a note that named a button of the
   // previous screen points at an id that no longer exists. It is invisible and transient, so it is left out of the check.
