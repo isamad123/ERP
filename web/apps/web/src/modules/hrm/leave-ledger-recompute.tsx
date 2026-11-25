@@ -1,9 +1,8 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // The balance check of the leave ledger screen (slice S1.33b; FR-HRM-LVE-14): the ledger worked out again from the policies by the server, every difference with its period and cause, and a
 // button that opens the post form filled in with the difference. Nothing is ever posted by itself: the check changes nothing, and HR posts an adjustment (R-148).
 import { useMutation } from '@tanstack/react-query';
 import type { LeaveType } from '@erp/generated/api/hrm';
-import { Banner, Button, EmptyState } from '@erp/ui';
+import { Banner, Button, EmptyState, ScrollRegion } from '@erp/ui';
 import { digitsOf, formatDate, formatDecimal, useLocaleSettings } from '@erp/i18n';
 import { leaveLedgerApi, type RecomputeDifference } from '../../api/leave-ledger';
 import { useShell } from '../../shell/context';
@@ -35,7 +34,7 @@ export function RecomputePanel({ employmentId, types, onAdjust }: { employmentId
           {answer.differences.length === 0 ? (
             <EmptyState title={t('lled.recompute.clean')}>{t('lled.recompute.clean.body', { count: answer.checked, date: formatDate(`${answer.asOf}T12:00:00Z`, lang, timeZone, numbers) })}</EmptyState>
           ) : (
-            <div className="erp-leave-scroll erp-table-scroll" role="region" tabIndex={0} aria-label={t('lled.recompute.caption')}>
+            <ScrollRegion className="erp-leave-scroll erp-table-scroll" label={t('lled.recompute.caption')}>
               <table className="erp-leave-table">
                 <caption className="erp-visually-hidden">{t('lled.recompute.caption')}</caption>
                 <thead><tr>
@@ -62,7 +61,7 @@ export function RecomputePanel({ employmentId, types, onAdjust }: { employmentId
                   })}
                 </tbody>
               </table>
-            </div>)}
+            </ScrollRegion>)}
         </>)}
     </section>
   );

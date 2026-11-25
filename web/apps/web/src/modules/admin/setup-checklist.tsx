@@ -3,7 +3,7 @@
 // an administrator gives a reason; before that the module is in set-up mode and nothing else is blocked.
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Banner, Button, Dialog, EmptyState, Link, StatusChip, TextAreaField, useToast } from '@erp/ui';
+import { Banner, Button, Dialog, EmptyState, Link, StatusChip, TextAreaField, useToast, ScrollRegion } from '@erp/ui';
 import { formatDateTime, formatInteger, useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { setupApi, type ModuleReadiness, type ReadinessOverview, type SetupTask } from '../../api/setup';
 import { useShell } from '../../shell/context';
@@ -49,7 +49,7 @@ function ModuleCard({ module, companyId }: { module: ModuleReadiness; companyId:
       {module.optionalTotal > 0 && <p className="erp-small erp-muted">{t('setup.checklist.optionalProgress', { done: formatInteger(module.optionalDone, numbers), total: formatInteger(module.optionalTotal, numbers) })}</p>}
       {module.isLive && module.liveNote && <Banner tone="warning">{t('setup.checklist.liveOverride', { reason: module.liveNote })}</Banner>}
       {module.goLiveActions.length > 0 && <p className="erp-small erp-muted">{t('setup.checklist.actions', { actions: module.goLiveActions.join(', ') })}</p>}
-      <div className="erp-table-scroll">
+      <ScrollRegion className="erp-table-scroll" label={name}>
         <table className="erp-table" aria-label={name}>
           <thead><tr>
             <th scope="col">{t('setup.checklist.col.item')}</th><th scope="col">{t('setup.checklist.col.status')}</th><th scope="col">{t('setup.checklist.col.fix')}</th>
@@ -72,7 +72,7 @@ function ModuleCard({ module, companyId }: { module: ModuleReadiness; companyId:
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
       {canGoLive && <div className="erp-row"><Button variant="primary" aria-label={t('setup.checklist.goLive.aria', { name })} onPress={() => setDialog(true)}>{t('setup.checklist.goLive')}</Button></div>}
       {dialog && <GoLiveDialog name={name} moduleId={module.moduleId} companyId={companyId} open={open} onClose={() => setDialog(false)} />}
     </section>
