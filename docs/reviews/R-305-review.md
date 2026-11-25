@@ -14,6 +14,12 @@ The main weaknesses are in four areas: the new date rule, how much of the defect
 
 **Counts:** high 0, medium 3, low 6.
 
+## Product owner ruling (2026-11-25)
+
+**M1: option 1, today's manager.** The `manager` approver of a request is the subject's manager **today** (the business date of the request), the same rule as leave (`LeaveRequestStore.LineManagerAsync`), whatever day the request is about. The document date is not used to pick the manager. This also removes the case of a separated or transferred manager being asked. To record in CR-116 as the ruling; the fix and its tests (M3) follow it.
+
+M2, M3 and L1 to L6 go ahead on the recommendations below (CR-083).
+
 ## Findings
 
 ### M1 (medium): the "as of the document date" rule can route to a former, separated or transferred manager, and leave does it differently
