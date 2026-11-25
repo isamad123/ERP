@@ -397,6 +397,37 @@ public sealed class PackTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal("{\"days\": 12}", await TextAsync(code, "select v.parameters::text from hrm.policy_versions v join hrm.policies p on p.id = v.policy_id where p.source = 'pack' and v.version = 2"));
     }
 
+    // ------------------------------------------------------------------ FR-HRM-LVE-12 (slice S1.32b, ruling Q2): pack leave types are editable defaults
+
+    [Fact]
+    public async Task FR_HRM_LVE_12_pack_leave_types_install_per_company_of_the_country_as_editable_defaults_and_a_customer_change_is_kept_on_upgrade()
+    {
+        var id = NewId();
+        var code = "PKTEST_" + Code(id)[..8].ToUpperInvariant();
+        object Type(string en, bool document) => new { name = new { en, ur = "آزمائشی رخصت" }, counting = "working_days", unit = "half_day", isPaid = true, requiresDocument = document, isCompOff = false, isUnpaidDeduction = false };
+        await PublishAsync(fx, id, "1.0.0", [new TestObject("leave_type", code, Type("Test leave", false)),
+            new TestObject("policy", "leave:PL_" + Code(id)[..8].ToUpperInvariant(), new { name = new { en = "Pack leave policy" }, parameters = new { types = new[] { new { leaveType = code, entitlement = new { model = "manual" } } } } })]);
+        var (customer, admin) = await CustomerAsync("l");
+        var hr = await _h.UserAsync(Ct, customer, "hr_admin");
+        var installed = await _h.PostAsync(admin, Packs + "/install", new { packId = id }, Ct, customer);
+        Assert.True(installed.Status == HttpStatusCode.OK, installed.Body);
+        Assert.Equal("pack|t|f", await TextAsync(customer, "select concat_ws('|', source, is_active, requires_document) from hrm.leave_types where code = $1", code));
+        Assert.Equal(1, await CountAsync(customer, "select count(*) from hrm.policies where source = 'pack' and policy_type = 'leave'")); // its policy names the type, installed after it
+
+        // HR changes the default (a document now needed); the pack's next version changes the name only: the customer's change is kept.
+        var typeId = Guid.Parse((await TextAsync(customer, "select id::text from hrm.leave_types where code = $1", code))!);
+        var version = long.Parse((await TextAsync(customer, "select row_version::text from hrm.leave_types where id = $1", typeId))!, System.Globalization.CultureInfo.InvariantCulture);
+        var changed = await _h.PutAsync(hr, $"/api/hrm/leave-types/{typeId}", new { requiresDocument = true, rowVersion = version }, Ct, customer);
+        Assert.True(changed.Status == HttpStatusCode.OK, changed.Body);
+        await PublishAsync(fx, id, "1.0.1", [new TestObject("leave_type", code, Type("Test leave renamed", false)),
+            new TestObject("policy", "leave:PL_" + Code(id)[..8].ToUpperInvariant(), new { name = new { en = "Pack leave policy" }, parameters = new { types = new[] { new { leaveType = code, entitlement = new { model = "manual" } } } } })]);
+        var upgraded = await _h.PostAsync(admin, $"{Packs}/{id}/upgrade", new { }, Ct, customer);
+        Assert.True(upgraded.Status == HttpStatusCode.OK, upgraded.Body);
+        Assert.Equal(1, upgraded.Json.GetProperty("result").GetProperty("kept").GetInt32());
+        Assert.Equal("t|Leave", await TextAsync(customer, "select concat_ws('|', requires_document, left(name_i18n->>'en', 5)) from hrm.leave_types where id = $1", typeId));
+        Assert.Equal(0, await CountAsync(customer, "select count(*) from hrm.leave_ledger")); // a type gives no leave by itself
+    }
+
     private static JsonElement Step(JsonElement overview, string key) =>
         overview.GetProperty("steps").EnumerateArray().Single(s => s.GetProperty("taskKey").GetString() == key);
 

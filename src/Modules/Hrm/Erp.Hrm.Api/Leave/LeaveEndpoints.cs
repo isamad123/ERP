@@ -48,7 +48,7 @@ public static class LeaveEndpoints
 
         // S1.32b: requests (FR-HRM-LVE-04 to -06, -16), year-end (LVE-11) and the leave side of transfers (FR-XM-30).
         Tag(app.MapPost("/api/hrm/leave-requests/preview", async (LeaveRequestInput body, ILeaveRequestService s, CancellationToken ct) =>
-            PersonEndpoints.Answer(await s.PreviewAsync(body, ct).ConfigureAwait(false))), "catalog", Requests, LeavePermissions.RequestsCreate);
+            PersonEndpoints.Answer(await s.PreviewAsync(body, ct).ConfigureAwait(false))), "record_action", Requests, LeavePermissions.RequestsCreate);
         Tag(app.MapPost("/api/hrm/leave-requests", async (LeaveRequestInput body, ILeaveRequestService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.CreateAsync(body, ct).ConfigureAwait(false))), "create", Requests, LeavePermissions.RequestsCreate);
         Tag(app.MapPut("/api/hrm/leave-requests/{id:guid}/draft", async (Guid id, LeaveRequestInput body, ILeaveRequestService s, CancellationToken ct) =>

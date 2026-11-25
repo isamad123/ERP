@@ -16,7 +16,7 @@ namespace Erp.IntegrationTests.Tenancy.Isolation;
 /// employments, the first linked to a user; from S1.20c a second company, a former employment, a contract and a probation; from S1.20d a
 /// payment account and a statutory registration of the first employment; from S1.23a a probation policy assigned to permanent employees
 /// (made before the hires, so the first employment's probation comes from it) and a second policy with a draft; from S1.34a a pay group
-/// with the periods of a tax year; from S1.32a a leave type and an opening balance of the first employment (S1.29a's engine routes need nothing more: the first employment's days are processed, read and explained by id, the exception queue lists B's own). Then, as for
+/// with the periods of a tax year; from S1.32a a leave type and an opening balance of the first employment; from S1.32b a leave policy, a draft and an approved request, a year-end preview and the former employment moved to the second company (S1.29a's engine routes need nothing more: the first employment's days are processed, read and explained by id, the exception queue lists B's own). Then, as for
 /// the other probes:
 /// <list type="number">
 /// <item>B's host and token aimed at A's ids, with and without headers naming A: actions on A's records are 404; creates and lists
@@ -42,7 +42,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         Guid Shift, long ShiftVersion, Guid Roster, long RosterVersion,
         Guid Component, long ComponentVersion, Guid Structure, long StructureVersion,
         Guid PushDevice, long PushDeviceVersion, Guid PullDevice, Guid Map, long MapVersion, Guid RemovalMap, long RemovalMapVersion, Guid Unmapped, long UnmappedVersion, string MapNo,
-        Guid LeaveType, long LeaveTypeVersion, Guid LeaveEntry);
+        Guid LeaveType, long LeaveTypeVersion, Guid LeaveEntry,
+        Guid LeaveDraft, long LeaveDraftVersion, Guid LeaveApproved, Guid YearEndRun, Guid ToLeaveType, Guid Mover);
 
     /// <summary>Where the probe hires (slice S1.20b): an org unit of a company and that company's branch.</summary>
     private sealed record Hire(Guid Company, Guid OrgUnit, Guid Branch);
@@ -55,7 +56,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.LeaveType, a.LeaveEntry, a.Component, a.Structure }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.LeaveType, a.LeaveEntry, a.LeaveDraft, a.LeaveApproved, a.YearEndRun, a.ToLeaveType, a.Mover, a.Component, a.Structure }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         pushSecrets[a.PushDevice] = PushSecret;
@@ -291,6 +292,18 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "GET /api/hrm/employments/{id:guid}/leave-balances" => ($"/api/hrm/employments/{m.Employment}/leave-balances?asOf=2024-06-30", null),
             "GET /api/hrm/my/leave-balances" => ("/api/hrm/my/leave-balances", null),
             "GET /api/hrm/employments/{id:guid}/leave-recompute" => ($"/api/hrm/employments/{m.Employment}/leave-recompute", null),
+            // S1.32b: leave requests, the year-end's decisions and the leave side of a transfer.
+            "POST /api/hrm/leave-requests/preview" => ("/api/hrm/leave-requests/preview", Json(new { employmentId = m.Employment, leaveTypeId = m.LeaveType, startDate = "2025-06-03" })),
+            "POST /api/hrm/leave-requests" => ("/api/hrm/leave-requests", Json(new { employmentId = m.Employment, leaveTypeId = m.LeaveType, startDate = "2025-06-04", submit = false })),
+            "PUT /api/hrm/leave-requests/{id:guid}/draft" => ($"/api/hrm/leave-requests/{m.LeaveDraft}/draft", Json(new { reason = "Probe change", rowVersion = m.LeaveDraftVersion })),
+            "POST /api/hrm/leave-requests/{id:guid}/submit" => ($"/api/hrm/leave-requests/{m.LeaveDraft}/submit", Json(new { rowVersion = m.LeaveDraftVersion })),
+            "POST /api/hrm/leave-requests/{id:guid}/cancel" => ($"/api/hrm/leave-requests/{m.LeaveApproved}/cancel", Json(new { reason = "Probe cancel" })),
+            "POST /api/hrm/leave-requests/{id:guid}/change" => ($"/api/hrm/leave-requests/{m.LeaveApproved}/change", Json(new { startDate = "2025-07-07" })),
+            "GET /api/hrm/leave-requests/{id:guid}/details" => ($"/api/hrm/leave-requests/{m.LeaveDraft}/details", null),
+            "POST /api/hrm/leave-year-end-runs/{id:guid}/confirm" => ($"/api/hrm/leave-year-end-runs/{m.YearEndRun}/confirm", Json(new { reason = "Probe confirm" })),
+            "POST /api/hrm/leave-year-end-runs/{id:guid}/rollback" => ($"/api/hrm/leave-year-end-runs/{m.YearEndRun}/rollback", Json(new { reason = "Probe roll back" })),
+            "GET /api/hrm/employments/{id:guid}/leave-transfer" => ($"/api/hrm/employments/{m.Mover}/leave-transfer", null),
+            "POST /api/hrm/employments/{id:guid}/leave-transfer" => ($"/api/hrm/employments/{m.Mover}/leave-transfer", Json(new { maps = new[] { new { fromLeaveTypeId = m.LeaveType, toLeaveTypeId = m.ToLeaveType } } })),
             "POST /api/hrm/employments/{id:guid}/attendance-days/process" => ($"/api/hrm/employments/{m.Employment}/attendance-days/process", Json(new { from = "2024-06-03", to = "2024-06-04" })),
             "GET /api/hrm/employments/{id:guid}/attendance-days" => ($"/api/hrm/employments/{m.Employment}/attendance-days?from=2024-06-01&to=2024-06-30", null),
             "GET /api/hrm/employments/{id:guid}/attendance-days/{date}/explain" => ($"/api/hrm/employments/{m.Employment}/attendance-days/2024-06-03/explain", null),
@@ -608,6 +621,91 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             counting = "working_days", unit = "day", requiresDocument = false, isCompOff = false, isUnpaidDeduction = false,
         }, ct);
         var leaveEntry = await PostAsync(host, token, $"/api/hrm/employments/{employment}/leave-ledger", new { leaveTypeId = leaveType.GetProperty("id").GetGuid(), kind = "opening", quantity = 2, entryDate = "2024-01-01", reason = "Probe opening" }, ct);
+
+        // S1.32b: a leave policy listing the type (assigned to permanent employees, as the probation one), a draft request of the first employment, an
+        // approved request with its day and a year-end preview (written directly: the approval is the workflow's, the preview the job's), and a separated
+        // employment moved to the second company (written directly: transfers are S1.20c's) with a balance of a type the new company does not have.
+        var leaveTypeId = leaveType.GetProperty("id").GetGuid();
+        var leavePolicy = await PostAsync(host, token, "/api/hrm/policies", new
+        {
+            companyId = org.Company, policyType = "leave", code = "LP" + Guid.NewGuid().ToString("N")[..8], name = new { en = "Probe leave policy" },
+            parameters = new { types = new[] { new { leaveType = leaveType.GetProperty("code").GetString(), entitlement = new { model = "manual" }, negativeLimit = 100 } } },
+        }, ct);
+        var lv1 = leavePolicy.GetProperty("versions")[0];
+        await OkAsync(host, token, $"/api/hrm/policy-versions/{lv1.GetProperty("id").GetGuid()}/activate", new { effectiveFrom = "2020-01-01", rowVersion = lv1.GetProperty("rowVersion").GetInt64() }, ct);
+        var leaveSets = await GetAsync(host, token, $"/api/hrm/policy-assignment-sets?companyId={org.Company}&policyType=leave", ct);
+        DateOnly? leaveLatest = leaveSets.GetProperty("latestFrom").ValueKind == JsonValueKind.String ? DateOnly.Parse(leaveSets.GetProperty("latestFrom").GetString()!, System.Globalization.CultureInfo.InvariantCulture) : null;
+        await OkAsync(host, token, "/api/hrm/policy-assignment-sets/activate", new
+        {
+            companyId = org.Company, policyType = "leave", effectiveFrom = (leaveLatest ?? new DateOnly(2019, 12, 31)).AddDays(1), basedOn = leaveLatest,
+            assignments = new[] { new { policyId = leavePolicy.GetProperty("id").GetGuid(), precedence = 1, rule = new { conditions = new[] { new { attribute = "employee_type", @operator = "in", values = Permanent } } } } },
+        }, ct);
+        var leaveDraft = await PostAsync(host, token, "/api/hrm/leave-requests", new { employmentId = employment, leaveTypeId, startDate = "2025-06-02", submit = false }, ct);
+        var leaveApproved = Guid.CreateVersion7();
+        var yearEndRun = Guid.CreateVersion7();
+        var toLeaveType = (await PostAsync(host, token, "/api/hrm/leave-types", new
+        {
+            companyId = to.Company, code = "LT" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe leave there", ur = "آزمائشی رخصت" }, isPaid = true,
+            counting = "working_days", unit = "day", requiresDocument = false, isCompOff = false, isUnpaidDeduction = false,
+        }, ct)).GetProperty("id").GetGuid();
+        var mover = (await PostAsync(host, token, "/api/hrm/employments", HireBody(org, "Mover"), ct)).GetProperty("employment").GetProperty("id").GetGuid();
+        await PostAsync(host, token, $"/api/hrm/employments/{mover}/leave-ledger", new { leaveTypeId, kind = "opening", quantity = 3, entryDate = "2024-06-01", reason = "Probe opening" }, ct);
+        Guid formerPerson;
+        await using (var c = await fx.OpenAdminAsync(code, ct))
+        {
+            await using (var separate = new NpgsqlCommand("update hrm.employments set status = 'separated', separation_date = '2024-12-31', row_version = row_version + 1 where id = $1", c))
+            {
+                separate.Parameters.Add(new NpgsqlParameter { Value = mover });
+                await separate.ExecuteNonQueryAsync(ct);
+            }
+
+            await using var command = new NpgsqlCommand("select person_id from hrm.employments where id = $1", c);
+            command.Parameters.Add(new NpgsqlParameter { Value = mover });
+            formerPerson = (Guid)(await command.ExecuteScalarAsync(ct))!;
+        }
+
+        var rehired = await PostAsync(host, token, "/api/hrm/employments", new
+        {
+            personId = formerPerson, companyId = to.Company, employeeType = "permanent", joiningDate = "2025-01-01",
+            assignment = new { orgUnitId = to.OrgUnit, branchId = to.Branch, title = "Probe officer" },
+        }, ct);
+        var moved = (rehired.TryGetProperty("employment", out var movedEmployment) ? movedEmployment : rehired).GetProperty("id").GetGuid();
+        await using (var c = await fx.OpenAdminAsync(code, ct))
+        {
+            async Task Exec(string sql, params object[] values)
+            {
+                await using var command = new NpgsqlCommand(sql, c);
+                foreach (var value in values)
+                {
+                    command.Parameters.Add(new NpgsqlParameter { Value = value });
+                }
+
+                await command.ExecuteNonQueryAsync(ct);
+            }
+
+            var by = BaselineSeed.SystemUserId;
+            await Exec("update hrm.employments set previous_employment_id = $2, row_version = row_version + 1 where id = $1", moved, mover);
+            await Exec("""
+                insert into hrm.employment_events (id, company_id, employment_id, kind, reason_code, effective_date, carry_over, changes, status, created_at, created_by, updated_at, updated_by)
+                select $1, company_id, id, 'separation', 'transfer', '2025-01-01', '{"service":"keep","leave":"carry","loans":"carry"}'::jsonb,
+                       jsonb_build_object('transfer', jsonb_build_object('to_employment_id', $2::text)), 'effective', now(), $4, now(), $4 from hrm.employments where id = $3
+                """, Guid.CreateVersion7(), moved, mover, by);
+            await Exec("""
+                insert into hrm.leave_requests (id, company_id, request_no, employment_id, leave_type_id, start_date, end_date, start_part, end_part, days, file_ids, status, custom,
+                                                created_at, created_by, updated_at, updated_by)
+                values ($1, $2, 'PROBE-' || $1::text, $3, $4, '2025-05-05', '2025-05-05', 'full', 'full', 1, '{}', 'approved', '{}'::jsonb, now(), $5, now(), $5)
+                """, leaveApproved, org.Company, employment, leaveTypeId, by);
+            await Exec("""
+                insert into hrm.leave_request_days (id, company_id, leave_request_id, employment_id, leave_date, quantity, is_paid, request_status, day_kind, created_at, created_by, updated_at, updated_by)
+                values ($1, $2, $3, $4, '2025-05-05', 1, true, 'approved', 'leave', now(), $5, now(), $5)
+                """, Guid.CreateVersion7(), org.Company, leaveApproved, employment, by);
+            await Exec("""
+                insert into hrm.leave_year_end_runs (id, company_id, leave_year, summary, status, created_at, created_by, updated_at, updated_by)
+                values ($1, $2, 2023, jsonb_build_object('leaveYear', 2023, 'types', jsonb_build_array(jsonb_build_object('leaveTypeId', $3::text, 'code', 'X', 'yearStart', '2023-01-01', 'yearEnd', '2023-12-31')), 'lines', '[]'::jsonb),
+                        'preview', now(), $4, now(), $4)
+                """, yearEndRun, org.Company, leaveTypeId, by);
+        }
+
         return new Material(person, created.GetProperty("rowVersion").GetInt64(), into, identifier.Id, identifier.Version, contact.Id, contact.Version,
             address.Id, address.Version, relation.Id, relation.Version, qualification.Id, qualification.Version,
             match.GetProperty("id").GetGuid(), match.GetProperty("rowVersion").GetInt64(), created.GetProperty("personNo").GetString()!,
@@ -622,7 +720,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             component.GetProperty("id").GetGuid(), component.GetProperty("rowVersion").GetInt64(), structure.GetProperty("id").GetGuid(), structure.GetProperty("rowVersion").GetInt64(),
             pushDevice.GetProperty("id").GetGuid(), pushDevice.GetProperty("rowVersion").GetInt64(), pullDevice.GetProperty("id").GetGuid(), mapRow.GetProperty("id").GetGuid(), mapRow.GetProperty("rowVersion").GetInt64(),
             removalMap, 1, unmapped, 1, mapNo,
-            leaveType.GetProperty("id").GetGuid(), leaveType.GetProperty("rowVersion").GetInt64(), leaveEntry.GetProperty("id").GetGuid());
+            leaveType.GetProperty("id").GetGuid(), leaveType.GetProperty("rowVersion").GetInt64(), leaveEntry.GetProperty("id").GetGuid(),
+            leaveDraft.GetProperty("id").GetGuid(), leaveDraft.GetProperty("rowVersion").GetInt64(), leaveApproved, yearEndRun, toLeaveType, mover);
     }
 
     private async Task OkAsync(string host, string token, string path, object body, CancellationToken ct)
