@@ -30,14 +30,14 @@ public sealed class HrmApproverDirectory(ITenantConnectionProvider tenant) : IAp
 
         await using var connection = (NpgsqlConnection)await tenant.DataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         var start = await IdsAsync(connection, $"select e.id from hrm.employments e where e.user_ref = $1 and {Current}", cancellationToken, userId, asOf).ConfigureAwait(false);
-        return await ManagerUsersAsync(connection, start, levels, asOf, asOf, cancellationToken).ConfigureAwait(false);
+        return await ManagerUsersAsync(connection, start, levels, asOf, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// The managers of the employment the document is about (R-305, CR-116): in post on the date and still today (review M1); the subject is the employment id, so a subject with no user
+    /// The managers of the employment the document is about (R-305, CR-116): the subject is the employment id, so a subject with no user
     /// still has its own manager. A subject that is not an employment id, an unknown one or one without a manager answers nothing.
     /// </summary>
-    public async Task<IReadOnlyList<Guid>> ManagersOfSubjectAsync(string subject, int levels, DateOnly asOf, DateOnly today, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<Guid>> ManagersOfSubjectAsync(string subject, int levels, DateOnly asOf, CancellationToken cancellationToken)
     {
         if (levels < 1 || !Guid.TryParse(subject, out var employmentId))
         {
@@ -45,10 +45,10 @@ public sealed class HrmApproverDirectory(ITenantConnectionProvider tenant) : IAp
         }
 
         await using var connection = (NpgsqlConnection)await tenant.DataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
-        return await ManagerUsersAsync(connection, [employmentId], levels, asOf, today, cancellationToken).ConfigureAwait(false);
+        return await ManagerUsersAsync(connection, [employmentId], levels, asOf, cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task<IReadOnlyList<Guid>> ManagerUsersAsync(NpgsqlConnection connection, List<Guid> current, int levels, DateOnly asOf, DateOnly alsoOn, CancellationToken cancellationToken)
+    private static async Task<IReadOnlyList<Guid>> ManagerUsersAsync(NpgsqlConnection connection, List<Guid> current, int levels, DateOnly asOf, CancellationToken cancellationToken)
     {
         for (var level = 0; level < levels && current.Count > 0; level++)
         {
@@ -56,8 +56,7 @@ public sealed class HrmApproverDirectory(ITenantConnectionProvider tenant) : IAp
                 select distinct a.manager_employment_id from hrm.employment_assignments a join hrm.employments e on e.id = a.manager_employment_id
                 where a.employment_id = any($1) and a.manager_employment_id is not null
                   and a.valid_from <= $2 and (a.valid_to is null or a.valid_to > $2) and {Current}
-                  and e.joining_date <= $3 and (e.separation_date is null or e.separation_date >= $3)
-                """, cancellationToken, current.ToArray(), asOf, alsoOn).ConfigureAwait(false);
+                """, cancellationToken, current.ToArray(), asOf).ConfigureAwait(false);
         }
 
         // Managers without a user link cannot approve; an employee with no manager gets no answer ("cannot resolve").

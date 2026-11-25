@@ -101,10 +101,10 @@ public interface IApproverDirectory
 
     /// <summary>
     /// The user(s) <paramref name="levels"/> manager levels above the document's subject, named by a reference the module understands
-    /// (the HR module: the subject's employment id), as of the date; a manager must also be in post on <paramref name="today"/> (review R-305 M1: a manager who has since left or moved never gets the task). Works for a subject with no user (R-305, CR-116); an unknown or
+    /// (the HR module: the subject's employment id), as of the date (the engine passes today: the manager in post now, as leave does, CR-116). Works for a subject with no user (R-305, CR-116); an unknown or
     /// unmanaged subject answers nothing, never somebody else's manager.
     /// </summary>
-    Task<IReadOnlyList<Guid>> ManagersOfSubjectAsync(string subject, int levels, DateOnly asOf, DateOnly today, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Guid>> ManagersOfSubjectAsync(string subject, int levels, DateOnly asOf, CancellationToken cancellationToken);
 
     /// <summary>The head(s) of the user's department in the company.</summary>
     Task<IReadOnlyList<Guid>> DepartmentHeadsAsync(Guid userId, Guid companyId, DateOnly asOf, CancellationToken cancellationToken);
@@ -151,8 +151,7 @@ public sealed record WorkflowDocumentType(
     bool RequiresApproval,
     string? DecidePermission,
     JsonElement DefaultRoute,
-    string? SubjectEmploymentField = null,
-    string? SubjectDateField = null);
+    string? SubjectEmploymentField = null);
 
 /// <summary>A module's document types, registered by the host (like numbering's <c>IDocumentTypeSource</c>).</summary>
 public interface IWorkflowDocumentTypeSource

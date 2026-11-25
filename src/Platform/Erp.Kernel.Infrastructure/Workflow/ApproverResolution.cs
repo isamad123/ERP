@@ -31,10 +31,6 @@ internal sealed class ApproverResolution(IApproverDirectory directory)
     /// <summary>The person the document is about (the first subject), else the requester: whose manager is meant.</summary>
     public static Guid AboutPerson(InstanceRow instance) => instance.SubjectUserIds.Length > 0 ? instance.SubjectUserIds[0] : instance.RequesterUserId;
 
-    private static DateOnly DocumentDate(WorkflowDocumentType type, IReadOnlyDictionary<string, JsonElement> values, DateOnly today) =>
-        type.SubjectDateField is { } field && values.TryGetValue(field, out var v) && v.ValueKind == JsonValueKind.String && DateOnly.TryParse(v.GetString(), System.Globalization.CultureInfo.InvariantCulture, out var date)
-            ? date : today;
-
     public async Task<ApproverTarget> ResolveAsync(WorkflowWork work, ApproverSpec spec, InstanceRow instance, WorkflowDocumentType type, IReadOnlyDictionary<string, JsonElement> values, CancellationToken ct)
     {
         var today = Today(work);
@@ -53,10 +49,10 @@ internal sealed class ApproverResolution(IApproverDirectory directory)
                 return values.TryGetValue(spec.Field!, out var v) && v.ValueKind == JsonValueKind.String && Guid.TryParse(v.GetString(), out var id)
                     && await ActiveUserAsync(work, id, ct).ConfigureAwait(false) ? new([id], null) : ApproverTarget.Nobody;
             case ApproverKinds.Manager when directory.Supports(DirectoryKinds.Manager) && type.SubjectEmploymentField is { } employmentField:
-                // R-305: the manager of the document's subject employment as of the document date; a subject we cannot name has no
+                // R-305: the manager of the document's subject employment in post today; a subject we cannot name has no
                 // manager (the route's fallback applies), never the requester's manager.
                 return values.TryGetValue(employmentField, out var subject) && subject.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(subject.GetString())
-                    ? new(await ActiveAsync(work, await directory.ManagersOfSubjectAsync(subject.GetString()!, spec.Levels, DocumentDate(type, values, today), today, ct).ConfigureAwait(false), ct).ConfigureAwait(false), null)
+                    ? new(await ActiveAsync(work, await directory.ManagersOfSubjectAsync(subject.GetString()!, spec.Levels, today, ct).ConfigureAwait(false), ct).ConfigureAwait(false), null)
                     : ApproverTarget.Nobody;
             case ApproverKinds.Manager when directory.Supports(DirectoryKinds.Manager):
                 return new(await ActiveAsync(work, await directory.ManagersAsync(AboutPerson(instance), spec.Levels, today, ct).ConfigureAwait(false), ct).ConfigureAwait(false), null);

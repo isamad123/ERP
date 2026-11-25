@@ -407,7 +407,7 @@ public sealed class AttendanceRequestTests(TenancyFixture fx) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task FR_XM_32_FR_KRN_WFL_02_the_manager_must_be_in_post_on_the_document_date_and_still_today()
+    public async Task FR_XM_32_FR_KRN_WFL_02_the_manager_is_the_one_in_post_today_whatever_day_the_request_is_about()
     {
         var o = await OrgAsync();
         var past = Today.AddDays(-10);
@@ -421,13 +421,13 @@ public sealed class AttendanceRequestTests(TenancyFixture fx) : IAsyncLifetime
         Assert.NotEqual(leaverUser, (await OpenStepAsync(gone)).Assignee);
         Assert.Equal(1, await CountAsync("select count(*) from wf.workflow_tasks t join iam.roles r on r.id = t.assignee_role_id where t.instance_id = $1 and t.status = 'pending' and lower(r.code) = 'hr_admin'", gone.Json.GetProperty("instanceId").GetGuid()));
 
-        // A manager who joined after the day was not the manager then: not asked for that day, asked for a day since.
+        // The manager in post today is asked even for a day before they took over (the same rule as leave); the day does not pick the manager.
         var (newEmployment, newUser) = await HireUnderAsync(o, null, true, "line_manager");
         var (report, _) = await HireUnderAsync(o, newEmployment, withUser: false);
         await _h.ExecAsync("update hrm.employments set joining_date = $1 where id = $2", Ct, past.AddDays(5), newEmployment);
         var before = await _h.PostAsync(o.Hr, Duties, new { employmentId = report, kind = "on_duty", startDate = Iso(past), endDate = Iso(past), purpose = "Before the manager joined" }, Ct);
         Assert.Equal(HttpStatusCode.Accepted, before.Status);
-        Assert.NotEqual(newUser, (await OpenStepAsync(before)).Assignee);
+        Assert.Equal(newUser, (await OpenStepAsync(before)).Assignee);
         var after = await _h.PostAsync(o.Hr, Duties, new { employmentId = report, kind = "on_duty", startDate = Iso(past.AddDays(6)), endDate = Iso(past.AddDays(6)), purpose = "After the manager joined" }, Ct);
         Assert.Equal(HttpStatusCode.Accepted, after.Status);
         Assert.Equal(newUser, (await OpenStepAsync(after)).Assignee);
