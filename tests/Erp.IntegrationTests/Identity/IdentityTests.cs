@@ -505,7 +505,7 @@ public sealed class IdentityTests(TenancyFixture fx) : IAsyncLifetime
                 Assert.False(policy.Mfa.Required);
             }
 
-            Assert.Equal(IdentitySettings.All.Count, await h.CountAsync(A, "select count(*) from cfg.settings where module_id = 'iam'", ct));
+            Assert.Equal(IdentitySettings.All.Count, await h.CountAsync(A, "select count(*) from cfg.settings where module_id = 'iam' and key not like 'iam.api_client.%'", ct)); // the identity settings only: the API client settings (S1.27c) are not identity policies
         }
         finally
         {

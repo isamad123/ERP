@@ -315,7 +315,7 @@ public static class ApiHost
     /// Takes the caller's address from <c>X-Forwarded-For</c> only when the request comes from a proxy the operator lists in <c>Network:TrustedProxies</c>
     /// (addresses or CIDR ranges). With none listed the address is the one the server sees; the host name is never taken from a forwarded header.
     /// </summary>
-    private static void UseTrustedProxies(WebApplication app, IConfiguration config)
+    private static void UseTrustedProxies(WebApplication app, ConfigurationManager config)
     {
         var entries = config.GetSection("Network:TrustedProxies").Get<string[]>() ?? [];
         if (entries.Length == 0)
