@@ -122,7 +122,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.leave_request_days.request_status"
+      "labelKey": "fields.hrm.leave_request_days.request_status",
+      "sortable": true
     },
     {
       "column": "day_kind",

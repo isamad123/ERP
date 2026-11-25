@@ -88,6 +88,9 @@ public static class HrmSettingKeys
 
     /// <summary>A choice can be made or changed until this many days before the holiday.</summary>
     public const string HrmAttOptionalHolidayCutoffDays = "hrm.att.optional_holiday_cutoff_days";
+
+    /// <summary>How often the live attendance dashboard asks the server for new counts while it is open.</summary>
+    public const string HrmAttDashboardRefreshSeconds = "hrm.att.dashboard_refresh_seconds";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

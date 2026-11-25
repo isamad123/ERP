@@ -275,3 +275,12 @@ settings:
     name: {en: "Optional holiday choice closes (days before)", ur: "اختیاری چھٹی کا انتخاب بند (دن پہلے)"}
     description: {en: "A choice can be made or changed until this many days before the holiday", ur: "انتخاب چھٹی سے اتنے دن پہلے تک کیا یا بدلا جا سکتا ہے"}
     help: {en: "With 0 a choice can be changed up to the day of the holiday itself. With 7 it closes seven days before. The rule applies to each holiday on its own.", ur: "0 ہو تو انتخاب چھٹی کے دن تک بدلا جا سکتا ہے۔ 7 ہو تو چھٹی سے سات دن پہلے بند ہو جاتا ہے۔ قاعدہ ہر چھٹی پر الگ لاگو ہوتا ہے۔"}
+  - key: hrm.att.dashboard_refresh_seconds
+    type: int
+    default: 60
+    validation: {min: 15, max: 3600}
+    layers: [tenant]
+    area: hr.attendance
+    name: {en: "Attendance dashboard refresh (seconds)", ur: "حاضری ڈیش بورڈ کی تازگی (سیکنڈ)"}
+    description: {en: "How often the live attendance dashboard asks the server for new counts while it is open", ur: "حاضری کا لائیو ڈیش بورڈ کھلا ہونے پر سرور سے نئی گنتی کتنی بار مانگے"}
+    help: {en: "The dashboard polls the server on this interval; nothing is pushed. A shorter interval shows punches sooner and asks the server more often. The person can also refresh at once.", ur: "ڈیش بورڈ اس وقفے سے سرور سے پوچھتا ہے؛ کچھ بھیجا نہیں جاتا۔ کم وقفے سے اندراجات جلد نظر آتے ہیں اور سرور سے زیادہ بار پوچھنا پڑتا ہے۔ شخص فوراً بھی تازہ کر سکتا ہے۔"}

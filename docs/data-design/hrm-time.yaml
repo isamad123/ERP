@@ -136,6 +136,8 @@
     - [reason, text, opt, "why a day is worked on a rest day, or why a published day was changed (S1.28a)"]
   unique: [[employment_id, work_date, "where roster_status = 'published'"]]
   indexes: [[employment_id, work_date]]
+  # S1.30b (CR-090 S1.30b detail b): the live dashboard reads one company's published lines of a day.
+  indexes_added_in: {S1.30b: [[work_date, company_id]]}
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   # S1.28a (CR-085 S1.28a detail; slice S1.28 Build items 4 and 5, FR-HRM-ATT-07): a person has one line per roster and day; a working
@@ -184,6 +186,8 @@
     - [supersedes_event_id, uuid, opt, correction of an earlier event]
   unique: [[company_id, idempotency_key, event_date]]
   indexes: [[employment_id, event_date]]
+  # S1.30b (CR-090 S1.30b detail b): the dashboard's first punch of a day and the punch log report read by day.
+  indexes_added_in: {S1.30b: [[company_id, event_date, employment_id]]}
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
@@ -300,11 +304,15 @@
     - [end_at, ts, req]
     - [purpose, text, req]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+    - [file_ids, "uuid[]", opt, "proof files of the request, kept when it is decided (S1.30b, R-161; the files are owned through IAttachmentOwner, type hrm.duty_requests)"]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   # S1.30a (CR-090; slice S1.30 Build items 2 and 3, FR-HRM-ATT-14, GHR-09): field duty is a fourth kind; requests are made, approved and
   # cancelled by the HR attendance request service (the acting user is created_by); generated writes closed.
   enum_added_in: {S1.30a: {kind: [field_duty]}}
+  # S1.30b (CR-090 S1.30b detail a, R-161): proof files like the regularization request has; an index for the dashboard's "on duty today".
+  added_in: {S1.30b: [file_ids]}
+  indexes_added_in: {S1.30b: [[status, start_at, end_at]]}
   api_actions: [read]
   reqs: [ATT-14]
 
@@ -421,6 +429,8 @@
     - [day_kind, "enum(leave,sandwich)", req, "default leave; sandwich: a holiday or weekly off between two leave days of the request counted as leave (S1.32b, Build item 8)"]
   unique: [[leave_request_id, leave_date]]
   indexes: [[employment_id, leave_date]]
+  # S1.30b (CR-090 S1.30b detail b): the dashboard's "on leave today" reads one day of a company.
+  indexes_added_in: {S1.30b: [[leave_date, company_id, request_status]]}
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   # S1.32b (CR-086 S1.32b detail; slice S1.32 Build items 7 and 8): the days are written with their request by the HR leave request service only

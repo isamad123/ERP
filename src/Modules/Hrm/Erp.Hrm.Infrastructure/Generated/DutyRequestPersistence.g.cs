@@ -24,6 +24,7 @@ internal sealed class DutyRequestConfiguration : IEntityTypeConfiguration<global
         builder.Property(e => e.EndAt).HasColumnName("end_at").HasColumnType("timestamptz");
         builder.Property(e => e.Purpose).HasColumnName("purpose").HasColumnType("text").IsRequired();
         builder.Property(e => e.WorkflowInstanceId).HasColumnName("workflow_instance_id").HasColumnType("uuid");
+        builder.Property(e => e.FileIds).HasColumnName("file_ids").HasColumnType("uuid[]");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
@@ -62,8 +63,11 @@ internal sealed class DutyRequestRepository(
         {
             query = query.Where(e => e.Status == statusFilter);
         }
-        return await PageAsync(query, page, cancellationToken).ConfigureAwait(false);
+        return await Sorts.PageAsync(Context.Set<global::Erp.Hrm.Domain.Generated.DutyRequest>().AsNoTracking(), query, filter.Sort, page, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.DutyRequest> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.DutyRequest>().Key("startAt", e => e.StartAt).Key("endAt", e => e.EndAt).Key("status", e => e.Status);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.DutyRequest>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
         await PageAsync((await QueryAsync(cancellationToken).ConfigureAwait(false)).Where(e => e.CompanyId == companyId), page, cancellationToken).ConfigureAwait(false);

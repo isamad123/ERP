@@ -21,6 +21,7 @@ public sealed class DutyRequestResponse
     public global::System.DateTimeOffset EndAt { get; init; }
     public string Purpose { get; init; } = null!;
     public global::System.Guid? WorkflowInstanceId { get; init; }
+    public global::System.Guid[]? FileIds { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
@@ -43,6 +44,9 @@ public sealed class DutyRequestListQuery
     public global::System.Guid? WorkflowInstanceId { get; init; }
 
     public string? Status { get; init; }
+
+    /// <summary>Sort key: startAt, endAt, status; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    public string? Sort { get; init; }
 }
 
 /// <summary>Generated endpoints of hrm.duty_requests: read. Answers pass through field security (S1.06).</summary>
@@ -61,7 +65,7 @@ internal static class DutyRequestEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.duty_requests.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.DutyRequestFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.DutyRequestFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.DutyRequestAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
@@ -83,6 +87,7 @@ internal static class DutyRequestEndpoints
         EndAt = row.EndAt,
         Purpose = row.Purpose,
         WorkflowInstanceId = row.WorkflowInstanceId,
+        FileIds = row.FileIds,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -111,7 +116,7 @@ internal static class DutyRequestEndpoints
             var fields = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(services);
             var query = export.Filter.ValueKind == global::System.Text.Json.JsonValueKind.Object ? global::System.Text.Json.JsonSerializer.Deserialize<DutyRequestListQuery>(export.Filter.GetRawText(), global::System.Text.Json.JsonSerializerOptions.Web) ?? new DutyRequestListQuery() : new DutyRequestListQuery();
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(after is null ? null : global::System.Guid.Parse(after), limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.DutyRequestFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.DutyRequestFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status, Sort = export.Sort ?? query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var maps = await repository.FieldAccessAsync(rows, global::Erp.Hrm.Application.Generated.DutyRequestAccess.Fields, fields, "read", cancellationToken).ConfigureAwait(false);
             var shaped = new global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>(rows.Count);
             for (var i = 0; i < rows.Count; i++)

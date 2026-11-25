@@ -484,6 +484,71 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
             return Results.Ok(new { value = await TenancyFixture.ScalarTextAsync(owner, "select value::text from cfg.setting_values where setting_key = $1 and layer = 'tenant'", Ct, key) });
         });
 
+        // S1.30b (R-162): the attendance of the person and three colleagues in the customer's first company, written as rows the HR services write (RowFactory):
+        // the person is an employee (current assignment in a unit of its own) with an open exception two days ago, a waiting correction request and a waiting
+        // duty request; today everyone works a shift from 00:00 to 23:59: the person and one colleague have punched, one colleague is on approved leave, one has no
+        // punch yet. No attendance policy is assigned, so the dashboard shows those with a shift and no punch as "no policy" (no number has a default).
+        // Answers the ids the browser tests look for.
+        app.MapPost("/attendance/seed", async (AttendanceSeedBody body) =>
+        {
+            try
+            {
+            await using var c = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+            var catalog = Erp.IntegrationTests.Infrastructure.MigratedDatabases.Catalog;
+            var user = (Guid)(await new NpgsqlCommand("select id from iam.users where lower(username) = lower($1)", c) { Parameters = { new NpgsqlParameter { Value = body.Username } } }.ExecuteScalarAsync(Ct))!;
+            var company = (Guid)(await new NpgsqlCommand("select id from org.companies where lower(code) = lower($1)", c) { Parameters = { new NpgsqlParameter { Value = code } } }.ExecuteScalarAsync(Ct))!;
+            var branch = (Guid)(await new NpgsqlCommand("select id from org.branches where company_id = $1 order by created_at, id limit 1", c) { Parameters = { new NpgsqlParameter { Value = company } } }.ExecuteScalarAsync(Ct))!;
+            var zone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Karachi");
+            var now = clock.UtcNow;
+            var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime);
+            await using var tx = await c.BeginTransactionAsync(Ct);
+            var factory = new Erp.IntegrationTests.Infrastructure.RowFactory(c, tx, catalog, 700_000 + Random.Shared.Next(0, 200_000), company);
+            async Task<IReadOnlyDictionary<string, object?>> Row(string table, params (string Column, object? Value)[] values) =>
+                await factory.InsertAsync(catalog.Tables.Single(t => t.Database == "tenant" && t.FullName == table), values.ToDictionary(v => v.Column, v => v.Value, StringComparer.Ordinal), Ct);
+            var unit = (Guid)(await Row("org.org_units"))["id"]!;
+            async Task<Guid> Hire(Guid? account)
+            {
+                var employment = (Guid)(await Row("hrm.employments", ("company_id", company), ("user_ref", account), ("status", "active"), ("employee_type", "permanent"), ("is_primary", true),
+                    ("joining_date", today.AddDays(-90)), ("service_start_date", today.AddDays(-90)), ("separation_date", null), ("previous_employment_id", null)))["id"]!;
+                var change = (Guid)(await Row("hrm.employment_events", ("company_id", company), ("employment_id", employment)))["id"]!;
+                await Row("hrm.employment_assignments", ("company_id", company), ("employment_id", employment), ("event_id", change), ("org_unit_id", unit), ("branch_id", branch),
+                    ("valid_from", today.AddDays(-90)), ("valid_to", null), ("location_id", null), ("manager_employment_id", null), ("pay_group_id", null));
+                return employment;
+            }
+
+            var me = await Hire(user);
+            var punched = await Hire(null);
+            var onLeave = await Hire(null);
+            var silent = await Hire(null);
+            var shift = (Guid)(await Row("hrm.shifts", ("company_id", company), ("start_time", new TimeOnly(0, 0)), ("end_time", new TimeOnly(23, 59)), ("crosses_midnight", false)))["id"]!;
+            var roster = (Guid)(await Row("hrm.rosters", ("company_id", company), ("org_unit_id", unit), ("status", "published"), ("period_start", today.AddDays(-1)), ("period_end", today.AddDays(1))))["id"]!;
+            foreach (var e in new[] { me, punched, onLeave, silent })
+            {
+                await Row("hrm.roster_lines", ("company_id", company), ("roster_id", roster), ("employment_id", e), ("work_date", today), ("shift_id", shift), ("day_type", "working"), ("roster_status", "published"), ("reason", "Seeded for the browser tests"));
+            }
+
+            foreach (var e in new[] { me, punched })
+            {
+                await Row("hrm.attendance_events", ("company_id", company), ("employment_id", e), ("event_date", today), ("event_at", now.AddMinutes(-2)), ("direction", "in"), ("source", "hr_entry"),
+                    ("is_duplicate", false), ("supersedes_event_id", null), ("device_id", null), ("received_at", now.AddMinutes(-2)));
+            }
+
+            await Row("hrm.leave_request_days", ("company_id", company), ("employment_id", onLeave), ("leave_date", today), ("request_status", "approved"));
+            var day = (Guid)(await Row("hrm.attendance_days", ("company_id", company), ("employment_id", me), ("work_date", today.AddDays(-2)), ("superseded_at", null), ("result", "incomplete")))["id"]!;
+            var exception = (Guid)(await Row("hrm.attendance_exceptions", ("company_id", company), ("employment_id", me), ("attendance_day_id", day), ("work_date", today.AddDays(-2)), ("kind", "missing_out"), ("status", "open")))["id"]!;
+            var correction = (Guid)(await Row("hrm.regularization_requests", ("company_id", company), ("employment_id", me), ("exception_id", null), ("work_date", today.AddDays(-3)), ("reason", "Seeded correction"), ("status", "submitted"),
+                ("requested_in", now.AddDays(-3)), ("requested_out", null), ("workflow_instance_id", null), ("created_by", user)))["id"]!;
+            var duty = (Guid)(await Row("hrm.duty_requests", ("company_id", company), ("employment_id", me), ("kind", "official_visit"), ("status", "submitted"), ("purpose", "Seeded visit"),
+                ("start_at", now.AddDays(2)), ("end_at", now.AddDays(2).AddHours(8)), ("workflow_instance_id", null), ("created_by", user)))["id"]!;
+            await tx.CommitAsync(Ct);
+            return Results.Ok(new { company, unit, me, punched, onLeave, silent, exception, correction, duty });
+            }
+            catch (Exception ex)
+            {
+                return Results.Text(ex.ToString(), statusCode: 500); // the seeding says why it failed (test machinery)
+            }
+        });
+
         // Facts the browser cannot see: live sessions and trusts of a person.
         app.MapGet("/facts", async (string username) =>
         {
@@ -611,6 +676,8 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
     private sealed record LabelBody(string Key, string Language, string? Text);
 
     private sealed record FieldPolicyBody(string Username, string Resource, string Field, string Access);
+
+    private sealed record AttendanceSeedBody(string Username);
 
     private sealed record RouteBody(string DocumentType, string Approver, bool Bulk);
 

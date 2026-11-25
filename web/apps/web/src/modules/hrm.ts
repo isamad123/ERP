@@ -2,7 +2,7 @@
 // ruling 2026-11-21: People, Time and Payroll show now and open "not available yet" until their slices build them).
 // Features are D-24 keys of the licence; permissions are the read permission of each area's main table.
 import { lazy } from 'react';
-import { AlertTriangle, Briefcase, ClipboardEdit, CalendarDays, CalendarRange, Clock, FileSearch, GitFork, Grid3x3, LayoutGrid, MonitorSmartphone, QrCode, Router, ScrollText, Sigma, SunMoon, Timer, Users, UsersRound, Wallet } from 'lucide-react';
+import { Activity, AlertTriangle, Briefcase, BarChart3, ClipboardEdit, CalendarDays, CalendarRange, Clock, FileSearch, GitFork, Grid3x3, LayoutGrid, MonitorSmartphone, QrCode, Router, ScrollText, Sigma, SunMoon, Timer, Users, UsersRound, Wallet } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
 
 // S1.23a: the policy framework's screens (policies with versions and assignments; "Which policy applies?"), loaded with their routes.
@@ -22,6 +22,10 @@ const OptionalHolidaysScreen = lazy(() => import('./hrm/optional-holidays'));
 // S1.30a: attendance requests (corrections and duty) and the exception queue, loaded with their routes.
 const RequestsScreen = lazy(() => import('./hrm/requests'));
 const ExceptionsScreen = lazy(() => import('./hrm/exceptions'));
+// S1.30b: the live attendance dashboard, the attendance reports and the manager's team view, loaded with their routes.
+const DashboardScreen = lazy(() => import('./hrm/dashboard'));
+const ReportsScreen = lazy(() => import('./hrm/reports'));
+const TeamScreen = lazy(() => import('./hrm/team'));
 // S1.34a: the pay groups (made by the engine) and the payroll calendar with its readiness list, loaded with their routes.
 const PayGroupsScreen = lazy(() => import('./payroll/pay-groups'));
 const PayCalendarScreen = lazy(() => import('./payroll/calendar'));
@@ -44,6 +48,10 @@ export const hrmScreens: ScreenDeclaration[] = [
   { id: 'attendance', path: '/time/attendance/*', labelKey: 'nav.attendance', icon: Clock, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_days.read', comesWith: 'S1.29' },
   // S1.30a (FR-HRM-ATT-11, ATT-14; slice S1.30 Build item 4): the more specific routes win over the attendance placeholder above, which S1.30b replaces.
   { id: 'attendance-exceptions', path: '/time/exceptions', labelKey: 'nav.exceptions', icon: AlertTriangle, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_exceptions.read', component: ExceptionsScreen },
+  // S1.30b (FR-HRM-ATT-18, ATT-19, SSP-02, RPT-05): live attendance, reports and the team view.
+  { id: 'attendance-dashboard', path: '/time/dashboard', labelKey: 'nav.liveAttendance', icon: Activity, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_dashboard.read', component: DashboardScreen },
+  { id: 'attendance-team', path: '/time/team', labelKey: 'nav.teamAttendance', icon: UsersRound, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_dashboard.read', component: TeamScreen },
+  { id: 'attendance-reports', path: '/time/reports', labelKey: 'nav.attendanceReports', icon: BarChart3, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance_reports.read', component: ReportsScreen },
   { id: 'attendance-requests', path: '/time/requests/*', labelKey: 'nav.attendanceRequests', icon: ClipboardEdit, group: 'time', feature: 'hrm.core', permission: 'hrm.regularization_requests.read', component: RequestsScreen },
   { id: 'punch', path: '/time/punch', labelKey: 'nav.punch', icon: Clock, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance.punch', component: PunchScreen },
   { id: 'kiosk', path: '/time/kiosk', labelKey: 'nav.kiosk', icon: MonitorSmartphone, group: 'time', feature: 'hrm.core', permission: 'hrm.attendance.kiosk', component: KioskScreen },

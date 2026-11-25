@@ -105,7 +105,10 @@
         "hrm.leave_ledger.read",
         "aud.history.view",
         "hrm.holidays.read",
-        "hrm.shift_effective.read"
+        "hrm.shift_effective.read",
+        "hrm.attendance_dashboard.read",
+        "hrm.attendance_reports.read",
+        "hrm.attendance_events.read"
       ],
       "scopes": {
         "*": "direct_team"
@@ -268,7 +271,9 @@
         "hrm.holidays.read",
         "hrm.optional_holidays.choose",
         "hrm.optional_holiday_choices.read",
-        "hrm.shift_effective.read"
+        "hrm.shift_effective.read",
+        "hrm.attendance_dashboard.read",
+        "hrm.attendance_reports.read"
       ],
       "scopes": {
         "*": "all",

@@ -1,6 +1,8 @@
 using System.Data.Common;
 using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Domain.Time;
+using Erp.BuildingBlocks.Infrastructure.Persistence;
+using Erp.Hrm.Application.Generated;
 using Erp.Hrm.Application.Attendance;
 using Erp.Hrm.Contracts.Attendance;
 using Erp.Hrm.Domain.Generated;
@@ -8,6 +10,7 @@ using Erp.Hrm.Infrastructure.Employments;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Hrm.Infrastructure.Policies;
 using Erp.Kernel.Contracts.Attendance;
+using Erp.Kernel.Contracts.Documents;
 using Erp.Kernel.Contracts.Settings;
 using Erp.Kernel.Contracts.Workflow;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +43,7 @@ internal sealed class RegularizationHandler(IServiceProvider services, IClock cl
         }
 
         var now = clock.UtcNow;
+        row.FileIds = [.. await services.GetRequiredService<IRecordFiles>().CurrentAsync(AttendanceRequestEvents.RegularizationOwnerType, row.Id, transaction, cancellationToken).ConfigureAwait(false)]; // the proof as it stood when decided (R-161)
         if (outcome.Outcome == WorkflowOutcomes.Approved)
         {
             if (await services.GetRequiredService<IAttendancePeriodLock>().IsLockedAsync(row.EmploymentId, row.WorkDate, cancellationToken).ConfigureAwait(false))
@@ -126,6 +130,7 @@ internal sealed class DutyRequestHandler(IServiceProvider services, IClock clock
         }
 
         var now = clock.UtcNow;
+        row.FileIds = [.. await services.GetRequiredService<IRecordFiles>().CurrentAsync(AttendanceRequestEvents.DutyOwnerType, row.Id, transaction, cancellationToken).ConfigureAwait(false)]; // the proof as it stood when decided (R-161)
         if (outcome.Outcome == WorkflowOutcomes.Approved)
         {
             row.Status = "approved";
@@ -142,5 +147,62 @@ internal sealed class DutyRequestHandler(IServiceProvider services, IClock clock
         row.UpdatedAt = now;
         row.UpdatedBy = actor.UserId;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+}
+
+/// <summary>
+/// Proof files of a regularization request (slice S1.30b, R-161; FR-KRN-DOC-01, DOC-03; owner type <c>hrm.regularization_requests</c>, CR-114). The files follow
+/// the request: the person it is for and the person who made it, the people with an open approval task of it, and readers of regularization requests whose
+/// data scope covers it (a manager's team, HR's company) may read; the parties and the people who may make requests for this person (data scope) may add or
+/// delete while the request waits for a decision; sensitive files are for the same people. Nobody else, and nothing in another company's scope.
+/// </summary>
+internal sealed class RegularizationAttachmentOwner(HrmDbContext db, ICurrentActor actor, IPermissionChecker permissions, IDataScopeFilter scope, IWorkflowQueries approvals) : IAttachmentOwner
+{
+    public string OwnerType => AttendanceRequestEvents.RegularizationOwnerType;
+
+    public async Task<AttachmentOwnerAccess?> AccessAsync(Guid ownerId, CancellationToken cancellationToken)
+    {
+        var r = await db.Set<RegularizationRequest>().AsNoTracking().FirstOrDefaultAsync(x => x.Id == ownerId, cancellationToken).ConfigureAwait(false);
+        if (r is null)
+        {
+            return null;
+        }
+
+        var source = new DbContextScopeSource(db);
+        var reader = await permissions.HasPermissionAsync(AttendanceRequestPermissions.RegularizationRead, cancellationToken).ConfigureAwait(false)
+            && await scope.AllowsAsync(r, RegularizationRequestAccess.Scope, "read", source, cancellationToken).ConfigureAwait(false);
+        var maker = await permissions.HasPermissionAsync(AttendanceRequestPermissions.RegularizationCreate, cancellationToken).ConfigureAwait(false)
+            && await scope.AllowsAsync(r, RegularizationRequestAccess.Scope, "create", source, cancellationToken).ConfigureAwait(false);
+        var employee = await db.Set<Employment>().AsNoTracking().Where(x => x.Id == r.EmploymentId).Select(x => x.UserRef).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var party = employee == actor.UserId || r.CreatedBy == actor.UserId;
+        var approver = !party && (await approvals.OpenApprovalsOfAsync(actor.UserId, null, cancellationToken).ConfigureAwait(false)).TasksToDecide
+            .Any(t => t.DocumentId == r.Id && t.DocumentType == AttendanceRequestEvents.RegularizationDocumentType);
+        return new AttachmentOwnerAccess(r.CompanyId, party || reader || approver, (party || maker) && r.Status == "submitted", party || approver || maker || reader);
+    }
+}
+
+/// <summary>Proof files of a duty request (slice S1.30b, R-161; owner type <c>hrm.duty_requests</c>): the same rules as <see cref="RegularizationAttachmentOwner"/>.</summary>
+internal sealed class DutyRequestAttachmentOwner(HrmDbContext db, ICurrentActor actor, IPermissionChecker permissions, IDataScopeFilter scope, IWorkflowQueries approvals) : IAttachmentOwner
+{
+    public string OwnerType => AttendanceRequestEvents.DutyOwnerType;
+
+    public async Task<AttachmentOwnerAccess?> AccessAsync(Guid ownerId, CancellationToken cancellationToken)
+    {
+        var r = await db.Set<DutyRequest>().AsNoTracking().FirstOrDefaultAsync(x => x.Id == ownerId, cancellationToken).ConfigureAwait(false);
+        if (r is null)
+        {
+            return null;
+        }
+
+        var source = new DbContextScopeSource(db);
+        var reader = await permissions.HasPermissionAsync(AttendanceRequestPermissions.DutyRead, cancellationToken).ConfigureAwait(false)
+            && await scope.AllowsAsync(r, DutyRequestAccess.Scope, "read", source, cancellationToken).ConfigureAwait(false);
+        var maker = await permissions.HasPermissionAsync(AttendanceRequestPermissions.DutyCreate, cancellationToken).ConfigureAwait(false)
+            && await scope.AllowsAsync(r, DutyRequestAccess.Scope, "create", source, cancellationToken).ConfigureAwait(false);
+        var employee = await db.Set<Employment>().AsNoTracking().Where(x => x.Id == r.EmploymentId).Select(x => x.UserRef).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var party = employee == actor.UserId || r.CreatedBy == actor.UserId;
+        var approver = !party && (await approvals.OpenApprovalsOfAsync(actor.UserId, null, cancellationToken).ConfigureAwait(false)).TasksToDecide
+            .Any(t => t.DocumentId == r.Id && t.DocumentType == AttendanceRequestEvents.DutyDocumentType);
+        return new AttachmentOwnerAccess(r.CompanyId, party || reader || approver, (party || maker) && r.Status == "submitted", party || approver || maker || reader);
     }
 }

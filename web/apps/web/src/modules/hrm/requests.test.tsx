@@ -36,7 +36,7 @@ const sent: { method: string; url: string; body: unknown }[] = [];
 function serve(handler: (method: string, url: string, body: unknown) => Response) {
   sent.length = 0;
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
-    const body = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined;
+    const body = typeof init?.body === 'string' ? JSON.parse(init.body) : init?.body ?? undefined;
     sent.push({ method: init?.method ?? 'GET', url, body });
     return handler(init?.method ?? 'GET', url, body);
   }));
@@ -180,5 +180,90 @@ describe('exception queue screen', () => {
     cleanup();
     show(<ExceptionsScreen />, shell([]));
     expect(screen.getByText('You may not see attendance exceptions.')).toBeTruthy();
+  });
+});
+
+describe('proof files of a request (R-161; FR-KRN-DOC-01)', () => {
+  const FILE = () => new File(['x'], 'ticket.pdf', { type: 'application/pdf' });
+  const exceptionRig = (upload: (n: number) => Response) => {
+    let uploads = 0;
+    serve((method, url) => {
+      if (url.includes('/attendance/exceptions')) return json({ status: 'open', items: [EXCEPTION], more: false, unmapped: null });
+      if (url === '/api/hrm/attendance/regularization-requests') return json({ id: 'new-request', employmentId: 'e1', status: 'submitted', instanceId: 'w9', onBehalf: false, rowVersion: 1 }, 202);
+      if (method === 'POST' && url === '/api/doc/attachments') { uploads += 1; return upload(uploads); }
+      return json({});
+    });
+  };
+  const fillAndSend = async () => {
+    await userEvent.click(await screen.findByRole('button', { name: 'Ask for a correction' }));
+    await userEvent.type(await screen.findByLabelText(/Time out/), '18:00');
+    await userEvent.type(screen.getByLabelText(/Reason/), 'Forgot to punch out');
+  };
+
+  it('FR-KRN-DOC-01 the request is made first, then each chosen file is uploaded to the new request as its owner, and the form closes', async () => {
+    exceptionRig(() => json({ id: 'f1', fileName: 'ticket.pdf' }, 201));
+    show(<ExceptionsScreen />, shell(READ));
+    await fillAndSend();
+    expect(screen.getByText(/Images \(PNG, JPEG\) or PDF/)).toBeTruthy();
+    await userEvent.upload(screen.getByTestId('proof-input'), FILE());
+    expect(screen.getByText('ticket.pdf')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Send request' }));
+    await vi.waitFor(() => expect(sent.some((c) => c.url === '/api/doc/attachments')).toBe(true));
+    const order = sent.filter((c) => c.method === 'POST').map((c) => c.url);
+    expect(order).toEqual(['/api/hrm/attendance/regularization-requests', '/api/doc/attachments']);
+    const form = sent.find((c) => c.url === '/api/doc/attachments')!.body as FormData;
+    expect(form.get('OwnerType')).toBe('hrm.regularization_requests');
+    expect(form.get('OwnerId')).toBe('new-request');
+    expect((form.get('File') as File).name).toBe('ticket.pdf');
+    await vi.waitFor(() => expect(screen.queryByRole('button', { name: 'Send request' })).toBeNull());
+  });
+
+  it('FR-KRN-DOC-01 a failed upload does not lose the request: it says which file failed and retries into the same request', async () => {
+    exceptionRig((n) => (n === 1 ? json({ title: 'errors.doc.too_large', status: 413 }, 413) : json({ id: 'f1', fileName: 'ticket.pdf' }, 201)));
+    show(<ExceptionsScreen />, shell(READ));
+    await fillAndSend();
+    await userEvent.upload(screen.getByTestId('proof-input'), FILE());
+    await userEvent.click(screen.getByRole('button', { name: 'Send request' }));
+    expect(await screen.findByText('The request was sent')).toBeTruthy();
+    expect(screen.getByRole('listitem').textContent).toContain('Not uploaded');
+    expect(sent.filter((c) => c.url === '/api/hrm/attendance/regularization-requests').length).toBe(1);
+    await userEvent.click(screen.getByRole('button', { name: 'Upload the failed files again' }));
+    await vi.waitFor(() => expect(sent.filter((c) => c.url === '/api/doc/attachments').length).toBe(2));
+    const retry = sent.filter((c) => c.url === '/api/doc/attachments')[1]!.body as FormData;
+    expect(retry.get('OwnerId')).toBe('new-request');
+    expect(sent.filter((c) => c.url === '/api/hrm/attendance/regularization-requests').length).toBe(1);
+  });
+
+  it('FR-KRN-DOC-01 a request lists its files with download through the signed-in client, and the maker can delete one while it waits', async () => {
+    const created = vi.fn(() => 'blob:x');
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: created, revokeObjectURL: vi.fn() }));
+    serve((method, url) => {
+      if (url.includes('/regularization-requests')) return json({ items: [REG], next: null });
+      if (method === 'GET' && url.startsWith('/api/doc/attachments?')) return json([{ id: 'f1', fileName: 'ticket.pdf' }]);
+      if (url === '/api/doc/attachments/f1/content') return new Response('pdf', { status: 200, headers: { 'Content-Type': 'application/pdf' } });
+      if (method === 'DELETE') return new Response(null, { status: 204 });
+      return json({ items: [], next: null });
+    });
+    show(<RequestsScreen />, shell(READ));
+    await userEvent.click(await screen.findByRole('button', { name: 'Files' }));
+    expect(await screen.findByText('ticket.pdf')).toBeTruthy();
+    expect(sent.find((c) => c.url.startsWith('/api/doc/attachments?'))!.url).toBe('/api/doc/attachments?ownerType=hrm.regularization_requests&ownerId=r1');
+    await userEvent.click(screen.getByRole('button', { name: 'Download ticket.pdf' }));
+    await vi.waitFor(() => expect(created).toHaveBeenCalled());
+    expect(sent.some((c) => c.url === '/api/doc/attachments/f1/content' && !c.url.includes('token'))).toBe(true);
+    await userEvent.click(screen.getByRole('button', { name: 'Delete ticket.pdf' }));
+    await vi.waitFor(() => expect(sent.some((c) => c.method === 'DELETE' && c.url === '/api/doc/attachments/f1')).toBe(true));
+  });
+
+  it('FR-KRN-DOC-01 a decided request keeps its files but offers no delete', async () => {
+    serve((method, url) => {
+      if (url.includes('/duty-requests')) return json({ items: [DUTY], next: null });
+      if (method === 'GET' && url.startsWith('/api/doc/attachments?')) return json([{ id: 'f2', fileName: 'order.pdf' }]);
+      return json({});
+    });
+    show(<RequestsScreen />, shell(['hrm.duty_requests.read']));
+    await userEvent.click(await screen.findByRole('button', { name: 'Files' }));
+    expect(await screen.findByText('order.pdf')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Delete order.pdf' })).toBeNull();
   });
 });
