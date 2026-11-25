@@ -1,0 +1,76 @@
+/* The leave types and leave rules screens (slice S1.33b). Tokens and logical properties only. */
+.erp-ltype-scroll {
+  position: relative; /* clips the visually hidden captions and column names inside, which would otherwise widen the page */
+  overflow-x: auto;
+  max-inline-size: 100%;
+}
+
+.erp-ltype-scroll:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.erp-ltype-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+
+/* The colour a type carries is a design token name; it is also written in words next to the chip, so colour is never the only cue. */
+.erp-ltype-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-inline: var(--space-2);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  background-color: var(--color-neutral-subtle);
+}
+
+.erp-ltype-chip[data-colour='primary'] { background-color: var(--color-primary-subtle); }
+.erp-ltype-chip[data-colour='success'] { background-color: var(--color-success-subtle); }
+.erp-ltype-chip[data-colour='warning'] { background-color: var(--color-warning-subtle); }
+.erp-ltype-chip[data-colour='danger'] { background-color: var(--color-danger-subtle); }
+.erp-ltype-chip[data-colour='info'] { background-color: var(--color-info-subtle); }
+.erp-ltype-chip[data-colour='neutral'] { background-color: var(--color-neutral-subtle); }
+
+.erp-ltype-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.erp-lrule-block {
+  padding: var(--space-4);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+}
+
+.erp-lrule-section {
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+}
+
+.erp-lrule-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.erp-lrule-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.erp-lrule-subtitle {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-strong);
+}
