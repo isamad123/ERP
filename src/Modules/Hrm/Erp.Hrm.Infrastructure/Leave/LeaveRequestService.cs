@@ -394,6 +394,13 @@ internal sealed class LeaveRequestService(
         var days = await db.Set<LeaveRequestDay>().AsNoTracking().Where(d => d.LeaveRequestId == row.Id).OrderBy(d => d.LeaveDate).ToListAsync(cancellationToken).ConfigureAwait(false);
         var entries = await db.Set<LeaveLedger>().AsNoTracking().Where(x => x.SourceType == LeaveUsage.Source && x.SourceId == row.Id).OrderBy(x => x.CreatedAt).ToListAsync(cancellationToken).ConfigureAwait(false);
         var current = await files.CurrentAsync(LeaveWorkflowValues.OwnerType, row.Id, null, cancellationToken).ConfigureAwait(false);
+        LeavePlan? impact = null;
+        if (row.Status is "submitted" or "draft")
+        {
+            var modifies = row.ModifiesRequestId is { } replaced ? await db.Set<LeaveRequest>().AsNoTracking().FirstOrDefaultAsync(r => r.Id == replaced, cancellationToken).ConfigureAwait(false) : null;
+            impact = await planner.ImpactAsync(e, type, row, modifies, cancellationToken).ConfigureAwait(false);
+        }
+
         var changes = await db.Set<LeaveRequest>().AsNoTracking().Where(r => r.ModifiesRequestId == row.Id).OrderBy(r => r.CreatedAt).Select(r => new { id = r.Id, requestNo = r.RequestNo, status = r.Status }).ToListAsync(cancellationToken).ConfigureAwait(false);
         return new PeopleResult(PeopleOutcome.Done, Body: new
         {
@@ -402,6 +409,7 @@ internal sealed class LeaveRequestService(
             companyId = row.CompanyId,
             employmentId = row.EmploymentId,
             employeeNo = e.EmployeeNo,
+            employeeName = await db.Set<Person>().AsNoTracking().Where(p => p.Id == e.PersonId).Select(p => p.FirstName + (p.LastName == null ? "" : " " + p.LastName)).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false),
             leaveTypeId = type.Id,
             leaveTypeCode = type.Code,
             unit = type.Unit,
@@ -423,6 +431,7 @@ internal sealed class LeaveRequestService(
             workflowInstanceId = row.WorkflowInstanceId,
             appliedBy = row.CreatedBy,
             onBehalf = e.UserRef != row.CreatedBy,
+            impact = impact is null ? null : new { leaveYear = impact.Year?.Year, balance = impact.Balance, pending = impact.Pending, after = impact.After, lowest = impact.Lowest },
             dayList = days.Select(d => new { date = d.LeaveDate, quantity = d.Quantity, kind = d.DayKind, isPaid = d.IsPaid, status = d.RequestStatus }).ToList(),
             entries = entries.Select(x => LeaveLedgerService.Entry(x, null)).ToList(),
             rowVersion = row.RowVersion,

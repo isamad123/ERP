@@ -2394,6 +2394,7 @@ export interface LeaveType
     isCompOff: boolean;
     isUnpaidDeduction: boolean;
     source: 'pack' | 'tenant';
+    colorToken: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'neutral' | null;
     isActive: boolean;
     isDeleted: boolean;
     deletedAt: string | null;

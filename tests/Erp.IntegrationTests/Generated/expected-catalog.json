@@ -20285,6 +20285,23 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "color_token",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "primary",
+            "success",
+            "warning",
+            "danger",
+            "info",
+            "neutral"
+          ]
         }
       ],
       "uniques": [
@@ -20296,7 +20313,8 @@
         "ck_leave_types_name_i18n_object",
         "ck_leave_types_counting",
         "ck_leave_types_unit",
-        "ck_leave_types_source"
+        "ck_leave_types_source",
+        "ck_leave_types_color_token"
       ],
       "exclusions": [],
       "foreign_keys": [

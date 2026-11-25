@@ -4,6 +4,7 @@
 import { lazy } from 'react';
 import { Activity, AlertTriangle, Briefcase, BarChart3, ClipboardEdit, CalendarDays, CalendarRange, Clock, FilePen, FileSearch, GitFork, Grid3x3, LayoutGrid, Lock, MonitorSmartphone, QrCode, Router, ScrollText, Sigma, SunMoon, Timer, Users, UsersRound, Wallet } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
+import { registerApprovalCard } from './kernel/approval-cards';
 
 // S1.23a: the policy framework's screens (policies with versions and assignments; "Which policy applies?"), loaded with their routes.
 const PoliciesScreen = lazy(() => import('./hr/policies'));
@@ -26,6 +27,13 @@ const ExceptionsScreen = lazy(() => import('./hrm/exceptions'));
 const DashboardScreen = lazy(() => import('./hrm/dashboard'));
 const ReportsScreen = lazy(() => import('./hrm/reports'));
 const TeamScreen = lazy(() => import('./hrm/team'));
+// S1.33a: leave (my leave, apply, request page) and the team leave calendar, loaded with their routes.
+const LeaveScreen = lazy(() => import('./hrm/leave'));
+const LeaveTeamScreen = lazy(() => import('./hrm/leave-team'));
+// S1.33a: the approvals inbox shows this card under the fields of a leave request or a leave cancellation (lazy, so the shell does not grow).
+const LeaveApprovalCard = lazy(() => import('./hrm/leave-approval-card'));
+registerApprovalCard('hrm.leave_request', LeaveApprovalCard);
+registerApprovalCard('hrm.leave_cancellation', LeaveApprovalCard);
 // S1.34a: the pay groups (made by the engine) and the payroll calendar with its readiness list, loaded with their routes.
 const PayGroupsScreen = lazy(() => import('./payroll/pay-groups'));
 const PayCalendarScreen = lazy(() => import('./payroll/calendar'));
@@ -66,7 +74,8 @@ export const hrmScreens: ScreenDeclaration[] = [
   { id: 'shifts', path: '/time/shifts/*', labelKey: 'nav.shifts', icon: Timer, group: 'time', feature: 'hrm.core', permission: 'hrm.shifts.read', component: ShiftsScreen, tables: ['hrm.shifts'] },
   { id: 'rosters', path: '/time/rosters/*', labelKey: 'nav.rosters', icon: LayoutGrid, group: 'time', feature: 'hrm.core', permission: 'hrm.rosters.read', component: RostersScreen, tables: ['hrm.rosters'] },
   { id: 'optional-holidays', path: '/time/optional-holidays', labelKey: 'nav.optionalHolidays', icon: SunMoon, group: 'time', feature: 'hrm.core', permission: 'hrm.holidays.read', component: OptionalHolidaysScreen },
-  { id: 'leave', path: '/time/leave/*', labelKey: 'nav.leave', icon: CalendarDays, group: 'time', feature: 'hrm.core', permission: 'hrm.leave_requests.read', comesWith: 'S1.33' },
+  { id: 'leave', path: '/time/leave/*', labelKey: 'nav.leave', icon: CalendarDays, group: 'time', feature: 'hrm.core', permission: 'hrm.leave_requests.read', component: LeaveScreen },
+  { id: 'leave-team', path: '/time/leave-team', labelKey: 'nav.leaveTeam', icon: UsersRound, group: 'time', feature: 'hrm.core', permission: 'hrm.leave_requests.read', component: LeaveTeamScreen },
   // S1.23a (FR-HRM-POL-02, -03; ruling Q1): HR administrators manage policies; both entries need the permission to read policies.
   { id: 'policies', path: '/hr/policies/*', labelKey: 'nav.policies', icon: ScrollText, group: 'people', feature: 'hrm.core', permission: 'hrm.policies.read', component: PoliciesScreen },
   { id: 'policy-resolution', path: '/hr/policy-resolution', labelKey: 'nav.policyResolution', icon: FileSearch, group: 'people', feature: 'hrm.core', permission: 'hrm.policies.read', component: ResolutionScreen },

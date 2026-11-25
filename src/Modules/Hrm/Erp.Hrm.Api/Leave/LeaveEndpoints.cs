@@ -61,6 +61,11 @@ public static class LeaveEndpoints
             PersonEndpoints.Answer(await s.ChangeAsync(id, body, ct).ConfigureAwait(false))), "record_action", Requests, LeavePermissions.RequestsUpdate);
         Tag(app.MapGet("/api/hrm/leave-requests/{id:guid}/details", async (Guid id, ILeaveRequestService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.DetailsAsync(id, ct).ConfigureAwait(false))), "record_action", Requests, LeavePermissions.RequestsRead);
+        // S1.33a: the team calendar and the coverage warning of an approval card (FR-HRM-LVE-05, -15); reads, under the permission to read requests and its data scope.
+        Tag(app.MapGet("/api/hrm/leave-calendar", async ([FromQuery] Guid? companyId, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] Guid? unitId, [FromQuery] Guid? leaveTypeId, [FromQuery] int? limit, [FromQuery] int? offset, ILeaveCalendarService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.CalendarAsync(new LeaveCalendarQuery(companyId, from, to, unitId, leaveTypeId, limit, offset), ct).ConfigureAwait(false))), "catalog", Requests, LeavePermissions.RequestsRead);
+        Tag(app.MapGet("/api/hrm/leave-requests/{id:guid}/coverage", async (Guid id, ILeaveCalendarService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.CoverageAsync(id, ct).ConfigureAwait(false))), "record_action", Requests, LeavePermissions.RequestsRead);
         Tag(app.MapPost("/api/hrm/leave-year-end-runs/{id:guid}/confirm", async (Guid id, LeaveYearEndDecision body, ILeaveYearEndService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.ConfirmAsync(id, body, ct).ConfigureAwait(false))), "record_action", YearEnds, LeavePermissions.YearEndConfirm);
         Tag(app.MapPost("/api/hrm/leave-year-end-runs/{id:guid}/rollback", async (Guid id, LeaveYearEndDecision body, ILeaveYearEndService s, CancellationToken ct) =>

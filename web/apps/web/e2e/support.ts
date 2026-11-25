@@ -62,6 +62,8 @@ export const server = {
   settingValue: async (key: string) => (await call<{ value: string | null }>('GET', `/settings/value?key=${encodeURIComponent(key)}`)).value,
   /** S1.30b: attendance of the named person (own employment, an open exception, a waiting correction and duty request) and three colleagues with a shift today. */
   attendanceSeed: (username: string) => call<{ company: string; unit: string; me: string; exception: string; correction: string; duty: string }>('POST', '/attendance/seed', { username }),
+  /** S1.33a: the named person as line manager of four reports with leave types, policies, grants, two approved and one waiting request next week (a holiday on Thursday). */
+  leaveSeed: (username: string) => call<{ company: string; unit: string; me: string; reports: string[]; annual: string; sick: string; waiting: string; monday: string }>('POST', '/leave/seed', { username }),
   facts: (username: string) => call<{ liveSessions: number; reusedSessions: number; trustedDevices: number }>('GET', `/facts?username=${encodeURIComponent(username)}`),
 };
 
