@@ -316,13 +316,13 @@ jobs:
       matrix:
         shard:
           - name: 1
-            files: "@@SHARD1@@"
+            files: "access exports notify-templates sign-in"
           - name: 2
-            files: "@@SHARD2@@"
+            files: "custom-fields setup shell users"
           - name: 3
-            files: "@@SHARD3@@"
+            files: "approvals imports leave-screens numbering-routes ops"
           - name: 4
-            files: "@@SHARD4@@"
+            files: "attendance-screens branches org-chart organization settings"
     name: web-e2e (shard ${{ matrix.shard.name }})
 
     services:
