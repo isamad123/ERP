@@ -47,8 +47,6 @@ public static class PayServices
         services.AddScoped<IPayReadinessCheck, LoansUpdatedCheck>(); // the readiness item loans_updated
         services.AddScoped<IWorkflowOutcomeHandler, LoanApplicationHandler>();
         services.AddScoped<IHeldChangeHandler, LoanReceiptHandler>();
-        services.AddScoped<IPayInputProvider, LoanInputProvider>();
-        services.AddScoped<ILoanRecoveryPosting, LoanRecoveryPosting>();
         services.AddScoped<IOutstandingLoans, OutstandingLoans>();
         return services;
     }

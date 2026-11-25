@@ -2,7 +2,7 @@
 // ruling 2026-11-21: People, Time and Payroll show now and open "not available yet" until their slices build them).
 // Features are D-24 keys of the licence; permissions are the read permission of each area's main table.
 import { lazy } from 'react';
-import { Activity, AlertTriangle, BookOpen, Briefcase, BarChart3, CalendarCheck, ListChecks, ClipboardEdit, CalendarDays, CalendarRange, Clock, FilePen, FileSearch, GitFork, Grid3x3, LayoutGrid, Lock, MonitorSmartphone, QrCode, Router, ScrollText, Sigma, SunMoon, Timer, Users, UsersRound, Wallet } from 'lucide-react';
+import { Activity, AlertTriangle, BookOpen, Briefcase, BarChart3, CalendarCheck, ListChecks, ClipboardEdit, CalendarDays, CalendarRange, Clock, FilePen, FileSearch, GitFork, Grid3x3, HandCoins, LayoutGrid, Lock, MonitorSmartphone, QrCode, Router, ScrollText, Sigma, SunMoon, Timer, Users, UsersRound, Wallet } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
 import { registerApprovalCard } from './kernel/approval-cards';
 
@@ -43,6 +43,12 @@ registerApprovalCard('hrm.leave_cancellation', LeaveApprovalCard);
 // S1.34a: the pay groups (made by the engine) and the payroll calendar with its readiness list, loaded with their routes.
 const PayGroupsScreen = lazy(() => import('./payroll/pay-groups'));
 const PayCalendarScreen = lazy(() => import('./payroll/calendar'));
+// S1.41: loans and advances (types, applications and the loan page, the outstanding and reconciliation reports) and the loan card of the approvals inbox, loaded with their routes.
+const LoansScreen = lazy(() => import('./payroll/loans'));
+const LoanTypesScreen = lazy(() => import('./payroll/loan-types'));
+const LoanReportsScreen = lazy(() => import('./payroll/loan-reports'));
+const LoanApprovalCard = lazy(() => import('./payroll/loan-approval-card'));
+registerApprovalCard('hrm.loan_application', LoanApprovalCard);
 // S1.31: the attendance lock console (periods with lock and reopen requests, late punches) and the retroactive adjustments, loaded with their routes.
 const PeriodsScreen = lazy(() => import('./hrm/periods'));
 const AdjustmentsScreen = lazy(() => import('./hrm/periods').then((m) => ({ default: m.AdjustmentsScreen })));
@@ -94,5 +100,9 @@ export const hrmScreens: ScreenDeclaration[] = [
   // S1.34a (FR-HRM-PAY-01, FR-HRM-PAY-38): the more specific routes win over the placeholder below, which S1.35 replaces.
   { id: 'pay-groups', path: '/payroll/pay-groups/*', labelKey: 'nav.payGroups', icon: UsersRound, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.pay_groups.read', component: PayGroupsScreen, tables: ['hrm.pay_groups'] },
   { id: 'pay-calendar', path: '/payroll/calendar', labelKey: 'nav.payCalendar', icon: CalendarRange, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.pay_periods.read', component: PayCalendarScreen },
+  // S1.41 (FR-HRM-LON-01 to -03, -05, -07): the more specific routes win over the placeholder below.
+  { id: 'loans', path: '/payroll/loans/*', labelKey: 'nav.loans', icon: HandCoins, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.loans.read', component: LoansScreen, tables: ['hrm.loans'] },
+  { id: 'loan-types', path: '/payroll/loan-types/*', labelKey: 'nav.loanTypes', icon: ListChecks, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.loan_types.update', component: LoanTypesScreen, tables: ['hrm.loan_types'] },
+  { id: 'loan-reports', path: '/payroll/loan-reports', labelKey: 'nav.loanReports', icon: BarChart3, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.loan_reports.read', component: LoanReportsScreen },
   { id: 'payroll', path: '/payroll/*', labelKey: 'nav.payroll', icon: Wallet, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.pay_runs.read', comesWith: 'S1.35' },
 ];

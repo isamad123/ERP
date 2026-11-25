@@ -432,11 +432,10 @@ public sealed class PayCalendarTests(TenancyFixture fx) : IAsyncLifetime
         var items = first.Json.GetProperty("items").EnumerateArray().ToDictionary(i => i.GetProperty("code").GetString()!);
         Assert.Equal(["attendance_locked", "loans_updated", "claims_approved", "bank_data_complete", "structures_assigned"], items.Keys.ToArray());
 
-        // Items whose slice does not exist yet are "not available", never passed; S1.31 made the attendance item real: an unlocked period fails it.
-        foreach (var code in new[] { "loans_updated", "claims_approved" })
-        {
-            Assert.Equal("not_available", items[code].GetProperty("status").GetString());
-        }
+        // Items whose slice does not exist yet are "not available", never passed; S1.31 made the attendance item real: an unlocked period fails it. S1.41 made the loans item real:
+        // with no approved loan waiting to be paid out it passes (LoanTests holds the failing case).
+        Assert.Equal("not_available", items["claims_approved"].GetProperty("status").GetString());
+        Assert.Equal("passed", items["loans_updated"].GetProperty("status").GetString());
 
         Assert.Equal("failed", items["attendance_locked"].GetProperty("status").GetString());
 

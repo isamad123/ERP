@@ -145,6 +145,7 @@
   "hrm.policy.param.shift.weekly_off_kind": "Kind of weekly off",
   "hrm.policy.type.attendance": "Attendance rules",
   "hrm.policy.type.bonus": "Bonus",
+  "hrm.policy.type.loan": "Loan",
   "hrm.policy.type.leave": "Leave",
   "hrm.policy.type.notice_period": "Notice period",
   "hrm.policy.type.probation": "Probation",

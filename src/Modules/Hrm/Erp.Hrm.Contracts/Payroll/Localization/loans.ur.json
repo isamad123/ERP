@@ -21,7 +21,6 @@
   "errors.hrm.loan.amount_decimals": "رقم میں کرنسی سے زیادہ اعشاریہ ہیں۔",
   "errors.hrm.loan.installments_required": "اقساط کی تعداد درج کریں، کم از کم ایک۔",
   "errors.hrm.loan.no_employment": "ملازم چنیں۔",
-  "errors.hrm.employment.not_current": "ملازم کی کوئی موجودہ ملازمت نہیں۔",
   "errors.hrm.loan.not_eligible": "قرض کی درخواست نہیں ہو سکتی۔ وجوہات دیکھیں۔",
   "errors.hrm.loan.not_eligible.service": "ملازم کی کم از کم اتنے ماہ کی ملازمت ہونی چاہیے: {value}۔",
   "errors.hrm.loan.not_eligible.grade": "یہ قرض ان گریڈز کے لیے ہے: {value}۔",

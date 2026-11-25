@@ -21,7 +21,10 @@ public interface ILoanTypeService
     Task<PeopleResult> UpdateAsync(Guid typeId, LoanTypeRequest request, CancellationToken cancellationToken);
 }
 
-/// <summary>An application for a loan, or its preview (FR-HRM-LON-02). The employment is the caller's own when it is not named; the amount is salary-class data.</summary>
+/// <summary>
+/// An application for a loan, or its preview (FR-HRM-LON-02). The employment is the caller's own when it is not named (by id or, for HR, by employee number); the guarantor is named by id
+/// or by employee number (the same company); the amount is salary-class data.
+/// </summary>
 public sealed record LoanApplicationRequest(
     Guid? EmploymentId,
     Guid? LoanTypeId,
@@ -29,7 +32,9 @@ public sealed record LoanApplicationRequest(
     int? Installments,
     Guid? StartPeriodId,
     Guid? GuarantorEmploymentId,
-    string? Reason);
+    string? Reason,
+    string? EmployeeNo = null,
+    string? GuarantorEmployeeNo = null);
 
 /// <summary>The date and payment reference of a disbursement (Q3: recorded by hand; S1.40 payment batches may carry it later).</summary>
 public sealed record LoanDisbursementRequest(DateOnly? Date, string? Reference);

@@ -32,7 +32,7 @@ public static class LoanEndpoints
             PersonEndpoints.Answer(await s.UpdateAsync(id, body, ct).ConfigureAwait(false))), "record_action", Types, LoanPermissions.TypesUpdate);
 
         Tag(app.MapPost("/api/hrm/loans/preview", async (LoanApplicationRequest body, ILoanService s, CancellationToken ct) =>
-            PersonEndpoints.Answer(await s.PreviewAsync(body, ct).ConfigureAwait(false))), "catalog", Loans, LoanPermissions.Apply);
+            PersonEndpoints.Answer(await s.PreviewAsync(body, ct).ConfigureAwait(false))), "create", Loans, LoanPermissions.Apply);
         Tag(app.MapPost("/api/hrm/loans", async (LoanApplicationRequest body, ILoanService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.ApplyAsync(body, ct).ConfigureAwait(false))), "create", Loans, LoanPermissions.Apply);
         Tag(app.MapGet("/api/hrm/loans/{id:guid}/detail", async (Guid id, ILoanService s, CancellationToken ct) =>

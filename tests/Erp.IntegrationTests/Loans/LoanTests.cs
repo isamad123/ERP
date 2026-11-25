@@ -58,7 +58,7 @@ public sealed class LoanTests(TenancyFixture fx) : IAsyncLifetime
     private static readonly string[] LoanDesk =
     [
         "hrm.loan_types.read", "hrm.loans.read", "hrm.loan_installments.read", "hrm.loan_transactions.read", "hrm.loans.disburse", "hrm.loans.receipt", "hrm.loans.cancel",
-        "hrm.loan_reports.read", "hrm.loans.create",
+        "hrm.loan_reports.read", "hrm.loans.create", "hrm.pay_readiness.read",
     ];
 
     /// <summary>A company with pay-change approval off; a payroll manager (set-up, engine, loan desk, salary editable), HR, a finance approver, a monthly pay group with periods around last month.</summary>
@@ -617,6 +617,27 @@ public sealed class LoanTests(TenancyFixture fx) : IAsyncLifetime
         var row = report.Json.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("loanId").GetGuid() == loan);
         Assert.Equal(12_000m, row.GetProperty("balance").GetDecimal());
         Assert.Equal(3, row.GetProperty("installmentsLeft").GetInt32());
+    }
+
+    [Fact]
+    public async Task FR_HRM_PAY_38_FR_HRM_LON_03_the_loans_item_of_the_readiness_list_fails_for_an_approved_loan_never_paid_out_and_passes_once_it_is()
+    {
+        var rig = await RigAsync();
+        var type = await TypeAsync(rig);
+        var staff = await StaffAsync(rig, Today.AddYears(-2));
+        async Task<(string Status, int Count)> ItemAsync()
+        {
+            var answer = await _h.GetAsync(rig.Payroll, $"/api/hrm/pay-periods/{rig.Period.Id}/readiness", Ct);
+            Assert.True(answer.Status == HttpStatusCode.OK, answer.Body);
+            var item = answer.Json.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("code").GetString() == "loans_updated");
+            return (item.GetProperty("status").GetString()!, item.TryGetProperty("count", out var c) ? c.GetInt32() : 0);
+        }
+
+        Assert.Equal(("passed", 0), await ItemAsync());
+        var loan = await ApplyAndApproveAsync(rig, staff, type, 6_000m, 2);
+        Assert.Equal(("failed", 1), await ItemAsync()); // payroll would leave the installment out of the run
+        await DisburseAsync(rig, loan);
+        Assert.Equal(("passed", 0), await ItemAsync());
     }
 
     [Fact]

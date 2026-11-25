@@ -46,7 +46,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         Guid LeaveType, long LeaveTypeVersion, Guid LeaveEntry,
         Guid LeaveDraft, long LeaveDraftVersion, Guid LeaveApproved, Guid YearEndRun, Guid ToLeaveType, Guid Mover,
         Guid Overtime, Guid Penalty, Guid LockedPeriod, Guid LockRun, Guid Adjustment, Guid LockedEmployment, DateOnly LockedStart,
-        Guid OneTime, Guid PayRun, Guid PayRunPeriod, Guid FreePeriod, Guid PayInput);
+        Guid OneTime, Guid PayRun, Guid PayRunPeriod, Guid FreePeriod, Guid PayInput,
+        Guid LoanType, long LoanTypeVersion, Guid LoanPolicy, Guid LoanDeduction, Guid LoanEmployment, Guid LoanApproved, Guid LoanActive);
 
     /// <summary>Where the probe hires (slice S1.20b): an org unit of a company and that company's branch.</summary>
     private sealed record Hire(Guid Company, Guid OrgUnit, Guid Branch);
@@ -59,7 +60,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.LeaveType, a.LeaveEntry, a.LeaveDraft, a.LeaveApproved, a.YearEndRun, a.ToLeaveType, a.Mover, a.Component, a.Structure, a.Overtime, a.Penalty, a.LockedPeriod, a.LockRun, a.Adjustment, a.LockedEmployment, a.OneTime, a.PayRun, a.PayInput }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.LeaveType, a.LeaveEntry, a.LeaveDraft, a.LeaveApproved, a.YearEndRun, a.ToLeaveType, a.Mover, a.Component, a.Structure, a.Overtime, a.Penalty, a.LockedPeriod, a.LockRun, a.Adjustment, a.LockedEmployment, a.OneTime, a.PayRun, a.PayInput, a.LoanType, a.LoanEmployment, a.LoanApproved, a.LoanActive }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         pushSecrets[a.PushDevice] = PushSecret;
@@ -344,6 +345,17 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "GET /api/hrm/pay-runs/{id:guid}/results" => ($"/api/hrm/pay-runs/{m.PayRun}/results", null),
             "POST /api/hrm/pay-inputs" => ("/api/hrm/pay-inputs", Json(new { items = new[] { new { employmentId = m.LockedEmployment, payPeriodId = m.PayRunPeriod, componentId = m.OneTime, amount = 250m } } })),
             "POST /api/hrm/pay-inputs/{id:guid}/cancel" => ($"/api/hrm/pay-inputs/{m.PayInput}/cancel", null),
+            // S1.41: loan types, the application and its preview, the detail, cancel, payout, repayment and the two reports.
+            "POST /api/hrm/loan-types" => ("/api/hrm/loan-types", Json(new { companyId = m.Org.Company, code = "LT" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe type" }, kind = "advance", policyId = m.LoanPolicy, deductionComponentId = m.LoanDeduction })),
+            "PUT /api/hrm/loan-types/{id:guid}" => ($"/api/hrm/loan-types/{m.LoanType}", Json(new { rowVersion = m.LoanTypeVersion, isActive = true })),
+            "POST /api/hrm/loans/preview" => ("/api/hrm/loans/preview", Json(new { employmentId = m.LoanEmployment, loanTypeId = m.LoanType, principal = 1000m, installments = 2 })),
+            "POST /api/hrm/loans" => ("/api/hrm/loans", Json(new { employmentId = m.LoanEmployment, loanTypeId = m.LoanType, principal = 1000m, installments = 2, reason = "Probe" })),
+            "GET /api/hrm/loans/{id:guid}/detail" => ($"/api/hrm/loans/{m.LoanApproved}/detail", null),
+            "POST /api/hrm/loans/{id:guid}/cancel" => ($"/api/hrm/loans/{m.LoanApproved}/cancel", null),
+            "POST /api/hrm/loans/{id:guid}/disburse" => ($"/api/hrm/loans/{m.LoanApproved}/disburse", Json(new { date = "2025-01-02", reference = "PROBE-REF" })),
+            "POST /api/hrm/loans/{id:guid}/receipts" => ($"/api/hrm/loans/{m.LoanActive}/receipts", Json(new { amount = 100m, date = "2025-01-03", reference = "PROBE-RCPT" })),
+            "GET /api/hrm/loan-reports/outstanding" => ($"/api/hrm/loan-reports/outstanding?companyId={m.Org.Company}", null),
+            "GET /api/hrm/loan-reports/reconciliation" => ($"/api/hrm/loan-reports/reconciliation?companyId={m.Org.Company}", null),
             "GET /api/hrm/pay-input-names" => ("/api/hrm/pay-input-names", null),
             "GET /api/hrm/attendance/adjustments/{id:guid}" => ($"/api/hrm/attendance/adjustments/{m.Adjustment}", null),
             var key => throw new InvalidOperationException($"No probe target for HR endpoint {key}; extend HrmProbe."),
@@ -865,6 +877,78 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var payInput = (await PostAsync(host, token, "/api/hrm/pay-inputs", new { items = new[] { new { employmentId = lockedEmployment, payPeriodId = runPeriod, componentId = oneTime, amount = 100m } } }, ct))
             .GetProperty("items")[0].GetProperty("id").GetGuid();
 
+        // S1.41: a deduction component, a loan policy and type, an employee of a pay group of their own, an approved loan (detail, cancel, payout) and an active one with its ledger and
+        // schedule (repayment). The loans are written directly: applying needs approvals the probe does not wait for.
+        var loanDeduction = (await PostAsync(host, token, "/api/hrm/pay-components", new
+        {
+            companyId = org.Company, code = "LD" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe loan deduction" }, kind = "deduction", payslipOrder = 9, isRecurring = false, isOneTimeAllowed = true,
+            version = new { validFrom = "2020-01-01", method = "manual", proRataRule = "none", statutoryFlags = new { } },
+        }, ct)).GetProperty("id").GetGuid();
+        var loanPolicy = await PostAsync(host, token, "/api/hrm/policies", new
+        {
+            companyId = org.Company, policyType = "loan", code = "LP" + Guid.NewGuid().ToString("N")[..8], name = new { en = "Probe loan policy" },
+            parameters = new { maxAmountBasis = "fixed_amount", maxAmount = 1000000, interestMethod = "none", maxInstallments = 12 },
+        }, ct);
+        var loanPolicyId = loanPolicy.GetProperty("id").GetGuid();
+        var loanVersion = loanPolicy.GetProperty("versions")[0];
+        await OkAsync(host, token, $"/api/hrm/policy-versions/{loanVersion.GetProperty("id").GetGuid()}/activate", new { effectiveFrom = "2020-01-01", rowVersion = loanVersion.GetProperty("rowVersion").GetInt64() }, ct);
+        var loanType = await PostAsync(host, token, "/api/hrm/loan-types", new
+        {
+            companyId = org.Company, code = "LT" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe loan type" }, kind = "loan", policyId = loanPolicyId, deductionComponentId = loanDeduction,
+        }, ct);
+        var loanTypeId = loanType.GetProperty("id").GetGuid();
+        var loanGroup = (await PostAsync(host, token, "/api/hrm/pay-groups", new { companyId = org.Company, code = "LG" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe loan group" }, frequency = "monthly", taxYearStartMonth = 7 }, ct)).GetProperty("id").GetGuid();
+        await PostAsync(host, token, $"/api/hrm/pay-groups/{loanGroup}/periods/generate", new { taxYear = 2024 }, ct);
+        var loanPeriods = (await GetAsync(host, token, $"/api/hrm/pay-periods?payGroupId={loanGroup}&limit=50", ct)).GetProperty("items").EnumerateArray()
+            .OrderBy(x => x.GetProperty("startDate").GetString(), StringComparer.Ordinal).Select(x => x.GetProperty("id").GetGuid()).ToList();
+        var loanEmployment = (await PostAsync(host, token, "/api/hrm/employments", new
+        {
+            person = new { firstName = "Loaner" + Guid.NewGuid().ToString("N")[..8], gender = "unspecified" }, companyId = org.Company, employeeType = "permanent", joiningDate = "2024-01-01",
+            assignment = new { orgUnitId = org.OrgUnit, branchId = org.Branch, title = "Probe officer", payGroupId = loanGroup },
+        }, ct)).GetProperty("employment").GetProperty("id").GetGuid();
+        var loanApproved = Guid.CreateVersion7();
+        var loanActive = Guid.CreateVersion7();
+        await using (var c = await fx.OpenAdminAsync(code, ct))
+        {
+            async Task Exec(string sql, params object[] values)
+            {
+                await using var command = new NpgsqlCommand(sql, c);
+                foreach (var value in values)
+                {
+                    command.Parameters.Add(new NpgsqlParameter { Value = value });
+                }
+
+                await command.ExecuteNonQueryAsync(ct);
+            }
+
+            var by = BaselineSeed.SystemUserId;
+            foreach (var (id, active) in new[] { (loanApproved, false), (loanActive, true) })
+            {
+                await Exec("""
+                    insert into hrm.loans (id, company_id, loan_no, employment_id, loan_type_id, principal, currency_code, interest_rate, installments, interest_method, status, created_at, created_by, updated_at, updated_by, row_version)
+                    values ($1, $2, $3, $4, $5, 5000, 'PKR', 0, 2, 'none', 'applied', now(), $6, now(), $6, 1)
+                    """, id, org.Company, "PL-" + id.ToString("N")[^10..], loanEmployment, loanTypeId, by);
+                await Exec("update hrm.loans set status = 'approved' where id = $1", id);
+                if (!active)
+                {
+                    continue;
+                }
+
+                await Exec("update hrm.loans set status = 'active', disbursed_on = '2025-01-01' where id = $1", id);
+                await Exec("""
+                    insert into hrm.loan_transactions (id, company_id, loan_id, kind, amount, txn_date, source_type, source_id, reference, created_at, created_by)
+                    values ($1, $2, $3, 'disbursement', 5000, '2025-01-01', 'hrm.loans', $3, 'PROBE', now(), $4)
+                    """, Guid.CreateVersion7(), org.Company, id, by);
+                for (var seq = 1; seq <= 2; seq++)
+                {
+                    await Exec("""
+                        insert into hrm.loan_installments (id, company_id, loan_id, seq, pay_period_id, principal_amount, interest_amount, status, created_at, created_by, updated_at, updated_by, row_version)
+                        values ($1, $2, $3, $4, $5, 2500, 0, 'scheduled', now(), $6, now(), $6, 1)
+                        """, Guid.CreateVersion7(), org.Company, id, seq, loanPeriods[seq], by);
+                }
+            }
+        }
+
         return new Material(person, created.GetProperty("rowVersion").GetInt64(), into, identifier.Id, identifier.Version, contact.Id, contact.Version,
             address.Id, address.Version, relation.Id, relation.Version, qualification.Id, qualification.Version,
             match.GetProperty("id").GetGuid(), match.GetProperty("rowVersion").GetInt64(), created.GetProperty("personNo").GetString()!,
@@ -881,7 +965,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             removalMap, 1, unmapped, 1, mapNo,
             leaveType.GetProperty("id").GetGuid(), leaveType.GetProperty("rowVersion").GetInt64(), leaveEntry.GetProperty("id").GetGuid(),
             leaveDraft.GetProperty("id").GetGuid(), leaveDraft.GetProperty("rowVersion").GetInt64(), leaveApproved, yearEndRun, toLeaveType, mover,
-            overtime, penalty, lockedPeriod, lockRun, adjustment, lockedEmployment, lockedStart, oneTime, payRun, runPeriod, freePeriod, payInput);
+            overtime, penalty, lockedPeriod, lockRun, adjustment, lockedEmployment, lockedStart, oneTime, payRun, runPeriod, freePeriod, payInput,
+            loanType.GetProperty("id").GetGuid(), loanType.GetProperty("rowVersion").GetInt64(), loanPolicyId, loanDeduction, loanEmployment, loanApproved, loanActive);
     }
 
     private static string Iso(DateOnly d) => d.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);

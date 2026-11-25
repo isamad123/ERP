@@ -226,7 +226,7 @@ internal sealed class LoanService(
     /// <summary>The checks and the schedule of an application. A field error or a refusal ends it; an ineligible applicant is not an error here: the reasons are in the plan.</summary>
     private async Task<(LoanPlan? Plan, PeopleResult? Refusal)> PlanAsync(LoanApplicationRequest r, CancellationToken ct)
     {
-        var (employment, failure) = await EmploymentAsync(r.EmploymentId, ct).ConfigureAwait(false);
+        var (employment, failure) = await EmploymentAsync(r.EmploymentId, r.EmployeeNo, ct).ConfigureAwait(false);
         if (employment is null)
         {
             return (null, failure);
@@ -286,9 +286,11 @@ internal sealed class LoanService(
 
         var problems = new List<LoanProblem>(LoanEligibility.Check(rules, context.ServiceMonths, context.GradeCode, context.OpenLoans, amount, r.Installments!.Value, context.GrossPay));
         Employment? guarantor = null;
-        if (r.GuarantorEmploymentId is { } gid)
+        var guarantorNo = r.GuarantorEmployeeNo?.Trim();
+        if (r.GuarantorEmploymentId is not null || !string.IsNullOrEmpty(guarantorNo))
         {
-            guarantor = await db.Set<Employment>().AsNoTracking().FirstOrDefaultAsync(e => e.Id == gid && e.CompanyId == employment.CompanyId && Current.Contains(e.Status), ct).ConfigureAwait(false);
+            guarantor = await db.Set<Employment>().AsNoTracking()
+                .FirstOrDefaultAsync(e => e.CompanyId == employment.CompanyId && Current.Contains(e.Status) && (r.GuarantorEmploymentId != null ? e.Id == r.GuarantorEmploymentId : e.EmployeeNo == guarantorNo), ct).ConfigureAwait(false);
             if (guarantor is null)
             {
                 return (null, PeopleResult.Fields(new Dictionary<string, string[]> { ["guarantorEmploymentId"] = [GuarantorUnknown] }));
@@ -398,12 +400,19 @@ internal sealed class LoanService(
     }
 
     /// <summary>The employment: the one named, else the caller's own (exactly one current), inside the caller's data scope to create loans.</summary>
-    private async Task<(Employment? Employment, PeopleResult? Failure)> EmploymentAsync(Guid? employmentId, CancellationToken ct)
+    private async Task<(Employment? Employment, PeopleResult? Failure)> EmploymentAsync(Guid? employmentId, string? employeeNo, CancellationToken ct)
     {
         Employment? employment;
+        var number = employeeNo?.Trim();
         if (employmentId is { } id && id != Guid.Empty)
         {
             employment = await db.Set<Employment>().AsNoTracking().FirstOrDefaultAsync(e => e.Id == id, ct).ConfigureAwait(false);
+        }
+        else if (!string.IsNullOrEmpty(number))
+        {
+            // By employee number (HR on behalf): the same data scope decides, and a number that two companies share asks for the company's employee by id.
+            var found = await db.Set<Employment>().AsNoTracking().Where(e => e.EmployeeNo == number && Current.Contains(e.Status)).Take(2).ToListAsync(ct).ConfigureAwait(false);
+            employment = found.Count == 1 ? found[0] : null;
         }
         else
         {

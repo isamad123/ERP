@@ -21,7 +21,6 @@
   "errors.hrm.loan.amount_decimals": "The amount has more decimals than the currency allows.",
   "errors.hrm.loan.installments_required": "Give the number of installments, at least one.",
   "errors.hrm.loan.no_employment": "Choose the employee.",
-  "errors.hrm.employment.not_current": "The employee has no current employment.",
   "errors.hrm.loan.not_eligible": "The loan cannot be asked for. See the reasons.",
   "errors.hrm.loan.not_eligible.service": "The employee needs at least this many months of service: {value}.",
   "errors.hrm.loan.not_eligible.grade": "This loan is for the grades: {value}.",
