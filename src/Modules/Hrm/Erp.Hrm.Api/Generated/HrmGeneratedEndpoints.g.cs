@@ -18,6 +18,7 @@ public static class HrmGeneratedEndpoints
         global::Erp.Hrm.Api.Generated.AttendanceDeviceEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.AttendanceEventEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.AttendanceExceptionEndpoints.Map(app);
+        global::Erp.Hrm.Api.Generated.AttendancePenaltyEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.AttendancePeriodEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.BenefitClaimEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.BenefitEnrollmentEndpoints.Map(app);
@@ -222,6 +223,7 @@ public static class HrmExportReaders
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Contracts.Itg.IExportRowReader, global::Erp.Hrm.Api.Generated.AttendanceDeviceEndpoints.ExportReader>());
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Contracts.Itg.IExportRowReader, global::Erp.Hrm.Api.Generated.AttendanceEventEndpoints.ExportReader>());
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Contracts.Itg.IExportRowReader, global::Erp.Hrm.Api.Generated.AttendanceExceptionEndpoints.ExportReader>());
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Contracts.Itg.IExportRowReader, global::Erp.Hrm.Api.Generated.AttendancePenaltyEndpoints.ExportReader>());
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Contracts.Itg.IExportRowReader, global::Erp.Hrm.Api.Generated.AttendancePeriodEndpoints.ExportReader>());
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Contracts.Itg.IExportRowReader, global::Erp.Hrm.Api.Generated.BenefitClaimEndpoints.ExportReader>());
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Contracts.Itg.IExportRowReader, global::Erp.Hrm.Api.Generated.BenefitEnrollmentEndpoints.ExportReader>());

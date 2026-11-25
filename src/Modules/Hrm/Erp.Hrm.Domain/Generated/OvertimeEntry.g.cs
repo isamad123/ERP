@@ -48,6 +48,18 @@ public sealed partial class OvertimeEntry : global::Erp.BuildingBlocks.Domain.En
     /// <summary>workflow_instance_id: fk wf.workflow_instances</summary>
     public global::System.Guid? WorkflowInstanceId { get; set; }
 
+    /// <summary>requested_minutes: minutes asked for before the day (pre-approval, S1.29b); null for overtime claimed after it was worked</summary>
+    public int? RequestedMinutes { get; set; }
+
+    /// <summary>reason: why the overtime is asked for or claimed (S1.29b)</summary>
+    public string? Reason { get; set; }
+
+    /// <summary>policy_version_id: fk hrm.policy_versions; the attendance policy version whose overtime rule gave the multiplier (S1.29b)</summary>
+    public global::System.Guid? PolicyVersionId { get; set; }
+
+    /// <summary>comp_off_minutes: minutes converted to compensatory off: what the comp-off leave type can earn in its unit; the rest of the approved minutes is paid (S1.29b review)</summary>
+    public int? CompOffMinutes { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

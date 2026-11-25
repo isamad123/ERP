@@ -2065,3 +2065,119 @@ functions:
       left join hrm.employment_assignments a
              on a.employment_id = x.employment_id and a.valid_from <= x.work_date and (a.valid_to is null or a.valid_to > x.work_date);
       grant select on hrm.rpt_att_exceptions to app_rw, app_ro, backup;
+
+  # S1.29b (CR-089 S1.29b detail; slice S1.29 Build items 7 and 8, FR-HRM-ATT-13, FR-XM-05): a lateness penalty is a record. Once it deducted leave,
+  # was asked to be waived or ended it is never deleted (an untouched one may be, audited, as the change-log coverage needs);
+  # who, which day, which kind and what was done (action, leave type and units, the usage entry) never change; while it is applied the engine may
+  # follow its day to a newer result (minutes, occurrence, day row, period, policy version, explanation); it ends once, waived or cancelled, and
+  # then nothing changes. A reversal of its leave is recorded only when it ends.
+  - slice: S1.29b
+    name: hrm.tg_attendance_penalties_rules
+    purpose: "A lateness penalty that deducted leave, was asked to be waived or ended is never deleted, its facts (employment, day, kind, action, leave type, units and usage entry) never change, and it ends once (waived or cancelled; waived needs the time), after which nothing changes; refused with constraint ck_attendance_penalties_rules."
+    triggers:
+      - [hrm.attendance_penalties, tg_attendance_penalties_rules]
+    sql: |
+      create or replace function hrm.tg_attendance_penalties_rules() returns trigger
+      language plpgsql as $fn$
+      begin
+          if tg_op = 'DELETE' then
+              -- Only an untouched penalty (applied, no leave deducted, no waiver asked) may go, and the change log records it; the application never
+              -- deletes one (its writes are closed). Anything that changed a balance or was asked about is kept for good.
+              if old.status <> 'applied' or old.leave_entry_id is not null or old.workflow_instance_id is not null or old.waiver_reason is not null then
+                  raise exception 'attendance penalty %: a penalty that deducted leave, was asked to be waived or ended is never deleted', old.id
+                      using errcode = '23514', constraint = 'ck_attendance_penalties_rules';
+              end if;
+              return old;
+          end if;
+          if new.minutes < 0 or new.occurrence < 1 or (new.leave_quantity is not null and new.leave_quantity <= 0)
+             or (new.action = 'leave') <> (new.leave_quantity is not null) or (new.action <> 'leave' and new.leave_type_id is not null)
+             or (new.status = 'waived' and new.waived_at is null) then
+              raise exception 'attendance penalty %: minutes, occurrence, leave or waiver time out of rule', new.id
+                  using errcode = '23514', constraint = 'ck_attendance_penalties_rules';
+          end if;
+          if tg_op = 'INSERT' then
+              if new.status <> 'applied' or new.leave_reversal_id is not null then
+                  raise exception 'attendance penalty %: a new penalty is applied', new.id
+                      using errcode = '23514', constraint = 'ck_attendance_penalties_rules';
+              end if;
+              return new;
+          end if;
+          if old.status <> 'applied'
+             or new.employment_id <> old.employment_id or new.company_id <> old.company_id or new.work_date <> old.work_date or new.kind <> old.kind
+             or new.action <> old.action or new.leave_type_id is distinct from old.leave_type_id or new.leave_quantity is distinct from old.leave_quantity
+             or new.leave_entry_id is distinct from old.leave_entry_id
+             or (new.leave_reversal_id is not null and new.status = 'applied')
+             or (new.status <> 'applied' and new.leave_entry_id is not null and new.leave_reversal_id is null) then
+              raise exception 'attendance penalty %: only an applied penalty follows its day or ends (giving back its leave); its facts never change', old.id
+                  using errcode = '23514', constraint = 'ck_attendance_penalties_rules';
+          end if;
+          return new;
+      end
+      $fn$;
+      drop trigger if exists tg_attendance_penalties_rules on hrm.attendance_penalties;
+      create trigger tg_attendance_penalties_rules before insert or update or delete on hrm.attendance_penalties
+          for each row execute function hrm.tg_attendance_penalties_rules();
+
+  # S1.29b (CR-089 S1.29b detail; slice S1.29 Build items 9 to 11, FR-HRM-ATT-12, FR-XM-26): an overtime entry keeps its employment and day; only a
+  # worked-out entry nobody has claimed may be removed (its overtime went away); approved minutes are set only by the approval (never above the
+  # minutes asked for before the day) and an approved, paid or converted entry always has them; a rejected or converted entry never changes (the
+  # leave engine only fills in the comp-off entry of a converted one).
+  - slice: S1.29b
+    name: hrm.tg_overtime_entries_rules
+    purpose: "An overtime entry keeps its employment and day, is removed only while worked out and unclaimed, gets approved minutes only on approval (within the minutes asked for), and never changes once rejected, converted to comp-off or paid; refused with constraint ck_overtime_entries_rules."
+    triggers:
+      - [hrm.overtime_entries, tg_overtime_entries_rules]
+    sql: |
+      create or replace function hrm.tg_overtime_entries_rules() returns trigger
+      language plpgsql as $fn$
+      begin
+          if tg_op = 'DELETE' then
+              if old.status <> 'calculated' or old.workflow_instance_id is not null then
+                  raise exception 'overtime entry %: only an unclaimed worked-out entry is removed', old.id
+                      using errcode = '23514', constraint = 'ck_overtime_entries_rules';
+              end if;
+              return old;
+          end if;
+          if new.minutes < 0 or (new.approved_minutes is not null and new.approved_minutes < 0) or (new.requested_minutes is not null and new.requested_minutes < 1)
+             or (new.approved_minutes is not null and new.requested_minutes is not null and new.approved_minutes > new.requested_minutes)
+             or (new.status in ('approved', 'paid', 'converted_to_comp_off') and new.approved_minutes is null)
+             or (new.comp_off_minutes is not null and (new.status <> 'converted_to_comp_off' or new.comp_off_minutes < 1 or new.comp_off_minutes > new.approved_minutes))
+             or new.rate_multiplier < 0 then
+              raise exception 'overtime entry %: minutes or multiplier out of rule', new.id
+                  using errcode = '23514', constraint = 'ck_overtime_entries_rules';
+          end if;
+          if tg_op = 'INSERT' then
+              if new.approved_minutes is not null or new.status not in ('calculated', 'submitted') then
+                  raise exception 'overtime entry %: a new entry is worked out or asked for', new.id
+                      using errcode = '23514', constraint = 'ck_overtime_entries_rules';
+              end if;
+              return new;
+          end if;
+          -- The comp-off entry of a converted entry is filled in once by the leave engine when it posts the earning; nothing else changes.
+          if old.status = 'converted_to_comp_off' and old.comp_off_entry_id is null and new.comp_off_entry_id is not null
+             and (to_jsonb(new) - array['comp_off_entry_id', 'updated_at', 'updated_by', 'row_version'])
+                 = (to_jsonb(old) - array['comp_off_entry_id', 'updated_at', 'updated_by', 'row_version']) then
+              return new;
+          end if;
+          -- Only the moves the services make (review S1.29b finding 6): worked out to claimed; claimed to approved, rejected or (a withdrawn claim) back to
+          -- worked out; approved to paid or converted.
+          if new.status <> old.status and not (
+                 (old.status = 'calculated' and new.status = 'submitted')
+              or (old.status = 'submitted' and new.status in ('approved', 'rejected'))
+              or (old.status = 'submitted' and new.status = 'calculated' and new.requested_minutes is null)
+              or (old.status = 'approved' and new.status in ('paid', 'converted_to_comp_off'))) then
+              raise exception 'overtime entry %: % cannot become %', old.id, old.status, new.status
+                  using errcode = '23514', constraint = 'ck_overtime_entries_rules';
+          end if;
+          if old.status in ('rejected', 'converted_to_comp_off', 'paid')
+             or new.employment_id <> old.employment_id or new.company_id <> old.company_id or new.work_date <> old.work_date
+             or (new.approved_minutes is distinct from old.approved_minutes and not (old.status = 'submitted' and new.status = 'approved')) then
+              raise exception 'overtime entry %: a decided entry never changes; approved minutes are set by the approval', old.id
+                  using errcode = '23514', constraint = 'ck_overtime_entries_rules';
+          end if;
+          return new;
+      end
+      $fn$;
+      drop trigger if exists tg_overtime_entries_rules on hrm.overtime_entries;
+      create trigger tg_overtime_entries_rules before insert or update or delete on hrm.overtime_entries
+          for each row execute function hrm.tg_overtime_entries_rules();

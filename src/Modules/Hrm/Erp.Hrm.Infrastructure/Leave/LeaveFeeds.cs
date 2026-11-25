@@ -150,6 +150,14 @@ public sealed class CompOffConsumer(IServiceProvider services, IClock clock) : I
                     {expires}, {SourceType}, {sourceId}, {policy?.Resolution.Policy?.VersionId}, null, 'comp_off', {now}, {actor})
             on conflict (source_type, source_id, kind, leave_type_id) where source_id is not null do nothing
             """, cancellationToken).ConfigureAwait(false);
+
+        // Overtime converted to comp-off (S1.29b) names the earning it became (the overtime entry is the event's source; set once).
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            update hrm.overtime_entries o set comp_off_entry_id = l.id, updated_at = {now}, updated_by = {actor}, row_version = o.row_version + 1
+            from hrm.leave_ledger l
+            where o.id = {sourceId} and o.status = 'converted_to_comp_off' and o.comp_off_entry_id is null
+              and l.company_id = o.company_id and l.source_type = {SourceType} and l.source_id = o.id and l.kind = 'comp_off_earned'
+            """, cancellationToken).ConfigureAwait(false);
     }
 }
 

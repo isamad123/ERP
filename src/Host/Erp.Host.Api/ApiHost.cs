@@ -176,6 +176,7 @@ public static class ApiHost
         services.AddSingleton<ILicenceResolver, LicenceResolver>();
         services.AddScoped<ILicensedFeatures, EntitlementFeatures>();
         services.AddScoped<ILicenceService, LicenceService>();
+        services.AddScoped<global::Erp.Kernel.Application.Jobs.ISystemHealth, global::Erp.Kernel.Infrastructure.Jobs.SystemHealthService>();
         // Session context of the web shell (S1.12b, S1.12 ruling Q9).
         services.AddScoped<ISessionContextService, SessionContextService>();
         // Saved list views and label overrides of the web lists and forms (S1.12c, S1.12 rulings Q11 and Q12).
@@ -297,6 +298,7 @@ public static class ApiHost
         Erp.Hrm.Api.Attendance.AttendanceDayEndpoints.MapHrmAttendanceDayEndpoints(api); // S1.29a attendance engine: process, days, explanation, exception queue
         Erp.Hrm.Api.Attendance.AttendanceReportEndpoints.MapHrmAttendanceReportEndpoints(api); // S1.30b live dashboard and standard attendance reports
         Erp.Hrm.Api.Attendance.AttendanceRequestEndpoints.MapHrmAttendanceRequestEndpoints(api); // S1.30a regularization and duty requests
+        Erp.Hrm.Api.Attendance.AttendanceConsequenceEndpoints.MapHrmAttendanceConsequenceEndpoints(api); // S1.29b overtime claims and requests, penalty waivers
         return app;
     }
 

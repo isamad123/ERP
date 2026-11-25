@@ -225,7 +225,7 @@ public sealed class AttendanceEngineUnitTests
         var type = manifest.RootElement.GetProperty("types").EnumerateArray().Single(t => t.GetProperty("code").GetString() == "attendance");
         var props = type.GetProperty("schema").GetProperty("properties").EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal).ToList();
         Assert.Equal(
-            ["absentBelowMinutes", "breakMinutes", "breakMode", "earlyGraceMinutes", "earlyHalfDayAfterMinutes", "fieldDutyCountsAsPresent", "fullDayMinutes", "holidayWork", "lateGraceMinutes", "lateHalfDayAfterMinutes", "officialVisitCountsAsPresent", "onDutyCountsAsPresent", "roundingMode", "roundingStepMinutes", "shiftWindowMinutes", "weeklyOffWork", "workFromHomeCountsAsPresent"],
+            ["absentBelowMinutes", "breakMinutes", "breakMode", "earlyGraceMinutes", "earlyHalfDayAfterMinutes", "earlyPenalty", "fieldDutyCountsAsPresent", "fullDayMinutes", "holidayWork", "lateGraceMinutes", "lateHalfDayAfterMinutes", "latePenalty", "officialVisitCountsAsPresent", "onDutyCountsAsPresent", "overtime", "roundingMode", "roundingStepMinutes", "shiftWindowMinutes", "weeklyOffWork", "workFromHomeCountsAsPresent"],
             props);
         Assert.DoesNotContain("\"default\"", type.GetRawText(), StringComparison.Ordinal);
         using var partial = JsonDocument.Parse("""{"lateGraceMinutes":10}""");

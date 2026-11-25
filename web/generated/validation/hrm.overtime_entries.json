@@ -69,6 +69,27 @@
       "format": "uuid",
       "nullable": true
     },
+    "requestedMinutes": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647,
+      "nullable": true
+    },
+    "reason": {
+      "type": "string",
+      "nullable": true
+    },
+    "policyVersionId": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
+    "compOffMinutes": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647,
+      "nullable": true
+    },
     "status": {
       "type": "string",
       "enum": [

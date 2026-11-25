@@ -22,7 +22,8 @@ public sealed class DeliveryLogService(
     ICurrentActor actor,
     IPermissionChecker permissions,
     ICallerAccess access,
-    NotificationCatalog catalog) : IDeliveryLog
+    NotificationCatalog catalog,
+    Erp.Kernel.Contracts.Settings.ISettings settings) : IDeliveryLog
 {
     private const int MaxLimit = 200;
 
@@ -54,7 +55,10 @@ public sealed class DeliveryLogService(
         }
 
         var payload = JsonSerializer.Deserialize<EmailPayload>(row.Payload, EmailOutbox.Json)!;
-        return new DeliveryDetail(row.View, payload.Body, payload.Link, payload.Language, payload.ResendOf);
+        // GHR-06: the text of identity e-mails (links, codes) and of salary messages is never shown in the log.
+        return DeliveryLog.IsBodyWithheld(row.View.EventCode)
+            ? new DeliveryDetail(row.View, string.Empty, null, payload.Language, payload.ResendOf, BodyWithheld: true)
+            : new DeliveryDetail(row.View, payload.Body, payload.Link, payload.Language, payload.ResendOf);
     }
 
     public async Task<DeliveryView> ResendAsync(Guid id, CancellationToken cancellationToken)
@@ -88,6 +92,28 @@ public sealed class DeliveryLogService(
             from ntf.outbound_messages
             """, r => new DeliverySummary((int)r.GetInt64(0), (int)r.GetInt64(1), (int)r.GetInt64(2), (int)r.GetInt64(3), (int)r.GetInt64(4),
                 r.IsDBNull(5) ? null : r.GetFieldValue<DateTimeOffset>(5)), cancellationToken, since).ConfigureAwait(false))[0];
+    }
+
+    public async Task<IReadOnlyList<DeliveryDay>> DailyAsync(int? days, CancellationToken cancellationToken)
+    {
+        await RequireAsync(NotificationPermissions.DeliveriesRead, cancellationToken).ConfigureAwait(false);
+        if (!await access.CoversCompanyAsync(NotificationPermissions.DeliveriesRead, null, cancellationToken).ConfigureAwait(false))
+        {
+            throw new NotificationException("errors.access.forbidden", 403);
+        }
+
+        var count = Math.Clamp(days ?? 14, 1, 31);
+        await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var setting = (await settings.GetAsync("org.time_zone", Erp.Kernel.Contracts.Settings.SettingContext.Customer, cancellationToken).ConfigureAwait(false)).Value;
+        var zone = setting.ValueKind == JsonValueKind.String && TimeZoneInfo.TryFindSystemTimeZoneById(setting.GetString()!, out _) ? setting.GetString()! : "Asia/Karachi";
+        var since = clock.UtcNow.AddDays(-count);
+        return await NotificationConsumer.ReadAsync(c, null, """
+            select (m.updated_at at time zone $1)::date as day,
+                   count(*) filter (where m.status = 'sent'), count(*) filter (where m.status = 'failed'), count(*) filter (where m.status = 'dead'),
+                   count(*) filter (where m.status = 'queued')
+            from ntf.outbound_messages m where m.updated_at >= $2 group by 1 order by 1 desc
+            """, r => new DeliveryDay(DateOnly.FromDateTime(r.GetDateTime(0)), (int)r.GetInt64(1), (int)r.GetInt64(2), (int)r.GetInt64(3), (int)r.GetInt64(4)),
+            cancellationToken, zone, since).ConfigureAwait(false);
     }
 
     public async Task<DeliveryView> TestSendAsync(TestSendRequest request, CancellationToken cancellationToken)
@@ -183,6 +209,11 @@ public static class DeliveryLog
     }
 
     /// <summary>Identity e-mails carried a link or code; they are never sent again (plan point P4): a new link is sent instead.</summary>
+    /// <summary>The text of these messages is not shown in the log: identity e-mails carry links and codes, salary messages carry pay data (GHR-06).</summary>
+    public static bool IsBodyWithheld(string? eventCode) =>
+        eventCode is not null && (eventCode.StartsWith("identity.", StringComparison.Ordinal) || eventCode.StartsWith("payroll.", StringComparison.Ordinal)
+            || eventCode.Contains(".payslip", StringComparison.Ordinal) || eventCode.Contains(".salary", StringComparison.Ordinal));
+
     public static bool IsResendable(string? eventCode) => eventCode is null || !eventCode.StartsWith("identity.", StringComparison.Ordinal);
 
     /// <summary>

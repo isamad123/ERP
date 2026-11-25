@@ -111,12 +111,12 @@ public sealed record DayExplanation(string Rule, ExplanationLine Summary, IReadO
 }
 
 /// <summary>
-/// The result of one day (columns of <c>hrm.attendance_days</c>) and the exception kinds it raises (FR-HRM-ATT-11). Overtime minutes are
-/// S1.29b's; part a records zero.
+/// The result of one day (columns of <c>hrm.attendance_days</c>) and the exception kinds it raises (FR-HRM-ATT-11). Overtime minutes come from the
+/// policy's overtime rule of the day type (S1.29b, <see cref="LatenessAndOvertime.OvertimeOf"/>); zero without one.
 /// </summary>
 public sealed record DayOutcome(
     string DayType, string Result, Guid? ShiftId, DateTimeOffset? FirstIn, DateTimeOffset? LastOut, int WorkedMinutes, int LateMinutes, int EarlyMinutes,
-    Guid? LeaveRequestId, Guid? DutyRequestId, DayExplanation Explanation, IReadOnlyList<string> Exceptions);
+    Guid? LeaveRequestId, Guid? DutyRequestId, DayExplanation Explanation, IReadOnlyList<string> Exceptions, int OvertimeMinutes = 0);
 
 /// <summary>Result values (enum of <c>hrm.attendance_days.result</c>) and exception kinds (<c>hrm.attendance_exceptions.kind</c>).</summary>
 public static class DayResults
@@ -197,7 +197,7 @@ public static class DayRules
 
     /// <summary>The codes an explanation may carry as values; each has a text <c>hrm.att.value.&lt;code&gt;</c> in both languages.</summary>
     public static IReadOnlyList<string> ValueCodes { get; } =
-        ["working", "weekly_off", "holiday", "full", "first_half", "second_half", "shift", "policy", "up", "down", "nearest", "on_duty", "official_visit", "work_from_home", "field_duty"];
+        ["working", "weekly_off", "holiday", "full", "first_half", "second_half", "shift", "policy", "up", "down", "nearest", "on_duty", "official_visit", "work_from_home", "field_duty", "late", "early"];
 
     /// <summary>Every key an explanation can hold (the text files must have each, in English and Urdu).</summary>
     public static IReadOnlyList<string> Keys { get; } =
@@ -285,7 +285,18 @@ public static class DayRules
     {
         ArgumentNullException.ThrowIfNull(input);
         // A duty of a kind the policy does not count as present is no duty here (ATT-14, CR-090): the day is worked out from the punches.
-        return input.Duty is { } duty && !input.Policy.CountsAsPresent(duty.Kind) ? EvaluateDay(input with { Duty = null }) : EvaluateDay(input);
+        var outcome = input.Duty is { } duty && !input.Policy.CountsAsPresent(duty.Kind) ? EvaluateDay(input with { Duty = null }) : EvaluateDay(input);
+
+        // Overtime by the day type's rule (S1.29b, FR-HRM-ATT-12): its step goes before the closing policy step.
+        var (overtime, step) = LatenessAndOvertime.OvertimeOf(input, outcome);
+        if (step is null)
+        {
+            return outcome;
+        }
+
+        var steps = outcome.Explanation.Steps.ToList();
+        steps.Insert(Math.Max(0, steps.Count - 1), step);
+        return outcome with { OvertimeMinutes = overtime, Explanation = outcome.Explanation with { Steps = steps } };
     }
 
     private static DayOutcome EvaluateDay(DayInput input)
