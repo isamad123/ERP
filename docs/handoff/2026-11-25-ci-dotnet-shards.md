@@ -9,3 +9,5 @@
 **Test change.** `FR_KRN_NUM_06` time per allocation asserted a wall-clock ratio that failed under the full suite (18 ms alone, 230 ms with 2000 other tests running): it now asserts the number of database commands one allocation sends (counted from the driver's trace events for the test's own database; 7 and 6, limit 12) and writes the time to the output.
 
 **Open.** Tests that depend on another namespace's state would fail only in CI shards: none found by the first run (see PR). Shard 4 is the largest by count (544 cheap schema tests) but not by time.
+
+**Tenant isolation (second step).** `tenant-isolation` was then the longest job (24m37). It is a collector over `tenant-isolation-shards` (matrix of two): shard 1 runs the endpoint cases whose display name holds `/api/hrm/` (522), shard 2 the rest (395: other endpoints and the suite's own checks); `--list-tests` with each filter adds up to the whole (917). The collector does not run on a push, like the job it replaces.

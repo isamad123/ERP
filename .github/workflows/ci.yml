@@ -284,11 +284,24 @@ jobs:
   # S1.04: the tenant-isolation suite (FR-KRN-TEN-03, FR-KRN-TEN-04, spec 03 section 10 invariant 10). Every API endpoint
   # is called as one customer with another customer's ids, hosts and tokens; any success fails this job. It is its own
   # job so it shows by name on every pull request and can be made a required check in the branch protection of main.
-  tenant-isolation:
+  tenant-isolation-shards:
     needs: changes
     if: ${{ !cancelled() && github.event_name != 'push' && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          # R-318: the endpoint cases are split by the address they probe (the display name of a case holds it): the HR endpoints (a bit over half
+          # of the 900) in shard 1, everything else (the other endpoints and the suite's own checks) in shard 2.
+          - name: 1 (HR endpoints)
+            flag: --filter-display-name
+            pattern: "*/api/hrm/*"
+          - name: 2 (the rest)
+            flag: --filter-not-display-name
+            pattern: "*/api/hrm/*"
+    name: tenant-isolation (shard ${{ matrix.shard.name }})
 
     services:
       postgres:
@@ -322,17 +335,41 @@ jobs:
       - name: Build
         run: dotnet build tests/Erp.IntegrationTests --no-restore -c Release -v q "-flp:logfile=logs/build.log;verbosity=normal"
 
-      - name: Tenant-isolation suite (every endpoint, crossed customers)
-        run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-trait "Suite=TenantIsolation" --report-xunit-trx --results-directory logs/test-results
+      - name: Tenant-isolation suite, shard ${{ matrix.shard.name }} (every endpoint, crossed customers)
+        env:
+          FLAG: ${{ matrix.shard.flag }}
+          PATTERN: ${{ matrix.shard.pattern }}
+        run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-trait "Suite=TenantIsolation" "$FLAG" "$PATTERN" --report-xunit-trx --results-directory logs/test-results
 
       - name: Upload full logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tenant-isolation-logs
+          name: tenant-isolation-logs-${{ strategy.job-index }}
           path: logs/
           if-no-files-found: warn
           retention-days: 14
+
+  # The check main requires (R-040) under its old name: green only when both shards are. Like the job it replaces it does not run on a push.
+  tenant-isolation:
+    needs: [changes, tenant-isolation-shards]
+    if: ${{ always() && github.event_name != 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Collect the results
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          SHARDS: ${{ needs.tenant-isolation-shards.result }}
+        run: |
+          echo "changes=$CHANGES code=$CODE shards=$SHARDS"
+          if [ "$CHANGES" = "success" ] && [ "$CODE" != "true" ]; then
+            [ "$SHARDS" = "skipped" ] && exit 0
+          fi
+          [ "$SHARDS" = "success" ] && exit 0
+          echo "a tenant-isolation shard did not succeed" >&2
+          exit 1
 
   # Slice S1.12a (ruling Q19): the web application. Install from the lockfile, npm licence gate (Q20, CR-064), lint, type
   # check, unit and component tests, token contrast check, production build with size budgets, then the browser
