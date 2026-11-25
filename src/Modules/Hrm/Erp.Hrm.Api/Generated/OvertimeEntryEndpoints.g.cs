@@ -25,6 +25,9 @@ public sealed class OvertimeEntryResponse
     public global::System.Guid? AttendanceDayId { get; init; }
     public global::System.Guid? CompOffEntryId { get; init; }
     public global::System.Guid? WorkflowInstanceId { get; init; }
+    public int? RequestedMinutes { get; init; }
+    public string? Reason { get; init; }
+    public global::System.Guid? PolicyVersionId { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
@@ -54,6 +57,8 @@ public sealed class OvertimeEntryListQuery
 
     public global::System.Guid? WorkflowInstanceId { get; init; }
 
+    public global::System.Guid? PolicyVersionId { get; init; }
+
     public string? Status { get; init; }
 
     /// <summary>Sort key: workDate; a leading minus sorts descending. Empty: by id (creation order).</summary>
@@ -76,7 +81,7 @@ internal static class OvertimeEntryEndpoints
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.overtime_entries.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.OvertimeEntryFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkDate = query.WorkDate, PayInputId = query.PayInputId, AttendanceDayId = query.AttendanceDayId, CompOffEntryId = query.CompOffEntryId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.OvertimeEntryFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkDate = query.WorkDate, PayInputId = query.PayInputId, AttendanceDayId = query.AttendanceDayId, CompOffEntryId = query.CompOffEntryId, WorkflowInstanceId = query.WorkflowInstanceId, PolicyVersionId = query.PolicyVersionId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.OvertimeEntryAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
@@ -102,6 +107,9 @@ internal static class OvertimeEntryEndpoints
         AttendanceDayId = row.AttendanceDayId,
         CompOffEntryId = row.CompOffEntryId,
         WorkflowInstanceId = row.WorkflowInstanceId,
+        RequestedMinutes = row.RequestedMinutes,
+        Reason = row.Reason,
+        PolicyVersionId = row.PolicyVersionId,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -130,7 +138,7 @@ internal static class OvertimeEntryEndpoints
             var fields = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(services);
             var query = export.Filter.ValueKind == global::System.Text.Json.JsonValueKind.Object ? global::System.Text.Json.JsonSerializer.Deserialize<OvertimeEntryListQuery>(export.Filter.GetRawText(), global::System.Text.Json.JsonSerializerOptions.Web) ?? new OvertimeEntryListQuery() : new OvertimeEntryListQuery();
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(after is null ? null : global::System.Guid.Parse(after), limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.OvertimeEntryFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkDate = query.WorkDate, PayInputId = query.PayInputId, AttendanceDayId = query.AttendanceDayId, CompOffEntryId = query.CompOffEntryId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status, Sort = export.Sort ?? query.Sort }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.OvertimeEntryFilter { CompanyId = query.CompanyId, EmploymentId = query.EmploymentId, WorkDate = query.WorkDate, PayInputId = query.PayInputId, AttendanceDayId = query.AttendanceDayId, CompOffEntryId = query.CompOffEntryId, WorkflowInstanceId = query.WorkflowInstanceId, PolicyVersionId = query.PolicyVersionId, Status = query.Status, Sort = export.Sort ?? query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var maps = await repository.FieldAccessAsync(rows, global::Erp.Hrm.Application.Generated.OvertimeEntryAccess.Fields, fields, "read", cancellationToken).ConfigureAwait(false);
             var shaped = new global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>(rows.Count);
             for (var i = 0; i < rows.Count; i++)

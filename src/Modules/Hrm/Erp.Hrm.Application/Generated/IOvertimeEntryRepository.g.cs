@@ -16,6 +16,7 @@ public sealed record OvertimeEntryFilter
     public global::System.Guid? AttendanceDayId { get; init; }
     public global::System.Guid? CompOffEntryId { get; init; }
     public global::System.Guid? WorkflowInstanceId { get; init; }
+    public global::System.Guid? PolicyVersionId { get; init; }
     public string? Status { get; init; }
     /// <summary>Sort key: workDate; a leading minus sorts descending. Empty: by id (creation order).</summary>
     public string? Sort { get; init; }
@@ -58,6 +59,9 @@ public static class OvertimeEntryAccess
         new("attendance_day_id", "AttendanceDayId", null),
         new("comp_off_entry_id", "CompOffEntryId", null),
         new("workflow_instance_id", "WorkflowInstanceId", null),
+        new("requested_minutes", "RequestedMinutes", null),
+        new("reason", "Reason", null),
+        new("policy_version_id", "PolicyVersionId", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

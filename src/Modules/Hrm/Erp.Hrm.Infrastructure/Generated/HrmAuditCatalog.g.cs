@@ -15,6 +15,7 @@ public static class HrmAuditCatalog
         new(typeof(global::Erp.Hrm.Domain.Generated.AttendanceDevice), "hrm.attendance_devices", true, null, "id", "company_id", null, null, null),
         new(typeof(global::Erp.Hrm.Domain.Generated.AttendanceEvent), "hrm.attendance_events", false, "append-only: the row itself is the record and is never changed (S1.07 Q4)", "id", "company_id", null, "employment_id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.AttendanceException), "hrm.attendance_exceptions", true, null, "id", "company_id", null, "employment_id", null),
+        new(typeof(global::Erp.Hrm.Domain.Generated.AttendancePenalty), "hrm.attendance_penalties", true, null, "id", "company_id", null, "employment_id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.AttendancePeriod), "hrm.attendance_periods", true, null, "id", "company_id", null, null, null),
         new(typeof(global::Erp.Hrm.Domain.Generated.BenefitClaim), "hrm.benefit_claims", true, null, "id", "company_id", null, null, null),
         new(typeof(global::Erp.Hrm.Domain.Generated.BenefitEnrollment), "hrm.benefit_enrollments", true, null, "id", "company_id", null, "employment_id", null),

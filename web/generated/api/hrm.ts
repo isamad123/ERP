@@ -172,6 +172,61 @@ export const attendanceExceptions =
     get: (id: string) => request<AttendanceException>('GET', `/api/hrm/attendance-exceptions/${id}`),
 };
 
+/** hrm.attendance_penalties: A late-coming or early-leaving penalty of a day beyond the monthly allowance of the attendance policy, and its waiver (S1.29b, CR-089, FR-HRM-ATT-13). Field rules (S1.06) may leave a field out or mask it as text. */
+export interface AttendancePenalty
+{
+    id: string;
+    companyId: string;
+    employmentId: string;
+    workDate: string;
+    kind: 'late' | 'early';
+    minutes: number;
+    occurrence: number;
+    action: 'leave' | 'pay_deduction' | 'warning';
+    leaveTypeId: string | null;
+    leaveQuantity: number | null;
+    leaveEntryId: string | null;
+    leaveReversalId: string | null;
+    attendanceDayId: string;
+    periodId: string;
+    policyVersionId: string;
+    explanation: unknown;
+    waiverReason: string | null;
+    waivedAt: string | null;
+    workflowInstanceId: string | null;
+    status: 'applied' | 'waived' | 'cancelled';
+    createdAt: string;
+    createdBy: string;
+    updatedAt: string;
+    updatedBy: string;
+    rowVersion: number;
+}
+
+export interface AttendancePenaltyListQuery
+{
+    after?: string;
+    limit?: number;
+    companyId?: string;
+    employmentId?: string;
+    workDate?: string;
+    leaveTypeId?: string;
+    leaveEntryId?: string;
+    leaveReversalId?: string;
+    attendanceDayId?: string;
+    periodId?: string;
+    policyVersionId?: string;
+    workflowInstanceId?: string;
+    status?: 'applied' | 'waived' | 'cancelled';
+    /** workDate, kind; a leading minus sorts descending. */
+    sort?: 'workDate' | '-workDate' | 'kind' | '-kind';
+}
+
+export const attendancePenalties =
+{
+    list: (query: AttendancePenaltyListQuery = {}) => request<PagedResult<AttendancePenalty>>('GET', '/api/hrm/attendance-penalties', { query }),
+    get: (id: string) => request<AttendancePenalty>('GET', `/api/hrm/attendance-penalties/${id}`),
+};
+
 /** hrm.attendance_periods: Lock unit for attendance per company and pay group (FR-XM-26). Field rules (S1.06) may leave a field out or mask it as text. */
 export interface AttendancePeriod
 {
@@ -2738,6 +2793,9 @@ export interface OvertimeEntry
     attendanceDayId: string | null;
     compOffEntryId: string | null;
     workflowInstanceId: string | null;
+    requestedMinutes: number | null;
+    reason: string | null;
+    policyVersionId: string | null;
     status: 'calculated' | 'submitted' | 'approved' | 'rejected' | 'paid' | 'converted_to_comp_off';
     createdAt: string;
     createdBy: string;
@@ -2757,6 +2815,7 @@ export interface OvertimeEntryListQuery
     attendanceDayId?: string;
     compOffEntryId?: string;
     workflowInstanceId?: string;
+    policyVersionId?: string;
     status?: 'calculated' | 'submitted' | 'approved' | 'rejected' | 'paid' | 'converted_to_comp_off';
     /** workDate; a leading minus sorts descending. */
     sort?: 'workDate' | '-workDate';

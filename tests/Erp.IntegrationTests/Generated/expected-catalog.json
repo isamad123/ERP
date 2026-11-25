@@ -8601,6 +8601,421 @@
     {
       "database": "tenant",
       "schema": "hrm",
+      "name": "attendance_penalties",
+      "module": "hrm",
+      "traits": [
+        "std",
+        "co"
+      ],
+      "requirements": [
+        "ATT-13"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "company_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "employment_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "work_date",
+          "kind": "Date",
+          "type": "date",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "kind",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "late",
+            "early"
+          ]
+        },
+        {
+          "name": "minutes",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "occurrence",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "action",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "leave",
+            "pay_deduction",
+            "warning"
+          ]
+        },
+        {
+          "name": "leave_type_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "leave_quantity",
+          "kind": "Qty",
+          "type": "numeric(19,6)",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "leave_entry_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "leave_reversal_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "attendance_day_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "period_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "policy_version_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "explanation",
+          "kind": "Json",
+          "type": "jsonb",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "waiver_reason",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "waived_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "workflow_instance_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "status",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "applied",
+            "waived",
+            "cancelled"
+          ]
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [
+        "uq_attendance_penalties_employment_id_work_date_kind"
+      ],
+      "checks": [
+        "ck_attendance_penalties_kind",
+        "ck_attendance_penalties_action",
+        "ck_attendance_penalties_status"
+      ],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_attendance_penalties_company_id",
+          "columns": [
+            "company_id"
+          ],
+          "target": "org.companies",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_penalties_employment_id",
+          "columns": [
+            "company_id",
+            "employment_id"
+          ],
+          "target": "hrm.employments",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_penalties_leave_type_id",
+          "columns": [
+            "company_id",
+            "leave_type_id"
+          ],
+          "target": "hrm.leave_types",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_penalties_leave_entry_id",
+          "columns": [
+            "company_id",
+            "leave_entry_id"
+          ],
+          "target": "hrm.leave_ledger",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_penalties_leave_reversal_id",
+          "columns": [
+            "company_id",
+            "leave_reversal_id"
+          ],
+          "target": "hrm.leave_ledger",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_penalties_attendance_day_id",
+          "columns": [
+            "company_id",
+            "attendance_day_id",
+            "work_date"
+          ],
+          "target": "hrm.attendance_days",
+          "target_columns": [
+            "company_id",
+            "id",
+            "work_date"
+          ]
+        },
+        {
+          "name": "fk_attendance_penalties_period_id",
+          "columns": [
+            "company_id",
+            "period_id"
+          ],
+          "target": "hrm.attendance_periods",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_penalties_policy_version_id",
+          "columns": [
+            "policy_version_id"
+          ],
+          "target": "hrm.policy_versions",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "fk_attendance_penalties_workflow_instance_id",
+          "columns": [
+            "company_id",
+            "workflow_instance_id"
+          ],
+          "target": "wf.workflow_instances",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_attendance_penalties_employment_id_work_date",
+        "ix_attendance_penalties_company_id",
+        "ix_attendance_penalties_company_id_employment_id",
+        "ix_attendance_penalties_company_id_leave_type_id",
+        "ix_attendance_penalties_company_id_leave_entry_id",
+        "ix_attendance_penalties_company_id_leave_reversal_id",
+        "ix_attendance_penalties_company_id_attendance_day_id_work_date",
+        "ix_attendance_penalties_company_id_period_id",
+        "ix_attendance_penalties_policy_version_id",
+        "ix_attendance_penalties_company_id_workflow_instance_id"
+      ],
+      "triggers": [
+        "tg_attendance_penalties_rules"
+      ],
+      "append_only_updatable": [],
+      "has_api": true,
+      "full_name": "hrm.attendance_penalties"
+    },
+    {
+      "database": "tenant",
+      "schema": "hrm",
       "name": "attendance_periods",
       "module": "hrm",
       "traits": [
@@ -21611,6 +22026,36 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "requested_minutes",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "reason",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "policy_version_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -21693,6 +22138,16 @@
             "company_id",
             "id"
           ]
+        },
+        {
+          "name": "fk_overtime_entries_policy_version_id",
+          "columns": [
+            "policy_version_id"
+          ],
+          "target": "hrm.policy_versions",
+          "target_columns": [
+            "id"
+          ]
         }
       ],
       "indexes": [
@@ -21702,9 +22157,12 @@
         "ix_overtime_entries_company_id_pay_input_id",
         "ix_overtime_entries_company_id_attendance_day_id_work_date",
         "ix_overtime_entries_company_id_comp_off_entry_id",
-        "ix_overtime_entries_company_id_workflow_instance_id"
+        "ix_overtime_entries_company_id_workflow_instance_id",
+        "ix_overtime_entries_policy_version_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_overtime_entries_rules"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.overtime_entries"
