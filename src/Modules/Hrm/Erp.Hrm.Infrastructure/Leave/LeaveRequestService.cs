@@ -409,6 +409,7 @@ internal sealed class LeaveRequestService(
             companyId = row.CompanyId,
             employmentId = row.EmploymentId,
             employeeNo = e.EmployeeNo,
+            employeeName = await db.Set<Person>().AsNoTracking().Where(p => p.Id == e.PersonId).Select(p => p.FirstName + (p.LastName == null ? "" : " " + p.LastName)).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false),
             leaveTypeId = type.Id,
             leaveTypeCode = type.Code,
             unit = type.Unit,

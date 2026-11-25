@@ -108,6 +108,7 @@ export interface LeaveDetails {
   companyId: string;
   employmentId: string;
   employeeNo: string;
+  employeeName?: string | null;
   leaveTypeId: string;
   leaveTypeCode: string;
   unit: 'day' | 'half_day' | 'hour';

@@ -32,7 +32,7 @@ export default function LeaveApprovalCard({ documentId }: ApprovalCardProps) {
     <section aria-labelledby="erp-leave-card" className="erp-stack">
       <h3 id="erp-leave-card">{t('leave.card.title')}</h3>
       <dl className="erp-facts">
-        <dt>{t('leave.facts.employee')}</dt><dd><bdi>{d.employeeNo}</bdi></dd>
+        <dt>{t('leave.facts.employee')}</dt><dd><bdi>{d.employeeName ? `${d.employeeName} (${d.employeeNo})` : d.employeeNo}</bdi></dd>
         <dt>{t('leave.facts.dates')}</dt><dd><bdi>{d.startDate === d.endDate ? day(d.startDate) : t('leave.period', { from: day(d.startDate), to: day(d.endDate) })}</bdi></dd>
         {(d.startPart !== 'full' || d.endPart !== 'full') && <><dt>{t('leave.facts.parts')}</dt><dd>{d.startDate === d.endDate ? t(`leave.part.${d.startPart}` as MessageKey) : `${t(`leave.part.${d.startPart}` as MessageKey)} / ${t(`leave.part.${d.endPart}` as MessageKey)}`}</dd></>}
         <dt>{t('leave.facts.counted')}</dt><dd>{d.unit === 'hour' && d.hours !== null ? qty(d.hours, 'hour') : qty(d.days, d.unit)}</dd>

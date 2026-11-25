@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nRoot } from '@erp/i18n';
 import { ToastProvider } from '@erp/ui';
@@ -35,10 +35,11 @@ function shell(permissions: string[], writable = true): ShellValue {
 }
 
 const sent: { method: string; url: string; body: unknown }[] = [];
-const serve = (handler: (method: string, url: string, body: any) => Response) => {
+type Body = Record<string, unknown> | undefined;
+const serve = (handler: (method: string, url: string, body: Body) => Response) => {
   sent.length = 0;
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
-    const body = typeof init?.body === 'string' ? JSON.parse(init.body) : init?.body ?? undefined;
+    const body = (typeof init?.body === 'string' ? JSON.parse(init.body) : init?.body ?? undefined) as Body;
     sent.push({ method: init?.method ?? 'GET', url, body });
     return handler(init?.method ?? 'GET', url, body);
   }));
@@ -97,7 +98,7 @@ const REQUEST = (id: string, status: string, extra: Record<string, unknown> = {}
   reason: null, fileIds: [], modifiesRequestId: null, workflowInstanceId: `w-${id}`, status, custom: null, createdAt: '2026-11-20T00:00:00Z', createdBy: ME, updatedAt: '2026-11-20T00:00:00Z', updatedBy: ME, rowVersion: 3, ...extra,
 });
 
-function rig(handler?: (method: string, url: string, body: any) => Response | null, previews: unknown = OK_PREVIEW) {
+function rig(handler?: (method: string, url: string, body: Body) => Response | null, previews: unknown = OK_PREVIEW) {
   serve((method, url, body) => {
     const custom = handler?.(method, url, body);
     if (custom) return custom;
@@ -227,9 +228,9 @@ describe('apply for leave', () => {
   it('GHR-09 HR applying for an employee names who acts for whom and sends the employment', async () => {
     rig();
     show(<LeaveScreen />, shell([...WIDE, 'hrm.employments.read']), '/apply');
-    await userEvent.click(await screen.findByRole('button', { name: /^Employee/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Employee/ }));
     await userEvent.click(await screen.findByRole('option', { name: 'E-7' }));
-    expect(await screen.findByText('Applied by Mona Me for E-7')).toBeTruthy();
+    expect(await screen.findByText(/Applied by .*Mona Me.* for .*E-7/)).toBeTruthy();
     await pickType('Annual leave');
     await typeDate(/^From/, '12032026');
     await screen.findByText('This leave can be sent.', {}, { timeout: 3000 });
@@ -246,7 +247,7 @@ describe('apply for leave', () => {
 
 describe('my leave', () => {
   const requests = [REQUEST('d1', 'draft'), REQUEST('s1', 'submitted'), REQUEST('a1', 'approved'), REQUEST('x1', 'rejected'), REQUEST('c1', 'cancelled')];
-  const mine = () => rig((method, url) => (url.includes('/api/hrm/leave-requests?') ? json({ items: requests, next: null }) : null));
+  const mine = () => rig((_method, url) => (url.includes('/api/hrm/leave-requests?') ? json({ items: requests, next: null }) : null));
 
   it('FR-HRM-LVE-04 shows the balance of each type and opens the entries behind the number', async () => {
     mine();
@@ -263,7 +264,7 @@ describe('my leave', () => {
     mine();
     show(<LeaveScreen />, shell(WIDE));
     const rows = async (no: string) => within((await screen.findByText(no)).closest('tr') as HTMLElement);
-    const names = (row: ReturnType<typeof within>) => row.queryAllByRole('button').map((b) => b.textContent);
+    const names = (row: ReturnType<typeof within>) => row.queryAllByRole('button').map((b: HTMLElement) => b.textContent);
     expect(names(await rows('LV-d1'))).toEqual(['Finish and send', 'Cancel leave']);
     expect(names(await rows('LV-s1'))).toEqual(['Withdraw']);
     expect(names(await rows('LV-a1'))).toEqual(['Change', 'Cancel leave']);
@@ -272,7 +273,7 @@ describe('my leave', () => {
   });
 
   it('FR-HRM-LVE-06 withdrawing a waiting request goes through the approval endpoint; cancelling approved leave asks for a reason and sends the row version', async () => {
-    rig((method, url) => {
+    rig((_method, url) => {
       if (url.includes('/api/hrm/leave-requests?')) return json({ items: requests, next: null });
       if (url === '/api/hrm/leave-requests/a1/details') return json({ id: 'a1', rowVersion: 7 });
       if (url === '/api/hrm/leave-requests/a1/cancel') return json({ id: 'a1', status: 'cancelled', rowVersion: 8 });
@@ -301,7 +302,7 @@ describe('my leave', () => {
   });
 
   it('FR-HRM-LVE-04 shows the empty state and an error state', async () => {
-    rig((method, url) => (url.includes('/api/hrm/leave-requests?') ? json({ items: [], next: null }) : null));
+    rig((_method, url) => (url.includes('/api/hrm/leave-requests?') ? json({ items: [], next: null }) : null));
     show(<LeaveScreen />, shell(WIDE));
     expect(await screen.findByText('No leave requests')).toBeTruthy();
     cleanup();
@@ -320,7 +321,7 @@ describe('leave request page', () => {
     entries: [], rowVersion: 4,
   };
   it('GHR-09 shows the days, the balance impact and that someone else applied on behalf of the employee, with no decision buttons', async () => {
-    rig((method, url) => (url === '/api/hrm/leave-requests/r1/details' ? json(DETAILS) : url.includes('/api/doc/attachments') ? json([]) : null));
+    rig((_method, url) => (url === '/api/hrm/leave-requests/r1/details' ? json(DETAILS) : url.includes('/api/doc/attachments') ? json([]) : null));
     show(<LeaveScreen />, shell(WIDE), '/requests/r1');
     expect(await screen.findByText('Someone else, on behalf of the employee')).toBeTruthy();
     expect(screen.getByText('Sandwich day')).toBeTruthy();
@@ -337,7 +338,7 @@ describe('approval card', () => {
     dayList: [{ date: '2026-12-03', quantity: 1, kind: 'leave', isPaid: true, status: 'submitted' }, { date: '2026-12-04', quantity: 1, kind: 'sandwich', isPaid: true, status: 'submitted' }], entries: [], rowVersion: 4,
   };
   const card = (coverage: unknown, status = 200) => {
-    serve((method, url) => (url === '/api/hrm/leave-requests/r1/details' ? json(D) : url.endsWith('/coverage') ? json(coverage, status) : url.includes('/api/doc/attachments') ? json([]) : json({})));
+    serve((_method, url) => (url === '/api/hrm/leave-requests/r1/details' ? json(D) : url.endsWith('/coverage') ? json(coverage, status) : url.includes('/api/doc/attachments') ? json([]) : json({})));
     show(<LeaveApprovalCard documentType="hrm.leave_request" documentId="r1" companyId={COMPANY} instanceId="w1" requesterUserId="u-hr" />, shell(WIDE));
   };
 

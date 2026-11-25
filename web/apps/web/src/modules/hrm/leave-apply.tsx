@@ -53,6 +53,13 @@ function FilePicker({ uploads, required, isDisabled }: { uploads: ReturnType<typ
 }
 
 export default function ApplyScreen() {
+  const { t } = useText();
+  const { can } = useShell();
+  if (!can('hrm.leave_requests.create')) return <div className="erp-page"><PageHeader title={t('leave.apply.title')} /><EmptyState title={t('leave.denied')}>{t('leave.apply.denied.body')}</EmptyState></div>;
+  return <ApplyForm />;
+}
+
+function ApplyForm() {
   const { t, server } = useText();
   const { locale } = useLocaleSettings();
   const { can, me, activeCompany, writable } = useShell();
@@ -187,7 +194,6 @@ export default function ApplyScreen() {
     send.mutate();
   };
 
-  if (!can('hrm.leave_requests.create')) return <div className="erp-page"><PageHeader title={t('leave.apply.title')} /><EmptyState title={t('leave.denied')}>{t('leave.apply.denied.body')}</EmptyState></div>;
   if (sourceId && source.isPending) return <div className="erp-page"><PageHeader title={t('leave.apply.title')} /><Skeleton lines={6} /></div>;
   if (sourceId && source.isError) return <div className="erp-page"><PageHeader title={t('leave.apply.title')} /><ErrorPanel title={t('leave.loadError')} message={refusal(source.error)} action={<Button onPress={() => { void source.refetch(); }}>{t('leave.retry')}</Button>} /></div>;
 

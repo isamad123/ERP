@@ -49,7 +49,7 @@ export default function LeaveRequestPage() {
       <div className="erp-stack">
         <div className="erp-row erp-wrap"><LeaveStatus status={d.status} /><RequestActions request={d} /></div>
         <dl className="erp-facts">
-          <dt>{t('leave.facts.employee')}</dt><dd><bdi>{d.employeeNo}</bdi></dd>
+          <dt>{t('leave.facts.employee')}</dt><dd><bdi>{d.employeeName ? `${d.employeeName} (${d.employeeNo})` : d.employeeNo}</bdi></dd>
           <dt>{t('leave.facts.type')}</dt><dd><TypeLabel name={typeNameOf(type, locale) || d.leaveTypeCode} token={type?.colorToken} /></dd>
           <dt>{t('leave.facts.dates')}</dt><dd><bdi>{d.startDate === d.endDate ? day(d.startDate) : t('leave.period', { from: day(d.startDate), to: day(d.endDate) })}</bdi></dd>
           {(d.startPart !== 'full' || d.endPart !== 'full') && <><dt>{t('leave.facts.parts')}</dt><dd>{d.startDate === d.endDate ? t(`leave.part.${d.startPart}` as MessageKey) : `${t(`leave.part.${d.startPart}` as MessageKey)} / ${t(`leave.part.${d.endPart}` as MessageKey)}`}</dd></>}
