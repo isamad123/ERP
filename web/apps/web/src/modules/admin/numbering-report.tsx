@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { parseDate, type CalendarDate } from '@internationalized/date';
-import { Banner, Button, DateField, Dialog, EmptyState, ErrorPanel, Skeleton } from '@erp/ui';
+import { Banner, Button, DateField, Dialog, EmptyState, ErrorPanel, Skeleton, ScrollRegion } from '@erp/ui';
 import { formatDateTime, useLocaleSettings, useText } from '@erp/i18n';
 import { ApiProblem } from '../../api/client';
 import { numberingApi, type SchemeRow } from '../../api/numbering';
@@ -34,7 +34,7 @@ export function VoidReportDialog({ scheme, onClose }: { scheme: SchemeRow; onClo
           <>
             <h3 className="erp-h3">{t('num.report.issued')}</h3>
             {report.data.issued.length === 0 ? <EmptyState level={2} title={t('num.report.issued.none')} /> : (
-              <div className="erp-table-scroll">
+              <ScrollRegion className="erp-table-scroll" label={t('num.report.issued')}>
                 <table className="erp-table" aria-label={t('num.report.issued')}>
                   <thead><tr>
                     <th scope="col">{t('num.report.col.period')}</th><th scope="col">{t('num.report.col.first')}</th><th scope="col">{t('num.report.col.last')}</th>
@@ -51,12 +51,12 @@ export function VoidReportDialog({ scheme, onClose }: { scheme: SchemeRow; onClo
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollRegion>
             )}
             <h3 className="erp-h3">{t('num.report.voids')}</h3>
             <Banner tone="info">{t('num.report.gapNote')}</Banner>
             {report.data.voids.length === 0 ? <EmptyState level={2} title={t('num.report.voids.none')} /> : (
-              <div className="erp-table-scroll">
+              <ScrollRegion className="erp-table-scroll" label={t('num.report.voids')}>
                 <table className="erp-table" aria-label={t('num.report.voids')}>
                   <thead><tr><th scope="col">{t('num.report.col.number')}</th><th scope="col">{t('num.report.col.reason')}</th><th scope="col">{t('num.report.col.when')}</th></tr></thead>
                   <tbody>
@@ -69,7 +69,7 @@ export function VoidReportDialog({ scheme, onClose }: { scheme: SchemeRow; onClo
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollRegion>
             )}
           </>
         )}

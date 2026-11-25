@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseDate } from '@internationalized/date';
-import { Banner, Button, DateField, Dialog, EmptyState, ErrorPanel, NumberField, PageHeader, SelectField, Skeleton, StatusChip, TextField, useToast, type Option } from '@erp/ui';
+import { Banner, Button, DateField, Dialog, EmptyState, ErrorPanel, NumberField, PageHeader, SelectField, Skeleton, StatusChip, TextField, useToast, type Option, ScrollRegion } from '@erp/ui';
 import { useDocumentTitle } from '@erp/engine';
 import { formatDate, formatDecimal, useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { ApiProblem, requestJson } from '../../api/client';
@@ -158,7 +158,7 @@ function Editor({ row, history }: { row: PositionRow | null; history: PositionRo
       {history.length > 0 && (
         <section className="erp-section" aria-labelledby="pos-history">
           <h2 id="pos-history" className="erp-h2">{t('pos.history.title')}</h2>
-          <div className="erp-pos-scroll">
+          <ScrollRegion className="erp-pos-scroll" label={t('pos.history.title')}>
             <table className="erp-pos-table" aria-label={t('pos.history.title')}>
               <thead><tr><th scope="col">{t('pos.positions.col.from')}</th><th scope="col">{t('pos.positions.col.title')}</th><th scope="col" className="erp-num">{t('pos.positions.col.fte')}</th><th scope="col">{t('pos.positions.col.status')}</th></tr></thead>
               <tbody>
@@ -170,7 +170,7 @@ function Editor({ row, history }: { row: PositionRow | null; history: PositionRo
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </section>
       )}
       {closing && (

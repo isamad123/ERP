@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
 import { useDocumentTitle } from '@erp/engine';
 import { Plus } from 'lucide-react';
-import { Banner, Button, Dialog, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, useToast, type Option } from '@erp/ui';
+import { Banner, Button, Dialog, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, useToast, type Option, ScrollRegion } from '@erp/ui';
 import { useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { ApiProblem } from '../../api/client';
 import { allSchemes, branchesOf, numberingApi, type NumberedType, type SchemeRow } from '../../api/numbering';
@@ -54,7 +54,7 @@ export default function NumberingScreen() {
       {types.isSuccess && schemes.isSuccess && types.data.length === 0 && <EmptyState title={t('num.empty')}>{t('num.empty.body')}</EmptyState>}
       {types.isSuccess && schemes.isSuccess && types.data.length > 0 && (
         <div className="erp-stack">
-          <div className="erp-table-scroll">
+          <ScrollRegion className="erp-table-scroll" label={t('num.types.title')}>
             <table className="erp-table" aria-label={t('num.types.title')}>
               <thead><tr>
                 <th scope="col">{t('num.col.type')}</th><th scope="col">{t('num.col.pattern')}</th><th scope="col">{t('num.col.reset')}</th>
@@ -77,7 +77,7 @@ export default function NumberingScreen() {
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
           {selected
             ? <TypeDetail key={`${selected.code}:${companyId}`} type={selected} companyId={companyId} schemes={scoped(selected)} />
             : <EmptyState title={t('num.pick')}>{t('num.pick.body')}</EmptyState>}

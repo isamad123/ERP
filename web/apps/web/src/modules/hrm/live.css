@@ -46,8 +46,3 @@ button.erp-live-card:focus-visible {
   overflow-x: auto;
   max-inline-size: 100%;
 }
-
-.erp-live-scroll:focus-visible {
-  outline: var(--focus-width) solid var(--color-focus);
-  outline-offset: var(--focus-offset);
-}

@@ -14,3 +14,4 @@ export * from './components/Navigation';
 export * from './components/Fields';
 export * from './components/NumberDate';
 export * from './components/QrCode';
+export * from './components/ScrollRegion';

@@ -88,3 +88,14 @@ p {
 .erp-small {
   font-size: var(--font-size-sm);
 }
+
+/* A sideways-scrolling region (ScrollRegion): the table inside may be wider than the screen; the region takes the keyboard focus. */
+.erp-scroll-region {
+  overflow-x: auto;
+  max-inline-size: 100%;
+}
+
+.erp-scroll-region:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}

@@ -1,8 +1,7 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // One leave type and leave year of the ledger screen (slice S1.33b; FR-HRM-LVE-10, FR-XM-05, -06): the balance the server returns, the entries with their date, kind, signed quantity, running
 // balance, expiry, reason, the server's explanation, the source (a request opens the request) and the "reversed by / reverses" markers, and the Reverse button. A warning appears when the
 // balance worked out here from the entries is not the one the server returned.
-import { Banner, Button, Link } from '@erp/ui';
+import { Banner, Button, Link, ScrollRegion } from '@erp/ui';
 import { digitsOf, formatDate, formatDecimal, useLocaleSettings } from '@erp/i18n';
 import type { BalanceLine, LedgerEntry } from '../../api/leave';
 import { TypeLabel } from './leave-parts';
@@ -37,7 +36,7 @@ export function LineSection({ line, name, token, filter, canReverse, onReverse }
       {!check.matches && <Banner tone="warning" title={t('lled.mismatch.title')}>{t('lled.mismatch.body', { screen: formatDecimal(check.computed, numbers), server: formatDecimal(check.server, numbers) })}</Banner>}
       {line.noPolicy && <p className="erp-muted">{server(line.noPolicy.message) ?? t('lled.noPolicy')}</p>}
       {shown.length === 0 ? <p className="erp-muted">{t(rows.length === 0 ? 'lled.entries.none' : 'lled.entries.filtered')}</p> : (
-        <div className="erp-leave-scroll erp-table-scroll" role="region" tabIndex={0} aria-label={t('lled.entries.caption', { name })}>
+        <ScrollRegion className="erp-leave-scroll erp-table-scroll" label={t('lled.entries.caption', { name })}>
           <table className="erp-leave-table">
             <caption className="erp-visually-hidden">{t('lled.entries.caption', { name })}</caption>
             <thead><tr>
@@ -67,7 +66,7 @@ export function LineSection({ line, name, token, filter, canReverse, onReverse }
               })}
             </tbody>
           </table>
-        </div>)}
+        </ScrollRegion>)}
     </section>
   );
 }

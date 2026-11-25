@@ -85,8 +85,3 @@
 .erp-leave-sum [data-strong] {
   font-weight: var(--font-weight-strong);
 }
-
-.erp-leave-scroll:focus-visible {
-  outline: var(--focus-width) solid var(--color-focus);
-  outline-offset: var(--focus-offset);
-}
