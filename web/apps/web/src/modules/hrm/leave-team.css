@@ -19,7 +19,10 @@
 }
 
 .erp-lcal-scroll {
+  position: relative; /* the hidden cell names are positioned inside the scrolling region, never beyond the page */
   overflow-x: auto;
+  min-inline-size: 0;
+  inline-size: 100%;
   max-inline-size: 100%;
   border: var(--border-width) solid var(--color-border-subtle);
   border-radius: var(--radius-control);

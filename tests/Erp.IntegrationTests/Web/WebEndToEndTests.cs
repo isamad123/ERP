@@ -584,7 +584,7 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
                 await IdentityHarness.ExecAsync(c, """
                     insert into iam.users (id, username, email, display_name, language, time_zone, is_system, status, created_at, created_by, updated_at, updated_by)
                     values ($1, $4, $5, 'Leave HR', 'en', 'Asia/Karachi', false, 'active', $2, $3, $2, $3)
-                    """, Ct, hr, clock.UtcNow, BaselineSeed.SystemUserId, "leave.hr." + hr.ToString("N")[..8], "leave.hr." + hr.ToString("N")[..8] + "@example.test");
+                    """, Ct, hr, clock.UtcNow, BaselineSeed.SystemUserId, "leave.hr." + hr.ToString("N")[^8..], "leave.hr." + hr.ToString("N")[^8..] + "@example.test");
                 await IdentityHarness.ExecAsync(c, """
                     insert into iam.user_roles (id, user_id, role_id, company_id, reason, valid_from, created_at, created_by, updated_at, updated_by)
                     select $1, $2, r.id, null, 'browser test leave seed', $3, now(), $4, now(), $4 from iam.roles r where r.code = 'hr_admin' and not r.is_deleted

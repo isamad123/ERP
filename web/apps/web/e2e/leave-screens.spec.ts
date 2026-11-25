@@ -13,10 +13,13 @@ const PERMISSIONS = [
   'wf.workflow_tasks.read', 'wf.workflow_tasks.decide', 'wf.workflow_instances.read',
 ];
 
+let manager: Awaited<ReturnType<typeof person>>;
+let seed: Awaited<ReturnType<typeof server.leaveSeed>>;
+
 test('FR-HRM-LVE-04 FR-HRM-LVE-05 FR-HRM-LVE-15 the leave screens and the approval card show the seeded team, in English and Urdu at three widths', async ({ browser }) => {
   const first = await person(browser, { permissions: PERMISSIONS, displayName: 'Hamza Manager' });
-  await first.context.close();
-  const seed = await server.leaveSeed(first.username);
+  manager = first;
+  seed = await server.leaveSeed(first.username);
   const screens = [
     { path: '/time/leave', name: 'my-leave', ready: 'main h1' },
     { path: '/time/leave/apply', name: 'apply', ready: 'main h1' },
@@ -56,9 +59,14 @@ test('FR-HRM-LVE-04 FR-HRM-LVE-05 FR-HRM-LVE-15 the leave screens and the approv
 });
 
 test('FR-HRM-LVE-05 FR-XM-32 the manager sees the coverage warning on the waiting request and decides it; the preview of the apply form shows the balance after', async ({ browser }) => {
-  const user = await person(browser, { permissions: PERMISSIONS, displayName: 'Imran Manager' });
-  const seed = await server.leaveSeed(user.username);
-  const page = user.page;
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await display(context, { language: 'en' });
+  const page = await openPage(context);
+  await page.goto('/sign-in');
+  await page.locator('input[name="username"]').fill(manager.username);
+  await page.locator('input[name="password"]').fill(PASSWORD);
+  await page.locator('button[type="submit"]').click();
+  await expect(page.locator('.erp-shell main h1')).toBeVisible();
   await page.goto(`/time/leave/requests/${seed.waiting}`);
   await expect(page.locator('main')).toContainText(/Seeded|days|Days/);
   await page.goto('/approvals');
@@ -72,5 +80,6 @@ test('FR-HRM-LVE-05 FR-XM-32 the manager sees the coverage warning on the waitin
   await page.getByRole('option', { name: /Annual/ }).click();
   await expect(page.locator('main')).toContainText(/balance/i);
   noProblems(page);
-  await user.context.close();
+  await context.close();
+  await manager.context.close();
 });

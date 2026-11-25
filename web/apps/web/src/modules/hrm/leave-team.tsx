@@ -140,8 +140,9 @@ function CalendarGrid({ data, month, monthName, num, decimal, date, weekday, typ
     const values = { away: num(d?.away ?? 0), size: num(d?.teamSize ?? 0), date: date(iso), limit: num(limits.get(companyId) ?? 0) };
     const name = !d ? t('lcal.coverage.none', { date: date(iso) }) : d.warn ? t('lcal.coverage.warn', values) : t('lcal.coverage.cell', values);
     return (
-      <td key={iso} role="gridcell" className="erp-lcal-cover" data-r={r} data-c={c} tabIndex={tab(r, c)} aria-label={name} title={name} {...(d?.warn ? { 'data-warn': true } : {})}
+      <td key={iso} role="gridcell" className="erp-lcal-cover" data-r={r} data-c={c} tabIndex={tab(r, c)} title={name} {...(d?.warn ? { 'data-warn': true } : {})}
         {...(todays.get(companyId) === iso ? { 'data-today': true } : {})}>
+        <span className="erp-visually-hidden">{name}</span>
         {d && (
           <>
             <span aria-hidden="true">{values.away}/{values.size}</span>
