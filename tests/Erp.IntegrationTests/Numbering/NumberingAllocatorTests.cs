@@ -127,57 +127,72 @@ public sealed class NumberingAllocatorTests(TenancyFixture fx, ITestOutputHelper
     }
 
     [Fact]
-    public async Task FR_KRN_NUM_06_time_per_allocation_is_measured_for_both_kinds()
+    public async Task FR_KRN_NUM_06_cost_per_allocation_is_measured_for_both_kinds_in_database_commands_and_time()
     {
         var company = await _h.CompanyAsync(Ct);
         await _rig.SchemeAsync(company, "hrm.letter_no", "LTR-{yyyy}-{seq:5}", "yearly", gapFree: true, ct: Ct);
         await _rig.SchemeAsync(company, "hrm.contract_no", "CON-{yyyy}-{seq:5}", "yearly", ct: Ct);
-        // R-318: no wall-clock limit. The cost of an allocation is compared with a plain round trip of the same shape measured in the
-        // same run on the same connection pool (begin, a statement that gives the transaction an id, commit: an allocation writes, so its commit waits for the disk too), so a loaded or slow machine moves both alike.
-        // The median of the rounds is used, so one stalled round cannot decide the result.
-        const int Rounds = 200;
-        const double MaxTimesBaseline = 100; // an allocation measured 45 to 50 times a plain round trip on the build machine (about 20 ms against 0.4 ms); the old limit of 100 ms was 100 times a 1 ms round trip
-        await _rig.PostAsync(Letter(company), true, Ct); // warm-up (pool, plans)
+        // R-318: the limit is on what an allocation does, not on how long a loaded machine takes: the number of commands it sends to the
+        // database (counted from the driver's own trace events, so other tests running at the same time do not count). A tenth of a second per
+        // allocation was the old limit; on a busy build machine one allocation took 20 ms alone and 230 ms next to 2000 other tests.
+        // Time is still measured and written to the test output.
+        const int Rounds = 50;
+        const int MostCommands = 12; // measured: see the output line; the allocator needs a handful (scheme, period, sequence, audit) plus begin and commit
         var request = new NumberRequest("hrm.contract_no", company, null, new DateOnly(2026, 3, 1));
+        await _rig.PostAsync(Letter(company), true, Ct); // warm-up (pool, plans)
         await _rig.Allocator.AssignOnCreateAsync(request, Ct);
-        await BaselineAsync();
 
-        var baseline = new List<double>();
-        var gapFree = new List<double>();
-        var gapAllowed = new List<double>();
-        for (var i = 0; i < Rounds; i++) // interleaved, so a slow period hits all three alike
+        using var counter = new CommandCounter(new NpgsqlConnectionStringBuilder(_rig.App.ConnectionString).Database!);
+        var gapFree = await MeasureAsync(counter, () => _rig.PostAsync(Letter(company), true, Ct));
+        var gapAllowed = await MeasureAsync(counter, () => _rig.Allocator.AssignOnCreateAsync(request, Ct));
+        output.WriteLine($"per number: gap-free {gapFree.Commands} commands, {gapFree.Milliseconds:0.00} ms (begin, allocate, commit); gap-allowed {gapAllowed.Commands} commands, {gapAllowed.Milliseconds:0.00} ms (median of {Rounds} rounds)");
+        Assert.InRange(gapFree.Commands, 1, MostCommands);
+        Assert.InRange(gapAllowed.Commands, 1, MostCommands);
+
+        async Task<(int Commands, double Milliseconds)> MeasureAsync(CommandCounter commands, Func<Task> work)
         {
-            baseline.Add(await TimeAsync(BaselineAsync));
-            gapFree.Add(await TimeAsync(() => _rig.PostAsync(Letter(company), true, Ct)));
-            gapAllowed.Add(await TimeAsync(() => _rig.Allocator.AssignOnCreateAsync(request, Ct)));
+            var times = new List<double>();
+            var perRound = new List<int>();
+            for (var i = 0; i < Rounds; i++)
+            {
+                var before = commands.Count;
+                var watch = Stopwatch.StartNew();
+                await work();
+                times.Add(watch.Elapsed.TotalMilliseconds);
+                perRound.Add(commands.Count - before);
+            }
+
+            return (perRound.Min(), times.Order().ToList()[times.Count / 2]);
+        }
+    }
+
+    /// <summary>Counts the commands the Npgsql driver sends to one database, from its trace events (other tests use other databases).</summary>
+    private sealed class CommandCounter : IDisposable
+    {
+        private readonly ActivityListener _listener;
+        private int _count;
+
+        public CommandCounter(string database)
+        {
+            _listener = new ActivityListener
+            {
+                ShouldListenTo = source => source.Name == "Npgsql",
+                Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+                ActivityStopped = activity =>
+                {
+                    var name = activity.GetTagItem("db.namespace") ?? activity.GetTagItem("db.name");
+                    if (string.Equals(name as string, database, StringComparison.Ordinal))
+                    {
+                        Interlocked.Increment(ref _count);
+                    }
+                },
+            };
+            ActivitySource.AddActivityListener(_listener);
         }
 
-        var (b, f, a) = (Median(baseline), Median(gapFree), Median(gapAllowed));
-        output.WriteLine($"median per number: gap-free {f:0.00} ms (begin, allocate, commit), gap-allowed {a:0.00} ms; plain round trip {b:0.00} ms; ratios {f / b:0.0} and {a / b:0.0} (limit {MaxTimesBaseline})");
-        Assert.True(f / b < MaxTimesBaseline, $"gap-free allocation took {f / b:0.0} times a plain round trip ({f:0.00} ms against {b:0.00} ms)");
-        Assert.True(a / b < MaxTimesBaseline, $"gap-allowed allocation took {a / b:0.0} times a plain round trip ({a:0.00} ms against {b:0.00} ms)");
+        public int Count => Volatile.Read(ref _count);
 
-        async Task BaselineAsync()
-        {
-            await using var connection = await _rig.App.OpenConnectionAsync(Ct);
-            await using var tx = await connection.BeginTransactionAsync(Ct);
-            await using var command = new NpgsqlCommand("select pg_current_xact_id()::text", connection, tx);
-            await command.ExecuteScalarAsync(Ct);
-            await tx.CommitAsync(Ct);
-        }
-
-        static async Task<double> TimeAsync(Func<Task> work)
-        {
-            var watch = Stopwatch.StartNew();
-            await work();
-            return watch.Elapsed.TotalMilliseconds;
-        }
-
-        static double Median(List<double> values)
-        {
-            var sorted = values.Order().ToList();
-            return sorted[sorted.Count / 2];
-        }
+        public void Dispose() => _listener.Dispose();
     }
 
     // ------------------------------------------------------------------ periods (Q5)

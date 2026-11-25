@@ -134,7 +134,9 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
   `migrate` records control-plane scripts with checksums in `cp.schema_history` like customer scripts in `meta.schema_history` (S1.11f2, CR-006);
   provisioning holds a per-customer advisory lock in the control-plane database, so a second run for the same customer waits (`ProvisioningLock`, R-031).
 - CI: `.github/workflows/ci.yml` runs restore, build, generator drift, TypeScript type-check, unit, architecture, integration
-  (PostgreSQL 16 service), data-dictionary drift and the licence gate.
+  (PostgreSQL 16 service), data-dictionary drift and the licence gate. The required checks `build-and-test` and `web` are collectors over parallel jobs
+  (`dotnet-checks`, `dotnet-integration` shards by test namespace, `web-checks`, `web-e2e` shards by spec file; R-318): a new browser spec file is added to a shard in
+  ci.yml (`build/e2e-shards-check.py` fails otherwise); a new integration test namespace runs in the last shard without any change.
 - Tenant-isolation suite (S1.04): `dotnet test --project tests/Erp.IntegrationTests --no-build --filter-trait "Suite=TenantIsolation"`; CI job `tenant-isolation`.
   Every endpoint is found automatically; one the suite cannot probe fails it (see `docs/handoff/2026-11-15-S1.04.md`).
 - Access control (S1.06): `generate` also writes each module's permission manifest (`*/Access/permissions.g.json`); baseline roles are

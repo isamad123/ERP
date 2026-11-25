@@ -1,0 +1,11 @@
+# `build-and-test` in parallel shards (R-318)
+
+**Why.** `build-and-test` took 41m49 on #141 (45-minute limit hit once on a slower run): one runner ran build, unit, architecture and 1500+ integration tests one after the other. About 85% was the integration step.
+
+**What.** `build-and-test` (required check, R-040) is now a collector over `dotnet-checks` (secret scan, restore, build, generator drift, TypeScript check, unit, architecture, data dictionary drift, licence gate; the dictionary command builds a database of its own, so it no longer needs the integration run) and `dotnet-integration` (four shards, each with its own runner, PostgreSQL service with 300 connections and PostgreSQL 16 client tools; each builds only `tests/Erp.IntegrationTests`, which references both hosts). Shard filters use `--filter-namespace`; shard 4 uses `--filter-not-namespace` over the same names, so a new test namespace runs there without a change. `build/integration-shards-check.py` (in `dotnet-checks`) fails on a mistyped or duplicated namespace. Logs upload per shard (`ci-logs-integration-<n>`).
+
+**Sizing.** A full local run with a trx report (test seconds by namespace: Identity 515, ImportCentre 484, Documents 235, Attendance 223, Numbering 130, Entitlements 124, Jobs 118, Notifications 110, Tenancy 103 ...; 2883 s in all, nearly serial because most classes share one collection): shard 1 Identity, Entitlements, Settings, Access, Org, Views; shard 2 ImportCentre, Numbering, Notifications, Packs, Metadata, Setup; shard 3 Documents, Attendance, Jobs, Api, Audit, Leave; shard 4 the rest. The shards list 170, 130, 384 and 842 tests (1526 in all, none lost or counted twice). Per-job CI times: see the pull request.
+
+**Test change.** `FR_KRN_NUM_06` time per allocation asserted a wall-clock ratio that failed under the full suite (18 ms alone, 230 ms with 2000 other tests running): it now asserts the number of database commands one allocation sends (counted from the driver's trace events for the test's own database; 7 and 6, limit 12) and writes the time to the output.
+
+**Open.** Tests that depend on another namespace's state would fail only in CI shards: none found by the first run (see PR). Shard 4 is the largest by count (544 cheap schema tests) but not by time.

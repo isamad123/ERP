@@ -71,11 +71,15 @@ jobs:
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "run the checks: $code"
 
-  build-and-test:
+  # R-318: `build-and-test` (a check main requires, R-040) is now a collector, like `web`. The quick checks run once in `dotnet-checks`
+  # (secret scan, build, generator drift, unit, architecture, data dictionary drift, licence gate); the integration tests (2000+ tests, the
+  # long part) run in `dotnet-integration`: parallel shards of test namespaces, each on a runner and a PostgreSQL service of its own. Shards
+  # 1 to 3 name their namespaces; the last shard runs every namespace the others do not name, so a new test namespace is never left out.
+  dotnet-checks:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 70 # R-318: was 45; build-and-test took 40 to 41 minutes on other pull requests and was cancelled at 45 on this one; the real fix is to split the integration tests into shards
+    timeout-minutes: 30
 
     services:
       postgres:
@@ -146,6 +150,77 @@ jobs:
       - name: Architecture tests
         run: dotnet test --project tests/Erp.ArchitectureTests --no-build -c Release --report-xunit-trx --results-directory logs/test-results
 
+      - name: Every integration test namespace is in a shard (a typing mistake in a shard list would leave tests out)
+        run: python3 build/integration-shards-check.py
+
+      - name: Data dictionary drift (the generator builds a database of its own from the migrations and must match the committed dictionary)
+        run: |
+          dotnet run --project tools/Erp.CodeGen --no-build -c Release -- dictionary --connection "$ERP_TEST_PG"
+          test -z "$(git status --porcelain)" || { echo "docs/data-design/generated/data-dictionary.md is out of date."; git diff --stat; exit 1; }
+
+      - name: Licence gate (D-09)
+        run: |
+          python3 build/licence-gate.py --self-test
+          python3 build/licence-gate.py | tee logs/licence-report.txt
+          exit "${PIPESTATUS[0]}"
+
+      - name: Upload full logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs
+          path: logs/
+          if-no-files-found: warn
+          retention-days: 14
+
+  dotnet-integration:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - name: 1
+            filter: "--filter-namespace Erp.IntegrationTests.Identity --filter-namespace Erp.IntegrationTests.Entitlements --filter-namespace Erp.IntegrationTests.Settings --filter-namespace Erp.IntegrationTests.Access --filter-namespace Erp.IntegrationTests.Org --filter-namespace Erp.IntegrationTests.Views"
+          - name: 2
+            filter: "--filter-namespace Erp.IntegrationTests.ImportCentre --filter-namespace Erp.IntegrationTests.Numbering --filter-namespace Erp.IntegrationTests.Notifications --filter-namespace Erp.IntegrationTests.Packs --filter-namespace Erp.IntegrationTests.Metadata --filter-namespace Erp.IntegrationTests.Setup"
+          - name: 3
+            filter: "--filter-namespace Erp.IntegrationTests.Documents --filter-namespace Erp.IntegrationTests.Attendance --filter-namespace Erp.IntegrationTests.Jobs --filter-namespace Erp.IntegrationTests.Api --filter-namespace Erp.IntegrationTests.Audit --filter-namespace Erp.IntegrationTests.Leave"
+          - name: 4 (the rest)
+            filter: "--filter-not-namespace Erp.IntegrationTests.Identity --filter-not-namespace Erp.IntegrationTests.Entitlements --filter-not-namespace Erp.IntegrationTests.Settings --filter-not-namespace Erp.IntegrationTests.Access --filter-not-namespace Erp.IntegrationTests.Org --filter-not-namespace Erp.IntegrationTests.Views --filter-not-namespace Erp.IntegrationTests.ImportCentre --filter-not-namespace Erp.IntegrationTests.Numbering --filter-not-namespace Erp.IntegrationTests.Notifications --filter-not-namespace Erp.IntegrationTests.Packs --filter-not-namespace Erp.IntegrationTests.Metadata --filter-not-namespace Erp.IntegrationTests.Setup --filter-not-namespace Erp.IntegrationTests.Documents --filter-not-namespace Erp.IntegrationTests.Attendance --filter-not-namespace Erp.IntegrationTests.Jobs --filter-not-namespace Erp.IntegrationTests.Api --filter-not-namespace Erp.IntegrationTests.Audit --filter-not-namespace Erp.IntegrationTests.Leave"
+    name: dotnet-integration (shard ${{ matrix.shard.name }})
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: erp
+          POSTGRES_PASSWORD: erp-ci-only
+          POSTGRES_DB: erp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U erp -d erp_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+          --shm-size=256mb
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Prepare log folder
+        run: mkdir -p logs
+
+      - name: Build the integration tests and the hosts they start (two-process tests start the API host build)
+        run: dotnet build tests/Erp.IntegrationTests -c Release -v q
+
       - name: PostgreSQL connection limit (the numbering tests run 100 concurrent transactions, S1.08)
         # The service starts with the image default of 100 connections; the invariant-6 test needs 100 at once plus the
         # other test classes running in parallel. Raised to 300 and the service restarted.
@@ -169,28 +244,42 @@ jobs:
           "$RUNNER_TEMP/pg16/pg_dump" --version
           "$RUNNER_TEMP/pg16/pg_restore" --version
 
-      - name: Integration tests (PostgreSQL 16; the tenant-isolation suite and the browser tests run in their own jobs below)
-        run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-not-trait "Suite=TenantIsolation" --filter-not-trait "Suite=WebE2E" --report-xunit-trx --results-directory logs/test-results
-
-      - name: Data dictionary drift (live database must match the committed dictionary)
-        run: |
-          dotnet run --project tools/Erp.CodeGen --no-build -c Release -- dictionary --connection "$ERP_TEST_PG"
-          test -z "$(git status --porcelain)" || { echo "docs/data-design/generated/data-dictionary.md is out of date."; git diff --stat; exit 1; }
-
-      - name: Licence gate (D-09)
-        run: |
-          python3 build/licence-gate.py --self-test
-          python3 build/licence-gate.py | tee logs/licence-report.txt
-          exit "${PIPESTATUS[0]}"
+      - name: Integration tests, shard ${{ matrix.shard.name }} (PostgreSQL 16; the tenant-isolation suite and the browser tests run in their own jobs)
+        env:
+          SHARD_FILTER: ${{ matrix.shard.filter }}
+        run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-not-trait "Suite=TenantIsolation" --filter-not-trait "Suite=WebE2E" $SHARD_FILTER --report-xunit-trx --results-directory logs/test-results
 
       - name: Upload full logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ci-logs
+          name: ci-logs-integration-${{ matrix.shard.name }}
           path: logs/
           if-no-files-found: warn
           retention-days: 14
+
+  # The check main requires (R-040), under its old name: green only when the quick checks and every integration shard are green. A skipped part
+  # counts as passed only when `changes` found nothing but documents (then the old job was skipped too).
+  build-and-test:
+    needs: [changes, dotnet-checks, dotnet-integration]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Collect the results
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          CHECKS: ${{ needs.dotnet-checks.result }}
+          INTEGRATION: ${{ needs.dotnet-integration.result }}
+        run: |
+          echo "changes=$CHANGES code=$CODE dotnet-checks=$CHECKS dotnet-integration=$INTEGRATION"
+          if [ "$CHANGES" = "success" ] && [ "$CODE" != "true" ]; then
+            [ "$CHECKS" = "skipped" ] && [ "$INTEGRATION" = "skipped" ] && exit 0
+          fi
+          [ "$CHECKS" = "success" ] && [ "$INTEGRATION" = "success" ] && exit 0
+          echo "a part did not succeed" >&2
+          exit 1
 
   # S1.04: the tenant-isolation suite (FR-KRN-TEN-03, FR-KRN-TEN-04, spec 03 section 10 invariant 10). Every API endpoint
   # is called as one customer with another customer's ids, hosts and tokens; any success fails this job. It is its own
