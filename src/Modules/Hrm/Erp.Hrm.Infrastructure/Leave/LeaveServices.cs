@@ -28,6 +28,14 @@ public static class LeaveServices
         services.AddScoped<Contracts.Leave.ILeaveDeductions, LeaveDeductionReader>();
         services.AddScoped<Contracts.Leave.ILeaveEncashments, LeaveEncashmentReader>();
         services.AddScoped<Kernel.Contracts.Documents.IAttachmentOwner, LeaveRequestAttachmentOwner>();
+
+        // S1.33b: the standard leave reports, and each of them as an exportable list for the export engine (both hosts: the worker makes the file).
+        services.AddScoped<ILeaveReportService, Reports.LeaveReportService>();
+        foreach (var code in Contracts.Leave.LeaveReportCodes.All)
+        {
+            services.AddScoped<Kernel.Contracts.Itg.IExportRowReader>(sp => new Reports.LeaveReportExportReader(sp, code));
+        }
+
         return services;
     }
 

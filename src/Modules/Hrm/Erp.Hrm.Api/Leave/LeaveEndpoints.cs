@@ -74,7 +74,43 @@ public static class LeaveEndpoints
             PersonEndpoints.Answer(await s.GetAsync(id, ct).ConfigureAwait(false))), "record_action", Employments, LeavePermissions.LedgerRead);
         Tag(app.MapPost("/api/hrm/employments/{id:guid}/leave-transfer", async (Guid id, LeaveTransferMapInput body, ILeaveTransferService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.MapAsync(id, body, ct).ConfigureAwait(false))), "record_action", Employments, LeavePermissions.LedgerPost);
+        // S1.33b: the standard leave reports (FR-HRM-LVE-10, FR-HRM-RPT-05); the permission opens them, the data scope of the caller's grants decides the rows.
+        Tag(app.MapGet("/api/hrm/leave/reports", async (ILeaveReportService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.CatalogueAsync(ct).ConfigureAwait(false))), "catalog", Ledger, LeavePermissions.ReportsRead);
+        Tag(app.MapGet("/api/hrm/leave/reports/{code}", async (string code, [AsParameters] LeaveReportParameters p, ILeaveReportService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.RunAsync(code, p.ToQuery(), p.Limit, p.Offset, ct).ConfigureAwait(false))), "catalog", Ledger, LeavePermissions.ReportsRead);
         return app;
+    }
+
+    /// <summary>The query string of a leave report: the filters of <see cref="LeaveReportQuery"/> plus the page.</summary>
+    internal sealed class LeaveReportParameters
+    {
+        public Guid? CompanyId { get; init; }
+
+        public Guid? UnitId { get; init; }
+
+        public Guid? EmploymentId { get; init; }
+
+        public Guid? LeaveTypeId { get; init; }
+
+        public int? LeaveYear { get; init; }
+
+        public DateOnly? From { get; init; }
+
+        public DateOnly? To { get; init; }
+
+        public string? Search { get; init; }
+
+        public string? Status { get; init; }
+
+        public int? Limit { get; init; }
+
+        public int? Offset { get; init; }
+
+        public LeaveReportQuery ToQuery() => new()
+        {
+            CompanyId = CompanyId, UnitId = UnitId, EmploymentId = EmploymentId, LeaveTypeId = LeaveTypeId, LeaveYear = LeaveYear, From = From, To = To, Search = Search, Status = Status,
+        };
     }
 
     private static void Tag(RouteHandlerBuilder endpoint, string kind, string resource, string permission) =>
