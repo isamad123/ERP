@@ -169,18 +169,19 @@ function CalendarGrid({ data, month, monthName, num, decimal, date, weekday, typ
       const status = t(`lcal.status.${first.day.status}` as MessageKey) + (first.sandwich ? `, ${t('lcal.cell.sandwich')}` : '');
       const name = t(first.half ? 'lcal.cell.leaveHalf' : 'lcal.cell.leave', { name: person, date: date(iso), type: parts.join(' + '), status });
       return (
-        <td key={iso} {...common} aria-label={name} title={name} data-colour={colourOf(ty?.colorToken)} {...(first.waiting ? { 'data-waiting': true } : {})} {...(first.sandwich ? { 'data-sandwich': true } : {})}>
+        <td key={iso} {...common} title={name} data-colour={colourOf(ty?.colorToken)} {...(first.waiting ? { 'data-waiting': true } : {})} {...(first.sandwich ? { 'data-sandwich': true } : {})}>
           <span aria-hidden="true"><bdi>{label}</bdi>{first.half ? '½' : ''}{cell.leaves.length > 1 ? '+' : ''}{first.waiting ? <Clock size={10} /> : null}</span>
+          <span className="erp-visually-hidden">{name}</span>
         </td>
       );
     }
     if (cell.kind === 'holiday') {
       const name = t('lcal.cell.holiday.name', { name: person, date: date(iso) });
-      return <td key={iso} {...common} aria-label={name} title={holidayOf(iso) ?? name}><span aria-hidden="true">{t('lcal.cell.holiday')}</span></td>;
+      return <td key={iso} {...common} title={holidayOf(iso) ?? name}><span aria-hidden="true">{t('lcal.cell.holiday')}</span><span className="erp-visually-hidden">{name}</span></td>;
     }
     if (cell.kind === 'off') {
       const name = t('lcal.cell.off.name', { name: person, date: date(iso) });
-      return <td key={iso} {...common} aria-label={name} title={name}><span aria-hidden="true">{t('lcal.cell.off')}</span></td>;
+      return <td key={iso} {...common} title={name}><span aria-hidden="true">{t('lcal.cell.off')}</span><span className="erp-visually-hidden">{name}</span></td>;
     }
     return <td key={iso} {...common} aria-label={t('lcal.cell.none', { name: person, date: date(iso) })} />;
   };
