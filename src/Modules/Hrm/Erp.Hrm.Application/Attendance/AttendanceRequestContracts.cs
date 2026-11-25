@@ -20,6 +20,16 @@ public sealed class RegularizationRequestInput
 
     public DateTimeOffset? RequestedOut { get; init; }
 
+    /// <summary>The time in as a clock time of the company's day (the web form's way); <see cref="RequestedInDayOffset"/> moves it to the day before (-1) or after (1).</summary>
+    public TimeOnly? RequestedInTime { get; init; }
+
+    public int RequestedInDayOffset { get; init; }
+
+    /// <summary>The time out as a clock time; <see cref="RequestedOutDayOffset"/> 1 is the morning after a night shift.</summary>
+    public TimeOnly? RequestedOutTime { get; init; }
+
+    public int RequestedOutDayOffset { get; init; }
+
     public string? Reason { get; init; }
 }
 
@@ -162,6 +172,14 @@ public static class AttendanceRequestRules
         var last = TimeZoneInfo.ConvertTime(end, zone).DateTime;
         var lastDay = DateOnly.FromDateTime(last.TimeOfDay == TimeSpan.Zero ? last.AddTicks(-1) : last);
         return (first, lastDay < first ? first : lastDay);
+    }
+
+    /// <summary>The instant of a clock time on <paramref name="day"/> plus <paramref name="dayOffset"/> days, in the company's zone.</summary>
+    public static DateTimeOffset LocalInstant(DateOnly day, TimeOnly time, int dayOffset, TimeZoneInfo zone)
+    {
+        ArgumentNullException.ThrowIfNull(zone);
+        var local = day.AddDays(Math.Clamp(dayOffset, -1, 1)).ToDateTime(time);
+        return new DateTimeOffset(local, zone.GetUtcOffset(local));
     }
 
     /// <summary>The time as the approval card shows it, in the company's local time ("HH:mm").</summary>

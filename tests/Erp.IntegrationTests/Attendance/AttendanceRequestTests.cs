@@ -218,7 +218,7 @@ public sealed class AttendanceRequestTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal("rejected", await _h.ScalarAsync<string>("select status from hrm.regularization_requests where id = $1", Ct, asked.Json.GetProperty("id").GetGuid()));
         Assert.Equal(0, await CountAsync("select count(*) from hrm.attendance_events where employment_id = $1 and source = 'regularization'", employment));
 
-        var again = await _h.PostAsync(user, Regularizations, new { workDate = Iso(day), requestedIn = At(day, "09:00"), reason = "The gate system was down, proof attached to HR" }, Ct);
+        var again = await _h.PostAsync(user, Regularizations, new { workDate = Iso(day), requestedInTime = "09:00:00", reason = "The gate system was down, proof attached to HR" }, Ct);
         Assert.Equal(HttpStatusCode.Accepted, again.Status);
         Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(o.Approver, $"/api/wf/tasks/{await TaskOfAsync(again)}/approve", new { comment = "ok" }, Ct)).Status);
         Assert.Equal(original, await _h.ScalarAsync<Guid>("select supersedes_event_id from hrm.attendance_events where employment_id = $1 and source = 'regularization' and direction = 'in'", Ct, employment));

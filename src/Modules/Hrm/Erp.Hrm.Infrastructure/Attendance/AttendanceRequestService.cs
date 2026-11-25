@@ -91,7 +91,9 @@ internal sealed class AttendanceRequestService(
         var now = clock.UtcNow;
         var zone = await applier.ZoneAsync(employment.CompanyId, cancellationToken).ConfigureAwait(false);
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime);
-        var errors = AttendanceRequestRules.CheckRegularization(workDate!.Value, today, request.RequestedIn, request.RequestedOut, request.Reason, zone);
+        var requestedIn = request.RequestedIn ?? (request.RequestedInTime is { } inTime ? AttendanceRequestRules.LocalInstant(workDate!.Value, inTime, request.RequestedInDayOffset, zone) : null);
+        var requestedOut = request.RequestedOut ?? (request.RequestedOutTime is { } outTime ? AttendanceRequestRules.LocalInstant(workDate!.Value, outTime, request.RequestedOutDayOffset, zone) : null);
+        var errors = AttendanceRequestRules.CheckRegularization(workDate!.Value, today, requestedIn, requestedOut, request.Reason, zone);
         if (errors.Count > 0)
         {
             return PeopleResult.Fields(errors);
@@ -109,8 +111,8 @@ internal sealed class AttendanceRequestService(
             EmploymentId = employment.Id,
             ExceptionId = exception?.Id,
             WorkDate = workDate.Value,
-            RequestedIn = request.RequestedIn?.ToUniversalTime(),
-            RequestedOut = request.RequestedOut?.ToUniversalTime(),
+            RequestedIn = requestedIn?.ToUniversalTime(),
+            RequestedOut = requestedOut?.ToUniversalTime(),
             Reason = request.Reason!.Trim(),
             FileIds = [],
             Status = "submitted",
