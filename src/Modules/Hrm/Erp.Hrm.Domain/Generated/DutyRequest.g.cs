@@ -36,6 +36,9 @@ public sealed partial class DutyRequest : global::Erp.BuildingBlocks.Domain.Enti
     /// <summary>workflow_instance_id: fk wf.workflow_instances</summary>
     public global::System.Guid? WorkflowInstanceId { get; set; }
 
+    /// <summary>file_ids: proof files of the request, kept when it is decided (S1.30b, R-161; the files are owned through IAttachmentOwner, type hrm.duty_requests)</summary>
+    public global::System.Guid[]? FileIds { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

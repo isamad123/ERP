@@ -146,5 +146,10 @@
   "errors.hrm.attendance.request.not_pending": "درخواست اب فیصلے کی منتظر نہیں۔",
   "errors.hrm.attendance.request.employment_closed": "یہ ملازمت ختم ہو چکی ہے؛ ایچ آر سے رابطہ کریں۔",
   "errors.hrm.attendance.request.file_store_later": "اس ریلیز میں ثبوت کی فائلیں دستیاب نہیں۔",
-  "errors.hrm.attendance.request.exception_missing": "استثنا یا درست کیا جانے والا دن دیں۔"
+  "errors.hrm.attendance.request.exception_missing": "استثنا یا درست کیا جانے والا دن دیں۔",
+  "permissions.hrm.attendance_dashboard.read": "آج کی لائیو حاضری دیکھنا (حاضر، تاخیر، غیر حاضر، چھٹی پر، ابھی پنچ نہیں کیا)",
+  "permissions.hrm.attendance_reports.read": "حاضری کی معیاری رپورٹیں چلانا",
+  "errors.hrm.attendance.report.range_order": "آخری تاریخ ابتدائی تاریخ سے پہلے ہے۔",
+  "errors.hrm.attendance.report.range_too_long": "ایک رپورٹ زیادہ سے زیادہ ایک سال کا احاطہ کرتی ہے۔",
+  "errors.hrm.attendance.report.unknown": "حاضری کی ایسی کوئی رپورٹ نہیں ہے۔"
 }

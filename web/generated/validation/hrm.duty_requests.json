@@ -46,6 +46,14 @@
       "format": "uuid",
       "nullable": true
     },
+    "fileIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "nullable": true
+    },
     "status": {
       "type": "string",
       "enum": [

@@ -42,7 +42,7 @@ public sealed class LeaveRequestDayListQuery
 
     public global::System.Guid? EmploymentId { get; init; }
 
-    /// <summary>Sort key: leaveDate; a leading minus sorts descending. Empty: by id (creation order).</summary>
+    /// <summary>Sort key: leaveDate, requestStatus; a leading minus sorts descending. Empty: by id (creation order).</summary>
     public string? Sort { get; init; }
 }
 

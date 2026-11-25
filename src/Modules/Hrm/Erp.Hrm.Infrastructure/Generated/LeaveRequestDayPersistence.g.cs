@@ -62,7 +62,7 @@ internal sealed class LeaveRequestDayRepository(
     }
 
     /// <summary>Sort keys of the list endpoint: indexed columns (S1.12c, ruling Q11).</summary>
-    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.LeaveRequestDay> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.LeaveRequestDay>().Key("leaveDate", e => e.LeaveDate);
+    private static readonly global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.LeaveRequestDay> Sorts = new global::Erp.BuildingBlocks.Infrastructure.Persistence.ListSorts<global::Erp.Hrm.Domain.Generated.LeaveRequestDay>().Key("leaveDate", e => e.LeaveDate).Key("requestStatus", e => e.RequestStatus);
 
     public async global::System.Threading.Tasks.Task<global::System.Collections.Generic.IReadOnlyList<global::Erp.Hrm.Domain.Generated.LeaveRequestDay>> ListByCompanyAsync(global::System.Guid companyId, global::Erp.BuildingBlocks.Application.Data.PageRequest page, global::System.Threading.CancellationToken cancellationToken) =>
         await PageAsync((await QueryAsync(cancellationToken).ConfigureAwait(false)).Where(e => e.CompanyId == companyId), page, cancellationToken).ConfigureAwait(false);
