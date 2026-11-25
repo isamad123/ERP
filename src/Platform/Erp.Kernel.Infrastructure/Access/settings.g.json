@@ -633,6 +633,101 @@
       }
     },
     {
+      "key": "iam.api_client.rotation_grace_minutes",
+      "module": "iam",
+      "type": "int",
+      "default": 60,
+      "validation": {
+        "min": 0,
+        "max": 10080
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "security.api_clients",
+      "unit": "minutes",
+      "name": {
+        "en": "Old API key valid after rotation",
+        "ur": "تبدیلی کے بعد پرانی API کلید کتنی دیر چلتی ہے"
+      },
+      "description": {
+        "en": "Minutes the previous secret of an API client keeps working after a rotation",
+        "ur": "تبدیلی کے بعد API کلائنٹ کا پچھلا خفیہ نمبر کتنے منٹ چلتا رہتا ہے"
+      },
+      "help": {
+        "en": "After a rotation the connected system needs time to switch to the new secret. The old one stops after this many minutes; 0 stops it at once.",
+        "ur": "تبدیلی کے بعد جڑے ہوئے نظام کو نیا خفیہ نمبر لگانے کے لیے وقت چاہیے۔ پرانا اتنے منٹ بعد رک جاتا ہے؛ 0 اسے فوراً روک دیتا ہے۔"
+      }
+    },
+    {
+      "key": "iam.api_client.expiry_notice_days",
+      "module": "iam",
+      "type": "int",
+      "default": 14,
+      "validation": {
+        "min": 1,
+        "max": 365
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "security.api_clients",
+      "unit": "days",
+      "name": {
+        "en": "Warning before an API key expires",
+        "ur": "API کلید ختم ہونے سے پہلے انتباہ"
+      },
+      "description": {
+        "en": "Days before expiry on which holders of the API client permission are told",
+        "ur": "ختم ہونے سے کتنے دن پہلے API کلائنٹ کی اجازت رکھنے والوں کو بتایا جاتا ہے"
+      },
+      "help": {
+        "en": "One notice is sent when an API client has this many days or fewer left.",
+        "ur": "جب API کلائنٹ کے پاس اتنے یا کم دن رہ جائیں تو ایک اطلاع بھیجی جاتی ہے۔"
+      }
+    },
+    {
+      "key": "itg.api.tenant_rate_per_minute",
+      "module": "itg",
+      "type": "int",
+      "default": 600,
+      "validation": {
+        "min": 1
+      },
+      "layers": [
+        "tenant"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "integration",
+      "unit": "calls",
+      "name": {
+        "en": "API calls a minute for the whole customer",
+        "ur": "پورے صارف کے لیے فی منٹ API کالیں"
+      },
+      "description": {
+        "en": "The most calls all API clients together may make in a minute",
+        "ur": "تمام API کلائنٹ مل کر ایک منٹ میں زیادہ سے زیادہ کتنی کالیں کر سکتے ہیں"
+      },
+      "help": {
+        "en": "Each client also has its own limit; a call over either limit is refused with a wait time.",
+        "ur": "ہر کلائنٹ کی اپنی حد بھی ہے؛ کسی بھی حد سے زیادہ کال انتظار کے وقت کے ساتھ مسترد ہوتی ہے۔"
+      }
+    },
+    {
       "key": "iam.report.inactive_days",
       "module": "iam",
       "type": "int",

@@ -22,6 +22,7 @@ internal sealed class PermissionConfiguration : IEntityTypeConfiguration<global:
         builder.Property(e => e.DescriptionI18n).HasColumnName("description_i18n").HasColumnType("jsonb").IsRequired();
         builder.Property(e => e.IsSensitive).HasColumnName("is_sensitive").HasColumnType("boolean");
         builder.Property(e => e.RetiredAt).HasColumnName("retired_at").HasColumnType("timestamptz");
+        builder.Property(e => e.IsApiClient).HasColumnName("is_api_client").HasColumnType("boolean");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");

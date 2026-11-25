@@ -289,6 +289,22 @@
       "manual": true,
       "request_permission": "job.runs.create",
       "schedule_editable": false
+    },
+    {
+      "code": "kernel.api_client_expiry",
+      "name": {"en": "API client expiry", "ur": "API کلائنٹ کی میعاد"},
+      "description": {"en": "Marks API clients whose expiry has passed, tells the people who manage API clients once when a key is about to expire, and removes old rate counters (S1.27c).", "ur": "وہ API کلائنٹ نشان زد کرتا ہے جن کی میعاد گزر چکی، کلید ختم ہونے سے پہلے API کلائنٹ سنبھالنے والوں کو ایک بار بتاتا ہے اور پرانے شرح کے شمار ہٹاتا ہے۔"},
+      "schedule": {"daily": {"at": "02:20"}},
+      "permissions": [],
+      "retry": {"max_attempts": 2, "backoff_seconds": [900]},
+      "timeout_seconds": 1800,
+      "priority": 20,
+      "concurrency": 1,
+      "runs_in": ["full", "read_only", "locked"],
+      "entitlement": "platform.base",
+      "manual": true,
+      "request_permission": "job.runs.create",
+      "schedule_editable": false
     }
   ]
 }

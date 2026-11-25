@@ -72,6 +72,7 @@ public static class KernelJobs
         services.AddSingleton<IJobHandler, Itg.ImportCommitJob>();
         services.AddSingleton<IJobHandler, Itg.ExportRunJob>(); // S1.16b
         services.AddSingleton<IJobHandler, Itg.ExportExpireJob>();
+        services.AddSingleton<IJobHandler, Access.ApiClientExpiryJob>(); // S1.27c
         return services;
     }
 

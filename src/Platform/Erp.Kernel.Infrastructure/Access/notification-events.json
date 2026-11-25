@@ -1261,6 +1261,81 @@
      "body": "فائل {file_name} میں {virus} پایا گیا اور اسے الگ کر دیا گیا۔ اسے کوئی نہیں کھول سکتا۔"
     }
    }
+  },
+  {
+   "code": "iam.api_client.limit_reached",
+   "source": "iam.api_client.limit_reached",
+   "group": "system",
+   "mandatory": false,
+   "audited": false,
+   "link_template": "/admin/api-clients",
+   "fields": [
+    {
+     "name": "client_name",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "limit",
+     "type": "number",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "recipients"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "An API client reached its limit",
+     "body": "The API client {client_name} used all of its {limit} calls a minute; further calls were refused until the next minute. Open API clients to check its use or raise the limit."
+    },
+    "ur": {
+     "title": "ایک API کلائنٹ اپنی حد کو پہنچ گیا",
+     "body": "API کلائنٹ {client_name} نے فی منٹ اپنی تمام {limit} کالیں استعمال کر لیں؛ اگلے منٹ تک مزید کالیں مسترد کی گئیں۔ اس کا استعمال دیکھنے یا حد بڑھانے کے لیے API کلائنٹس کھولیں۔"
+    }
+   }
+  },
+  {
+   "code": "iam.api_client.expiring",
+   "source": "iam.api_client.expiring",
+   "group": "system",
+   "mandatory": false,
+   "audited": false,
+   "link_template": "/admin/api-clients",
+   "fields": [
+    {
+     "name": "client_name",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "expires_on",
+     "type": "text",
+     "class": "general"
+    },
+    {
+     "name": "days",
+     "type": "number",
+     "class": "general"
+    }
+   ],
+   "audience": {
+    "users": [
+     "recipients"
+    ]
+   },
+   "texts": {
+    "en": {
+     "title": "An API client key is about to expire",
+     "body": "The key of the API client {client_name} expires on {expires_on}, in {days} days. Rotate it before then so the connected system keeps working."
+    },
+    "ur": {
+     "title": "ایک API کلائنٹ کی کلید ختم ہونے والی ہے",
+     "body": "API کلائنٹ {client_name} کی کلید {expires_on} کو، یعنی {days} دن میں ختم ہو جائے گی۔ جڑا ہوا نظام چلتا رہے اس کے لیے اس سے پہلے کلید تبدیل کریں۔"
+    }
+   }
   }
  ]
 }

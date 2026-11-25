@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Erp.BuildingBlocks.Application.Audit;
+using Erp.Kernel.Contracts.Access;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 
@@ -50,10 +51,12 @@ public sealed class HttpAuditContext(IHttpContextAccessor accessor) : IAuditCont
 
     public string? IpAddress => Info.IpAddress;
 
-    public string Source => ActorUserId is null ? AuditSources.System : Info.Source;
+    private bool IsApiClient => accessor.HttpContext?.User.FindFirstValue(ApiClientCodes.ActorClaim) == ApiClientCodes.ActorClaimValue;
+
+    public string Source => ActorUserId is null ? AuditSources.System : IsApiClient ? AuditSources.Api : Info.Source;
 
     public Guid? ActorUserId =>
         Guid.TryParse(accessor.HttpContext?.User.FindFirstValue("sub") ?? accessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
 
-    public string ActorKind => ActorUserId is null ? ActorKinds.System : ActorKinds.User;
+    public string ActorKind => ActorUserId is null ? ActorKinds.System : IsApiClient ? ActorKinds.ApiClient : ActorKinds.User;
 }

@@ -366,7 +366,8 @@
       "code": "hrm.attendance_devices.push",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.attendance_devices.push",
-      "sensitive": false
+      "sensitive": false,
+      "apiClient": true
     },
     {
       "code": "hrm.device_user_maps.create",

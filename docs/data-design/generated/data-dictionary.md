@@ -2,7 +2,7 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 227 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 229 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
@@ -10,7 +10,7 @@ Release 1.0. Customer database: 227 tables. Control-plane database: 15 tables. E
 | customer | cfg | 20 |
 | customer | doc | 7 |
 | customer | hrm | 116 |
-| customer | iam | 24 |
+| customer | iam | 26 |
 | customer | itg | 12 |
 | customer | job | 5 |
 | customer | meta | 4 |
@@ -5560,6 +5560,59 @@ Indexes:
 - `ix_unmapped_punches_company_id_employment_id` CREATE INDEX ix_unmapped_punches_company_id_employment_id ON hrm.unmapped_punches USING btree (company_id, employment_id)
 - `ix_unmapped_punches_resolved_by` CREATE INDEX ix_unmapped_punches_resolved_by ON hrm.unmapped_punches USING btree (resolved_by)
 
+### iam.api_client_usage
+
+Calls, errors and response times of each API client per day (S1.27c, ADM-SEC-02, KRN-INT-07); the hosts add their counts every minute. Requirements: ADM-SEC-02, KRN-INT-07. Source: kernel.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| client_id | uuid | no |  | fk iam.api_clients |
+| usage_date | date | no |  | UTC day |
+| calls | integer | no | 0 | default 0 |
+| errors_4xx | integer | no | 0 | default 0 |
+| errors_5xx | integer | no | 0 | default 0 |
+| rate_limited | integer | no | 0 | default 0 |
+| max_ms | integer | no | 0 | default 0 |
+| latency_histogram | jsonb | no |  | answer times: upper bound of the bucket in milliseconds to the number of calls; the 95th percentile is read from it |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `fk_api_client_usage_client_id` FOREIGN KEY (client_id) REFERENCES iam.api_clients(id)
+- `pk_api_client_usage` PRIMARY KEY (id)
+- `uq_api_client_usage_client_id_usage_date` UNIQUE (client_id, usage_date)
+
+### iam.api_client_windows
+
+Calls of each API client in each minute, added by the API hosts and read back so a limit holds across hosts (S1.27c, KRN-INT-07, R-208). Requirements: KRN-INT-07. Source: kernel.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| client_id | uuid | no |  | fk iam.api_clients |
+| window_start | timestamp with time zone | no |  | the minute |
+| calls | integer | no | 0 | default 0 |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `fk_api_client_windows_client_id` FOREIGN KEY (client_id) REFERENCES iam.api_clients(id)
+- `pk_api_client_windows` PRIMARY KEY (id)
+- `uq_api_client_windows_client_id_window_start` UNIQUE (client_id, window_start)
+
+Indexes:
+
+- `ix_api_client_windows_window_start` CREATE INDEX ix_api_client_windows_window_start ON iam.api_client_windows USING btree (window_start)
+
 ### iam.api_clients
 
 API keys for integrations such as biometric middleware and HR data feeds (ADM-SEC-02); OAuth client credentials are Release 1.1. Requirements: ADM-SEC-02, KRN-INT-07. Source: kernel.yaml.
@@ -5584,6 +5637,11 @@ API keys for integrations such as biometric middleware and HR data feeds (ADM-SE
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| previous_secret_hash | text | yes |  | S1.27c: the secret before the last rotation; works until previous_valid_until (iam.api_client.rotation_grace_minutes) |
+| previous_valid_until | timestamp with time zone | yes |  |  |
+| revoked_at | timestamp with time zone | yes |  |  |
+| expiring_notified_at | timestamp with time zone | yes |  | S1.27c: set when the iam.api_client.expiring notice was raised; one notice per expiry date |
+| limit_notified_on | date | yes |  | S1.27c: the day the iam.api_client.limit_reached notice was raised; one notice per client and day |
 
 Constraints:
 
@@ -5915,6 +5973,7 @@ Registered from module manifests at start-up. Requirements: KRN-IAM-10, ADM-ROL-
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
 | retired_at | timestamp with time zone | yes |  | set when no module declares the code any more; never deleted, grants nothing (CR-021) |
+| is_api_client | boolean | no | false | S1.27c: the manifest flag api_client: an API client may be given this permission as a scope |
 
 Constraints:
 

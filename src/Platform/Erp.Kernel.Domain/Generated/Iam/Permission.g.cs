@@ -30,6 +30,9 @@ public sealed partial class Permission : global::Erp.BuildingBlocks.Domain.Entit
     /// <summary>retired_at: set when no module declares the code any more; never deleted, grants nothing (CR-021)</summary>
     public global::System.DateTimeOffset? RetiredAt { get; set; }
 
+    /// <summary>is_api_client: S1.27c: the manifest flag api_client: an API client may be given this permission as a scope</summary>
+    public bool IsApiClient { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

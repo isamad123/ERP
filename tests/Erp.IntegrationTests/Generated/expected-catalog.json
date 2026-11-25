@@ -34506,6 +34506,319 @@
     {
       "database": "tenant",
       "schema": "iam",
+      "name": "api_client_usage",
+      "module": "kernel",
+      "traits": [
+        "std"
+      ],
+      "requirements": [
+        "ADM-SEC-02",
+        "KRN-INT-07"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "client_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "usage_date",
+          "kind": "Date",
+          "type": "date",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "calls",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "errors_4xx",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "errors_5xx",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "rate_limited",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "max_ms",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "latency_histogram",
+          "kind": "Json",
+          "type": "jsonb",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [
+        "uq_api_client_usage_client_id_usage_date"
+      ],
+      "checks": [],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_api_client_usage_client_id",
+          "columns": [
+            "client_id"
+          ],
+          "target": "iam.api_clients",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "indexes": [],
+      "triggers": [],
+      "append_only_updatable": [],
+      "has_api": false,
+      "full_name": "iam.api_client_usage"
+    },
+    {
+      "database": "tenant",
+      "schema": "iam",
+      "name": "api_client_windows",
+      "module": "kernel",
+      "traits": [
+        "std"
+      ],
+      "requirements": [
+        "KRN-INT-07"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "client_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "window_start",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "calls",
+          "kind": "Int4",
+          "type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [
+        "uq_api_client_windows_client_id_window_start"
+      ],
+      "checks": [],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_api_client_windows_client_id",
+          "columns": [
+            "client_id"
+          ],
+          "target": "iam.api_clients",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_api_client_windows_window_start"
+      ],
+      "triggers": [],
+      "append_only_updatable": [],
+      "has_api": false,
+      "full_name": "iam.api_client_windows"
+    },
+    {
+      "database": "tenant",
+      "schema": "iam",
       "name": "api_clients",
       "module": "kernel",
       "traits": [
@@ -34701,6 +35014,56 @@
           "type": "bigint",
           "not_null": true,
           "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "previous_secret_hash",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "previous_valid_until",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "revoked_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "expiring_notified_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "limit_notified_on",
+          "kind": "Date",
+          "type": "date",
+          "not_null": false,
+          "has_default": false,
           "generated": false,
           "sensitive": false,
           "enum_values": []
@@ -36418,6 +36781,16 @@
           "type": "timestamp with time zone",
           "not_null": false,
           "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "is_api_client",
+          "kind": "Bool",
+          "type": "boolean",
+          "not_null": true,
+          "has_default": true,
           "generated": false,
           "sensitive": false,
           "enum_values": []

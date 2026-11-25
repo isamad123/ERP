@@ -50,7 +50,7 @@ public static class DeviceEndpoints
             using var reader = new StreamReader(http.Request.Body, Encoding.UTF8, false, 8192, leaveOpen: true);
             var body = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
             return PersonEndpoints.Answer(await s.PushAsync(id, body, http.Request.Headers[SignatureHeader].ToString(), ct).ConfigureAwait(false));
-        }), "record_action", Devices, DevicePermissions.DevicesPush);
+        }), "record_action", Devices, DevicePermissions.DevicesPush).WithMetadata(new ApiClientEndpointMetadata(DevicePermissions.DevicesPush)); // S1.27c: an API client with this scope may push
 
         Tag(app.MapGet("/api/hrm/attendance/device-maps", async ([FromQuery] Guid? companyId, [FromQuery] Guid? deviceId, [FromQuery] string? state, IDeviceMappingService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.ListAsync(companyId, deviceId, state, ct).ConfigureAwait(false))), "catalog", Maps, DevicePermissions.MapsRead);
@@ -71,7 +71,7 @@ public static class DeviceEndpoints
         return app;
     }
 
-    private static void Tag(RouteHandlerBuilder endpoint, string kind, string resource, string permission) =>
+    private static RouteHandlerBuilder Tag(RouteHandlerBuilder endpoint, string kind, string resource, string permission) =>
         endpoint.WithTags(resource).WithMetadata(new HrmEndpointMetadata(kind, resource, permission), Core);
 
     private static class Limits

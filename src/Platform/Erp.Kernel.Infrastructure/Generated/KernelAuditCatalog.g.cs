@@ -45,6 +45,8 @@ public static class KernelAuditCatalog
         new(typeof(global::Erp.Kernel.Domain.Generated.Doc.RetentionRule), "doc.retention_rules", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Doc.TemplateVersion), "doc.template_versions", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Doc.Template), "doc.templates", true, null, "id", "company_id", null, null, null),
+        new(typeof(global::Erp.Kernel.Domain.Generated.Iam.ApiClientUsage), "iam.api_client_usage", false, "machinery: usage counters added by the API hosts every minute (S1.27c); the client's own changes are audited on iam.api_clients", "id", null, null, null, null),
+        new(typeof(global::Erp.Kernel.Domain.Generated.Iam.ApiClientWindow), "iam.api_client_windows", false, "machinery: rate counters, pruned by the daily job kernel.api_client_expiry (S1.27c)", "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Iam.ApiClient), "iam.api_clients", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Iam.DataScope), "iam.data_scopes", true, null, "id", null, null, null, null),
         new(typeof(global::Erp.Kernel.Domain.Generated.Iam.Delegation), "iam.delegations", true, null, "id", null, null, null, null),

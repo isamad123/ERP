@@ -8,6 +8,7 @@ using Erp.IntegrationTests.Tenancy;
 using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
@@ -55,6 +56,8 @@ public sealed class AccessHarness
         {
             services.RemoveAll<IClock>();
             services.AddSingleton<IClock>(clock);
+            // S1.27c: the test server has no client address; a request names one in X-Test-Remote-Address (the key's allow list reads it).
+            services.AddTransient<IStartupFilter, TestRemoteAddressFilter>();
             // S1.23a (Build item 1): the policy framework's test types, registered as a module would (tests only).
             services.AddSingleton(new Erp.Hrm.Contracts.Policies.PolicyTypeSource(Policies.PolicyTestSupport.TestTypes));
             // S1.22b: the chart's PDF export prints with Chromium, which needs --no-sandbox when the runner is root (as the template tests do).
@@ -268,4 +271,22 @@ public sealed class AccessHarness
         var row = await RowAsync("org.companies", Guid.Empty, new Dictionary<string, object?> { ["status"] = "active" }, ct);
         return (Guid)row["id"]!;
     }
+}
+
+/// <summary>Gives a test request the caller address named in <c>X-Test-Remote-Address</c> (the in-process test server has none), before anything reads it.</summary>
+public sealed class TestRemoteAddressFilter : IStartupFilter
+{
+    public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+    {
+        app.Use((context, nextMiddleware) =>
+        {
+            if (context.Request.Headers.TryGetValue("X-Test-Remote-Address", out var value) && System.Net.IPAddress.TryParse(value.ToString(), out var address))
+            {
+                context.Connection.RemoteIpAddress = address;
+            }
+
+            return nextMiddleware(context);
+        });
+        next(app);
+    };
 }

@@ -56,6 +56,11 @@ public sealed class CrossTenantProbe(IsolationFixture fx, WebApplication app)
             return await new ExportProbe(fx, app).RunAsync(endpoint, ct);
         }
 
+        if (endpoint.Pattern.StartsWith("/api/iam/api-clients", StringComparison.Ordinal))
+        {
+            return await new ApiClientProbe(fx, app).RunAsync(endpoint, ct);
+        }
+
         if (endpoint.Kind is EndpointKind.AccessCreate or EndpointKind.AccessRecordAction or EndpointKind.AccessQuery or EndpointKind.AccessCatalog)
         {
             return await new AccessProbe(fx, app).RunAsync(endpoint, ct);

@@ -49,6 +49,8 @@ public sealed partial class KernelDbContext(DbContextOptions<KernelDbContext> op
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Doc.RetentionRuleConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Doc.TemplateVersionConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Doc.TemplateConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.ApiClientUsageConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.ApiClientWindowConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.ApiClientConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.DataScopeConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Kernel.Infrastructure.Generated.Iam.DelegationConfiguration());
@@ -156,6 +158,8 @@ public static class KernelGeneratedServices
         services.AddScoped<global::Erp.Kernel.Application.Generated.Doc.IRetentionRuleRepository, global::Erp.Kernel.Infrastructure.Generated.Doc.RetentionRuleRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Doc.ITemplateVersionRepository, global::Erp.Kernel.Infrastructure.Generated.Doc.TemplateVersionRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Doc.ITemplateRepository, global::Erp.Kernel.Infrastructure.Generated.Doc.TemplateRepository>();
+        services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IApiClientUsageRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.ApiClientUsageRepository>();
+        services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IApiClientWindowRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.ApiClientWindowRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IApiClientRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.ApiClientRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IDataScopeRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.DataScopeRepository>();
         services.AddScoped<global::Erp.Kernel.Application.Generated.Iam.IDelegationRepository, global::Erp.Kernel.Infrastructure.Generated.Iam.DelegationRepository>();

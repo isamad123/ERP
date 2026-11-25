@@ -19,6 +19,7 @@ public sealed class PermissionResponse
     public global::System.Text.Json.JsonElement DescriptionI18n { get; init; }
     public bool IsSensitive { get; init; }
     public global::System.DateTimeOffset? RetiredAt { get; init; }
+    public bool IsApiClient { get; init; }
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
@@ -76,6 +77,7 @@ internal static class PermissionEndpoints
         DescriptionI18n = row.DescriptionI18n.RootElement.Clone(),
         IsSensitive = row.IsSensitive,
         RetiredAt = row.RetiredAt,
+        IsApiClient = row.IsApiClient,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
         UpdatedAt = row.UpdatedAt,

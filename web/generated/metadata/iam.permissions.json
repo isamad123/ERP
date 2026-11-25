@@ -24,7 +24,8 @@
     "moduleId",
     "descriptionI18n",
     "isSensitive",
-    "retiredAt"
+    "retiredAt",
+    "isApiClient"
   ],
   "search": [
     "code"
@@ -96,6 +97,16 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.iam.permissions.retired_at"
+    },
+    {
+      "column": "is_api_client",
+      "field": "isApiClient",
+      "kind": "Bool",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.iam.permissions.is_api_client"
     },
     {
       "column": "created_at",

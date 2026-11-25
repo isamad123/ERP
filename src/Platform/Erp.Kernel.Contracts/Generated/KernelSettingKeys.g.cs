@@ -68,6 +68,15 @@ public static class KernelSettingKeys
     /// <summary>Days a change waiting for approval stays open.</summary>
     public const string IamMakerCheckerExpiryDays = "iam.maker_checker.expiry_days";
 
+    /// <summary>Minutes the previous secret of an API client keeps working after a rotation.</summary>
+    public const string IamApiClientRotationGraceMinutes = "iam.api_client.rotation_grace_minutes";
+
+    /// <summary>Days before expiry on which holders of the API client permission are told.</summary>
+    public const string IamApiClientExpiryNoticeDays = "iam.api_client.expiry_notice_days";
+
+    /// <summary>The most calls all API clients together may make in a minute.</summary>
+    public const string ItgApiTenantRatePerMinute = "itg.api.tenant_rate_per_minute";
+
     /// <summary>Days without a sign-in after which an active user appears in the role usage report.</summary>
     public const string IamReportInactiveDays = "iam.report.inactive_days";
 

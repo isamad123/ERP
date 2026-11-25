@@ -25,6 +25,11 @@ internal sealed class ApiClientConfiguration : IEntityTypeConfiguration<global::
         builder.Property(e => e.RateLimitPerMinute).HasColumnName("rate_limit_per_minute").HasColumnType("integer");
         builder.Property(e => e.ExpiresAt).HasColumnName("expires_at").HasColumnType("timestamptz");
         builder.Property(e => e.LastUsedAt).HasColumnName("last_used_at").HasColumnType("timestamptz");
+        builder.Property(e => e.PreviousSecretHash).HasColumnName("previous_secret_hash").HasColumnType("text");
+        builder.Property(e => e.PreviousValidUntil).HasColumnName("previous_valid_until").HasColumnType("timestamptz");
+        builder.Property(e => e.RevokedAt).HasColumnName("revoked_at").HasColumnType("timestamptz");
+        builder.Property(e => e.ExpiringNotifiedAt).HasColumnName("expiring_notified_at").HasColumnType("timestamptz");
+        builder.Property(e => e.LimitNotifiedOn).HasColumnName("limit_notified_on").HasColumnType("date");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.IsDeleted).HasColumnName("is_deleted").HasColumnType("boolean");
         builder.Property(e => e.DeletedAt).HasColumnName("deleted_at").HasColumnType("timestamptz");

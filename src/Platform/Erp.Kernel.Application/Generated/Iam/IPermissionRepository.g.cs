@@ -40,6 +40,7 @@ public static class PermissionAccess
         new("description_i18n", "DescriptionI18n", null),
         new("is_sensitive", "IsSensitive", null),
         new("retired_at", "RetiredAt", null),
+        new("is_api_client", "IsApiClient", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
         new("updated_at", "UpdatedAt", null),

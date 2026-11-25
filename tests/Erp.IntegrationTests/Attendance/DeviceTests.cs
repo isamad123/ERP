@@ -272,6 +272,71 @@ public sealed class DeviceTests(TenancyFixture fx) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task S127c_FR_ADM_SEC_02_a_gateway_pushes_with_an_api_key_scoped_to_the_push_permission_and_the_device_signature_still_applies()
+    {
+        var w = await WorldAsync();
+        var (device, _) = await PushDeviceAsync(w);
+        Assert.Equal(HttpStatusCode.Created, (await MapAsync(w, device, "17", "2024-01-01")).Status);
+        await _h.ExecAsync("""
+            insert into cfg.setting_values (id, setting_key, layer, scope_id, value, created_at, created_by, updated_at, updated_by)
+            values ($1, 'iam.maker_checker.sensitive_roles', 'tenant', null, 'false'::jsonb, now(), $2, now(), $2)
+            on conflict (setting_key, layer, scope_id) do update set value = excluded.value
+            """, Ct, Guid.CreateVersion7(), Erp.Kernel.Infrastructure.ControlPlane.Provisioning.BaselineSeed.SystemUserId);
+        try
+        {
+            var manager = await UserWithAsync(null, "iam.api_clients.manage", "iam.api_clients.read");
+            var made = await _h.PostAsync(manager, "/api/iam/api-clients", new { name = "Gateway", scopes = new[] { "hrm.attendance_devices.push" }, ipAllow = new[] { "10.1.2.0/24" }, rateLimitPerMinute = 60, expiresAt = (DateTimeOffset?)null }, Ct);
+            Assert.True(made.Status == HttpStatusCode.Created, made.Body);
+            var key = made.Text("apiKey")!;
+            var clientRow = made.Json.GetProperty("id").GetGuid();
+            var at = _h.Clock.UtcNow.AddHours(-3);
+            var body = Records(("17", at, "in"));
+
+            async Task<(HttpStatusCode Status, string Body)> WithKeyAsync(string? signed, string ip = "10.1.2.3")
+            {
+                using var client = TenancyFixture.Client(_h.App, TenancyFixture.HostOf(_h.Code));
+                using var request = new HttpRequestMessage(HttpMethod.Post, $"{Base}/devices/{device}/push") { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+                request.Headers.TryAddWithoutValidation("Authorization", "ApiKey " + key);
+                request.Headers.Add("X-Test-Remote-Address", ip);
+                if (signed is not null)
+                {
+                    request.Headers.Add("X-Erp-Signature", signed);
+                }
+
+                using var response = await client.SendAsync(request, Ct);
+                return (response.StatusCode, await response.Content.ReadAsStringAsync(Ct));
+            }
+
+            var signature = DeviceRules.SignatureHeader(Secret, _h.Clock.UtcNow.ToUnixTimeSeconds(), body);
+            Assert.Equal(HttpStatusCode.Forbidden, (await WithKeyAsync(null)).Status); // the key is not the signature: the device's secret still has to sign the body
+            Assert.Equal(HttpStatusCode.Forbidden, (await WithKeyAsync(signature, "10.9.9.9")).Status); // outside the key's allowed addresses
+            Assert.Equal(0L, await EventsAsync(w.Employment));
+
+            var pushed = await WithKeyAsync(signature);
+            Assert.True(pushed.Status == HttpStatusCode.OK, pushed.Body);
+            Assert.Equal(1, JsonDocument.Parse(pushed.Body).RootElement.GetProperty("stored").GetInt32());
+            Assert.Equal(1L, await EventsAsync(w.Employment, "source = 'biometric'"));
+            Assert.Equal(clientRow, await _h.ScalarAsync<Guid>("select created_by from hrm.attendance_events where employment_id = $1", Ct, w.Employment)); // the client is the actor, not a user
+            Assert.Equal(1L, await _h.ScalarAsync<long>("select count(*) from aud.change_log where entity_type = 'iam.api_clients' and entity_id = $1 and action = 'create'", Ct, clientRow));
+
+            // the same key cannot do what the push permission does not cover: read the punch log, read people, or reach /api/iam
+            foreach (var path in new[] { $"{Base}/punch-log", "/api/hrm/persons", "/api/iam/api-clients" })
+            {
+                using var client = TenancyFixture.Client(_h.App, TenancyFixture.HostOf(_h.Code));
+                using var request = new HttpRequestMessage(HttpMethod.Get, path);
+                request.Headers.TryAddWithoutValidation("Authorization", "ApiKey " + key);
+                request.Headers.Add("X-Test-Remote-Address", "10.1.2.3");
+                using var response = await client.SendAsync(request, Ct);
+                Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            }
+        }
+        finally
+        {
+            await _h.ExecAsync("update cfg.setting_values set value = 'true'::jsonb where setting_key = 'iam.maker_checker.sensitive_roles' and layer = 'tenant' and scope_id is null", Ct);
+        }
+    }
+
+    [Fact]
     public async Task FR_HRM_ATT_03_a_push_with_a_missing_wrong_old_or_foreign_signature_is_refused_before_anything_is_read()
     {
         var w = await WorldAsync();

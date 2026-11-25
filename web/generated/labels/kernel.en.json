@@ -339,6 +339,7 @@
   "fields.iam.permissions.created_by": "Created by",
   "fields.iam.permissions.description_i18n": "Description",
   "fields.iam.permissions.id": "ID",
+  "fields.iam.permissions.is_api_client": "Api client",
   "fields.iam.permissions.is_sensitive": "Sensitive",
   "fields.iam.permissions.module_id": "Module",
   "fields.iam.permissions.retired_at": "Retired at",

@@ -146,6 +146,7 @@ export interface Permission
     descriptionI18n: Record<string, string>;
     isSensitive: boolean;
     retiredAt: string | null;
+    isApiClient: boolean;
     createdAt: string;
     createdBy: string;
     updatedAt: string;

@@ -29,7 +29,7 @@ namespace Erp.Kernel.Infrastructure.Access;
 /// A background job acting as the job actor (slice S1.11 ruling Q4, R-009) gets exactly the permissions its manifest
 /// declares, with scope "all" and no field rights, instead of roles read from the database (<see cref="Jobs.JobRunContext"/>).
 /// </para>
-public sealed class AccessEngine(ITenantConnectionProvider tenant, IClock clock, ICurrentActor actor, IWorkforceDirectory workforce, Jobs.JobRunContext? job = null)
+public sealed class AccessEngine(ITenantConnectionProvider tenant, IClock clock, ICurrentActor actor, IWorkforceDirectory workforce, Jobs.JobRunContext? job = null, ApiClientContext? client = null)
     : IPermissionChecker, IDataScopeFilter, IFieldAccess, ICallerAccess
 {
     private static readonly MethodInfo GuidContains = ContainsOf<Guid?>();
@@ -49,6 +49,12 @@ public sealed class AccessEngine(ITenantConnectionProvider tenant, IClock clock,
         if (job is { IsBound: true, Grant: { } grant })
         {
             return AccessSnapshot.ForGrant(grant);
+        }
+
+        // An API key acts with exactly its scopes (slice S1.27c): scope "all" and no field rights, never a user's roles.
+        if (client is { IsBound: true })
+        {
+            return AccessSnapshot.ForGrant(client.Scopes);
         }
 
         await using var connection = (NpgsqlConnection)await tenant.DataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);

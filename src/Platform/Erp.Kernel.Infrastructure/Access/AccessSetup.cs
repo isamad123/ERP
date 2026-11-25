@@ -35,7 +35,7 @@ public sealed class AccessManifest
             if (File.Exists(permissions))
             {
                 var file = JsonSerializer.Deserialize<PermissionFile>(File.ReadAllText(permissions)) ?? throw new InvalidDataException(permissions + " is empty.");
-                manifest.Permissions.AddRange(file.Permissions.Select(p => new PermissionDefinition(p.Code, p.Module, p.DescriptionKey, p.Sensitive)));
+                manifest.Permissions.AddRange(file.Permissions.Select(p => new PermissionDefinition(p.Code, p.Module, p.DescriptionKey, p.Sensitive, p.ApiClient)));
             }
         }
 
@@ -69,6 +69,10 @@ public sealed class AccessManifest
 
         [JsonPropertyName("sensitive")]
         public bool Sensitive { get; init; }
+
+        /// <summary>The manifest flag <c>api_client</c> (slice S1.27c).</summary>
+        [JsonPropertyName("apiClient")]
+        public bool ApiClient { get; init; }
     }
 
     private sealed class RolesFile
@@ -156,7 +160,7 @@ public sealed record AccessSetupResult(int PermissionsAdded, int PermissionsReti
 /// </summary>
 public static class AccessSetup
 {
-    public static IReadOnlyList<PermissionDefinition> HandWritten { get; } = [.. IdentityPermissions.All, .. AccessControlPermissions.All, .. Contracts.Audit.AuditPermissions.All, .. Contracts.Numbering.NumberingPermissions.All, .. Contracts.Settings.SettingsPermissions.All, .. Contracts.Entitlements.LicencePermissions.All, .. Contracts.Workflow.WorkflowPermissions.All, .. Contracts.Jobs.JobPermissions.All, .. Contracts.Notifications.NotificationPermissions.All, .. Contracts.Documents.DocumentPermissions.All, .. Contracts.Documents.TemplatePermissions.All, .. Contracts.Views.ViewPermissions.All, .. Contracts.Metadata.MetadataPermissions.All, .. Contracts.Itg.ImportPermissions.All, .. Contracts.Itg.ExportPermissions.All, .. Contracts.Setup.SetupPermissions.All, .. Contracts.Packs.PackPermissions.All];
+    public static IReadOnlyList<PermissionDefinition> HandWritten { get; } = [.. IdentityPermissions.All, .. AccessControlPermissions.All, .. Contracts.Audit.AuditPermissions.All, .. Contracts.Numbering.NumberingPermissions.All, .. Contracts.Settings.SettingsPermissions.All, .. Contracts.Entitlements.LicencePermissions.All, .. Contracts.Workflow.WorkflowPermissions.All, .. Contracts.Jobs.JobPermissions.All, .. Contracts.Notifications.NotificationPermissions.All, .. Contracts.Documents.DocumentPermissions.All, .. Contracts.Documents.TemplatePermissions.All, .. Contracts.Views.ViewPermissions.All, .. Contracts.Metadata.MetadataPermissions.All, .. Contracts.Itg.ImportPermissions.All, .. Contracts.Itg.ExportPermissions.All, .. Contracts.Setup.SetupPermissions.All, .. Contracts.Packs.PackPermissions.All, .. Contracts.Access.ApiClientPermissions.All];
 
     public static async Task<AccessSetupResult> EnsureAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction, IReadOnlyList<string> manifestFolders, DateTimeOffset now, CancellationToken cancellationToken)
     {
@@ -198,15 +202,15 @@ public static class AccessSetup
         {
             var description = JsonSerializer.Serialize(new Dictionary<string, string> { ["key"] = p.DescriptionKey });
             await using var command = Command(c, tx, """
-                insert into iam.permissions (id, code, module_id, description_i18n, is_sensitive, created_at, created_by, updated_at, updated_by)
-                values ($1, $2, $3, $4, $5, $6, $7, $6, $7)
+                insert into iam.permissions (id, code, module_id, description_i18n, is_sensitive, is_api_client, created_at, created_by, updated_at, updated_by)
+                values ($1, $2, $3, $4, $5, $8, $6, $7, $6, $7)
                 on conflict (code) do update set module_id = excluded.module_id, description_i18n = excluded.description_i18n,
-                    is_sensitive = excluded.is_sensitive, retired_at = null, updated_at = excluded.updated_at, updated_by = excluded.updated_by,
+                    is_sensitive = excluded.is_sensitive, is_api_client = excluded.is_api_client, retired_at = null, updated_at = excluded.updated_at, updated_by = excluded.updated_by,
                     row_version = iam.permissions.row_version + 1
-                where (iam.permissions.module_id, iam.permissions.description_i18n, iam.permissions.is_sensitive, iam.permissions.retired_at)
-                    is distinct from (excluded.module_id, excluded.description_i18n, excluded.is_sensitive, null::timestamptz)
+                where (iam.permissions.module_id, iam.permissions.description_i18n, iam.permissions.is_sensitive, iam.permissions.is_api_client, iam.permissions.retired_at)
+                    is distinct from (excluded.module_id, excluded.description_i18n, excluded.is_sensitive, excluded.is_api_client, null::timestamptz)
                 returning (xmax = 0)
-                """, Guid.CreateVersion7(now), p.Code, p.ModuleId, new Json(description), p.IsSensitive, now, system);
+                """, Guid.CreateVersion7(now), p.Code, p.ModuleId, new Json(description), p.IsSensitive, now, system, p.IsApiClient);
             if (await command.ExecuteScalarAsync(ct).ConfigureAwait(false) is true)
             {
                 added++;

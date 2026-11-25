@@ -34,6 +34,9 @@ api_excluded:
   - cfg.option_lists
   - cfg.option_list_items
   - iam.api_clients
+  # S1.27c: usage counters and rate windows are written by the API hosts and read only through /api/iam/api-clients/{id}/usage.
+  - iam.api_client_usage
+  - iam.api_client_windows
   - aud.change_log
   - aud.access_log
   - aud.chain_anchors

@@ -63,6 +63,7 @@ using Erp.Kernel.Application.ControlPlane.Tenancy;
 using Erp.Kernel.Infrastructure.Generated;
 using Erp.Kernel.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -110,6 +111,9 @@ public static class ApiHost
         services.AddKernelGeneratedRepositories().AddHrmGeneratedRepositories();
         services.AddKernelImportEngine().AddKernelImportWriters();
         services.AddKernelExportEngine().AddKernelExportReaders().AddHrmExportReaders(); // S1.16b
+        services.AddKernelApiClients(); // S1.27c: API clients, key authentication, rate limits and usage
+        services.AddScoped<Erp.Kernel.Contracts.Access.ApiClientContext>();
+        services.AddHostedService<ApiUsageFlushService>();
         services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 
         // Access control (S1.06): one engine decides permissions, data scopes and field access for every endpoint. The HR
@@ -218,8 +222,12 @@ public static class ApiHost
         services.AddKernelDocuments(key => config[key]);
 
         var keys = signing.Validation.Concat((config.GetSection("Auth:SigningPublicKeys").Get<string[]>() ?? []).Select(ToKey)).ToList();
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, Erp.Kernel.Api.Access.ApiKeyAuthenticationHandler>(Erp.Kernel.Contracts.Access.ApiClientCodes.Scheme, _ => { })
+            .AddJwtBearer(o =>
         {
+            // S1.27c: a request that says "Authorization: ApiKey ..." is handled by the key scheme, everything else by the session token.
+            o.ForwardDefaultSelector = context => Erp.Kernel.Api.Access.ApiKeyAuthenticationHandler.IsKeyRequest(context.Request) ? Erp.Kernel.Contracts.Access.ApiClientCodes.Scheme : null;
             o.MapInboundClaims = false;
             o.TokenValidationParameters = new TokenValidationParameters
             {
@@ -243,6 +251,7 @@ public static class ApiHost
         var app = builder.Build();
         app.Services.VerifyWorkflow(); // manifests and outcome handlers checked at start (review S1.10a finding 4)
         var webRoot = WebHosting.Root(config); // the web application (slice S1.12a, ruling Q2); null = API only
+        UseTrustedProxies(app, config); // S1.27c: the caller address of an API key's allow list is the real client behind the customer's own proxies
         app.UseErpSecurityHeaders();
         app.UseErpAuditCorrelation();
         app.UseRouting();
@@ -253,8 +262,10 @@ public static class ApiHost
             app.UseErpWebApplication(webRoot);
         }
 
+        app.UseErpApiClientMetering();
         app.UseAuthentication();
         app.UseErpTokenTenantCheck();
+        app.UseErpApiClientGate();
         app.UseAuthorization();
         app.MapHealthChecks("/health");
         app.MapIdentityAuthEndpoints();
@@ -262,6 +273,7 @@ public static class ApiHost
         var api = app.MapGroup(string.Empty).RequireAuthorization();
         api.MapIdentityAccountEndpoints();
         api.MapAccessEndpoints();
+        api.MapApiClientEndpoints(); // S1.27c
         api.MapUserConsoleEndpoints();
         api.MapOrganizationEndpoints();
         api.MapAccessConsoleEndpoints();
@@ -297,6 +309,40 @@ public static class ApiHost
         Erp.Hrm.Api.Attendance.AttendanceDayEndpoints.MapHrmAttendanceDayEndpoints(api); // S1.29a attendance engine: process, days, explanation, exception queue
         Erp.Hrm.Api.Attendance.AttendanceRequestEndpoints.MapHrmAttendanceRequestEndpoints(api); // S1.30a regularization and duty requests
         return app;
+    }
+
+    /// <summary>
+    /// Takes the caller's address from <c>X-Forwarded-For</c> only when the request comes from a proxy the operator lists in <c>Network:TrustedProxies</c>
+    /// (addresses or CIDR ranges). With none listed the address is the one the server sees; the host name is never taken from a forwarded header.
+    /// </summary>
+    private static void UseTrustedProxies(WebApplication app, IConfiguration config)
+    {
+        var entries = config.GetSection("Network:TrustedProxies").Get<string[]>() ?? [];
+        if (entries.Length == 0)
+        {
+            return;
+        }
+
+        var options = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor, ForwardLimit = 1 };
+        options.KnownProxies.Clear();
+        options.KnownIPNetworks.Clear();
+        foreach (var entry in entries)
+        {
+            if (entry.Contains('/', StringComparison.Ordinal) && System.Net.IPNetwork.TryParse(entry, out var network))
+            {
+                options.KnownIPNetworks.Add(network);
+            }
+            else if (System.Net.IPAddress.TryParse(entry, out var address))
+            {
+                options.KnownProxies.Add(address);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Network:TrustedProxies has an entry that is neither an address nor a CIDR range: {entry}");
+            }
+        }
+
+        app.UseForwardedHeaders(options);
     }
 
     private static ECDsaSecurityKey ToKey(string pem)

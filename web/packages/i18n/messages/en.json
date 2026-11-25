@@ -142,6 +142,7 @@
   "nav.jobs": "Background jobs",
   "nav.audit": "Audit log",
   "nav.exports": "Exports",
+  "nav.apiClients": "API clients",
   "nav.quarantine": "Quarantined files",
   "nav.document": "Document",
   "nav.people": "People",

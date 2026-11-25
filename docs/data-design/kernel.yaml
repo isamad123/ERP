@@ -189,8 +189,9 @@
     - [description_i18n, i18n, req]
     - [is_sensitive, bool, req]
     - [retired_at, ts, opt, "set when no module declares the code any more; never deleted, grants nothing (CR-021)"]
+    - [is_api_client, bool, req, "S1.27c: the manifest flag api_client: an API client may be given this permission as a scope"]
   unique: [[code]]
-  added_in: {S1.06: [retired_at]}
+  added_in: {S1.06: [retired_at], S1.27c: [is_api_client]}
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   api_actions: [read]
   reqs: [KRN-IAM-10, ADM-ROL-01]
@@ -338,8 +339,46 @@
     - [rate_limit_per_minute, int, req]
     - [expires_at, ts, opt]
     - [last_used_at, ts, opt]
+    - [previous_secret_hash, text, opt, "S1.27c: the secret before the last rotation; works until previous_valid_until (iam.api_client.rotation_grace_minutes)"]
+    - [previous_valid_until, ts, opt]
+    - [revoked_at, ts, opt]
+    - [expiring_notified_at, ts, opt, "S1.27c: set when the iam.api_client.expiring notice was raised; one notice per expiry date"]
+    - [limit_notified_on, date, opt, "S1.27c: the day the iam.api_client.limit_reached notice was raised; one notice per client and day"]
   unique: [[client_id]]
+  added_in: {S1.27c: [previous_secret_hash, previous_valid_until, revoked_at, expiring_notified_at, limit_notified_on]}
   reqs: [ADM-SEC-02, KRN-INT-07]
+
+- table: iam.api_client_usage
+  purpose: "Calls, errors and response times of each API client per day (S1.27c, ADM-SEC-02, KRN-INT-07); the hosts add their counts every minute"
+  traits: [std]
+  added_in: S1.27c
+  columns:
+    - [client_id, uuid, req, fk iam.api_clients]
+    - [usage_date, date, req, "UTC day"]
+    - [calls, int, req, default 0]
+    - [errors_4xx, int, req, default 0]
+    - [errors_5xx, int, req, default 0]
+    - [rate_limited, int, req, default 0]
+    - [max_ms, int, req, default 0]
+    - [latency_histogram, json, req, "answer times: upper bound of the bucket in milliseconds to the number of calls; the 95th percentile is read from it"]
+  unique: [[client_id, usage_date]]
+  audit: false
+  audit_reason: "machinery: usage counters added by the API hosts every minute (S1.27c); the client's own changes are audited on iam.api_clients"
+  reqs: [ADM-SEC-02, KRN-INT-07]
+
+- table: iam.api_client_windows
+  purpose: "Calls of each API client in each minute, added by the API hosts and read back so a limit holds across hosts (S1.27c, KRN-INT-07, R-208)"
+  traits: [std]
+  added_in: S1.27c
+  columns:
+    - [client_id, uuid, req, fk iam.api_clients]
+    - [window_start, ts, req, "the minute"]
+    - [calls, int, req, default 0]
+  unique: [[client_id, window_start]]
+  indexes: [[window_start]]
+  audit: false
+  audit_reason: "machinery: rate counters, pruned by the daily job kernel.api_client_expiry (S1.27c)"
+  reqs: [KRN-INT-07]
 
 - table: org.companies
   purpose: Legal entities

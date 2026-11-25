@@ -2,7 +2,7 @@
 // catalogue (S1.11b1: /settings/licence, /admin/jobs/runs, /admin/jobs/health, /admin/audit, /admin/documents/quarantine,
 // /documents/{id}); screens of later slices open "not available yet" until their slice adds the component.
 import { lazy } from 'react';
-import { Activity, BarChart3, Bell, Building2, CalendarDays, ClipboardCheck, Download, EyeOff, FileText, Filter, Flag, House, ImagePlus, KeyRound, Landmark, ListChecks, MapPin, Network, Package, ScrollText, Settings, ShieldAlert, ShieldCheck, Upload, UserCog, Users, UsersRound, Workflow } from 'lucide-react';
+import { Activity, BarChart3, Bell, Building2, CalendarDays, ClipboardCheck, Download, EyeOff, FileText, Filter, Flag, House, ImagePlus, KeyRound, Landmark, ListChecks, MapPin, Network, Package, Plug, ScrollText, Settings, ShieldAlert, ShieldCheck, Upload, UserCog, Users, UsersRound, Workflow } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
 import { HomePage } from '../pages/home';
 
@@ -41,6 +41,7 @@ const CustomFieldsScreen = lazy(() => import('./admin/custom-fields'));
 const ImportsScreen = lazy(() => import('./admin/imports'));
 // S1.16b: the export centre.
 const ExportsScreen = lazy(() => import('./admin/exports'));
+const ApiClientsScreen = lazy(() => import('./admin/api-clients'));
 const NumberingScreen = lazy(() => import('./admin/numbering'));
 const RoutesScreen = lazy(() => import('./admin/routes'));
 // S1.15d: notification texts and rules, document templates.
@@ -97,6 +98,8 @@ export const kernelScreens: ScreenDeclaration[] = [
   { id: 'jobs', path: '/admin/jobs/*', labelKey: 'nav.jobs', icon: Activity, group: 'administration', permission: 'job.runs.read', comesWith: 'S1.16' },
   { id: 'audit', path: '/admin/audit/*', labelKey: 'nav.audit', icon: ScrollText, group: 'administration', permission: 'aud.changes.view', component: AuditScreen },
   { id: 'exports', path: '/admin/exports', labelKey: 'nav.exports', icon: Download, group: 'administration', permission: 'itg.exports.run', allowedWhenLocked: true, component: ExportsScreen },
+  // S1.27c: the keys of connected systems, next to Exports in the Administration group.
+  { id: 'api-clients', path: '/admin/api-clients', labelKey: 'nav.apiClients', icon: Plug, group: 'administration', permission: 'iam.api_clients.read', component: ApiClientsScreen },
   { id: 'quarantine', path: '/admin/documents/quarantine', labelKey: 'nav.quarantine', icon: ShieldAlert, comesWith: 'S1.16' },
   // A file follows its record (S1.11c1 ruling Q23): the server decides when the screen asks for it.
   { id: 'document', path: '/documents/:id', labelKey: 'nav.document', icon: FileText, comesWith: 'S1.24' },

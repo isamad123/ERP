@@ -118,3 +118,10 @@ public sealed record NotificationEndpointMetadata(string Kind, string Resource, 
 /// or upgrade, naming a pack id) or <c>record_action</c> (a route with a pack item's <c>{id}</c>).
 /// </summary>
 public sealed record PackEndpointMetadata(string Kind, string Resource, string Permission);
+
+/// <summary>
+/// Marks an endpoint an API client may call with its key (slice S1.27c): the permission it needs, which must be flagged <c>api_client</c> in a permission
+/// manifest and be one of the client's scopes. An endpoint without this mark answers 403 to every API key; a key never opens a web session or any
+/// <c>/api/iam</c> endpoint. The permission is also checked by the endpoint's own service, which sees the client with only its scopes.
+/// </summary>
+public sealed record ApiClientEndpointMetadata(string Permission);

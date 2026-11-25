@@ -39,6 +39,21 @@ public sealed partial class ApiClient : global::Erp.BuildingBlocks.Domain.Entiti
     /// <summary>last_used_at</summary>
     public global::System.DateTimeOffset? LastUsedAt { get; set; }
 
+    /// <summary>previous_secret_hash: S1.27c: the secret before the last rotation; works until previous_valid_until (iam.api_client.rotation_grace_minutes)</summary>
+    public string? PreviousSecretHash { get; set; }
+
+    /// <summary>previous_valid_until</summary>
+    public global::System.DateTimeOffset? PreviousValidUntil { get; set; }
+
+    /// <summary>revoked_at</summary>
+    public global::System.DateTimeOffset? RevokedAt { get; set; }
+
+    /// <summary>expiring_notified_at: S1.27c: set when the iam.api_client.expiring notice was raised; one notice per expiry date</summary>
+    public global::System.DateTimeOffset? ExpiringNotifiedAt { get; set; }
+
+    /// <summary>limit_notified_on: S1.27c: the day the iam.api_client.limit_reached notice was raised; one notice per client and day</summary>
+    public global::System.DateOnly? LimitNotifiedOn { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 
