@@ -101,7 +101,7 @@ public sealed class NotificationProbe(IsolationFixture fx, WebApplication app)
         return key switch
         {
             "GET /api/ntf/centre/items" or "GET /api/ntf/centre/unread-count" or "GET /api/ntf/centre/preferences" or "GET /api/ntf/catalogue" or "GET /api/ntf/text-templates" or "GET /api/ntf/rules"
-                or "GET /api/ntf/deliveries" or "GET /api/ntf/deliveries/summary" => (endpoint.Pattern, null),
+                or "GET /api/ntf/deliveries" or "GET /api/ntf/deliveries/summary" or "GET /api/ntf/deliveries/daily" => (endpoint.Pattern, null),
             "GET /api/ntf/deliveries/{id:guid}" => ($"/api/ntf/deliveries/{m.Message}", null),
             "POST /api/ntf/deliveries/{id:guid}/resend" => ($"/api/ntf/deliveries/{m.Message}/resend", "{}"),
             "POST /api/ntf/text-templates/test-send" => (endpoint.Pattern, Json(new { eventCode = "workflow.task_assigned", language = "en", subject = "Probe", body = "Probe text" })),

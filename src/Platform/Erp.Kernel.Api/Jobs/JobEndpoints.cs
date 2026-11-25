@@ -49,6 +49,8 @@ public static class JobEndpoints
             RunAsync(async () => Results.Ok(await s.CancelAsync(id, ct).ConfigureAwait(false)))), "record_action", Runs, JobPermissions.RunsUpdate);
         Tag(g.MapGet("/health", (IJobCentre s, CancellationToken ct) =>
             RunAsync(async () => Results.Ok(await s.HealthAsync(ct).ConfigureAwait(false)))), "catalog", Runs, JobPermissions.RunsRead);
+        Tag(g.MapGet("/system-health", (ISystemHealth s, CancellationToken ct) =>
+            RunAsync(async () => Results.Ok(await s.ReadAsync(ct).ConfigureAwait(false)))), "catalog", Runs, JobPermissions.RunsRead);
         return app;
     }
 
