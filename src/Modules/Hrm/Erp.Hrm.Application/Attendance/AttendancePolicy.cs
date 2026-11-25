@@ -82,12 +82,13 @@ public sealed record AttendancePolicy(
     public const string MonthlyBelowDaily = "errors.hrm.policy.attendance.monthly_cap_below_daily";
     public const string CountBeforeShiftRequired = "errors.hrm.policy.attendance.count_before_shift_required";
     public const string CountBeforeShiftUnused = "errors.hrm.policy.attendance.count_before_shift_unused";
+    public const string RestWorkIgnored = "errors.hrm.policy.attendance.overtime_rest_work_ignored";
 
     /// <summary>Every error key of the check (the text files must have each, in English and Urdu).</summary>
     public static IReadOnlyList<string> ErrorKeys { get; } =
     [
         BreakMinutesRequired, BreakMinutesUnused, RoundingStepRequired, RoundingStepUnused, AbsentAboveFullDay, HalfDayWithinGrace, LeaveTypeRequired, LeaveUnitsRequired,
-        PenaltyLeaveUnused, CompOffMinutesRequired, CompOffUnused, MonthlyBelowDaily, CountBeforeShiftRequired, CountBeforeShiftUnused,
+        PenaltyLeaveUnused, CompOffMinutesRequired, CompOffUnused, MonthlyBelowDaily, CountBeforeShiftRequired, CountBeforeShiftUnused, RestWorkIgnored,
     ];
 
     /// <summary>
@@ -260,6 +261,12 @@ public sealed record AttendancePolicy(
                 if (Int(r, "dailyCapMinutes") is { } daily && Int(r, "monthlyCapMinutes") is { } monthly && monthly < daily)
                 {
                     errors[at + "monthlyCapMinutes"] = [MonthlyBelowDaily];
+                }
+
+                // A rest-day rule would never apply when the policy ignores work on that day (review S1.29b finding 5).
+                if ((dayType == "weekly_off" && Text(p, "weeklyOffWork") == Ignore) || (dayType == "holiday" && Text(p, "holidayWork") == Ignore))
+                {
+                    errors[at + "multiplier"] = [RestWorkIgnored];
                 }
 
                 // Whether time before the shift counts is asked only of a working day (the customer's choice, never assumed).

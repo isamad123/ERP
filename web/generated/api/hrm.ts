@@ -2796,6 +2796,7 @@ export interface OvertimeEntry
     requestedMinutes: number | null;
     reason: string | null;
     policyVersionId: string | null;
+    compOffMinutes: number | null;
     status: 'calculated' | 'submitted' | 'approved' | 'rejected' | 'paid' | 'converted_to_comp_off';
     createdAt: string;
     createdBy: string;

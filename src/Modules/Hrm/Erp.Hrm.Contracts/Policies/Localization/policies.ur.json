@@ -178,5 +178,6 @@
   "errors.hrm.policy.attendance.comp_off_unused": "متبادل چھٹی کی ترتیبات صرف تب استعمال ہوتی ہیں جب اوور ٹائم متبادل چھٹی کے طور پر دیا جائے۔",
   "errors.hrm.policy.attendance.monthly_cap_below_daily": "ماہانہ حد روزانہ حد سے کم نہیں ہو سکتی۔",
   "errors.hrm.policy.attendance.count_before_shift_required": "بتائیں کیا شفٹ شروع ہونے سے پہلے کا وقت اوور ٹائم میں شمار ہوتا ہے۔",
-  "errors.hrm.policy.attendance.count_before_shift_unused": "شفٹ سے پہلے کا وقت صرف کام کے دن شمار ہوتا ہے۔"
+  "errors.hrm.policy.attendance.count_before_shift_unused": "شفٹ سے پہلے کا وقت صرف کام کے دن شمار ہوتا ہے۔",
+  "errors.hrm.policy.attendance.overtime_rest_work_ignored": "جب پالیسی اس دن کے کام کو نظر انداز کرتی ہے تو اس قسم کے دن کا اوور ٹائم کبھی شمار نہیں ہوتا؛ کام درج کریں یا اوور ٹائم کا اصول ہٹا دیں۔"
 }

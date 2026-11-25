@@ -48,6 +48,7 @@ internal sealed class AttendanceConsequenceService(
     public const string NotWaivable = "errors.hrm.attendance.penalty.not_waivable";
     public const string WaiverPending = "errors.hrm.attendance.penalty.waiver_pending";
     public const string EmploymentClosed = "errors.hrm.attendance.request.employment_closed";
+    public const string Changed = "errors.hrm.attendance.overtime.changed";
 
     private static readonly string[] CurrentStatuses = ["pre_joining", "active", "on_notice"];
 
@@ -83,16 +84,18 @@ internal sealed class AttendanceConsequenceService(
             async () =>
             {
                 var row = await db.Set<OvertimeEntry>().FirstOrDefaultAsync(x => x.Id == entryId, cancellationToken).ConfigureAwait(false);
-                if (row is null || row.Status != "calculated" || row.Minutes <= 0)
+                // A claim the approver sent back is sent again (review S1.29b finding 1); the workflow refuses it unless it is returned.
+                var again = row is { Status: "submitted", WorkflowInstanceId: not null, RequestedMinutes: null };
+                if (row is null || !(again || row.Status == "calculated") || row.Minutes <= 0)
                 {
-                    return (PeopleResult.Conflict(NotClaimable), null);
+                    return (PeopleResult.Conflict(NotClaimable), null, false);
                 }
 
                 row.Status = "submitted";
                 row.Reason = request.Reason!.Trim();
                 EmploymentApplier.Bump(row, clock.UtcNow, actor.UserId);
-                return (null, i => row.WorkflowInstanceId = i);
-            }, cancellationToken).ConfigureAwait(false);
+                return (null, i => row.WorkflowInstanceId = i, again);
+            }, NotClaimable, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<PeopleResult> RequestOvertimeAsync(OvertimeRequestInput request, CancellationToken cancellationToken)
@@ -149,12 +152,12 @@ internal sealed class AttendanceConsequenceService(
             {
                 if (await db.Set<OvertimeEntry>().AsNoTracking().AnyAsync(x => x.EmploymentId == employment.Id && x.WorkDate == date && x.Status != "rejected", cancellationToken).ConfigureAwait(false))
                 {
-                    return (PeopleResult.Conflict(AlreadyAsked), null);
+                    return (PeopleResult.Conflict(AlreadyAsked), null, false);
                 }
 
                 db.Add(row);
-                return (null, i => row.WorkflowInstanceId = i);
-            }, cancellationToken).ConfigureAwait(false);
+                return (null, i => row.WorkflowInstanceId = i, false);
+            }, AlreadyAsked, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<PeopleResult> RequestWaiverAsync(Guid penaltyId, PenaltyWaiverInput request, CancellationToken cancellationToken)
@@ -198,18 +201,15 @@ internal sealed class AttendanceConsequenceService(
                 var row = await db.Set<AttendancePenalty>().FirstOrDefaultAsync(x => x.Id == penaltyId, cancellationToken).ConfigureAwait(false);
                 if (row is null || row.Status != "applied")
                 {
-                    return (PeopleResult.Conflict(NotWaivable), null);
+                    return (PeopleResult.Conflict(NotWaivable), null, false);
                 }
 
-                if (row.WorkflowInstanceId is not null)
-                {
-                    return (PeopleResult.Conflict(WaiverPending), null);
-                }
-
+                // A waiting waiver is refused; one the approver sent back is sent again with the new reason (review S1.29b finding 1).
+                var again = row.WorkflowInstanceId is not null;
                 row.WaiverReason = request.Reason!.Trim();
                 EmploymentApplier.Bump(row, clock.UtcNow, actor.UserId);
-                return (null, i => row.WorkflowInstanceId = i);
-            }, cancellationToken).ConfigureAwait(false);
+                return (null, i => row.WorkflowInstanceId = i, again);
+            }, WaiverPending, cancellationToken).ConfigureAwait(false);
     }
 
     private static Dictionary<string, JsonElement> OvertimeValues(Employment e, DateOnly date, string dayType, int minutes, bool before) => new(StringComparer.Ordinal)
@@ -254,7 +254,8 @@ internal sealed class AttendanceConsequenceService(
     /// line manager and the employee as values, and the row takes the instance. The answer is 202 with the row and the instance.
     /// </summary>
     private async Task<PeopleResult> StartAsync(
-        Employment employment, Guid documentId, string documentType, Dictionary<string, JsonElement> values, Func<Task<(PeopleResult? Refused, Action<Guid>? Attach)>> prepare, CancellationToken ct)
+        Employment employment, Guid documentId, string documentType, Dictionary<string, JsonElement> values, Func<Task<(PeopleResult? Refused, Action<Guid>? Attach, bool Resubmit)>> prepare,
+        string notReturned, CancellationToken ct)
     {
         try
         {
@@ -267,7 +268,7 @@ internal sealed class AttendanceConsequenceService(
                 db.ChangeTracker.Clear();
                 await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
                 await db.Database.ExecuteSqlInterpolatedAsync($"select pg_advisory_xact_lock(hashtextextended({"hrm.attendance_request:" + employment.Id.ToString("D")}, 0))", ct).ConfigureAwait(false);
-                var (no, attach) = await prepare().ConfigureAwait(false);
+                var (no, attach, resubmit) = await prepare().ConfigureAwait(false);
                 if (no is not null)
                 {
                     refused = no;
@@ -286,8 +287,10 @@ internal sealed class AttendanceConsequenceService(
                     values["line_manager"] = Json(manager.ToString());
                 }
 
-                var started = await workflow.StartAsync(new WorkflowStartRequest(documentType, documentId, employment.CompanyId, employment.UserRef is { } subject ? [subject] : [], values),
-                    db.Database.CurrentTransaction!.GetDbTransaction(), ct).ConfigureAwait(false);
+                var started = resubmit
+                    ? await workflow.ResubmitAsync(documentType, documentId, values, db.Database.CurrentTransaction!.GetDbTransaction(), ct).ConfigureAwait(false)
+                    : await workflow.StartAsync(new WorkflowStartRequest(documentType, documentId, employment.CompanyId, employment.UserRef is { } subject ? [subject] : [], values),
+                        db.Database.CurrentTransaction!.GetDbTransaction(), ct).ConfigureAwait(false);
                 instance = started.InstanceId;
                 attach!(started.InstanceId);
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);
@@ -307,10 +310,20 @@ internal sealed class AttendanceConsequenceService(
                 onBehalf = employment.UserRef is not { } u || u != actor.UserId,
             });
         }
+        catch (WorkflowException ex) when (ex.ErrorKey is "errors.workflow.not_returned" or "errors.workflow.request_open")
+        {
+            db.ChangeTracker.Clear();
+            return PeopleResult.Conflict(notReturned); // still waiting for a decision: nothing to send again
+        }
         catch (WorkflowException ex)
         {
             db.ChangeTracker.Clear();
             return PeopleResult.Conflict(ex.ErrorKey, ex.Details.Count == 0 ? null : new Dictionary<string, object?> { ["details"] = ex.Details });
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            db.ChangeTracker.Clear();
+            return PeopleResult.Conflict(Changed); // the engine changed the record meanwhile (review S1.29b finding 7): try again
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
         {

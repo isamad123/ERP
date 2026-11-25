@@ -218,6 +218,16 @@
       "references": "hrm.policy_versions"
     },
     {
+      "column": "comp_off_minutes",
+      "field": "compOffMinutes",
+      "kind": "Int4",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.overtime_entries.comp_off_minutes"
+    },
+    {
       "column": "status",
       "field": "status",
       "kind": "Enum",

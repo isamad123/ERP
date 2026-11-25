@@ -1189,7 +1189,7 @@ A late-coming or early-leaving penalty of a day beyond the monthly allowance of 
 | period_id | uuid | no |  | fk hrm.attendance_periods; the day's attendance period (FR-XM-26) |
 | policy_version_id | uuid | no |  | fk hrm.policy_versions |
 | explanation | jsonb | no |  | why: keys and values translated at display (ATT-10 style) |
-| waiver_reason | text | yes |  | the reason given when a waiver was asked for |
+| waiver_reason | text | yes |  | the reason of the last waiver asked for (the workflow history keeps every request and decision) |
 | waived_at | timestamp with time zone | yes |  |  |
 | workflow_instance_id | uuid | yes |  | fk wf.workflow_instances |
 | status | text | no |  |  |
@@ -3440,6 +3440,7 @@ Requirements: ATT-12, LVE-08. Source: hrm-time.yaml.
 | requested_minutes | integer | yes |  | minutes asked for before the day (pre-approval, S1.29b); null for overtime claimed after it was worked |
 | reason | text | yes |  | why the overtime is asked for or claimed (S1.29b) |
 | policy_version_id | uuid | yes |  | fk hrm.policy_versions; the attendance policy version whose overtime rule gave the multiplier (S1.29b) |
+| comp_off_minutes | integer | yes |  | minutes converted to compensatory off: what the comp-off leave type can earn in its unit; the rest of the approved minutes is paid (S1.29b review) |
 
 Constraints:
 

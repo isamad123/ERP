@@ -162,6 +162,33 @@ public static class LatenessAndOvertime
         return rule.CompOffDayMinutes is { } perDay && perDay > 0 ? decimal.Round((decimal)approvedMinutes / perDay, 4, MidpointRounding.ToZero) : 0m;
     }
 
+    /// <summary>
+    /// What compensatory off approved overtime earns on a leave type of <paramref name="unit"/> (review S1.29b finding 2; the leave engine rounds the
+    /// same way): hours keep every minute; half days and days count only whole halves or days of the policy's <c>compOffDayMinutes</c>. Answers the
+    /// minutes earned (the rest is paid) and the days to send (exactly the earned part; zero for an hour type, which takes the minutes).
+    /// </summary>
+    public static (int EarnedMinutes, decimal Days) CompOffEarnable(string unit, int approvedMinutes, OvertimeRule rule)
+    {
+        ArgumentNullException.ThrowIfNull(rule);
+        if (approvedMinutes <= 0 || rule.CompOffDayMinutes is not { } perDay || perDay <= 0)
+        {
+            return (0, 0m);
+        }
+
+        switch (unit)
+        {
+            case "hour":
+                return (approvedMinutes, CompOffDays(approvedMinutes, rule));
+            case "half_day":
+                var halves = approvedMinutes * 2 / perDay;
+                var halfMinutes = (int)Math.Floor(halves * perDay / 2m);
+                return halves == 0 ? (0, 0m) : (halfMinutes, halves / 2m);
+            default:
+                var days = approvedMinutes / perDay;
+                return (days * perDay, days);
+        }
+    }
+
     /// <summary>The explanation of a penalty: the action's key with the kind, minutes, occurrence, allowance and, for leave, the type and units.</summary>
     public static ExplanationLine Explain(PlannedPenalty p, string? problemKey = null)
     {

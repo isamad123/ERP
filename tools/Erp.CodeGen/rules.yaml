@@ -1986,8 +1986,9 @@ functions:
              or new.employment_id <> old.employment_id or new.company_id <> old.company_id or new.work_date <> old.work_date or new.kind <> old.kind
              or new.action <> old.action or new.leave_type_id is distinct from old.leave_type_id or new.leave_quantity is distinct from old.leave_quantity
              or new.leave_entry_id is distinct from old.leave_entry_id
-             or (new.leave_reversal_id is not null and new.status = 'applied') then
-              raise exception 'attendance penalty %: only an applied penalty follows its day or ends; its facts never change', old.id
+             or (new.leave_reversal_id is not null and new.status = 'applied')
+             or (new.status <> 'applied' and new.leave_entry_id is not null and new.leave_reversal_id is null) then
+              raise exception 'attendance penalty %: only an applied penalty follows its day or ends (giving back its leave); its facts never change', old.id
                   using errcode = '23514', constraint = 'ck_attendance_penalties_rules';
           end if;
           return new;
@@ -2020,6 +2021,7 @@ functions:
           if new.minutes < 0 or (new.approved_minutes is not null and new.approved_minutes < 0) or (new.requested_minutes is not null and new.requested_minutes < 1)
              or (new.approved_minutes is not null and new.requested_minutes is not null and new.approved_minutes > new.requested_minutes)
              or (new.status in ('approved', 'paid', 'converted_to_comp_off') and new.approved_minutes is null)
+             or (new.comp_off_minutes is not null and (new.status <> 'converted_to_comp_off' or new.comp_off_minutes < 1 or new.comp_off_minutes > new.approved_minutes))
              or new.rate_multiplier < 0 then
               raise exception 'overtime entry %: minutes or multiplier out of rule', new.id
                   using errcode = '23514', constraint = 'ck_overtime_entries_rules';
@@ -2036,6 +2038,16 @@ functions:
              and (to_jsonb(new) - array['comp_off_entry_id', 'updated_at', 'updated_by', 'row_version'])
                  = (to_jsonb(old) - array['comp_off_entry_id', 'updated_at', 'updated_by', 'row_version']) then
               return new;
+          end if;
+          -- Only the moves the services make (review S1.29b finding 6): worked out to claimed; claimed to approved, rejected or (a withdrawn claim) back to
+          -- worked out; approved to paid or converted.
+          if new.status <> old.status and not (
+                 (old.status = 'calculated' and new.status = 'submitted')
+              or (old.status = 'submitted' and new.status in ('approved', 'rejected'))
+              or (old.status = 'submitted' and new.status = 'calculated' and new.requested_minutes is null)
+              or (old.status = 'approved' and new.status in ('paid', 'converted_to_comp_off'))) then
+              raise exception 'overtime entry %: % cannot become %', old.id, old.status, new.status
+                  using errcode = '23514', constraint = 'ck_overtime_entries_rules';
           end if;
           if old.status in ('rejected', 'converted_to_comp_off', 'paid')
              or new.employment_id <> old.employment_id or new.company_id <> old.company_id or new.work_date <> old.work_date

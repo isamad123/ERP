@@ -60,7 +60,7 @@ public sealed partial class AttendancePenalty : global::Erp.BuildingBlocks.Domai
     /// <summary>explanation: why: keys and values translated at display (ATT-10 style)</summary>
     public global::System.Text.Json.JsonDocument Explanation { get; set; } = null!;
 
-    /// <summary>waiver_reason: the reason given when a waiver was asked for</summary>
+    /// <summary>waiver_reason: the reason of the last waiver asked for (the workflow history keeps every request and decision)</summary>
     public string? WaiverReason { get; set; }
 
     /// <summary>waived_at</summary>

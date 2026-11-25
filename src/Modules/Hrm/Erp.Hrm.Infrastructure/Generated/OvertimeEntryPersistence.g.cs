@@ -31,6 +31,7 @@ internal sealed class OvertimeEntryConfiguration : IEntityTypeConfiguration<glob
         builder.Property(e => e.RequestedMinutes).HasColumnName("requested_minutes").HasColumnType("integer");
         builder.Property(e => e.Reason).HasColumnName("reason").HasColumnType("text");
         builder.Property(e => e.PolicyVersionId).HasColumnName("policy_version_id").HasColumnType("uuid");
+        builder.Property(e => e.CompOffMinutes).HasColumnName("comp_off_minutes").HasColumnType("integer");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");

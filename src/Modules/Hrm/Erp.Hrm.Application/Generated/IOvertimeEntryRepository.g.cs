@@ -62,6 +62,7 @@ public static class OvertimeEntryAccess
         new("requested_minutes", "RequestedMinutes", null),
         new("reason", "Reason", null),
         new("policy_version_id", "PolicyVersionId", null),
+        new("comp_off_minutes", "CompOffMinutes", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

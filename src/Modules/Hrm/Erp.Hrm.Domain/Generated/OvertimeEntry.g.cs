@@ -57,6 +57,9 @@ public sealed partial class OvertimeEntry : global::Erp.BuildingBlocks.Domain.En
     /// <summary>policy_version_id: fk hrm.policy_versions; the attendance policy version whose overtime rule gave the multiplier (S1.29b)</summary>
     public global::System.Guid? PolicyVersionId { get; set; }
 
+    /// <summary>comp_off_minutes: minutes converted to compensatory off: what the comp-off leave type can earn in its unit; the rest of the approved minutes is paid (S1.29b review)</summary>
+    public int? CompOffMinutes { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

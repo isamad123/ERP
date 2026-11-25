@@ -73,7 +73,8 @@ public sealed class LatenessOvertimeUnitTests
         new OvertimeCase("08 a half day has no overtime", Working, ["13:00", "20:00"], 0, null),
         new OvertimeCase("09 a weekly off worked: all the work", WeeklyOff, ["10:00", "15:00"], 240, LatenessAndOvertime.StepOvertimeRest),
         new OvertimeCase("10 a holiday worked: all the work", Holiday, ["10:00", "18:00"], 420, LatenessAndOvertime.StepOvertimeRest),
-        new OvertimeCase("11 a holiday whose work the policy ignores: none", Holiday, ["10:00", "18:00"], 0, null, IgnoreHoliday: true),
+        // (A holiday rule while the policy ignores holiday work is refused by the check, review S1.29b finding 5; without a rule there is none.)
+        new OvertimeCase("11 a holiday without a holiday rule: none", Holiday, ["10:00", "18:00"], 0, null, IgnoreHoliday: true),
     };
 
     [Theory]
@@ -84,7 +85,8 @@ public sealed class LatenessOvertimeUnitTests
         var json = BaseJson.TrimEnd().TrimEnd('}') + "," + c.Extra + "}";
         if (c.IgnoreHoliday)
         {
-            json = json.Replace("\"holidayWork\":\"record\"", "\"holidayWork\":\"ignore\"", StringComparison.Ordinal);
+            json = System.Text.RegularExpressions.Regex.Replace(json, ",\\s*\"holiday\":\\{[^}]*\\}", string.Empty);
+            Assert.DoesNotContain("2.5", json, StringComparison.Ordinal);
         }
 
         var policy = AttendancePolicy.Read(Json(json)) ?? throw new InvalidOperationException("policy");
@@ -119,6 +121,18 @@ public sealed class LatenessOvertimeUnitTests
         // No cap given: the policy has none (statutory limits are the customer's to enter, R-002).
         var open = Policy(Overtime.Replace("\"dailyCapMinutes\":120,\"monthlyCapMinutes\":600,", string.Empty, StringComparison.Ordinal)).OvertimeFor(DayPlan.Working)!;
         Assert.Equal(new OvertimeApproval(500, null), LatenessAndOvertime.Approvable(500, null, open, 10_000));
+    }
+
+    [Theory]
+    [InlineData("day", 300, 0, 0)]
+    [InlineData("day", 1000, 960, 2)]
+    [InlineData("half_day", 300, 240, 0.5)]
+    [InlineData("half_day", 239, 0, 0)]
+    [InlineData("hour", 300, 300, 0.625)]
+    public void review_2_FR_HRM_LVE_08_comp_off_earns_whole_units_of_the_leave_type(string unit, int approved, int earned, double days)
+    {
+        var rule = Policy(Overtime).OvertimeFor(DayPlan.Holiday)!;
+        Assert.Equal((earned, (decimal)days), LatenessAndOvertime.CompOffEarnable(unit, approved, rule));
     }
 
     [Fact]
@@ -202,6 +216,8 @@ public sealed class LatenessOvertimeUnitTests
         Assert.Equal([AttendancePolicy.MonthlyBelowDaily], AttendancePolicy.Check(With("\"overtime\":{\"working\":{\"multiplier\":1.5,\"approval\":\"post\",\"compensation\":\"pay\",\"countBeforeShift\":false,\"dailyCapMinutes\":120,\"monthlyCapMinutes\":60}}"))["overtime.working.monthlyCapMinutes"]);
         Assert.Equal([AttendancePolicy.CountBeforeShiftRequired], AttendancePolicy.Check(With("\"overtime\":{\"working\":{\"multiplier\":1.5,\"approval\":\"post\",\"compensation\":\"pay\"}}"))["overtime.working.countBeforeShift"]);
         Assert.Empty(AttendancePolicy.Check(With(Overtime)));
+        // review S1.29b finding 5: a rest-day rule while the policy ignores that day's work is refused.
+        Assert.Equal([AttendancePolicy.RestWorkIgnored], AttendancePolicy.Check(Json(With(Overtime).GetRawText().Replace("\"holidayWork\":\"record\"", "\"holidayWork\":\"ignore\"", StringComparison.Ordinal)))["overtime.holiday.multiplier"]);
         // A policy failing its check is never read (so a broken version never gives zero caps or zero allowances).
         Assert.Null(AttendancePolicy.Read(With("\"overtime\":{\"working\":{\"multiplier\":1.5,\"approval\":\"post\",\"compensation\":\"pay\"}}")));
     }

@@ -178,5 +178,6 @@
   "errors.hrm.policy.attendance.comp_off_unused": "Compensatory off settings are used only when overtime is given as compensatory off.",
   "errors.hrm.policy.attendance.monthly_cap_below_daily": "The monthly cap cannot be below the daily cap.",
   "errors.hrm.policy.attendance.count_before_shift_required": "Say whether time before the shift starts counts as overtime.",
-  "errors.hrm.policy.attendance.count_before_shift_unused": "Time before the shift counts only on a working day."
+  "errors.hrm.policy.attendance.count_before_shift_unused": "Time before the shift counts only on a working day.",
+  "errors.hrm.policy.attendance.overtime_rest_work_ignored": "Overtime on this day type is never counted while the policy ignores work on it; record the work or remove the overtime rule."
 }

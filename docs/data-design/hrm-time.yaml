@@ -325,6 +325,7 @@
     - [requested_minutes, int, opt, "minutes asked for before the day (pre-approval, S1.29b); null for overtime claimed after it was worked"]
     - [reason, text, opt, "why the overtime is asked for or claimed (S1.29b)"]
     - [policy_version_id, uuid, opt, "fk hrm.policy_versions; the attendance policy version whose overtime rule gave the multiplier (S1.29b)"]
+    - [comp_off_minutes, int, opt, "minutes converted to compensatory off: what the comp-off leave type can earn in its unit; the rest of the approved minutes is paid (S1.29b review)"]
   indexes: [[employment_id, work_date]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
@@ -334,8 +335,9 @@
   # S1.29b (CR-089 S1.29b detail; slice S1.29 Build items 9 to 11, FR-HRM-ATT-12, LVE-08): minutes are the overtime the engine worked out from the
   # day's result (beyond the shift on a working day, all recorded work on a weekly off or holiday); approved_minutes is set on approval, within the
   # policy's daily and monthly caps of the day type; a pre-approval is asked before the day (requested_minutes) and pays the smaller of the minutes
-  # worked and approved. Approved overtime the policy converts becomes converted_to_comp_off and earns comp-off through hrm.attendance.comp_off_earned.
-  added_in: {S1.29b: [requested_minutes, reason, policy_version_id]}
+  # worked and approved. Approved overtime the policy converts becomes converted_to_comp_off and earns comp-off through hrm.attendance.comp_off_earned
+  # for the minutes the comp-off leave type can earn in its unit (comp_off_minutes); the rest is paid (review S1.29b finding 2).
+  added_in: {S1.29b: [requested_minutes, reason, policy_version_id, comp_off_minutes]}
   api_actions: [read]
 
 - table: hrm.attendance_penalties
@@ -357,7 +359,7 @@
     - [period_id, uuid, req, "fk hrm.attendance_periods; the day's attendance period (FR-XM-26)"]
     - [policy_version_id, uuid, req, fk hrm.policy_versions]
     - [explanation, json, req, "why: keys and values translated at display (ATT-10 style)"]
-    - [waiver_reason, text, opt, "the reason given when a waiver was asked for"]
+    - [waiver_reason, text, opt, "the reason of the last waiver asked for (the workflow history keeps every request and decision)"]
     - [waived_at, ts, opt]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   unique: [[employment_id, work_date, kind, "where status <> 'cancelled'"]]

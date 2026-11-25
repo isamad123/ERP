@@ -1141,6 +1141,7 @@
   "fields.hrm.overtime_entries.approved_minutes": "Approved minutes",
   "fields.hrm.overtime_entries.attendance_day_id": "Attendance day",
   "fields.hrm.overtime_entries.comp_off_entry_id": "Comp off entry",
+  "fields.hrm.overtime_entries.comp_off_minutes": "Comp off minutes",
   "fields.hrm.overtime_entries.company_id": "Company",
   "fields.hrm.overtime_entries.created_at": "Created at",
   "fields.hrm.overtime_entries.created_by": "Created by",

@@ -71,6 +71,8 @@ internal sealed class AttendanceConsequences(HrmDbContext db, IServiceProvider s
         var day = await db.Set<AttendanceDay>().AsNoTracking().Where(d => d.Id == dayId && d.WorkDate == date).Select(d => new { d.PolicyVersionId }).FirstAsync(ct).ConfigureAwait(false);
         var policy = day.PolicyVersionId is { } versionId ? await PolicyAsync(versionId, ct).ConfigureAwait(false) : null;
         var rule = policy?.OvertimeFor(outcome.DayType);
+        // The same lock as an overtime decision of this employment, so the engine and an approval never miss each other's change (review S1.29b finding 7).
+        await db.Database.ExecuteSqlInterpolatedAsync($"select pg_advisory_xact_lock(hashtextextended({"hrm.overtime:" + e.Id.ToString("D")}, 0))", ct).ConfigureAwait(false);
         var entries = await db.Set<OvertimeEntry>().Where(x => x.EmploymentId == e.Id && x.WorkDate == date).ToListAsync(ct).ConfigureAwait(false);
         var active = entries.FirstOrDefault(x => x.Status != "rejected");
         var minutes = outcome.OvertimeMinutes;
@@ -120,22 +122,35 @@ internal sealed class AttendanceConsequences(HrmDbContext db, IServiceProvider s
         // An approved pre-approval the policy gives as comp-off earns it once the day shows the minutes worked (never more than approved).
         if (active.Status == "approved" && active.RequestedMinutes is not null && minutes > 0 && rule is { Compensation: OvertimeRule.CompOff })
         {
-            Convert(active, Math.Min(minutes, active.ApprovedMinutes ?? 0), rule, now, actor);
+            await ConvertAsync(db, active, Math.Min(minutes, active.ApprovedMinutes ?? 0), rule, now, actor, ct).ConfigureAwait(false);
         }
 
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Turns approved overtime into compensatory off (LVE-08, S1.32 Q6): the entry becomes <c>converted_to_comp_off</c> and the event
-    /// <c>hrm.attendance.comp_off_earned</c> is written in the same transaction (the leave engine posts the earning once per entry).
+    /// Turns approved overtime into compensatory off (LVE-08, S1.32 Q6; review S1.29b finding 2): the part the company's comp-off leave type can earn in
+    /// its unit (the type the rule names, else the only active one) becomes <c>converted_to_comp_off</c> with <c>comp_off_minutes</c>, and the event
+    /// <c>hrm.attendance.comp_off_earned</c> is written in the same transaction for exactly that part (the leave engine posts it once per entry); the rest of
+    /// the approved minutes stays payable. When the type earns nothing (less than a unit) the entry stays approved and is paid. Without a single comp-off
+    /// type every minute is converted and the leave engine waits for HR to create one (S1.32b), as before.
     /// </summary>
-    public static void Convert(HrmDbContext db, OvertimeEntry entry, int minutes, OvertimeRule rule, DateTimeOffset now, Guid actor)
+    public static async Task ConvertAsync(HrmDbContext db, OvertimeEntry entry, int minutes, OvertimeRule rule, DateTimeOffset now, Guid actor, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(db);
         ArgumentNullException.ThrowIfNull(entry);
         ArgumentNullException.ThrowIfNull(rule);
+        var types = await db.Set<LeaveType>().AsNoTracking().Where(t => t.CompanyId == entry.CompanyId && t.IsCompOff && t.IsActive && !t.IsDeleted)
+            .Select(t => new { t.Code, t.Unit }).ToListAsync(ct).ConfigureAwait(false);
+        var type = rule.CompOffLeaveTypeCode is { } code ? types.Find(t => string.Equals(t.Code, code, StringComparison.OrdinalIgnoreCase)) : types.Count == 1 ? types[0] : null;
+        var (earned, days) = type is null ? (minutes, LatenessAndOvertime.CompOffDays(minutes, rule)) : LatenessAndOvertime.CompOffEarnable(type.Unit, minutes, rule);
+        if (earned <= 0)
+        {
+            return; // less than one unit of the comp-off type: paid as overtime instead of lost
+        }
+
         entry.Status = "converted_to_comp_off";
+        entry.CompOffMinutes = earned;
         Employments.EmploymentApplier.Bump(entry, now, actor);
         db.Add(new OutboxMessage
         {
@@ -149,16 +164,14 @@ internal sealed class AttendanceConsequences(HrmDbContext db, IServiceProvider s
                 employmentId = entry.EmploymentId,
                 companyId = entry.CompanyId,
                 workDate = entry.WorkDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                days = LatenessAndOvertime.CompOffDays(minutes, rule),
-                minutes,
+                days,
+                minutes = earned,
                 sourceId = entry.Id,
                 leaveTypeCode = rule.CompOffLeaveTypeCode,
             }, JsonSerializerOptions.Web),
             Headers = JsonSerializer.SerializeToDocument(new { actor }, JsonSerializerOptions.Web),
         });
     }
-
-    private void Convert(OvertimeEntry entry, int minutes, OvertimeRule rule, DateTimeOffset now, Guid actor) => Convert(db, entry, minutes, rule, now, actor);
 
     // ------------------------------------------------------------------ lateness (Build item 7)
 
@@ -248,19 +261,16 @@ internal sealed class AttendanceConsequences(HrmDbContext db, IServiceProvider s
             return true;
         }
 
-        if (p.LeaveQuantity != due.Rule.LeaveUnits || p.LeaveEntryId is null)
+        if (p.LeaveQuantity != due.Rule.LeaveUnits)
         {
             return false;
         }
 
-        var type = await LeaveTypeAsync(e, due.Rule.LeaveTypeCode!, ct).ConfigureAwait(false);
-        return type == p.LeaveTypeId;
-    }
-
-    private async Task<Guid?> LeaveTypeAsync(Employment e, string code, CancellationToken ct)
-    {
-        var types = await db.Set<LeaveType>().AsNoTracking().Where(t => t.CompanyId == e.CompanyId && t.IsActive && !t.IsDeleted).Select(t => new { t.Id, t.Code }).ToListAsync(ct).ConfigureAwait(false);
-        return types.Find(t => string.Equals(t.Code, code, StringComparison.OrdinalIgnoreCase))?.Id;
+        // Same type by code, retired or not (review S1.29b finding 4): a penalty whose leave could not be posted (no type, closed year) is followed, not
+        // replaced on every run; it is replaced only once the type it lacked now exists.
+        var types = await db.Set<LeaveType>().AsNoTracking().Where(t => t.CompanyId == e.CompanyId && !t.IsDeleted).Select(t => new { t.Id, t.Code, t.IsActive }).ToListAsync(ct).ConfigureAwait(false);
+        var named = types.Where(t => string.Equals(t.Code, due.Rule.LeaveTypeCode, StringComparison.OrdinalIgnoreCase)).ToList();
+        return p.LeaveTypeId is { } typeId ? named.Exists(t => t.Id == typeId) : !named.Exists(t => t.IsActive);
     }
 
     private static void Follow(AttendancePenalty p, PlannedPenalty due, DateTimeOffset now, Guid actor)

@@ -63,13 +63,19 @@ internal static class LeavePenaltyUsage
         }
 
         var usage = await db.Set<LeaveLedger>().AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct).ConfigureAwait(false);
-        if (usage is null || await db.Set<LeaveLedger>().AsNoTracking().AnyAsync(x => x.ReversesEntryId == id, ct).ConfigureAwait(false)
+        if (usage is null)
+        {
+            return null;
+        }
+
+        // The lock first, then the check, so a waiver and the engine giving the same leave back never both post (review S1.29b finding 7).
+        await LeaveLedgerStore.LockAsync(db, usage.EmploymentId, usage.LeaveTypeId, ct).ConfigureAwait(false);
+        if (await db.Set<LeaveLedger>().AsNoTracking().AnyAsync(x => x.ReversesEntryId == id, ct).ConfigureAwait(false)
             || await LeaveYearEnds.ClosedAsync(db, usage.CompanyId, usage.LeaveTypeId, usage.LeaveYear, ct).ConfigureAwait(false))
         {
             return null;
         }
 
-        await LeaveLedgerStore.LockAsync(db, usage.EmploymentId, usage.LeaveTypeId, ct).ConfigureAwait(false);
         var reversal = new LeaveLedger
         {
             Id = Guid.CreateVersion7(now), CompanyId = usage.CompanyId, EmploymentId = usage.EmploymentId, LeaveTypeId = usage.LeaveTypeId, LeaveYear = usage.LeaveYear,

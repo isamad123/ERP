@@ -84,6 +84,12 @@
       "format": "uuid",
       "nullable": true
     },
+    "compOffMinutes": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647,
+      "nullable": true
+    },
     "status": {
       "type": "string",
       "enum": [

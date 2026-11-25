@@ -173,5 +173,6 @@
   "errors.hrm.attendance.penalty.waiver_pending": "اس سزا کی معافی پہلے سے فیصلے کی منتظر ہے۔",
   "errors.hrm.attendance.penalty.leave_year_closed": "کاٹی گئی رخصت کا سال بند ہے، اس لیے سزا معاف نہیں ہو سکتی؛ ایچ آر سے ایڈجسٹمنٹ کے لیے کہیں۔",
   "permissions.hrm.overtime_entries.submit": "کیے گئے اوور ٹائم کا دعویٰ یا دن سے پہلے اوور ٹائم کی درخواست",
-  "permissions.hrm.attendance_penalties.waive": "تاخیر کی سزا کی معافی کی درخواست"
+  "permissions.hrm.attendance_penalties.waive": "تاخیر کی سزا کی معافی کی درخواست",
+  "errors.hrm.attendance.overtime.changed": "اسی دوران ریکارڈ بدل گیا؛ دوبارہ کوشش کریں۔"
 }

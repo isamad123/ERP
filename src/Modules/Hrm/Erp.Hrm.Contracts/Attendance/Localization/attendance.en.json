@@ -173,5 +173,6 @@
   "errors.hrm.attendance.penalty.waiver_pending": "A waiver of this penalty is already waiting for a decision.",
   "errors.hrm.attendance.penalty.leave_year_closed": "The leave year of the deducted leave is closed, so the penalty cannot be waived; ask HR for an adjustment.",
   "permissions.hrm.overtime_entries.submit": "Claim worked overtime or ask for overtime before the day",
-  "permissions.hrm.attendance_penalties.waive": "Ask for a lateness penalty to be waived"
+  "permissions.hrm.attendance_penalties.waive": "Ask for a lateness penalty to be waived",
+  "errors.hrm.attendance.overtime.changed": "The record changed meanwhile; try again."
 }

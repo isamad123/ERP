@@ -51,6 +51,7 @@ create index if not exists ix_attendance_penalties_company_id_workflow_instance_
 alter table hrm.overtime_entries add column if not exists requested_minutes integer;
 alter table hrm.overtime_entries add column if not exists reason text;
 alter table hrm.overtime_entries add column if not exists policy_version_id uuid;
+alter table hrm.overtime_entries add column if not exists comp_off_minutes integer;
 create index if not exists ix_overtime_entries_policy_version_id on hrm.overtime_entries (policy_version_id); -- foreign key fk_overtime_entries_policy_version_id
 do $do$ begin
     if not exists (select 1 from pg_constraint where conname = 'fk_attendance_penalties_company_id' and conrelid = 'hrm.attendance_penalties'::regclass) then
@@ -118,7 +119,7 @@ comment on column hrm.attendance_penalties.attendance_day_id is 'fk hrm.attendan
 comment on column hrm.attendance_penalties.period_id is 'fk hrm.attendance_periods; the day''s attendance period (FR-XM-26)';
 comment on column hrm.attendance_penalties.policy_version_id is 'fk hrm.policy_versions';
 comment on column hrm.attendance_penalties.explanation is 'why: keys and values translated at display (ATT-10 style)';
-comment on column hrm.attendance_penalties.waiver_reason is 'the reason given when a waiver was asked for';
+comment on column hrm.attendance_penalties.waiver_reason is 'the reason of the last waiver asked for (the workflow history keeps every request and decision)';
 comment on column hrm.attendance_penalties.workflow_instance_id is 'fk wf.workflow_instances';
 comment on table hrm.overtime_entries is 'Requirements: ATT-12, LVE-08. Source: hrm-time.yaml.';
 comment on column hrm.overtime_entries.employment_id is 'fk hrm.employments';
@@ -130,3 +131,4 @@ comment on column hrm.overtime_entries.workflow_instance_id is 'fk wf.workflow_i
 comment on column hrm.overtime_entries.requested_minutes is 'minutes asked for before the day (pre-approval, S1.29b); null for overtime claimed after it was worked';
 comment on column hrm.overtime_entries.reason is 'why the overtime is asked for or claimed (S1.29b)';
 comment on column hrm.overtime_entries.policy_version_id is 'fk hrm.policy_versions; the attendance policy version whose overtime rule gave the multiplier (S1.29b)';
+comment on column hrm.overtime_entries.comp_off_minutes is 'minutes converted to compensatory off: what the comp-off leave type can earn in its unit; the rest of the approved minutes is paid (S1.29b review)';

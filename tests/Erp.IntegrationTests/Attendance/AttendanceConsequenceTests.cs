@@ -193,7 +193,7 @@ public sealed class AttendanceConsequenceTests(TenancyFixture fx) : IAsyncLifeti
     {
         var created = await _h.PostAsync(o.Hr, "/api/hrm/leave-types", new
         {
-            companyId = o.Company, code, nameI18n = new { en = "Leave " + code, ur = "رخصت " + code }, isPaid = true, counting = "working_days", unit,
+            companyId = o.Company, code, nameI18n = new { en = "Leave " + code, ur = "رخصت " + code }, isPaid = true, counting = unit == "hour" ? "hours" : "working_days", unit,
             requiresDocument = false, isCompOff = compOff, isUnpaidDeduction = false,
         }, Ct);
         Assert.True(created.Status == HttpStatusCode.Created, created.Body);
@@ -546,5 +546,163 @@ public sealed class AttendanceConsequenceTests(TenancyFixture fx) : IAsyncLifeti
         await Assert.ThrowsAsync<PostgresException>(() => _h.ExecAsync("update hrm.overtime_entries set approved_minutes = 30 where id = $1", Ct, entry));
         Assert.True((await _h.PostAsync(user.Value, $"/api/hrm/attendance/overtime-entries/{entry}/claim", new { reason = "Evening" }, Ct)).Status == HttpStatusCode.Accepted);
         await Assert.ThrowsAsync<PostgresException>(() => _h.ExecAsync("delete from hrm.overtime_entries where id = $1", Ct, entry));
+    }
+
+    // ------------------------------------------------------------------ review S1.29b
+
+    private async Task<(Org O, Guid Employment, Guid User, Guid Entry)> ClaimableAsync(Dictionary<string, object> overtime, string inAt = "09:00", string outAt = "20:00")
+    {
+        var policy = Base();
+        policy["overtime"] = new { working = overtime };
+        var o = await OrgAsync(policy);
+        var (employment, user) = await HireAsync(o);
+        await RosterAsync(o, employment, WorkingDays(o.Monday));
+        await PunchAsync(o, employment, o.Monday, inAt, outAt);
+        await ProcessAsync(o, employment, o.Monday, o.Monday);
+        return (o, employment, user!.Value, await _h.ScalarAsync<Guid>("select id from hrm.overtime_entries where employment_id = $1", Ct, employment));
+    }
+
+    [Fact]
+    public async Task review_1_FR_HRM_ATT_12_13_a_returned_claim_or_waiver_is_sent_again_or_withdrawn_and_claimed_anew()
+    {
+        var (o, employment, user, entry) = await ClaimableAsync(WorkingOvertime("post", null, null));
+        var claim = await _h.PostAsync(user, $"/api/hrm/attendance/overtime-entries/{entry}/claim", new { reason = "Close" }, Ct);
+        Assert.True((await _h.PostAsync(o.Approver, $"/api/wf/tasks/{await TaskOfAsync(claim)}/return", new { comment = "Add the job number" }, Ct)).Status == HttpStatusCode.OK);
+        Assert.Equal("submitted", await _h.ScalarAsync<string>("select status from hrm.overtime_entries where id = $1", Ct, entry)); // still open, not lost
+
+        // Sent again with the detail, then approved.
+        var again = await _h.PostAsync(user, $"/api/hrm/attendance/overtime-entries/{entry}/claim", new { reason = "Close, job 4711" }, Ct);
+        Assert.True(again.Status == HttpStatusCode.Accepted, again.Body);
+        Assert.Equal(HttpStatusCode.Conflict, (await _h.PostAsync(user, $"/api/hrm/attendance/overtime-entries/{entry}/claim", new { reason = "third" }, Ct)).Status); // waiting again
+        var task = await _h.ScalarAsync<Guid>("select id from wf.workflow_tasks where instance_id = $1 and status = 'pending' order by created_at desc limit 1", Ct, claim.Json.GetProperty("instanceId").GetGuid());
+        Assert.True((await _h.PostAsync(o.Approver, $"/api/wf/tasks/{task}/approve", new { comment = "ok" }, Ct)).Status == HttpStatusCode.OK);
+        Assert.Equal("approved|Close, job 4711", await _h.ScalarAsync<string>("select status || '|' || reason from hrm.overtime_entries where id = $1", Ct, entry));
+
+        // Another day: returned, then withdrawn by the employee: back to worked out, and claimed anew.
+        var day = o.Monday.AddDays(1);
+        await RosterAsync(o, employment, WorkingDays(day));
+        await PunchAsync(o, employment, day, "09:00", "19:30");
+        await ProcessAsync(o, employment, day, day);
+        var second = await _h.ScalarAsync<Guid>("select id from hrm.overtime_entries where employment_id = $1 and work_date = $2", Ct, employment, day);
+        var first = await _h.PostAsync(user, $"/api/hrm/attendance/overtime-entries/{second}/claim", new { reason = "Audit" }, Ct);
+        Assert.True((await _h.PostAsync(o.Approver, $"/api/wf/tasks/{await TaskOfAsync(first)}/return", new { comment = "Which audit?" }, Ct)).Status == HttpStatusCode.OK);
+        var withdrawn = await _h.PostAsync(user, $"/api/wf/instances/{first.Json.GetProperty("instanceId").GetGuid()}/withdraw", new { reason = "Will ask again" }, Ct);
+        Assert.True(withdrawn.Status == HttpStatusCode.OK, withdrawn.Body);
+        Assert.Equal("calculated", await _h.ScalarAsync<string>("select status from hrm.overtime_entries where id = $1 and workflow_instance_id is null", Ct, second));
+        var anew = await _h.PostAsync(user, $"/api/hrm/attendance/overtime-entries/{second}/claim", new { reason = "Year-end audit" }, Ct);
+        Assert.True(anew.Status == HttpStatusCode.Accepted, anew.Body);
+        Assert.True((await _h.PostAsync(o.Approver, $"/api/wf/tasks/{await TaskOfAsync(anew)}/approve", new { comment = "ok" }, Ct)).Status == HttpStatusCode.OK);
+        Assert.Equal(2, (await InCustomerScopeAsync(sp => sp.GetRequiredService<IOvertimeInputs>().ForAsync([employment], o.Monday, day, Ct))).Count);
+    }
+
+    [Fact]
+    public async Task review_1_FR_HRM_ATT_13_a_returned_waiver_is_sent_again_and_approved()
+    {
+        var policy = Base();
+        policy["latePenalty"] = new { allowedPerMonth = 0, action = "warning" };
+        var o = await OrgAsync(policy);
+        var (employment, user) = await HireAsync(o);
+        await RosterAsync(o, employment, WorkingDays(o.Monday));
+        await PunchAsync(o, employment, o.Monday, "09:30", "18:30");
+        await ProcessAsync(o, employment, o.Monday, o.Monday);
+        var penalty = await _h.ScalarAsync<Guid>("select id from hrm.attendance_penalties where employment_id = $1", Ct, employment);
+        var asked = await _h.PostAsync(user!.Value, $"/api/hrm/attendance/penalties/{penalty}/waiver", new { reason = "Bus" }, Ct);
+        Assert.True((await _h.PostAsync(o.Approver, $"/api/wf/tasks/{await TaskOfAsync(asked)}/return", new { comment = "Proof?" }, Ct)).Status == HttpStatusCode.OK);
+        var again = await _h.PostAsync(user.Value, $"/api/hrm/attendance/penalties/{penalty}/waiver", new { reason = "Bus broke down, ticket attached" }, Ct);
+        Assert.True(again.Status == HttpStatusCode.Accepted, again.Body);
+        var task = await _h.ScalarAsync<Guid>("select id from wf.workflow_tasks where instance_id = $1 and status = 'pending' order by created_at desc limit 1", Ct, asked.Json.GetProperty("instanceId").GetGuid());
+        Assert.True((await _h.PostAsync(o.Approver, $"/api/wf/tasks/{task}/approve", new { comment = "ok" }, Ct)).Status == HttpStatusCode.OK);
+        Assert.Equal("waived|Bus broke down, ticket attached", await _h.ScalarAsync<string>("select status || '|' || waiver_reason from hrm.attendance_penalties where id = $1", Ct, penalty));
+    }
+
+    [Theory]
+    [InlineData("day", "approved", 0, 300)]
+    [InlineData("half_day", "converted_to_comp_off", 240, 60)]
+    [InlineData("hour", "converted_to_comp_off", 300, 0)]
+    public async Task review_2_FR_HRM_LVE_08_comp_off_earns_only_whole_units_of_the_leave_type_and_the_rest_is_paid(string unit, string status, int converted, int paid)
+    {
+        var policy = Base();
+        policy["overtime"] = new { weeklyOff = new { multiplier = 2, approval = "post", compensation = "comp_off", compOffDayMinutes = 480 } };
+        var o = await OrgAsync(policy);
+        var compOff = await LeaveTypeAsync(o, "CO" + Guid.NewGuid().ToString("N")[..4].ToUpperInvariant(), compOff: true, unit: unit);
+        var (employment, user) = await HireAsync(o);
+        var sunday = o.Monday.AddDays(6);
+        await RosterAsync(o, employment, (sunday, "weekly_off"));
+        await PunchAsync(o, employment, sunday, "09:00", "15:00"); // 300 minutes after the fixed break
+        await ProcessAsync(o, employment, sunday, sunday);
+        var entry = await _h.ScalarAsync<Guid>("select id from hrm.overtime_entries where employment_id = $1 and minutes = 300", Ct, employment);
+        var claim = await _h.PostAsync(user!.Value, $"/api/hrm/attendance/overtime-entries/{entry}/claim", new { reason = "Sunday shipment" }, Ct);
+        Assert.True((await _h.PostAsync(o.Approver, $"/api/wf/tasks/{await TaskOfAsync(claim)}/approve", new { comment = "ok" }, Ct)).Status == HttpStatusCode.OK);
+        Assert.Equal($"{status}:{(converted == 0 ? string.Empty : converted)}", await _h.ScalarAsync<string>("select status || ':' || coalesce(comp_off_minutes::text, '') from hrm.overtime_entries where id = $1", Ct, entry));
+
+        // Nothing is lost: what the type cannot earn is paid at the multiplier.
+        var inputs = await InCustomerScopeAsync(sp => sp.GetRequiredService<IOvertimeInputs>().ForAsync([employment], sunday, sunday, Ct));
+        Assert.Equal(paid, inputs.Sum(i => i.Minutes));
+        if (converted > 0)
+        {
+            await DispatchAsync(async () => await CountAsync("select count(*) from hrm.overtime_entries where id = $1 and comp_off_entry_id is not null", entry) == 1);
+            Assert.Equal(unit == "hour" ? 5m : 0.5m, await BalanceAsync(employment, compOff));
+        }
+        else
+        {
+            Assert.Equal(0, await CountAsync("select count(*) from hrm.outbox_messages where event_type = 'hrm.attendance.comp_off_earned' and payload->>'sourceId' = $1", entry.ToString()));
+        }
+    }
+
+    [Fact]
+    public async Task review_3_FR_HRM_ATT_12_approved_but_unworked_pre_approval_frees_the_monthly_cap_once_its_day_is_processed()
+    {
+        var policy = Base();
+        policy["overtime"] = new { working = WorkingOvertime("pre", null, 120) };
+        var o = await OrgAsync(policy);
+        var (employment, user) = await HireAsync(o);
+        var first = Today.AddDays(2);
+        var second = Today.AddDays(3);
+        await RosterAsync(o, employment, WorkingDays(first, second));
+        var a = await _h.PostAsync(user!.Value, "/api/hrm/attendance/overtime-requests", new { workDate = Iso(first), minutes = 120, reason = "Release" }, Ct);
+        var b = await _h.PostAsync(user.Value, "/api/hrm/attendance/overtime-requests", new { workDate = Iso(second), minutes = 60, reason = "Release" }, Ct);
+        Assert.True((await _h.PostAsync(o.Approver, $"/api/wf/tasks/{await TaskOfAsync(a)}/approve", new { comment = "ok" }, Ct)).Status == HttpStatusCode.OK);
+
+        // While the first day is ahead its approval holds the cap.
+        var held = await _h.PostAsync(o.Approver, $"/api/wf/tasks/{await TaskOfAsync(b)}/approve", new { comment = "ok" }, Ct);
+        Assert.Contains("errors.hrm.attendance.overtime.cap_reached", held.Body, StringComparison.Ordinal);
+
+        // The first day is worked without overtime and processed: its approval no longer uses the cap.
+        var later = new TestClock();
+        later.Advance(TimeSpan.FromDays(3) + TimeSpan.FromHours(12));
+        await using (var c = await _h.OwnerAsync(null, Ct))
+        {
+            foreach (var (at, direction) in new[] { (At(first, "09:00"), "in"), (At(first, "18:00"), "out") })
+            {
+                await TenancyFixture.ExecAsync(c, """
+                    insert into hrm.attendance_events (id, company_id, employment_id, event_date, event_at, direction, source, received_at, idempotency_key, is_duplicate, created_at, created_by)
+                    select $1, company_id, id, $2, $3, $4, 'hr_entry', $3, $5, false, $3, $6 from hrm.employments where id = $7
+                    """, Ct, Guid.CreateVersion7(), first, at.ToUniversalTime(), direction, "t:" + Guid.NewGuid().ToString("N"), BaselineSeed.SystemUserId, employment);
+            }
+        }
+
+        await using (var rig = await JobRig.ForExistingAsync(fx, _h.Code, later, Ct))
+        {
+            var worker = rig.Worker();
+            var run = await rig.QueueAsync("hrm.attendance_process", new { employment_id = employment, from = Iso(first), to = Iso(first) }, ct: Ct);
+            await rig.RunUntilIdleAsync(worker, Ct);
+            Assert.True(await rig.StatusAsync(run, Ct) == "succeeded", string.Join("\n", await rig.LogsAsync(run, Ct)));
+        }
+
+        Assert.Equal("0:120:approved", await _h.ScalarAsync<string>("select minutes || ':' || approved_minutes || ':' || status from hrm.overtime_entries where employment_id = $1 and work_date = $2", Ct, employment, first));
+        var approved = await _h.PostAsync(o.Approver, $"/api/wf/tasks/{await TaskOfAsync(b)}/approve", new { comment = "ok" }, Ct);
+        Assert.True(approved.Status == HttpStatusCode.OK, approved.Body);
+        Assert.Equal("60:approved", await _h.ScalarAsync<string>("select approved_minutes || ':' || status from hrm.overtime_entries where employment_id = $1 and work_date = $2", Ct, employment, second));
+    }
+
+    [Fact]
+    public async Task review_6_FR_HRM_ATT_12_13_the_database_allows_only_the_moves_the_services_make()
+    {
+        var (o, _, user, entry) = await ClaimableAsync(WorkingOvertime("post", null, null));
+        var claim = await _h.PostAsync(user, $"/api/hrm/attendance/overtime-entries/{entry}/claim", new { reason = "Close" }, Ct);
+        Assert.True((await _h.PostAsync(o.Approver, $"/api/wf/tasks/{await TaskOfAsync(claim)}/approve", new { comment = "ok" }, Ct)).Status == HttpStatusCode.OK);
+        await Assert.ThrowsAsync<PostgresException>(() => _h.ExecAsync("update hrm.overtime_entries set status = 'submitted' where id = $1", Ct, entry));
+        await Assert.ThrowsAsync<PostgresException>(() => _h.ExecAsync("update hrm.overtime_entries set status = 'calculated' where id = $1", Ct, entry));
+        await Assert.ThrowsAsync<PostgresException>(() => _h.ExecAsync("update hrm.overtime_entries set status = 'converted_to_comp_off', comp_off_minutes = 9999 where id = $1", Ct, entry));
     }
 }

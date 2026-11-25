@@ -28,6 +28,7 @@ public sealed class OvertimeEntryResponse
     public int? RequestedMinutes { get; init; }
     public string? Reason { get; init; }
     public global::System.Guid? PolicyVersionId { get; init; }
+    public int? CompOffMinutes { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
@@ -110,6 +111,7 @@ internal static class OvertimeEntryEndpoints
         RequestedMinutes = row.RequestedMinutes,
         Reason = row.Reason,
         PolicyVersionId = row.PolicyVersionId,
+        CompOffMinutes = row.CompOffMinutes,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
