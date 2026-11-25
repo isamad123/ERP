@@ -154,10 +154,10 @@ public sealed class DeliveryLogApiTests(TenancyFixture fx) : IAsyncLifetime
         await MessageAsync("failed", "workflow.task_assigned", employee);
         var daily = await _h.GetAsync(admin, "/api/ntf/deliveries/daily?days=3", Ct);
         Assert.True(daily.Status == HttpStatusCode.OK, daily.Body);
-        // The day of the messages written above (the customer's zone, Asia/Karachi), not the newest row: other classes share this customer and its clock and may have
-        // moved the clock days ahead and sent messages there, so the newest row is not always today.
-        var day = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_h.Clock.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Karachi")).DateTime).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-        var today = daily.Json.EnumerateArray().Single(d => d.GetProperty("day").GetString() == day);
+        // R-318: the customer is shared with other tests, whose messages can sit on a newer day (their clocks move); the row of this test's day is found by its date
+        // (the company date from the harness clock in the customer's time zone, Asia/Karachi), not by position.
+        var todayKey = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_h.Clock.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Karachi")).DateTime).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        var today = daily.Json.EnumerateArray().Single(d => d.GetProperty("day").GetString() == todayKey);
         Assert.True(today.GetProperty("sent").GetInt32() >= 3);
         Assert.True(today.GetProperty("failed").GetInt32() >= 1);
         Assert.Equal(HttpStatusCode.Forbidden, (await _h.GetAsync(employee, "/api/ntf/deliveries/daily", Ct)).Status);

@@ -50,11 +50,11 @@ internal sealed class AttendanceReportService(
             q => q.OrderBy(r => r.Month).ThenBy(r => r.EmployeeNo).ThenBy(r => r.EmploymentId),
             async (q, ct) => (await q.GroupBy(_ => 1).Select(g => new
             {
-                Present = g.Sum(r => r.PresentDays), Absent = g.Sum(r => r.AbsentDays), Late = g.Sum(r => r.LateDays), Half = g.Sum(r => r.HalfDays), Leave = g.Sum(r => r.LeaveDays),
+                Rows = g.LongCount(), Present = g.Sum(r => r.PresentDays), Absent = g.Sum(r => r.AbsentDays), Late = g.Sum(r => r.LateDays), Half = g.Sum(r => r.HalfDays), Leave = g.Sum(r => r.LeaveDays),
                 Duty = g.Sum(r => r.DutyDays), Worked = g.Sum(r => r.WorkedMinutes), LateMin = g.Sum(r => r.LateMinutes), EarlyMin = g.Sum(r => r.EarlyMinutes),
             }).ToListAsync(ct).ConfigureAwait(false)).SelectMany(x => new Dictionary<string, long>
             {
-                ["presentDays"] = x.Present, ["absentDays"] = x.Absent, ["lateDays"] = x.Late, ["halfDays"] = x.Half, ["leaveDays"] = x.Leave, ["dutyDays"] = x.Duty,
+                [ReportDef<MonthlyRow>.RowsKey] = x.Rows, ["presentDays"] = x.Present, ["absentDays"] = x.Absent, ["lateDays"] = x.Late, ["halfDays"] = x.Half, ["leaveDays"] = x.Leave, ["dutyDays"] = x.Duty,
                 ["workedMinutes"] = x.Worked, ["lateMinutes"] = x.LateMin, ["earlyMinutes"] = x.EarlyMin,
             }).ToDictionary(p => p.Key, p => p.Value)),
         new ReportDef<AbsenteeismRow>(AttendanceReportCodes.Absenteeism, "select * from hrm.rpt_att_absenteeism", Target<AbsenteeismRow>("hrm.attendance_days", r => r.CompanyId, r => r.EmploymentId, r => r.OrgUnitId, r => r.BranchId),
@@ -63,7 +63,7 @@ internal sealed class AttendanceReportService(
                 .Maybe(Search<AbsenteeismRow>(f.Search, (r, t) => EF.Functions.ILike(r.EmployeeNo, t) || EF.Functions.ILike(r.FirstName + " " + (r.LastName ?? string.Empty), t))),
             q => q.OrderBy(r => r.Month).ThenByDescending(r => r.AbsentDays).ThenBy(r => r.EmployeeNo).ThenBy(r => r.EmploymentId),
             async (q, ct) => (await q.GroupBy(_ => 1).Select(g => new { Scheduled = g.Sum(r => r.ScheduledDays), Absent = g.Sum(r => r.AbsentDays), Half = g.Sum(r => r.HalfDays), People = g.LongCount() })
-                .ToListAsync(ct).ConfigureAwait(false)).SelectMany(x => new Dictionary<string, long> { ["scheduledDays"] = x.Scheduled, ["absentDays"] = x.Absent, ["halfDays"] = x.Half, ["rows"] = x.People })
+                .ToListAsync(ct).ConfigureAwait(false)).SelectMany(x => new Dictionary<string, long> { ["scheduledDays"] = x.Scheduled, ["absentDays"] = x.Absent, ["halfDays"] = x.Half, ["rows"] = x.People, [ReportDef<AbsenteeismRow>.RowsKey] = x.People })
                 .ToDictionary(p => p.Key, p => p.Value)),
         new ReportDef<LateEarlyRow>(AttendanceReportCodes.LateEarly, "select * from hrm.rpt_att_late_early", Target<LateEarlyRow>("hrm.attendance_days", r => r.CompanyId, r => r.EmploymentId, r => r.OrgUnitId, r => r.BranchId),
             (q, f) => q.Dated(f, r => r.WorkDate).Place(f, r => r.CompanyId, r => r.EmploymentId, r => r.OrgUnitId, r => r.BranchId, r => r.LocationId)

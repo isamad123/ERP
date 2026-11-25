@@ -75,15 +75,28 @@ public sealed class NumberingAllocatorTests(TenancyFixture fx, ITestOutputHelper
     {
         var company = await _h.CompanyAsync(Ct);
         await _rig.SchemeAsync(company, "hrm.contract_no", "CON-{yyyy}-{seq:5}", "yearly", ct: Ct);
-        var hold = TimeSpan.FromMilliseconds(200);
-        var watch = Stopwatch.StartNew();
-        var numbers = await Task.WhenAll(Enumerable.Range(0, 100).Select(i => Task.Run(() =>
-            _rig.PostAsync(new NumberRequest("hrm.contract_no", company, null, new DateOnly(2026, 5, 1)), commit: i % 10 != 0, Ct, hold), Ct)));
-        watch.Stop();
-        output.WriteLine($"gap-allowed: 100 concurrent transactions each holding {hold.TotalMilliseconds} ms finished in {watch.ElapsedMilliseconds} ms (serial would be {100 * hold.TotalMilliseconds} ms)");
+        // Deterministic instead of a wall-clock limit (R-318): every transaction takes its number and then stays open until all 100 are
+        // open together. If a gap-allowed allocation made transactions wait on each other, the later ones would never get their
+        // number, the rendezvous would never complete and the test would fail by its deadlock guard, however fast the machine is.
+        const int Transactions = 100;
+        var allOpen = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var open = 0;
+        async Task Rendezvous(CancellationToken token)
+        {
+            if (Interlocked.Increment(ref open) == Transactions)
+            {
+                allOpen.SetResult();
+            }
 
-        Assert.Equal(100, numbers.Distinct(StringComparer.Ordinal).Count());
-        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(10), $"transactions waited on each other: {watch.ElapsedMilliseconds} ms");
+            await allOpen.Task.WaitAsync(TimeSpan.FromSeconds(120), token); // deadlock guard only; a healthy run needs a fraction of a second
+        }
+
+        var numbers = await Task.WhenAll(Enumerable.Range(0, Transactions).Select(i => Task.Run(() =>
+            _rig.PostAsync(new NumberRequest("hrm.contract_no", company, null, new DateOnly(2026, 5, 1)), commit: i % 10 != 0, Ct, Rendezvous), Ct)));
+        output.WriteLine($"gap-allowed: {open} transactions were open at the same time, each holding its number");
+
+        Assert.Equal(Transactions, open);
+        Assert.Equal(Transactions, numbers.Distinct(StringComparer.Ordinal).Count());
 
         // Ten of them rolled back: their numbers are gaps that are never filled; the next number comes after all of them.
         Assert.Equal("CON-2026-00101", await _rig.Allocator.AssignOnCreateAsync(new NumberRequest("hrm.contract_no", company, null, new DateOnly(2026, 5, 2)), Ct));
@@ -119,26 +132,52 @@ public sealed class NumberingAllocatorTests(TenancyFixture fx, ITestOutputHelper
         var company = await _h.CompanyAsync(Ct);
         await _rig.SchemeAsync(company, "hrm.letter_no", "LTR-{yyyy}-{seq:5}", "yearly", gapFree: true, ct: Ct);
         await _rig.SchemeAsync(company, "hrm.contract_no", "CON-{yyyy}-{seq:5}", "yearly", ct: Ct);
+        // R-318: no wall-clock limit. The cost of an allocation is compared with a plain round trip of the same shape measured in the
+        // same run on the same connection pool (begin, a statement that gives the transaction an id, commit: an allocation writes, so its commit waits for the disk too), so a loaded or slow machine moves both alike.
+        // The median of the rounds is used, so one stalled round cannot decide the result.
         const int Rounds = 200;
+        const double MaxTimesBaseline = 100; // an allocation measured 45 to 50 times a plain round trip on the build machine (about 20 ms against 0.4 ms); the old limit of 100 ms was 100 times a 1 ms round trip
         await _rig.PostAsync(Letter(company), true, Ct); // warm-up (pool, plans)
-        var gapFree = Stopwatch.StartNew();
-        for (var i = 0; i < Rounds; i++)
-        {
-            await _rig.PostAsync(Letter(company), true, Ct);
-        }
-
-        gapFree.Stop();
         var request = new NumberRequest("hrm.contract_no", company, null, new DateOnly(2026, 3, 1));
         await _rig.Allocator.AssignOnCreateAsync(request, Ct);
-        var gapAllowed = Stopwatch.StartNew();
-        for (var i = 0; i < Rounds; i++)
+        await BaselineAsync();
+
+        var baseline = new List<double>();
+        var gapFree = new List<double>();
+        var gapAllowed = new List<double>();
+        for (var i = 0; i < Rounds; i++) // interleaved, so a slow period hits all three alike
         {
-            await _rig.Allocator.AssignOnCreateAsync(request, Ct);
+            baseline.Add(await TimeAsync(BaselineAsync));
+            gapFree.Add(await TimeAsync(() => _rig.PostAsync(Letter(company), true, Ct)));
+            gapAllowed.Add(await TimeAsync(() => _rig.Allocator.AssignOnCreateAsync(request, Ct)));
         }
 
-        gapAllowed.Stop();
-        output.WriteLine($"one at a time: gap-free {gapFree.Elapsed.TotalMilliseconds / Rounds:0.00} ms per post (begin, allocate, commit); gap-allowed {gapAllowed.Elapsed.TotalMilliseconds / Rounds:0.00} ms per number");
-        Assert.True(gapFree.Elapsed.TotalMilliseconds / Rounds < 100 && gapAllowed.Elapsed.TotalMilliseconds / Rounds < 100);
+        var (b, f, a) = (Median(baseline), Median(gapFree), Median(gapAllowed));
+        output.WriteLine($"median per number: gap-free {f:0.00} ms (begin, allocate, commit), gap-allowed {a:0.00} ms; plain round trip {b:0.00} ms; ratios {f / b:0.0} and {a / b:0.0} (limit {MaxTimesBaseline})");
+        Assert.True(f / b < MaxTimesBaseline, $"gap-free allocation took {f / b:0.0} times a plain round trip ({f:0.00} ms against {b:0.00} ms)");
+        Assert.True(a / b < MaxTimesBaseline, $"gap-allowed allocation took {a / b:0.0} times a plain round trip ({a:0.00} ms against {b:0.00} ms)");
+
+        async Task BaselineAsync()
+        {
+            await using var connection = await _rig.App.OpenConnectionAsync(Ct);
+            await using var tx = await connection.BeginTransactionAsync(Ct);
+            await using var command = new NpgsqlCommand("select pg_current_xact_id()::text", connection, tx);
+            await command.ExecuteScalarAsync(Ct);
+            await tx.CommitAsync(Ct);
+        }
+
+        static async Task<double> TimeAsync(Func<Task> work)
+        {
+            var watch = Stopwatch.StartNew();
+            await work();
+            return watch.Elapsed.TotalMilliseconds;
+        }
+
+        static double Median(List<double> values)
+        {
+            var sorted = values.Order().ToList();
+            return sorted[sorted.Count / 2];
+        }
     }
 
     // ------------------------------------------------------------------ periods (Q5)

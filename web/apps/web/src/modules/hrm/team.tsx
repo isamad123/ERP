@@ -1,8 +1,8 @@
+/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // The manager's team view (slice S1.30b Build item 7; FR-HRM-SSP-02, FR-HRM-ATT-18): today's counts and people of the caller's team (the server limits every answer to the
 // caller's data scope) and this month's days and late minutes per person from the monthly muster. The month comes from the company's date in the dashboard answer,
 // never from the browser's clock.
 import { useState } from 'react';
-import { ScrollRegion } from './scroll-region';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useDocumentTitle } from '@erp/engine';
 import { Button, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton } from '@erp/ui';
@@ -76,7 +76,7 @@ export default function TeamScreen() {
             {month.isPending && !!today && <Skeleton lines={3} />}
             {month.isError && <ErrorPanel title={t('team.month.error')} message={isDenied(month.error) ? t('team.denied') : refusal(month.error)} />}
             {month.data && (rows.length === 0 ? <EmptyState title={t('team.month.empty')} /> : (
-              <ScrollRegion label={t('team.month')}><table className="erp-pos-table">
+              <div className="erp-live-scroll" role="region" tabIndex={0} aria-label={t('team.month')}><table className="erp-pos-table">
                 <caption className="erp-visually-hidden">{t('team.month')}</caption>
                 <thead><tr>
                   <th scope="col">{t('alive.col.employeeNo')}</th><th scope="col">{t('alive.col.name')}</th><th scope="col">{t('team.col.present')}</th><th scope="col">{t('team.col.late')}</th>
@@ -88,7 +88,7 @@ export default function TeamScreen() {
                     <td><bdi>{`${r.firstName ?? ''} ${r.lastName ?? ''}`.trim()}</bdi></td>
                     <td>{num(r.presentDays)}</td><td>{num(r.lateDays)}</td><td>{num(r.absentDays)}</td><td>{num(r.leaveDays)}</td><td>{num(r.lateMinutes)}</td>
                   </tr>))}</tbody>
-              </table></ScrollRegion>
+              </table></div>
             ))}
             {month.hasNextPage && <div><Button variant="secondary" isPending={month.isFetchingNextPage} onPress={() => { void month.fetchNextPage(); }}>{t('alive.people.more')}</Button></div>}
           </section>
