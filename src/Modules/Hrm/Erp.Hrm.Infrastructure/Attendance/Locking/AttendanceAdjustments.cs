@@ -106,6 +106,21 @@ internal static class AdjustmentPlanner
             .Where(x => x.EmploymentId == e.Id && x.WorkDate >= first && x.WorkDate <= last && (x.Status == "approved" || x.Status == "paid" || x.Status == "converted_to_comp_off"))
             .Select(x => new { x.WorkDate, Payable = Math.Min(x.Minutes, x.ApprovedMinutes ?? 0) - (x.CompOffMinutes ?? 0) }).ToListAsync(ct).ConfigureAwait(false);
 
+        // A date corrected before (approved or applied, any kind) starts from that correction, not from the locked record, so each adjustment carries only
+        // its own difference and payroll never pays one locked day twice (review S1.31 finding 1). Only one adjustment of a date waits at a time, so the
+        // newest decided one is the day's current corrected result.
+        var decided = await db.Set<AttendanceAdjustment>().AsNoTracking()
+            .Where(a => a.EmploymentId == e.Id && a.FromDate <= last && a.ToDate >= first && (a.Status == "approved" || a.Status == "applied"))
+            .OrderBy(a => a.CreatedAt).ThenBy(a => a.Id).Select(a => a.NewSummary).ToListAsync(ct).ConfigureAwait(false);
+        var corrected = new Dictionary<DateOnly, AdjustedDaySummary>();
+        foreach (var summary in decided)
+        {
+            foreach (var (date, day) in AttendanceLockRules.FromJson(summary))
+            {
+                corrected[date] = day;
+            }
+        }
+
         var planned = new List<PlannedDay>(dates.Count);
         AttendancePeriod? period = null;
         string? refusal = null;
@@ -113,7 +128,7 @@ internal static class AdjustmentPlanner
         {
             var p = await LockedPeriodOfAsync(db, e.Id, date, ct).ConfigureAwait(false);
             results.TryGetValue(date, out var day);
-            var old = new AdjustedDaySummary(day?.Result, day?.WorkedMinutes ?? 0, day?.LateMinutes ?? 0, day?.EarlyMinutes ?? 0,
+            var old = corrected.GetValueOrDefault(date) ?? new AdjustedDaySummary(day?.Result, day?.WorkedMinutes ?? 0, day?.LateMinutes ?? 0, day?.EarlyMinutes ?? 0,
                 Math.Max(0, overtime.Where(o => o.WorkDate == date).Sum(o => o.Payable)), leaveDays.Where(l => l.LeaveDate == date).Sum(l => l.Unpaid), leaveDays.Where(l => l.LeaveDate == date).Sum(l => l.Paid));
             shares.TryGetValue(date, out var share);
             planned.Add(new PlannedDay(date, p is { Status: "locked" }, p?.Id, p?.PayPeriodId, old, AttendanceLockRules.Corrected(kind, old, inputs.GetValueOrDefault(date), share.Unpaid, share.Paid)));
@@ -243,8 +258,10 @@ internal sealed class AttendanceAdjustmentService(
                 var to = plan.Days[^1].Date;
                 var kind = plan.Kind;
                 var leaveId = plan.Leave?.Id;
-                if (await db.Set<AttendanceAdjustment>().AsNoTracking().AnyAsync(a => a.EmploymentId == employment.Id && a.Kind == kind && a.Status == "submitted"
-                        && (leaveId != null ? a.LeaveRequestId == leaveId : a.FromDate <= to && a.ToDate >= from), cancellationToken).ConfigureAwait(false)
+                // One adjustment of a date waits at a time, whatever its kind (an attendance correction also restates the day's overtime): a further change
+                // waits until it is decided and then starts from it (review S1.31 finding 1).
+                if (await db.Set<AttendanceAdjustment>().AsNoTracking().AnyAsync(a => a.EmploymentId == employment.Id && a.Status == "submitted"
+                        && a.FromDate <= to && a.ToDate >= from, cancellationToken).ConfigureAwait(false)
                     || (leaveId != null && await db.Set<AttendanceAdjustment>().AsNoTracking().AnyAsync(a => a.LeaveRequestId == leaveId && Open.Contains(a.Status), cancellationToken).ConfigureAwait(false)))
                 {
                     result = PeopleResult.Conflict(Waiting);
@@ -472,6 +489,7 @@ internal sealed class AttendanceAdjustmentHandler(IServiceProvider services, ICl
 {
     public const string NotPending = "errors.hrm.attendance.adjustment.not_pending";
     public const string LeaveYearClosed = "errors.hrm.attendance.adjustment.leave_year_closed";
+    public const string PeriodNotLocked = "errors.hrm.attendance.adjustment.period_not_locked";
 
     public string DocumentType => AttendanceLockEvents.AdjustmentDocumentType;
 
@@ -504,7 +522,15 @@ internal sealed class AttendanceAdjustmentHandler(IServiceProvider services, ICl
             return;
         }
 
+        // The period must still be locked (read for share, so a reopen waits for this decision or this decision sees the reopen): a reopened period's days are
+        // corrected and paid directly by the recalculated run (review S1.31 finding 2).
+        await db.Database.ExecuteSqlInterpolatedAsync($"select 1 from hrm.attendance_periods where id = {row.PeriodId} for share", cancellationToken).ConfigureAwait(false);
         var period = await db.Set<AttendancePeriod>().AsNoTracking().FirstAsync(p => p.Id == row.PeriodId, cancellationToken).ConfigureAwait(false);
+        if (period.Status != "locked")
+        {
+            throw new WorkflowException(PeriodNotLocked);
+        }
+
         var target = await AttendancePeriodQueries.NextOpenAsync(db, period.PayGroupId, period.PeriodEnd, cancellationToken).ConfigureAwait(false)
             ?? throw new WorkflowException(AdjustmentPlanner.NoOpenPeriod);
         row.TargetPayPeriodId = target.Id;
@@ -600,7 +626,7 @@ internal sealed class AttendanceAdjustmentReader(HrmDbContext db) : IAttendanceA
         var rows = await (from a in db.Set<AttendanceAdjustment>().AsNoTracking()
                           join p in db.Set<AttendancePeriod>().AsNoTracking() on a.PeriodId equals p.Id
                           where ids.Contains(a.EmploymentId) && a.TargetPayPeriodId == payPeriodId && (a.Status == "approved" || a.Status == "applied")
-                          orderby a.EmploymentId, a.FromDate, a.Id
+                          orderby a.EmploymentId, a.FromDate, a.CreatedAt, a.Id
                           select new { a, p.PayPeriodId })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
         return [.. rows.Select(x =>

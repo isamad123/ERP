@@ -114,6 +114,7 @@ internal sealed class AttendancePeriodLocks(HrmDbContext db, IServiceProvider se
     public const string RunFinal = "errors.hrm.attendance.lock.run_final";
     public const string OwnApproval = "errors.hrm.attendance.lock.own_approval";
     public const string ReasonRequired = "errors.hrm.attendance.lock.reason_required";
+    public const string AdjustmentsOpen = "errors.hrm.attendance.lock.adjustments_open";
 
     public async Task<bool> IsLockedAsync(Guid employmentId, DateOnly day, CancellationToken cancellationToken)
     {
@@ -217,7 +218,6 @@ internal sealed class AttendancePeriodLocks(HrmDbContext db, IServiceProvider se
 
         var now = clock.UtcNow;
         var run = period.LockedByRunId;
-        var lockedAt = period.LockedAt;
         period.Status = "open";
         period.LockedAt = null;
         period.LockKind = null;
@@ -247,8 +247,9 @@ internal sealed class AttendancePeriodLocks(HrmDbContext db, IServiceProvider se
             ["employmentIds"] = employments,
         });
 
-        // Punches that arrived while the period was locked are worked out now (ruling Q5: they were kept as events and never reprocessed while locked).
-        foreach (var employment in await AttendancePeriodQueries.LateEvents(on, period.PeriodStart, period.PeriodEnd, period.PayGroupId, lockedAt).Select(e => e.EmploymentId).Distinct().ToListAsync(ct).ConfigureAwait(false))
+        // Every employment of the period is worked out again (ruling Q5: punches that arrived while it was locked were kept as events and never processed; and
+        // days the engine skipped while locked, also of people without a punch, have no result yet: review S1.31 finding 3).
+        foreach (var employment in employments)
         {
             AttendanceReprocessing.Add(on, employment, period.PeriodStart, period.PeriodEnd, "period_reopened", now, approval.ApprovedBy);
         }
@@ -273,6 +274,14 @@ internal sealed class AttendancePeriodLocks(HrmDbContext db, IServiceProvider se
         if (approval is not null && approval.RequestedBy == approval.ApprovedBy)
         {
             return OwnApproval; // FR-XM-32
+        }
+
+        // Adjustments of the period that wait or are approved and not yet applied would be paid in the next period after the recalculated run has paid the
+        // same days directly: the period does not reopen while one exists (review S1.31 finding 2). A waiting one is withdrawn first; an approved one is
+        // carried by payroll, so the run stays.
+        if (await on.Set<AttendanceAdjustment>().AsNoTracking().AnyAsync(a => a.PeriodId == period.Id && (a.Status == "submitted" || a.Status == "approved"), ct).ConfigureAwait(false))
+        {
+            return AdjustmentsOpen;
         }
 
         var runs = services.GetRequiredService<IPayRunStates>();
@@ -315,6 +324,8 @@ internal static class AttendancePeriodQueries
     /// </summary>
     public static async Task<AttendancePeriod> TakeAsync(HrmDbContext db, PayPeriod payPeriod, DateTimeOffset now, Guid actor, CancellationToken ct)
     {
+        // The pay period row first: a guard of a date whose attendance period does not exist yet waits on it (rules.yaml hrm.locked_attendance_period).
+        await db.Database.ExecuteSqlInterpolatedAsync($"select 1 from hrm.pay_periods where id = {payPeriod.Id} for update", ct).ConfigureAwait(false);
         var id = await db.Set<AttendancePeriod>().AsNoTracking().Where(p => p.PayPeriodId == payPeriod.Id).Select(p => (Guid?)p.Id).FirstOrDefaultAsync(ct).ConfigureAwait(false);
         if (id is null)
         {

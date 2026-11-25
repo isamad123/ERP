@@ -759,6 +759,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var lockRun = Guid.CreateVersion7();
         var lockedAttendance = Guid.CreateVersion7();
         var adjustment = Guid.CreateVersion7();
+        var adjustAttendance = Guid.CreateVersion7();
         Guid lockedPeriod;
         DateOnly lockedStart;
         await using (var c = await fx.OpenAdminAsync(code, ct))
@@ -799,7 +800,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
                 """, penalty, dayId, by);
 
             // S1.31: the material's own employment in the pay group; the first pay period other than the one above locked by a calculated run (S1.35 makes
-            // runs), and a waiting adjustment of its fifth day carried into the next period.
+            // runs), which the reopen request probes; the pay period after it locked by HR, with a waiting adjustment of its fifth day carried into the next
+            // period (an adjustment keeps its period from reopening, review S1.31 finding 2, so the two are apart).
             await Exec("update hrm.employment_assignments set pay_group_id = $1 where employment_id = $2", groupId, lockedEmployment);
             await Exec("""
                 insert into hrm.pay_runs (id, company_id, run_no, pay_group_id, pay_period_id, kind, currency_code, stage_log, status, created_at, created_by, updated_at, updated_by)
@@ -813,19 +815,27 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
                 from hrm.pay_runs r join hrm.pay_periods p on p.id = r.pay_period_id where r.id = $3
                 """, lockedAttendance, by, lockRun);
             await Exec("""
+                insert into hrm.attendance_periods (id, company_id, pay_group_id, pay_period_id, period_start, period_end, status, locked_at, lock_kind, locked_by,
+                                                    created_at, created_by, updated_at, updated_by)
+                select $1, n.company_id, n.pay_group_id, n.id, n.start_date, n.end_date, 'locked', now(), 'manual', $2, now(), $2, now(), $2
+                from hrm.attendance_periods l join hrm.pay_periods n on n.pay_group_id = l.pay_group_id and n.start_date > l.period_end
+                where l.id = $3 and not exists (select 1 from hrm.attendance_periods x where x.pay_period_id = n.id) order by n.start_date limit 1
+                """, adjustAttendance, by, lockedAttendance);
+            await Exec("""
                 insert into hrm.attendance_adjustments (id, company_id, employment_id, period_id, from_date, to_date, kind, old_summary, new_summary, reason, target_pay_period_id,
                                                         status_history, status, created_at, created_by, updated_at, updated_by)
                 select $1, p.company_id, $2, $3, p.period_start + 4, p.period_start + 4, 'attendance', '{"days":[]}'::jsonb, '{"days":[]}'::jsonb, 'Probe material',
                        (select n.id from hrm.pay_periods n where n.pay_group_id = p.pay_group_id and n.start_date > p.period_end order by n.start_date limit 1),
                        '[{"status":"submitted","at":"2024-09-01T00:00:00.000000Z"}]'::jsonb, 'submitted', now(), $4, now(), $4
                 from hrm.attendance_periods p where p.id = $3
-                """, adjustment, lockedEmployment, lockedAttendance, by);
-            await using var read = new NpgsqlCommand("select pay_period_id, period_start from hrm.attendance_periods where id = $1", c);
+                """, adjustment, lockedEmployment, adjustAttendance, by);
+            await using var read = new NpgsqlCommand("select (select pay_period_id from hrm.attendance_periods where id = $1), (select period_start from hrm.attendance_periods where id = $2)", c);
             read.Parameters.Add(new NpgsqlParameter { Value = lockedAttendance });
+            read.Parameters.Add(new NpgsqlParameter { Value = adjustAttendance });
             await using var reader = await read.ExecuteReaderAsync(ct);
             await reader.ReadAsync(ct);
             lockedPeriod = reader.GetGuid(0);
-            lockedStart = DateOnly.FromDateTime(reader.GetDateTime(1));
+            lockedStart = DateOnly.FromDateTime(reader.GetDateTime(1)); // the HR-locked period: the days of the adjustment probes
         }
 
         return new Material(person, created.GetProperty("rowVersion").GetInt64(), into, identifier.Id, identifier.Version, contact.Id, contact.Version,

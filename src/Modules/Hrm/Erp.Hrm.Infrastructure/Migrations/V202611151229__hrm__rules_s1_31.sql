@@ -38,7 +38,9 @@ comment on column hrm.attendance_days.period_id is 'fk hrm.attendance_periods; d
 -- hrm.attendance_periods: A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments.
 drop function if exists hrm.todo_attendance_periods_lock();
 -- The locked attendance period of an employment's date: the period of the employment's pay group on the date, read with a share lock
--- (it waits for a lock being taken and is waited for by one); null when the date's period is open or there is none.
+-- (it waits for a lock being taken and is waited for by one); null when the date's period is open or there is none. Before the period's
+-- first lock or processed day there is no attendance period row: the guard then meets the lock on the pay period row (the lock takes it
+-- for update before it creates the attendance period) and reads again, so a write and a lock never pass each other (review S1.31 finding 4).
 create or replace function hrm.locked_attendance_period(p_employment_id uuid, p_date date) returns uuid
 language plpgsql as $fn$
 declare
@@ -55,6 +57,14 @@ begin
     select p.id, p.status into v_id, v_status from hrm.attendance_periods p
      where p.pay_group_id = v_group and p.period_start <= p_date and p.period_end >= p_date
      for share;
+    if v_id is null then
+        perform 1 from hrm.pay_periods pp
+         where pp.pay_group_id = v_group and pp.start_date <= p_date and pp.end_date >= p_date
+         for share;
+        select p.id, p.status into v_id, v_status from hrm.attendance_periods p
+         where p.pay_group_id = v_group and p.period_start <= p_date and p.period_end >= p_date
+         for share;
+    end if;
     return case when v_status = 'locked' then v_id end;
 end
 $fn$;

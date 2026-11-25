@@ -213,5 +213,7 @@
   "errors.hrm.attendance.adjustment.leave_not_approved": "Only approved leave is cancelled by an adjustment.",
   "errors.hrm.attendance.adjustment.waiting": "An adjustment of these days is already waiting for a decision.",
   "errors.hrm.attendance.adjustment.not_pending": "This adjustment is not waiting for a decision.",
-  "errors.hrm.attendance.adjustment.leave_year_closed": "The leave year of this leave is closed by its year-end, so the leave cannot be given back; reject the adjustment."
+  "errors.hrm.attendance.adjustment.leave_year_closed": "The leave year of this leave is closed by its year-end, so the leave cannot be given back; reject the adjustment.",
+  "errors.hrm.attendance.lock.adjustments_open": "Adjustments of this period are waiting or approved and not yet paid; withdraw the waiting ones first. An approved adjustment is paid in the next period, so the period stays locked.",
+  "errors.hrm.attendance.adjustment.period_not_locked": "The period of this adjustment is no longer locked; its days are corrected directly. Reject or withdraw the adjustment."
 }

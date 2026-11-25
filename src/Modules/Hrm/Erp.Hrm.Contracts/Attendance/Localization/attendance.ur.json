@@ -213,5 +213,7 @@
   "errors.hrm.attendance.adjustment.leave_not_approved": "درستی سے صرف منظور شدہ رخصت منسوخ ہوتی ہے۔",
   "errors.hrm.attendance.adjustment.waiting": "ان دنوں کی ایک درستی پہلے ہی فیصلے کی منتظر ہے۔",
   "errors.hrm.attendance.adjustment.not_pending": "یہ درستی فیصلے کی منتظر نہیں ہے۔",
-  "errors.hrm.attendance.adjustment.leave_year_closed": "اس رخصت کا سال اختتامِ سال سے بند ہے، اس لیے رخصت واپس نہیں دی جا سکتی؛ درستی مسترد کریں۔"
+  "errors.hrm.attendance.adjustment.leave_year_closed": "اس رخصت کا سال اختتامِ سال سے بند ہے، اس لیے رخصت واپس نہیں دی جا سکتی؛ درستی مسترد کریں۔",
+  "errors.hrm.attendance.lock.adjustments_open": "اس مدت کی درستیاں منتظر ہیں یا منظور ہو کر ابھی ادا نہیں ہوئیں؛ پہلے منتظر درستیاں واپس لیں۔ منظور شدہ درستی اگلی مدت میں ادا ہوتی ہے، اس لیے مدت لاک رہتی ہے۔",
+  "errors.hrm.attendance.adjustment.period_not_locked": "اس درستی کی مدت اب لاک نہیں؛ اس کے دن براہِ راست درست ہوتے ہیں۔ درستی مسترد کریں یا واپس لیں۔"
 }

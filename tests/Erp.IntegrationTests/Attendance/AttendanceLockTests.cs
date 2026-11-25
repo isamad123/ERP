@@ -40,6 +40,8 @@ public sealed class AttendanceLockTests(TenancyFixture fx) : IAsyncLifetime
 
     private DateOnly Today => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_h.Clock.UtcNow, Karachi).DateTime);
 
+    private const string AttendanceAdjustmentWaiting = "errors.hrm.attendance.adjustment.waiting";
+
     private static string Iso(DateOnly d) => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     public async ValueTask InitializeAsync()
@@ -464,6 +466,86 @@ public sealed class AttendanceLockTests(TenancyFixture fx) : IAsyncLifetime
         // An overtime correction of a locked day is an adjustment too.
         var ot = await _h.PostAsync(o.Hr, Adjustments, new { employmentId = employment, kind = "overtime", reason = "Approved late", days = new[] { new { date = Iso(days[4]), overtimeMinutes = 45 } } }, Ct);
         Assert.True(ot.Status == HttpStatusCode.Accepted, ot.Body);
+    }
+
+    [Fact]
+    public async Task FR_XM_26_FR_XM_06_a_locked_day_corrected_again_starts_from_its_approved_correction_and_one_correction_of_a_day_waits_at_a_time()
+    {
+        // Review S1.31 finding 1: a second correction of the same locked day is paid only for its own difference, never again against the locked record.
+        var o = await OrgAsync();
+        var (employment, _, days) = await WeekAsync(o);
+        await LockByHrAsync(o);
+        object Body(string result, int late) => new
+        {
+            employmentId = employment, kind = "attendance", reason = "Corrected from the gate register",
+            days = new[] { new { date = Iso(days[1]), result, workedMinutes = 480, lateMinutes = late } },
+        };
+
+        var first = await _h.PostAsync(o.Hr, Adjustments, Body("present", 0), Ct);
+        Assert.True(first.Status == HttpStatusCode.Accepted, first.Body);
+        await ApproveAsync(o.Approver, first.Json.GetProperty("instanceId").GetGuid());
+        _h.Clock.Advance(TimeSpan.FromMinutes(5)); // asked later, as a further correction always is
+
+        // The impact of a further correction shows the approved correction as the day's result, not the locked "late".
+        var impact = await _h.PostAsync(o.Hr, $"{Adjustments}/impact", Body("late", 10), Ct);
+        Assert.True(impact.Status == HttpStatusCode.OK, impact.Body);
+        Assert.Equal(("present", 0, "late", 10), (impact.Json.GetProperty("days")[0].GetProperty("old").GetProperty("result").GetString(), impact.Json.GetProperty("days")[0].GetProperty("old").GetProperty("lateMinutes").GetInt32(),
+            impact.Json.GetProperty("days")[0].GetProperty("new").GetProperty("result").GetString(), impact.Json.GetProperty("days")[0].GetProperty("new").GetProperty("lateMinutes").GetInt32()));
+        var second = await _h.PostAsync(o.Hr, Adjustments, Body("late", 10), Ct);
+        Assert.True(second.Status == HttpStatusCode.Accepted, second.Body);
+        await ApproveAsync(o.Approver, second.Json.GetProperty("instanceId").GetGuid());
+
+        // Payroll reads both, chained: late to present, then present to late with 10 minutes; together the day ends late by 10 minutes, once.
+        var inputs = await InCustomerScopeAsync(sp => sp.GetRequiredService<IAttendanceAdjustments>().ForPayPeriodAsync([employment], o.Next, Ct));
+        Assert.Equal(["late>present:30>0", "present>late:0>10"], inputs.Select(i => i.Days.Single()).Select(d => $"{d.Old.Result}>{d.New.Result}:{d.Old.LateMinutes}>{d.New.LateMinutes}"));
+
+        // While one correction of a day waits, no other of that day is asked, of any kind (an attendance correction also states the day's overtime).
+        var waiting = await _h.PostAsync(o.Hr, Adjustments, new { employmentId = employment, kind = "attendance", reason = "Overtime from the register", days = new[] { new { date = Iso(days[2]), result = "present", workedMinutes = 540, overtimeMinutes = 60 } } }, Ct);
+        Assert.True(waiting.Status == HttpStatusCode.Accepted, waiting.Body);
+        Assert.Equal((HttpStatusCode.Conflict, AttendanceAdjustmentWaiting), await StatusTitleAsync(_h.PostAsync(o.Hr, Adjustments, new { employmentId = employment, kind = "overtime", reason = "Approved late", days = new[] { new { date = Iso(days[2]), overtimeMinutes = 60 } } }, Ct)));
+    }
+
+    [Fact]
+    public async Task FR_XM_26_FR_HRM_ATT_21_a_period_with_waiting_or_approved_adjustments_does_not_reopen_and_an_adjustment_of_a_reopened_period_is_not_approved()
+    {
+        // Review S1.31 finding 2: the recalculated run of a reopened period pays its days directly, so their adjustments must not be paid in the next period too.
+        var o = await OrgAsync();
+        var (employment, _, days) = await WeekAsync(o);
+        var run = await RunAsync(o, o.Locked, "calculated");
+        Assert.Equal(PeriodLockOutcome.Locked, (await InCustomerScopeAsync(sp => sp.GetRequiredService<IAttendancePeriodLock>().LockAsync(new PeriodLockRequest(o.Locked, run, true, o.Hr), null, Ct))).Outcome);
+        object Body(DateOnly day) => new { employmentId = employment, kind = "attendance", reason = "Missing punches", days = new[] { new { date = Iso(day), result = "present", workedMinutes = 480, lateMinutes = 0 } } };
+
+        var waiting = await _h.PostAsync(o.Hr, Adjustments, Body(days[1]), Ct);
+        Assert.True(waiting.Status == HttpStatusCode.Accepted, waiting.Body);
+        var waitingInstance = waiting.Json.GetProperty("instanceId").GetGuid();
+        Assert.Equal((HttpStatusCode.Conflict, "errors.hrm.attendance.lock.adjustments_open"), await StatusTitleAsync(_h.PostAsync(o.Hr, $"{Periods}/{o.Locked}/reopen-request", new { reason = "Recalculate" }, Ct)));
+        var console = await _h.GetAsync(o.Hr, $"{Periods}/{o.Locked}", Ct);
+        Assert.True(console.Status == HttpStatusCode.OK, console.Body);
+        Assert.Contains("errors.hrm.attendance.lock.adjustments_open", console.Body, StringComparison.Ordinal);
+
+        // The contract refuses it too (S1.38 cancels a run through it), even once the run is cancelled.
+        await _h.ExecAsync("update hrm.pay_runs set status = 'cancelled' where id = $1", Ct, run);
+        var refused = await InCustomerScopeAsync(sp => sp.GetRequiredService<IAttendancePeriodLock>().ReopenAsync(o.Locked, "Recalculate", new PeriodReopenApproval(o.Hr, o.Payroll, null), null, Ct));
+        Assert.Equal((PeriodLockOutcome.Refused, "errors.hrm.attendance.lock.adjustments_open"), (refused.Outcome, refused.ErrorKey));
+
+        // The period opens (as the reopen would, once nothing waits): the waiting adjustment can then no longer be approved; it is rejected or withdrawn.
+        await _h.ExecAsync("update hrm.attendance_periods set status = 'open', locked_at = null, lock_kind = null, locked_by = null, locked_by_run_id = null, unprocessed_accepted = null, exceptions_accepted = null, reopened_at = now(), reopen_reason = 'test' where pay_period_id = $1", Ct, o.Locked);
+        var approve = await _h.PostAsync(o.Approver, $"/api/wf/tasks/{await TaskOfAsync(waitingInstance)}/approve", new { comment = "agreed" }, Ct);
+        Assert.Equal((HttpStatusCode.BadRequest, "errors.hrm.attendance.adjustment.period_not_locked"), (approve.Status, approve.Text("title"))); // the workflow engine answers a refused decision with 400
+        Assert.Equal("submitted", await _h.ScalarAsync<string>("select status from hrm.attendance_adjustments where id = $1", Ct, waiting.Json.GetProperty("id").GetGuid()));
+        var rejected = await _h.PostAsync(o.Approver, $"/api/wf/tasks/{await TaskOfAsync(waitingInstance)}/reject", new { comment = "The period reopened" }, Ct);
+        Assert.True(rejected.Status == HttpStatusCode.OK, rejected.Body);
+        Assert.Equal("rejected", await _h.ScalarAsync<string>("select status from hrm.attendance_adjustments where id = $1", Ct, waiting.Json.GetProperty("id").GetGuid()));
+        Assert.Empty(await InCustomerScopeAsync(sp => sp.GetRequiredService<IAttendanceAdjustments>().ForPayPeriodAsync([employment], o.Next, Ct)));
+
+        // Locked again by a new run, an approved adjustment keeps the period locked: payroll carries it into the next period.
+        var second = await RunAsync(o, o.Locked, "calculated");
+        Assert.Equal(PeriodLockOutcome.Locked, (await InCustomerScopeAsync(sp => sp.GetRequiredService<IAttendancePeriodLock>().LockAsync(new PeriodLockRequest(o.Locked, second, true, o.Hr), null, Ct))).Outcome);
+        var approved = await _h.PostAsync(o.Hr, Adjustments, Body(days[0]), Ct);
+        Assert.True(approved.Status == HttpStatusCode.Accepted, approved.Body);
+        await ApproveAsync(o.Approver, approved.Json.GetProperty("instanceId").GetGuid());
+        await _h.ExecAsync("update hrm.pay_runs set status = 'cancelled' where id = $1", Ct, second);
+        Assert.Equal("errors.hrm.attendance.lock.adjustments_open", (await InCustomerScopeAsync(sp => sp.GetRequiredService<IAttendancePeriodLock>().ReopenAsync(o.Locked, "Recalculate", new PeriodReopenApproval(o.Hr, o.Payroll, null), null, Ct))).ErrorKey);
     }
 
     // ------------------------------------------------------------------ locked leave and accruals (FR-HRM-LVE-07, FR-XM-26, R-146)
