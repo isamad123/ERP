@@ -387,21 +387,50 @@ public sealed class AttendanceRequestTests(TenancyFixture fx) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task FR_XM_32_nobody_is_the_approver_of_their_own_request_even_when_the_subjects_manager_is_the_one_who_entered_it()
+    public async Task FR_XM_32_nobody_approves_their_own_request_when_the_subjects_manager_entered_it_it_moves_up_one_level_to_the_managers_manager()
     {
         var o = await OrgAsync();
-        var (managerEmployment, managerUser) = await HireUnderAsync(o, null, true, "line_manager");
+        var (bossEmployment, bossUser) = await HireUnderAsync(o, null, true, "line_manager");
+        var (managerEmployment, managerUser) = await HireUnderAsync(o, bossEmployment, true, "line_manager");
         var (employee, _) = await HireUnderAsync(o, managerEmployment, withUser: false);
         var day = o.Monday.AddDays(7);
 
-        // The manager enters the request for their report (they may: HR role for the test); it must not land with the manager.
+        // The manager enters the request for their report (right granted for the test). The engine never lets the requester decide,
+        // so it moves up one level (ruling Q6): the manager's own manager gets the task.
         await _h.AssignAsync(managerUser!.Value, await _h.RoleAsync(Ct, ["hrm.duty_requests.create", "hrm.duty_requests.read"], [("*", "all")], []), null, _h.Today.AddDays(-1), null, Ct);
         var asked = await _h.PostAsync(managerUser.Value, Duties, new { employmentId = employee, kind = "on_duty", startDate = Iso(day), endDate = Iso(day), purpose = "Manager enters it" }, Ct);
         Assert.Equal(HttpStatusCode.Accepted, asked.Status);
-        var (assignee, step) = await OpenStepAsync(asked);
-        Assert.NotEqual(managerUser, assignee);
-        Assert.Equal("manager", step); // the step stays open, in the HR administrators' queue (the route's fallback)
-        Assert.NotEqual(HttpStatusCode.OK, (await _h.PostAsync(managerUser.Value, $"/api/wf/tasks/{await TaskOfAsync(asked)}/approve", new { comment = "mine" }, Ct)).Status);
+        Assert.Equal(bossUser, (await OpenStepAsync(asked)).Assignee);
+        var refused = await _h.PostAsync(managerUser.Value, $"/api/wf/tasks/{await TaskOfAsync(asked)}/approve", new { comment = "mine" }, Ct);
+        Assert.Equal(HttpStatusCode.NotFound, refused.Status); // the requester cannot even open a task they may not decide (FR-XM-32)
+        Assert.Equal("errors.workflow.task_not_found", refused.Text("title"));
+    }
+
+    [Fact]
+    public async Task FR_XM_32_FR_KRN_WFL_02_the_manager_must_be_in_post_on_the_document_date_and_still_today()
+    {
+        var o = await OrgAsync();
+        var past = Today.AddDays(-10);
+
+        // A manager who left after the day: not asked (the request waits with HR), the other kinds of tasks are unchanged.
+        var (leaverEmployment, leaverUser) = await HireUnderAsync(o, null, true, "line_manager");
+        var (employee, _) = await HireUnderAsync(o, leaverEmployment, withUser: false);
+        await _h.ExecAsync("update hrm.employments set separation_date = $1 where id = $2", Ct, Today.AddDays(-2), leaverEmployment);
+        var gone = await _h.PostAsync(o.Hr, Duties, new { employmentId = employee, kind = "on_duty", startDate = Iso(past), endDate = Iso(past), purpose = "Manager has left" }, Ct);
+        Assert.Equal(HttpStatusCode.Accepted, gone.Status);
+        Assert.NotEqual(leaverUser, (await OpenStepAsync(gone)).Assignee);
+        Assert.Equal(1, await CountAsync("select count(*) from wf.workflow_tasks t join iam.roles r on r.id = t.assignee_role_id where t.instance_id = $1 and t.status = 'pending' and lower(r.code) = 'hr_admin'", gone.Json.GetProperty("instanceId").GetGuid()));
+
+        // A manager who joined after the day was not the manager then: not asked for that day, asked for a day since.
+        var (newEmployment, newUser) = await HireUnderAsync(o, null, true, "line_manager");
+        var (report, _) = await HireUnderAsync(o, newEmployment, withUser: false);
+        await _h.ExecAsync("update hrm.employments set joining_date = $1 where id = $2", Ct, past.AddDays(5), newEmployment);
+        var before = await _h.PostAsync(o.Hr, Duties, new { employmentId = report, kind = "on_duty", startDate = Iso(past), endDate = Iso(past), purpose = "Before the manager joined" }, Ct);
+        Assert.Equal(HttpStatusCode.Accepted, before.Status);
+        Assert.NotEqual(newUser, (await OpenStepAsync(before)).Assignee);
+        var after = await _h.PostAsync(o.Hr, Duties, new { employmentId = report, kind = "on_duty", startDate = Iso(past.AddDays(6)), endDate = Iso(past.AddDays(6)), purpose = "After the manager joined" }, Ct);
+        Assert.Equal(HttpStatusCode.Accepted, after.Status);
+        Assert.Equal(newUser, (await OpenStepAsync(after)).Assignee);
     }
 
     [Fact]

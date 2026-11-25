@@ -54,7 +54,7 @@ internal sealed class NoApproverDirectory : IApproverDirectory
 
     public Task<IReadOnlyList<Guid>> ManagersAsync(Guid userId, int levels, DateOnly asOf, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<Guid>>([]);
 
-    public Task<IReadOnlyList<Guid>> ManagersOfSubjectAsync(string subject, int levels, DateOnly asOf, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<Guid>>([]);
+    public Task<IReadOnlyList<Guid>> ManagersOfSubjectAsync(string subject, int levels, DateOnly asOf, DateOnly today, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<Guid>>([]);
 
     public Task<IReadOnlyList<Guid>> DepartmentHeadsAsync(Guid userId, Guid companyId, DateOnly asOf, CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<Guid>>([]);
 
