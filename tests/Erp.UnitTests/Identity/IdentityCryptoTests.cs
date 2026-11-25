@@ -40,31 +40,63 @@ public sealed class IdentityCryptoTests
         Assert.True(rehash);
     }
 
+    private static readonly string[] OkOrBusy = ["ok", "busy"];
+
     [Fact]
     public void S105_review5_password_hashing_is_capped_and_refuses_with_busy_instead_of_exhausting_memory()
     {
-        // Eight real threads released together, so the calls truly overlap; only one may hash at a time.
+        // R-317: the old form released eight threads together and hoped that one hash (tens of milliseconds) was still running when the
+        // others asked; on a loaded machine the threads woke up one after the other and all eight answered "ok". Now the one place is
+        // held by the test itself, so the refusal is certain, and the cap and its release are checked in order.
         using var hasher = new Argon2idPasswordHasher(maxConcurrent: 1, maxWait: TimeSpan.FromMilliseconds(1));
-        using var start = new Barrier(8);
-        var outcomes = new string[8];
-        var threads = Enumerable.Range(0, 8).Select(i => new Thread(() =>
+        var gate = (SemaphoreSlim)typeof(Argon2idPasswordHasher).GetField("_gate", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(hasher)!;
+        gate.Wait(TestContext.Current.CancellationToken); // a hash in progress
+        try
         {
-            start.SignalAndWait();
+            using var start = new Barrier(8);
+            var outcomes = new string[8];
+            var threads = Enumerable.Range(0, 8).Select(i => new Thread(() =>
+            {
+                start.SignalAndWait();
+                try
+                {
+                    hasher.Hash("Correct-Horse-7");
+                    outcomes[i] = "ok";
+                }
+                catch (Erp.Kernel.Application.Identity.PasswordHasherBusyException)
+                {
+                    outcomes[i] = "busy";
+                }
+            })).ToList();
+            threads.ForEach(t => t.Start());
+            threads.ForEach(t => t.Join());
+            Assert.All(outcomes, outcome => Assert.Equal("busy", outcome)); // every caller is refused while the one place is taken
+        }
+        finally
+        {
+            gate.Release();
+        }
+
+        // With the place free again, real concurrent calls each get either a hash or a refusal, never a failure of another kind, and one always succeeds.
+        using var start2 = new Barrier(8);
+        var results = new string[8];
+        var overlapping = Enumerable.Range(0, 8).Select(i => new Thread(() =>
+        {
+            start2.SignalAndWait();
             try
             {
                 hasher.Hash("Correct-Horse-7");
-                outcomes[i] = "ok";
+                results[i] = "ok";
             }
             catch (Erp.Kernel.Application.Identity.PasswordHasherBusyException)
             {
-                outcomes[i] = "busy";
+                results[i] = "busy";
             }
         })).ToList();
-        threads.ForEach(t => t.Start());
-        threads.ForEach(t => t.Join());
-
-        Assert.Contains("ok", outcomes);
-        Assert.Contains("busy", outcomes);
+        overlapping.ForEach(t => t.Start());
+        overlapping.ForEach(t => t.Join());
+        Assert.All(results, outcome => Assert.Contains(outcome, OkOrBusy));
+        Assert.Contains("ok", results);
         Assert.True(hasher.Verify("Correct-Horse-7", hasher.Hash("Correct-Horse-7"), "argon2id-v1", out _)); // the gate is released again
     }
 
