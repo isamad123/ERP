@@ -750,7 +750,7 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
         var output = process.StandardOutput.ReadToEndAsync(Ct);
         var errors = process.StandardError.ReadToEndAsync(Ct);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(Ct);
-        timeout.CancelAfter(TimeSpan.FromMinutes(20));
+        timeout.CancelAfter(TimeSpan.FromMinutes(40)); // R-318: was 20; the suite took 18m31 on main at 07:26, 20m23 at 11:06; split into shards (follow-up)
         try
         {
             await process.WaitForExitAsync(timeout.Token);
