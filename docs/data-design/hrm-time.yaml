@@ -330,13 +330,55 @@
     - [attendance_day_id, uuid, opt, fk hrm.attendance_days]
     - [comp_off_entry_id, uuid, opt, fk hrm.leave_ledger]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+    - [requested_minutes, int, opt, "minutes asked for before the day (pre-approval, S1.29b); null for overtime claimed after it was worked"]
+    - [reason, text, opt, "why the overtime is asked for or claimed (S1.29b)"]
+    - [policy_version_id, uuid, opt, "fk hrm.policy_versions; the attendance policy version whose overtime rule gave the multiplier (S1.29b)"]
+    - [comp_off_minutes, int, opt, "minutes converted to compensatory off: what the comp-off leave type can earn in its unit; the rest of the approved minutes is paid (S1.29b review)"]
   indexes: [[employment_id, work_date]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   reqs: [ATT-12, LVE-08]
   unique: [[employment_id, work_date, "where status <> 'rejected'"]]
   # S1.29a (CR-089 S1.29a detail): entries are made by the attendance engine and approved through the workflow (S1.29b); generated writes closed.
+  # S1.29b (CR-089 S1.29b detail; slice S1.29 Build items 9 to 11, FR-HRM-ATT-12, LVE-08): minutes are the overtime the engine worked out from the
+  # day's result (beyond the shift on a working day, all recorded work on a weekly off or holiday); approved_minutes is set on approval, within the
+  # policy's daily and monthly caps of the day type; a pre-approval is asked before the day (requested_minutes) and pays the smaller of the minutes
+  # worked and approved. Approved overtime the policy converts becomes converted_to_comp_off and earns comp-off through hrm.attendance.comp_off_earned
+  # for the minutes the comp-off leave type can earn in its unit (comp_off_minutes); the rest is paid (review S1.29b finding 2).
+  added_in: {S1.29b: [requested_minutes, reason, policy_version_id, comp_off_minutes]}
   api_actions: [read]
+
+- table: hrm.attendance_penalties
+  purpose: "A late-coming or early-leaving penalty of a day beyond the monthly allowance of the attendance policy, and its waiver (S1.29b, CR-089, FR-HRM-ATT-13)"
+  traits: [std, co]
+  status: [applied, waived, cancelled]
+  columns:
+    - [employment_id, uuid, req, fk hrm.employments]
+    - [work_date, date, req]
+    - [kind, "enum(late,early)", req]
+    - [minutes, int, req, "the late or early minutes of the day's result"]
+    - [occurrence, int, req, "which late (or early) day of the calendar month this is; the policy allows a number of them before the action"]
+    - [action, "enum(leave,pay_deduction,warning)", req, "what the policy does beyond the allowance: deduct leave, a pay deduction input for payroll, or a warning only"]
+    - [leave_type_id, uuid, opt, fk hrm.leave_types]
+    - [leave_quantity, qty, opt, "the leave units the policy deducts (action leave)"]
+    - [leave_entry_id, uuid, opt, "fk hrm.leave_ledger; the usage entry posted (action leave)"]
+    - [leave_reversal_id, uuid, opt, "fk hrm.leave_ledger; the usage reversal posted when the penalty was waived or cancelled"]
+    - [attendance_day_id, uuid, req, fk hrm.attendance_days]
+    - [period_id, uuid, req, "fk hrm.attendance_periods; the day's attendance period (FR-XM-26)"]
+    - [policy_version_id, uuid, req, fk hrm.policy_versions]
+    - [explanation, json, req, "why: keys and values translated at display (ATT-10 style)"]
+    - [waiver_reason, text, opt, "the reason of the last waiver asked for (the workflow history keeps every request and decision)"]
+    - [waived_at, ts, opt]
+    - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+  unique: [[employment_id, work_date, kind, "where status <> 'cancelled'"]]
+  indexes: [[employment_id, work_date]]
+  # S1.29b (CR-089 S1.29b detail; slice S1.29 Build items 7 and 8, FR-HRM-ATT-13, FR-XM-32): the attendance engine applies and cancels penalties as
+  # day results change (never in a locked period, FR-XM-26); a waiver is asked through the workflow and approved by someone other than the
+  # employee; a waived penalty stays as the record (status waived). Generated writes closed (rules.yaml function hrm.tg_attendance_penalties_rules).
+  scope: {company: company_id, employment: employment_id}
+  added_in: S1.29b
+  api_actions: [read]
+  reqs: [ATT-13]
 
 - table: hrm.leave_types
   traits: [std, co, soft, name]

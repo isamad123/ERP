@@ -40,6 +40,7 @@
     "fk_overtime_entries_company_id": "companyId",
     "fk_overtime_entries_employment_id": "employmentId",
     "fk_overtime_entries_pay_input_id": "payInputId",
+    "fk_overtime_entries_policy_version_id": "policyVersionId",
     "fk_overtime_entries_workflow_instance_id": "workflowInstanceId"
   },
   "fields": [
@@ -184,6 +185,47 @@
       "filter": true,
       "labelKey": "fields.hrm.overtime_entries.workflow_instance_id",
       "references": "wf.workflow_instances"
+    },
+    {
+      "column": "requested_minutes",
+      "field": "requestedMinutes",
+      "kind": "Int4",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.overtime_entries.requested_minutes"
+    },
+    {
+      "column": "reason",
+      "field": "reason",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.overtime_entries.reason"
+    },
+    {
+      "column": "policy_version_id",
+      "field": "policyVersionId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": true,
+      "labelKey": "fields.hrm.overtime_entries.policy_version_id",
+      "references": "hrm.policy_versions"
+    },
+    {
+      "column": "comp_off_minutes",
+      "field": "compOffMinutes",
+      "kind": "Int4",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.overtime_entries.comp_off_minutes"
     },
     {
       "column": "status",

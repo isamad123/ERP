@@ -28,7 +28,8 @@ internal static class AttendanceEngine
         var resolver = PolicyResolver.For(db, services);
         var effective = new EffectiveShiftReader(db, resolver, services.GetRequiredService<IHolidayCalendars>(), new AttendanceSettingReader(services.GetRequiredService<ISettings>()));
         return new AttendanceDayProcessor(db, resolver, effective, services.GetRequiredService<IApprovedLeaveDays>(), services.GetRequiredService<IApprovedDutyDays>(),
-            services.GetRequiredService<IAttendancePeriodLock>(), new EmploymentApplier(db, services.GetRequiredService<ISettings>(), resolver));
+            services.GetRequiredService<IAttendancePeriodLock>(), new EmploymentApplier(db, services.GetRequiredService<ISettings>(), resolver),
+            new AttendanceConsequences(db, services, services.GetRequiredService<IAttendancePeriodLock>()));
     }
 
     public static async Task<HrmDbContext> OnAsync(IServiceProvider services, DbConnection connection, DbTransaction transaction, CancellationToken ct)

@@ -27,6 +27,12 @@
       "sensitive": false
     },
     {
+      "code": "hrm.attendance_penalties.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.attendance_penalties.read",
+      "sensitive": false
+    },
+    {
       "code": "hrm.attendance_periods.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.attendance_periods.read",

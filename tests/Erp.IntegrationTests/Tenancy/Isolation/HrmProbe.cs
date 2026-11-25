@@ -16,7 +16,7 @@ namespace Erp.IntegrationTests.Tenancy.Isolation;
 /// employments, the first linked to a user; from S1.20c a second company, a former employment, a contract and a probation; from S1.20d a
 /// payment account and a statutory registration of the first employment; from S1.23a a probation policy assigned to permanent employees
 /// (made before the hires, so the first employment's probation comes from it) and a second policy with a draft; from S1.34a a pay group
-/// with the periods of a tax year; from S1.32a a leave type and an opening balance of the first employment; from S1.32b a leave policy, a draft and an approved request, a year-end preview and the former employment moved to the second company (S1.29a's engine routes need nothing more: the first employment's days are processed, read and explained by id, the exception queue lists B's own). Then, as for
+/// with the periods of a tax year; from S1.32a a leave type and an opening balance of the first employment; from S1.32b a leave policy, a draft and an approved request, a year-end preview and the former employment moved to the second company; from S1.29b an attendance policy, a processed day with a worked-out overtime entry and a penalty (S1.29a's engine routes need nothing more: the first employment's days are processed, read and explained by id, the exception queue lists B's own). Then, as for
 /// the other probes:
 /// <list type="number">
 /// <item>B's host and token aimed at A's ids, with and without headers naming A: actions on A's records are 404; creates and lists
@@ -43,7 +43,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         Guid Component, long ComponentVersion, Guid Structure, long StructureVersion,
         Guid PushDevice, long PushDeviceVersion, Guid PullDevice, Guid Map, long MapVersion, Guid RemovalMap, long RemovalMapVersion, Guid Unmapped, long UnmappedVersion, string MapNo,
         Guid LeaveType, long LeaveTypeVersion, Guid LeaveEntry,
-        Guid LeaveDraft, long LeaveDraftVersion, Guid LeaveApproved, Guid YearEndRun, Guid ToLeaveType, Guid Mover);
+        Guid LeaveDraft, long LeaveDraftVersion, Guid LeaveApproved, Guid YearEndRun, Guid ToLeaveType, Guid Mover,
+        Guid Overtime, Guid Penalty);
 
     /// <summary>Where the probe hires (slice S1.20b): an org unit of a company and that company's branch.</summary>
     private sealed record Hire(Guid Company, Guid OrgUnit, Guid Branch);
@@ -56,7 +57,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.LeaveType, a.LeaveEntry, a.LeaveDraft, a.LeaveApproved, a.YearEndRun, a.ToLeaveType, a.Mover, a.Component, a.Structure }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.LeaveType, a.LeaveEntry, a.LeaveDraft, a.LeaveApproved, a.YearEndRun, a.ToLeaveType, a.Mover, a.Component, a.Structure, a.Overtime, a.Penalty }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         pushSecrets[a.PushDevice] = PushSecret;
@@ -317,6 +318,11 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             // S1.30a: requests for a date long past; the probe's company has no policy or lock, so a request that got through would be created.
             "POST /api/hrm/attendance/regularization-requests" => ("/api/hrm/attendance/regularization-requests", Json(new { employmentId = m.Employment, workDate = "2024-06-03", requestedIn = "2024-06-03T09:00:00+05:00", reason = "Probe correction" })),
             "POST /api/hrm/attendance/duty-requests" => ("/api/hrm/attendance/duty-requests", Json(new { employmentId = m.Employment, kind = "field_duty", startDate = "2024-06-03", endDate = "2024-06-04", purpose = "Probe duty" })),
+            // S1.29b: A's worked-out overtime entry and applied warning penalty (written directly: the engine makes them), and overtime asked for a day in 2030
+            // under the attendance policy of the material (pre-approval on working days).
+            "POST /api/hrm/attendance/overtime-entries/{id:guid}/claim" => ($"/api/hrm/attendance/overtime-entries/{m.Overtime}/claim", Json(new { reason = "Probe claim" })),
+            "POST /api/hrm/attendance/overtime-requests" => ("/api/hrm/attendance/overtime-requests", Json(new { employmentId = m.Employment, workDate = "2030-03-05", minutes = 60, reason = "Probe overtime" })),
+            "POST /api/hrm/attendance/penalties/{id:guid}/waiver" => ($"/api/hrm/attendance/penalties/{m.Penalty}/waiver", Json(new { reason = "Probe waiver" })),
             var key => throw new InvalidOperationException($"No probe target for HR endpoint {key}; extend HrmProbe."),
         };
     }
@@ -715,6 +721,66 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
                 """, yearEndRun, org.Company, leaveTypeId, by);
         }
 
+        // S1.29b: an attendance policy for every employee (overtime on working days asked before the day), a processed day of the first employment in the
+        // pay period of the material with a worked-out overtime entry and an applied warning penalty (written directly: the engine makes them).
+        var attendance = await PostAsync(host, token, "/api/hrm/policies", new
+        {
+            companyId = org.Company, policyType = "attendance", code = "AT" + Guid.NewGuid().ToString("N")[..8], name = new { en = "Probe attendance" },
+            parameters = new
+            {
+                lateGraceMinutes = 10, earlyGraceMinutes = 10, absentBelowMinutes = 120, breakMode = "none", roundingMode = "none", shiftWindowMinutes = 120,
+                weeklyOffWork = "record", holidayWork = "record", overtime = new { working = new { multiplier = 1.5, approval = "pre", compensation = "pay", countBeforeShift = false } },
+            },
+        }, ct);
+        var av1 = attendance.GetProperty("versions")[0];
+        await OkAsync(host, token, $"/api/hrm/policy-versions/{av1.GetProperty("id").GetGuid()}/activate", new { effectiveFrom = "2020-01-01", rowVersion = av1.GetProperty("rowVersion").GetInt64() }, ct);
+        var attendanceSets = await GetAsync(host, token, $"/api/hrm/policy-assignment-sets?companyId={org.Company}&policyType=attendance", ct);
+        DateOnly? attendanceLatest = attendanceSets.GetProperty("latestFrom").ValueKind == JsonValueKind.String ? DateOnly.Parse(attendanceSets.GetProperty("latestFrom").GetString()!, System.Globalization.CultureInfo.InvariantCulture) : null;
+        await OkAsync(host, token, "/api/hrm/policy-assignment-sets/activate", new
+        {
+            companyId = org.Company, policyType = "attendance", effectiveFrom = (attendanceLatest ?? new DateOnly(2019, 12, 31)).AddDays(1), basedOn = attendanceLatest,
+            assignments = new[] { new { policyId = attendance.GetProperty("id").GetGuid(), precedence = 1, rule = new { conditions = Array.Empty<object>() } } },
+        }, ct);
+        var overtime = Guid.CreateVersion7();
+        var penalty = Guid.CreateVersion7();
+        await using (var c = await fx.OpenAdminAsync(code, ct))
+        {
+            var by = BaselineSeed.SystemUserId;
+            var periodId = Guid.CreateVersion7();
+            var dayId = Guid.CreateVersion7();
+            async Task Exec(string sql, params object[] values)
+            {
+                await using var command = new NpgsqlCommand(sql, c);
+                foreach (var value in values)
+                {
+                    command.Parameters.Add(new NpgsqlParameter { Value = value });
+                }
+
+                await command.ExecuteNonQueryAsync(ct);
+            }
+
+            await Exec("""
+                insert into hrm.attendance_periods (id, company_id, pay_group_id, pay_period_id, period_start, period_end, status, created_at, created_by, updated_at, updated_by)
+                select $1, company_id, pay_group_id, id, start_date, end_date, 'open', now(), $3, now(), $3 from hrm.pay_periods where id = $2
+                """, periodId, period.GetProperty("id").GetGuid(), by);
+            await Exec("""
+                insert into hrm.attendance_days (id, company_id, employment_id, work_date, day_type, result, worked_minutes, late_minutes, early_minutes, overtime_minutes,
+                                                 explanation, policy_version_id, period_id, processed_at, created_at, created_by, updated_at, updated_by)
+                select $1, $2, $3, p.period_start, 'working', 'late', 480, 30, 0, 60, '{"rule":"late"}'::jsonb, $4, p.id, now(), now(), $5, now(), $5
+                from hrm.attendance_periods p where p.id = $6
+                """, dayId, org.Company, employment, av1.GetProperty("id").GetGuid(), by, periodId);
+            await Exec("""
+                insert into hrm.overtime_entries (id, company_id, employment_id, work_date, day_type, minutes, rate_multiplier, attendance_day_id, status, created_at, created_by, updated_at, updated_by)
+                select $1, company_id, employment_id, work_date, 'working', 60, 1.5, id, 'calculated', now(), $3, now(), $3 from hrm.attendance_days where id = $2
+                """, overtime, dayId, by);
+            await Exec("""
+                insert into hrm.attendance_penalties (id, company_id, employment_id, work_date, kind, minutes, occurrence, action, attendance_day_id, period_id, policy_version_id,
+                                                      explanation, status, created_at, created_by, updated_at, updated_by)
+                select $1, company_id, employment_id, work_date, 'late', 30, 4, 'warning', id, period_id, policy_version_id, '{"key":"hrm.att.penalty.warning"}'::jsonb, 'applied',
+                       now(), $3, now(), $3 from hrm.attendance_days where id = $2
+                """, penalty, dayId, by);
+        }
+
         return new Material(person, created.GetProperty("rowVersion").GetInt64(), into, identifier.Id, identifier.Version, contact.Id, contact.Version,
             address.Id, address.Version, relation.Id, relation.Version, qualification.Id, qualification.Version,
             match.GetProperty("id").GetGuid(), match.GetProperty("rowVersion").GetInt64(), created.GetProperty("personNo").GetString()!,
@@ -730,7 +796,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             pushDevice.GetProperty("id").GetGuid(), pushDevice.GetProperty("rowVersion").GetInt64(), pullDevice.GetProperty("id").GetGuid(), mapRow.GetProperty("id").GetGuid(), mapRow.GetProperty("rowVersion").GetInt64(),
             removalMap, 1, unmapped, 1, mapNo,
             leaveType.GetProperty("id").GetGuid(), leaveType.GetProperty("rowVersion").GetInt64(), leaveEntry.GetProperty("id").GetGuid(),
-            leaveDraft.GetProperty("id").GetGuid(), leaveDraft.GetProperty("rowVersion").GetInt64(), leaveApproved, yearEndRun, toLeaveType, mover);
+            leaveDraft.GetProperty("id").GetGuid(), leaveDraft.GetProperty("rowVersion").GetInt64(), leaveApproved, yearEndRun, toLeaveType, mover,
+            overtime, penalty);
     }
 
     private async Task OkAsync(string host, string token, string path, object body, CancellationToken ct)

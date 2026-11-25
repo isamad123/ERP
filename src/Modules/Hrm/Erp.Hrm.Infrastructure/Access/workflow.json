@@ -1,5 +1,5 @@
 {
-  "_comment": "Document types the HR module sends for approval (slice S1.10 format). S1.20b (CR-076 item 8, slice S1.20 ruling Q11): an employment event of a kind the company setting hrm.employment_events.approval_kinds lists waits for this route and applies on approval; the requester and the employee never approve it (FR-XM-32). Changing the route needs a second administrator (requires_approval). S1.20c: a transfer between companies uses kind transfer and gives to_company (review S1.20c finding 9). Seeded by migrate and provisioning with its default route, active at once. S1.22a (CR-078 item 2, slice S1.22 ruling Q5): hrm.strength_exception is the permission to place one person beyond a position's budgeted FTE or a unit and grade's sanctioned count; default route HR Admin; the person placed and the requester never approve it (FR-XM-32). S1.32b (CR-086 S1.32b detail; slice S1.32 Build items 7 and 9, FR-HRM-LVE-05, -06, FR-XM-32): hrm.leave_request is a leave request (default route: the employee's line manager, given by the leave service in the field line_manager so an employee without a sign-in reaches their own manager (review S1.32b finding 2), or the HR administrators when there is none, then HR where the leave policy sets hrApproval for the type); hrm.leave_cancellation the cancellation of approved leave where the policy sets cancellationApproval (default route: the line manager, or the HR administrators). The employee and the person who applied never approve either. The routes are the customer's to change (for example by days or leave type). Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "Document types the HR module sends for approval (slice S1.10 format). S1.20b (CR-076 item 8, slice S1.20 ruling Q11): an employment event of a kind the company setting hrm.employment_events.approval_kinds lists waits for this route and applies on approval; the requester and the employee never approve it (FR-XM-32). Changing the route needs a second administrator (requires_approval). S1.20c: a transfer between companies uses kind transfer and gives to_company (review S1.20c finding 9). Seeded by migrate and provisioning with its default route, active at once. S1.22a (CR-078 item 2, slice S1.22 ruling Q5): hrm.strength_exception is the permission to place one person beyond a position's budgeted FTE or a unit and grade's sanctioned count; default route HR Admin; the person placed and the requester never approve it (FR-XM-32). S1.32b (CR-086 S1.32b detail; slice S1.32 Build items 7 and 9, FR-HRM-LVE-05, -06, FR-XM-32): hrm.leave_request is a leave request (default route: the employee's line manager, given by the leave service in the field line_manager so an employee without a sign-in reaches their own manager (review S1.32b finding 2), or the HR administrators when there is none, then HR where the leave policy sets hrApproval for the type); hrm.leave_cancellation the cancellation of approved leave where the policy sets cancellationApproval (default route: the line manager, or the HR administrators). The employee and the person who applied never approve either. The routes are the customer's to change (for example by days or leave type). S1.29b (CR-089 S1.29b detail; slice S1.29 Build items 8 and 9, FR-HRM-ATT-12, ATT-13, FR-XM-32): hrm.overtime is overtime asked for before the day or claimed after it, hrm.attendance_penalty_waiver a waiver of a lateness penalty; both go to the employee's line manager given in the field line_manager (R-305), or the HR administrators when there is none; the employee and the requester never approve. Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "document_types": [
     {
@@ -132,6 +132,50 @@
       "subject_fields": ["employee"],
       "title": {"en": "Cancel leave {request_no} ({leave_type}) of {employee_no}: {start_date} to {end_date}", "ur": "رخصت {request_no} ({leave_type}) کی منسوخی، {employee_no}: {start_date} تا {end_date}"},
       "link": "/time/leave/requests/{document_id}",
+      "bulk_approval": false,
+      "requires_approval": true,
+      "default_route": {"steps": [{"key": "manager", "name": {"en": "Line manager", "ur": "لائن مینیجر"}, "approver": {"kind": "document_user", "field": "line_manager"}, "fallback": {"kind": "role", "role": "hr_admin"}}]}
+    },
+    {
+      "code": "hrm.overtime",
+      "entitlement_key": "hrm.core",
+      "name": {"en": "Overtime", "ur": "اوور ٹائم"},
+      "fields": [
+        {"name": "company", "type": "company", "label": {"en": "Company", "ur": "کمپنی"}},
+        {"name": "employee", "type": "user", "label": {"en": "Employee", "ur": "ملازم"}},
+        {"name": "line_manager", "type": "user", "label": {"en": "Line manager of the employee", "ur": "ملازم کا لائن مینیجر"}},
+        {"name": "employee_no", "type": "text", "label": {"en": "Employee number", "ur": "ملازم نمبر"}},
+        {"name": "work_date", "type": "date", "label": {"en": "Day", "ur": "دن"}},
+        {"name": "day_type", "type": "text", "label": {"en": "Day type", "ur": "دن کی قسم"}},
+        {"name": "minutes", "type": "number", "label": {"en": "Minutes", "ur": "منٹ"}},
+        {"name": "pre_approval", "type": "bool", "label": {"en": "Asked before the day", "ur": "دن سے پہلے درخواست"}}
+      ],
+      "company_field": "company",
+      "subject_fields": ["employee"],
+      "title": {"en": "Overtime of {employee_no} on {work_date}: {minutes} minutes", "ur": "{employee_no} کا {work_date} کا اوور ٹائم: {minutes} منٹ"},
+      "link": "/time/overtime/{document_id}",
+      "bulk_approval": true,
+      "requires_approval": true,
+      "default_route": {"steps": [{"key": "manager", "name": {"en": "Line manager", "ur": "لائن مینیجر"}, "approver": {"kind": "document_user", "field": "line_manager"}, "fallback": {"kind": "role", "role": "hr_admin"}}]}
+    },
+    {
+      "code": "hrm.attendance_penalty_waiver",
+      "entitlement_key": "hrm.core",
+      "name": {"en": "Waiver of a lateness penalty", "ur": "تاخیر کی سزا کی معافی"},
+      "fields": [
+        {"name": "company", "type": "company", "label": {"en": "Company", "ur": "کمپنی"}},
+        {"name": "employee", "type": "user", "label": {"en": "Employee", "ur": "ملازم"}},
+        {"name": "line_manager", "type": "user", "label": {"en": "Line manager of the employee", "ur": "ملازم کا لائن مینیجر"}},
+        {"name": "employee_no", "type": "text", "label": {"en": "Employee number", "ur": "ملازم نمبر"}},
+        {"name": "work_date", "type": "date", "label": {"en": "Day", "ur": "دن"}},
+        {"name": "kind", "type": "text", "label": {"en": "Late or early", "ur": "دیر سے یا جلد"}},
+        {"name": "action", "type": "text", "label": {"en": "Penalty", "ur": "سزا"}},
+        {"name": "minutes", "type": "number", "label": {"en": "Minutes", "ur": "منٹ"}}
+      ],
+      "company_field": "company",
+      "subject_fields": ["employee"],
+      "title": {"en": "Waive the {kind} penalty of {employee_no} on {work_date}", "ur": "{employee_no} کی {work_date} کی ({kind}) سزا کی معافی"},
+      "link": "/time/penalties/{document_id}",
       "bulk_approval": false,
       "requires_approval": true,
       "default_route": {"steps": [{"key": "manager", "name": {"en": "Line manager", "ur": "لائن مینیجر"}, "approver": {"kind": "document_user", "field": "line_manager"}, "fallback": {"kind": "role", "role": "hr_admin"}}]}

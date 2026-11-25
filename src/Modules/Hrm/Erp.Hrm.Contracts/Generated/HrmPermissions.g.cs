@@ -15,6 +15,7 @@ public static class HrmPermissions
         new("hrm.attendance_devices.read", "hrm", "permissions.hrm.attendance_devices.read", false),
         new("hrm.attendance_events.read", "hrm", "permissions.hrm.attendance_events.read", false),
         new("hrm.attendance_exceptions.read", "hrm", "permissions.hrm.attendance_exceptions.read", false),
+        new("hrm.attendance_penalties.read", "hrm", "permissions.hrm.attendance_penalties.read", false),
         new("hrm.attendance_periods.read", "hrm", "permissions.hrm.attendance_periods.read", false),
         new("hrm.attendance_periods.create", "hrm", "permissions.hrm.attendance_periods.create", false),
         new("hrm.attendance_periods.update", "hrm", "permissions.hrm.attendance_periods.update", false),
