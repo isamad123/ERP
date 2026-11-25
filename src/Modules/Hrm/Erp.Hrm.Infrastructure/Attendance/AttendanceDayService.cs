@@ -182,7 +182,8 @@ internal sealed class AttendanceDayService(
         query = kind is { Length: > 0 } k ? query.Where(x => x.Kind == k) : query;
         query = firstDay is { } f ? query.Where(x => x.WorkDate >= f) : query;
         query = lastDay is { } t ? query.Where(x => x.WorkDate <= t) : query;
-        var today = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+        // The company's date (its time zone), as every other attendance answer: after 19:00 UTC it is already tomorrow in Pakistan (R-286, R-318). Without a company: the UTC date.
+        var today = companyId is { } company ? await applier.TodayAsync(company, clock.UtcNow, cancellationToken).ConfigureAwait(false) : DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
         if (minAgeDays is { } age and > 0)
         {
             var latest = today.AddDays(-age);
