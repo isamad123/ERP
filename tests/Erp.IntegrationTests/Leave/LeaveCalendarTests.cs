@@ -214,6 +214,14 @@ public sealed class LeaveCalendarTests(TenancyFixture fx) : IAsyncLifetime
         Assert.False(days[1].GetProperty("warn").GetBoolean()); // 1 of 4 is 25 percent, below the limit of 30
         Assert.Equal(t.Staff[0].Employment, days[0].GetProperty("people")[0].GetProperty("employmentId").GetGuid()); // the colleague by name, not the requester
 
+        // The card's balance after: the grant of 10 less this request's two days; its own days are not counted twice as "waiting".
+        var details = await _h.GetAsync(t.ManagerUser, $"{Requests}/{waiting}/details", Ct);
+        Assert.True(details.Status == HttpStatusCode.OK, details.Body);
+        var impact = details.Json.GetProperty("impact");
+        Assert.Equal(10m, impact.GetProperty("balance").GetDecimal());
+        Assert.Equal(0m, impact.GetProperty("pending").GetDecimal());
+        Assert.Equal(8m, impact.GetProperty("after").GetDecimal());
+
         // The warning is only a warning: the manager approves the request all the same.
         var instance = await _h.ScalarAsync<Guid>("select workflow_instance_id from hrm.leave_requests where id = $1", Ct, waiting);
         var task = await _h.ScalarAsync<Guid>("select id from wf.workflow_tasks where instance_id = $1 and status = 'pending' order by created_at desc limit 1", Ct, instance);

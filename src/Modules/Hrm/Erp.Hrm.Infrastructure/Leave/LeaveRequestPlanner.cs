@@ -236,6 +236,27 @@ internal sealed class LeaveRequestPlanner(
     }
 
     /// <summary>
+    /// The balance impact of a request already saved and waiting (slice S1.33a, the approval card): its leave year's balance at its first day, the other
+    /// waiting requests, and the balance after it. Nothing is checked again (notice, overlap and the like were checked when it was saved), so an
+    /// urgent request still shows its numbers; null when no leave policy covers the type on its first day.
+    /// </summary>
+    public async Task<LeavePlan?> ImpactAsync(Employment e, LeaveType type, LeaveRequest row, LeaveRequest? modifies, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+        ArgumentNullException.ThrowIfNull(type);
+        ArgumentNullException.ThrowIfNull(row);
+        var rules = (await policies.AtAsync(e.Id, row.StartDate, ct).ConfigureAwait(false))?.For(type.Code);
+        if (rules is null)
+        {
+            return null;
+        }
+
+        var plan = new LeavePlan { Rules = rules, Year = await years.YearAsync(e.CompanyId, rules, row.StartDate, ct).ConfigureAwait(false) };
+        await BalanceAsync(db, plan, e, type, row.StartDate, type.Counting == "hours" ? row.Hours ?? 0m : row.Days, row.Id, modifies, ct).ConfigureAwait(false);
+        return plan;
+    }
+
+    /// <summary>
     /// The balance of the request's leave year before and after it, and the lowest it reaches from the first day on with the other waiting requests
     /// counted and expiring leave gone; refused below the policy's negative limit (paid types only).
     /// </summary>
