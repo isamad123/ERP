@@ -100,3 +100,30 @@ public sealed record AttachmentContent(string FileName, string ContentType, byte
 
 /// <summary>A file past its retention that an administrator reviews.</summary>
 public sealed record RetentionReviewItem(Guid FileId, string OwnerType, Guid OwnerId, string FileName, string DocumentType, DateOnly DueOn);
+
+/// <summary>
+/// What the signed-in person may do with the files of one record (ruling Q23): read it and its files, change them, and read
+/// files of a sensitive kind. The owner (a module, or the kernel for workflow tasks) decides, including data scopes.
+/// </summary>
+public sealed record AttachmentOwnerAccess(Guid CompanyId, bool CanRead, bool CanWrite, bool CanReadSensitive);
+
+/// <summary>
+/// A kind of record that can carry files (KRN-DOC-01). Modules register theirs with the kernel (a module through this contract: CR-114 moved it here from the kernel application layer); the owner type is the table
+/// name (for example <c>wf.workflow_tasks</c>). Returns null when the record does not exist.
+/// </summary>
+public interface IAttachmentOwner
+{
+    string OwnerType { get; }
+
+    Task<AttachmentOwnerAccess?> AccessAsync(Guid ownerId, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// The current files of a record (CR-114, first used by slice S1.32b): the ids of its attachments that are not deleted, archived, infected or
+/// quarantined (clean, or still waiting for the scan), newest first. For a module that keeps the file ids on its own document (the leave
+/// request's <c>file_ids</c>, FR-HRM-LVE-16). No access check: the caller has its own. Read on the caller's transaction when given.
+/// </summary>
+public interface IRecordFiles
+{
+    Task<IReadOnlyList<Guid>> CurrentAsync(string ownerType, Guid ownerId, System.Data.Common.DbTransaction? transaction, CancellationToken cancellationToken);
+}

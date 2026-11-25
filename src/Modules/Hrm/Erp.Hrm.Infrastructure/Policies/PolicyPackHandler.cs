@@ -20,7 +20,7 @@ namespace Erp.Hrm.Infrastructure.Policies;
 /// <summary>The HR module's pack object handlers (slice S1.23 Build item 9, D-10): registered by every host that installs packs.</summary>
 public static class HrmPackHandlers
 {
-    public static IReadOnlyList<IPackObjectHandler> Create(PolicyTypeCatalog types) => [new PolicyPackHandler(types)];
+    public static IReadOnlyList<IPackObjectHandler> Create(PolicyTypeCatalog types) => [new Leave.LeaveTypePackHandler(), new PolicyPackHandler(types)]; // S1.32b: leave types before policies
 
     /// <summary>The handlers with the HR module's own policy-type manifest (the migrator and provisioning, which have no service container).</summary>
     public static IReadOnlyList<IPackObjectHandler> Default { get; } = Create(new PolicyTypeCatalog([new PolicyTypeSource(PolicyServices.TypeManifest)], [new Erp.Hrm.Application.Leave.LeavePolicyCheck()]));

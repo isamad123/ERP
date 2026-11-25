@@ -6,7 +6,7 @@ using Erp.BuildingBlocks.Application.Security;
 using Erp.BuildingBlocks.Domain.Time;
 using Erp.IntegrationTests.Identity;
 using Erp.IntegrationTests.Tenancy;
-using Erp.Kernel.Application.Documents;
+using Erp.Kernel.Contracts.Documents;
 using Erp.Kernel.Infrastructure.ControlPlane;
 using Erp.Kernel.Infrastructure.ControlPlane.Provisioning;
 using Erp.Kernel.Infrastructure.Documents;

@@ -299,6 +299,12 @@ internal sealed partial class LeaveLedgerService(
             return refused;
         }
 
+        // A leave year closed by its confirmed year-end takes no more entries (S1.32b): its carry-forward, payout and lapse were worked out from it.
+        if (await LeaveYearEnds.ClosedAsync(db, row.CompanyId, row.LeaveTypeId, row.LeaveYear, ct).ConfigureAwait(false))
+        {
+            return PeopleResult.Conflict(LeaveRequestPlanner.YearClosed, new Dictionary<string, object?> { ["leaveYear"] = row.LeaveYear });
+        }
+
         if (row.Quantity < 0m)
         {
             var allowance = rules?.NegativeAllowance ?? 0m;

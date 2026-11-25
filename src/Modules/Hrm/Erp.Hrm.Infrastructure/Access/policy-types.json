@@ -583,6 +583,20 @@
                     "maxLength": 40
                   },
                   "title": "hrm.policy.param.leave.not_combined_with"
+                },
+                "hrApproval": {
+                  "type": "boolean",
+                  "title": "hrm.policy.param.leave.hr_approval"
+                },
+                "cancellationApproval": {
+                  "type": "boolean",
+                  "title": "hrm.policy.param.leave.cancellation_approval"
+                },
+                "compOffExpiryDays": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 3650,
+                  "title": "hrm.policy.param.leave.comp_off_expiry_days"
                 }
               }
             }

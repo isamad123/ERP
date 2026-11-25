@@ -36,6 +36,9 @@ public sealed partial class LeaveRequestDay : global::Erp.BuildingBlocks.Domain.
     /// <summary>request_status: copy of leave_requests.status</summary>
     public string RequestStatus { get; set; } = null!;
 
+    /// <summary>day_kind: default leave; sandwich: a holiday or weekly off between two leave days of the request counted as leave (S1.32b, Build item 8)</summary>
+    public string DayKind { get; set; } = "leave";
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 
