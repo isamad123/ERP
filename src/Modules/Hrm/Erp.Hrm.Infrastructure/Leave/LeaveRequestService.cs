@@ -466,6 +466,7 @@ internal sealed class LeaveRequestService(
             // Numbered when saved (FR-KRN-NUM, FR-XM-06): gap-free in this transaction; a rollback gives the number back.
             row.RequestNo = await numbers.AssignAsync(new NumberRequest(NumberType, row.CompanyId, row.BranchId, row.StartDate), db.Database.CurrentTransaction!.GetDbTransaction(), ct).ConfigureAwait(false);
             db.Add(row);
+            await db.SaveChangesAsync(ct).ConfigureAwait(false); // the request first: its days refer to it
             AddDays(row, type, plan, now);
             if (!submit)
             {

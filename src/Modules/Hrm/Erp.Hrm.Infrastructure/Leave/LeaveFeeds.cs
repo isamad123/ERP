@@ -203,7 +203,7 @@ internal sealed class LeaveExpiryJob(IClock clock) : IJobHandler
                         insert into hrm.leave_ledger (id, company_id, employment_id, leave_type_id, leave_year, entry_date, kind, quantity, expires_on, source_type, source_id,
                                                       policy_version_id, reverses_entry_id, reason, created_at, created_by)
                         values ({Guid.CreateVersion7(clock.UtcNow)}, {g.Key.CompanyId}, {g.Key.EmploymentId}, {g.Key.LeaveTypeId}, {g.Key.LeaveYear}, {expiry.On}, {expiry.Kind}, {-expiry.Quantity},
-                                null, {LeaveLots.ExpirySource}, {LeaveLots.ExpirySourceId(expiry.LotId)}, null, 'expired', {clock.UtcNow}, {actor})
+                                null, {LeaveLots.ExpirySource}, {LeaveLots.ExpirySourceId(expiry.LotId)}, null, null, 'expired', {clock.UtcNow}, {actor})
                         on conflict (source_type, source_id, kind, leave_type_id) where source_id is not null do nothing
                         """, ct).ConfigureAwait(false);
                 }
