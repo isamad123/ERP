@@ -1,7 +1,7 @@
 // Attendance requests (slice S1.30a Build items 1 to 4; FR-HRM-ATT-11, ATT-14, GHR-09): the requests of the signed-in person, of the people they may see (team,
 // company) and the two forms. A request waits for the approval of the line manager (or HR) in the shared approvals inbox; its maker can withdraw it while it waits.
-// A request made by someone else for a person says so. Proof files for a correction are not part of this release.
-import { useState } from 'react';
+// A request made by someone else for a person says so. Proof files (S1.30b) are listed under a request and can be deleted while it waits.
+import { Fragment, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDocumentTitle } from '@erp/engine';
 import { dutyRequests, regularizationRequests, type DutyRequest, type RegularizationRequest } from '@erp/generated/api/hrm';
@@ -10,6 +10,8 @@ import { formatDate, formatDateTime, useLocaleSettings, useText, type MessageKey
 import { attendanceRequestsApi } from '../../api/attendance-requests';
 import { useShell } from '../../shell/context';
 import { CorrectionDialog, DutyDialog, useRefusal } from './requests-forms';
+import { ProofList } from './proof-files';
+import { PROOF_OWNER } from '../../api/attendance-requests';
 import './requests-messages';
 
 type Status = 'submitted' | 'approved' | 'rejected' | 'cancelled';
@@ -65,6 +67,7 @@ function Corrections({ company }: { company: string }) {
   const refusal = useRefusal();
   const withdraw = useWithdraw();
   const [open, setOpen] = useState(false);
+  const [filesOf, setFilesOf] = useState<string | null>(null);
   const query = useQuery({ queryKey: ['hrm', 'attendance-requests', 'regularization', company], queryFn: () => regularizationRequests.list({ companyId: company, limit: 100 }), enabled: !!company });
   const clock = (v: string | null) => (v ? formatDateTime(v, lang, timeZone, numbers) : '');
   return (
@@ -76,14 +79,20 @@ function Corrections({ company }: { company: string }) {
         <table className="erp-pos-table">
           <thead><tr><th scope="col">{t('req.col.day')}</th><th scope="col">{t('req.col.times')}</th><th scope="col">{t('req.col.reason')}</th><th scope="col">{t('req.col.by')}</th><th scope="col">{t('req.col.status')}</th><th scope="col">{t('req.col.actions')}</th></tr></thead>
           <tbody>{query.data.items.map((r: RegularizationRequest) => (
-            <tr key={r.id}>
+            <Fragment key={r.id}>
+            <tr>
               <td><bdi>{formatDate(`${r.workDate}T12:00:00Z`, lang, timeZone, numbers)}</bdi></td>
               <td><bdi>{[r.requestedIn ? t('req.times.in', { time: clock(r.requestedIn) }) : '', r.requestedOut ? t('req.times.out', { time: clock(r.requestedOut) }) : ''].filter(Boolean).join(' · ')}</bdi></td>
               <td><bdi>{r.reason}</bdi></td>
               <td>{r.createdBy === me.userId ? t('req.by.me') : t('req.by.other')}</td>
               <td><Chip status={r.status} /></td>
-              <td>{r.status === 'submitted' && r.createdBy === me.userId && <Button variant="quiet" isDisabled={!writable} onPress={() => withdraw(r.workflowInstanceId)}>{t('req.withdraw')}</Button>}</td>
-            </tr>))}</tbody>
+              <td>
+                <Button variant="quiet" aria-expanded={filesOf === r.id} onPress={() => setFilesOf(filesOf === r.id ? null : r.id)}>{filesOf === r.id ? t('req.proof.hide') : t('req.proof.files')}</Button>
+                {r.status === 'submitted' && r.createdBy === me.userId && <Button variant="quiet" isDisabled={!writable} onPress={() => withdraw(r.workflowInstanceId)}>{t('req.withdraw')}</Button>}
+              </td>
+            </tr>
+            {filesOf === r.id && <tr><td colSpan={6}><ProofList owner={PROOF_OWNER.correction} ownerId={r.id} canDelete={r.status === 'submitted' && writable} /></td></tr>}
+            </Fragment>))}</tbody>
         </table>
       ))}
       {open && <CorrectionDialog company={company} isOpen={open} onOpenChange={setOpen} />}
@@ -99,6 +108,7 @@ function Duty({ company }: { company: string }) {
   const refusal = useRefusal();
   const withdraw = useWithdraw();
   const [open, setOpen] = useState(false);
+  const [filesOf, setFilesOf] = useState<string | null>(null);
   const query = useQuery({ queryKey: ['hrm', 'attendance-requests', 'duty', company], queryFn: () => dutyRequests.list({ companyId: company, limit: 100 }), enabled: !!company });
   return (
     <div className="erp-stack">
@@ -109,14 +119,20 @@ function Duty({ company }: { company: string }) {
         <table className="erp-pos-table">
           <thead><tr><th scope="col">{t('req.col.kind')}</th><th scope="col">{t('req.col.period')}</th><th scope="col">{t('req.col.purpose')}</th><th scope="col">{t('req.col.by')}</th><th scope="col">{t('req.col.status')}</th><th scope="col">{t('req.col.actions')}</th></tr></thead>
           <tbody>{query.data.items.map((r: DutyRequest) => (
-            <tr key={r.id}>
+            <Fragment key={r.id}>
+            <tr>
               <td>{t(`req.kind.${r.kind}` as MessageKey)}</td>
               <td><bdi>{t('req.period', { from: formatDateTime(r.startAt, lang, timeZone, numbers), to: formatDateTime(r.endAt, lang, timeZone, numbers) })}</bdi></td>
               <td><bdi>{r.purpose}</bdi></td>
               <td>{r.createdBy === me.userId ? t('req.by.me') : t('req.by.other')}</td>
               <td><Chip status={r.status} /></td>
-              <td>{r.status === 'submitted' && r.createdBy === me.userId && <Button variant="quiet" isDisabled={!writable} onPress={() => withdraw(r.workflowInstanceId)}>{t('req.withdraw')}</Button>}</td>
-            </tr>))}</tbody>
+              <td>
+                <Button variant="quiet" aria-expanded={filesOf === r.id} onPress={() => setFilesOf(filesOf === r.id ? null : r.id)}>{filesOf === r.id ? t('req.proof.hide') : t('req.proof.files')}</Button>
+                {r.status === 'submitted' && r.createdBy === me.userId && <Button variant="quiet" isDisabled={!writable} onPress={() => withdraw(r.workflowInstanceId)}>{t('req.withdraw')}</Button>}
+              </td>
+            </tr>
+            {filesOf === r.id && <tr><td colSpan={6}><ProofList owner={PROOF_OWNER.duty} ownerId={r.id} canDelete={r.status === 'submitted' && writable} /></td></tr>}
+            </Fragment>))}</tbody>
         </table>
       ))}
       {open && <DutyDialog company={company} isOpen={open} onOpenChange={setOpen} />}
