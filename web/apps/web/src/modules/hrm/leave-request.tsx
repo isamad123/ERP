@@ -1,5 +1,6 @@
 // The leave request page (slice S1.33a; FR-HRM-LVE-04 to -06, -16, GHR-09): the link target of the approvals inbox and of "My leave". Days one by one, the balance impact of a
 // waiting request, the ledger entries the request made, the files, who applied (and for whom). Decisions stay in the shared inbox (FR-XM-32); this page only shows.
+import { Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useDocumentTitle } from '@erp/engine';
@@ -56,7 +57,7 @@ export default function LeaveRequestPage() {
           <dt>{t('leave.facts.reason')}</dt><dd>{d.reason ? <bdi>{d.reason}</bdi> : t('leave.facts.none')}</dd>
           <dt>{t('leave.facts.appliedBy')}</dt><dd>{d.onBehalf ? (mine ? t('leave.facts.onBehalf.you') : t('leave.facts.onBehalf.other')) : (mine ? t('leave.facts.self.you') : t('leave.facts.self'))}</dd>
           {d.modifiesRequestId && <><dt>{t('leave.facts.changes')}</dt><dd><Link href={`/time/leave/requests/${d.modifiesRequestId}`}>{t('leave.facts.changes.link')}</Link></dd></>}
-          {d.changes.map((c) => <><dt key={`${c.id}-t`}>{t('leave.facts.changedBy')}</dt><dd key={c.id}><Link href={`/time/leave/requests/${c.id}`}><bdi>{c.requestNo}</bdi></Link> {t(`leave.status.${c.status}` as MessageKey)}</dd></>)}
+          {d.changes.map((c) => <Fragment key={c.id}><dt>{t('leave.facts.changedBy')}</dt><dd><Link href={`/time/leave/requests/${c.id}`}><bdi>{c.requestNo}</bdi></Link> {t(`leave.status.${c.status}` as MessageKey)}</dd></Fragment>)}
         </dl>
 
         {d.impact && (

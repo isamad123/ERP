@@ -225,7 +225,7 @@ export default function ApplyScreen() {
               <SelectField label={single ? t('leave.apply.part.day') : t('leave.apply.part.first')} options={partOptions} value={startPart} isDisabled={lockedForm} error={field('startPart')} onChange={(id) => setStartPart(id as LeavePart)} />
               {!single && <SelectField label={t('leave.apply.part.last')} options={partOptions} value={endPart} isDisabled={lockedForm} error={field('endPart')} onChange={(id) => setEndPart(id as LeavePart)} />}
             </>)}
-          {hourly && <TextField label={t('leave.apply.hours')} help={t('leave.apply.hours.help')} isRequired value={hours} isDisabled={lockedForm} inputMode="decimal" error={field('hours')} onChange={setHours} isCode />}
+          {hourly && <TextField label={t('leave.apply.hours')} help={t('leave.apply.hours.help')} isRequired value={hours} isDisabled={lockedForm} inputMode="numeric" error={field('hours')} onChange={setHours} isCode />}
           <TextAreaField label={t('leave.apply.reason')} value={reason} maxLength={500} isDisabled={lockedForm} error={field('reason')} onChange={setReason} />
           {type && <FilePicker uploads={uploads} required={type.requiresDocument} isDisabled={send.isPending || !!draft && !uploads.states.some((s) => s === 'failed')} />}
           {documentMissing && <p role="status" className="erp-help">{t('leave.apply.documentMissing')}</p>}
