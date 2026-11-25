@@ -11,13 +11,16 @@ public sealed record DayPunch(Guid Id, DateTimeOffset At, string Direction, bool
 public sealed record DayShift(Guid Id, string Code, string ShiftType, TimeOnly Start, TimeOnly End, TimeOnly? CoreStart, TimeOnly? CoreEnd, bool CrossesMidnight, int MinFullDayMinutes);
 
 /// <summary>
-/// What the day is planned to be (slice S1.29 Build item 2): <see cref="Source"/> is <c>roster</c> (a published roster line, S1.28a),
-/// <c>weekly_off_pattern</c> (no line, the shift policy's pattern says off) or <c>none</c> (nothing planned: the day is unscheduled).
+/// What the day is planned to be (slice S1.29 Build item 2), as the effective shift of S1.28b answers it (R-158): <see cref="Source"/> is
+/// <c>roster</c> (a published roster line, S1.28a), <c>weekly_off_pattern</c> (no line, the shift policy's pattern says off),
+/// <c>holiday_calendar</c> (no line, not a weekly off, and a holiday of the employee's calendar) or <c>none</c> (nothing planned: the day is
+/// unscheduled). <see cref="Season"/> names the <c>seasonal_timing</c> season whose times the shift carries on this day, if any.
 /// </summary>
-public sealed record DayPlan(string Source, string DayType, DayShift? Shift)
+public sealed record DayPlan(string Source, string DayType, DayShift? Shift, DaySeason? Season = null)
 {
     public const string FromRoster = "roster";
     public const string FromPattern = "weekly_off_pattern";
+    public const string FromCalendar = "holiday_calendar";
     public const string Unplanned = "none";
 
     public const string Working = "working";
@@ -26,6 +29,9 @@ public sealed record DayPlan(string Source, string DayType, DayShift? Shift)
 
     public static DayPlan None { get; } = new(Unplanned, Working, null);
 }
+
+/// <summary>The season of a <c>seasonal_timing</c> policy that changed the shift's times on the day (S1.28b): its name and the policy's code.</summary>
+public sealed record DaySeason(string Name, string PolicyCode);
 
 /// <summary>
 /// An approved leave day (contract <c>IApprovedLeaveDays</c>): the request, the part of a day (1 = whole day) and which half; hourly leave gives
@@ -165,6 +171,8 @@ public static class DayRules
     public const string StepShift = "hrm.att.step.shift";
     public const string StepRosterDay = "hrm.att.step.roster_day";
     public const string StepPattern = "hrm.att.step.weekly_off_pattern";
+    public const string StepCalendarHoliday = "hrm.att.step.holiday_calendar";
+    public const string StepSeason = "hrm.att.step.season";
     public const string StepPunches = "hrm.att.step.punches";
     public const string StepNotCounted = "hrm.att.step.not_counted";
     public const string StepOutsideWindow = "hrm.att.step.outside_window";
@@ -196,7 +204,7 @@ public static class DayRules
     [
         ExplainHoliday, ExplainWeeklyOff, ExplainOnLeave, ExplainOnDuty, ExplainAbsentNoPunch, ExplainAbsentWorked, ExplainMissingOut, ExplainMissingIn,
         ExplainUnscheduled, ExplainHalfDayWorked, ExplainHalfDayLate, ExplainHalfDayEarly, ExplainLate, ExplainPresent, ExplainPresentLeftEarly,
-        StepShift, StepRosterDay, StepPattern, StepPunches, StepNotCounted, StepOutsideWindow, StepBreakFixed, StepBreakPunches, StepRounded, StepWithinGrace,
+        StepShift, StepRosterDay, StepPattern, StepCalendarHoliday, StepSeason, StepPunches, StepNotCounted, StepOutsideWindow, StepBreakFixed, StepBreakPunches, StepRounded, StepWithinGrace,
         StepEarly, StepEarlyWithinGrace, StepFullDay, StepPartLeave, StepOddCount, StepRestWorkRecorded, StepRestWorkIgnored, StepPunchesIgnored, StepPolicy,
         StepDutyPart, StepHourLeave,
     ];
@@ -213,6 +221,24 @@ public static class DayRules
         }
 
         return (start, start.AddMinutes(span));
+    }
+
+    /// <summary>
+    /// The shift with a season's times (S1.28b <c>seasonal_timing</c>; R-158): start, end and crossing midnight come from the season, and the
+    /// shift's own full-day minutes shrink or grow in proportion to the span (a 9-hour shift needing 480 minutes, cut to 6 hours, needs 320). A
+    /// policy's <c>fullDayMinutes</c> stays absolute (it is the policy's own rule), and the policy decides how breaks count, as on any day.
+    /// </summary>
+    public static DayShift WithSeason(DayShift shift, TimeOnly start, TimeOnly end, bool crossesMidnight)
+    {
+        ArgumentNullException.ThrowIfNull(shift);
+        var seasonal = shift with { Start = start, End = end, CrossesMidnight = crossesMidnight };
+        var (baseStart, baseEnd) = ShiftTimes(DateOnly.MinValue, shift);
+        var (newStart, newEnd) = ShiftTimes(DateOnly.MinValue, seasonal);
+        var baseSpan = (long)(baseEnd - baseStart).TotalMinutes;
+        var newSpan = (long)(newEnd - newStart).TotalMinutes;
+        return baseSpan <= 0 || baseSpan == newSpan
+            ? seasonal
+            : seasonal with { MinFullDayMinutes = (int)(shift.MinFullDayMinutes * newSpan / baseSpan) };
     }
 
     /// <summary>
@@ -273,6 +299,15 @@ public static class DayRules
         else if (plan.Source == DayPlan.FromPattern)
         {
             steps.Add(Line(StepPattern));
+        }
+        else if (plan.Source == DayPlan.FromCalendar)
+        {
+            steps.Add(Line(StepCalendarHoliday));
+        }
+
+        if (plan.Season is { } season)
+        {
+            steps.Add(Line(StepSeason, ("season", season.Name), ("policy", season.PolicyCode)));
         }
 
         if (shift is not null)

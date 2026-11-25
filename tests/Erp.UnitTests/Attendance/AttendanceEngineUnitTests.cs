@@ -255,6 +255,44 @@ public sealed class AttendanceEngineUnitTests
         Assert.All(DayRules.Keys.Where(k => k.Contains(".explain.", StringComparison.Ordinal)), k => Assert.Matches(@"\p{IsArabic}", ur[k]));
     }
 
+    [Fact]
+    public void FR_HRM_ATT_16_R158_a_calendar_holiday_without_a_roster_line_is_a_holiday_and_work_on_it_is_recorded()
+    {
+        var plan = new DayPlan(DayPlan.FromCalendar, DayPlan.Holiday, null);
+        var rest = DayRules.Evaluate(Input(plan, []));
+        Assert.Equal(("holiday", "holiday"), (rest.Result, rest.Explanation.Rule));
+        Assert.Equal(DayRules.StepCalendarHoliday, rest.Explanation.Steps[0].Key);
+
+        var worked = DayRules.Evaluate(Input(plan, [P("10:00"), P("14:00", "out")]));
+        Assert.Equal(("holiday", 180), (worked.Result, worked.WorkedMinutes)); // four hours less the policy's fixed 60-minute break
+        Assert.Contains(worked.Explanation.Steps, s => s.Key == DayRules.StepRestWorkRecorded);
+    }
+
+    [Fact]
+    public void FR_HRM_ATT_16_R158_a_season_moves_the_shift_and_scales_the_shifts_full_day_but_not_the_policys()
+    {
+        // Ramzan 09:00 to 15:00 instead of 09:00 to 18:00: 6 of 9 hours, so the shift's 420 full-day minutes become 280.
+        var ramzan = DayRules.WithSeason(DayShift9To6, new(9, 0), new(15, 0), false);
+        Assert.Equal((new TimeOnly(9, 0), new TimeOnly(15, 0), false, 420 * 6 / 9), (ramzan.Start, ramzan.End, ramzan.CrossesMidnight, ramzan.MinFullDayMinutes));
+        Assert.Equal(DayShift9To6, DayRules.WithSeason(DayShift9To6, new(8, 0), new(17, 0), false) with { Start = new(9, 0), End = new(18, 0) }); // same span: unchanged
+        Assert.Equal(390 * 7 / 8, DayRules.WithSeason(Night, new(21, 0), new(4, 0), true).MinFullDayMinutes);
+
+        var plan = new DayPlan(DayPlan.FromRoster, DayPlan.Working, ramzan, new DaySeason("Ramzan", "RAMZAN-26"));
+        var leftAtThree = DayRules.Evaluate(Input(plan, [P("09:00"), P("15:00", "out")], Policy(v => v["breakMinutes"] = 0)));
+        Assert.Equal(("present", "present", 360, 0), (leftAtThree.Result, leftAtThree.Explanation.Rule, leftAtThree.WorkedMinutes, leftAtThree.EarlyMinutes));
+        var season = Assert.Single(leftAtThree.Explanation.Steps, s => s.Key == DayRules.StepSeason);
+        Assert.Equal("Ramzan", season.Params["season"]);
+        Assert.Contains(leftAtThree.Explanation.Steps, s => s.Key == DayRules.StepShift && (string)s.Params["end"] == "15:00");
+
+        // The same punches on the ordinary shift leave three hours early.
+        var ordinary = DayRules.Evaluate(Input(Working(DayShift9To6), [P("09:00"), P("15:00", "out")], Policy(v => v["breakMinutes"] = 0)));
+        Assert.Equal(180, ordinary.EarlyMinutes);
+
+        // A policy's own fullDayMinutes is the policy's rule and is not scaled.
+        var strict = DayRules.Evaluate(Input(plan, [P("09:00"), P("15:00", "out")], Policy(v => { v["breakMinutes"] = 0; v["fullDayMinutes"] = 420; })));
+        Assert.Equal(("half_day", "half_day_worked"), (strict.Result, strict.Explanation.Rule));
+    }
+
     private static Dictionary<string, string> Texts(string lang) =>
         JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(Path.Combine(Root, $"src/Modules/Hrm/Erp.Hrm.Contracts/Attendance/Localization/attendance.{lang}.json")))!;
 

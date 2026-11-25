@@ -26,6 +26,8 @@ public static class AttendanceServices
         services.TryAddScoped<IApprovedLeaveDays, ApprovedLeaveDaysReader>();
         services.TryAddScoped<IApprovedDutyDays, ApprovedDutyDaysReader>();
         services.TryAddScoped<IAttendanceReprocessing, AttendanceReprocessing>();
+        services.AddScoped<EffectiveShiftReader>(); // S1.28b's effective shift is the engine's day plan (R-158); needs IHolidayCalendars from the host
+        services.AddScoped<IEffectiveShiftReader>(sp => sp.GetRequiredService<EffectiveShiftReader>());
         services.AddScoped<AttendanceDayProcessor>();
         return services;
     }
@@ -50,7 +52,6 @@ public static class AttendanceServices
         services.AddScoped<IHolidayService, HolidayService>(); // S1.28b: Hijri dates and optional holidays
         services.AddScoped<EffectiveShiftService>();
         services.AddScoped<IEffectiveShiftService>(sp => sp.GetRequiredService<EffectiveShiftService>());
-        services.AddScoped<IEffectiveShiftReader>(sp => sp.GetRequiredService<EffectiveShiftService>());
         return services;
     }
 
