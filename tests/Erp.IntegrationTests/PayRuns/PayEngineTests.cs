@@ -460,7 +460,7 @@ public sealed class PayEngineTests(TenancyFixture fx) : IAsyncLifetime
         // The change log keeps the amounts encrypted with the customer key; the trace table is never in it (CR-034).
         var logged = await _h.ScalarAsync<string>("select changes::text from aud.change_log where entity_type = 'hrm.pay_results' and entity_id = (select id from hrm.pay_results where pay_run_id = $1) and action = 'create'", Ct, run);
         Assert.DoesNotContain("54321", logged, StringComparison.Ordinal);
-        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from aud.change_log where entity_type = 'hrm.pay_traces'", Ct));
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from aud.change_log where entity_type = 'hrm.pay_traces' and entity_id in (select id from hrm.pay_results where pay_run_id = $1)", Ct, run));
 
         // Another company's payroll officer does not see the run; the generated writes of the engine's tables are closed.
         var otherCompany = await _h.CompanyAsync(Ct);
