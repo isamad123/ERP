@@ -14,6 +14,7 @@ public static class HrmGeneratedEndpoints
 {
     public static IEndpointRouteBuilder MapHrmGeneratedEndpoints(this IEndpointRouteBuilder app)
     {
+        global::Erp.Hrm.Api.Generated.AttendanceAdjustmentEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.AttendanceDayEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.AttendanceDeviceEndpoints.Map(app);
         global::Erp.Hrm.Api.Generated.AttendanceEventEndpoints.Map(app);
@@ -219,6 +220,7 @@ public static class HrmExportReaders
 {
     public static global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddHrmExportReaders(this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
     {
+        global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Contracts.Itg.IExportRowReader, global::Erp.Hrm.Api.Generated.AttendanceAdjustmentEndpoints.ExportReader>());
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Contracts.Itg.IExportRowReader, global::Erp.Hrm.Api.Generated.AttendanceDayEndpoints.ExportReader>());
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Contracts.Itg.IExportRowReader, global::Erp.Hrm.Api.Generated.AttendanceDeviceEndpoints.ExportReader>());
         global::Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddEnumerable(services, global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Erp.Kernel.Contracts.Itg.IExportRowReader, global::Erp.Hrm.Api.Generated.AttendanceEventEndpoints.ExportReader>());

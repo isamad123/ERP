@@ -290,7 +290,9 @@ internal static class LeaveYearEndPosting
 
             if (line.Encash != 0m)
             {
-                posted += await InsertAsync(db, run.CompanyId, line.EmploymentId, line.LeaveTypeId, run.LeaveYear, line.YearEnd, "encashment", -line.Encash, null, Source, outId, line.PolicyVersionId, "year_end", now, actor, ct).ConfigureAwait(false);
+                // Paid out by payroll: dated in the next open payroll period when the year's last day is locked (S1.31, R-304; the database refuses it inside a lock).
+                var paidOn = await Attendance.AttendancePeriodQueries.OpenDateAsync(db, line.EmploymentId, line.YearEnd, ct).ConfigureAwait(false);
+                posted += await InsertAsync(db, run.CompanyId, line.EmploymentId, line.LeaveTypeId, run.LeaveYear, paidOn, "encashment", -line.Encash, null, Source, outId, line.PolicyVersionId, "year_end", now, actor, ct).ConfigureAwait(false);
             }
 
             if (line.CarryForward != 0m)

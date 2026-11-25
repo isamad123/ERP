@@ -736,7 +736,8 @@ internal static class LeaveCancellation
         {
             if (await locks.IsLockedAsync(r.EmploymentId, d, ct).ConfigureAwait(false))
             {
-                return PeopleResult.Conflict(LeaveLedgerService.PeriodLocked, new Dictionary<string, object?> { ["date"] = d });
+                // FR-XM-26 (S1.31): the cancellation becomes a retroactive adjustment (POST /api/hrm/attendance/adjustments, kind leave_cancellation).
+                return PeopleResult.Conflict(LeaveLedgerService.PeriodLocked, new Dictionary<string, object?> { ["date"] = d, ["adjustmentKind"] = "leave_cancellation" });
             }
         }
 

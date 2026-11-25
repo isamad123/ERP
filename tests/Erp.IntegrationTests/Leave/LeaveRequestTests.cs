@@ -535,7 +535,7 @@ public sealed class LeaveRequestTests(TenancyFixture fx) : IAsyncLifetime
         await _h.ExecAsync("update hrm.employment_assignments set pay_group_id = $2 where employment_id = $1", Ct, s.Employment, group);
         var later = (await _h.PostAsync(s.User, Requests, Ask(unpaid, Base.AddDays(8)), Ct)).Json.GetProperty("id").GetGuid();
         await ApproveAsync(s.ManagerUser, later);
-        await _h.ExecAsync("update hrm.attendance_periods set status = 'locked' where pay_period_id = $1", Ct, period);
+        await _h.ExecAsync("update hrm.attendance_periods set status = 'locked', locked_at = now(), lock_kind = 'manual', locked_by = created_by where pay_period_id = $1", Ct, period);
         var refused = await _h.PostAsync(s.User, Requests, Ask(unpaid, Base.AddDays(9)), Ct);
         Assert.True(refused.Status == HttpStatusCode.Conflict, refused.Body);
         Assert.Contains("errors.hrm.leave.period_locked", refused.Body, StringComparison.Ordinal);

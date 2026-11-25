@@ -130,8 +130,9 @@ public sealed class GeneratorTests
         // 30 from S1.02; S1.03 implemented SC-2 (org.branches), S1.10a FR-XM-32 (wf.workflow_tasks), S1.14b the unit link cycle check
         // (org.org_unit_links), S1.20b the manager cycle and the cost allocation of hrm.employment_assignments, S1.20d the bank fields
         // of hrm.employee_bank_accounts, S1.22a the position reporting cycle (hrm.positions), S1.34b the component base cycle
-        // (hrm.pay_component_versions), S1.32b the leave transfer pair (hrm.leave_ledger) and the daily leave total (hrm.leave_request_days).
-        Assert.Equal(20, stubs.Count);
+        // (hrm.pay_component_versions), S1.32b the leave transfer pair (hrm.leave_ledger) and the daily leave total (hrm.leave_request_days), S1.31 the
+        // attendance period lock and the lock of its day results (FR-XM-26).
+        Assert.Equal(18, stubs.Count);
         Assert.Equal(30, Model.Value.AllStubs.Count());
         Assert.Equal(["employment_assignments_cost_allocation_sum", "employment_assignments_manager_cycle"],
             Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.20b").Select(s => s.Name).Order(StringComparer.Ordinal));
@@ -144,7 +145,8 @@ public sealed class GeneratorTests
         Assert.Equal(["leave_ledger_transfer", "leave_request_days_daily_total"],
             Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.32b").Select(s => s.Name).Order(StringComparer.Ordinal));
         Assert.All(stubs, s => Assert.Matches(@"^S1\.\d{2}$", s.Owner));
-        Assert.Contains(stubs, s => s.Name == "attendance_periods_lock" && s.Owner == "S1.31"); // FR-XM-26
+        Assert.Equal(["attendance_days_lock", "attendance_periods_lock"],
+            Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.31" && s.Owner == "S1.31").Select(s => s.Name).Order(StringComparer.Ordinal)); // FR-XM-26
         Assert.Contains(Model.Value.ImplementedStubs, s => s.Name == "workflow_tasks_no_self_approval" && s.Owner == "S1.10"); // FR-XM-32
     }
 

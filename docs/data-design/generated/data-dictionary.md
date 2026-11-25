@@ -2,14 +2,14 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 228 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 229 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
 | customer | aud | 7 |
 | customer | cfg | 20 |
 | customer | doc | 7 |
-| customer | hrm | 117 |
+| customer | hrm | 118 |
 | customer | iam | 24 |
 | customer | itg | 12 |
 | customer | job | 5 |
@@ -979,9 +979,69 @@ Indexes:
 - `ix_templates_id_active_version_id` CREATE INDEX ix_templates_id_active_version_id ON doc.templates USING btree (id, active_version_id)
 - `uq_templates_code_company_id_language` CREATE UNIQUE INDEX uq_templates_code_company_id_language ON doc.templates USING btree (lower(code), company_id, language) NULLS NOT DISTINCT
 
+### hrm.attendance_adjustments
+
+A change to attendance or leave of a locked period, carried into the next open payroll period; the locked days stay as they were (S1.31, CR-091, FR-XM-26). Requirements: ATT-17, FR-XM-26. Source: hrm-time.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| company_id | uuid | no |  |  |
+| employment_id | uuid | no |  | fk hrm.employments |
+| period_id | uuid | no |  | fk hrm.attendance_periods; the locked period of the dates |
+| from_date | date | no |  |  |
+| to_date | date | no |  |  |
+| kind | text | no |  | a day's result, approved leave cancelled, or overtime of a locked day |
+| leave_request_id | uuid | yes |  | fk hrm.leave_requests; the approved leave cancelled (kind leave_cancellation) |
+| old_summary | jsonb | no |  | the locked result of each day (result, minutes, leave, overtime) as payroll read it |
+| new_summary | jsonb | no |  | the corrected result of each day |
+| reason | text | no |  |  |
+| target_pay_period_id | uuid | no |  | fk hrm.pay_periods; the next open payroll period of the employment's pay group, set again on approval |
+| leave_reversal_id | uuid | yes |  | fk hrm.leave_ledger; the usage reversal dated in the target period (kind leave_cancellation) |
+| workflow_instance_id | uuid | yes |  | fk wf.workflow_instances |
+| applied_in_run_id | uuid | yes |  | fk hrm.pay_runs; the run that paid or recovered it (S1.39) |
+| status_history | jsonb | no |  | every status the adjustment took with who and when; only added to |
+| status | text | no |  |  |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `ck_attendance_adjustments_kind` CHECK ((kind = ANY (ARRAY['attendance'::text, 'leave_cancellation'::text, 'overtime'::text])))
+- `ck_attendance_adjustments_status` CHECK ((status = ANY (ARRAY['submitted'::text, 'approved'::text, 'rejected'::text, 'withdrawn'::text, 'applied'::text])))
+- `fk_attendance_adjustments_applied_in_run_id` FOREIGN KEY (company_id, applied_in_run_id) REFERENCES hrm.pay_runs(company_id, id)
+- `fk_attendance_adjustments_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
+- `fk_attendance_adjustments_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
+- `fk_attendance_adjustments_leave_request_id` FOREIGN KEY (company_id, leave_request_id) REFERENCES hrm.leave_requests(company_id, id)
+- `fk_attendance_adjustments_leave_reversal_id` FOREIGN KEY (company_id, leave_reversal_id) REFERENCES hrm.leave_ledger(company_id, id)
+- `fk_attendance_adjustments_period_id` FOREIGN KEY (company_id, period_id) REFERENCES hrm.attendance_periods(company_id, id)
+- `fk_attendance_adjustments_target_pay_period_id` FOREIGN KEY (company_id, target_pay_period_id) REFERENCES hrm.pay_periods(company_id, id)
+- `fk_attendance_adjustments_workflow_instance_id` FOREIGN KEY (company_id, workflow_instance_id) REFERENCES wf.workflow_instances(company_id, id)
+- `pk_attendance_adjustments` PRIMARY KEY (id)
+
+Indexes:
+
+- `ix_attendance_adjustments_company_id_applied_in_run_id` CREATE INDEX ix_attendance_adjustments_company_id_applied_in_run_id ON hrm.attendance_adjustments USING btree (company_id, applied_in_run_id)
+- `ix_attendance_adjustments_company_id_employment_id` CREATE INDEX ix_attendance_adjustments_company_id_employment_id ON hrm.attendance_adjustments USING btree (company_id, employment_id)
+- `ix_attendance_adjustments_company_id_leave_request_id` CREATE INDEX ix_attendance_adjustments_company_id_leave_request_id ON hrm.attendance_adjustments USING btree (company_id, leave_request_id)
+- `ix_attendance_adjustments_company_id_leave_reversal_id` CREATE INDEX ix_attendance_adjustments_company_id_leave_reversal_id ON hrm.attendance_adjustments USING btree (company_id, leave_reversal_id)
+- `ix_attendance_adjustments_company_id_period_id` CREATE INDEX ix_attendance_adjustments_company_id_period_id ON hrm.attendance_adjustments USING btree (company_id, period_id)
+- `ix_attendance_adjustments_company_id_status` CREATE INDEX ix_attendance_adjustments_company_id_status ON hrm.attendance_adjustments USING btree (company_id, status)
+- `ix_attendance_adjustments_company_id_target_pay_period_id` CREATE INDEX ix_attendance_adjustments_company_id_target_pay_period_id ON hrm.attendance_adjustments USING btree (company_id, target_pay_period_id)
+- `ix_attendance_adjustments_company_id_workflow_instance_id` CREATE INDEX ix_attendance_adjustments_company_id_workflow_instance_id ON hrm.attendance_adjustments USING btree (company_id, workflow_instance_id)
+- `ix_attendance_adjustments_employment_id_from_date` CREATE INDEX ix_attendance_adjustments_employment_id_from_date ON hrm.attendance_adjustments USING btree (employment_id, from_date)
+- `ix_attendance_adjustments_target_pay_period_id_status` CREATE INDEX ix_attendance_adjustments_target_pay_period_id_status ON hrm.attendance_adjustments USING btree (target_pay_period_id, status)
+
+Triggers:
+
+- `tg_attendance_adjustments_rules` CREATE TRIGGER tg_attendance_adjustments_rules BEFORE INSERT OR DELETE OR UPDATE ON hrm.attendance_adjustments FOR EACH ROW EXECUTE FUNCTION hrm.tg_attendance_adjustments_rules()
+
 ### hrm.attendance_days
 
-Processed daily result per employee with explanation. Requirements: ATT-10, ATT-13, ATT-18, ATT-19, FR-XM-26. Pending rule (S1.31, placeholder hrm.todo_attendance_days_lock): Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26). Source: hrm-time.yaml.
+Processed daily result per employee with explanation. Requirements: ATT-10, ATT-13, ATT-18, ATT-19, FR-XM-26. Rule (implemented in S1.31): Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26). Source: hrm-time.yaml.
 
 Partitioned by range; 37 partitions.
 
@@ -1040,6 +1100,7 @@ Indexes:
 
 Triggers:
 
+- `tg_attendance_days_lock` CREATE TRIGGER tg_attendance_days_lock BEFORE INSERT OR DELETE OR UPDATE ON hrm.attendance_days FOR EACH ROW EXECUTE FUNCTION hrm.tg_attendance_days_lock()
 - `tg_attendance_days_versions` CREATE TRIGGER tg_attendance_days_versions BEFORE DELETE OR UPDATE ON hrm.attendance_days FOR EACH ROW EXECUTE FUNCTION hrm.tg_attendance_days_versions()
 
 ### hrm.attendance_devices
@@ -1232,11 +1293,12 @@ Indexes:
 
 Triggers:
 
+- `tg_attendance_penalties_lock` CREATE TRIGGER tg_attendance_penalties_lock BEFORE INSERT OR DELETE OR UPDATE ON hrm.attendance_penalties FOR EACH ROW EXECUTE FUNCTION hrm.tg_attendance_penalties_lock()
 - `tg_attendance_penalties_rules` CREATE TRIGGER tg_attendance_penalties_rules BEFORE INSERT OR DELETE OR UPDATE ON hrm.attendance_penalties FOR EACH ROW EXECUTE FUNCTION hrm.tg_attendance_penalties_rules()
 
 ### hrm.attendance_periods
 
-Lock unit for attendance per company and pay group (FR-XM-26). Requirements: ATT-17, ATT-21, FR-XM-26. Pending rule (S1.31, placeholder hrm.todo_attendance_periods_lock): A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments. Source: hrm-time.yaml.
+Lock unit for attendance per company and pay group (FR-XM-26). Requirements: ATT-17, ATT-21, FR-XM-26. Rule (implemented in S1.31): A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments. Source: hrm-time.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -1254,24 +1316,45 @@ Lock unit for attendance per company and pay group (FR-XM-26). Requirements: ATT
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| lock_kind | text | yes |  | who locked: payroll's calculation (locked_by_run_id) or HR after the cut-off date with approval (S1.31) |
+| locked_by | uuid | yes |  | the user who locked: the payroll run's calculator or the HR requester (S1.31) |
+| lock_reason | text | yes |  | why HR asks to lock, or locked, before payroll (S1.31) |
+| lock_requested_by | uuid | yes |  | who asked HR's lock, waiting or decided (S1.31) |
+| lock_accept_open | boolean | yes |  | HR's lock request accepts days not processed and open exceptions (S1.31) |
+| unprocessed_accepted | integer | yes |  | employee days not processed that the lock accepted (S1.31); null when every day was processed |
+| exceptions_accepted | integer | yes |  | open exceptions the lock accepted (S1.31); null when none was open |
+| lock_workflow_instance_id | uuid | yes |  | fk wf.workflow_instances; HR's lock request, waiting or decided (S1.31) |
+| reopen_workflow_instance_id | uuid | yes |  | fk wf.workflow_instances; the request to cancel the locking run and reopen (S1.31) |
+| reopen_requested_by | uuid | yes |  | who asked to cancel the locking run and reopen (S1.31) |
+| reopened_at | timestamp with time zone | yes |  | when the period last reopened (S1.31) |
+| reopen_reason | text | yes |  | why it is asked to reopen, or last reopened (S1.31) |
 
 Constraints:
 
+- `ck_attendance_periods_lock_kind` CHECK ((lock_kind = ANY (ARRAY['payroll'::text, 'manual'::text])))
 - `ck_attendance_periods_status` CHECK ((status = ANY (ARRAY['open'::text, 'locked'::text])))
 - `ex_attendance_periods_pay_group_id_period` EXCLUDE USING gist (pay_group_id WITH =, daterange(period_start, period_end, '[]'::text) WITH &&)
 - `fk_attendance_periods_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
+- `fk_attendance_periods_lock_workflow_instance_id` FOREIGN KEY (company_id, lock_workflow_instance_id) REFERENCES wf.workflow_instances(company_id, id)
 - `fk_attendance_periods_locked_by_run_id` FOREIGN KEY (company_id, locked_by_run_id) REFERENCES hrm.pay_runs(company_id, id)
 - `fk_attendance_periods_pay_group_id` FOREIGN KEY (company_id, pay_group_id) REFERENCES hrm.pay_groups(company_id, id)
 - `fk_attendance_periods_pay_period_id` FOREIGN KEY (company_id, pay_period_id) REFERENCES hrm.pay_periods(company_id, id)
+- `fk_attendance_periods_reopen_workflow_instance_id` FOREIGN KEY (company_id, reopen_workflow_instance_id) REFERENCES wf.workflow_instances(company_id, id)
 - `pk_attendance_periods` PRIMARY KEY (id)
 - `uq_attendance_periods_company_id_id` UNIQUE (company_id, id)
 - `uq_attendance_periods_pay_period_id` UNIQUE (pay_period_id)
 
 Indexes:
 
+- `ix_attendance_periods_company_id_lock_workflow_instance_id` CREATE INDEX ix_attendance_periods_company_id_lock_workflow_instance_id ON hrm.attendance_periods USING btree (company_id, lock_workflow_instance_id)
 - `ix_attendance_periods_company_id_locked_by_run_id` CREATE INDEX ix_attendance_periods_company_id_locked_by_run_id ON hrm.attendance_periods USING btree (company_id, locked_by_run_id)
 - `ix_attendance_periods_company_id_pay_group_id` CREATE INDEX ix_attendance_periods_company_id_pay_group_id ON hrm.attendance_periods USING btree (company_id, pay_group_id)
 - `ix_attendance_periods_company_id_pay_period_id` CREATE INDEX ix_attendance_periods_company_id_pay_period_id ON hrm.attendance_periods USING btree (company_id, pay_period_id)
+- `ix_attendance_periods_company_id_reopen_workflow_instance_id` CREATE INDEX ix_attendance_periods_company_id_reopen_workflow_instance_id ON hrm.attendance_periods USING btree (company_id, reopen_workflow_instance_id)
+
+Triggers:
+
+- `tg_attendance_periods_lock` CREATE TRIGGER tg_attendance_periods_lock BEFORE DELETE OR UPDATE ON hrm.attendance_periods FOR EACH ROW EXECUTE FUNCTION hrm.tg_attendance_periods_lock()
 
 ### hrm.benefit_claims
 
@@ -2909,6 +2992,7 @@ Indexes:
 Triggers:
 
 - `tg_leave_ledger_append_only` CREATE TRIGGER tg_leave_ledger_append_only BEFORE DELETE OR UPDATE ON hrm.leave_ledger FOR EACH ROW EXECUTE FUNCTION hrm.tg_refuse_change()
+- `tg_leave_ledger_lock` CREATE TRIGGER tg_leave_ledger_lock BEFORE INSERT ON hrm.leave_ledger FOR EACH ROW EXECUTE FUNCTION hrm.tg_leave_ledger_lock()
 - `tg_leave_ledger_no_truncate` CREATE TRIGGER tg_leave_ledger_no_truncate BEFORE TRUNCATE ON hrm.leave_ledger FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_refuse_change()
 - `tg_leave_ledger_reversal` CREATE TRIGGER tg_leave_ledger_reversal BEFORE INSERT ON hrm.leave_ledger FOR EACH ROW EXECUTE FUNCTION hrm.tg_leave_ledger_reversal()
 - `tg_leave_ledger_transfer` CREATE TRIGGER tg_leave_ledger_transfer BEFORE INSERT ON hrm.leave_ledger FOR EACH ROW EXECUTE FUNCTION hrm.tg_leave_ledger_transfer()
@@ -2954,6 +3038,7 @@ Indexes:
 Triggers:
 
 - `tg_leave_request_days_daily_total` CREATE TRIGGER tg_leave_request_days_daily_total BEFORE INSERT OR UPDATE ON hrm.leave_request_days FOR EACH ROW EXECUTE FUNCTION hrm.tg_leave_request_days_daily_total()
+- `tg_leave_request_days_lock` CREATE TRIGGER tg_leave_request_days_lock BEFORE INSERT OR DELETE OR UPDATE ON hrm.leave_request_days FOR EACH ROW EXECUTE FUNCTION hrm.tg_attendance_lock_guard()
 
 ### hrm.leave_requests
 
@@ -3473,6 +3558,7 @@ Indexes:
 
 Triggers:
 
+- `tg_overtime_entries_lock` CREATE TRIGGER tg_overtime_entries_lock BEFORE INSERT OR DELETE OR UPDATE ON hrm.overtime_entries FOR EACH ROW EXECUTE FUNCTION hrm.tg_attendance_lock_guard()
 - `tg_overtime_entries_rules` CREATE TRIGGER tg_overtime_entries_rules BEFORE INSERT OR DELETE OR UPDATE ON hrm.overtime_entries FOR EACH ROW EXECUTE FUNCTION hrm.tg_overtime_entries_rules()
 
 ### hrm.parallel_run_lines
@@ -4761,6 +4847,10 @@ Indexes:
 - `ix_regularization_requests_company_id_employment_id` CREATE INDEX ix_regularization_requests_company_id_employment_id ON hrm.regularization_requests USING btree (company_id, employment_id)
 - `ix_regularization_requests_company_id_exception_id` CREATE INDEX ix_regularization_requests_company_id_exception_id ON hrm.regularization_requests USING btree (company_id, exception_id)
 - `ix_regularization_requests_company_id_workflow_instance_id` CREATE INDEX ix_regularization_requests_company_id_workflow_instance_id ON hrm.regularization_requests USING btree (company_id, workflow_instance_id)
+
+Triggers:
+
+- `tg_regularization_requests_lock` CREATE TRIGGER tg_regularization_requests_lock BEFORE INSERT OR UPDATE ON hrm.regularization_requests FOR EACH ROW EXECUTE FUNCTION hrm.tg_attendance_lock_guard()
 
 ### hrm.retro_adjustments
 
@@ -7915,8 +8005,14 @@ Constraints:
 - `cfg.tg_refuse_change` 
 - `doc.tg_refuse_change` 
 - `hrm.drop_expired_attendance_partitions` 
+- `hrm.locked_attendance_period` 
+- `hrm.tg_attendance_adjustments_rules` 
+- `hrm.tg_attendance_days_lock` 
 - `hrm.tg_attendance_days_versions` 
+- `hrm.tg_attendance_lock_guard` 
+- `hrm.tg_attendance_penalties_lock` 
 - `hrm.tg_attendance_penalties_rules` 
+- `hrm.tg_attendance_periods_lock` 
 - `hrm.tg_compensation_fixed` 
 - `hrm.tg_compensation_lines_insert` 
 - `hrm.tg_employee_bank_accounts_bank_fields_required` 
@@ -7926,6 +8022,7 @@ Constraints:
 - `hrm.tg_employment_events_fixed` 
 - `hrm.tg_grades_value_checks` 
 - `hrm.tg_headcount_budgets_value_checks` 
+- `hrm.tg_leave_ledger_lock` 
 - `hrm.tg_leave_ledger_reversal` 
 - `hrm.tg_leave_ledger_transfer` 
 - `hrm.tg_leave_request_days_daily_total` 
@@ -7940,8 +8037,6 @@ Constraints:
 - `hrm.tg_positions_value_checks` 
 - `hrm.tg_refuse_change` 
 - `hrm.tg_roster_lines_published` 
-- `hrm.todo_attendance_days_lock` Pending rule for hrm.attendance_days, owned by S1.31: Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26).
-- `hrm.todo_attendance_periods_lock` Pending rule for hrm.attendance_periods, owned by S1.31: A locked period never reopens (FR-XM-26). Unlocking is allowed only if the locking run is cancelled before it is locked itself. Lock trigger covers attendance_days, leave_request_days, overtime_entries and approved regularization_requests dated in the period; changes after lock become hrm.retro_adjustments.
 - `hrm.todo_final_settlements_approval_needs_clearance` Pending rule for hrm.final_settlements, owned by S1.43: status may become approved only when clearance_status in (cleared, waived) (FR-XM-29)
 - `hrm.todo_final_settlements_lock` Pending rule for hrm.final_settlements, owned by S1.43: Header and lines locked by trigger from approved onward; correction by cancel and reissue (FR-XM-05).
 - `hrm.todo_goals_parent_cycle` Pending rule for hrm.goals, owned by S1.49: Cycle check trigger on parent_goal_id.

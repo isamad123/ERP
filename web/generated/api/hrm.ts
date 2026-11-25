@@ -3,6 +3,56 @@
 // </auto-generated>
 import { request, type PagedResult } from './http';
 
+/** hrm.attendance_adjustments: A change to attendance or leave of a locked period, carried into the next open payroll period; the locked days stay as they were (S1.31, CR-091, FR-XM-26). Field rules (S1.06) may leave a field out or mask it as text. */
+export interface AttendanceAdjustment
+{
+    id: string;
+    companyId: string;
+    employmentId: string;
+    periodId: string;
+    fromDate: string;
+    toDate: string;
+    kind: 'attendance' | 'leave_cancellation' | 'overtime';
+    leaveRequestId: string | null;
+    oldSummary: unknown;
+    newSummary: unknown;
+    reason: string;
+    targetPayPeriodId: string;
+    leaveReversalId: string | null;
+    workflowInstanceId: string | null;
+    appliedInRunId: string | null;
+    statusHistory: unknown;
+    status: 'submitted' | 'approved' | 'rejected' | 'withdrawn' | 'applied';
+    createdAt: string;
+    createdBy: string;
+    updatedAt: string;
+    updatedBy: string;
+    rowVersion: number;
+}
+
+export interface AttendanceAdjustmentListQuery
+{
+    after?: string;
+    limit?: number;
+    companyId?: string;
+    employmentId?: string;
+    periodId?: string;
+    leaveRequestId?: string;
+    targetPayPeriodId?: string;
+    leaveReversalId?: string;
+    workflowInstanceId?: string;
+    appliedInRunId?: string;
+    status?: 'submitted' | 'approved' | 'rejected' | 'withdrawn' | 'applied';
+    /** fromDate, status; a leading minus sorts descending. */
+    sort?: 'fromDate' | '-fromDate' | 'status' | '-status';
+}
+
+export const attendanceAdjustments =
+{
+    list: (query: AttendanceAdjustmentListQuery = {}) => request<PagedResult<AttendanceAdjustment>>('GET', '/api/hrm/attendance-adjustments', { query }),
+    get: (id: string) => request<AttendanceAdjustment>('GET', `/api/hrm/attendance-adjustments/${id}`),
+};
+
 /** hrm.attendance_days: Processed daily result per employee with explanation. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface AttendanceDay
 {
@@ -238,24 +288,24 @@ export interface AttendancePeriod
     periodEnd: string;
     lockedAt: string | null;
     lockedByRunId: string | null;
+    lockKind: 'payroll' | 'manual' | null;
+    lockedBy: string | null;
+    lockReason: string | null;
+    lockRequestedBy: string | null;
+    lockAcceptOpen: boolean | null;
+    unprocessedAccepted: number | null;
+    exceptionsAccepted: number | null;
+    lockWorkflowInstanceId: string | null;
+    reopenWorkflowInstanceId: string | null;
+    reopenRequestedBy: string | null;
+    reopenedAt: string | null;
+    reopenReason: string | null;
     status: 'open' | 'locked';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface AttendancePeriodWrite
-{
-    companyId: string;
-    payGroupId: string;
-    payPeriodId: string;
-    periodStart: string;
-    periodEnd: string;
-    lockedAt?: string | null;
-    lockedByRunId?: string | null;
-    status: 'open' | 'locked';
 }
 
 export interface AttendancePeriodListQuery
@@ -266,6 +316,8 @@ export interface AttendancePeriodListQuery
     payGroupId?: string;
     payPeriodId?: string;
     lockedByRunId?: string;
+    lockWorkflowInstanceId?: string;
+    reopenWorkflowInstanceId?: string;
     status?: 'open' | 'locked';
 }
 
@@ -273,8 +325,6 @@ export const attendancePeriods =
 {
     list: (query: AttendancePeriodListQuery = {}) => request<PagedResult<AttendancePeriod>>('GET', '/api/hrm/attendance-periods', { query }),
     get: (id: string) => request<AttendancePeriod>('GET', `/api/hrm/attendance-periods/${id}`),
-    create: (body: AttendancePeriodWrite) => request<AttendancePeriod>('POST', '/api/hrm/attendance-periods', { body }),
-    update: (id: string, body: AttendancePeriodWrite & { rowVersion: number }) => request<AttendancePeriod>('PUT', `/api/hrm/attendance-periods/${id}`, { body }),
 };
 
 /** hrm.benefit_claims: BenefitClaim. Field rules (S1.06) may leave a field out or mask it as text. */

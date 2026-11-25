@@ -24,6 +24,18 @@ internal sealed class AttendancePeriodConfiguration : IEntityTypeConfiguration<g
         builder.Property(e => e.PeriodEnd).HasColumnName("period_end").HasColumnType("date");
         builder.Property(e => e.LockedAt).HasColumnName("locked_at").HasColumnType("timestamptz");
         builder.Property(e => e.LockedByRunId).HasColumnName("locked_by_run_id").HasColumnType("uuid");
+        builder.Property(e => e.LockKind).HasColumnName("lock_kind").HasColumnType("text");
+        builder.Property(e => e.LockedBy).HasColumnName("locked_by").HasColumnType("uuid");
+        builder.Property(e => e.LockReason).HasColumnName("lock_reason").HasColumnType("text");
+        builder.Property(e => e.LockRequestedBy).HasColumnName("lock_requested_by").HasColumnType("uuid");
+        builder.Property(e => e.LockAcceptOpen).HasColumnName("lock_accept_open").HasColumnType("boolean");
+        builder.Property(e => e.UnprocessedAccepted).HasColumnName("unprocessed_accepted").HasColumnType("integer");
+        builder.Property(e => e.ExceptionsAccepted).HasColumnName("exceptions_accepted").HasColumnType("integer");
+        builder.Property(e => e.LockWorkflowInstanceId).HasColumnName("lock_workflow_instance_id").HasColumnType("uuid");
+        builder.Property(e => e.ReopenWorkflowInstanceId).HasColumnName("reopen_workflow_instance_id").HasColumnType("uuid");
+        builder.Property(e => e.ReopenRequestedBy).HasColumnName("reopen_requested_by").HasColumnType("uuid");
+        builder.Property(e => e.ReopenedAt).HasColumnName("reopened_at").HasColumnType("timestamptz");
+        builder.Property(e => e.ReopenReason).HasColumnName("reopen_reason").HasColumnType("text");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
@@ -61,6 +73,14 @@ internal sealed class AttendancePeriodRepository(
         if (filter.LockedByRunId is { } lockedByRunIdFilter)
         {
             query = query.Where(e => e.LockedByRunId == lockedByRunIdFilter);
+        }
+        if (filter.LockWorkflowInstanceId is { } lockWorkflowInstanceIdFilter)
+        {
+            query = query.Where(e => e.LockWorkflowInstanceId == lockWorkflowInstanceIdFilter);
+        }
+        if (filter.ReopenWorkflowInstanceId is { } reopenWorkflowInstanceIdFilter)
+        {
+            query = query.Where(e => e.ReopenWorkflowInstanceId == reopenWorkflowInstanceIdFilter);
         }
         if (filter.Status is { } statusFilter)
         {
