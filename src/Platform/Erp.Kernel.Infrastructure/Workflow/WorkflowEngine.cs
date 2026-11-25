@@ -211,7 +211,7 @@ public sealed partial class WorkflowEngine(
 
             if (via != "fallback" && step.Fallback is not null)
             {
-                var fallback = await DecidersAsync(work, request, await _people.ResolveAsync(work, step.Fallback, request.Instance, request.Values, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
+                var fallback = await DecidersAsync(work, request, await _people.ResolveAsync(work, step.Fallback, request.Instance, request.Type, request.Values, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
                 var others = fallback.People.Where(p => !request.Instance.Excludes(p)).ToList();
                 if (others.Count > 0)
                 {
@@ -235,10 +235,10 @@ public sealed partial class WorkflowEngine(
     /// </summary>
     private async Task<(ApproverTarget Target, string Via)> TargetAsync(WorkflowWork work, Request request, RouteStep step, CancellationToken ct)
     {
-        var target = await DecidersAsync(work, request, await _people.ResolveAsync(work, step.Approver, request.Instance, request.Values, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
+        var target = await DecidersAsync(work, request, await _people.ResolveAsync(work, step.Approver, request.Instance, request.Type, request.Values, ct).ConfigureAwait(false), ct).ConfigureAwait(false);
         if (target.IsEmpty && step.Fallback is not null)
         {
-            return (await DecidersAsync(work, request, await _people.ResolveAsync(work, step.Fallback, request.Instance, request.Values, ct).ConfigureAwait(false), ct).ConfigureAwait(false), "fallback");
+            return (await DecidersAsync(work, request, await _people.ResolveAsync(work, step.Fallback, request.Instance, request.Type, request.Values, ct).ConfigureAwait(false), ct).ConfigureAwait(false), "fallback");
         }
 
         return (target, "approver");

@@ -111,7 +111,7 @@ public sealed partial class WorkflowEngine
             : [];
         if (people.Count == 0 && step.Escalation is { } spec)
         {
-            var target = await _people.ResolveAsync(work, spec, request.Instance, request.Values, ct).ConfigureAwait(false);
+            var target = await _people.ResolveAsync(work, spec, request.Instance, request.Type, request.Values, ct).ConfigureAwait(false);
             people = await DecidersAsync(work, request, target.People.Where(p => !request.Instance.Excludes(p) && p != task.AssigneeUserId), ct).ConfigureAwait(false);
             roleId = target.RoleId;
             via = "escalation";

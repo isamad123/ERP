@@ -252,6 +252,7 @@ internal sealed class AttendanceRequestService(
 
                 db.Add(row);
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                values["employment"] = JsonSerializer.SerializeToElement(employment.Id.ToString()); // the manager step follows the subject's employment (R-305)
                 if (employment.UserRef is { } user)
                 {
                     values["employee"] = JsonSerializer.SerializeToElement(user.ToString());
