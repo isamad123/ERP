@@ -126,4 +126,11 @@ public interface IAttachmentOwner
 public interface IRecordFiles
 {
     Task<IReadOnlyList<Guid>> CurrentAsync(string ownerType, Guid ownerId, System.Data.Common.DbTransaction? transaction, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The SHA-256 checksum (as stored, lower-case hex) of each named file that is still current (clean or waiting for the scan; not deleted or archived), for a
+    /// module that compares files without reading them (the duplicate receipt check of expense claims, slice S1.42, CR-098 detail c). Files not found are left
+    /// out. No access check: the caller has its own.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, string>> ChecksumsAsync(IReadOnlyCollection<Guid> fileIds, System.Data.Common.DbTransaction? transaction, CancellationToken cancellationToken);
 }

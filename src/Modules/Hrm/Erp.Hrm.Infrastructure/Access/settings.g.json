@@ -1026,6 +1026,72 @@
         "en": "The dashboard polls the server on this interval; nothing is pushed. A shorter interval shows punches sooner and asks the server more often. The person can also refresh at once.",
         "ur": "ڈیش بورڈ اس وقفے سے سرور سے پوچھتا ہے؛ کچھ بھیجا نہیں جاتا۔ کم وقفے سے اندراجات جلد نظر آتے ہیں اور سرور سے زیادہ بار پوچھنا پڑتا ہے۔ شخص فوراً بھی تازہ کر سکتا ہے۔"
       }
+    },
+    {
+      "key": "hrm.exp.claim_window_days",
+      "module": "hrm",
+      "type": "int",
+      "default": 0,
+      "validation": {
+        "min": 0,
+        "max": 3650
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.expenses",
+      "unit": null,
+      "name": {
+        "en": "Expense claim window (days)",
+        "ur": "اخراجات کے دعوے کی مدت (دن)"
+      },
+      "description": {
+        "en": "How many days after the expense date a line can still be claimed without a warning; 0 means no window",
+        "ur": "اخراجات کی تاریخ کے بعد کتنے دن تک لائن بغیر انتباہ کے دعوے میں شامل ہو سکتی ہے؛ 0 کا مطلب کوئی مدت نہیں"
+      },
+      "help": {
+        "en": "A line older than this (or dated in the future) gets the out-of-policy flag when the claim is saved and submitted; the flag is shown to the approvers and stops the claim only when its category says so. With 0 no line is ever flagged for its date.",
+        "ur": "اس سے پرانی (یا مستقبل کی تاریخ والی) لائن پر دعویٰ محفوظ اور جمع کرتے وقت پالیسی سے باہر کا نشان لگتا ہے؛ یہ نشان منظور کنندگان کو دکھایا جاتا ہے اور دعوے کو اسی وقت روکتا ہے جب اس کا زمرہ ایسا کہے۔ 0 ہو تو تاریخ کی بنا پر کبھی نشان نہیں لگتا۔"
+      }
+    },
+    {
+      "key": "hrm.exp.finance_threshold",
+      "module": "hrm",
+      "type": "decimal",
+      "default": 0,
+      "validation": {
+        "min": 0,
+        "max": 1000000000
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.expenses",
+      "unit": null,
+      "name": {
+        "en": "Expense claim total that needs finance approval",
+        "ur": "وہ دعوے کی کل رقم جس پر مالیات کی منظوری درکار ہے"
+      },
+      "description": {
+        "en": "A claim whose total reaches this amount, in the claim currency, goes to the finance step after the manager; 0 means no finance step",
+        "ur": "جس دعوے کی کل رقم دعوے کی کرنسی میں اس تک پہنچے وہ مینیجر کے بعد مالیات کے مرحلے میں جاتا ہے؛ 0 کا مطلب مالیات کا مرحلہ نہیں"
+      },
+      "help": {
+        "en": "The decision is taken when the claim is submitted: a claim below the amount is approved by the manager alone. The amount is compared with the claimed total, not the approved one. Who the finance step goes to is set in the approval route of expense claims.",
+        "ur": "فیصلہ دعویٰ جمع کرتے وقت ہوتا ہے: اس رقم سے کم دعویٰ صرف مینیجر منظور کرتا ہے۔ رقم کا موازنہ دعوے کی کل رقم سے ہوتا ہے، منظور شدہ سے نہیں۔ مالیات کا مرحلہ کس کے پاس جائے یہ اخراجات کے دعووں کے منظوری راستے میں طے ہوتا ہے۔"
+      }
     }
   ],
   "flags": []

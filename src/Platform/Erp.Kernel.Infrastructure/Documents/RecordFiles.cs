@@ -26,4 +26,28 @@ public sealed class RecordFiles(ITenantConnectionProvider tenant) : IRecordFiles
         await using var c = (NpgsqlConnection)await tenant.DataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         return await Notifications.NotificationConsumer.ReadAsync(c, null, Sql, r => r.GetGuid(0), cancellationToken, ownerType, ownerId).ConfigureAwait(false);
     }
+
+    public async Task<IReadOnlyDictionary<Guid, string>> ChecksumsAsync(IReadOnlyCollection<Guid> fileIds, DbTransaction? transaction, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(fileIds);
+        if (fileIds.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        const string Sql = "select f.id, f.checksum from doc.files f where f.id = any($1) and f.status in ('clean', 'uploading') and f.archived_at is null";
+        var ids = fileIds.Distinct().ToArray();
+        IReadOnlyList<(Guid Id, string Checksum)> rows;
+        if (transaction is NpgsqlTransaction tx)
+        {
+            rows = await Notifications.NotificationConsumer.ReadAsync(tx.Connection!, tx, Sql, r => (r.GetGuid(0), r.GetString(1)), cancellationToken, ids).ConfigureAwait(false);
+        }
+        else
+        {
+            await using var c = (NpgsqlConnection)await tenant.DataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            rows = await Notifications.NotificationConsumer.ReadAsync(c, null, Sql, r => (r.GetGuid(0), r.GetString(1)), cancellationToken, ids).ConfigureAwait(false);
+        }
+
+        return rows.ToDictionary(r => r.Id, r => r.Checksum);
+    }
 }

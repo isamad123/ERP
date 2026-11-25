@@ -35,6 +35,7 @@ public static class EmploymentServices
         services.AddScoped<EmploymentChangeCheck>();
         services.AddScoped<IWorkflowOutcomeHandler, EmploymentEventHandler>();
         services.AddScoped<IApproverDirectory, HrmApproverDirectory>();
+        Expenses.ExpenseServices.AddHrmExpenses(services); // S1.42 expense claims: approval end, receipt files, payroll input, payment return
         services.AddSingleton<ILimitCounter, ActiveEmployeeLimitCounter>();
         services.AddSingleton<IActiveEmployeeCounter, ActiveEmployeeCounter>();
         services.AddSingleton(new JobManifestSource(JobManifest));
@@ -53,6 +54,7 @@ public static class EmploymentServices
         services.AddScoped<Erp.Kernel.Contracts.Access.IHeldChangeHandler, BankAccountChangeHandler>(); // approval of held account changes
         services.AddHrmPayrollApi(); // S1.34a pay groups, calendar and readiness
         Leave.LeaveServices.AddHrmLeaveApi(services); // S1.32a leave types, ledger, balances and recompute
+        Expenses.ExpenseServices.AddHrmExpensesApi(services); // S1.42 expense claim service
         return services;
     }
 

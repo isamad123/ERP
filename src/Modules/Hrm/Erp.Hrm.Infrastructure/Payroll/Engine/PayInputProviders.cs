@@ -187,7 +187,7 @@ internal sealed class PayInputRowsProvider(HrmDbContext db, IClock clock, ICurre
         ArgumentNullException.ThrowIfNull(request);
         var ids = request.EmploymentIds.ToList();
         var rows = await db.Set<PayInput>().AsNoTracking()
-            .Where(i => ids.Contains(i.EmploymentId) && i.PayPeriodId == request.PayPeriodId
+            .Where(i => ids.Contains(i.EmploymentId) && i.PayPeriodId == request.PayPeriodId && i.SourceType != "expense_claim" // expense claims are read by their own provider (S1.42)
                         && (i.Status == "pending" || (i.Status == "consumed" && i.ConsumedByRunId == request.PayRunId)))
             .OrderBy(i => i.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
         return [.. rows.Select(i => new PayInputItem(i.EmploymentId, ProviderCode, i.SourceType, i.Id, ComponentId: i.ComponentId, Amount: i.Amount, Units: i.Units))];

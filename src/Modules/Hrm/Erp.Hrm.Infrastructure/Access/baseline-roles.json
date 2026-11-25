@@ -62,7 +62,9 @@
         "hrm.holidays.read",
         "hrm.optional_holidays.choose",
         "hrm.optional_holiday_choices.read",
-        "hrm.shift_effective.read"
+        "hrm.shift_effective.read",
+        "hrm.expense_claims.create",
+        "hrm.expense_categories.read"
       ],
       "scopes": {
         "*": "own",
@@ -115,7 +117,11 @@
         "hrm.attendance_dashboard.read",
         "hrm.attendance_reports.read",
         "hrm.leave_reports.read",
-        "hrm.attendance_events.read"
+        "hrm.attendance_events.read",
+        "hrm.expense_claims.create",
+        "hrm.expense_claims.read",
+        "hrm.expense_claims.decide",
+        "hrm.expense_categories.read"
       ],
       "scopes": {
         "*": "direct_team"
@@ -288,7 +294,17 @@
         "hrm.attendance_periods.lock",
         "hrm.attendance_periods.reopen",
         "hrm.attendance_adjustments.read",
-        "hrm.attendance_adjustments.submit"
+        "hrm.attendance_adjustments.submit",
+        "hrm.expense_claims.create",
+        "hrm.expense_claims.read",
+        "hrm.expense_claims.decide",
+        "hrm.expense_categories.read",
+        "hrm.expense_categories.create",
+        "hrm.expense_categories.update",
+        "hrm.expense_categories.delete",
+        "hrm.exchange_rates.read",
+        "hrm.exchange_rates.create",
+        "hrm.exchange_rates.update"
       ],
       "scopes": {
         "*": "all",
@@ -374,7 +390,8 @@
         "hrm.pay.run",
         "hrm.pay.results.read",
         "hrm.pay_inputs.create",
-        "hrm.pay_inputs.cancel"
+        "hrm.pay_inputs.cancel",
+        "hrm.exchange_rates.read"
       ],
       "scopes": {
         "*": "all"
@@ -469,7 +486,11 @@
         "hrm.pay.run",
         "hrm.pay.results.read",
         "hrm.pay_inputs.create",
-        "hrm.pay_inputs.cancel"
+        "hrm.pay_inputs.cancel",
+        "hrm.expense_claims.decide",
+        "hrm.exchange_rates.read",
+        "hrm.exchange_rates.create",
+        "hrm.exchange_rates.update"
       ],
       "scopes": {
         "*": "all",

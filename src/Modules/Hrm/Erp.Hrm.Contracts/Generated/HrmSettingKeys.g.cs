@@ -100,6 +100,12 @@ public static class HrmSettingKeys
 
     /// <summary>How often the live attendance dashboard asks the server for new counts while it is open.</summary>
     public const string HrmAttDashboardRefreshSeconds = "hrm.att.dashboard_refresh_seconds";
+
+    /// <summary>How many days after the expense date a line can still be claimed without a warning; 0 means no window.</summary>
+    public const string HrmExpClaimWindowDays = "hrm.exp.claim_window_days";
+
+    /// <summary>A claim whose total reaches this amount, in the claim currency, goes to the finance step after the manager; 0 means no finance step.</summary>
+    public const string HrmExpFinanceThreshold = "hrm.exp.finance_threshold";
 }
 
 /// <summary>Keys of the feature flags declared in the hrm settings manifest (FR-KRN-SET-05).</summary>

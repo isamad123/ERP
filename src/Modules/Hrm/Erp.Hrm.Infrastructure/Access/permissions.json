@@ -589,6 +589,18 @@
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay_inputs.cancel",
       "sensitive": true
+    },
+    {
+      "code": "hrm.expense_claims.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.expense_claims.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.expense_claims.decide",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.expense_claims.decide",
+      "sensitive": true
     }
   ]
 }

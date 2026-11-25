@@ -246,6 +246,28 @@
       "bulk_approval": false,
       "requires_approval": true,
       "default_route": {"steps": [{"key": "hr", "name": {"en": "HR Admin", "ur": "ایچ آر ایڈمن"}, "approver": {"kind": "role", "role": "hr_admin"}}]}
+    },
+    {
+      "code": "hrm.expense_claim",
+      "entitlement_key": "hrm.payroll",
+      "name": {"en": "Expense claim", "ur": "اخراجات کا دعویٰ"},
+      "fields": [
+        {"name": "company", "type": "company", "label": {"en": "Company", "ur": "کمپنی"}},
+        {"name": "employee", "type": "user", "label": {"en": "Employee", "ur": "ملازم"}},
+        {"name": "employment", "type": "text", "label": {"en": "Employment of the employee", "ur": "ملازم کی ملازمت"}},
+        {"name": "employee_no", "type": "text", "label": {"en": "Employee number", "ur": "ملازم نمبر"}},
+        {"name": "claim_no", "type": "text", "label": {"en": "Claim number", "ur": "دعوے کا نمبر"}},
+        {"name": "reimburse_via", "type": "choice", "choices": ["payroll", "payment_batch"], "label": {"en": "Paid through", "ur": "ادائیگی کا ذریعہ"}},
+        {"name": "needs_finance", "type": "bool", "label": {"en": "Finance approval required by the claim total", "ur": "دعوے کی کل رقم کے مطابق مالیات کی منظوری درکار"}}
+      ],
+      "company_field": "company",
+      "subject_fields": ["employee"],
+      "subject_employment_field": "employment",
+      "title": {"en": "Expense claim {claim_no} of {employee_no}", "ur": "{employee_no} کا اخراجات کا دعویٰ {claim_no}"},
+      "link": "/expenses/claims/{document_id}",
+      "bulk_approval": false,
+      "requires_approval": true,
+      "default_route": {"steps": [{"key": "manager", "name": {"en": "Line manager", "ur": "لائن مینیجر"}, "approver": {"kind": "manager", "levels": 1}, "fallback": {"kind": "role", "role": "hr_admin"}}, {"key": "finance", "name": {"en": "Finance approval", "ur": "مالیات کی منظوری"}, "condition": {"field": "needs_finance", "op": "eq", "value": true}, "approver": {"kind": "role", "role": "payroll_manager"}}]}
     }
   ]
 }
