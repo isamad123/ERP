@@ -1,3 +1,4 @@
+#pragma warning disable CA1861 // literal test data arrays, each used once
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
@@ -549,6 +550,148 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
             }
         });
 
+        // S1.33a: leave for the named person, who is the line manager of four reports (and an employee without a manager of their own). Everything goes through the
+        // real HR API as an HR administrator (leave types with design-token colours, leave and shift policies, grants, requests applied on behalf of the reports, a decision
+        // by the manager), except the people and the holiday calendar, which are rows. Next week: two reports on approved leave on Tuesday and Wednesday, one report waiting
+        // for the named person's decision (the approval card), the person's own waiting request; Thursday is a public holiday. Answers the ids the browser tests look for.
+        app.MapPost("/leave/seed", async (LeaveSeedBody body) =>
+        {
+            try
+            {
+                var user = await UserIdAsync(code, body.Username);
+                var zone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Karachi");
+                var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.UtcNow, zone).DateTime);
+                var monday = today.AddDays(8 - (int)today.DayOfWeek + (today.DayOfWeek == DayOfWeek.Sunday ? -7 : 0)); // the Monday after this week
+                while (monday.DayOfWeek != DayOfWeek.Monday)
+                {
+                    monday = monday.AddDays(1);
+                }
+
+                if (monday.AddDays(6).Year != monday.Year)
+                {
+                    monday = new DateOnly(monday.Year + 1, 1, 12);
+                    while (monday.DayOfWeek != DayOfWeek.Monday)
+                    {
+                        monday = monday.AddDays(1);
+                    }
+                }
+
+                await using var c = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+                var catalog = Erp.IntegrationTests.Infrastructure.MigratedDatabases.Catalog;
+                var company = (Guid)(await new NpgsqlCommand("select id from org.companies where lower(code) = lower($1)", c) { Parameters = { new NpgsqlParameter { Value = code } } }.ExecuteScalarAsync(Ct))!;
+                var branch = (Guid)(await new NpgsqlCommand("select id from org.branches where company_id = $1 order by created_at, id limit 1", c) { Parameters = { new NpgsqlParameter { Value = company } } }.ExecuteScalarAsync(Ct))!;
+                var hr = Guid.CreateVersion7(clock.UtcNow);
+                await IdentityHarness.ExecAsync(c, """
+                    insert into iam.users (id, username, email, display_name, language, time_zone, is_system, status, created_at, created_by, updated_at, updated_by)
+                    values ($1, $4, $5, 'Leave HR', 'en', 'Asia/Karachi', false, 'active', $2, $3, $2, $3)
+                    """, Ct, hr, clock.UtcNow, BaselineSeed.SystemUserId, "leave.hr." + hr.ToString("N")[^8..], "leave.hr." + hr.ToString("N")[^8..] + "@example.test");
+                await IdentityHarness.ExecAsync(c, """
+                    insert into iam.user_roles (id, user_id, role_id, company_id, reason, valid_from, created_at, created_by, updated_at, updated_by)
+                    select $1, $2, r.id, null, 'browser test leave seed', $3, now(), $4, now(), $4 from iam.roles r where r.code = 'hr_admin' and not r.is_deleted
+                    """, Ct, Guid.CreateVersion7(), hr, today.AddDays(-1), BaselineSeed.SystemUserId);
+
+                var joined = today.AddDays(-400);
+                await using var tx = await c.BeginTransactionAsync(Ct);
+                var factory = new Erp.IntegrationTests.Infrastructure.RowFactory(c, tx, catalog, 800_000 + Random.Shared.Next(0, 100_000), company);
+                async Task<IReadOnlyDictionary<string, object?>> Row(string table, params (string Column, object? Value)[] values) =>
+                    await factory.InsertAsync(catalog.Tables.Single(t => t.Database == "tenant" && t.FullName == table), values.ToDictionary(v => v.Column, v => v.Value, StringComparer.Ordinal), Ct);
+                var unit = (Guid)(await Row("org.org_units"))["id"]!;
+                async Task<Guid> Hire(Guid? account, Guid? manager)
+                {
+                    var employment = (Guid)(await Row("hrm.employments", ("company_id", company), ("user_ref", account), ("status", "active"), ("employee_type", "permanent"), ("is_primary", true),
+                        ("joining_date", joined), ("service_start_date", joined), ("separation_date", null), ("previous_employment_id", null)))["id"]!;
+                    var change = (Guid)(await Row("hrm.employment_events", ("company_id", company), ("employment_id", employment)))["id"]!;
+                    await Row("hrm.employment_assignments", ("company_id", company), ("employment_id", employment), ("event_id", change), ("org_unit_id", unit), ("branch_id", branch),
+                        ("valid_from", joined), ("valid_to", null), ("location_id", null), ("manager_employment_id", manager), ("pay_group_id", null));
+                    return employment;
+                }
+
+                var me = await Hire(user, null);
+                var reports = new List<Guid>();
+                for (var i = 0; i < 4; i++)
+                {
+                    reports.Add(await Hire(null, me));
+                }
+
+                var calendar = (Guid)(await Row("ref.calendars"))["id"]!;
+                await Row("ref.holidays", ("calendar_id", calendar), ("holiday_date", monday.AddDays(3)), ("kind", "public"), ("is_tentative", false));
+                await new NpgsqlCommand("update org.companies set holiday_calendar_id = $2 where id = $1", c, tx) { Parameters = { new NpgsqlParameter { Value = company }, new NpgsqlParameter { Value = calendar } } }.ExecuteNonQueryAsync(Ct);
+                await tx.CommitAsync(Ct);
+
+                using var admin = ApiClient(apiUrl, host, fx.Token(code, user: hr));
+                async Task<System.Text.Json.JsonElement> Send(HttpClient client, HttpMethod method, string url, object? payload = null)
+                {
+                    using var request = new HttpRequestMessage(method, url) { Content = payload is null ? null : JsonContent.Create(payload) };
+                    using var response = await client.SendAsync(request, Ct);
+                    var text = await response.Content.ReadAsStringAsync(Ct);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        throw new InvalidOperationException($"{method} {url} {(int)response.StatusCode} {text}");
+                    }
+
+                    return text.Length == 0 ? default : System.Text.Json.JsonDocument.Parse(text).RootElement.Clone();
+                }
+
+                async Task<Guid> Type(string typeCode, string en, string ur, string colour, bool document, string unitKind = "day") =>
+                    (await Send(admin, HttpMethod.Post, "/api/hrm/leave-types", new
+                    {
+                        companyId = company, code = typeCode, nameI18n = new { en, ur }, isPaid = true, counting = "working_days", unit = unitKind, requiresDocument = document,
+                        isCompOff = false, isUnpaidDeduction = false, colorToken = colour,
+                    })).GetProperty("id").GetGuid();
+                var annual = await Type("ANNUAL", "Annual leave", "سالانہ رخصت", "info", false, "half_day");
+                var sick = await Type("SICK", "Sick leave", "بیماری کی رخصت", "warning", true, "half_day");
+                var from = today.AddYears(-3);
+                string Iso(DateOnly d) => d.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+                var leaveParameters = new { types = new object[] { new { leaveType = "ANNUAL", entitlement = new { model = "manual" } }, new { leaveType = "SICK", entitlement = new { model = "manual" } } } };
+                async Task Policy(string type, object parameters)
+                {
+                    var created = await Send(admin, HttpMethod.Post, "/api/hrm/policies", new { companyId = company, policyType = type, code = "E2E" + type.ToUpperInvariant(), name = new { en = "Policy " + type, ur = "پالیسی " + type }, parameters });
+                    var draft = created.GetProperty("versions")[0];
+                    await Send(admin, HttpMethod.Post, $"/api/hrm/policy-versions/{draft.GetProperty("id").GetGuid()}/activate", new { effectiveFrom = Iso(from), rowVersion = draft.GetProperty("rowVersion").GetInt64() });
+                    var latest = await Send(admin, HttpMethod.Get, $"/api/hrm/policy-assignment-sets?companyId={company}&policyType={type}");
+                    await Send(admin, HttpMethod.Post, "/api/hrm/policy-assignment-sets/activate", new
+                    {
+                        companyId = company, policyType = type, effectiveFrom = Iso(from), basedOn = latest.GetProperty("latestFrom").ValueKind == System.Text.Json.JsonValueKind.Null ? null : latest.GetProperty("latestFrom").GetString(),
+                        assignments = new[] { new { policyId = created.GetProperty("id").GetGuid(), precedence = 1, rule = new { conditions = new object[] { new { attribute = "employee_type", @operator = "in", values = new[] { "permanent" } } } } } },
+                    });
+                }
+
+                await Policy("leave", leaveParameters);
+                await Policy("shift", new { weeklyOffKind = "fixed", offDays = new[] { 6, 7 } });
+                foreach (var employment in reports.Append(me))
+                {
+                    foreach (var type in new[] { annual, sick })
+                    {
+                        await Send(admin, HttpMethod.Post, $"/api/hrm/employments/{employment}/leave-ledger", new { leaveTypeId = type, kind = "grant", quantity = 12m, entryDate = Iso(new DateOnly(monday.Year, 1, 1)), reason = "Seeded for the browser tests" });
+                    }
+                }
+
+                using var manager = ApiClient(apiUrl, host, fx.Token(code, user: user));
+                async Task<Guid> Ask(Guid employment, DateOnly start, DateOnly end, string reason) =>
+                    (await Send(admin, HttpMethod.Post, "/api/hrm/leave-requests", new { employmentId = employment, leaveTypeId = annual, startDate = Iso(start), endDate = Iso(end), reason })).GetProperty("id").GetGuid();
+                async Task Approve(Guid request)
+                {
+                    await using var read = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
+                    var task = await TenancyFixture.ScalarTextAsync(read, """
+                        select t.id::text from wf.workflow_tasks t join wf.workflow_instances i on i.id = t.instance_id
+                        where i.document_id = $1 and t.status = 'pending' order by t.created_at desc limit 1
+                        """, Ct, request);
+                    await Send(manager, HttpMethod.Post, $"/api/wf/tasks/{task}/approve", new { comment = "Seeded approval" });
+                }
+
+                var first = await Ask(reports[0], monday.AddDays(1), monday.AddDays(2), "Seeded: approved");
+                await Approve(first);
+                var second = await Ask(reports[1], monday.AddDays(1), monday.AddDays(1), "Seeded: approved");
+                await Approve(second);
+                var waiting = await Ask(reports[2], monday.AddDays(1), monday.AddDays(2), "Seeded: waiting for the manager");
+                return Results.Ok(new { company, unit, me, reports, annual, sick, waiting, monday = Iso(monday) });
+            }
+            catch (Exception ex)
+            {
+                return Results.Text(ex.ToString(), statusCode: 500); // the seeding says why it failed (test machinery)
+            }
+        });
+
         // Facts the browser cannot see: live sessions and trusts of a person.
         app.MapGet("/facts", async (string username) =>
         {
@@ -607,7 +750,7 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
         var output = process.StandardOutput.ReadToEndAsync(Ct);
         var errors = process.StandardError.ReadToEndAsync(Ct);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(Ct);
-        timeout.CancelAfter(TimeSpan.FromMinutes(20));
+        timeout.CancelAfter(TimeSpan.FromMinutes(40)); // R-318: was 20; the suite took 18m31 on main at 07:26, 20m23 at 11:06; split into shards (follow-up)
         try
         {
             await process.WaitForExitAsync(timeout.Token);
@@ -678,6 +821,8 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
     private sealed record FieldPolicyBody(string Username, string Resource, string Field, string Access);
 
     private sealed record AttendanceSeedBody(string Username);
+
+    private sealed record LeaveSeedBody(string Username);
 
     private sealed record RouteBody(string DocumentType, string Approver, bool Bulk);
 

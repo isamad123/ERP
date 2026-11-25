@@ -766,6 +766,39 @@
       }
     },
     {
+      "key": "hrm.leave.coverage_warning_percent",
+      "module": "hrm",
+      "type": "int",
+      "default": 30,
+      "validation": {
+        "min": 0,
+        "max": 100
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.leave",
+      "unit": null,
+      "name": {
+        "en": "Team coverage warning (percent away)",
+        "ur": "ٹیم کی دستیابی کی تنبیہ (غیر حاضر فیصد)"
+      },
+      "description": {
+        "en": "Warn the approver and the team calendar when this share of a team is away on one day; 0 turns the warning off",
+        "ur": "جب ایک دن ٹیم کا اتنا حصہ رخصت پر ہو تو منظور کنندہ اور ٹیم کیلنڈر کو تنبیہ دکھائیں؛ 0 تنبیہ بند کر دیتا ہے"
+      },
+      "help": {
+        "en": "The share is the people of the line manager's team (direct and indirect reports) who have approved or waiting leave on that day, out of the team's members at work that period. The warning is shown on the approval card and on the team calendar; it never blocks an approval. Urdu text to be reviewed (R-062).",
+        "ur": "حصہ لائن مینیجر کی ٹیم (براہ راست اور بالواسطہ ماتحت) کے ان افراد کا ہے جن کی اس دن رخصت منظور شدہ یا منظوری کی منتظر ہے، ٹیم کے کل ارکان میں سے۔ تنبیہ منظوری کے کارڈ اور ٹیم کیلنڈر پر دکھائی جاتی ہے اور منظوری کو کبھی نہیں روکتی۔"
+      }
+    },
+    {
       "key": "hrm.leave.year_end_requires_approval",
       "module": "hrm",
       "type": "bool",

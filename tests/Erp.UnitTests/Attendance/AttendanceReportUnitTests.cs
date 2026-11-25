@@ -89,7 +89,7 @@ public sealed class AttendanceReportUnitTests
     {
         var rules = File.ReadAllText(Path.Combine(Root(), "tools/Erp.CodeGen/rules.yaml"));
         var views = System.Text.RegularExpressions.Regex.Matches(rules, @"create or replace view (hrm\.rpt_att_\w+)", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(5));
-        Assert.Equal(7, views.Count);
+        Assert.Equal(9, views.Count); // seven views and the two redefinitions of the monthly muster and absenteeism (R-318); every definition is checked
         foreach (System.Text.RegularExpressions.Match view in views)
         {
             var start = view.Index;

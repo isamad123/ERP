@@ -42,6 +42,7 @@ public static class LeaveServices
         services.AddScoped<Kernel.Contracts.Settings.ISettingChangeGuard, LeaveYearStartGuard>(); // review S1.32a finding 3
         services.AddScoped<LeaveRequestPlanner>(); // S1.32b requests, year-end, transfers, pack leave types
         services.AddScoped<ILeaveRequestService, LeaveRequestService>();
+        services.AddScoped<ILeaveCalendarService, LeaveCalendarService>(); // S1.33a
         services.AddScoped<ILeaveYearEndService, LeaveYearEndService>();
         services.AddScoped<ILeaveTransferService, LeaveTransferService>();
         services.AddScoped<Kernel.Contracts.Access.IHeldChangeHandler, YearEndConfirmHandler>();

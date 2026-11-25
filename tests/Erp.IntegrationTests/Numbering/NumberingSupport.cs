@@ -76,15 +76,15 @@ public sealed class NumberingRig : IAsyncDisposable
         return (id, code);
     }
 
-    /// <summary>Takes a number at posting in a transaction of its own and commits or rolls back.</summary>
-    public async Task<string> PostAsync(NumberRequest request, bool commit, CancellationToken ct, TimeSpan? holdFor = null)
+    /// <summary>Takes a number at posting in a transaction of its own and commits or rolls back; <paramref name="whileHeld"/> runs between the two.</summary>
+    public async Task<string> PostAsync(NumberRequest request, bool commit, CancellationToken ct, Func<CancellationToken, Task>? whileHeld = null)
     {
         await using var connection = await App.OpenConnectionAsync(ct);
         await using var tx = await connection.BeginTransactionAsync(ct);
         var number = await Allocator.AssignAsync(request, tx, ct);
-        if (holdFor is { } hold)
+        if (whileHeld is not null)
         {
-            await Task.Delay(hold, ct);
+            await whileHeld(ct); // the transaction stays open, holding whatever the allocation took, until this returns
         }
 
         if (commit)

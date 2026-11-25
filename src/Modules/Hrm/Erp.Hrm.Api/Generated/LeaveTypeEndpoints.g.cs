@@ -24,6 +24,7 @@ public sealed class LeaveTypeResponse
     public bool IsCompOff { get; init; }
     public bool IsUnpaidDeduction { get; init; }
     public string Source { get; init; } = null!;
+    public string? ColorToken { get; init; }
     public bool IsActive { get; init; }
     public bool IsDeleted { get; init; }
     public global::System.DateTimeOffset? DeletedAt { get; init; }
@@ -94,6 +95,7 @@ internal static class LeaveTypeEndpoints
         IsCompOff = row.IsCompOff,
         IsUnpaidDeduction = row.IsUnpaidDeduction,
         Source = row.Source,
+        ColorToken = row.ColorToken,
         IsActive = row.IsActive,
         IsDeleted = row.IsDeleted,
         DeletedAt = row.DeletedAt,

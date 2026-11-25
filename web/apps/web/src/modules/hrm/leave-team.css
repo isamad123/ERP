@@ -1,0 +1,199 @@
+/* The team leave calendar (slice S1.33a). Tokens and logical properties only; the grid scrolls inside its own region. */
+.erp-lcal-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.erp-lcal-month {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.erp-lcal-month-name {
+  min-inline-size: 9rem;
+  text-align: center;
+  font-weight: var(--font-weight-strong);
+}
+
+.erp-lcal-scroll {
+  position: relative; /* the hidden cell names are positioned inside the scrolling region, never beyond the page */
+  overflow-x: auto;
+  min-inline-size: 0;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+}
+
+.erp-lcal-grid {
+  border-collapse: collapse;
+  min-inline-size: max-content;
+  font-size: var(--font-size-sm);
+}
+
+.erp-lcal-grid th,
+.erp-lcal-grid td {
+  padding-block: var(--space-1);
+  padding-inline: var(--space-1);
+  min-inline-size: 2.25rem;
+  text-align: center;
+  white-space: nowrap;
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+  border-inline-end: var(--border-width) solid var(--color-border-subtle);
+}
+
+.erp-lcal-grid [role='rowheader'],
+.erp-lcal-grid th.erp-lcal-corner {
+  position: sticky;
+  inset-inline-start: 0;
+  text-align: start;
+  min-inline-size: 11rem;
+  padding-inline: var(--space-2);
+  background: var(--color-surface-raised);
+  z-index: var(--layer-base);
+}
+
+.erp-lcal-grid [role='columnheader'] {
+  background: var(--color-surface-sunken);
+  font-weight: var(--font-weight-strong);
+}
+
+.erp-lcal-grid [role='columnheader'][data-holiday],
+.erp-lcal-grid [role='columnheader'][data-weekend] {
+  color: var(--color-text-muted);
+}
+
+.erp-lcal-grid [role='columnheader'][data-holiday] {
+  border-block-start: var(--space-1) solid var(--color-warning);
+}
+
+.erp-lcal-grid [data-today] {
+  border-inline-start: var(--focus-width) solid var(--color-primary);
+  border-inline-end: var(--focus-width) solid var(--color-primary);
+}
+
+.erp-lcal-weekday {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: normal;
+}
+
+.erp-lcal-grid [role='gridcell']:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: calc(var(--focus-width) * -1);
+}
+
+.erp-lcal-cell[data-kind='off'],
+.erp-lcal-cell[data-kind='holiday'] {
+  background: var(--color-neutral-subtle);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.erp-lcal-cell[data-kind='holiday'] {
+  background: var(--color-warning-subtle);
+}
+
+.erp-lcal-cell[data-kind='leave'] {
+  color: var(--color-text);
+  font-weight: var(--font-weight-strong);
+}
+
+.erp-lcal-cell[data-colour='primary'],
+.erp-lcal-swatch[data-colour='primary'] { background-color: var(--color-primary-subtle); }
+.erp-lcal-cell[data-colour='success'],
+.erp-lcal-swatch[data-colour='success'] { background-color: var(--color-success-subtle); }
+.erp-lcal-cell[data-colour='warning'],
+.erp-lcal-swatch[data-colour='warning'] { background-color: var(--color-warning-subtle); }
+.erp-lcal-cell[data-colour='danger'],
+.erp-lcal-swatch[data-colour='danger'] { background-color: var(--color-danger-subtle); }
+.erp-lcal-cell[data-colour='info'],
+.erp-lcal-swatch[data-colour='info'] { background-color: var(--color-info-subtle); }
+.erp-lcal-cell[data-colour='neutral'],
+.erp-lcal-swatch[data-colour='neutral'] { background-color: var(--color-neutral-subtle); }
+
+/* Waiting for approval: hatched and italic, so approved and waiting differ without colour alone. */
+.erp-lcal-cell[data-waiting],
+.erp-lcal-swatch[data-waiting] {
+  font-style: italic;
+  background-image: repeating-linear-gradient(135deg, transparent 0 var(--space-1), var(--color-border) var(--space-1) var(--space-2));
+}
+
+/* A sandwich day (an off day counted as leave): dotted outline. */
+.erp-lcal-cell[data-sandwich],
+.erp-lcal-swatch[data-sandwich] {
+  outline: var(--border-width) dotted var(--color-text-muted);
+  outline-offset: calc(var(--space-1) * -1);
+}
+
+.erp-lcal-cover[data-warn] {
+  background: var(--color-warning-subtle);
+  color: var(--color-text);
+  font-weight: var(--font-weight-strong);
+}
+
+.erp-lcal-cover-percent {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: normal;
+}
+
+.erp-lcal-person-no {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  margin-inline-start: var(--space-2);
+}
+
+.erp-lcal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.erp-lcal-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.erp-lcal-swatch {
+  display: inline-block;
+  min-inline-size: 1.75rem;
+  padding-inline: var(--space-1);
+  text-align: center;
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-xs);
+}
+
+@media print {
+  @page { size: landscape; }
+
+  .erp-lcal-noprint,
+  nav,
+  aside {
+    display: none;
+  }
+
+  .erp-lcal-scroll {
+    overflow: visible;
+    border: none;
+  }
+
+  .erp-lcal-grid [role='rowheader'],
+  .erp-lcal-grid th.erp-lcal-corner {
+    position: static;
+  }
+
+  .erp-lcal-cell,
+  .erp-lcal-swatch {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

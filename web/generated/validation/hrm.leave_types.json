@@ -71,6 +71,18 @@
         "tenant"
       ]
     },
+    "colorToken": {
+      "type": "string",
+      "enum": [
+        "primary",
+        "success",
+        "warning",
+        "danger",
+        "info",
+        "neutral"
+      ],
+      "nullable": true
+    },
     "isActive": {
       "type": "boolean"
     }

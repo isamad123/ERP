@@ -62,6 +62,8 @@ export const server = {
   settingValue: async (key: string) => (await call<{ value: string | null }>('GET', `/settings/value?key=${encodeURIComponent(key)}`)).value,
   /** S1.30b: attendance of the named person (own employment, an open exception, a waiting correction and duty request) and three colleagues with a shift today. */
   attendanceSeed: (username: string) => call<{ company: string; unit: string; me: string; exception: string; correction: string; duty: string }>('POST', '/attendance/seed', { username }),
+  /** S1.33a: the named person as line manager of four reports with leave types, policies, grants, two approved and one waiting request next week (a holiday on Thursday). */
+  leaveSeed: (username: string) => call<{ company: string; unit: string; me: string; reports: string[]; annual: string; sick: string; waiting: string; monday: string }>('POST', '/leave/seed', { username }),
   facts: (username: string) => call<{ liveSessions: number; reusedSessions: number; trustedDevices: number }>('GET', `/facts?username=${encodeURIComponent(username)}`),
 };
 
@@ -110,6 +112,14 @@ export async function nextCode(pages: Page[], secret: string): Promise<string> {
 
 /** No accessibility violation of serious or critical level (Q20: axe-core, development only). */
 export async function accessible(page: Page, label: string): Promise<void> {
+  // R-318: wait until no finite animation or transition is running. Controls fade their background (`--motion-fast`) when they
+  // become enabled or the pointer rests on them; axe reads the colour it finds at that moment, so a scan in the middle of the
+  // fade measured a blend of two colours and reported a contrast finding that vanished on the next run. The condition is
+  // read from the page (Web Animations API), not slept for; timed animations (toasts, the busy spinner) are not waited for.
+  await expect.poll(() => page.evaluate(() => document.getAnimations().filter((a) => {
+    // Only transitions (a control's colour fade): a toast's timed fade-out is an animation that runs for seconds and changes nothing a scan measures.
+    return a instanceof CSSTransition && a.playState === 'running';
+  }).length), { message: `${label}: animations did not settle`, timeout: 10_000 }).toBe(0);
   // React Aria's live announcer keeps its last screen-reader notes for a few seconds; a note that named a button of the
   // previous screen points at an id that no longer exists. It is invisible and transient, so it is left out of the check.
   const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).exclude('[data-live-announcer]').analyze();

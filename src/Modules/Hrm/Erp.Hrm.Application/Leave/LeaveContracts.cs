@@ -4,7 +4,8 @@ namespace Erp.Hrm.Application.Leave;
 
 /// <summary>
 /// A leave type to create or change (slice S1.32 Build item 1, FR-HRM-LVE-01). On a change only the fields sent change; <see cref="IsActive"/>
-/// false retires the type (never deleted), true brings it back.
+/// false retires the type (never deleted), true brings it back. <see cref="ColorToken"/> (S1.33a) is the design token that paints the type on the calendar
+/// (<c>primary</c>, <c>success</c>, <c>warning</c>, <c>danger</c>, <c>info</c> or <c>neutral</c>; an empty text clears it), never a raw colour.
 /// </summary>
 public sealed record LeaveTypeRequest(
     Guid? CompanyId,
@@ -17,7 +18,8 @@ public sealed record LeaveTypeRequest(
     bool? IsCompOff,
     bool? IsUnpaidDeduction,
     bool? IsActive,
-    long? RowVersion);
+    long? RowVersion,
+    string? ColorToken = null);
 
 /// <summary>
 /// A manual ledger entry (Build item 4): an opening balance, a grant or an adjustment of one leave type, dated, with a reason. The quantity is

@@ -46,7 +46,7 @@ describe('FR-KRN-IAM-10 menus follow the permissions (the server still decides)'
       'hrm.leave_requests.read', 'hrm.pay_runs.read', 'cfg.licence.read', 'job.runs.read', 'aud.changes.view'].map((c) => grant(c)), 'active');
     const menu = menuFor(screens, all);
     expect(menu.map((s) => s.group)).toEqual(['home', 'approvals', 'people', 'time', 'payroll', 'administration']);
-    expect(menu.find((s) => s.group === 'time')!.entries.map((e) => e.id)).toEqual(['attendance', 'leave']);
+    expect(menu.find((s) => s.group === 'time')!.entries.map((e) => e.id)).toEqual(['attendance', 'leave', 'leave-team']);
     // Deep-link targets without a menu group stay out of the menu.
     expect(menu.flatMap((s) => s.entries.map((e) => e.id))).not.toContain('document');
   });
