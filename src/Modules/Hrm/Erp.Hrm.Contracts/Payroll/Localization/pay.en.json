@@ -177,5 +177,12 @@
   "errors.hrm.pay.pro_rata_not_applicable": "This method already counts the employee's days or hours, so it takes no pro-rata rule (choose none); otherwise the days would be counted twice.",
   "errors.hrm.pay.calc.pro_rata_not_applicable": "A component counted in days or hours has a pro-rata rule; set its rule to none in a new version.",
   "errors.hrm.pay.run.before_cut_off": "The run cannot be calculated until the period's cut-off date has passed: the calculation locks the period's attendance and leave.",
-  "errors.hrm.pay.run.inputs_changed": "A one-time input changed while the run was being calculated. Calculate again."
+  "errors.hrm.pay.run.inputs_changed": "A one-time input changed while the run was being calculated. Calculate again.",
+  "permissions.hrm.pay.trace.read": "Read the calculation trace of payroll results (amounts also need salary access)",
+  "errors.hrm.pay.run.calculating": "This run is being calculated. Wait for the calculation to finish, or cancel it.",
+  "errors.hrm.pay.run.not_calculating": "No calculation of this run is waiting or running.",
+  "errors.hrm.pay.run.employment_not_in_run": "An employment is not in this run.",
+  "errors.hrm.pay.trace.salary_class": "The calculation trace shows salary amounts: it needs access to salary data.",
+  "errors.hrm.pay.job.parameters": "The payroll calculation was started without its run. Start it from the payroll run.",
+  "errors.hrm.pay.job.run_missing": "The payroll run of this calculation no longer exists."
 }

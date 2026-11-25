@@ -342,6 +342,11 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "POST /api/hrm/pay-runs/{id:guid}/calculate" => ($"/api/hrm/pay-runs/{m.PayRun}/calculate", Json(new { acceptOpenItems = true })),
             "GET /api/hrm/pay-runs/{id:guid}/summary" => ($"/api/hrm/pay-runs/{m.PayRun}/summary", null),
             "GET /api/hrm/pay-runs/{id:guid}/results" => ($"/api/hrm/pay-runs/{m.PayRun}/results", null),
+            // S1.35b: recalculation, cancel of a calculation and a result's trace (the other customer's run id is never found; the trace of an id that is
+            // not one of this customer's results is not found either).
+            "POST /api/hrm/pay-runs/{id:guid}/recalculate" => ($"/api/hrm/pay-runs/{m.PayRun}/recalculate", Json(new { acceptOpenItems = true })),
+            "POST /api/hrm/pay-runs/{id:guid}/cancel-calculation" => ($"/api/hrm/pay-runs/{m.PayRun}/cancel-calculation", null),
+            "GET /api/hrm/pay-results/{id:guid}/trace" => ($"/api/hrm/pay-results/{m.PayRun}/trace", null),
             "POST /api/hrm/pay-inputs" => ("/api/hrm/pay-inputs", Json(new { items = new[] { new { employmentId = m.LockedEmployment, payPeriodId = m.PayRunPeriod, componentId = m.OneTime, amount = 250m } } })),
             "POST /api/hrm/pay-inputs/{id:guid}/cancel" => ($"/api/hrm/pay-inputs/{m.PayInput}/cancel", null),
             "GET /api/hrm/pay-input-names" => ("/api/hrm/pay-input-names", null),

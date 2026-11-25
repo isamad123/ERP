@@ -317,6 +317,9 @@
   reqs: [PAY-32]
   # S1.35a (CR-093 S1.35a detail): generated writes closed; the engine writes traces (S1.35b).
   api_actions: [read]
+  # S1.35b (CR-093 S1.35b detail, slice S1.35 Build item 8): the trace is restricted data (it holds salary inputs and amounts); the engine's own read
+  # (GET /api/hrm/pay-results/{id}/trace) needs hrm.pay.trace.read and the salary class of the result.
+  field_class: {trace: restricted}
   notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
 
 - table: hrm.pay_result_reversals

@@ -36,6 +36,7 @@ public static class PayServices
     public static IServiceCollection AddHrmPayrollWorker(this IServiceCollection services)
     {
         services.AddSingleton<IJobHandler, PayCutoffReminderJob>();
+        Engine.PayEngineServices.AddHrmPayrollEngineWorker(services); // S1.35b the calculation's job (lanes, chunks, checkpoints)
         return services;
     }
 

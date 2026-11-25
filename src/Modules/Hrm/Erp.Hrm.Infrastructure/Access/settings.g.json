@@ -673,6 +673,39 @@
       }
     },
     {
+      "key": "hrm.pay.max_parallel_chunks",
+      "module": "hrm",
+      "type": "int",
+      "default": 2,
+      "validation": {
+        "min": 1,
+        "max": 8
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.payroll",
+      "unit": null,
+      "name": {
+        "en": "Payroll calculation lanes",
+        "ur": "پے رول حساب کی متوازی قطاریں"
+      },
+      "description": {
+        "en": "How many batches of a payroll calculation may run at the same time",
+        "ur": "پے رول حساب کی کتنی کھیپیں ایک ہی وقت میں چل سکتی ہیں"
+      },
+      "help": {
+        "en": "A calculation is split into this many lanes, each a background run that saves its own batches; each employee is calculated on their own, so the lanes never wait for each other. More lanes finish sooner when the background workers have free places; one lane is the slowest and the lightest on the database.",
+        "ur": "حساب اتنی قطاروں میں بانٹا جاتا ہے، ہر قطار ایک پس منظر کا رن ہے جو اپنی کھیپیں خود محفوظ کرتا ہے؛ ہر ملازم کا حساب الگ ہوتا ہے، اس لیے قطاریں ایک دوسرے کا انتظار نہیں کرتیں۔ جب پس منظر کے ورکرز میں جگہ ہو تو زیادہ قطاریں جلد ختم کرتی ہیں؛ ایک قطار سب سے سست اور ڈیٹا بیس پر سب سے ہلکی ہے۔"
+      }
+    },
+    {
       "key": "hrm.att.biometric_enabled",
       "module": "hrm",
       "type": "bool",

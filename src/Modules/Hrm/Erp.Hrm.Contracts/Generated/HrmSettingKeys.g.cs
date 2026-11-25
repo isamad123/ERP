@@ -68,6 +68,9 @@ public static class HrmSettingKeys
     /// <summary>How many employees a payroll calculation saves together.</summary>
     public const string HrmPayChunkSize = "hrm.pay.chunk_size";
 
+    /// <summary>How many batches of a payroll calculation may run at the same time.</summary>
+    public const string HrmPayMaxParallelChunks = "hrm.pay.max_parallel_chunks";
+
     /// <summary>Allow this company to use biometric attendance devices; mapping a device user then needs the person's consent.</summary>
     public const string HrmAttBiometricEnabled = "hrm.att.biometric_enabled";
 

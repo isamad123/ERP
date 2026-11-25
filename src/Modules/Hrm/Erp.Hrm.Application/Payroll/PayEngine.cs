@@ -55,7 +55,7 @@ public sealed record PayCalculation(
 public static class PayEngine
 {
     /// <summary>The engine and grammar version stored in every snapshot (ruling Q1); a change of the calculation rules is a new version.</summary>
-    public const string Version = "S1.35a.1";
+    public const string Version = "S1.35b.1";
 
     private const string P = "errors.hrm.pay.calc.";
     public const string EngineVersionDiffers = P + "engine_version";
@@ -558,17 +558,40 @@ public static class PayEngine
             decimal total = 0m;
             decimal fullTotal = 0m;
             var parts = new List<string>();
-            foreach (var seg in segments)
+            if (divisorOf is { } fixedDivisor)
             {
-                var full = seg.Full.GetValueOrDefault(id);
-                var days = Days(seg.Start, seg.End).Where(Counted).ToList();
-                var ks = days.Count;
-                var missing = days.Sum(d => employed.Contains(d) ? unpaid.GetValueOrDefault(d) : 1m);
-                var numerator = (ks * (decimal)divisor) - (missing * kp);
-                var part = PayRounding.Internal(full * numerator / (kp * (decimal)divisor));
-                total += part;
-                fullTotal += full;
-                parts.Add(Invariant($"{seg.Start:yyyy-MM-dd}..{seg.End:yyyy-MM-dd}: {full} x ({ks} x {divisor} - {missing} x {kp}) / ({kp} x {divisor}) = {part}"));
+                // A fixed divisor (fixed_30, custom) pays the days employed: amount / divisor x min(divisor, employed counted days), a whole period
+                // employed paying the full amount; each unpaid leave day costs amount / divisor (coordinator's ruling under CR-083, R-175, CR-093
+                // S1.35b detail a). Segments share the paid days by their employed days, so a whole period stays exact after a mid-month change.
+                var employedCounted = periodDays.Count(d => Counted(d) && employed.Contains(d));
+                var basis = employedCounted == kp ? fixedDivisor : Math.Min(fixedDivisor, employedCounted);
+                foreach (var seg in segments)
+                {
+                    var full = seg.Full.GetValueOrDefault(id);
+                    var days = Days(seg.Start, seg.End).Where(d => Counted(d) && employed.Contains(d)).ToList();
+                    var es = days.Count;
+                    var unpaidDays = days.Sum(d => unpaid.GetValueOrDefault(d));
+                    var part = employedCounted == 0 ? 0m : PayRounding.Internal(full * ((es * (decimal)basis) - (unpaidDays * employedCounted)) / (fixedDivisor * (decimal)employedCounted));
+                    total += part;
+                    fullTotal += full;
+                    parts.Add(Invariant($"{seg.Start:yyyy-MM-dd}..{seg.End:yyyy-MM-dd}: {full} x ({es} x {basis} - {unpaidDays} x {employedCounted}) / ({fixedDivisor} x {employedCounted}) = {part}"));
+                }
+            }
+            else
+            {
+                // Calendar or working days: the days paid over the period's days of that kind (deducting missing days and paying the employed ones
+                // are the same here, as the divisor is the period's own count).
+                foreach (var seg in segments)
+                {
+                    var full = seg.Full.GetValueOrDefault(id);
+                    var days = Days(seg.Start, seg.End).Where(Counted).ToList();
+                    var ks = days.Count;
+                    var missing = days.Sum(d => employed.Contains(d) ? unpaid.GetValueOrDefault(d) : 1m);
+                    var part = PayRounding.Internal(full * (ks - missing) / kp);
+                    total += part;
+                    fullTotal += full;
+                    parts.Add(Invariant($"{seg.Start:yyyy-MM-dd}..{seg.End:yyyy-MM-dd}: {full} x ({ks} - {missing}) / {kp} = {part}"));
+                }
             }
 
             if (total < 0m && fullTotal >= 0m)

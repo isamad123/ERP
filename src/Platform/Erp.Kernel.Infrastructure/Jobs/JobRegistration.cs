@@ -23,6 +23,7 @@ public static class JobRegistration
         services.AddSingleton(sp => JobCatalog.WithoutHandlers(sp.GetServices<JobManifestSource>()));
         services.TryAddScoped<JobRunContext>();
         services.AddScoped<IJobCentre, JobCentreService>();
+        services.TryAddScoped<IJobRequests, JobRequests>(); // S1.35b: runs a module starts from its own service
         return services;
     }
 
@@ -43,6 +44,7 @@ public static class JobRegistration
         // The HR module's active employee counter, when the host registers it (S1.20b; S1.09b ruling Q8: the monthly meter).
         services.AddSingleton(sp => new LicenceMaintenance(sp.GetRequiredService<ControlPlaneOptions>(), sp.GetRequiredService<Erp.BuildingBlocks.Application.Tenancy.ISecretStore>(), sp.GetRequiredService<IClock>(), sp.GetService<IActiveEmployeeCounter>()));
         services.AddKernelJobHandlers();
+        services.TryAddScoped<IJobRequests, JobRequests>(); // S1.35b: a running job may queue or cancel runs (the payroll calculation's lanes)
         services.AddSingleton(sp => new JobCatalog(sp.GetServices<JobManifestSource>(), sp.GetServices<IJobHandler>()));
         services.AddSingleton<JobWorker>();
         services.AddSingleton<EventDispatcher>();

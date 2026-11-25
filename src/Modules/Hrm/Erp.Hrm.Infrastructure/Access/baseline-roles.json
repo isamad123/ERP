@@ -373,6 +373,7 @@
         "hrm.attendance_adjustments.read",
         "hrm.pay.run",
         "hrm.pay.results.read",
+        "hrm.pay.trace.read",
         "hrm.pay_inputs.create",
         "hrm.pay_inputs.cancel"
       ],
@@ -468,6 +469,7 @@
         "wf.workflow_tasks.update",
         "hrm.pay.run",
         "hrm.pay.results.read",
+        "hrm.pay.trace.read",
         "hrm.pay_inputs.create",
         "hrm.pay_inputs.cancel"
       ],
