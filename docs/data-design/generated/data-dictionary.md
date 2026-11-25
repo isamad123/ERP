@@ -2795,7 +2795,7 @@ Indexes:
 
 ### hrm.leave_ledger
 
-Every movement of a leave balance; balances are sums (LVE-10, LVE-14). Requirements: LVE-02, LVE-03, LVE-08, LVE-10, LVE-14. Pending rule (S1.32, placeholder hrm.todo_leave_ledger_transfer): Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30). Source: hrm-time.yaml.
+Every movement of a leave balance; balances are sums (LVE-10, LVE-14). Requirements: LVE-02, LVE-03, LVE-08, LVE-10, LVE-14. Rule (implemented in S1.32b): Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30). Source: hrm-time.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -2842,10 +2842,11 @@ Triggers:
 - `tg_leave_ledger_append_only` CREATE TRIGGER tg_leave_ledger_append_only BEFORE DELETE OR UPDATE ON hrm.leave_ledger FOR EACH ROW EXECUTE FUNCTION hrm.tg_refuse_change()
 - `tg_leave_ledger_no_truncate` CREATE TRIGGER tg_leave_ledger_no_truncate BEFORE TRUNCATE ON hrm.leave_ledger FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_refuse_change()
 - `tg_leave_ledger_reversal` CREATE TRIGGER tg_leave_ledger_reversal BEFORE INSERT ON hrm.leave_ledger FOR EACH ROW EXECUTE FUNCTION hrm.tg_leave_ledger_reversal()
+- `tg_leave_ledger_transfer` CREATE TRIGGER tg_leave_ledger_transfer BEFORE INSERT ON hrm.leave_ledger FOR EACH ROW EXECUTE FUNCTION hrm.tg_leave_ledger_transfer()
 
 ### hrm.leave_request_days
 
-Day-by-day breakdown used by attendance and payroll. Requirements: LVE-04, LVE-07. Pending rule (S1.32, placeholder hrm.todo_leave_request_days_daily_total): trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave) Source: hrm-time.yaml.
+Day-by-day breakdown used by attendance and payroll. Requirements: LVE-04, LVE-07. Rule (implemented in S1.32b): trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave) Source: hrm-time.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -2862,9 +2863,11 @@ Day-by-day breakdown used by attendance and payroll. Requirements: LVE-04, LVE-0
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| day_kind | text | no | 'leave'::text | default leave; sandwich: a holiday or weekly off between two leave days of the request counted as leave (S1.32b, Build item 8) |
 
 Constraints:
 
+- `ck_leave_request_days_day_kind` CHECK ((day_kind = ANY (ARRAY['leave'::text, 'sandwich'::text])))
 - `fk_leave_request_days_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_leave_request_days_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
 - `fk_leave_request_days_leave_request_id` FOREIGN KEY (company_id, leave_request_id) REFERENCES hrm.leave_requests(company_id, id)
@@ -2877,6 +2880,10 @@ Indexes:
 - `ix_leave_request_days_company_id_employment_id` CREATE INDEX ix_leave_request_days_company_id_employment_id ON hrm.leave_request_days USING btree (company_id, employment_id)
 - `ix_leave_request_days_company_id_leave_request_id` CREATE INDEX ix_leave_request_days_company_id_leave_request_id ON hrm.leave_request_days USING btree (company_id, leave_request_id)
 - `ix_leave_request_days_employment_id_leave_date` CREATE INDEX ix_leave_request_days_employment_id_leave_date ON hrm.leave_request_days USING btree (employment_id, leave_date)
+
+Triggers:
+
+- `tg_leave_request_days_daily_total` CREATE TRIGGER tg_leave_request_days_daily_total BEFORE INSERT OR UPDATE ON hrm.leave_request_days FOR EACH ROW EXECUTE FUNCTION hrm.tg_leave_request_days_daily_total()
 
 ### hrm.leave_requests
 
@@ -7838,6 +7845,8 @@ Constraints:
 - `hrm.tg_grades_value_checks` 
 - `hrm.tg_headcount_budgets_value_checks` 
 - `hrm.tg_leave_ledger_reversal` 
+- `hrm.tg_leave_ledger_transfer` 
+- `hrm.tg_leave_request_days_daily_total` 
 - `hrm.tg_leave_types_rules` 
 - `hrm.tg_pay_component_versions_bases` 
 - `hrm.tg_pay_groups_rules` 
@@ -7853,8 +7862,6 @@ Constraints:
 - `hrm.todo_final_settlements_approval_needs_clearance` Pending rule for hrm.final_settlements, owned by S1.43: status may become approved only when clearance_status in (cleared, waived) (FR-XM-29)
 - `hrm.todo_final_settlements_lock` Pending rule for hrm.final_settlements, owned by S1.43: Header and lines locked by trigger from approved onward; correction by cancel and reissue (FR-XM-05).
 - `hrm.todo_goals_parent_cycle` Pending rule for hrm.goals, owned by S1.49: Cycle check trigger on parent_goal_id.
-- `hrm.todo_leave_ledger_transfer` Pending rule for hrm.leave_ledger, owned by S1.32: Intra-group transfer posts transfer_out on the old employment and transfer_in on the new one with the same source_id (FR-XM-30).
-- `hrm.todo_leave_request_days_daily_total` Pending rule for hrm.leave_request_days, owned by S1.32: trigger: sum(quantity) per (employment_id, leave_date) over non-cancelled requests <= 1 day (or shift hours for hourly leave)
 - `hrm.todo_loan_installments_freeze` Pending rule for hrm.loan_installments, owned by S1.41: Frozen by trigger once status = deducted.
 - `hrm.todo_loan_transactions_recovery_within_balance` Pending rule for hrm.loan_transactions, owned by S1.41: trigger: a recovery cannot exceed the outstanding balance
 - `hrm.todo_nominations_shares_sum_to_one` Pending rule for hrm.nominations, owned by S1.20: deferred: shares per (person_id, scheme) on any date sum to 1
