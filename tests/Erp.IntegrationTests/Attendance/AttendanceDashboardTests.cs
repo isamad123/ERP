@@ -102,7 +102,7 @@ public sealed class AttendanceDashboardTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(7, N(totals, "scheduled"));
 
         // Dashboard counts equal list counts, status by status (ATT-18).
-        Assert.Equal([p.Present.ToString(), p.Late.ToString()], (await ListAsync(o.Hr, o, "present")).Order(StringComparer.Ordinal));
+        Assert.Equal(new[] { p.Present.ToString(), p.Late.ToString() }.Order(StringComparer.Ordinal), (await ListAsync(o.Hr, o, "present")).Order(StringComparer.Ordinal));
         Assert.Equal([p.Late.ToString()], await ListAsync(o.Hr, o, "late"));
         Assert.Equal([p.NotYet.ToString()], await ListAsync(o.Hr, o, "not_yet_punched"));
         Assert.Equal([p.Leave.ToString()], await ListAsync(o.Hr, o, "on_leave"));
