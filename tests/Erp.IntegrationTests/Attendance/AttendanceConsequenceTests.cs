@@ -539,8 +539,9 @@ public sealed class AttendanceConsequenceTests(TenancyFixture fx) : IAsyncLifeti
             Assert.True(write.Status is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed, $"{path}: {write.Status}");
         }
 
-        // The database keeps the record: a penalty is never deleted and its facts never change; a claimed overtime entry is never removed.
-        await Assert.ThrowsAsync<PostgresException>(() => _h.ExecAsync("delete from hrm.attendance_penalties where id = $1", Ct, penalty));
+        // The database keeps the record: a penalty asked about is never deleted and its facts never change; a claimed overtime entry is never removed.
+        Assert.True((await _h.PostAsync(user.Value, $"/api/hrm/attendance/penalties/{penalty}/waiver", new { reason = "Doctor visit" }, Ct)).Status == HttpStatusCode.Accepted);
+        await Assert.ThrowsAsync<PostgresException>(() => _h.ExecAsync("delete from hrm.attendance_penalties where id = $1", Ct, penalty)); // asked about: kept for good
         await Assert.ThrowsAsync<PostgresException>(() => _h.ExecAsync("update hrm.attendance_penalties set action = 'leave', leave_quantity = 1 where id = $1", Ct, penalty));
         await Assert.ThrowsAsync<PostgresException>(() => _h.ExecAsync("update hrm.overtime_entries set approved_minutes = 30 where id = $1", Ct, entry));
         Assert.True((await _h.PostAsync(user.Value, $"/api/hrm/attendance/overtime-entries/{entry}/claim", new { reason = "Evening" }, Ct)).Status == HttpStatusCode.Accepted);

@@ -2,14 +2,14 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 227 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 228 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
 | customer | aud | 7 |
 | customer | cfg | 20 |
 | customer | doc | 7 |
-| customer | hrm | 116 |
+| customer | hrm | 117 |
 | customer | iam | 24 |
 | customer | itg | 12 |
 | customer | job | 5 |
@@ -1166,6 +1166,72 @@ Indexes:
 - `ix_attendance_exceptions_company_id_employment_id` CREATE INDEX ix_attendance_exceptions_company_id_employment_id ON hrm.attendance_exceptions USING btree (company_id, employment_id)
 - `ix_attendance_exceptions_company_id_status` CREATE INDEX ix_attendance_exceptions_company_id_status ON hrm.attendance_exceptions USING btree (company_id, status)
 - `ix_attendance_exceptions_employment_id_work_date` CREATE INDEX ix_attendance_exceptions_employment_id_work_date ON hrm.attendance_exceptions USING btree (employment_id, work_date)
+
+### hrm.attendance_penalties
+
+A late-coming or early-leaving penalty of a day beyond the monthly allowance of the attendance policy, and its waiver (S1.29b, CR-089, FR-HRM-ATT-13). Requirements: ATT-13. Source: hrm-time.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| company_id | uuid | no |  |  |
+| employment_id | uuid | no |  | fk hrm.employments |
+| work_date | date | no |  |  |
+| kind | text | no |  |  |
+| minutes | integer | no |  | the late or early minutes of the day's result |
+| occurrence | integer | no |  | which late (or early) day of the calendar month this is; the policy allows a number of them before the action |
+| action | text | no |  | what the policy does beyond the allowance: deduct leave, a pay deduction input for payroll, or a warning only |
+| leave_type_id | uuid | yes |  | fk hrm.leave_types |
+| leave_quantity | numeric(19,6) | yes |  | the leave units the policy deducts (action leave) |
+| leave_entry_id | uuid | yes |  | fk hrm.leave_ledger; the usage entry posted (action leave) |
+| leave_reversal_id | uuid | yes |  | fk hrm.leave_ledger; the usage reversal posted when the penalty was waived or cancelled |
+| attendance_day_id | uuid | no |  | fk hrm.attendance_days |
+| period_id | uuid | no |  | fk hrm.attendance_periods; the day's attendance period (FR-XM-26) |
+| policy_version_id | uuid | no |  | fk hrm.policy_versions |
+| explanation | jsonb | no |  | why: keys and values translated at display (ATT-10 style) |
+| waiver_reason | text | yes |  | the reason given when a waiver was asked for |
+| waived_at | timestamp with time zone | yes |  |  |
+| workflow_instance_id | uuid | yes |  | fk wf.workflow_instances |
+| status | text | no |  |  |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `ck_attendance_penalties_action` CHECK ((action = ANY (ARRAY['leave'::text, 'pay_deduction'::text, 'warning'::text])))
+- `ck_attendance_penalties_kind` CHECK ((kind = ANY (ARRAY['late'::text, 'early'::text])))
+- `ck_attendance_penalties_status` CHECK ((status = ANY (ARRAY['applied'::text, 'waived'::text, 'cancelled'::text])))
+- `fk_attendance_penalties_attendance_day_id` FOREIGN KEY (company_id, attendance_day_id, work_date) REFERENCES hrm.attendance_days(company_id, id, work_date)
+- `fk_attendance_penalties_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
+- `fk_attendance_penalties_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
+- `fk_attendance_penalties_leave_entry_id` FOREIGN KEY (company_id, leave_entry_id) REFERENCES hrm.leave_ledger(company_id, id)
+- `fk_attendance_penalties_leave_reversal_id` FOREIGN KEY (company_id, leave_reversal_id) REFERENCES hrm.leave_ledger(company_id, id)
+- `fk_attendance_penalties_leave_type_id` FOREIGN KEY (company_id, leave_type_id) REFERENCES hrm.leave_types(company_id, id)
+- `fk_attendance_penalties_period_id` FOREIGN KEY (company_id, period_id) REFERENCES hrm.attendance_periods(company_id, id)
+- `fk_attendance_penalties_policy_version_id` FOREIGN KEY (policy_version_id) REFERENCES hrm.policy_versions(id)
+- `fk_attendance_penalties_workflow_instance_id` FOREIGN KEY (company_id, workflow_instance_id) REFERENCES wf.workflow_instances(company_id, id)
+- `pk_attendance_penalties` PRIMARY KEY (id)
+
+Indexes:
+
+- `ix_attendance_penalties_company_id` CREATE INDEX ix_attendance_penalties_company_id ON hrm.attendance_penalties USING btree (company_id)
+- `ix_attendance_penalties_company_id_attendance_day_id_work_date` CREATE INDEX ix_attendance_penalties_company_id_attendance_day_id_work_date ON hrm.attendance_penalties USING btree (company_id, attendance_day_id, work_date)
+- `ix_attendance_penalties_company_id_employment_id` CREATE INDEX ix_attendance_penalties_company_id_employment_id ON hrm.attendance_penalties USING btree (company_id, employment_id)
+- `ix_attendance_penalties_company_id_leave_entry_id` CREATE INDEX ix_attendance_penalties_company_id_leave_entry_id ON hrm.attendance_penalties USING btree (company_id, leave_entry_id)
+- `ix_attendance_penalties_company_id_leave_reversal_id` CREATE INDEX ix_attendance_penalties_company_id_leave_reversal_id ON hrm.attendance_penalties USING btree (company_id, leave_reversal_id)
+- `ix_attendance_penalties_company_id_leave_type_id` CREATE INDEX ix_attendance_penalties_company_id_leave_type_id ON hrm.attendance_penalties USING btree (company_id, leave_type_id)
+- `ix_attendance_penalties_company_id_period_id` CREATE INDEX ix_attendance_penalties_company_id_period_id ON hrm.attendance_penalties USING btree (company_id, period_id)
+- `ix_attendance_penalties_company_id_workflow_instance_id` CREATE INDEX ix_attendance_penalties_company_id_workflow_instance_id ON hrm.attendance_penalties USING btree (company_id, workflow_instance_id)
+- `ix_attendance_penalties_employment_id_work_date` CREATE INDEX ix_attendance_penalties_employment_id_work_date ON hrm.attendance_penalties USING btree (employment_id, work_date)
+- `ix_attendance_penalties_policy_version_id` CREATE INDEX ix_attendance_penalties_policy_version_id ON hrm.attendance_penalties USING btree (policy_version_id)
+- `uq_attendance_penalties_employment_id_work_date_kind` CREATE UNIQUE INDEX uq_attendance_penalties_employment_id_work_date_kind ON hrm.attendance_penalties USING btree (employment_id, work_date, kind) WHERE (status <> 'cancelled'::text)
+
+Triggers:
+
+- `tg_attendance_penalties_rules` CREATE TRIGGER tg_attendance_penalties_rules BEFORE INSERT OR DELETE OR UPDATE ON hrm.attendance_penalties FOR EACH ROW EXECUTE FUNCTION hrm.tg_attendance_penalties_rules()
 
 ### hrm.attendance_periods
 
@@ -3371,6 +3437,9 @@ Requirements: ATT-12, LVE-08. Source: hrm-time.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| requested_minutes | integer | yes |  | minutes asked for before the day (pre-approval, S1.29b); null for overtime claimed after it was worked |
+| reason | text | yes |  | why the overtime is asked for or claimed (S1.29b) |
+| policy_version_id | uuid | yes |  | fk hrm.policy_versions; the attendance policy version whose overtime rule gave the multiplier (S1.29b) |
 
 Constraints:
 
@@ -3381,6 +3450,7 @@ Constraints:
 - `fk_overtime_entries_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_overtime_entries_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
 - `fk_overtime_entries_pay_input_id` FOREIGN KEY (company_id, pay_input_id) REFERENCES hrm.pay_inputs(company_id, id)
+- `fk_overtime_entries_policy_version_id` FOREIGN KEY (policy_version_id) REFERENCES hrm.policy_versions(id)
 - `fk_overtime_entries_workflow_instance_id` FOREIGN KEY (company_id, workflow_instance_id) REFERENCES wf.workflow_instances(company_id, id)
 - `pk_overtime_entries` PRIMARY KEY (id)
 
@@ -3393,7 +3463,12 @@ Indexes:
 - `ix_overtime_entries_company_id_pay_input_id` CREATE INDEX ix_overtime_entries_company_id_pay_input_id ON hrm.overtime_entries USING btree (company_id, pay_input_id)
 - `ix_overtime_entries_company_id_workflow_instance_id` CREATE INDEX ix_overtime_entries_company_id_workflow_instance_id ON hrm.overtime_entries USING btree (company_id, workflow_instance_id)
 - `ix_overtime_entries_employment_id_work_date` CREATE INDEX ix_overtime_entries_employment_id_work_date ON hrm.overtime_entries USING btree (employment_id, work_date)
+- `ix_overtime_entries_policy_version_id` CREATE INDEX ix_overtime_entries_policy_version_id ON hrm.overtime_entries USING btree (policy_version_id)
 - `uq_overtime_entries_employment_id_work_date` CREATE UNIQUE INDEX uq_overtime_entries_employment_id_work_date ON hrm.overtime_entries USING btree (employment_id, work_date) WHERE (status <> 'rejected'::text)
+
+Triggers:
+
+- `tg_overtime_entries_rules` CREATE TRIGGER tg_overtime_entries_rules BEFORE INSERT OR DELETE OR UPDATE ON hrm.overtime_entries FOR EACH ROW EXECUTE FUNCTION hrm.tg_overtime_entries_rules()
 
 ### hrm.parallel_run_lines
 
@@ -7835,6 +7910,7 @@ Constraints:
 - `doc.tg_refuse_change` 
 - `hrm.drop_expired_attendance_partitions` 
 - `hrm.tg_attendance_days_versions` 
+- `hrm.tg_attendance_penalties_rules` 
 - `hrm.tg_compensation_fixed` 
 - `hrm.tg_compensation_lines_insert` 
 - `hrm.tg_employee_bank_accounts_bank_fields_required` 
@@ -7848,6 +7924,7 @@ Constraints:
 - `hrm.tg_leave_ledger_transfer` 
 - `hrm.tg_leave_request_days_daily_total` 
 - `hrm.tg_leave_types_rules` 
+- `hrm.tg_overtime_entries_rules` 
 - `hrm.tg_pay_component_versions_bases` 
 - `hrm.tg_pay_groups_rules` 
 - `hrm.tg_pay_periods_fixed` 

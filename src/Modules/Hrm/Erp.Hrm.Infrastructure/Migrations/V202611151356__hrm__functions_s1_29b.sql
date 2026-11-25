@@ -4,13 +4,18 @@
 -- </auto-generated>
 -- Database functions of slice S1.29b (tools/Erp.CodeGen/rules.yaml, functions)
 
--- hrm.tg_attendance_penalties_rules: A lateness penalty is never deleted, its facts (employment, day, kind, action, leave type, units and usage entry) never change, and it ends once (waived or cancelled; waived needs the time), after which nothing changes; refused with constraint ck_attendance_penalties_rules.
+-- hrm.tg_attendance_penalties_rules: A lateness penalty that deducted leave, was asked to be waived or ended is never deleted, its facts (employment, day, kind, action, leave type, units and usage entry) never change, and it ends once (waived or cancelled; waived needs the time), after which nothing changes; refused with constraint ck_attendance_penalties_rules.
 create or replace function hrm.tg_attendance_penalties_rules() returns trigger
 language plpgsql as $fn$
 begin
     if tg_op = 'DELETE' then
-        raise exception 'attendance penalty %: a penalty is never deleted; it is waived or cancelled', old.id
-            using errcode = '23514', constraint = 'ck_attendance_penalties_rules';
+        -- Only an untouched penalty (applied, no leave deducted, no waiver asked) may go, and the change log records it; the application never
+        -- deletes one (its writes are closed). Anything that changed a balance or was asked about is kept for good.
+        if old.status <> 'applied' or old.leave_entry_id is not null or old.workflow_instance_id is not null or old.waiver_reason is not null then
+            raise exception 'attendance penalty %: a penalty that deducted leave, was asked to be waived or ended is never deleted', old.id
+                using errcode = '23514', constraint = 'ck_attendance_penalties_rules';
+        end if;
+        return old;
     end if;
     if new.minutes < 0 or new.occurrence < 1 or (new.leave_quantity is not null and new.leave_quantity <= 0)
        or (new.action = 'leave') <> (new.leave_quantity is not null) or (new.action <> 'leave' and new.leave_type_id is not null)
