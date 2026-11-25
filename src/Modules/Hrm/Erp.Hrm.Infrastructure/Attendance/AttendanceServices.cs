@@ -28,11 +28,16 @@ public static class AttendanceServices
         services.TryAddScoped<IAttendanceReprocessing, AttendanceReprocessing>();
         services.AddScoped<EffectiveShiftReader>(); // S1.28b's effective shift is the engine's day plan (R-158); needs IHolidayCalendars from the host
         services.AddScoped<IEffectiveShiftReader>(sp => sp.GetRequiredService<EffectiveShiftReader>());
+        services.AddScoped<AttendanceConsequences>(); // S1.29b: overtime entries and lateness penalties follow the results
         services.AddScoped<AttendanceDayProcessor>();
+        services.TryAddScoped<IOvertimeInputs, OvertimeInputReader>(); // S1.29b payroll hand-off (S1.35 reads both)
+        services.TryAddScoped<ILatenessDeductions, LatenessDeductionReader>();
 
         // S1.30a: the end of an approval of a regularization or duty request (an approval can be decided through either host).
         services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, RegularizationHandler>();
         services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, DutyRequestHandler>();
+        services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, OvertimeHandler>(); // S1.29b overtime and waivers
+        services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, PenaltyWaiverHandler>();
         return services;
     }
 
@@ -45,6 +50,7 @@ public static class AttendanceServices
         services.AddScoped<IDevicePushService, DevicePushService>();
         services.AddScoped<IAttendanceDayService, AttendanceDayService>(); // S1.29a
         services.AddScoped<IAttendanceRequestService, AttendanceRequestService>(); // S1.30a
+        services.AddScoped<IAttendanceConsequenceService, AttendanceConsequenceService>(); // S1.29b
         return services;
     }
 

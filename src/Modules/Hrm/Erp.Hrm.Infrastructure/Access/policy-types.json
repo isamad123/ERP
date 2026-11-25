@@ -291,8 +291,8 @@
       "code": "attendance",
       "name": { "en": "Attendance rules", "ur": "حاضری کے اصول" },
       "description": {
-        "en": "How punches become a day's result for the employees it covers: grace minutes for coming late and leaving early, lateness or early leaving that makes a half day, the minutes worked below which a day is a half day or an absence, how breaks are taken off, how worked minutes are rounded, how far from the shift a punch still belongs to it, and whether work on a weekly off or a holiday is recorded. No number is filled in for you; until a policy applies, days are not processed",
-        "ur": "متعلقہ ملازمین کے اندراجات سے دن کا نتیجہ کیسے بنتا ہے: دیر سے آنے اور جلد جانے کے رعایتی منٹ، کتنی دیر یا کتنا جلد جانا آدھا دن بناتا ہے، کام کے کتنے منٹ سے کم پر دن آدھا یا غیر حاضری ہے، وقفہ کیسے منہا ہوتا ہے، کام کے منٹ کیسے گول ہوتے ہیں، شفٹ سے کتنے فاصلے تک اندراج اسی کا ہے، اور ہفتہ وار چھٹی یا تعطیل پر کام درج ہوتا ہے یا نہیں۔ کوئی عدد خود سے نہیں بھرا جاتا؛ جب تک کوئی پالیسی لاگو نہ ہو، دن پراسیس نہیں ہوتے"
+        "en": "How punches become a day's result for the employees it covers: grace minutes for coming late and leaving early, lateness or early leaving that makes a half day, the minutes worked below which a day is a half day or an absence, how breaks are taken off, how worked minutes are rounded, how far from the shift a punch still belongs to it, and whether work on a weekly off or a holiday is recorded. No number is filled in for you; until a policy applies, days are not processed. Optionally: how many late arrivals and early departures a month are allowed and what follows each further one (leave deducted, a pay deduction for payroll, or a warning), and for each day type whether overtime counts, at which multiplier, within which daily and monthly caps, approved before or after the day, and paid or given as compensatory off. No working-time limit or overtime rate of any law is filled in; enter your own",
+        "ur": "متعلقہ ملازمین کے اندراجات سے دن کا نتیجہ کیسے بنتا ہے: دیر سے آنے اور جلد جانے کے رعایتی منٹ، کتنی دیر یا کتنا جلد جانا آدھا دن بناتا ہے، کام کے کتنے منٹ سے کم پر دن آدھا یا غیر حاضری ہے، وقفہ کیسے منہا ہوتا ہے، کام کے منٹ کیسے گول ہوتے ہیں، شفٹ سے کتنے فاصلے تک اندراج اسی کا ہے، اور ہفتہ وار چھٹی یا تعطیل پر کام درج ہوتا ہے یا نہیں۔ کوئی عدد خود سے نہیں بھرا جاتا؛ جب تک کوئی پالیسی لاگو نہ ہو، دن پراسیس نہیں ہوتے۔ اختیاری طور پر: مہینے میں کتنی بار دیر سے آنا اور جلد جانا معاف ہے اور اس کے بعد ہر بار کیا ہوتا ہے (رخصت کی کٹوتی، پے رول کے لیے تنخواہ کی کٹوتی، یا صرف تنبیہ)، اور ہر قسم کے دن کے لیے اوور ٹائم شمار ہوتا ہے یا نہیں، کس شرح سے، روزانہ اور ماہانہ کس حد تک، دن سے پہلے یا بعد منظوری، اور ادائیگی یا متبادل چھٹی۔ کسی قانون کی اوقاتِ کار کی حد یا اوور ٹائم کی شرح خود سے نہیں بھری جاتی؛ اپنی درج کریں"
       },
       "cardinality": "one",
       "required": true,
@@ -318,7 +318,70 @@
           "onDutyCountsAsPresent": { "type": "boolean", "title": "hrm.policy.param.attendance.on_duty_counts_as_present" },
           "officialVisitCountsAsPresent": { "type": "boolean", "title": "hrm.policy.param.attendance.official_visit_counts_as_present" },
           "workFromHomeCountsAsPresent": { "type": "boolean", "title": "hrm.policy.param.attendance.work_from_home_counts_as_present" },
-          "fieldDutyCountsAsPresent": { "type": "boolean", "title": "hrm.policy.param.attendance.field_duty_counts_as_present" }
+          "fieldDutyCountsAsPresent": { "type": "boolean", "title": "hrm.policy.param.attendance.field_duty_counts_as_present" },
+          "latePenalty": {
+            "type": "object", "additionalProperties": false, "required": ["allowedPerMonth", "action"], "title": "hrm.policy.param.attendance.late_penalty",
+            "properties": {
+              "allowedPerMonth": { "type": "integer", "minimum": 0, "maximum": 31, "title": "hrm.policy.param.attendance.penalty.allowed_per_month" },
+              "action": { "type": "string", "enum": ["leave", "pay_deduction", "warning"], "title": "hrm.policy.param.attendance.penalty.action" },
+              "leaveTypeCode": { "type": "string", "minLength": 1, "maxLength": 50, "title": "hrm.policy.param.attendance.penalty.leave_type_code" },
+              "leaveUnits": { "type": "number", "minimum": 0.01, "maximum": 31, "title": "hrm.policy.param.attendance.penalty.leave_units" }
+            }
+          },
+          "earlyPenalty": {
+            "type": "object", "additionalProperties": false, "required": ["allowedPerMonth", "action"], "title": "hrm.policy.param.attendance.early_penalty",
+            "properties": {
+              "allowedPerMonth": { "type": "integer", "minimum": 0, "maximum": 31, "title": "hrm.policy.param.attendance.penalty.allowed_per_month" },
+              "action": { "type": "string", "enum": ["leave", "pay_deduction", "warning"], "title": "hrm.policy.param.attendance.penalty.action" },
+              "leaveTypeCode": { "type": "string", "minLength": 1, "maxLength": 50, "title": "hrm.policy.param.attendance.penalty.leave_type_code" },
+              "leaveUnits": { "type": "number", "minimum": 0.01, "maximum": 31, "title": "hrm.policy.param.attendance.penalty.leave_units" }
+            }
+          },
+          "overtime": {
+            "type": "object", "additionalProperties": false, "title": "hrm.policy.param.attendance.overtime",
+            "properties": {
+              "working": {
+                "type": "object", "additionalProperties": false, "required": ["multiplier", "approval", "compensation"], "title": "hrm.policy.param.attendance.overtime.working",
+                "properties": {
+                  "multiplier": { "type": "number", "minimum": 0, "maximum": 10, "title": "hrm.policy.param.attendance.overtime.multiplier" },
+                  "approval": { "type": "string", "enum": ["pre", "post"], "title": "hrm.policy.param.attendance.overtime.approval" },
+                  "dailyCapMinutes": { "type": "integer", "minimum": 1, "maximum": 1440, "title": "hrm.policy.param.attendance.overtime.daily_cap_minutes" },
+                  "monthlyCapMinutes": { "type": "integer", "minimum": 1, "maximum": 44640, "title": "hrm.policy.param.attendance.overtime.monthly_cap_minutes" },
+                  "minimumMinutes": { "type": "integer", "minimum": 1, "maximum": 1440, "title": "hrm.policy.param.attendance.overtime.minimum_minutes" },
+                  "compensation": { "type": "string", "enum": ["pay", "comp_off"], "title": "hrm.policy.param.attendance.overtime.compensation" },
+                  "compOffDayMinutes": { "type": "integer", "minimum": 1, "maximum": 1440, "title": "hrm.policy.param.attendance.overtime.comp_off_day_minutes" },
+                  "compOffLeaveTypeCode": { "type": "string", "minLength": 1, "maxLength": 50, "title": "hrm.policy.param.attendance.overtime.comp_off_leave_type_code" },
+                  "countBeforeShift": { "type": "boolean", "title": "hrm.policy.param.attendance.overtime.count_before_shift" }
+                }
+              },
+              "weeklyOff": {
+                "type": "object", "additionalProperties": false, "required": ["multiplier", "approval", "compensation"], "title": "hrm.policy.param.attendance.overtime.weekly_off",
+                "properties": {
+                  "multiplier": { "type": "number", "minimum": 0, "maximum": 10, "title": "hrm.policy.param.attendance.overtime.multiplier" },
+                  "approval": { "type": "string", "enum": ["pre", "post"], "title": "hrm.policy.param.attendance.overtime.approval" },
+                  "dailyCapMinutes": { "type": "integer", "minimum": 1, "maximum": 1440, "title": "hrm.policy.param.attendance.overtime.daily_cap_minutes" },
+                  "monthlyCapMinutes": { "type": "integer", "minimum": 1, "maximum": 44640, "title": "hrm.policy.param.attendance.overtime.monthly_cap_minutes" },
+                  "minimumMinutes": { "type": "integer", "minimum": 1, "maximum": 1440, "title": "hrm.policy.param.attendance.overtime.minimum_minutes" },
+                  "compensation": { "type": "string", "enum": ["pay", "comp_off"], "title": "hrm.policy.param.attendance.overtime.compensation" },
+                  "compOffDayMinutes": { "type": "integer", "minimum": 1, "maximum": 1440, "title": "hrm.policy.param.attendance.overtime.comp_off_day_minutes" },
+                  "compOffLeaveTypeCode": { "type": "string", "minLength": 1, "maxLength": 50, "title": "hrm.policy.param.attendance.overtime.comp_off_leave_type_code" }
+                }
+              },
+              "holiday": {
+                "type": "object", "additionalProperties": false, "required": ["multiplier", "approval", "compensation"], "title": "hrm.policy.param.attendance.overtime.holiday",
+                "properties": {
+                  "multiplier": { "type": "number", "minimum": 0, "maximum": 10, "title": "hrm.policy.param.attendance.overtime.multiplier" },
+                  "approval": { "type": "string", "enum": ["pre", "post"], "title": "hrm.policy.param.attendance.overtime.approval" },
+                  "dailyCapMinutes": { "type": "integer", "minimum": 1, "maximum": 1440, "title": "hrm.policy.param.attendance.overtime.daily_cap_minutes" },
+                  "monthlyCapMinutes": { "type": "integer", "minimum": 1, "maximum": 44640, "title": "hrm.policy.param.attendance.overtime.monthly_cap_minutes" },
+                  "minimumMinutes": { "type": "integer", "minimum": 1, "maximum": 1440, "title": "hrm.policy.param.attendance.overtime.minimum_minutes" },
+                  "compensation": { "type": "string", "enum": ["pay", "comp_off"], "title": "hrm.policy.param.attendance.overtime.compensation" },
+                  "compOffDayMinutes": { "type": "integer", "minimum": 1, "maximum": 1440, "title": "hrm.policy.param.attendance.overtime.comp_off_day_minutes" },
+                  "compOffLeaveTypeCode": { "type": "string", "minLength": 1, "maxLength": 50, "title": "hrm.policy.param.attendance.overtime.comp_off_leave_type_code" }
+                }
+              }
+            }
+          }
         }
       }
     },
