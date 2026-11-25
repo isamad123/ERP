@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { Route, Routes, useNavigate, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { EngineProvider, FormPage, ListPage, useDocumentTitle, type EngineApi, type FormValues, type Row, type TableMetadata, type ValidationSchema } from '@erp/engine';
-import { Banner, Button, CheckboxField, DateField, Dialog, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, TextField, useToast } from '@erp/ui';
+import { Banner, Button, CheckboxField, DateField, Dialog, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, TextField, useToast, ScrollRegion } from '@erp/ui';
 import { formatDate, useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { parseDate, type CalendarDate } from '@internationalized/date';
 import { rosterLines, rosters, shifts as shiftApi, type Roster, type RosterLine } from '@erp/generated/api/hrm';
@@ -211,9 +211,7 @@ function Grid({ roster, lines, people, shifts, holidays, editable, onOpen }: {
   const dayLabel = (d: string) => formatDate(`${d}T12:00:00Z`, lang, 'UTC', numbers);
   const what = (c: Cell) => (!c ? t('ros.grid.off') : c.dayType === 'working' ? code(c.shiftId) : t(c.dayType === 'holiday' ? 'ros.grid.holiday' : 'ros.grid.off'));
   return (
-    // A scrolling region must be reachable by keyboard even when every cell is disabled (WCAG 2.1.1).
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-    <div className="erp-ros-scroll" role="region" aria-label={t('ros.grid.label')} tabIndex={0}>
+    <ScrollRegion className="erp-ros-scroll" label={t('ros.grid.label')}>
       <table className="erp-ros-grid">
         <thead>
           <tr>
@@ -248,7 +246,7 @@ function Grid({ roster, lines, people, shifts, holidays, editable, onOpen }: {
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }
 

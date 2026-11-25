@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
 import { useDocumentTitle } from '@erp/engine';
-import { Banner, Button, Dialog, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, SwitchField, TextField, useToast, type Option } from '@erp/ui';
+import { Banner, Button, Dialog, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, SwitchField, TextField, useToast, type Option, ScrollRegion } from '@erp/ui';
 import { useLocaleSettings, useText } from '@erp/i18n';
 import { ApiProblem } from '../../api/client';
 import { labelsApi, type LabelOverride } from '../../api/config';
@@ -82,7 +82,7 @@ export default function LabelsScreen() {
       {list.isSuccess && rows.length > 0 && (
         <>
           <p className="erp-small erp-muted" role="status">{t('labels.count', { count: rows.length })}</p>
-          <div className="erp-table-scroll">
+          <ScrollRegion className="erp-table-scroll" label={t('labels.title')}>
           <table className="erp-table erp-labels-table" aria-label={t('labels.title')}>
             <thead>
               <tr>
@@ -121,7 +121,7 @@ export default function LabelsScreen() {
               })}
             </tbody>
           </table>
-          </div>
+          </ScrollRegion>
           {rows.length > shown && <Button variant="secondary" onPress={() => setShown((n) => n + PAGE)}>{t('labels.more', { shown: visible.length, total: rows.length })}</Button>}
         </>
       )}

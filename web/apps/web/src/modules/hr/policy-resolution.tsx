@@ -4,7 +4,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useDocumentTitle } from '@erp/engine';
-import { Banner, Button, ComboBoxField, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, type Option } from '@erp/ui';
+import { Banner, Button, ComboBoxField, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, type Option, ScrollRegion } from '@erp/ui';
 import { isolate, useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { ApiProblem } from '../../api/client';
 import { policiesApi, type AssignmentEvaluation, type PolicyType, type Resolution } from '../../api/policies';
@@ -106,7 +106,7 @@ function Evaluation({ evaluation: e, resolution }: { evaluation: AssignmentEvalu
         <StatusChip status={OUTCOME_STATUS[e.outcome]} label={t(`pol.res.outcome.${e.outcome}` as MessageKey)} />
       </span>
       {e.conditions.length === 0 ? <p className="erp-small">{t('pol.rule.everyone')}</p> : (
-        <div className="erp-table-scroll">
+        <ScrollRegion className="erp-table-scroll" label={t('pol.res.conditions', { order: e.precedence })}>
           <table className="erp-table" aria-label={t('pol.res.conditions', { order: e.precedence })}>
             <thead><tr><th scope="col">{t('pol.res.col.condition')}</th><th scope="col">{t('pol.res.col.employee')}</th><th scope="col">{t('pol.res.col.met')}</th></tr></thead>
             <tbody>
@@ -119,7 +119,7 @@ function Evaluation({ evaluation: e, resolution }: { evaluation: AssignmentEvalu
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       )}
     </li>
   );

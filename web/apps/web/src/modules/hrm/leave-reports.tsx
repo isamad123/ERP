@@ -1,4 +1,3 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // The leave reports (slice S1.33b Build item 9; FR-HRM-LVE-10, FR-HRM-RPT-05, FR-HRM-GHR-06): balance summary by unit, leave taken by type and month, and leave waiting for a decision.
 // Filters that apply to the chosen report, a summary table built from the server's groups (over every row of the filter, not only the page), the rows, paging and an export of
 // exactly the filter shown. Quantities are exact decimals shown with their unit; balances of types counted in different units are never added. Nothing here shows pay.
@@ -6,7 +5,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { parseDate, type CalendarDate } from '@internationalized/date';
 import { EngineProvider, ExportButton, useDocumentTitle, type EngineApi } from '@erp/engine';
-import { Button, DateField, EmptyState, ErrorPanel, Link, PageHeader, SelectField, Skeleton, TextField } from '@erp/ui';
+import { Button, DateField, EmptyState, ErrorPanel, Link, PageHeader, SelectField, Skeleton, TextField, ScrollRegion } from '@erp/ui';
 import { formatDecimal, useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { leaveReportsApi, LEAVE_REPORT_CODES, type LeaveReportFilter, type LeaveReportGroup, type LeaveReportRow } from '../../api/leave-reports';
 import { ApiProblem, sendText } from '../../api/client';
@@ -127,13 +126,13 @@ export default function LeaveReportsScreen() {
     return unpaid > 0 ? `${qty(hit, 'taken')} · ${t('lrep.unpaidNote', { value: qty(hit, 'unpaid') })}` : qty(hit, 'taken');
   };
   const region = (aria: string, head: React.ReactNode, body: React.ReactNode, hidden = false) => (
-    <div className="erp-live-scroll" role="region" tabIndex={0} aria-label={aria}>
+    <ScrollRegion className="erp-live-scroll" label={aria}>
       <table className="erp-pos-table">
         <caption className={hidden ? 'erp-visually-hidden' : undefined}>{aria}</caption>
         <thead>{head}</thead>
         <tbody>{body}</tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
   const th = (k: string) => <th key={k} scope="col" data-column={k}>{label(k)}</th>;
   return (
