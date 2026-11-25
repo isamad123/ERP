@@ -77,6 +77,9 @@ public static class HrmSettingKeys
     /// <summary>How many hours of work a day has for hourly leave on a day no shift plans; 0 means not set.</summary>
     public const string HrmLeaveHoursPerDay = "hrm.leave.hours_per_day";
 
+    /// <summary>Warn the approver and the team calendar when this share of a team is away on one day; 0 turns the warning off.</summary>
+    public const string HrmLeaveCoverageWarningPercent = "hrm.leave.coverage_warning_percent";
+
     /// <summary>Confirming the leave year-end needs a second person's approval.</summary>
     public const string HrmLeaveYearEndRequiresApproval = "hrm.leave.year_end_requires_approval";
 

@@ -37,6 +37,7 @@
   ],
   "constraints": {
     "ck_leave_types_code_code": "code",
+    "ck_leave_types_color_token": "colorToken",
     "ck_leave_types_counting": "counting",
     "ck_leave_types_name_i18n_object": "nameI18n",
     "ck_leave_types_source": "source",
@@ -194,6 +195,42 @@
         {
           "value": "tenant",
           "labelKey": "options.hrm.leave_types.source.tenant"
+        }
+      ]
+    },
+    {
+      "column": "color_token",
+      "field": "colorToken",
+      "kind": "Enum",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.leave_types.color_token",
+      "options": [
+        {
+          "value": "primary",
+          "labelKey": "options.hrm.leave_types.color_token.primary"
+        },
+        {
+          "value": "success",
+          "labelKey": "options.hrm.leave_types.color_token.success"
+        },
+        {
+          "value": "warning",
+          "labelKey": "options.hrm.leave_types.color_token.warning"
+        },
+        {
+          "value": "danger",
+          "labelKey": "options.hrm.leave_types.color_token.danger"
+        },
+        {
+          "value": "info",
+          "labelKey": "options.hrm.leave_types.color_token.info"
+        },
+        {
+          "value": "neutral",
+          "labelKey": "options.hrm.leave_types.color_token.neutral"
         }
       ]
     },

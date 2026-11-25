@@ -348,12 +348,15 @@
     - [is_comp_off, bool, req]
     - [is_unpaid_deduction, bool, req, flows to payroll as leave without pay (LVE-07)]
     - [source, "enum(pack,tenant)", req]
+    # S1.33a (CR-092, slice S1.33 ruling Q3): the design token the calendar paints the type with (a token name, never a raw colour); null shows the neutral token.
+    - [color_token, "enum(primary,success,warning,danger,info,neutral)", opt]
   unique: [[company_id, lower(code)]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
   # S1.32a (CR-086 S1.32a detail; slice S1.32 Build item 1): generated writes closed; the HR leave type service writes (code, counting and unit fixed once
   # the type has ledger entries; retire, never delete; rules.yaml function hrm.tg_leave_types_rules).
   api_actions: [read]
+  added_in: {S1.33a: [color_token]}
   reqs: [LVE-01, LVE-12]
   notes: "Entitlement, accrual, carry-forward, encashment, eligibility and sandwich rules are a leave policy (hrm.policies type leave) assigned per leave type."
 

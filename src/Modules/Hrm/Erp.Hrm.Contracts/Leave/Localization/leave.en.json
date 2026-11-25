@@ -61,6 +61,7 @@
   "errors.hrm.leave.type_fixed": "The code, counting and unit cannot change once the leave type has ledger entries.",
   "errors.hrm.leave.type_retired": "This leave type is retired. Bring it back before posting to it.",
   "errors.hrm.leave.type_unknown": "This is not a leave type of the employee's company.",
+  "errors.hrm.leave.color_token": "The colour must be one of the design colours: primary, success, warning, danger, info or neutral.",
   "errors.hrm.leave.unit": "The unit must be a day, a half day or an hour.",
   "errors.hrm.leave.year_closed": "This leave year has been closed by its year-end; nothing more can be posted to it.",
   "errors.hrm.leave.year_end.already_applied": "The year-end of this leave year has already been confirmed.",

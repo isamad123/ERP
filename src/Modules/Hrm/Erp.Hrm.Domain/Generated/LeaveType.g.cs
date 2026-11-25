@@ -45,6 +45,9 @@ public sealed partial class LeaveType : global::Erp.BuildingBlocks.Domain.Entiti
     /// <summary>source</summary>
     public string Source { get; set; } = null!;
 
+    /// <summary>color_token</summary>
+    public string? ColorToken { get; set; }
+
     /// <summary>is_active</summary>
     public bool IsActive { get; set; } = true;
 
