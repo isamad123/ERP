@@ -75,7 +75,7 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 70 # R-318: was 45; build-and-test took 40 to 41 minutes on other pull requests and was cancelled at 45 on this one; the real fix is to split the integration tests into shards
 
     services:
       postgres:
@@ -316,9 +316,9 @@ jobs:
       matrix:
         shard:
           - name: 1
-            files: "access exports notify-templates sign-in"
+            files: "access attendance-periods exports notify-templates sign-in"
           - name: 2
-            files: "custom-fields setup shell users"
+            files: "custom-fields leave-admin setup shell users"
           - name: 3
             files: "approvals imports leave-screens numbering-routes ops"
           - name: 4
