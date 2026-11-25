@@ -150,6 +150,8 @@
   "nav.shifts": "Shifts",
   "nav.rosters": "Rosters",
   "nav.optionalHolidays": "Optional holidays",
+  "nav.attendanceRequests": "Attendance requests",
+  "nav.exceptions": "Attendance exceptions",
   "nav.kiosk": "Attendance kiosk",
   "nav.qr": "Gate QR code",
   "nav.attendance": "Attendance",

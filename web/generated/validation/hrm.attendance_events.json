@@ -48,7 +48,8 @@
         "kiosk",
         "hr_entry",
         "import",
-        "qr"
+        "qr",
+        "regularization"
       ]
     },
     "deviceId": {

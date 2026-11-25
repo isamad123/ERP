@@ -8246,7 +8246,8 @@
             "kiosk",
             "hr_entry",
             "import",
-            "qr"
+            "qr",
+            "regularization"
           ]
         },
         {
@@ -12528,7 +12529,8 @@
           "enum_values": [
             "on_duty",
             "official_visit",
-            "work_from_home"
+            "work_from_home",
+            "field_duty"
           ]
         },
         {

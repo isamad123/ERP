@@ -124,7 +124,7 @@ public sealed record ExclusionDef(string Name, IReadOnlyList<string> Elements, s
 /// <see cref="ReplacedIn"/> and <see cref="BaseSql"/> (design key <c>enum_added_in</c>, S1.08): the frozen file created the
 /// check as <see cref="BaseSql"/>; the slice's design migration replaces it with <see cref="Sql"/>.
 /// </remarks>
-public sealed record CheckDef(string Name, string Sql, string? AddedIn = null, string? BaseSql = null, string? ReplacedIn = null);
+public sealed record CheckDef(string Name, string Sql, string? AddedIn = null, string? BaseSql = null, string? ReplacedIn = null, IReadOnlyList<(string Slice, string Sql)>? Steps = null);
 
 /// <remarks>
 /// <see cref="ReplacedIn"/>, <see cref="BaseColumns"/> and <see cref="BaseTargetColumns"/> (design key <c>fks_replaced_in</c>,
@@ -243,7 +243,7 @@ public sealed class Table
     public IEnumerable<string> ChangedIn =>
         new[] { AddedIn }.Concat(Columns.Select(c => c.AddedIn)).Concat(UpdatableAddedIn.Select(u => u.Slice)).Concat(CommentsAddedIn.Select(c => c.Slice))
             .Concat(Indexes.Select(i => i.AddedIn)).Concat(Checks.Select(c => c.AddedIn))
-            .Concat(Columns.Select(c => c.OptionalIn)).Concat(Checks.Select(c => c.ReplacedIn)).Concat(Uniques.Select(u => u.AddedIn)).Concat(Uniques.Select(u => u.ReplacedIn))
+            .Concat(Columns.Select(c => c.OptionalIn)).Concat(Checks.Select(c => c.ReplacedIn)).Concat(Checks.SelectMany(c => (c.Steps ?? []).Select(x => (string?)x.Slice))).Concat(Uniques.Select(u => u.AddedIn)).Concat(Uniques.Select(u => u.ReplacedIn))
             .Concat(ForeignKeys.Select(f => f.ReplacedIn))
             .Where(s => s is not null).Select(s => s!).Distinct(StringComparer.Ordinal);
 

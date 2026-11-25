@@ -23,5 +23,5 @@ public interface IAttendanceDayService
 
     Task<PeopleResult> ExplainAsync(Guid employmentId, DateOnly workDate, CancellationToken cancellationToken);
 
-    Task<PeopleResult> ExceptionsAsync(Guid? companyId, string? status, string? kind, DateOnly? firstDay, DateOnly? lastDay, int? limit, CancellationToken cancellationToken);
+    Task<PeopleResult> ExceptionsAsync(Guid? companyId, string? status, string? kind, DateOnly? firstDay, DateOnly? lastDay, int? limit, CancellationToken cancellationToken, Guid? orgUnitId = null, int? minAgeDays = null);
 }

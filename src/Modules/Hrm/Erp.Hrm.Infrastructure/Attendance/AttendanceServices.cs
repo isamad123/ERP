@@ -29,6 +29,10 @@ public static class AttendanceServices
         services.AddScoped<EffectiveShiftReader>(); // S1.28b's effective shift is the engine's day plan (R-158); needs IHolidayCalendars from the host
         services.AddScoped<IEffectiveShiftReader>(sp => sp.GetRequiredService<EffectiveShiftReader>());
         services.AddScoped<AttendanceDayProcessor>();
+
+        // S1.30a: the end of an approval of a regularization or duty request (an approval can be decided through either host).
+        services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, RegularizationHandler>();
+        services.AddScoped<Kernel.Contracts.Workflow.IWorkflowOutcomeHandler, DutyRequestHandler>();
         return services;
     }
 
@@ -40,6 +44,7 @@ public static class AttendanceServices
         services.AddScoped<IDeviceMappingService, DeviceMappingService>();
         services.AddScoped<IDevicePushService, DevicePushService>();
         services.AddScoped<IAttendanceDayService, AttendanceDayService>(); // S1.29a
+        services.AddScoped<IAttendanceRequestService, AttendanceRequestService>(); // S1.30a
         return services;
     }
 

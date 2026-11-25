@@ -314,7 +314,11 @@
           "roundingStepMinutes": { "type": "integer", "minimum": 1, "maximum": 60, "title": "hrm.policy.param.attendance.rounding_step_minutes" },
           "shiftWindowMinutes": { "type": "integer", "minimum": 0, "maximum": 720, "title": "hrm.policy.param.attendance.shift_window_minutes" },
           "weeklyOffWork": { "type": "string", "enum": ["record", "ignore"], "title": "hrm.policy.param.attendance.weekly_off_work" },
-          "holidayWork": { "type": "string", "enum": ["record", "ignore"], "title": "hrm.policy.param.attendance.holiday_work" }
+          "holidayWork": { "type": "string", "enum": ["record", "ignore"], "title": "hrm.policy.param.attendance.holiday_work" },
+          "onDutyCountsAsPresent": { "type": "boolean", "title": "hrm.policy.param.attendance.on_duty_counts_as_present" },
+          "officialVisitCountsAsPresent": { "type": "boolean", "title": "hrm.policy.param.attendance.official_visit_counts_as_present" },
+          "workFromHomeCountsAsPresent": { "type": "boolean", "title": "hrm.policy.param.attendance.work_from_home_counts_as_present" },
+          "fieldDutyCountsAsPresent": { "type": "boolean", "title": "hrm.policy.param.attendance.field_duty_counts_as_present" }
         }
       }
     },

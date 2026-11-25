@@ -284,6 +284,12 @@ public static class DayRules
     public static DayOutcome Evaluate(DayInput input)
     {
         ArgumentNullException.ThrowIfNull(input);
+        // A duty of a kind the policy does not count as present is no duty here (ATT-14, CR-090): the day is worked out from the punches.
+        return input.Duty is { } duty && !input.Policy.CountsAsPresent(duty.Kind) ? EvaluateDay(input with { Duty = null }) : EvaluateDay(input);
+    }
+
+    private static DayOutcome EvaluateDay(DayInput input)
+    {
         var policy = input.Policy;
         var steps = new List<ExplanationLine>();
         var exceptions = new List<string>();

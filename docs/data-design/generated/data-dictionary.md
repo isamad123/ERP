@@ -1113,7 +1113,7 @@ Partitioned by range; 37 partitions.
 Constraints:
 
 - `ck_attendance_events_direction` CHECK ((direction = ANY (ARRAY['in'::text, 'out'::text, 'break_out'::text, 'break_in'::text, 'unknown'::text])))
-- `ck_attendance_events_source` CHECK ((source = ANY (ARRAY['web'::text, 'biometric'::text, 'kiosk'::text, 'hr_entry'::text, 'import'::text, 'qr'::text])))
+- `ck_attendance_events_source` CHECK ((source = ANY (ARRAY['web'::text, 'biometric'::text, 'kiosk'::text, 'hr_entry'::text, 'import'::text, 'qr'::text, 'regularization'::text])))
 - `fk_attendance_events_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_attendance_events_device_id` FOREIGN KEY (company_id, device_id) REFERENCES hrm.attendance_devices(company_id, id)
 - `fk_attendance_events_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
@@ -1841,7 +1841,7 @@ On-duty, official visit and work-from-home requests (ATT-14). Requirements: ATT-
 
 Constraints:
 
-- `ck_duty_requests_kind` CHECK ((kind = ANY (ARRAY['on_duty'::text, 'official_visit'::text, 'work_from_home'::text])))
+- `ck_duty_requests_kind` CHECK ((kind = ANY (ARRAY['on_duty'::text, 'official_visit'::text, 'work_from_home'::text, 'field_duty'::text])))
 - `ck_duty_requests_status` CHECK ((status = ANY (ARRAY['submitted'::text, 'approved'::text, 'rejected'::text, 'cancelled'::text])))
 - `fk_duty_requests_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_duty_requests_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
