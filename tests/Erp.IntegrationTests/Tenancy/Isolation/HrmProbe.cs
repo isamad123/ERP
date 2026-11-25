@@ -16,7 +16,7 @@ namespace Erp.IntegrationTests.Tenancy.Isolation;
 /// employments, the first linked to a user; from S1.20c a second company, a former employment, a contract and a probation; from S1.20d a
 /// payment account and a statutory registration of the first employment; from S1.23a a probation policy assigned to permanent employees
 /// (made before the hires, so the first employment's probation comes from it) and a second policy with a draft; from S1.34a a pay group
-/// with the periods of a tax year; from S1.32a a leave type and an opening balance of the first employment. Then, as for
+/// with the periods of a tax year; from S1.32a a leave type and an opening balance of the first employment (S1.29a's engine routes need nothing more: the first employment's days are processed, read and explained by id, the exception queue lists B's own). Then, as for
 /// the other probes:
 /// <list type="number">
 /// <item>B's host and token aimed at A's ids, with and without headers naming A: actions on A's records are 404; creates and lists
@@ -291,6 +291,10 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "GET /api/hrm/employments/{id:guid}/leave-balances" => ($"/api/hrm/employments/{m.Employment}/leave-balances?asOf=2024-06-30", null),
             "GET /api/hrm/my/leave-balances" => ("/api/hrm/my/leave-balances", null),
             "GET /api/hrm/employments/{id:guid}/leave-recompute" => ($"/api/hrm/employments/{m.Employment}/leave-recompute", null),
+            "POST /api/hrm/employments/{id:guid}/attendance-days/process" => ($"/api/hrm/employments/{m.Employment}/attendance-days/process", Json(new { from = "2024-06-03", to = "2024-06-04" })),
+            "GET /api/hrm/employments/{id:guid}/attendance-days" => ($"/api/hrm/employments/{m.Employment}/attendance-days?from=2024-06-01&to=2024-06-30", null),
+            "GET /api/hrm/employments/{id:guid}/attendance-days/{date}/explain" => ($"/api/hrm/employments/{m.Employment}/attendance-days/2024-06-03/explain", null),
+            "GET /api/hrm/attendance/exceptions" => ($"/api/hrm/attendance/exceptions?companyId={m.Org.Company}", null),
             var key => throw new InvalidOperationException($"No probe target for HR endpoint {key}; extend HrmProbe."),
         };
     }

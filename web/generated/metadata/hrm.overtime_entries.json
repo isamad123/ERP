@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.overtime_entries.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.overtime_entries.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.overtime_entries.update"
     }
   ],
   "companyScoped": true,

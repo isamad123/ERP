@@ -1011,6 +1011,7 @@ Partitioned by range; 37 partitions.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| superseded_at | timestamp with time zone | yes |  | when a newer result of the same day replaced this one; null for the current result (S1.29a) |
 
 Constraints:
 
@@ -1025,7 +1026,6 @@ Constraints:
 - `fk_attendance_days_shift_id` FOREIGN KEY (company_id, shift_id) REFERENCES hrm.shifts(company_id, id)
 - `pk_attendance_days` PRIMARY KEY (id, work_date)
 - `uq_attendance_days_company_id_id_work_date` UNIQUE (company_id, id, work_date)
-- `uq_attendance_days_employment_id_work_date` UNIQUE (employment_id, work_date)
 
 Indexes:
 
@@ -1036,6 +1036,11 @@ Indexes:
 - `ix_attendance_days_company_id_shift_id` CREATE INDEX ix_attendance_days_company_id_shift_id ON ONLY hrm.attendance_days USING btree (company_id, shift_id)
 - `ix_attendance_days_company_id_work_date_result` CREATE INDEX ix_attendance_days_company_id_work_date_result ON ONLY hrm.attendance_days USING btree (company_id, work_date, result)
 - `ix_attendance_days_policy_version_id` CREATE INDEX ix_attendance_days_policy_version_id ON ONLY hrm.attendance_days USING btree (policy_version_id)
+- `uq_attendance_days_employment_id_work_date` CREATE UNIQUE INDEX uq_attendance_days_employment_id_work_date ON ONLY hrm.attendance_days USING btree (employment_id, work_date) WHERE (superseded_at IS NULL)
+
+Triggers:
+
+- `tg_attendance_days_versions` CREATE TRIGGER tg_attendance_days_versions BEFORE DELETE OR UPDATE ON hrm.attendance_days FOR EACH ROW EXECUTE FUNCTION hrm.tg_attendance_days_versions()
 
 ### hrm.attendance_devices
 
@@ -1147,7 +1152,7 @@ Requirements: ATT-11. Source: hrm-time.yaml.
 
 Constraints:
 
-- `ck_attendance_exceptions_kind` CHECK ((kind = ANY (ARRAY['missing_in'::text, 'missing_out'::text, 'late'::text, 'early'::text, 'absent'::text, 'unscheduled'::text])))
+- `ck_attendance_exceptions_kind` CHECK ((kind = ANY (ARRAY['missing_in'::text, 'missing_out'::text, 'late'::text, 'early'::text, 'absent'::text, 'unscheduled'::text, 'odd_count'::text, 'outside_tolerance'::text])))
 - `ck_attendance_exceptions_status` CHECK ((status = ANY (ARRAY['open'::text, 'regularized'::text, 'accepted'::text, 'rejected'::text, 'closed'::text])))
 - `fk_attendance_exceptions_attendance_day_id` FOREIGN KEY (company_id, attendance_day_id, work_date) REFERENCES hrm.attendance_days(company_id, id, work_date)
 - `fk_attendance_exceptions_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
@@ -7822,6 +7827,7 @@ Constraints:
 - `cfg.tg_refuse_change` 
 - `doc.tg_refuse_change` 
 - `hrm.drop_expired_attendance_partitions` 
+- `hrm.tg_attendance_days_versions` 
 - `hrm.tg_compensation_fixed` 
 - `hrm.tg_compensation_lines_insert` 
 - `hrm.tg_employee_bank_accounts_bank_fields_required` 

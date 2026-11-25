@@ -7730,6 +7730,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "superseded_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -7832,7 +7842,9 @@
         "ix_attendance_days_policy_version_id",
         "ix_attendance_days_company_id_period_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_attendance_days_versions"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.attendance_days"
@@ -8446,7 +8458,9 @@
             "late",
             "early",
             "absent",
-            "unscheduled"
+            "unscheduled",
+            "odd_count",
+            "outside_tolerance"
           ]
         },
         {

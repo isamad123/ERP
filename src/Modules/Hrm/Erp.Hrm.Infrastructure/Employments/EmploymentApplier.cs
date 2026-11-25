@@ -24,9 +24,15 @@ public sealed class EmploymentApplier(HrmDbContext db, ISettings settings, IPoli
     /// <summary>The company's business date (setting <c>org.time_zone</c>, default Asia/Karachi).</summary>
     public async Task<DateOnly> TodayAsync(Guid companyId, DateTimeOffset now, CancellationToken ct)
     {
-        var zone = (await settings.GetAsync("org.time_zone", new SettingContext(companyId, null), ct).ConfigureAwait(false)).Value;
-        var tz = zone.ValueKind == JsonValueKind.String && TimeZoneInfo.TryFindSystemTimeZoneById(zone.GetString()!, out var found) ? found : Fallback;
+        var tz = await ZoneAsync(companyId, ct).ConfigureAwait(false);
         return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, tz).DateTime);
+    }
+
+    /// <summary>The company's time zone (setting <c>org.time_zone</c>); the attendance engine reads clock times in it (S1.29a).</summary>
+    public async Task<TimeZoneInfo> ZoneAsync(Guid companyId, CancellationToken ct)
+    {
+        var zone = (await settings.GetAsync("org.time_zone", new SettingContext(companyId, null), ct).ConfigureAwait(false)).Value;
+        return zone.ValueKind == JsonValueKind.String && TimeZoneInfo.TryFindSystemTimeZoneById(zone.GetString()!, out var found) ? found : Fallback;
     }
 
     /// <summary>Every event of the employment, in the order recorded.</summary>

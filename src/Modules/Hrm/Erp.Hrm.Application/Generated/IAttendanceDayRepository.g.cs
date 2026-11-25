@@ -70,6 +70,7 @@ public static class AttendanceDayAccess
         new("policy_version_id", "PolicyVersionId", null),
         new("period_id", "PeriodId", null),
         new("processed_at", "ProcessedAt", null),
+        new("superseded_at", "SupersededAt", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
         new("updated_at", "UpdatedAt", null),

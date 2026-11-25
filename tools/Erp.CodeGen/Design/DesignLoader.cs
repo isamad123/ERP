@@ -301,14 +301,15 @@ public static partial class DesignLoader
             {
                 var items = YamlNode.Texts(key, table.FullName + ".uniques_replaced_in").ToList();
                 var where = TrailingWhere(items);
-                var index = table.Uniques.FindIndex(u => u.Items.SequenceEqual(items) && u.Where is not null && u.AddedIn is null && u.ReplacedIn is null);
+                var index = table.Uniques.FindIndex(u => u.Items.SequenceEqual(items) && u.AddedIn is null && u.ReplacedIn is null);
                 if (where is null || index < 0)
                 {
-                    throw new DesignException(table.FullName, "uniques_replaced_in names a partial unique key of the first migrations by its columns and gives its new \"where ...\"");
+                    throw new DesignException(table.FullName, "uniques_replaced_in names a unique key of the first migrations by its columns and gives its new \"where ...\"");
                 }
 
+                // A plain key of the first migrations (a constraint) may become partial too (S1.29a, CR-089: attendance day versions).
                 var old = table.Uniques[index];
-                table.Uniques[index] = old with { Where = AndNotDeleted(table, where), BaseWhere = old.Where, ReplacedIn = SliceId(slice, table.FullName) };
+                table.Uniques[index] = old with { Where = AndNotDeleted(table, where), BaseWhere = old.Where, BasePlain = old.IsPlain, ReplacedIn = SliceId(slice, table.FullName) };
             }
         }
 

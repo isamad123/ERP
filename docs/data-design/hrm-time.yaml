@@ -234,6 +234,7 @@
     - [policy_version_id, uuid, opt, fk hrm.policy_versions]
     - [period_id, uuid, req, fk hrm.attendance_periods; derived from pay group and date on insert]
     - [processed_at, ts, req]
+    - [superseded_at, ts, opt, "when a newer result of the same day replaced this one; null for the current result (S1.29a)"]
   unique: [[employment_id, work_date]]
   indexes: [[company_id, work_date, result]]
   notes: Trigger refuses updates when the period is locked; later changes create hrm.retro_adjustments (FR-XM-26).
@@ -241,6 +242,16 @@
   scope: {company: company_id, employment: employment_id}
   reqs: [ATT-10, ATT-13, ATT-18, ATT-19, FR-XM-26]
   partition: "range (work_date) monthly; key (id, work_date)"
+  # S1.29a (CR-089 S1.29a detail; slice S1.29 Build items 2 and 6, FR-HRM-ATT-10): the attendance engine writes each result; a reprocessed day is
+  # a new row and the row it replaces gets superseded_at (history kept, never edited in place; rules.yaml function hrm.tg_attendance_days_versions),
+  # so one current row per employment and day; generated writes closed.
+  added_in: {S1.29a: [superseded_at]}
+  uniques_replaced_in: {S1.29a: [[employment_id, work_date, "where superseded_at is null"]]}
+  api_actions: [read]
+  # S1.07 audit key (CR-026), set by S1.29a (CR-089 S1.29a detail f): each result is its own row, never changed or deleted; the row says who
+  # processed it and when, and superseded_at when a newer one replaced it, so the change log skips the table like the other append-only ones.
+  audit: false
+  audit_reason: "row versions: each result is a new row that is never changed or deleted; superseded_at records when a newer one replaced it (S1.29a)"
 
 - table: hrm.attendance_exceptions
   traits: [std, co]
@@ -248,12 +259,16 @@
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
     - [work_date, date, req]
-    - [kind, "enum(missing_in,missing_out,late,early,absent,unscheduled)", req]
+    - [kind, "enum(missing_in,missing_out,late,early,absent,unscheduled,odd_count,outside_tolerance)", req]
     - [attendance_day_id, uuid, req, fk hrm.attendance_days]
   indexes: [[employment_id, work_date], [company_id, status]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   reqs: [ATT-11]
+  # S1.29a (CR-089 S1.29a detail; slice S1.29 Build item 4, FR-HRM-ATT-11): the engine raises an odd number of punches and a punch outside the
+  # shift's window as exceptions too, and follows an open exception to the day's newest result; generated writes closed.
+  enum_added_in: {S1.29a: {kind: [odd_count, outside_tolerance]}}
+  api_actions: [read]
 
 - table: hrm.regularization_requests
   traits: [std, co]
@@ -305,6 +320,8 @@
   scope: {company: company_id, employment: employment_id}
   reqs: [ATT-12, LVE-08]
   unique: [[employment_id, work_date, "where status <> 'rejected'"]]
+  # S1.29a (CR-089 S1.29a detail): entries are made by the attendance engine and approved through the workflow (S1.29b); generated writes closed.
+  api_actions: [read]
 
 - table: hrm.leave_types
   traits: [std, co, soft, name]

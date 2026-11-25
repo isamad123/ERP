@@ -12,13 +12,9 @@ public static class HrmPermissions
     public static global::System.Collections.Generic.IReadOnlyList<global::Erp.BuildingBlocks.Contracts.Security.PermissionDefinition> All { get; } =
     [
         new("hrm.attendance_days.read", "hrm", "permissions.hrm.attendance_days.read", false),
-        new("hrm.attendance_days.create", "hrm", "permissions.hrm.attendance_days.create", false),
-        new("hrm.attendance_days.update", "hrm", "permissions.hrm.attendance_days.update", false),
         new("hrm.attendance_devices.read", "hrm", "permissions.hrm.attendance_devices.read", false),
         new("hrm.attendance_events.read", "hrm", "permissions.hrm.attendance_events.read", false),
         new("hrm.attendance_exceptions.read", "hrm", "permissions.hrm.attendance_exceptions.read", false),
-        new("hrm.attendance_exceptions.create", "hrm", "permissions.hrm.attendance_exceptions.create", false),
-        new("hrm.attendance_exceptions.update", "hrm", "permissions.hrm.attendance_exceptions.update", false),
         new("hrm.attendance_periods.read", "hrm", "permissions.hrm.attendance_periods.read", false),
         new("hrm.attendance_periods.create", "hrm", "permissions.hrm.attendance_periods.create", false),
         new("hrm.attendance_periods.update", "hrm", "permissions.hrm.attendance_periods.update", false),
@@ -161,8 +157,6 @@ public static class HrmPermissions
         new("hrm.nominations.read", "hrm", "permissions.hrm.nominations.read", false),
         new("hrm.optional_holiday_choices.read", "hrm", "permissions.hrm.optional_holiday_choices.read", false),
         new("hrm.overtime_entries.read", "hrm", "permissions.hrm.overtime_entries.read", false),
-        new("hrm.overtime_entries.create", "hrm", "permissions.hrm.overtime_entries.create", false),
-        new("hrm.overtime_entries.update", "hrm", "permissions.hrm.overtime_entries.update", false),
         new("hrm.parallel_run_lines.read", "hrm", "permissions.hrm.parallel_run_lines.read", true),
         new("hrm.parallel_run_lines.create", "hrm", "permissions.hrm.parallel_run_lines.create", true),
         new("hrm.parallel_run_lines.update", "hrm", "permissions.hrm.parallel_run_lines.update", true),

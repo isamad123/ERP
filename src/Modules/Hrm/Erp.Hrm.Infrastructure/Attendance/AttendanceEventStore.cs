@@ -31,6 +31,9 @@ internal sealed class AttendanceEventStore(HrmDbContext db, IClock clock, ICurre
 
     public const int MaxKeyLength = 200;
 
+    /// <summary>The employment and local date of each counted punch stored by this call (and the date of a punch a correction replaces).</summary>
+    private readonly HashSet<(Guid EmploymentId, DateOnly Date)> touched = [];
+
     public async Task<IReadOnlyList<AttendanceEventOutcome>> AppendAsync(IReadOnlyList<AttendanceEventInput> events, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(events);
@@ -47,12 +50,14 @@ internal sealed class AttendanceEventStore(HrmDbContext db, IClock clock, ICurre
         await strategy.ExecuteAsync(async () =>
         {
             results.Clear();
+            touched.Clear();
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
             foreach (var input in events)
             {
                 results.Add(await AppendOneAsync(input, companies, now, cancellationToken).ConfigureAwait(false));
             }
 
+            await RequeueLateAsync(now, cancellationToken).ConfigureAwait(false);
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         }).ConfigureAwait(false);
         return results;
@@ -134,7 +139,45 @@ internal sealed class AttendanceEventStore(HrmDbContext db, IClock clock, ICurre
             return new(key, AttendanceEventOutcome.AlreadyReceived, other.Id, other.IsDuplicate, null);
         }
 
+        if (!duplicate)
+        {
+            touched.Add((input.EmploymentId, eventDate));
+            if (input.SupersedesEventId is { } replaced)
+            {
+                var replacedDate = await db.Set<AttendanceEvent>().AsNoTracking().Where(e => e.Id == replaced).Select(e => e.EventDate).FirstAsync(ct).ConfigureAwait(false);
+                touched.Add((input.EmploymentId, replacedDate));
+            }
+        }
+
         return new(key, AttendanceEventOutcome.Stored, id, duplicate, null);
+    }
+
+    /// <summary>
+    /// A punch that arrives for a day already processed re-queues that day, and the day before when that day is processed and had a shift (its
+    /// window may reach past midnight and own the punch), and only those (slice S1.29 Build item 6): an outbox event in this transaction, handled
+    /// by the engine's consumer. A day not processed yet needs nothing: the nightly run works it out once it has ended, so an ordinary punch of
+    /// today re-queues nothing of today (review S1.29a finding 1).
+    /// </summary>
+    private async Task RequeueLateAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        foreach (var (employmentId, date) in touched.OrderBy(t => t.EmploymentId).ThenBy(t => t.Date))
+        {
+            var before = date.AddDays(-1);
+            var processed = await db.Set<AttendanceDay>().AsNoTracking()
+                .Where(d => d.EmploymentId == employmentId && d.WorkDate >= before && d.WorkDate <= date && d.SupersededAt == null)
+                .Select(d => new { d.WorkDate, d.ShiftId }).ToListAsync(ct).ConfigureAwait(false);
+            var self = processed.Exists(d => d.WorkDate == date);
+            var previous = processed.Exists(d => d.WorkDate == before && d.ShiftId != null);
+            if (self || previous)
+            {
+                AttendanceReprocessing.Add(db, employmentId, previous ? before : date, self ? date : before, "late_punch", now, actor.UserId);
+            }
+        }
+
+        if (db.ChangeTracker.HasChanges())
+        {
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        }
     }
 
     /// <summary>A counted punch of the same employment and direction inside the window, on either side (R-154: a late earlier punch is marked, the stored later one stays counted).</summary>

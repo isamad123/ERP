@@ -32,37 +32,12 @@ public sealed class AttendanceDayResponse
     public global::System.Guid? PolicyVersionId { get; init; }
     public global::System.Guid PeriodId { get; init; }
     public global::System.DateTimeOffset ProcessedAt { get; init; }
+    public global::System.DateTimeOffset? SupersededAt { get; init; }
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for hrm.attendance_days. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class AttendanceDayWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public global::System.Guid? EmploymentId { get; init; }
-    public global::System.DateOnly? WorkDate { get; init; }
-    public global::System.Guid? ShiftId { get; init; }
-    public string? DayType { get; init; }
-    public string? Result { get; init; }
-    public global::System.DateTimeOffset? FirstIn { get; init; }
-    public global::System.DateTimeOffset? LastOut { get; init; }
-    public int? WorkedMinutes { get; init; }
-    public int? LateMinutes { get; init; }
-    public int? EarlyMinutes { get; init; }
-    public int? OvertimeMinutes { get; init; }
-    public global::System.Guid? LeaveRequestId { get; init; }
-    public global::System.Guid? DutyRequestId { get; init; }
-    public global::System.Text.Json.JsonElement? Explanation { get; init; }
-    public global::System.Guid? PolicyVersionId { get; init; }
-    public global::System.Guid? PeriodId { get; init; }
-    public global::System.DateTimeOffset? ProcessedAt { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for hrm.attendance_days.</summary>
@@ -90,7 +65,7 @@ public sealed class AttendanceDayListQuery
     public string? Sort { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.attendance_days: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.attendance_days: read. Answers pass through field security (S1.06).</summary>
 internal static class AttendanceDayEndpoints
 {
     private const string Resource = "hrm.attendance_days";
@@ -100,8 +75,6 @@ internal static class AttendanceDayEndpoints
         var group = app.MapGroup("/api/hrm/attendance-days").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.attendance_days.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.attendance_days.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.attendance_days.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.attendance_days.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.attendance_days.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.attendance_days.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.attendance_days.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.attendance_days.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.core", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] AttendanceDayListQuery query, global::Erp.Hrm.Application.Generated.IAttendanceDayRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -118,53 +91,6 @@ internal static class AttendanceDayEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.AttendanceDayAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(AttendanceDayWriteRequest request, global::Erp.Hrm.Application.Generated.IAttendanceDayRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_days.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.AttendanceDayAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.AttendanceDay();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/attendance-days/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.AttendanceDayAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, AttendanceDayWriteRequest request, global::Erp.Hrm.Application.Generated.IAttendanceDayRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.attendance_days.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.AttendanceDayAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.AttendanceDayAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static AttendanceDayResponse ToResponse(global::Erp.Hrm.Domain.Generated.AttendanceDay row) => new()
@@ -188,225 +114,13 @@ internal static class AttendanceDayEndpoints
         PolicyVersionId = row.PolicyVersionId,
         PeriodId = row.PeriodId,
         ProcessedAt = row.ProcessedAt,
+        SupersededAt = row.SupersededAt,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
         UpdatedAt = row.UpdatedAt,
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(AttendanceDayWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
-        {
-            errors.Add("employmentId");
-        }
-        if (request.WorkDate is null && (!update || access.CanEdit("work_date")))
-        {
-            errors.Add("workDate");
-        }
-        if (request.DayType is null && (!update || access.CanEdit("day_type")))
-        {
-            errors.Add("dayType");
-        }
-        if (request.Result is null && (!update || access.CanEdit("result")))
-        {
-            errors.Add("result");
-        }
-        if (request.WorkedMinutes is null && (!update || access.CanEdit("worked_minutes")))
-        {
-            errors.Add("workedMinutes");
-        }
-        if (request.LateMinutes is null && (!update || access.CanEdit("late_minutes")))
-        {
-            errors.Add("lateMinutes");
-        }
-        if (request.EarlyMinutes is null && (!update || access.CanEdit("early_minutes")))
-        {
-            errors.Add("earlyMinutes");
-        }
-        if (request.OvertimeMinutes is null && (!update || access.CanEdit("overtime_minutes")))
-        {
-            errors.Add("overtimeMinutes");
-        }
-        if (request.Explanation is null && (!update || access.CanEdit("explanation")))
-        {
-            errors.Add("explanation");
-        }
-        if (request.PeriodId is null && (!update || access.CanEdit("period_id")))
-        {
-            errors.Add("periodId");
-        }
-        if (request.ProcessedAt is null && (!update || access.CanEdit("processed_at")))
-        {
-            errors.Add("processedAt");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(AttendanceDayWriteRequest request, global::Erp.Hrm.Domain.Generated.AttendanceDay row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("employment_id"))
-        {
-            row.EmploymentId = request.EmploymentId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
-        {
-            denied.Add("employmentId");
-        }
-        if (access.CanEdit("work_date"))
-        {
-            row.WorkDate = request.WorkDate!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkDate, row.WorkDate, update))
-        {
-            denied.Add("workDate");
-        }
-        if (access.CanEdit("shift_id"))
-        {
-            row.ShiftId = request.ShiftId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ShiftId, row.ShiftId, update))
-        {
-            denied.Add("shiftId");
-        }
-        if (access.CanEdit("day_type"))
-        {
-            row.DayType = request.DayType!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DayType, row.DayType, update))
-        {
-            denied.Add("dayType");
-        }
-        if (access.CanEdit("result"))
-        {
-            row.Result = request.Result!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Result, row.Result, update))
-        {
-            denied.Add("result");
-        }
-        if (access.CanEdit("first_in"))
-        {
-            row.FirstIn = request.FirstIn;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FirstIn, row.FirstIn, update))
-        {
-            denied.Add("firstIn");
-        }
-        if (access.CanEdit("last_out"))
-        {
-            row.LastOut = request.LastOut;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LastOut, row.LastOut, update))
-        {
-            denied.Add("lastOut");
-        }
-        if (access.CanEdit("worked_minutes"))
-        {
-            row.WorkedMinutes = request.WorkedMinutes!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkedMinutes, row.WorkedMinutes, update))
-        {
-            denied.Add("workedMinutes");
-        }
-        if (access.CanEdit("late_minutes"))
-        {
-            row.LateMinutes = request.LateMinutes!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LateMinutes, row.LateMinutes, update))
-        {
-            denied.Add("lateMinutes");
-        }
-        if (access.CanEdit("early_minutes"))
-        {
-            row.EarlyMinutes = request.EarlyMinutes!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EarlyMinutes, row.EarlyMinutes, update))
-        {
-            denied.Add("earlyMinutes");
-        }
-        if (access.CanEdit("overtime_minutes"))
-        {
-            row.OvertimeMinutes = request.OvertimeMinutes!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.OvertimeMinutes, row.OvertimeMinutes, update))
-        {
-            denied.Add("overtimeMinutes");
-        }
-        if (access.CanEdit("leave_request_id"))
-        {
-            row.LeaveRequestId = request.LeaveRequestId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LeaveRequestId, row.LeaveRequestId, update))
-        {
-            denied.Add("leaveRequestId");
-        }
-        if (access.CanEdit("duty_request_id"))
-        {
-            row.DutyRequestId = request.DutyRequestId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.DutyRequestId, row.DutyRequestId, update))
-        {
-            denied.Add("dutyRequestId");
-        }
-        if (access.CanEdit("explanation"))
-        {
-            row.Explanation = GeneratedEndpointSupport.ToDocument(request.Explanation)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Explanation, row.Explanation, update))
-        {
-            denied.Add("explanation");
-        }
-        if (access.CanEdit("policy_version_id"))
-        {
-            row.PolicyVersionId = request.PolicyVersionId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PolicyVersionId, row.PolicyVersionId, update))
-        {
-            denied.Add("policyVersionId");
-        }
-        if (access.CanEdit("period_id"))
-        {
-            row.PeriodId = request.PeriodId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodId, row.PeriodId, update))
-        {
-            denied.Add("periodId");
-        }
-        if (access.CanEdit("processed_at"))
-        {
-            row.ProcessedAt = request.ProcessedAt!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ProcessedAt, row.ProcessedAt, update))
-        {
-            denied.Add("processedAt");
-        }
-        return denied;
-    }
 
     /// <summary>Reads pages of hrm.attendance_days for an export through the list's own rules (S1.16b).</summary>
     internal sealed class ExportReader(global::System.IServiceProvider services) : global::Erp.Kernel.Contracts.Itg.IExportRowReader

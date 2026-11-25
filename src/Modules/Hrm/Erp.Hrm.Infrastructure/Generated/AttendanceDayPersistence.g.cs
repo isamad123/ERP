@@ -35,6 +35,7 @@ internal sealed class AttendanceDayConfiguration : IEntityTypeConfiguration<glob
         builder.Property(e => e.PolicyVersionId).HasColumnName("policy_version_id").HasColumnType("uuid");
         builder.Property(e => e.PeriodId).HasColumnName("period_id").HasColumnType("uuid");
         builder.Property(e => e.ProcessedAt).HasColumnName("processed_at").HasColumnType("timestamptz");
+        builder.Property(e => e.SupersededAt).HasColumnName("superseded_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");

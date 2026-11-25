@@ -275,7 +275,9 @@ public static class SqlEmitter
             // Partial unique keys with a new condition (uniques_replaced_in, S1.09b): dropped and recreated in the same file.
             foreach (var unique in table.Uniques.Where(u => u.ReplacedIn == slice))
             {
-                b.Append(CultureInfo.InvariantCulture, $"drop index if exists {table.Schema}.{unique.Name};\n");
+                b.Append(unique.BasePlain
+                    ? $"alter table {table.FullName} drop constraint if exists {unique.Name};\n"
+                    : $"drop index if exists {table.Schema}.{unique.Name};\n");
                 b.Append(UniqueIndex(table, unique, unique.Where));
             }
 
@@ -538,7 +540,7 @@ public static class SqlEmitter
         }
 
         lines.Add($"    constraint pk_{table.Name} primary key ({string.Join(", ", table.PrimaryKey)})");
-        foreach (var unique in table.Uniques.Where(u => u.IsPlain && (!baseOnly || u.AddedIn is null)))
+        foreach (var unique in table.Uniques.Where(u => (u.IsPlain || (baseOnly && u.BasePlain)) && (!baseOnly || u.AddedIn is null)))
         {
             var nulls = unique.NullsNotDistinct ? " nulls not distinct" : string.Empty;
             lines.Add($"    constraint {unique.Name} unique{nulls} ({string.Join(", ", unique.Items)})");
@@ -563,7 +565,7 @@ public static class SqlEmitter
             b.Append(Partitions(table, partition, settings));
         }
 
-        foreach (var unique in table.Uniques.Where(u => !u.IsPlain && (!baseOnly || u.AddedIn is null)))
+        foreach (var unique in table.Uniques.Where(u => !u.IsPlain && !(baseOnly && u.BasePlain) && (!baseOnly || u.AddedIn is null)))
         {
             b.Append(UniqueIndex(table, unique, baseOnly && unique.ReplacedIn is not null ? unique.BaseWhere : unique.Where));
         }

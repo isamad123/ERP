@@ -69,6 +69,9 @@ public sealed partial class AttendanceDay : global::Erp.BuildingBlocks.Domain.En
     /// <summary>processed_at</summary>
     public global::System.DateTimeOffset ProcessedAt { get; set; }
 
+    /// <summary>superseded_at: when a newer result of the same day replaced this one; null for the current result (S1.29a)</summary>
+    public global::System.DateTimeOffset? SupersededAt { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

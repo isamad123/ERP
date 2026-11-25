@@ -143,6 +143,7 @@
         "hrm.leave_types.update",
         "hrm.leave_ledger.post",
         "hrm.leave_ledger.recompute",
+        "hrm.attendance_days.process",
         "hrm.employee_documents.read",
         "hrm.policy_publications.read",
         "hrm.policy_acknowledgements.read",

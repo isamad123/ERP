@@ -9,18 +9,6 @@
       "sensitive": false
     },
     {
-      "code": "hrm.attendance_days.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.attendance_days.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.attendance_days.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.attendance_days.update",
-      "sensitive": false
-    },
-    {
       "code": "hrm.attendance_devices.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.attendance_devices.read",
@@ -36,18 +24,6 @@
       "code": "hrm.attendance_exceptions.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.attendance_exceptions.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.attendance_exceptions.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.attendance_exceptions.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.attendance_exceptions.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.attendance_exceptions.update",
       "sensitive": false
     },
     {
@@ -900,18 +876,6 @@
       "code": "hrm.overtime_entries.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.overtime_entries.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.overtime_entries.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.overtime_entries.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.overtime_entries.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.overtime_entries.update",
       "sensitive": false
     },
     {
