@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // The attendance lock console (slice S1.31 Build item 7; FR-XM-26, FR-HRM-ATT-17, ATT-21, ATT-64, GHR-04, FR-XM-32): the pay periods of the person's
 // companies with their attendance state, who locked and why, what the lock accepted and the adjustments; HR's lock request after the cut-off date,
 // the request to cancel the locking run and reopen, the punches received after the lock; and the retroactive adjustments with their impact before
@@ -69,7 +70,7 @@ export default function PeriodsScreen() {
         )}
         {list.isSuccess && list.data.items.length === 0 && <EmptyState title={t('lock.empty')}>{t('lock.empty.body')}</EmptyState>}
         {list.isSuccess && list.data.items.length > 0 && (
-          <div className="erp-table-scroll">
+          <div className="erp-table-scroll" role="region" tabIndex={0} aria-label={t('lock.title')}>
             <table className="erp-table" aria-label={t('lock.title')}>
               <thead><tr>
                 <th scope="col">{t('lock.col.group')}</th><th scope="col">{t('lock.col.period')}</th><th scope="col">{t('lock.col.dates')}</th>
@@ -151,7 +152,7 @@ function PeriodDialog({ id, canLock, canReopen, canSeePunches, server, onClose }
                 {late.isSuccess && late.data.total > 0 && (
                   <>
                     <p>{t('lock.late.count', { count: f.int(late.data.total) })}</p>
-                    <div className="erp-table-scroll">
+                    <div className="erp-table-scroll" role="region" tabIndex={0} aria-label={t('lock.late.title')}>
                       <table className="erp-table" aria-label={t('lock.late.title')}>
                         <thead><tr><th scope="col">{t('lock.late.col.employee')}</th><th scope="col">{t('lock.late.col.day')}</th><th scope="col">{t('lock.late.col.punch')}</th><th scope="col">{t('lock.late.col.received')}</th></tr></thead>
                         <tbody>{late.data.items.map((e) => (
@@ -285,7 +286,7 @@ export function AdjustmentsScreen() {
         )}
         {list.isSuccess && list.data.items.length === 0 && <EmptyState title={t('adj.empty')}>{t('adj.empty.body')}</EmptyState>}
         {list.isSuccess && list.data.items.length > 0 && (
-          <div className="erp-table-scroll">
+          <div className="erp-table-scroll" role="region" tabIndex={0} aria-label={t('adj.title')}>
             <table className="erp-table" aria-label={t('adj.title')}>
               <thead><tr>
                 <th scope="col">{t('adj.col.employee')}</th><th scope="col">{t('adj.col.kind')}</th><th scope="col">{t('adj.col.dates')}</th>
@@ -347,7 +348,7 @@ function AdjustmentDialog({ id, onClose }: { id: string; onClose: () => void }) 
             <span className="erp-row erp-wrap"><StatusChip status={ADJ_CHIP[a.status]} label={t(`adj.status.${a.status}`)} /><span>{t(`adj.kind.${a.kind}`)}</span></span>
             <p>{a.reason}</p>
             {a.targetPayPeriod && <p>{t('adj.detail.carried', { from: f.day(a.targetPayPeriod.startDate), to: f.day(a.targetPayPeriod.endDate) })}</p>}
-            <div className="erp-table-scroll">
+            <div className="erp-table-scroll" role="region" tabIndex={0} aria-label={t('adj.col.dates')}>
               <table className="erp-table" aria-label={t('adj.col.dates')}>
                 <thead><tr><th scope="col">{t('adj.day.col.date')}</th><th scope="col">{t('adj.day.col.locked')}</th><th scope="col">{t('adj.day.col.corrected')}</th></tr></thead>
                 <tbody>{a.days.map((d) => <tr key={d.date}><td>{f.day(d.date)}</td><td>{summary(d.old)}</td><td>{d.new ? summary(d.new) : ''}</td></tr>)}</tbody>
@@ -477,8 +478,8 @@ function ImpactPanel({ impact, server }: { impact: Impact; server: (key: string)
         {impact.payPeriods.map((p) => <li key={p.payPeriodId}>{t(p.role === 'target' ? 'adj.impact.period.target' : 'adj.impact.period.locked', { from: f.day(p.startDate), to: f.day(p.endDate) })}</li>)}
       </ul>
       {impact.days.length > 0 && (
-        <div className="erp-table-scroll">
-          <table className="erp-table" aria-label={t('adj.impact.title')}>
+        <div className="erp-table-scroll" role="region" tabIndex={0} aria-label={t('adj.impact.days')}>
+          <table className="erp-table" aria-label={t('adj.impact.days')}>
             <thead><tr><th scope="col">{t('adj.day.col.date')}</th><th scope="col">{t('adj.day.col.locked')}</th><th scope="col">{t('adj.day.col.corrected')}</th></tr></thead>
             <tbody>{impact.days.map((d) => <tr key={d.date}><td>{f.day(d.date)}</td><td>{summary(d.old)}</td><td>{summary(d.new)}</td></tr>)}</tbody>
           </table>

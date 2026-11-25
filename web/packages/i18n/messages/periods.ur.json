@@ -113,6 +113,7 @@
   "adj.form.done": "درستی منظوری کی منتظر ہے۔",
   "adj.form.fix": "نشان زدہ خانے درست کریں۔",
   "adj.impact.title": "اثر",
+  "adj.impact.days": "اثر کے دن",
   "adj.impact.modules": "متاثرہ: {modules}",
   "adj.impact.module.attendance": "حاضری",
   "adj.impact.module.leave": "رخصت",

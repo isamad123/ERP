@@ -113,6 +113,7 @@
   "adj.form.done": "The adjustment waits for approval.",
   "adj.form.fix": "Correct the marked fields.",
   "adj.impact.title": "Impact",
+  "adj.impact.days": "Days of the impact",
   "adj.impact.modules": "Affects: {modules}",
   "adj.impact.module.attendance": "attendance",
   "adj.impact.module.leave": "leave",
