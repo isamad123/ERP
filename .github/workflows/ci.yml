@@ -293,14 +293,15 @@ jobs:
       fail-fast: false
       matrix:
         shard:
-          # R-318: the endpoint cases are split by the address they probe (the display name of a case holds it): the HR endpoints (a bit over half
-          # of the 900) in shard 1, everything else (the other endpoints and the suite's own checks) in shard 2.
-          - name: 1 (HR endpoints)
-            flag: --filter-display-name
-            pattern: "*/api/hrm/*"
-          - name: 2 (the rest)
-            flag: --filter-not-display-name
-            pattern: "*/api/hrm/*"
+          # R-318: the endpoint cases are split by the address they probe (the display name of a case holds it): 255 HR cases of the heavy
+          # areas (shard 1), the other 267 HR cases (shard 2) and everything else, 395 cases (shard 3). Checked with --list-tests: 255 + 267 + 395 = 917, the
+          # whole suite; a new HR area lands in shard 2 without any change.
+          - name: 1 (HR, attendance, people, pay, leave)
+            args: --filter-display-name "*/api/hrm/attendance*" "*/api/hrm/employments*" "*/api/hrm/persons*" "*/api/hrm/leave*" "*/api/hrm/pay*" "*/api/hrm/policy*" "*/api/hrm/policies*" "*/api/hrm/rosters*" "*/api/hrm/shifts*" "*/api/hrm/positions*" "*/api/hrm/salary*" "*/api/hrm/loan*"
+          - name: 2 (HR, other areas)
+            args: --filter-display-name "*/api/hrm/*" --filter-not-display-name "*/api/hrm/attendance*" "*/api/hrm/employments*" "*/api/hrm/persons*" "*/api/hrm/leave*" "*/api/hrm/pay*" "*/api/hrm/policy*" "*/api/hrm/policies*" "*/api/hrm/rosters*" "*/api/hrm/shifts*" "*/api/hrm/positions*" "*/api/hrm/salary*" "*/api/hrm/loan*"
+          - name: 3 (the rest)
+            args: --filter-not-display-name "*/api/hrm/*"
     name: tenant-isolation (shard ${{ matrix.shard.name }})
 
     services:
@@ -337,9 +338,8 @@ jobs:
 
       - name: Tenant-isolation suite, shard ${{ matrix.shard.name }} (every endpoint, crossed customers)
         env:
-          FLAG: ${{ matrix.shard.flag }}
-          PATTERN: ${{ matrix.shard.pattern }}
-        run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-trait "Suite=TenantIsolation" "$FLAG" "$PATTERN" --report-xunit-trx --results-directory logs/test-results
+          SHARD_ARGS: ${{ matrix.shard.args }}
+        run: eval "dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-trait \"Suite=TenantIsolation\" $SHARD_ARGS --report-xunit-trx --results-directory logs/test-results"
 
       - name: Upload full logs
         if: always()
@@ -350,7 +350,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  # The check main requires (R-040) under its old name: green only when both shards are. Like the job it replaces it does not run on a push.
+  # The check main requires (R-040) under its old name: green only when every shard are. Like the job it replaces it does not run on a push.
   tenant-isolation:
     needs: [changes, tenant-isolation-shards]
     if: ${{ always() && github.event_name != 'push' }}
