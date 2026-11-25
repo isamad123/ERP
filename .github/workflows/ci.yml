@@ -284,11 +284,25 @@ jobs:
   # S1.04: the tenant-isolation suite (FR-KRN-TEN-03, FR-KRN-TEN-04, spec 03 section 10 invariant 10). Every API endpoint
   # is called as one customer with another customer's ids, hosts and tokens; any success fails this job. It is its own
   # job so it shows by name on every pull request and can be made a required check in the branch protection of main.
-  tenant-isolation:
+  tenant-isolation-shards:
     needs: changes
     if: ${{ !cancelled() && github.event_name != 'push' && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          # R-318: the endpoint cases are split by the address they probe (the display name of a case holds it): 255 HR cases of the heavy
+          # areas (shard 1), the other 267 HR cases (shard 2) and everything else, 395 cases (shard 3). Checked with --list-tests: 255 + 267 + 395 = 917, the
+          # whole suite; a new HR area lands in shard 2 without any change.
+          - name: 1 (HR, attendance, people, pay, leave)
+            args: --filter-display-name "*/api/hrm/attendance*" "*/api/hrm/employments*" "*/api/hrm/persons*" "*/api/hrm/leave*" "*/api/hrm/pay*" "*/api/hrm/policy*" "*/api/hrm/policies*" "*/api/hrm/rosters*" "*/api/hrm/shifts*" "*/api/hrm/positions*" "*/api/hrm/salary*" "*/api/hrm/loan*"
+          - name: 2 (HR, other areas)
+            args: --filter-display-name "*/api/hrm/*" --filter-not-display-name "*/api/hrm/attendance*" "*/api/hrm/employments*" "*/api/hrm/persons*" "*/api/hrm/leave*" "*/api/hrm/pay*" "*/api/hrm/policy*" "*/api/hrm/policies*" "*/api/hrm/rosters*" "*/api/hrm/shifts*" "*/api/hrm/positions*" "*/api/hrm/salary*" "*/api/hrm/loan*"
+          - name: 3 (the rest)
+            args: --filter-not-display-name "*/api/hrm/*"
+    name: tenant-isolation (shard ${{ matrix.shard.name }})
 
     services:
       postgres:
@@ -322,17 +336,40 @@ jobs:
       - name: Build
         run: dotnet build tests/Erp.IntegrationTests --no-restore -c Release -v q "-flp:logfile=logs/build.log;verbosity=normal"
 
-      - name: Tenant-isolation suite (every endpoint, crossed customers)
-        run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-trait "Suite=TenantIsolation" --report-xunit-trx --results-directory logs/test-results
+      - name: Tenant-isolation suite, shard ${{ matrix.shard.name }} (every endpoint, crossed customers)
+        env:
+          SHARD_ARGS: ${{ matrix.shard.args }}
+        run: eval "dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-trait \"Suite=TenantIsolation\" $SHARD_ARGS --report-xunit-trx --results-directory logs/test-results"
 
       - name: Upload full logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tenant-isolation-logs
+          name: tenant-isolation-logs-${{ strategy.job-index }}
           path: logs/
           if-no-files-found: warn
           retention-days: 14
+
+  # The check main requires (R-040) under its old name: green only when every shard are. Like the job it replaces it does not run on a push.
+  tenant-isolation:
+    needs: [changes, tenant-isolation-shards]
+    if: ${{ always() && github.event_name != 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Collect the results
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          SHARDS: ${{ needs.tenant-isolation-shards.result }}
+        run: |
+          echo "changes=$CHANGES code=$CODE shards=$SHARDS"
+          if [ "$CHANGES" = "success" ] && [ "$CODE" != "true" ]; then
+            [ "$SHARDS" = "skipped" ] && exit 0
+          fi
+          [ "$SHARDS" = "success" ] && exit 0
+          echo "a tenant-isolation shard did not succeed" >&2
+          exit 1
 
   # Slice S1.12a (ruling Q19): the web application. Install from the lockfile, npm licence gate (Q20, CR-064), lint, type
   # check, unit and component tests, token contrast check, production build with size budgets, then the browser
