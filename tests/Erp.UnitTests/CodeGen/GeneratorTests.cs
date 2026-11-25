@@ -131,8 +131,8 @@ public sealed class GeneratorTests
         // (org.org_unit_links), S1.20b the manager cycle and the cost allocation of hrm.employment_assignments, S1.20d the bank fields
         // of hrm.employee_bank_accounts, S1.22a the position reporting cycle (hrm.positions), S1.34b the component base cycle
         // (hrm.pay_component_versions), S1.32b the leave transfer pair (hrm.leave_ledger) and the daily leave total (hrm.leave_request_days), S1.31 the
-        // attendance period lock and the lock of its day results (FR-XM-26).
-        Assert.Equal(18, stubs.Count);
+        // attendance period lock and the lock of its day results (FR-XM-26), S1.35a the five locks of a locked pay run and its results (FR-XM-05, PAY-33).
+        Assert.Equal(13, stubs.Count);
         Assert.Equal(30, Model.Value.AllStubs.Count());
         Assert.Equal(["employment_assignments_cost_allocation_sum", "employment_assignments_manager_cycle"],
             Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.20b").Select(s => s.Name).Order(StringComparer.Ordinal));
@@ -148,6 +148,8 @@ public sealed class GeneratorTests
         Assert.Equal(["attendance_days_lock", "attendance_periods_lock"],
             Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.31" && s.Owner == "S1.31").Select(s => s.Name).Order(StringComparer.Ordinal)); // FR-XM-26
         Assert.Contains(Model.Value.ImplementedStubs, s => s.Name == "workflow_tasks_no_self_approval" && s.Owner == "S1.10"); // FR-XM-32
+        Assert.Equal(["pay_result_lines_lock", "pay_results_lock", "pay_run_employees_lock", "pay_runs_lock", "pay_traces_lock"],
+            Model.Value.ImplementedStubs.Where(s => s.Implementation!.Slice == "S1.35a" && s.Owner == "S1.38").Select(s => s.Name).Order(StringComparer.Ordinal)); // FR-HRM-PAY-33
     }
 
     [Fact]

@@ -62,6 +62,12 @@ public static class HrmSettingKeys
     /// <summary>A change of a salary structure's components or of an employee's salary needs a second person's approval.</summary>
     public const string HrmPayChangeApproval = "hrm.pay.change_approval";
 
+    /// <summary>How payroll rounds each payslip amount to the currency's smallest unit and in round() of a formula.</summary>
+    public const string HrmPayRoundingMode = "hrm.pay.rounding_mode";
+
+    /// <summary>How many employees a payroll calculation saves together.</summary>
+    public const string HrmPayChunkSize = "hrm.pay.chunk_size";
+
     /// <summary>Allow this company to use biometric attendance devices; mapping a device user then needs the person's consent.</summary>
     public const string HrmAttBiometricEnabled = "hrm.att.biometric_enabled";
 

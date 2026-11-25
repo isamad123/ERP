@@ -46,7 +46,7 @@ public static partial class ComponentRules
     public static bool IsComponentCode(string? code) => code is not null && ComponentCodePattern().IsMatch(code) && !Reserved.Contains(code, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The function names of the formula grammar cannot be component codes (review S1.34b L9).</summary>
-    public static readonly string[] Reserved = ["min", "max", "round"];
+    public static readonly string[] Reserved = ["min", "max", "round", "if"];
 
     public static bool IsFlagCode(string? code) => code is not null && FlagCodePattern().IsMatch(code);
 

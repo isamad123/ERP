@@ -225,11 +225,11 @@ public sealed class PayCompensationTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal("errors.hrm.pay.formula_brackets", Err(brackets, "formula"));
 
         // A formula over existing components, named inputs and the three functions is stored as text and never evaluated.
-        var formula = $"round(min({basicCode} * 0.5, $cap), 0)";
+        var formula = $"round(min({basicCode} * 0.5, $paid_days), 0)"; // S1.35a: named inputs come from the engine's catalogue (R-282)
         var ok = await VersionAsync(rig.Admin, allowance, new { validFrom = Iso(from), method = "formula", formula, proRataRule = "none", statutoryFlags = new { } });
         Assert.Equal(HttpStatusCode.Created, ok.Status);
         Assert.Equal(formula, await _h.ScalarAsync<string>("select formula from hrm.pay_component_versions where component_id = $1", Ct, allowance));
-        var check = await _h.PostAsync(rig.Admin, "/api/hrm/pay-formulas/check", new { companyId = rig.Company, formula = $"{allowanceCode} + $days" }, Ct);
+        var check = await _h.PostAsync(rig.Admin, "/api/hrm/pay-formulas/check", new { companyId = rig.Company, formula = $"{allowanceCode} + $worked_days" }, Ct);
         Assert.True(check.Json.GetProperty("valid").GetBoolean(), check.Body);
 
         // The basic component may not now be based on the allowance (a cycle) nor on itself; the database refuses the same on any other path.

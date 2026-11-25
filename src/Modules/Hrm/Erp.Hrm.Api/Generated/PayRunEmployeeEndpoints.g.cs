@@ -33,26 +33,6 @@ public sealed class PayRunEmployeeResponse
     public long RowVersion { get; init; }
 }
 
-/// <summary>Body of create and update calls for hrm.pay_run_employees. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class PayRunEmployeeWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public global::System.Guid? PayRunId { get; init; }
-    public global::System.Guid? EmploymentId { get; init; }
-    public global::System.DateOnly? PeriodStart { get; init; }
-    public global::System.DateOnly? PeriodEnd { get; init; }
-    public string? RunKind { get; init; }
-    public string? RunStatus { get; init; }
-    public global::System.Text.Json.JsonElement? Snapshot { get; init; }
-    public byte[]? SnapshotHash { get; init; }
-    public string[]? ValidationFlags { get; init; }
-    public global::System.Guid? HoldId { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
-}
-
 /// <summary>Query string of the list endpoint for hrm.pay_run_employees.</summary>
 public sealed class PayRunEmployeeListQuery
 {
@@ -71,7 +51,7 @@ public sealed class PayRunEmployeeListQuery
     public string? Status { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.pay_run_employees: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.pay_run_employees: read. Answers pass through field security (S1.06).</summary>
 internal static class PayRunEmployeeEndpoints
 {
     private const string Resource = "hrm.pay_run_employees";
@@ -81,8 +61,6 @@ internal static class PayRunEmployeeEndpoints
         var group = app.MapGroup("/api/hrm/pay-run-employees").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.pay_run_employees.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.pay_run_employees.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.pay_run_employees.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.pay_run_employees.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.pay_run_employees.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.pay_run_employees.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.pay_run_employees.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.pay_run_employees.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] PayRunEmployeeListQuery query, global::Erp.Hrm.Application.Generated.IPayRunEmployeeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -99,53 +77,6 @@ internal static class PayRunEmployeeEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(PayRunEmployeeWriteRequest request, global::Erp.Hrm.Application.Generated.IPayRunEmployeeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_run_employees.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.PayRunEmployee();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/pay-run-employees/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, PayRunEmployeeWriteRequest request, global::Erp.Hrm.Application.Generated.IPayRunEmployeeRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.pay_run_employees.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.PayRunEmployeeAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static PayRunEmployeeResponse ToResponse(global::Erp.Hrm.Domain.Generated.PayRunEmployee row) => new()
@@ -169,166 +100,6 @@ internal static class PayRunEmployeeEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(PayRunEmployeeWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.PayRunId is null && (!update || access.CanEdit("pay_run_id")))
-        {
-            errors.Add("payRunId");
-        }
-        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
-        {
-            errors.Add("employmentId");
-        }
-        if (request.PeriodStart is null && (!update || access.CanEdit("period_start")))
-        {
-            errors.Add("periodStart");
-        }
-        if (request.PeriodEnd is null && (!update || access.CanEdit("period_end")))
-        {
-            errors.Add("periodEnd");
-        }
-        if (request.RunKind is null && (!update || access.CanEdit("run_kind")))
-        {
-            errors.Add("runKind");
-        }
-        if (request.RunStatus is null && (!update || access.CanEdit("run_status")))
-        {
-            errors.Add("runStatus");
-        }
-        if (request.Snapshot is null && (!update || access.CanEdit("snapshot")))
-        {
-            errors.Add("snapshot");
-        }
-        if (request.SnapshotHash is null && (!update || access.CanEdit("snapshot_hash")))
-        {
-            errors.Add("snapshotHash");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(PayRunEmployeeWriteRequest request, global::Erp.Hrm.Domain.Generated.PayRunEmployee row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("pay_run_id"))
-        {
-            row.PayRunId = request.PayRunId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PayRunId, row.PayRunId, update))
-        {
-            denied.Add("payRunId");
-        }
-        if (access.CanEdit("employment_id"))
-        {
-            row.EmploymentId = request.EmploymentId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
-        {
-            denied.Add("employmentId");
-        }
-        if (access.CanEdit("period_start"))
-        {
-            row.PeriodStart = request.PeriodStart!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodStart, row.PeriodStart, update))
-        {
-            denied.Add("periodStart");
-        }
-        if (access.CanEdit("period_end"))
-        {
-            row.PeriodEnd = request.PeriodEnd!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PeriodEnd, row.PeriodEnd, update))
-        {
-            denied.Add("periodEnd");
-        }
-        if (access.CanEdit("run_kind"))
-        {
-            row.RunKind = request.RunKind!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RunKind, row.RunKind, update))
-        {
-            denied.Add("runKind");
-        }
-        if (access.CanEdit("run_status"))
-        {
-            row.RunStatus = request.RunStatus!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.RunStatus, row.RunStatus, update))
-        {
-            denied.Add("runStatus");
-        }
-        if (access.CanEdit("snapshot"))
-        {
-            row.Snapshot = GeneratedEndpointSupport.ToDocument(request.Snapshot)!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Snapshot, row.Snapshot, update))
-        {
-            denied.Add("snapshot");
-        }
-        if (access.CanEdit("snapshot_hash"))
-        {
-            row.SnapshotHash = request.SnapshotHash!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SnapshotHash, row.SnapshotHash, update))
-        {
-            denied.Add("snapshotHash");
-        }
-        if (access.CanEdit("validation_flags"))
-        {
-            if (request.ValidationFlags is not null)
-            {
-                row.ValidationFlags = request.ValidationFlags ?? [];
-            }
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ValidationFlags, row.ValidationFlags, update))
-        {
-            denied.Add("validationFlags");
-        }
-        if (access.CanEdit("hold_id"))
-        {
-            row.HoldId = request.HoldId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.HoldId, row.HoldId, update))
-        {
-            denied.Add("holdId");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
 
     /// <summary>Reads pages of hrm.pay_run_employees for an export through the list's own rules (S1.16b).</summary>
     internal sealed class ExportReader(global::System.IServiceProvider services) : global::Erp.Kernel.Contracts.Itg.IExportRowReader

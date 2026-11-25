@@ -187,6 +187,26 @@ settings:
     name: {en: "Approval of salary structure and compensation changes", ur: "تنخواہ کے ڈھانچے اور معاوضے کی تبدیلیوں کی منظوری"}
     description: {en: "A change of a salary structure's components or of an employee's salary needs a second person's approval", ur: "تنخواہ کے ڈھانچے کے اجزا یا ملازم کی تنخواہ کی تبدیلی کے لیے دوسرے شخص کی منظوری درکار"}
     help: {en: "A change of the components of a salary structure, and a new salary arrangement or revision for an employee, waits until another person with the approval permission approves it. The person who asked can never approve it. Switching this off also waits for a second person.", ur: "تنخواہ کے ڈھانچے کے اجزا کی تبدیلی اور ملازم کے لیے نیا تنخواہی انتظام یا نظرثانی اس وقت تک رکی رہتی ہے جب تک منظوری کی اجازت والا کوئی دوسرا شخص اسے منظور نہ کرے۔ درخواست کرنے والا اسے کبھی منظور نہیں کر سکتا۔ اسے بند کرنا بھی دوسرے شخص کی منظوری کا منتظر رہتا ہے۔"}
+  # S1.35a (CR-093; slice S1.35 Q3, Q9): read by the payroll engine when it takes a run's snapshot (the mode is frozen in each employee's
+  # snapshot, so a later change never alters a calculated run). Urdu texts to be reviewed by a native speaker (R-062).
+  - key: hrm.pay.rounding_mode
+    type: choice
+    default: "half_away_from_zero"
+    validation: {choices: [half_away_from_zero, half_even]}
+    layers: [tenant, company]
+    area: hr.payroll
+    name: {en: "Payroll rounding", ur: "پے رول میں رقم کی گولائی"}
+    description: {en: "How payroll rounds each payslip amount to the currency's smallest unit and in round() of a formula", ur: "پے رول ہر پے سلپ رقم کو کرنسی کی سب سے چھوٹی اکائی تک اور فارمولے کے round() میں کیسے گول کرتا ہے"}
+    help: {en: "Half away from zero: 0.5 goes up (2.345 becomes 2.35, -2.345 becomes -2.35). Half even (banker's rounding): 0.5 goes to the even digit (2.345 becomes 2.34, 2.355 becomes 2.36). Working values inside a calculation always keep four decimals.", ur: "صفر سے دور نصف: 0.5 اوپر جاتا ہے (2.345 سے 2.35، -2.345 سے -2.35)۔ جفت نصف (بینکر کی گولائی): 0.5 جفت ہندسے کی طرف جاتا ہے (2.345 سے 2.34، 2.355 سے 2.36)۔ حساب کے اندر کام کی قدریں ہمیشہ چار اعشاریہ رکھتی ہیں۔"}
+  - key: hrm.pay.chunk_size
+    type: int
+    default: 200
+    validation: {min: 1, max: 5000}
+    layers: [tenant, company]
+    area: hr.payroll
+    name: {en: "Payroll calculation batch size", ur: "پے رول حساب کی کھیپ کا سائز"}
+    description: {en: "How many employees a payroll calculation saves together", ur: "پے رول کا حساب ایک ساتھ کتنے ملازمین محفوظ کرتا ہے"}
+    help: {en: "A calculation works through the employees of a run in batches of this size; each batch is saved on its own, so a stop loses at most one batch. Larger batches are faster, smaller ones hold the database for less time.", ur: "حساب کسی رن کے ملازمین کو اس سائز کی کھیپوں میں مکمل کرتا ہے؛ ہر کھیپ الگ محفوظ ہوتی ہے، اس لیے رکنے پر زیادہ سے زیادہ ایک کھیپ ضائع ہوتی ہے۔ بڑی کھیپیں تیز ہیں، چھوٹی ڈیٹا بیس کو کم وقت کے لیے مصروف رکھتی ہیں۔"}
   # S1.27b (CR-088 S1.27b detail; FR-HRM-ATT-02, ATT-03, ATT-20). Urdu texts to be reviewed by a native speaker (R-062).
   - key: hrm.att.biometric_enabled
     type: bool

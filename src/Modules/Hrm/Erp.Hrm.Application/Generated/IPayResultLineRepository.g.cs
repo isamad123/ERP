@@ -50,7 +50,7 @@ public static class PayResultLineAccess
         new("component_id", "ComponentId", null),
         new("amount", "Amount", "salary"),
         new("units", "Units", null),
-        new("rate", "Rate", null),
+        new("rate", "Rate", "salary"),
         new("period_start", "PeriodStart", null),
         new("cost_allocation", "CostAllocation", null),
         new("created_at", "CreatedAt", null),

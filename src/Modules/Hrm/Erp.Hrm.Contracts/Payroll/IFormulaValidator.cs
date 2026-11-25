@@ -14,11 +14,12 @@ public sealed record FormulaCheck(IReadOnlySet<string> Components, IReadOnlySet<
 }
 
 /// <summary>
-/// Stores-and-name-checks only: the contract through which the pay set-up checks a component formula (slice S1.34 Q3, S1.34b). A
-/// formula is a small expression over component codes and named inputs (<c>$name</c>), the operators + - * / ( ) and the functions
-/// min, max and round. This slice checks that the characters belong to the grammar, the brackets balance, every component code
-/// exists and no component leads back to itself; it never evaluates. S1.35 completes the grammar and evaluates through the same
-/// contract. No statutory value is ever read or written here (AS-4).
+/// The contract through which the pay set-up checks a component formula (slice S1.34 Q3, S1.34b; completed by S1.35a, CR-093). A formula is a small
+/// expression over component codes and named inputs (<c>$name</c>, the catalogue of <see cref="PayInputNames"/> plus the names input providers
+/// register), numbers, the operators + - * / ( ), the functions min, max, round and if(condition, a, b) whose condition is one comparison
+/// (&lt; &lt;= &gt; &gt;= = &lt;&gt;). The check reads the characters, the names (every component code exists, every named input is known), the
+/// brackets and the grammar with the same parser the payroll engine evaluates with, and finds cycles; it never evaluates. No statutory value is
+/// ever read or written here (AS-4).
 /// </summary>
 public interface IFormulaValidator
 {
@@ -30,4 +31,7 @@ public interface IFormulaValidator
     /// found, the first code repeated at the end, or null when there is none.
     /// </summary>
     IReadOnlyList<string>? FindCycle(IReadOnlyDictionary<string, IReadOnlySet<string>> uses);
+
+    /// <summary>The named inputs a formula may use, without the dollar sign, in order (S1.35a: the engine's and every registered provider's).</summary>
+    IReadOnlyList<string> KnownInputs { get; }
 }
