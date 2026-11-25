@@ -125,7 +125,7 @@ internal sealed class AttendanceConsequenceService(
 
         // The day type is the plan of the day (S1.28b's effective shift); the rule is the attendance policy the day's shift names, else the resolver's.
         var plan = await effective.ReadAsync(employment.Id, date, cancellationToken).ConfigureAwait(false);
-        var dayType = plan?.DayType ?? "working";
+        var dayType = plan?.DayType is "weekly_off" or "holiday" ? plan.DayType : "working"; // a day with nothing planned is worked out as a working day (DayPlan.None)
         var shiftPolicy = plan?.ShiftId is { } shiftId ? await db.Set<Shift>().AsNoTracking().Where(s => s.Id == shiftId).Select(s => s.PolicyId).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false) : null;
         var answer = await new AttendancePolicyReader(db, resolver).AtAsync(employment.Id, date, shiftPolicy, cancellationToken).ConfigureAwait(false);
         if (answer.Policy is null)
