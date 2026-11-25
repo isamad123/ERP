@@ -426,6 +426,10 @@
   scope: {company: company_id, employment: employment_id}
   added_in: S1.31
   api_actions: [read]
+  # S1.07 audit key (CR-026), set by S1.31 (CR-091 S1.31 detail): the facts never change and the row is never removed; each status move is added to
+  # status_history with who and when, so the change log skips the table like the other append-only ones.
+  audit: false
+  audit_reason: "append-only status history: the facts never change, each status move is added to status_history with who and when, and the row is never removed (S1.31)"
   reqs: [ATT-17, FR-XM-26]
 
 - table: hrm.leave_types

@@ -11,7 +11,7 @@ public static class HrmAuditCatalog
 {
     public static global::System.Collections.Generic.IReadOnlyList<global::Erp.BuildingBlocks.Application.Audit.AuditedTable> All { get; } =
     [
-        new(typeof(global::Erp.Hrm.Domain.Generated.AttendanceAdjustment), "hrm.attendance_adjustments", true, null, "id", "company_id", null, "employment_id", null),
+        new(typeof(global::Erp.Hrm.Domain.Generated.AttendanceAdjustment), "hrm.attendance_adjustments", false, "append-only status history: the facts never change, each status move is added to status_history with who and when, and the row is never removed (S1.31)", "id", "company_id", null, "employment_id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.AttendanceDay), "hrm.attendance_days", false, "row versions: each result is a new row that is never changed or deleted; superseded_at records when a newer one replaced it (S1.29a)", "id", "company_id", null, "employment_id", null),
         new(typeof(global::Erp.Hrm.Domain.Generated.AttendanceDevice), "hrm.attendance_devices", true, null, "id", "company_id", null, null, null),
         new(typeof(global::Erp.Hrm.Domain.Generated.AttendanceEvent), "hrm.attendance_events", false, "append-only: the row itself is the record and is never changed (S1.07 Q4)", "id", "company_id", null, "employment_id", null),
