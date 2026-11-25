@@ -180,6 +180,9 @@ Run from the repository root. Tests use Microsoft Testing Platform (`global.json
   permission-denied states on every screen. No token or personal data in browser storage.
 - Stay within the budgets (shell under 300 KB, route chunks under 200 KB compressed); lazy-load module routes.
 - Assets are bundled; nothing is fetched from another host. The content security policy allows no inline script or style.
+- Texts and size (R-291, `docs/handoff/2026-11-24-shell-size.md`): only English core texts ship in the shell; the Urdu core catalogue and every screen's own texts are lazy
+  catalogues (`registerMessages`, R-213), never in `en.json`/`ur.json`; a menu text is a core text. Keep the shell under 285 KB (`pnpm build` prints it). Never statically import a screen or
+  its messages from navigation, modules or the shell; a new shared dependency that adds more than 3 KB to the shell: stop and report.
 
 ## Web commands (S1.12a)
 Run from `web/` (Node 22, pnpm through corepack): `pnpm install --frozen-lockfile`, then `pnpm lint`, `pnpm typecheck`,

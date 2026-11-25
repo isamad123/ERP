@@ -3,7 +3,7 @@
 // the defaults apply.
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { I18nProvider } from 'react-aria-components';
-import { DEFAULT_NUMBERS, I18nRoot, localeTag, type LabelOverrides, type NumberPreferences } from '@erp/i18n';
+import { DEFAULT_NUMBERS, I18nRoot, loadLocale, localeTag, type LabelOverrides, type NumberPreferences } from '@erp/i18n';
 import { readDisplay, uiLocale, writeDisplay, type Display } from './preferences';
 
 export interface Formats {
@@ -37,7 +37,8 @@ export function DisplayProvider({ children }: { children: ReactNode }) {
   const locale = uiLocale(display);
   const value = useMemo<DisplayValue>(() => ({
     display,
-    setDisplay: (next: Display) => { writeDisplay(next); setState(next); },
+    // A language that is not in the shell (Urdu) is fetched first, so the screen changes in one step and keeps its state.
+    setDisplay: (next: Display) => { writeDisplay(next); void loadLocale(uiLocale(next)).then(() => setState(next), () => setState(next)); },
     formats,
     setFormats: (next: Formats) => setFormatState((current) =>
       current.timeZone === next.timeZone && current.numbers.digits === next.numbers.digits && current.numbers.grouping === next.numbers.grouping ? current : next),
