@@ -46,7 +46,7 @@ public static partial class ComponentRules
     public static bool IsComponentCode(string? code) => code is not null && ComponentCodePattern().IsMatch(code) && !Reserved.Contains(code, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The function names of the formula grammar cannot be component codes (review S1.34b L9).</summary>
-    public static readonly string[] Reserved = ["min", "max", "round"];
+    public static readonly string[] Reserved = ["min", "max", "round", "if"];
 
     public static bool IsFlagCode(string? code) => code is not null && FlagCodePattern().IsMatch(code);
 
@@ -207,6 +207,41 @@ public static partial class ComponentRules
         }
 
         return amount is < 0 || percent is < 0 || units is < 0 ? LineNegative : null;
+    }
+
+    public const string ProRataNotApplicable = "errors.hrm.pay.pro_rata_not_applicable";
+
+    /// <summary>The methods whose value is already a count of the employee's days or hours (S1.35a review finding 1).</summary>
+    public static readonly string[] CountingMethods = ["per_day", "per_hour", "attendance_linked"];
+
+    /// <summary>The named inputs that count the employee's own days or hours (the period's calendar and working days are constants of the period).</summary>
+    public static readonly string[] CountingInputs =
+    [
+        "employed_days", "paid_days", "worked_days", "absent_days", "worked_hours", "unpaid_leave_days", "unpaid_leave_hours", "leave_encashment_days",
+        "leave_encashment_hours", "overtime_hours", "overtime_minutes", "late_deductions", "late_deduction_minutes", "adjustment_paid_days", "adjustment_worked_days",
+        "adjustment_overtime_minutes",
+    ];
+
+    /// <summary>
+    /// A pro-rata rule cannot be given to a value already counted in the employee's days or hours (per day, per hour, attendance-linked, or a formula
+    /// over such an input): the days would be counted twice (FR-HRM-PAY-05; S1.35a review finding 1). Returns the error key, or null when the rule is
+    /// <c>none</c> or the value is a full-period amount.
+    /// </summary>
+    public static string? ProRataProblem(string? method, string? rule, string? formula)
+    {
+        if (rule is null or "none")
+        {
+            return null;
+        }
+
+        if (method is not null && CountingMethods.Contains(method, StringComparer.Ordinal))
+        {
+            return ProRataNotApplicable;
+        }
+
+        return method == "formula" && formula is not null && CountingInputs.Any(i => Regex.IsMatch(formula, @"\$" + i + @"(?![A-Za-z0-9_])"))
+            ? ProRataNotApplicable
+            : null;
     }
 
     public static decimal Money(decimal value) => decimal.Round(value, 4, MidpointRounding.ToEven);

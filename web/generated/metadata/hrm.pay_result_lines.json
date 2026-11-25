@@ -13,14 +13,6 @@
     {
       "action": "read",
       "permission": "hrm.pay_result_lines.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.pay_result_lines.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.pay_result_lines.update"
     }
   ],
   "companyScoped": true,
@@ -141,7 +133,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_result_lines.rate"
+      "labelKey": "fields.hrm.pay_result_lines.rate",
+      "fieldClass": "salary"
     },
     {
       "column": "period_start",

@@ -199,6 +199,9 @@
   scope: {company: company_id}
   # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
   numbering: {column: run_no, type: hrm.pay_run_no, assign: post, gap_free: yes, default: "PR-{yyyy}{mm}-{seq:2}", reset: monthly}
+  # S1.35a (CR-093 S1.35a detail): generated writes closed; runs are created and calculated by the payroll engine (hrm.pay.run). The totals
+  # stay unclassified (CR-018 ruling B: run totals are not salary-class data).
+  api_actions: [read]
   reqs: [PAY-10, PAY-14, PAY-15, PAY-34]
   notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33); status column may still advance (paid, posted, closed) through the run service only."
 
@@ -221,6 +224,9 @@
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   reqs: [PAY-09, PAY-11, PAY-31]
+  # S1.35a (CR-093 S1.35a detail): generated writes closed; the engine writes the snapshot, which holds compensation amounts (salary-class, GHR-06).
+  field_class: {snapshot: salary}
+  api_actions: [read]
   notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
   checks: ["exclusion: (employment_id with =, daterange(period_start, period_end, '[]') with &&) where run_kind in ('regular','final_settlement') and run_status <> 'cancelled'"]
 
@@ -244,6 +250,8 @@
   scope: {company: company_id, employment: employment_id}
   field_class: {amount: salary}
   reqs: [PAY-07, PAY-08]
+  # S1.35a (CR-093 S1.35a detail): generated writes closed; inputs are added and cancelled by the pay input service and the import centre.
+  api_actions: [read]
   unique: [[source_type, source_id, component_id, "where status <> 'cancelled' and source_id is not null"]]
 
 - table: hrm.pay_results
@@ -269,6 +277,8 @@
   scope: {company: company_id, employment: employment_id}
   field_class: {gross: salary, deductions: salary, net: salary, employer_cost: salary, taxable_income_ytd: salary, tax_ytd: salary}
   reqs: [PAY-12, PAY-28, PAY-33, FR-XM-27]
+  # S1.35a (CR-093 S1.35a detail): generated writes closed; only the payroll engine writes results (PAY-31, PAY-33).
+  api_actions: [read]
   indexes: [[employment_id, tax_year]]
 
 - table: hrm.pay_result_lines
@@ -286,8 +296,11 @@
   indexes: [[result_id], [company_id, component_id, pay_period_id]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
-  field_class: {amount: salary}
+  field_class: {amount: salary, rate: salary}
   reqs: [PAY-06, PAY-29, PAY-30]
+  # S1.35a (CR-093 S1.35a detail): generated writes closed; only the payroll engine writes result lines. The rate of a per-day or per-hour line
+  # is a salary rate, so it is salary-class data like the amount (GHR-06).
+  api_actions: [read]
   notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
   partition: range on pay_period start (yearly) once volume requires; key includes partition column
 
@@ -302,6 +315,8 @@
   audit: false
   audit_reason: "calculation trace with salary inputs, rewritten per calculation; the pay result's own entries record the change (CR-034)"
   reqs: [PAY-32]
+  # S1.35a (CR-093 S1.35a detail): generated writes closed; the engine writes traces (S1.35b).
+  api_actions: [read]
   notes: "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
 
 - table: hrm.pay_result_reversals

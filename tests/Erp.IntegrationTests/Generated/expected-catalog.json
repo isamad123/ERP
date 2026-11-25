@@ -24675,7 +24675,10 @@
         "ix_pay_result_lines_company_id_component_id_pay_period_id",
         "ix_pay_result_lines_company_id_result_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_pay_result_lines_lock",
+        "tg_pay_result_lines_lock_truncate"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.pay_result_lines"
@@ -25125,7 +25128,10 @@
         "ix_pay_results_company_id_pay_period_id",
         "ix_pay_results_company_id_corrects_result_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_pay_results_lock",
+        "tg_pay_results_lock_truncate"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.pay_results"
@@ -25399,7 +25405,10 @@
         "ix_pay_run_employees_company_id_employment_id",
         "ix_pay_run_employees_company_id_hold_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_pay_run_employees_lock",
+        "tg_pay_run_employees_lock_truncate"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.pay_run_employees"
@@ -25738,7 +25747,10 @@
         "ix_pay_runs_calc_job_run_id",
         "ix_pay_runs_company_id_workflow_instance_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_pay_runs_lock",
+        "tg_pay_runs_lock_truncate"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.pay_runs"
@@ -25804,7 +25816,10 @@
         }
       ],
       "indexes": [],
-      "triggers": [],
+      "triggers": [
+        "tg_pay_traces_lock",
+        "tg_pay_traces_lock_truncate"
+      ],
       "append_only_updatable": [],
       "has_api": false,
       "full_name": "hrm.pay_traces"
@@ -47727,45 +47742,10 @@
     },
     {
       "schema": "hrm",
-      "function": "todo_pay_result_lines_lock",
-      "table": "hrm.pay_result_lines",
-      "owner": "S1.38",
-      "rule": "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
-    },
-    {
-      "schema": "hrm",
       "function": "todo_pay_result_reversals_before_payment",
       "table": "hrm.pay_result_reversals",
       "owner": "S1.39",
       "rule": "allowed only while no non-failed payment line exists for the result"
-    },
-    {
-      "schema": "hrm",
-      "function": "todo_pay_results_lock",
-      "table": "hrm.pay_results",
-      "owner": "S1.38",
-      "rule": "Trigger refuses update and delete when the run status is locked or later. Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
-    },
-    {
-      "schema": "hrm",
-      "function": "todo_pay_run_employees_lock",
-      "table": "hrm.pay_run_employees",
-      "owner": "S1.38",
-      "rule": "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
-    },
-    {
-      "schema": "hrm",
-      "function": "todo_pay_runs_lock",
-      "table": "hrm.pay_runs",
-      "owner": "S1.38",
-      "rule": "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33); status column may still advance (paid, posted, closed) through the run service only."
-    },
-    {
-      "schema": "hrm",
-      "function": "todo_pay_traces_lock",
-      "table": "hrm.pay_traces",
-      "owner": "S1.38",
-      "rule": "Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33)."
     },
     {
       "schema": "hrm",

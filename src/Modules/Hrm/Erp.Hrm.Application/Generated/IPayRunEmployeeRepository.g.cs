@@ -49,7 +49,7 @@ public static class PayRunEmployeeAccess
         new("period_end", "PeriodEnd", null),
         new("run_kind", "RunKind", null),
         new("run_status", "RunStatus", null),
-        new("snapshot", "Snapshot", null),
+        new("snapshot", "Snapshot", "salary"),
         new("snapshot_hash", "SnapshotHash", null),
         new("validation_flags", "ValidationFlags", null),
         new("hold_id", "HoldId", null),

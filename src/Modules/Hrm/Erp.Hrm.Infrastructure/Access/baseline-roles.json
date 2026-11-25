@@ -370,7 +370,11 @@
         "hrm.compensation_lines.create",
         "hrm.pay.compensation.read",
         "hrm.attendance_periods.read",
-        "hrm.attendance_adjustments.read"
+        "hrm.attendance_adjustments.read",
+        "hrm.pay.run",
+        "hrm.pay.results.read",
+        "hrm.pay_inputs.create",
+        "hrm.pay_inputs.cancel"
       ],
       "scopes": {
         "*": "all"
@@ -461,7 +465,11 @@
         "hrm.attendance_periods.reopen",
         "hrm.attendance_adjustments.read",
         "wf.workflow_tasks.read",
-        "wf.workflow_tasks.update"
+        "wf.workflow_tasks.update",
+        "hrm.pay.run",
+        "hrm.pay.results.read",
+        "hrm.pay_inputs.create",
+        "hrm.pay_inputs.cancel"
       ],
       "scopes": {
         "*": "all",

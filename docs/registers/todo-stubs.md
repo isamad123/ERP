@@ -11,11 +11,6 @@ Tests fail if the database and this register disagree, or if an owning slice has
 | S1.20 | hrm.nominations | `hrm.todo_nominations_shares_sum_to_one()` | deferred: shares per (person_id, scheme) on any date sum to 1 |
 | S1.36 | hrm.statutory_table_rows | `hrm.todo_statutory_table_rows_lock()` | Immutable by trigger once the parent version is effective or referenced by any run; change by a new table version. |
 | S1.38 | hrm.pay_periods | `hrm.todo_pay_periods_closed_period_guard()` | Trigger refuses new pay_inputs, retro_adjustments or installments targeting a closed period. |
-| S1.38 | hrm.pay_result_lines | `hrm.todo_pay_result_lines_lock()` | Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). |
-| S1.38 | hrm.pay_results | `hrm.todo_pay_results_lock()` | Trigger refuses update and delete when the run status is locked or later. Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). |
-| S1.38 | hrm.pay_run_employees | `hrm.todo_pay_run_employees_lock()` | Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). |
-| S1.38 | hrm.pay_runs | `hrm.todo_pay_runs_lock()` | Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33); status column may still advance (paid, posted, closed) through the run service only. |
-| S1.38 | hrm.pay_traces | `hrm.todo_pay_traces_lock()` | Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). |
 | S1.39 | hrm.pay_result_reversals | `hrm.todo_pay_result_reversals_before_payment()` | allowed only while no non-failed payment line exists for the result |
 | S1.39 | hrm.retro_adjustments | `hrm.todo_retro_adjustments_apply_once()` | applied_in_run_id may be set once (trigger); status pending -> applied is one-way. |
 | S1.40 | hrm.payment_lines | `hrm.todo_payment_lines_sum_equals_net()` | deferred: sum of active lines per result equals pay_results.net |
@@ -27,4 +22,4 @@ Tests fail if the database and this register disagree, or if an owning slice has
 | S1.44 | hrm.provident_fund_accounts | `hrm.todo_provident_fund_accounts_transfer()` | On intra-group transfer the old account closes with a transfer entry and the new account opens with the balance (employment_events.carry_over). |
 | S1.49 | hrm.goals | `hrm.todo_goals_parent_cycle()` | Cycle check trigger on parent_goal_id. |
 
-18 placeholders.
+13 placeholders.

@@ -14,14 +14,6 @@
     {
       "action": "read",
       "permission": "hrm.pay_runs.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.pay_runs.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.pay_runs.update"
     }
   ],
   "companyScoped": true,

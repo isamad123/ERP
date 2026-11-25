@@ -891,18 +891,6 @@
       "sensitive": true
     },
     {
-      "code": "hrm.pay_inputs.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_inputs.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.pay_inputs.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_inputs.update",
-      "sensitive": true
-    },
-    {
       "code": "hrm.pay_periods.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay_periods.read",
@@ -912,18 +900,6 @@
       "code": "hrm.pay_result_lines.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay_result_lines.read",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.pay_result_lines.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_result_lines.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.pay_result_lines.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_result_lines.update",
       "sensitive": true
     },
     {
@@ -945,51 +921,15 @@
       "sensitive": true
     },
     {
-      "code": "hrm.pay_results.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_results.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.pay_results.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_results.update",
-      "sensitive": true
-    },
-    {
       "code": "hrm.pay_run_employees.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay_run_employees.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.pay_run_employees.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_run_employees.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.pay_run_employees.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_run_employees.update",
-      "sensitive": false
+      "sensitive": true
     },
     {
       "code": "hrm.pay_runs.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay_runs.read",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.pay_runs.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_runs.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.pay_runs.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.pay_runs.update",
       "sensitive": true
     },
     {

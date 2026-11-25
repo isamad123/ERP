@@ -15,8 +15,8 @@ public sealed class PayComponentRulesTests
 
     [Theory]
     [InlineData("BASIC * 0.45")]
-    [InlineData("round(min(BASIC * 0.5, $cap), 0) + HOUSE")]
-    [InlineData("(BASIC + Medical_1) / $days_in_period")]
+    [InlineData("round(min(BASIC * 0.5, $paid_days), 0) + HOUSE")]
+    [InlineData("(BASIC + Medical_1) / $period_days")]
     [InlineData("max(BASIC, 1000)")]
     public void FR_HRM_PAY_03_a_formula_over_known_components_inputs_and_the_three_functions_is_valid(string formula)
     {

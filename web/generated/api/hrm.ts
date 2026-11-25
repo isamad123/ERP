@@ -3125,22 +3125,6 @@ export interface PayInput
     rowVersion: number;
 }
 
-export interface PayInputWrite
-{
-    companyId: string;
-    employmentId: string;
-    payPeriodId: string;
-    componentId: string;
-    amount?: number | null;
-    currencyCode: string;
-    units?: number | null;
-    sourceType: string;
-    sourceId?: string | null;
-    consumedByRunId?: string | null;
-    importBatchId?: string | null;
-    status: 'pending' | 'consumed' | 'cancelled';
-}
-
 export interface PayInputListQuery
 {
     after?: string;
@@ -3160,8 +3144,6 @@ export const payInputs =
 {
     list: (query: PayInputListQuery = {}) => request<PagedResult<PayInput>>('GET', '/api/hrm/pay-inputs', { query }),
     get: (id: string) => request<PayInput>('GET', `/api/hrm/pay-inputs/${id}`),
-    create: (body: PayInputWrite) => request<PayInput>('POST', '/api/hrm/pay-inputs', { body }),
-    update: (id: string, body: PayInputWrite & { rowVersion: number }) => request<PayInput>('PUT', `/api/hrm/pay-inputs/${id}`, { body }),
 };
 
 /** hrm.pay_periods: Payroll calendar per pay group. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3212,7 +3194,7 @@ export interface PayResultLine
     componentId: string;
     amount?: number | string;
     units: number | null;
-    rate: number | null;
+    rate?: number | string | null;
     periodStart: string | null;
     costAllocation: unknown;
     createdAt: string;
@@ -3220,20 +3202,6 @@ export interface PayResultLine
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface PayResultLineWrite
-{
-    companyId: string;
-    resultId: string;
-    payPeriodId: string;
-    employmentId: string;
-    componentId: string;
-    amount: number;
-    units?: number | null;
-    rate?: number | null;
-    periodStart?: string | null;
-    costAllocation: unknown;
 }
 
 export interface PayResultLineListQuery
@@ -3249,8 +3217,6 @@ export const payResultLines =
 {
     list: (query: PayResultLineListQuery = {}) => request<PagedResult<PayResultLine>>('GET', '/api/hrm/pay-result-lines', { query }),
     get: (id: string) => request<PayResultLine>('GET', `/api/hrm/pay-result-lines/${id}`),
-    create: (body: PayResultLineWrite) => request<PayResultLine>('POST', '/api/hrm/pay-result-lines', { body }),
-    update: (id: string, body: PayResultLineWrite & { rowVersion: number }) => request<PayResultLine>('PUT', `/api/hrm/pay-result-lines/${id}`, { body }),
 };
 
 /** hrm.pay_result_reversals: Reversal of a single payslip after approval and before payment (FR-XM-27); after payment correct by adjustment or off-cycle run. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3316,24 +3282,6 @@ export interface PayResult
     rowVersion: number;
 }
 
-export interface PayResultWrite
-{
-    companyId: string;
-    payRunId: string;
-    employmentId: string;
-    taxYear: number;
-    payPeriodId: string;
-    gross: number;
-    deductions: number;
-    net: number;
-    employerCost: number;
-    taxableIncomeYtd: number;
-    taxYtd: number;
-    workedDays: number;
-    paidDays: number;
-    correctsResultId?: string | null;
-}
-
 export interface PayResultListQuery
 {
     after?: string;
@@ -3351,8 +3299,6 @@ export const payResults =
 {
     list: (query: PayResultListQuery = {}) => request<PagedResult<PayResult>>('GET', '/api/hrm/pay-results', { query }),
     get: (id: string) => request<PayResult>('GET', `/api/hrm/pay-results/${id}`),
-    create: (body: PayResultWrite) => request<PayResult>('POST', '/api/hrm/pay-results', { body }),
-    update: (id: string, body: PayResultWrite & { rowVersion: number }) => request<PayResult>('PUT', `/api/hrm/pay-results/${id}`, { body }),
 };
 
 /** hrm.pay_run_employees: Who is in a run, the frozen input snapshot, status and validation flags. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3366,7 +3312,7 @@ export interface PayRunEmployee
     periodEnd: string;
     runKind: string;
     runStatus: string;
-    snapshot: unknown;
+    snapshot?: unknown | string;
     snapshotHash: string;
     validationFlags: string[];
     holdId: string | null;
@@ -3376,22 +3322,6 @@ export interface PayRunEmployee
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface PayRunEmployeeWrite
-{
-    companyId: string;
-    payRunId: string;
-    employmentId: string;
-    periodStart: string;
-    periodEnd: string;
-    runKind: string;
-    runStatus: string;
-    snapshot: unknown;
-    snapshotHash: string;
-    validationFlags?: string[];
-    holdId?: string | null;
-    status: 'included' | 'excluded' | 'held' | 'calculated' | 'error';
 }
 
 export interface PayRunEmployeeListQuery
@@ -3409,8 +3339,6 @@ export const payRunEmployees =
 {
     list: (query: PayRunEmployeeListQuery = {}) => request<PagedResult<PayRunEmployee>>('GET', '/api/hrm/pay-run-employees', { query }),
     get: (id: string) => request<PayRunEmployee>('GET', `/api/hrm/pay-run-employees/${id}`),
-    create: (body: PayRunEmployeeWrite) => request<PayRunEmployee>('POST', '/api/hrm/pay-run-employees', { body }),
-    update: (id: string, body: PayRunEmployeeWrite & { rowVersion: number }) => request<PayRunEmployee>('PUT', `/api/hrm/pay-run-employees/${id}`, { body }),
 };
 
 /** hrm.pay_runs: PayRun. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -3440,25 +3368,6 @@ export interface PayRun
     rowVersion: number;
 }
 
-export interface PayRunWrite
-{
-    companyId: string;
-    payGroupId: string;
-    payPeriodId: string;
-    kind: 'regular' | 'bonus' | 'correction' | 'final_settlement' | 'advance';
-    currencyCode: string;
-    snapshotTakenAt?: string | null;
-    calcJobRunId?: string | null;
-    totalGross?: number | null;
-    totalNet?: number | null;
-    totalEmployer?: number | null;
-    employeeCount?: number | null;
-    stageLog: unknown;
-    reopenedReason?: string | null;
-    workflowInstanceId?: string | null;
-    status: 'created' | 'inputs_imported' | 'calculated' | 'validated' | 'in_review' | 'approved' | 'locked' | 'paid' | 'posted' | 'closed' | 'cancelled';
-}
-
 export interface PayRunListQuery
 {
     after?: string;
@@ -3477,8 +3386,6 @@ export const payRuns =
 {
     list: (query: PayRunListQuery = {}) => request<PagedResult<PayRun>>('GET', '/api/hrm/pay-runs', { query }),
     get: (id: string) => request<PayRun>('GET', `/api/hrm/pay-runs/${id}`),
-    create: (body: PayRunWrite) => request<PayRun>('POST', '/api/hrm/pay-runs', { body }),
-    update: (id: string, body: PayRunWrite & { rowVersion: number }) => request<PayRun>('PUT', `/api/hrm/pay-runs/${id}`, { body }),
 };
 
 /** hrm.payment_batches: PaymentBatch. Field rules (S1.06) may leave a field out or mask it as text. */

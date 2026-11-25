@@ -4,9 +4,12 @@ using Erp.Hrm.Contracts.Payroll;
 namespace Erp.Hrm.Application.Payroll;
 
 /// <summary>
-/// The name-checking <see cref="IFormulaValidator"/> of slice S1.34b (FR-HRM-PAY-03, ruling Q3): pure, no database and no package.
-/// Component codes are identifiers (a letter, then letters, digits and underscores), named inputs are <c>$identifier</c>, numbers
-/// are decimals. S1.35 completes the grammar (operand and operator order) and evaluates.
+/// The <see cref="IFormulaValidator"/> of the payroll engine (slice S1.34b names and cycles; completed by S1.35a, Build item 4, ruling Q1): pure, no
+/// database and no package. A first pass reads the characters (component codes are identifiers, named inputs are <c>$identifier</c>, numbers are
+/// decimals) and checks names and brackets as S1.34b did; then the formula is parsed by <see cref="FormulaLanguage"/>, the same parser the engine
+/// evaluates with, so operand and operator order, the arity of <c>min</c>, <c>max</c>, <c>round</c> and <c>if</c>, comparisons only as a condition
+/// of <c>if</c>, and named inputs from the catalogue (<see cref="PayInputNames"/> and the names providers register, R-282) are all checked when the
+/// formula is saved. Nothing is evaluated here.
 /// </summary>
 public sealed partial class FormulaValidator : IFormulaValidator
 {
@@ -17,9 +20,24 @@ public sealed partial class FormulaValidator : IFormulaValidator
     public const string Cycle = "errors.hrm.pay.formula_cycle";
     public const int MaxLength = 2000;
 
-    private static readonly HashSet<string> Functions = new(["min", "max", "round"], StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _inputs;
 
-    [GeneratedRegex(@"\G(?:(?<num>\d+(?:\.\d+)?)|(?<input>\$[A-Za-z][A-Za-z0-9_]*)|(?<id>[A-Za-z][A-Za-z0-9_]*)|(?<op>[+\-*/(),])|(?<ws>\s+))")]
+    /// <summary>A validator knowing the built-in named inputs and those of <paramref name="providerNames"/> (registered by later input providers).</summary>
+    public FormulaValidator(IEnumerable<PayInputNameSet>? providerNames = null)
+    {
+        _inputs = new HashSet<string>(PayInputNames.BuiltIn, StringComparer.Ordinal);
+        foreach (var set in providerNames ?? [])
+        {
+            _inputs.UnionWith(set.Names);
+        }
+    }
+
+    /// <summary>The named inputs a formula may use (without the dollar sign), in order.</summary>
+    public IReadOnlyList<string> KnownInputs => [.. _inputs.Order(StringComparer.Ordinal)];
+
+    private static IReadOnlySet<string> Functions => FormulaLanguage.Functions;
+
+    [GeneratedRegex(@"\G(?:(?<num>\d+(?:\.\d+)?)|(?<input>\$[A-Za-z][A-Za-z0-9_]*)|(?<id>[A-Za-z][A-Za-z0-9_]*)|(?<op>[+\-*/(),<>=])|(?<ws>\s+))")]
     private static partial Regex TokenPattern();
 
     public FormulaCheck Check(string? formula, IReadOnlySet<string> knownComponentCodes)
@@ -97,6 +115,17 @@ public sealed partial class FormulaValidator : IFormulaValidator
         if (!balanced || depth != 0)
         {
             problems.Add(new FormulaProblem(Brackets));
+        }
+
+        foreach (var input in inputs.Where(i => !_inputs.Contains(i[1..])).Order(StringComparer.Ordinal))
+        {
+            problems.Add(new FormulaProblem(FormulaLanguage.InputUnknown, input));
+        }
+
+        // S1.35a: the grammar itself (operand and operator order, arity, comparisons), by the engine's own parser.
+        if (problems.Count == 0)
+        {
+            problems.AddRange(FormulaLanguage.Parse(formula).Problems);
         }
 
         return new FormulaCheck(components, inputs, [.. problems.DistinctBy(p => (p.ErrorKey, p.Name))]);

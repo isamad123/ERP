@@ -24,6 +24,8 @@ public static class PayEndpoints
     private const string Components = "hrm.pay_components";
     private const string Structures = "hrm.salary_structures";
     private const string Compensation = "hrm.compensation_assignments";
+    private const string Runs = "hrm.pay_runs";
+    private const string Inputs = "hrm.pay_inputs";
     private static readonly EntitlementMetadata Payroll = new("hrm.payroll", "hrm");
 
     public static IEndpointRouteBuilder MapHrmPayEndpoints(this IEndpointRouteBuilder app)
@@ -64,6 +66,22 @@ public static class PayEndpoints
             PersonEndpoints.Answer(await s.AssignAsync(id, CompensationRequest.Parse(body), ct).ConfigureAwait(false))), "record_action", Compensation, PayPermissions.CompensationCreate);
         Tag(app.MapGet("/api/hrm/employments/{id:guid}/compensation", async (Guid id, [FromQuery] DateOnly? asOf, ICompensationService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.GetAsync(id, asOf, ct).ConfigureAwait(false))), "record_action", Compensation, PayPermissions.CompensationRead);
+
+        // S1.35a: runs, their calculation (lock first, snapshot, results) and one-time inputs. Reads of the rows stay generated.
+        Tag(app.MapPost("/api/hrm/pay-runs", async (PayRunCreateRequest body, IPayRunService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.CreateAsync(body, ct).ConfigureAwait(false))), "create", Runs, PayRunPermissions.Run);
+        Tag(app.MapPost("/api/hrm/pay-runs/{id:guid}/calculate", async (Guid id, PayRunCalculateRequest? body, IPayRunService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.CalculateAsync(id, body ?? new PayRunCalculateRequest(), ct).ConfigureAwait(false))), "record_action", Runs, PayRunPermissions.Run);
+        Tag(app.MapGet("/api/hrm/pay-runs/{id:guid}/summary", async (Guid id, IPayRunService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.GetAsync(id, ct).ConfigureAwait(false))), "record_action", Runs, PayRunPermissions.RunsRead);
+        Tag(app.MapGet("/api/hrm/pay-runs/{id:guid}/results", async (Guid id, [FromQuery] Guid? employmentId, IPayRunService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.ResultsAsync(id, employmentId, ct).ConfigureAwait(false))), "record_action", Runs, PayRunPermissions.ResultsRead);
+        Tag(app.MapPost("/api/hrm/pay-inputs", async (PayInputsRequest body, IPayInputService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.AddAsync(body, null, ct).ConfigureAwait(false))), "create", Inputs, PayRunPermissions.InputsCreate);
+        Tag(app.MapPost("/api/hrm/pay-inputs/{id:guid}/cancel", async (Guid id, IPayInputService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.CancelAsync(id, ct).ConfigureAwait(false))), "record_action", Inputs, PayRunPermissions.InputsCancel);
+        Tag(app.MapGet("/api/hrm/pay-input-names", async (IPayInputService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.InputNamesAsync(ct).ConfigureAwait(false))), "catalog", Components, PayPermissions.ComponentsRead);
         return app;
     }
 

@@ -18,7 +18,9 @@ public static class PayServices
         services.AddSingleton(new PayReadinessRegistry(ReadinessManifest));
         services.AddScoped<IPayGroupService, PayGroupService>();
         services.AddScoped<IPayCalendarService, PayCalendarService>();
-        services.AddSingleton<IFormulaValidator, FormulaValidator>(); // S1.34b: names and cycles only; S1.35 completes the grammar
+        // S1.34b names and cycles; S1.35a completes the grammar and knows the named inputs of every registered provider (R-282).
+        services.AddSingleton<IFormulaValidator>(sp => new FormulaValidator(sp.GetServices<PayInputNameSet>()));
+        Engine.PayEngineServices.AddHrmPayrollEngine(services); // S1.35a runs, calculation, inputs
         services.AddScoped<IPayComponentService, PayComponentService>();
         services.AddScoped<ISalaryStructureService, SalaryStructureService>();
         services.AddScoped<ICompensationService, CompensationService>();

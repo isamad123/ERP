@@ -605,6 +605,74 @@
       }
     },
     {
+      "key": "hrm.pay.rounding_mode",
+      "module": "hrm",
+      "type": "choice",
+      "default": "half_away_from_zero",
+      "validation": {
+        "choices": [
+          "half_away_from_zero",
+          "half_even"
+        ]
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.payroll",
+      "unit": null,
+      "name": {
+        "en": "Payroll rounding",
+        "ur": "پے رول میں رقم کی گولائی"
+      },
+      "description": {
+        "en": "How payroll rounds each payslip amount to the currency's smallest unit and in round() of a formula",
+        "ur": "پے رول ہر پے سلپ رقم کو کرنسی کی سب سے چھوٹی اکائی تک اور فارمولے کے round() میں کیسے گول کرتا ہے"
+      },
+      "help": {
+        "en": "Half away from zero: 0.5 goes up (2.345 becomes 2.35, -2.345 becomes -2.35). Half even (banker's rounding): 0.5 goes to the even digit (2.345 becomes 2.34, 2.355 becomes 2.36). Working values inside a calculation always keep four decimals.",
+        "ur": "صفر سے دور نصف: 0.5 اوپر جاتا ہے (2.345 سے 2.35، -2.345 سے -2.35)۔ جفت نصف (بینکر کی گولائی): 0.5 جفت ہندسے کی طرف جاتا ہے (2.345 سے 2.34، 2.355 سے 2.36)۔ حساب کے اندر کام کی قدریں ہمیشہ چار اعشاریہ رکھتی ہیں۔"
+      }
+    },
+    {
+      "key": "hrm.pay.chunk_size",
+      "module": "hrm",
+      "type": "int",
+      "default": 200,
+      "validation": {
+        "min": 1,
+        "max": 5000
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.payroll",
+      "unit": null,
+      "name": {
+        "en": "Payroll calculation batch size",
+        "ur": "پے رول حساب کی کھیپ کا سائز"
+      },
+      "description": {
+        "en": "How many employees a payroll calculation saves together",
+        "ur": "پے رول کا حساب ایک ساتھ کتنے ملازمین محفوظ کرتا ہے"
+      },
+      "help": {
+        "en": "A calculation works through the employees of a run in batches of this size; each batch is saved on its own, so a stop loses at most one batch. Larger batches are faster, smaller ones hold the database for less time.",
+        "ur": "حساب کسی رن کے ملازمین کو اس سائز کی کھیپوں میں مکمل کرتا ہے؛ ہر کھیپ الگ محفوظ ہوتی ہے، اس لیے رکنے پر زیادہ سے زیادہ ایک کھیپ ضائع ہوتی ہے۔ بڑی کھیپیں تیز ہیں، چھوٹی ڈیٹا بیس کو کم وقت کے لیے مصروف رکھتی ہیں۔"
+      }
+    },
+    {
       "key": "hrm.att.biometric_enabled",
       "module": "hrm",
       "type": "bool",

@@ -564,33 +564,34 @@ public sealed class AuditTests(TenancyFixture fx) : IAsyncLifetime
     public async Task FR_KRN_AUD_07_history_shows_values_through_the_viewers_field_security()
     {
         var company = await _h.DefaultCompanyAsync(Ct);
-        var result = await _h.RowAsync("hrm.pay_results", company, null, Ct);
+        // S1.35a closed the generated writes of pay results (only the payroll engine writes them); another salary-class record with a generated update serves.
+        var result = await _h.RowAsync("hrm.previous_employer_income", company, null, Ct);
         var id = (Guid)result["id"]!;
-        var editorRole = await _h.RoleAsync(Ct, ["hrm.pay_results.read", "hrm.pay_results.update"], [("hrm.pay_results", "all")], [("hrm.pay_results", "class:salary", "editable")]);
+        var editorRole = await _h.RoleAsync(Ct, ["hrm.previous_employer_income.read", "hrm.previous_employer_income.update"], [("hrm.previous_employer_income", "all")], [("hrm.previous_employer_income", "class:salary", "editable")]);
         var editor = await _h.UserAsync(Ct);
         await _h.AssignAsync(editor, editorRole, null, _h.Today.AddDays(-1), null, Ct);
-        var current = await SendAsync(HttpMethod.Get, editor, $"/api/hrm/pay-results/{id}", null);
+        var current = await SendAsync(HttpMethod.Get, editor, $"/api/hrm/previous-employer-income/{id}", null);
         var body = System.Text.Json.Nodes.JsonNode.Parse(current.Body)!.AsObject();
-        var gross = body["gross"]!.GetValue<decimal>();
-        body["gross"] = gross + 1000m;
-        var put = await SendAsync(HttpMethod.Put, editor, $"/api/hrm/pay-results/{id}", body.ToJsonString());
+        var gross = body["taxableIncome"]!.GetValue<decimal>();
+        body["taxableIncome"] = gross + 1000m;
+        var put = await SendAsync(HttpMethod.Put, editor, $"/api/hrm/previous-employer-income/{id}", body.ToJsonString());
         Assert.Equal(HttpStatusCode.OK, put.Status);
 
         // The salary value is stored encrypted with the customer key (not readable in the raw table).
-        var raw = await _h.ScalarAsync<string>("select changes::text from aud.change_log where entity_type = 'hrm.pay_results' and entity_id = $1 and action = 'update'", Ct, id);
+        var raw = await _h.ScalarAsync<string>("select changes::text from aud.change_log where entity_type = 'hrm.previous_employer_income' and entity_id = $1 and action = 'update'", Ct, id);
         Assert.Contains("\"customer\"", raw, StringComparison.Ordinal);
 
         var payroll = await _h.UserAsync(Ct, null, "payroll_officer");
-        var seen = await SendAsync(HttpMethod.Get, payroll, $"/api/aud/history/hrm.pay_results/{id}", null);
+        var seen = await SendAsync(HttpMethod.Get, payroll, $"/api/aud/history/hrm.previous_employer_income/{id}", null);
         Assert.Equal(HttpStatusCode.OK, seen.Status);
-        Assert.Equal(gross + 1000m, Field(seen.Json[0], "gross").GetProperty("after").GetDecimal());
+        Assert.Equal(gross + 1000m, Field(seen.Json[0], "taxable_income").GetProperty("after").GetDecimal());
 
-        var noSalaryRole = await _h.RoleAsync(Ct, ["hrm.pay_results.read", "aud.history.view"], [("hrm.pay_results", "all")]);
+        var noSalaryRole = await _h.RoleAsync(Ct, ["hrm.previous_employer_income.read", "aud.history.view"], [("hrm.previous_employer_income", "all")]);
         var manager = await _h.UserAsync(Ct);
         await _h.AssignAsync(manager, noSalaryRole, null, _h.Today.AddDays(-1), null, Ct);
-        var hidden = await SendAsync(HttpMethod.Get, manager, $"/api/aud/history/hrm.pay_results/{id}", null);
+        var hidden = await SendAsync(HttpMethod.Get, manager, $"/api/aud/history/hrm.previous_employer_income/{id}", null);
         Assert.Equal(HttpStatusCode.OK, hidden.Status);
-        var grossChange = Field(hidden.Json[0], "gross");
+        var grossChange = Field(hidden.Json[0], "taxable_income");
         Assert.True(grossChange.GetProperty("hidden").GetBoolean());
         Assert.False(grossChange.TryGetProperty("after", out _));
         Assert.DoesNotContain((gross + 1000m).ToString(System.Globalization.CultureInfo.InvariantCulture), hidden.Body, StringComparison.Ordinal);
@@ -598,7 +599,7 @@ public sealed class AuditTests(TenancyFixture fx) : IAsyncLifetime
         // Without read access to the record there is no history at all.
         var outsider = await _h.UserAsync(Ct);
         await _h.AssignAsync(outsider, await _h.RoleAsync(Ct, ["aud.history.view"]), null, _h.Today.AddDays(-1), null, Ct);
-        Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Get, outsider, $"/api/aud/history/hrm.pay_results/{id}", null)).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await SendAsync(HttpMethod.Get, outsider, $"/api/aud/history/hrm.previous_employer_income/{id}", null)).Status);
     }
 
     // ------------------------------------------------------------------ helpers

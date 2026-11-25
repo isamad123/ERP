@@ -3856,7 +3856,7 @@ Triggers:
 
 ### hrm.pay_result_lines
 
-Requirements: PAY-06, PAY-29, PAY-30. Partitioning (design): range on pay_period start (yearly) once volume requires; key includes partition column. Not partitioned in this release (rules.yaml). Pending rule (S1.38, placeholder hrm.todo_pay_result_lines_lock): Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). Source: hrm-pay.yaml.
+Requirements: PAY-06, PAY-29, PAY-30. Partitioning (design): range on pay_period start (yearly) once volume requires; key includes partition column. Not partitioned in this release (rules.yaml). Rule (implemented in S1.35a): Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). Source: hrm-pay.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -3890,6 +3890,11 @@ Indexes:
 - `ix_pay_result_lines_company_id_component_id_pay_period_id` CREATE INDEX ix_pay_result_lines_company_id_component_id_pay_period_id ON hrm.pay_result_lines USING btree (company_id, component_id, pay_period_id)
 - `ix_pay_result_lines_company_id_result_id` CREATE INDEX ix_pay_result_lines_company_id_result_id ON hrm.pay_result_lines USING btree (company_id, result_id)
 - `ix_pay_result_lines_result_id` CREATE INDEX ix_pay_result_lines_result_id ON hrm.pay_result_lines USING btree (result_id)
+
+Triggers:
+
+- `tg_pay_result_lines_lock` CREATE TRIGGER tg_pay_result_lines_lock BEFORE INSERT OR DELETE OR UPDATE ON hrm.pay_result_lines FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_run_results_lock()
+- `tg_pay_result_lines_lock_truncate` CREATE TRIGGER tg_pay_result_lines_lock_truncate BEFORE TRUNCATE ON hrm.pay_result_lines FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_pay_run_no_truncate()
 
 ### hrm.pay_result_reversals
 
@@ -3927,7 +3932,7 @@ Triggers:
 
 ### hrm.pay_results
 
-Net result per employee per run; append-only once the run is locked (PAY-33). Requirements: PAY-12, PAY-28, PAY-33, FR-XM-27. Pending rule (S1.38, placeholder hrm.todo_pay_results_lock): Trigger refuses update and delete when the run status is locked or later. Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). Source: hrm-pay.yaml.
+Net result per employee per run; append-only once the run is locked (PAY-33). Requirements: PAY-12, PAY-28, PAY-33, FR-XM-27. Rule (implemented in S1.35a): Trigger refuses update and delete when the run status is locked or later. Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). Source: hrm-pay.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -3971,9 +3976,14 @@ Indexes:
 - `ix_pay_results_company_id_pay_run_id` CREATE INDEX ix_pay_results_company_id_pay_run_id ON hrm.pay_results USING btree (company_id, pay_run_id)
 - `ix_pay_results_employment_id_tax_year` CREATE INDEX ix_pay_results_employment_id_tax_year ON hrm.pay_results USING btree (employment_id, tax_year)
 
+Triggers:
+
+- `tg_pay_results_lock` CREATE TRIGGER tg_pay_results_lock BEFORE INSERT OR DELETE OR UPDATE ON hrm.pay_results FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_run_results_lock()
+- `tg_pay_results_lock_truncate` CREATE TRIGGER tg_pay_results_lock_truncate BEFORE TRUNCATE ON hrm.pay_results FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_pay_run_no_truncate()
+
 ### hrm.pay_run_employees
 
-Who is in a run, the frozen input snapshot, status and validation flags. Requirements: PAY-09, PAY-11, PAY-31. Pending rule (S1.38, placeholder hrm.todo_pay_run_employees_lock): Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). Source: hrm-pay.yaml.
+Who is in a run, the frozen input snapshot, status and validation flags. Requirements: PAY-09, PAY-11, PAY-31. Rule (implemented in S1.35a): Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). Source: hrm-pay.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -4014,9 +4024,14 @@ Indexes:
 - `ix_pay_run_employees_company_id_hold_id` CREATE INDEX ix_pay_run_employees_company_id_hold_id ON hrm.pay_run_employees USING btree (company_id, hold_id)
 - `ix_pay_run_employees_company_id_pay_run_id` CREATE INDEX ix_pay_run_employees_company_id_pay_run_id ON hrm.pay_run_employees USING btree (company_id, pay_run_id)
 
+Triggers:
+
+- `tg_pay_run_employees_lock` CREATE TRIGGER tg_pay_run_employees_lock BEFORE INSERT OR DELETE OR UPDATE ON hrm.pay_run_employees FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_run_results_lock()
+- `tg_pay_run_employees_lock_truncate` CREATE TRIGGER tg_pay_run_employees_lock_truncate BEFORE TRUNCATE ON hrm.pay_run_employees FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_pay_run_no_truncate()
+
 ### hrm.pay_runs
 
-Requirements: PAY-10, PAY-14, PAY-15, PAY-34. Pending rule (S1.38, placeholder hrm.todo_pay_runs_lock): Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33); status column may still advance (paid, posted, closed) through the run service only. Source: hrm-pay.yaml.
+Requirements: PAY-10, PAY-14, PAY-15, PAY-34. Rule (implemented in S1.35a): Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33); status column may still advance (paid, posted, closed) through the run service only. Source: hrm-pay.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -4065,9 +4080,14 @@ Indexes:
 - `ix_pay_runs_pay_group_id_pay_period_id` CREATE INDEX ix_pay_runs_pay_group_id_pay_period_id ON hrm.pay_runs USING btree (pay_group_id, pay_period_id)
 - `uq_pay_runs_pay_group_id_pay_period_id` CREATE UNIQUE INDEX uq_pay_runs_pay_group_id_pay_period_id ON hrm.pay_runs USING btree (pay_group_id, pay_period_id) WHERE ((kind = 'regular'::text) AND (status <> 'cancelled'::text))
 
+Triggers:
+
+- `tg_pay_runs_lock` CREATE TRIGGER tg_pay_runs_lock BEFORE DELETE OR UPDATE ON hrm.pay_runs FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_runs_lock()
+- `tg_pay_runs_lock_truncate` CREATE TRIGGER tg_pay_runs_lock_truncate BEFORE TRUNCATE ON hrm.pay_runs FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_pay_run_no_truncate()
+
 ### hrm.pay_traces
 
-Calculation trace per result (PAY-32). Requirements: PAY-32. Pending rule (S1.38, placeholder hrm.todo_pay_traces_lock): Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). Source: hrm-pay.yaml.
+Calculation trace per result (PAY-32). Requirements: PAY-32. Rule (implemented in S1.35a): Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33). Source: hrm-pay.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -4079,6 +4099,11 @@ Constraints:
 
 - `fk_pay_traces_result_id` FOREIGN KEY (result_id) REFERENCES hrm.pay_results(id)
 - `pk_pay_traces` PRIMARY KEY (result_id)
+
+Triggers:
+
+- `tg_pay_traces_lock` CREATE TRIGGER tg_pay_traces_lock BEFORE INSERT OR DELETE OR UPDATE ON hrm.pay_traces FOR EACH ROW EXECUTE FUNCTION hrm.tg_pay_run_results_lock()
+- `tg_pay_traces_lock_truncate` CREATE TRIGGER tg_pay_traces_lock_truncate BEFORE TRUNCATE ON hrm.pay_traces FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_pay_run_no_truncate()
 
 ### hrm.payment_batches
 
@@ -8033,6 +8058,9 @@ Constraints:
 - `hrm.tg_pay_component_versions_bases` 
 - `hrm.tg_pay_groups_rules` 
 - `hrm.tg_pay_periods_fixed` 
+- `hrm.tg_pay_run_no_truncate` 
+- `hrm.tg_pay_run_results_lock` 
+- `hrm.tg_pay_runs_lock` 
 - `hrm.tg_policy_assignments_checks` 
 - `hrm.tg_policy_versions_fixed` 
 - `hrm.tg_positions_reporting_cycle` 
@@ -8046,12 +8074,7 @@ Constraints:
 - `hrm.todo_loan_transactions_recovery_within_balance` Pending rule for hrm.loan_transactions, owned by S1.41: trigger: a recovery cannot exceed the outstanding balance
 - `hrm.todo_nominations_shares_sum_to_one` Pending rule for hrm.nominations, owned by S1.20: deferred: shares per (person_id, scheme) on any date sum to 1
 - `hrm.todo_pay_periods_closed_period_guard` Pending rule for hrm.pay_periods, owned by S1.38: Trigger refuses new pay_inputs, retro_adjustments or installments targeting a closed period.
-- `hrm.todo_pay_result_lines_lock` Pending rule for hrm.pay_result_lines, owned by S1.38: Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33).
 - `hrm.todo_pay_result_reversals_before_payment` Pending rule for hrm.pay_result_reversals, owned by S1.39: allowed only while no non-failed payment line exists for the result
-- `hrm.todo_pay_results_lock` Pending rule for hrm.pay_results, owned by S1.38: Trigger refuses update and delete when the run status is locked or later. Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33).
-- `hrm.todo_pay_run_employees_lock` Pending rule for hrm.pay_run_employees, owned by S1.38: Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33).
-- `hrm.todo_pay_runs_lock` Pending rule for hrm.pay_runs, owned by S1.38: Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33); status column may still advance (paid, posted, closed) through the run service only.
-- `hrm.todo_pay_traces_lock` Pending rule for hrm.pay_traces, owned by S1.38: Lock: trigger refuses UPDATE and DELETE once the parent pay run status is locked or later (FR-XM-05, PAY-33).
 - `hrm.todo_payment_lines_sum_equals_net` Pending rule for hrm.payment_lines, owned by S1.40: deferred: sum of active lines per result equals pay_results.net
 - `hrm.todo_provident_fund_accounts_transfer` Pending rule for hrm.provident_fund_accounts, owned by S1.44: On intra-group transfer the old account closes with a transfer entry and the new account opens with the balance (employment_events.carry_over).
 - `hrm.todo_retro_adjustments_apply_once` Pending rule for hrm.retro_adjustments, owned by S1.39: applied_in_run_id may be set once (trigger); status pending -> applied is one-way.

@@ -13,14 +13,6 @@
     {
       "action": "read",
       "permission": "hrm.pay_run_employees.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.pay_run_employees.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.pay_run_employees.update"
     }
   ],
   "companyScoped": true,
@@ -141,7 +133,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.pay_run_employees.snapshot"
+      "labelKey": "fields.hrm.pay_run_employees.snapshot",
+      "fieldClass": "salary"
     },
     {
       "column": "snapshot_hash",
