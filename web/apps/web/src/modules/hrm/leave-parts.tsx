@@ -1,4 +1,3 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // Pieces shared by the leave screens (slice S1.33a; FR-HRM-LVE-04 to -06): status chips, leave type labels with their colour token, quantities, the day-by-day list with
 // the server's explanation of each day, the ledger entries behind a balance, and the refusal text of the server's answers. Colour is never the only sign: a dot is
 // always next to the name, and status and sandwich marks carry text and an icon.
@@ -6,7 +5,7 @@ import './leave.css';
 import { useQuery } from '@tanstack/react-query';
 import { Layers } from 'lucide-react';
 import { leaveTypes, type LeaveType } from '@erp/generated/api/hrm';
-import { StatusChip, type Status } from '@erp/ui';
+import { StatusChip, type Status, ScrollRegion } from '@erp/ui';
 import { formatDate, formatDecimal, useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { ApiProblem } from '../../api/client';
 import type { LedgerEntry, LeaveDetails } from '../../api/leave';
@@ -101,7 +100,7 @@ export function DayList({ days, unit }: { days: DayRow[]; unit: string | undefin
   const lang = locale === 'ur' ? 'ur' : 'en';
   const qty = useQuantity();
   return (
-    <div className="erp-leave-scroll" role="region" tabIndex={0} aria-label={t('leave.days.caption')}>
+    <ScrollRegion className="erp-leave-scroll" label={t('leave.days.caption')}>
       <table className="erp-leave-table">
         <caption className="erp-visually-hidden">{t('leave.days.caption')}</caption>
         <thead><tr><th scope="col">{t('leave.days.date')}</th><th scope="col">{t('leave.days.counted')}</th><th scope="col">{t('leave.days.why')}</th></tr></thead>
@@ -118,7 +117,7 @@ export function DayList({ days, unit }: { days: DayRow[]; unit: string | undefin
             </tr>))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }
 
@@ -130,7 +129,7 @@ export function EntryList({ entries, unit }: { entries: LedgerEntry[]; unit: str
   const day = (d: string) => formatDate(`${d}T12:00:00Z`, lang, timeZone, numbers);
   if (entries.length === 0) return <p className="erp-muted">{t('leave.entries.empty')}</p>;
   return (
-    <div className="erp-leave-scroll" role="region" tabIndex={0} aria-label={t('leave.entries.caption')}>
+    <ScrollRegion className="erp-leave-scroll" label={t('leave.entries.caption')}>
       <table className="erp-leave-table">
         <caption className="erp-visually-hidden">{t('leave.entries.caption')}</caption>
         <thead><tr><th scope="col">{t('leave.entries.date')}</th><th scope="col">{t('leave.entries.what')}</th><th scope="col">{t('leave.entries.quantity')}</th><th scope="col">{t('leave.entries.note')}</th></tr></thead>
@@ -144,6 +143,6 @@ export function EntryList({ entries, unit }: { entries: LedgerEntry[]; unit: str
             </tr>))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }

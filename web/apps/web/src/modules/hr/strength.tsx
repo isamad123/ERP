@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { parseDate } from '@internationalized/date';
-import { Banner, Button, CheckboxField, DateField, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, useToast } from '@erp/ui';
+import { Banner, Button, CheckboxField, DateField, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton, StatusChip, useToast, ScrollRegion } from '@erp/ui';
 import { useDocumentTitle } from '@erp/engine';
 import { formatDecimal, useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { ApiProblem } from '../../api/client';
@@ -49,7 +49,7 @@ export default function StrengthScreen() {
     const data = report.data;
     const columns = ['sanctioned', 'filled', 'vacant', 'over', 'planned', 'frozen'] as const;
     body = (
-      <div className="erp-pos-scroll">
+      <ScrollRegion className="erp-pos-scroll" label={t('pos.strength.title')}>
         <table className="erp-pos-table" aria-label={t('pos.strength.title')}>
           <thead><tr>
             <th scope="col">{t('pos.unit')}</th><th scope="col">{t('pos.grade')}</th>{!headcount && <th scope="col">{t('pos.location')}</th>}
@@ -73,7 +73,7 @@ export default function StrengthScreen() {
             <td />
           </tr></tfoot>
         </table>
-      </div>
+      </ScrollRegion>
     );
   }
 
@@ -114,7 +114,7 @@ function Drill({ filter, title }: { filter: StrengthFilter; title: string }) {
       {drill.isError && <ErrorPanel message={t('pos.loadError')} action={<Button variant="primary" onPress={() => { void drill.refetch(); }}>{t('common.retry')}</Button>} />}
       {rows && rows.positions.length === 0 && rows.people.length === 0 && <p className="erp-muted">{t('pos.strength.drill.none')}</p>}
       {rows && rows.positions.length > 0 && (
-        <div className="erp-pos-scroll">
+        <ScrollRegion className="erp-pos-scroll" label={t('pos.strength.drill.positions')}>
           <table className="erp-pos-table" aria-label={t('pos.strength.drill.positions')}>
             <thead><tr>
               <th scope="col">{t('pos.positions.col.code')}</th><th scope="col">{t('pos.positions.col.title')}</th><th scope="col">{t('pos.positions.col.status')}</th>
@@ -132,7 +132,7 @@ function Drill({ filter, title }: { filter: StrengthFilter; title: string }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       )}
       {rows && rows.people.length > 0 && (
         <ul className="erp-plain-list" aria-label={t('pos.strength.drill.people')}>

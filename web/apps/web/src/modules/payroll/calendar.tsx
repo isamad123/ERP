@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseDate, type CalendarDate } from '@internationalized/date';
 import { EngineProvider, useDocumentTitle, type EngineApi } from '@erp/engine';
-import { Banner, Button, DateField, Dialog, EmptyState, ErrorPanel, NumberField, PageHeader, SelectField, Skeleton, StatusChip, useToast, type Option, type Status } from '@erp/ui';
+import { Banner, Button, DateField, Dialog, EmptyState, ErrorPanel, NumberField, PageHeader, SelectField, Skeleton, StatusChip, useToast, type Option, type Status, ScrollRegion } from '@erp/ui';
 import { formatDate, formatInteger, intlLocale, useLocaleSettings, useText, type MessageKey } from '@erp/i18n';
 import { ApiProblem, sendText } from '../../api/client';
 import { payApi, WEEKDAYS, type CalendarPeriod, type GroupOption, type PeriodStatus, type ReadinessStatus, type Weekday } from '../../api/pay';
@@ -70,7 +70,7 @@ function Calendar() {
       {calendar.isSuccess && calendar.data.items.length > 0 && (
         <>
           {calendar.data.more && <Banner tone="info">{t('pay.calendar.more')}</Banner>}
-          <div className="erp-table-scroll">
+          <ScrollRegion className="erp-table-scroll" label={t('pay.calendar.title')}>
             <table className="erp-table" aria-label={t('pay.calendar.title')}>
               <thead><tr>
                 <th scope="col">{t('pay.calendar.col.group')}</th><th scope="col">{t('pay.calendar.col.period')}</th><th scope="col">{t('pay.calendar.col.dates')}</th>
@@ -96,7 +96,7 @@ function Calendar() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </>
       )}
       {generating && <GenerateDialog groups={groups.data?.items ?? []} group={group === ALL ? null : group} year={year} onClose={() => setGenerating(false)} />}

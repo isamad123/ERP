@@ -1,8 +1,7 @@
-/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- a scrolling table region must be reachable by keyboard (WCAG 2.1.1, R-318) */
 // The preview table of a year-end run (slice S1.33b; FR-HRM-LVE-11): one line per employee and leave type with the closing balance, what is carried forward, paid out and lapsed, the status in
 // words, totals per type, and a search by employee number with filters by type and status. Nothing here changes a balance; the lines are the job's and the server checks them again on confirm.
 import { useState } from 'react';
-import { EmptyState, SelectField, TextField } from '@erp/ui';
+import { EmptyState, SelectField, TextField, ScrollRegion } from '@erp/ui';
 import { formatDate, formatDecimal, useLocaleSettings } from '@erp/i18n';
 import type { LeaveType } from '@erp/generated/api/hrm';
 import type { YearEndSummary } from '../../api/leave-ledger';
@@ -29,7 +28,7 @@ export function PreviewTable({ summary, types }: { summary: YearEndSummary; type
     <div className="erp-stack">
       <h3 id="erp-lye-totals">{t('lye.totals.byType')}</h3>
       {perType.length === 0 ? <p className="erp-muted">{t('lye.totals.none')}</p> : (
-        <div className="erp-leave-scroll erp-table-scroll" role="region" tabIndex={0} aria-label={t('lye.totals.caption')}>
+        <ScrollRegion className="erp-leave-scroll erp-table-scroll" label={t('lye.totals.caption')}>
           <table className="erp-leave-table">
             <caption className="erp-visually-hidden">{t('lye.totals.caption')}</caption>
             <thead><tr>
@@ -44,7 +43,7 @@ export function PreviewTable({ summary, types }: { summary: YearEndSummary; type
                 </tr>))}
             </tbody>
           </table>
-        </div>)}
+        </ScrollRegion>)}
 
       <h3 id="erp-lye-lines">{t('lye.lines')}</h3>
       <form className="erp-row erp-wrap" role="search" aria-label={t('lye.filters')} onSubmit={(e) => e.preventDefault()}>
@@ -55,7 +54,7 @@ export function PreviewTable({ summary, types }: { summary: YearEndSummary; type
           value={filter.status || ALL} onChange={(id) => setFilter({ ...filter, status: id === ALL ? '' : id })} />
       </form>
       {lines.length === 0 ? <EmptyState title={t('lye.lines.empty')}>{t(summary.lines.length === 0 ? 'lye.lines.empty.none' : 'lye.lines.empty.filtered')}</EmptyState> : (
-        <div className="erp-leave-scroll erp-table-scroll" role="region" tabIndex={0} aria-label={t('lye.lines.caption')}>
+        <ScrollRegion className="erp-leave-scroll erp-table-scroll" label={t('lye.lines.caption')}>
           <table className="erp-leave-table">
             <caption className="erp-visually-hidden">{t('lye.lines.caption')}</caption>
             <thead><tr>
@@ -77,7 +76,7 @@ export function PreviewTable({ summary, types }: { summary: YearEndSummary; type
               })}
             </tbody>
           </table>
-        </div>)}
+        </ScrollRegion>)}
     </div>
   );
 }
