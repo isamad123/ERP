@@ -734,7 +734,15 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
     {
         // E2E_GREP runs only the matching scenarios (local debugging); CI runs them all.
         var grep = Environment.GetEnvironmentVariable("E2E_GREP");
-        var start = new ProcessStartInfo("pnpm", grep is { Length: > 0 } ? $"exec playwright test --grep \"{grep.Replace("\"", string.Empty, StringComparison.Ordinal)}\"" : "exec playwright test")
+        // E2E_FILES runs only the named spec files (space separated, for example "users settings"): the CI shards of R-318. Names are plain words, never paths.
+        var files = (Environment.GetEnvironmentVariable("E2E_FILES") ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var file in files)
+        {
+            Assert.Matches("^[a-z0-9-]+$", file);
+        }
+
+        var selection = string.Concat(files.Select(f => $" e2e/{f}.spec.ts"));
+        var start = new ProcessStartInfo("pnpm", "exec playwright test" + selection + (grep is { Length: > 0 } ? $" --grep \"{grep.Replace("\"", string.Empty, StringComparison.Ordinal)}\"" : string.Empty))
         {
             WorkingDirectory = appFolder,
             RedirectStandardOutput = true,

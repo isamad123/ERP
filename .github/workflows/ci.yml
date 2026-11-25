@@ -249,11 +249,81 @@ jobs:
   # check, unit and component tests, token contrast check, production build with size budgets, then the browser
   # end-to-end tests (Playwright 1.63.0, Chromium) against the real API host on PostgreSQL 16. Screenshots (English and
   # Urdu, light and dark, three widths) are kept as the artifact `web-screenshots` for the product owner.
-  web:
+  # R-318: the web checks are three kinds of job. `web-checks` is everything quick (licence gate, lint, types, unit tests, contrast,
+  # production build with size budgets). `web-e2e` is the browser suite in parallel shards, each on a runner and a PostgreSQL service of its
+  # own (a shard builds the test host and web test build itself); a shard runs whole spec files (E2E_FILES) in the same order as a full run.
+  # `web` is the check main requires (R-040): it only collects the two results, so a failing shard or check fails it and nothing else
+  # about the repository settings changes. When a spec file is added, add it to a shard below (the check "every spec file is in a shard"
+  # in `web-checks` fails otherwise). Shards were sized from a run of every file alone (see docs/handoff/2026-11-25-e2e-shards.md).
+  web-checks:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: pnpm (the version in web/package.json, through corepack)
+        working-directory: web
+        run: |
+          corepack enable
+          pnpm --version
+
+      - name: Install from the lockfile
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: npm licence gate (D-09; development-only exceptions of ruling Q20 and CR-064, each named)
+        run: |
+          python3 build/licence-gate.py --self-test
+          python3 build/licence-gate.py --npm web
+
+      - name: Every browser spec file is in a shard (a new file that no shard runs would never be tested)
+        run: python3 build/e2e-shards-check.py
+
+      - name: Lint (ESLint and Stylelint rules of spec 13 section 24)
+        working-directory: web
+        run: pnpm lint
+
+      - name: Type check
+        working-directory: web
+        run: pnpm typecheck
+
+      - name: Unit and component tests
+        working-directory: web
+        run: pnpm test
+
+      - name: Token contrast check (fails below 4.5:1 and 3:1; the self-test proves it fails on a bad pair)
+        working-directory: web
+        run: pnpm contrast
+
+      - name: Production build with size budgets (shell under 300 KB, route chunks under 200 KB, compressed)
+        working-directory: web
+        run: pnpm build
+
+  web-e2e:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - name: 1
+            files: "@@SHARD1@@"
+          - name: 2
+            files: "@@SHARD2@@"
+          - name: 3
+            files: "@@SHARD3@@"
+          - name: 4
+            files: "@@SHARD4@@"
+    name: web-e2e (shard ${{ matrix.shard.name }})
 
     services:
       postgres:
@@ -287,31 +357,6 @@ jobs:
         working-directory: web
         run: pnpm install --frozen-lockfile
 
-      - name: npm licence gate (D-09; development-only exceptions of ruling Q20 and CR-064, each named)
-        run: |
-          python3 build/licence-gate.py --self-test
-          python3 build/licence-gate.py --npm web
-
-      - name: Lint (ESLint and Stylelint rules of spec 13 section 24)
-        working-directory: web
-        run: pnpm lint
-
-      - name: Type check
-        working-directory: web
-        run: pnpm typecheck
-
-      - name: Unit and component tests
-        working-directory: web
-        run: pnpm test
-
-      - name: Token contrast check (fails below 4.5:1 and 3:1; the self-test proves it fails on a bad pair)
-        working-directory: web
-        run: pnpm contrast
-
-      - name: Production build with size budgets (shell under 300 KB, route chunks under 200 KB, compressed)
-        working-directory: web
-        run: pnpm build
-
       - name: Test build (with the component catalogue)
         working-directory: web
         run: pnpm build:e2e
@@ -327,16 +372,42 @@ jobs:
         working-directory: web/apps/web
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Browser end-to-end tests (real API host over HTTPS, real PostgreSQL)
+      - name: Browser end-to-end tests, shard ${{ matrix.shard.name }} (real API host over HTTPS, real PostgreSQL)
+        env:
+          E2E_FILES: ${{ matrix.shard.files }}
         run: dotnet test --project tests/Erp.IntegrationTests --no-build -c Release --filter-trait "Suite=WebE2E"
 
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: web-screenshots
+          name: web-screenshots-${{ matrix.shard.name }}
           path: |
             web/apps/web/test-results/screenshots
             web/apps/web/test-results/output
           if-no-files-found: ignore
           retention-days: 14
+
+  # The check main requires (R-040), under its old name: green only when the quick checks and every browser shard are green.
+  # A skipped part counts as passed only when `changes` found nothing but documents (then the old `web` job was skipped too).
+  web:
+    needs: [changes, web-checks, web-e2e]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Collect the web results
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          CHECKS: ${{ needs.web-checks.result }}
+          E2E: ${{ needs.web-e2e.result }}
+        run: |
+          echo "changes=$CHANGES code=$CODE web-checks=$CHECKS web-e2e=$E2E"
+          if [ "$CHANGES" = "success" ] && [ "$CODE" != "true" ]; then
+            # documents only: both parts are skipped on purpose
+            [ "$CHECKS" = "skipped" ] && [ "$E2E" = "skipped" ] && exit 0
+          fi
+          [ "$CHECKS" = "success" ] && [ "$E2E" = "success" ] && exit 0
+          echo "a web part did not succeed" >&2
+          exit 1
