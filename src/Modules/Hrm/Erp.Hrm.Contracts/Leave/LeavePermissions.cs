@@ -44,6 +44,26 @@ public static class LeavePermissions
     /// <summary>Approve a held year-end confirmation as the second person (setting <c>hrm.leave.year_end_requires_approval</c>).</summary>
     public const string YearEndApprove = "hrm.leave_year_end_runs.approve";
 
+    /// <summary>
+    /// Run the standard leave reports (S1.33b, FR-HRM-LVE-10). The permission opens the reports; which rows appear is the data scope of the caller's grants on
+    /// <c>hrm.leave_ledger.read</c>, <c>hrm.leave_request_days.read</c> and <c>hrm.leave_requests.read</c>. No report has a pay or salary column (FR-HRM-GHR-06).
+    /// </summary>
+    public const string ReportsRead = "hrm.leave_reports.read";
+
     /// <summary>The hand-written codes (declared in permissions.json).</summary>
-    public static IReadOnlyList<string> HandWritten { get; } = [TypesCreate, TypesUpdate, LedgerPost, Recompute, RequestsCreate, RequestsUpdate, RequestsCancel, YearEndConfirm, YearEndApprove];
+    public static IReadOnlyList<string> HandWritten { get; } = [TypesCreate, TypesUpdate, LedgerPost, Recompute, RequestsCreate, RequestsUpdate, RequestsCancel, YearEndConfirm, YearEndApprove, ReportsRead];
+}
+
+/// <summary>The standard leave reports (S1.33b, FR-HRM-LVE-10): the code in the URL, and the code an export of the report carries.</summary>
+public static class LeaveReportCodes
+{
+    public const string BalanceSummary = "balance_summary";
+    public const string LeaveTaken = "leave_taken";
+    public const string PendingRequests = "pending_requests";
+
+    /// <summary>Every report built in 1.0.</summary>
+    public static IReadOnlyList<string> All { get; } = [BalanceSummary, LeaveTaken, PendingRequests];
+
+    /// <summary>The export type of a report (the key the export centre and the export button use).</summary>
+    public static string ExportType(string code) => "hrm.rpt_leave_" + code;
 }

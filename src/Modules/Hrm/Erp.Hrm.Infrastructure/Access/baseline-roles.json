@@ -114,6 +114,7 @@
         "hrm.shift_effective.read",
         "hrm.attendance_dashboard.read",
         "hrm.attendance_reports.read",
+        "hrm.leave_reports.read",
         "hrm.attendance_events.read"
       ],
       "scopes": {
@@ -283,6 +284,7 @@
         "hrm.shift_effective.read",
         "hrm.attendance_dashboard.read",
         "hrm.attendance_reports.read",
+        "hrm.leave_reports.read",
         "hrm.attendance_periods.lock",
         "hrm.attendance_periods.reopen",
         "hrm.attendance_adjustments.read",

@@ -632,12 +632,22 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
                     return text.Length == 0 ? default : System.Text.Json.JsonDocument.Parse(text).RootElement.Clone();
                 }
 
-                async Task<Guid> Type(string typeCode, string en, string ur, string colour, bool document, string unitKind = "day") =>
-                    (await Send(admin, HttpMethod.Post, "/api/hrm/leave-types", new
+                // A second seed on the same server (another browser test needs its own team) finds the leave types and policies of the first and adds only its people, grants and requests.
+                var existing = (await new NpgsqlCommand("select count(*) from hrm.leave_types where company_id = $1 and lower(code) in ('annual', 'sick')", c) { Parameters = { new NpgsqlParameter { Value = company } } }.ExecuteScalarAsync(Ct)) is long n && n == 2;
+                async Task<Guid> Type(string typeCode, string en, string ur, string colour, bool document, string unitKind = "day")
+                {
+                    if (existing)
+                    {
+                        return (Guid)(await new NpgsqlCommand("select id from hrm.leave_types where company_id = $1 and lower(code) = lower($2)", c) { Parameters = { new NpgsqlParameter { Value = company }, new NpgsqlParameter { Value = typeCode } } }.ExecuteScalarAsync(Ct))!;
+                    }
+
+                    return (await Send(admin, HttpMethod.Post, "/api/hrm/leave-types", new
                     {
                         companyId = company, code = typeCode, nameI18n = new { en, ur }, isPaid = true, counting = "working_days", unit = unitKind, requiresDocument = document,
                         isCompOff = false, isUnpaidDeduction = false, colorToken = colour,
                     })).GetProperty("id").GetGuid();
+                }
+
                 var annual = await Type("ANNUAL", "Annual leave", "سالانہ رخصت", "info", false, "half_day");
                 var sick = await Type("SICK", "Sick leave", "بیماری کی رخصت", "warning", true, "half_day");
                 var from = today.AddYears(-3);
@@ -656,8 +666,12 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
                     });
                 }
 
-                await Policy("leave", leaveParameters);
-                await Policy("shift", new { weeklyOffKind = "fixed", offDays = new[] { 6, 7 } });
+                if (!existing)
+                {
+                    await Policy("leave", leaveParameters);
+                    await Policy("shift", new { weeklyOffKind = "fixed", offDays = new[] { 6, 7 } });
+                }
+
                 foreach (var employment in reports.Append(me))
                 {
                     foreach (var type in new[] { annual, sick })

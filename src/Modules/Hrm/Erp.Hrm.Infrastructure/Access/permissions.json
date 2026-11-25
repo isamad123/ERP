@@ -447,6 +447,12 @@
       "sensitive": true
     },
     {
+      "code": "hrm.leave_reports.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.leave_reports.read",
+      "sensitive": false
+    },
+    {
       "code": "hrm.pay_components.create",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay_components.create",
