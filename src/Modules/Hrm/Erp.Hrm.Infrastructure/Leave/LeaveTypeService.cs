@@ -30,6 +30,8 @@ internal sealed partial class LeaveTypeService(HrmDbContext db, IClock clock, IC
     public const string NameRequired = "errors.hrm.leave.name_required";
     public const string CountingInvalid = "errors.hrm.leave.counting";
     public const string UnitInvalid = "errors.hrm.leave.unit";
+    public const string ColorInvalid = "errors.hrm.leave.color_token";
+    public static readonly string[] ColorTokens = ["primary", "success", "warning", "danger", "info", "neutral"];
     public const string HoursGoTogether = "errors.hrm.leave.hours_unit";
     public const string PaidDeduction = "errors.hrm.leave.paid_deduction";
     public const string FixedOnceUsed = "errors.hrm.leave.type_fixed";
@@ -181,6 +183,22 @@ internal sealed partial class LeaveTypeService(HrmDbContext db, IClock clock, IC
 
         Choice(r.Counting, Countings, "counting", CountingInvalid, v => row.Counting = v);
         Choice(r.Unit, Units, "unit", UnitInvalid, v => row.Unit = v);
+        if (r.ColorToken is { } colour)
+        {
+            if (colour.Length == 0)
+            {
+                row.ColorToken = null;
+            }
+            else if (ColorTokens.Contains(colour, StringComparer.Ordinal))
+            {
+                row.ColorToken = colour;
+            }
+            else
+            {
+                Fail("colorToken", ColorInvalid);
+            }
+        }
+
         Flag(r.IsPaid, "isPaid", v => row.IsPaid = v);
         Flag(r.RequiresDocument, "requiresDocument", v => row.RequiresDocument = v);
         Flag(r.IsCompOff, "isCompOff", v => row.IsCompOff = v);
@@ -272,6 +290,7 @@ internal sealed partial class LeaveTypeService(HrmDbContext db, IClock clock, IC
         ["isCompOff"] = r.IsCompOff,
         ["isUnpaidDeduction"] = r.IsUnpaidDeduction,
         ["source"] = r.Source,
+        ["colorToken"] = r.ColorToken,
         ["isActive"] = r.IsActive,
         ["createdAt"] = r.CreatedAt,
         ["updatedAt"] = r.UpdatedAt,

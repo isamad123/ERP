@@ -301,6 +301,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "POST /api/hrm/leave-requests/{id:guid}/cancel" => ($"/api/hrm/leave-requests/{m.LeaveApproved}/cancel", Json(new { reason = "Probe cancel" })),
             "POST /api/hrm/leave-requests/{id:guid}/change" => ($"/api/hrm/leave-requests/{m.LeaveApproved}/change", Json(new { startDate = "2025-07-07" })),
             "GET /api/hrm/leave-requests/{id:guid}/details" => ($"/api/hrm/leave-requests/{m.LeaveDraft}/details", null),
+            "GET /api/hrm/leave-requests/{id:guid}/coverage" => ($"/api/hrm/leave-requests/{m.LeaveDraft}/coverage", null),
+            "GET /api/hrm/leave-calendar" => ("/api/hrm/leave-calendar?from=2025-06-01&to=2025-06-30", null),
             "POST /api/hrm/leave-year-end-runs/{id:guid}/confirm" => ($"/api/hrm/leave-year-end-runs/{m.YearEndRun}/confirm", Json(new { reason = "Probe confirm" })),
             "POST /api/hrm/leave-year-end-runs/{id:guid}/rollback" => ($"/api/hrm/leave-year-end-runs/{m.YearEndRun}/rollback", Json(new { reason = "Probe roll back" })),
             "GET /api/hrm/employments/{id:guid}/leave-transfer" => ($"/api/hrm/employments/{m.Mover}/leave-transfer", null),

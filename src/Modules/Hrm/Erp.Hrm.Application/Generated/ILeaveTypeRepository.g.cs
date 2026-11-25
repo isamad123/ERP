@@ -52,6 +52,7 @@ public static class LeaveTypeAccess
         new("is_comp_off", "IsCompOff", null),
         new("is_unpaid_deduction", "IsUnpaidDeduction", null),
         new("source", "Source", null),
+        new("color_token", "ColorToken", null),
         new("is_active", "IsActive", null),
         new("is_deleted", "IsDeleted", null),
         new("deleted_at", "DeletedAt", null),

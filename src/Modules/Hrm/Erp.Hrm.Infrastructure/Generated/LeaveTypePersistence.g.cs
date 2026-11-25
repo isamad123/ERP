@@ -27,6 +27,7 @@ internal sealed class LeaveTypeConfiguration : IEntityTypeConfiguration<global::
         builder.Property(e => e.IsCompOff).HasColumnName("is_comp_off").HasColumnType("boolean");
         builder.Property(e => e.IsUnpaidDeduction).HasColumnName("is_unpaid_deduction").HasColumnType("boolean");
         builder.Property(e => e.Source).HasColumnName("source").HasColumnType("text").IsRequired();
+        builder.Property(e => e.ColorToken).HasColumnName("color_token").HasColumnType("text");
         builder.Property(e => e.IsActive).HasColumnName("is_active").HasColumnType("boolean");
         builder.Property(e => e.IsDeleted).HasColumnName("is_deleted").HasColumnType("boolean");
         builder.Property(e => e.DeletedAt).HasColumnName("deleted_at").HasColumnType("timestamptz");

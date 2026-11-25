@@ -3037,10 +3037,12 @@ Requirements: LVE-01, LVE-12. Entitlement, accrual, carry-forward, encashment, e
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| color_token | text | yes |  |  |
 
 Constraints:
 
 - `ck_leave_types_code_code` CHECK ((((length(code) >= 1) AND (length(code) <= 40)) AND (code = btrim(code))))
+- `ck_leave_types_color_token` CHECK ((color_token = ANY (ARRAY['primary'::text, 'success'::text, 'warning'::text, 'danger'::text, 'info'::text, 'neutral'::text])))
 - `ck_leave_types_counting` CHECK ((counting = ANY (ARRAY['calendar_days'::text, 'working_days'::text, 'hours'::text])))
 - `ck_leave_types_name_i18n_object` CHECK ((jsonb_typeof(name_i18n) = 'object'::text))
 - `ck_leave_types_source` CHECK ((source = ANY (ARRAY['pack'::text, 'tenant'::text])))
