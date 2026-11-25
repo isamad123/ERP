@@ -368,8 +368,8 @@ public sealed class AttendanceLockTests(TenancyFixture fx) : IAsyncLifetime
         Assert.NotEqual(HttpStatusCode.OK, (await _h.PostAsync(o.Hr, $"/api/wf/tasks/{await TaskOfAsync(instance)}/approve", new { comment = "mine" }, Ct)).Status);
         await ApproveAsync(o.Payroll, instance);
         Assert.Equal("cancelled", await _h.ScalarAsync<string>("select status from hrm.pay_runs where id = $1", Ct, run));
-        Assert.Equal($"open|true|Device punches of the week were missing|{o.Hr}|true", await _h.ScalarAsync<string>(
-            "select status || '|' || (reopened_at is not null) || '|' || reopen_reason || '|' || reopen_requested_by || '|' || (locked_at is null and locked_by_run_id is null) from hrm.attendance_periods where pay_period_id = $1", Ct, o.Locked));
+        Assert.Equal("open|true|Device punches of the week were missing|true|true", await _h.ScalarAsync<string>(
+            "select status || '|' || (reopened_at is not null) || '|' || reopen_reason || '|' || (reopen_workflow_instance_id is null) || '|' || (locked_at is null and locked_by_run_id is null) from hrm.attendance_periods where pay_period_id = $1", Ct, o.Locked));
         using (var ev = JsonDocument.Parse(await EventAsync(AttendanceLockEvents.Reopened, o.Locked)))
         {
             Assert.Equal((run, o.Hr, o.Payroll), (ev.RootElement.GetProperty("runId").GetGuid(), ev.RootElement.GetProperty("requestedBy").GetGuid(), ev.RootElement.GetProperty("approvedBy").GetGuid()));
@@ -383,6 +383,12 @@ public sealed class AttendanceLockTests(TenancyFixture fx) : IAsyncLifetime
         // A new run locks again; once that run reaches locked the period never reopens.
         var second = await RunAsync(o, o.Locked, "calculated");
         Assert.Equal(PeriodLockOutcome.Locked, (await InCustomerScopeAsync(sp => sp.GetRequiredService<IAttendancePeriodLock>().LockAsync(new PeriodLockRequest(o.Locked, second, true, o.Hr), null, Ct))).Outcome);
+        var again = await _h.PostAsync(o.Hr, $"{Periods}/{o.Locked}/reopen-request", new { reason = "Asked anew" }, Ct); // a new request, not the decided one again
+        Assert.True(again.Status == HttpStatusCode.Accepted, again.Body);
+        Assert.NotEqual(instance, again.Json.GetProperty("instanceId").GetGuid());
+        var rejected = await _h.PostAsync(o.Payroll, $"/api/wf/tasks/{await TaskOfAsync(again.Json.GetProperty("instanceId").GetGuid())}/reject", new { comment = "No" }, Ct);
+        Assert.True(rejected.Status == HttpStatusCode.OK, rejected.Body);
+        Assert.Equal("locked|true", await _h.ScalarAsync<string>("select status || '|' || (reopen_workflow_instance_id is null) from hrm.attendance_periods where pay_period_id = $1", Ct, o.Locked));
         await _h.ExecAsync("update hrm.pay_runs set status = 'locked' where id = $1", Ct, second);
         var final = await _h.PostAsync(o.Hr, $"{Periods}/{o.Locked}/reopen-request", new { reason = "Too late" }, Ct);
         Assert.Equal((HttpStatusCode.Conflict, "errors.hrm.attendance.lock.run_final"), (final.Status, final.Text("title")));

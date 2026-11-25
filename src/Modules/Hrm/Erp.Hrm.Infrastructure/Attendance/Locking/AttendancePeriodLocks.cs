@@ -227,8 +227,14 @@ internal sealed class AttendancePeriodLocks(HrmDbContext db, IServiceProvider se
         period.ExceptionsAccepted = null;
         period.ReopenedAt = now;
         period.ReopenReason = reason.Trim();
-        period.ReopenRequestedBy = approval.RequestedBy;
-        period.ReopenWorkflowInstanceId = approval.WorkflowInstanceId ?? period.ReopenWorkflowInstanceId;
+        // The decided requests are done (who asked and approved is in the event, the workflow history and the change log): a later lock or reopen
+        // is a new request, never a resubmission of these.
+        period.ReopenRequestedBy = null;
+        period.ReopenWorkflowInstanceId = null;
+        period.LockWorkflowInstanceId = null;
+        period.LockRequestedBy = null;
+        period.LockAcceptOpen = null;
+        period.LockReason = null;
         EmploymentApplier.Bump(period, now, approval.ApprovedBy);
         await on.SaveChangesAsync(ct).ConfigureAwait(false);
         var employments = await AttendancePeriodQueries.EmploymentsAsync(on, period, ct).ConfigureAwait(false);
