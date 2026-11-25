@@ -23,6 +23,9 @@ internal sealed class ExpenseCategoryConfiguration : IEntityTypeConfiguration<gl
         builder.Property(e => e.PolicyId).HasColumnName("policy_id").HasColumnType("uuid");
         builder.Property(e => e.RequiresReceipt).HasColumnName("requires_receipt").HasColumnType("boolean");
         builder.Property(e => e.ReimbursementComponentId).HasColumnName("reimbursement_component_id").HasColumnType("uuid");
+        builder.Property(e => e.Kind).HasColumnName("kind").HasColumnType("text").IsRequired();
+        builder.Property(e => e.FlagsBlockSubmit).HasColumnName("flags_block_submit").HasColumnType("boolean");
+        builder.Property(e => e.TaxTreatment).HasColumnName("tax_treatment").HasColumnType("text");
         builder.Property(e => e.IsActive).HasColumnName("is_active").HasColumnType("boolean");
         builder.Property(e => e.IsDeleted).HasColumnName("is_deleted").HasColumnType("boolean");
         builder.Property(e => e.DeletedAt).HasColumnName("deleted_at").HasColumnType("timestamptz");

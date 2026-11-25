@@ -23,29 +23,21 @@ public sealed class ExpenseClaimResponse
     public string ReimburseVia { get; init; } = null!;
     public global::System.Guid? PayInputId { get; init; }
     public global::System.Guid? WorkflowInstanceId { get; init; }
+    public string? Title { get; init; }
+    public global::System.DateTimeOffset? SubmittedAt { get; init; }
+    public bool NeedsFinance { get; init; }
+    public decimal? ApprovedTotal { get; init; }
+    public global::System.Guid? PayPeriodId { get; init; }
+    public global::System.DateTimeOffset? ReimbursedAt { get; init; }
+    public string PaymentStatus { get; init; } = null!;
+    public string? PaymentReference { get; init; }
+    public global::System.Guid? PaymentLineId { get; init; }
     public string Status { get; init; } = null!;
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
     public global::System.DateTimeOffset UpdatedAt { get; init; }
     public global::System.Guid UpdatedBy { get; init; }
     public long RowVersion { get; init; }
-}
-
-/// <summary>Body of create and update calls for hrm.expense_claims. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class ExpenseClaimWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public global::System.Guid? BranchId { get; init; }
-    public global::System.Guid? EmploymentId { get; init; }
-    public string? CurrencyCode { get; init; }
-    public decimal? TotalAmount { get; init; }
-    public string? ReimburseVia { get; init; }
-    public global::System.Guid? PayInputId { get; init; }
-    public global::System.Guid? WorkflowInstanceId { get; init; }
-    public string? Status { get; init; }
-
-    /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
-    public long? RowVersion { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for hrm.expense_claims.</summary>
@@ -65,13 +57,15 @@ public sealed class ExpenseClaimListQuery
 
     public global::System.Guid? WorkflowInstanceId { get; init; }
 
+    public global::System.Guid? PayPeriodId { get; init; }
+
     public string? Status { get; init; }
 
     /// <summary>Sort key: claimNo; a leading minus sorts descending. Empty: by id (creation order).</summary>
     public string? Sort { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.expense_claims: read, create, update. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.expense_claims: read. Answers pass through field security (S1.06).</summary>
 internal static class ExpenseClaimEndpoints
 {
     private const string Resource = "hrm.expense_claims";
@@ -81,15 +75,13 @@ internal static class ExpenseClaimEndpoints
         var group = app.MapGroup("/api/hrm/expense-claims").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.expense_claims.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.expense_claims.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.expense_claims.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.expense_claims.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.expense_claims.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.expense_claims.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
-        group.MapPut("/{id:guid}", UpdateAsync).WithName("hrm.expense_claims.update").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "update", "hrm.expense_claims.update"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] ExpenseClaimListQuery query, global::Erp.Hrm.Application.Generated.IExpenseClaimRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
         GeneratedEndpointSupport.RunAsync(permissions, "hrm.expense_claims.read", async () =>
         {
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(query.After, query.Limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ExpenseClaimFilter { CompanyId = query.CompanyId, BranchId = query.BranchId, EmploymentId = query.EmploymentId, PayInputId = query.PayInputId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ExpenseClaimFilter { CompanyId = query.CompanyId, BranchId = query.BranchId, EmploymentId = query.EmploymentId, PayInputId = query.PayInputId, WorkflowInstanceId = query.WorkflowInstanceId, PayPeriodId = query.PayPeriodId, Status = query.Status, Sort = query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var items = await GeneratedEndpointSupport.ShapeAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ExpenseClaimAccess.Fields, rows, ToResponse, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(new global::Erp.BuildingBlocks.Contracts.Api.PagedResult<global::System.Text.Json.Nodes.JsonObject>(items, rows.Count == page.Limit ? rows[^1].Id : null));
         }, cancellationToken);
@@ -99,55 +91,6 @@ internal static class ExpenseClaimEndpoints
         {
             var row = await repository.GetByIdAsync(id, cancellationToken).ConfigureAwait(false);
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ExpenseClaimAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(ExpenseClaimWriteRequest request, global::Erp.Hrm.Application.Generated.IExpenseClaimRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::Erp.Kernel.Contracts.Numbering.INumberAllocator numbers, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.expense_claims.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.ExpenseClaimAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.ExpenseClaim();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.EnsureCanCreateAsync(row, cancellationToken).ConfigureAwait(false);
-            row.ClaimNo = await numbers.AssignOnCreateAsync(new global::Erp.Kernel.Contracts.Numbering.NumberRequest("hrm.expense_claim_no", row.CompanyId, row.BranchId, null), cancellationToken).ConfigureAwait(false);
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/expense-claims/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ExpenseClaimAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
-    private static global::System.Threading.Tasks.Task<IResult> UpdateAsync(global::System.Guid id, ExpenseClaimWriteRequest request, global::Erp.Hrm.Application.Generated.IExpenseClaimRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.expense_claims.update", async () =>
-        {
-            var row = await repository.GetForUpdateAsync(id, cancellationToken).ConfigureAwait(false);
-            if (row is null)
-            {
-                return GeneratedEndpointSupport.NotFound();
-            }
-
-            var access = (await repository.FieldAccessAsync([row], global::Erp.Hrm.Application.Generated.ExpenseClaimAccess.Fields, fields, "update", cancellationToken).ConfigureAwait(false))[0];
-            var errors = Validate(request, update: true, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var denied = Apply(request, row, update: true, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.UpdateAsync(row, request.RowVersion!.Value, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.ExpenseClaimAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
     private static ExpenseClaimResponse ToResponse(global::Erp.Hrm.Domain.Generated.ExpenseClaim row) => new()
@@ -162,6 +105,15 @@ internal static class ExpenseClaimEndpoints
         ReimburseVia = row.ReimburseVia,
         PayInputId = row.PayInputId,
         WorkflowInstanceId = row.WorkflowInstanceId,
+        Title = row.Title,
+        SubmittedAt = row.SubmittedAt,
+        NeedsFinance = row.NeedsFinance,
+        ApprovedTotal = row.ApprovedTotal,
+        PayPeriodId = row.PayPeriodId,
+        ReimbursedAt = row.ReimbursedAt,
+        PaymentStatus = row.PaymentStatus,
+        PaymentReference = row.PaymentReference,
+        PaymentLineId = row.PaymentLineId,
         Status = row.Status,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
@@ -169,123 +121,6 @@ internal static class ExpenseClaimEndpoints
         UpdatedBy = row.UpdatedBy,
         RowVersion = row.RowVersion,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(ExpenseClaimWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.EmploymentId is null && (!update || access.CanEdit("employment_id")))
-        {
-            errors.Add("employmentId");
-        }
-        if (request.CurrencyCode is null && (!update || access.CanEdit("currency_code")))
-        {
-            errors.Add("currencyCode");
-        }
-        if (request.TotalAmount is null && (!update || access.CanEdit("total_amount")))
-        {
-            errors.Add("totalAmount");
-        }
-        if (request.ReimburseVia is null && (!update || access.CanEdit("reimburse_via")))
-        {
-            errors.Add("reimburseVia");
-        }
-        if (request.Status is null && (!update || access.CanEdit("status")))
-        {
-            errors.Add("status");
-        }
-        if (update && request.RowVersion is null)
-        {
-            errors.Add("rowVersion");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(ExpenseClaimWriteRequest request, global::Erp.Hrm.Domain.Generated.ExpenseClaim row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("branch_id"))
-        {
-            row.BranchId = request.BranchId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.BranchId, row.BranchId, update))
-        {
-            denied.Add("branchId");
-        }
-        if (access.CanEdit("employment_id"))
-        {
-            row.EmploymentId = request.EmploymentId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.EmploymentId, row.EmploymentId, update))
-        {
-            denied.Add("employmentId");
-        }
-        if (access.CanEdit("currency_code"))
-        {
-            row.CurrencyCode = request.CurrencyCode!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.CurrencyCode, row.CurrencyCode, update))
-        {
-            denied.Add("currencyCode");
-        }
-        if (access.CanEdit("total_amount"))
-        {
-            row.TotalAmount = request.TotalAmount!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TotalAmount, row.TotalAmount, update))
-        {
-            denied.Add("totalAmount");
-        }
-        if (access.CanEdit("reimburse_via"))
-        {
-            row.ReimburseVia = request.ReimburseVia!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReimburseVia, row.ReimburseVia, update))
-        {
-            denied.Add("reimburseVia");
-        }
-        if (access.CanEdit("pay_input_id"))
-        {
-            row.PayInputId = request.PayInputId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.PayInputId, row.PayInputId, update))
-        {
-            denied.Add("payInputId");
-        }
-        if (access.CanEdit("workflow_instance_id"))
-        {
-            row.WorkflowInstanceId = request.WorkflowInstanceId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.WorkflowInstanceId, row.WorkflowInstanceId, update))
-        {
-            denied.Add("workflowInstanceId");
-        }
-        if (access.CanEdit("status"))
-        {
-            row.Status = request.Status!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Status, row.Status, update))
-        {
-            denied.Add("status");
-        }
-        return denied;
-    }
 
     /// <summary>Reads pages of hrm.expense_claims for an export through the list's own rules (S1.16b).</summary>
     internal sealed class ExportReader(global::System.IServiceProvider services) : global::Erp.Kernel.Contracts.Itg.IExportRowReader
@@ -307,7 +142,7 @@ internal static class ExpenseClaimEndpoints
             var fields = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Erp.BuildingBlocks.Application.Security.IFieldAccess>(services);
             var query = export.Filter.ValueKind == global::System.Text.Json.JsonValueKind.Object ? global::System.Text.Json.JsonSerializer.Deserialize<ExpenseClaimListQuery>(export.Filter.GetRawText(), global::System.Text.Json.JsonSerializerOptions.Web) ?? new ExpenseClaimListQuery() : new ExpenseClaimListQuery();
             var page = global::Erp.BuildingBlocks.Application.Data.PageRequest.Create(after is null ? null : global::System.Guid.Parse(after), limit);
-            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ExpenseClaimFilter { CompanyId = query.CompanyId, BranchId = query.BranchId, EmploymentId = query.EmploymentId, PayInputId = query.PayInputId, WorkflowInstanceId = query.WorkflowInstanceId, Status = query.Status, Sort = export.Sort ?? query.Sort }, page, cancellationToken).ConfigureAwait(false);
+            var rows = await repository.ListAsync(new global::Erp.Hrm.Application.Generated.ExpenseClaimFilter { CompanyId = query.CompanyId, BranchId = query.BranchId, EmploymentId = query.EmploymentId, PayInputId = query.PayInputId, WorkflowInstanceId = query.WorkflowInstanceId, PayPeriodId = query.PayPeriodId, Status = query.Status, Sort = export.Sort ?? query.Sort }, page, cancellationToken).ConfigureAwait(false);
             var maps = await repository.FieldAccessAsync(rows, global::Erp.Hrm.Application.Generated.ExpenseClaimAccess.Fields, fields, "read", cancellationToken).ConfigureAwait(false);
             var shaped = new global::System.Collections.Generic.List<global::System.Text.Json.Nodes.JsonObject>(rows.Count);
             for (var i = 0; i < rows.Count; i++)

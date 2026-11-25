@@ -20,6 +20,9 @@ public sealed class ExpenseCategoryResponse
     public global::System.Guid? PolicyId { get; init; }
     public bool RequiresReceipt { get; init; }
     public global::System.Guid? ReimbursementComponentId { get; init; }
+    public string Kind { get; init; } = null!;
+    public bool FlagsBlockSubmit { get; init; }
+    public string? TaxTreatment { get; init; }
     public bool IsActive { get; init; }
     public bool IsDeleted { get; init; }
     public global::System.DateTimeOffset? DeletedAt { get; init; }
@@ -40,6 +43,9 @@ public sealed class ExpenseCategoryWriteRequest
     public global::System.Guid? PolicyId { get; init; }
     public bool? RequiresReceipt { get; init; }
     public global::System.Guid? ReimbursementComponentId { get; init; }
+    public string? Kind { get; init; }
+    public bool? FlagsBlockSubmit { get; init; }
+    public string? TaxTreatment { get; init; }
     public bool? IsActive { get; init; }
 
     /// <summary>Required on update: the row_version the client read (optimistic concurrency).</summary>
@@ -167,6 +173,9 @@ internal static class ExpenseCategoryEndpoints
         PolicyId = row.PolicyId,
         RequiresReceipt = row.RequiresReceipt,
         ReimbursementComponentId = row.ReimbursementComponentId,
+        Kind = row.Kind,
+        FlagsBlockSubmit = row.FlagsBlockSubmit,
+        TaxTreatment = row.TaxTreatment,
         IsActive = row.IsActive,
         IsDeleted = row.IsDeleted,
         DeletedAt = row.DeletedAt,
@@ -258,6 +267,36 @@ internal static class ExpenseCategoryEndpoints
         else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.ReimbursementComponentId, row.ReimbursementComponentId, update))
         {
             denied.Add("reimbursementComponentId");
+        }
+        if (access.CanEdit("kind"))
+        {
+            if (request.Kind is not null)
+            {
+                row.Kind = request.Kind!;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Kind, row.Kind, update))
+        {
+            denied.Add("kind");
+        }
+        if (access.CanEdit("flags_block_submit"))
+        {
+            if (request.FlagsBlockSubmit is not null)
+            {
+                row.FlagsBlockSubmit = request.FlagsBlockSubmit!.Value;
+            }
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.FlagsBlockSubmit, row.FlagsBlockSubmit, update))
+        {
+            denied.Add("flagsBlockSubmit");
+        }
+        if (access.CanEdit("tax_treatment"))
+        {
+            row.TaxTreatment = request.TaxTreatment;
+        }
+        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TaxTreatment, row.TaxTreatment, update))
+        {
+            denied.Add("taxTreatment");
         }
         if (access.CanEdit("is_active"))
         {

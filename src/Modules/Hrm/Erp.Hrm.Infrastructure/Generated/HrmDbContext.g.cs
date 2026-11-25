@@ -46,6 +46,7 @@ public sealed partial class HrmDbContext(DbContextOptions<HrmDbContext> options)
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.EmploymentEventConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.EmploymentStatutoryRegistrationConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.EmploymentConfiguration());
+        modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.ExchangeRateConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.ExpenseCategoryConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.ExpenseClaimLineConfiguration());
         modelBuilder.ApplyConfiguration(new global::Erp.Hrm.Infrastructure.Generated.ExpenseClaimConfiguration());
@@ -172,6 +173,7 @@ public static class HrmGeneratedServices
         services.AddScoped<global::Erp.Hrm.Application.Generated.IEmploymentEventRepository, global::Erp.Hrm.Infrastructure.Generated.EmploymentEventRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IEmploymentStatutoryRegistrationRepository, global::Erp.Hrm.Infrastructure.Generated.EmploymentStatutoryRegistrationRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IEmploymentRepository, global::Erp.Hrm.Infrastructure.Generated.EmploymentRepository>();
+        services.AddScoped<global::Erp.Hrm.Application.Generated.IExchangeRateRepository, global::Erp.Hrm.Infrastructure.Generated.ExchangeRateRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IExpenseCategoryRepository, global::Erp.Hrm.Infrastructure.Generated.ExpenseCategoryRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IExpenseClaimLineRepository, global::Erp.Hrm.Infrastructure.Generated.ExpenseClaimLineRepository>();
         services.AddScoped<global::Erp.Hrm.Application.Generated.IExpenseClaimRepository, global::Erp.Hrm.Infrastructure.Generated.ExpenseClaimRepository>();

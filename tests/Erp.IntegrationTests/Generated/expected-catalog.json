@@ -15688,6 +15688,183 @@
     {
       "database": "tenant",
       "schema": "hrm",
+      "name": "exchange_rates",
+      "module": "hrm",
+      "traits": [
+        "std",
+        "co"
+      ],
+      "requirements": [
+        "EXP-02"
+      ],
+      "partition_column": null,
+      "primary_key": [
+        "id"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "company_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "from_currency",
+          "kind": "FixedText",
+          "type": "character(3)",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "to_currency",
+          "kind": "FixedText",
+          "type": "character(3)",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "rate_date",
+          "kind": "Date",
+          "type": "date",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "rate",
+          "kind": "Rate",
+          "type": "numeric(19,10)",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "created_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "updated_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": true,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "row_version",
+          "kind": "BigInteger",
+          "type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        }
+      ],
+      "uniques": [
+        "uq_exchange_rates_company_id_from_currency_to_currency_99344eea"
+      ],
+      "checks": [
+        "ck_exchange_rates_rate_rule",
+        "ck_exchange_rates_currencies_rate"
+      ],
+      "exclusions": [],
+      "foreign_keys": [
+        {
+          "name": "fk_exchange_rates_company_id",
+          "columns": [
+            "company_id"
+          ],
+          "target": "org.companies",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "fk_exchange_rates_from_currency",
+          "columns": [
+            "from_currency"
+          ],
+          "target": "ref.currencies",
+          "target_columns": [
+            "code"
+          ]
+        },
+        {
+          "name": "fk_exchange_rates_to_currency",
+          "columns": [
+            "to_currency"
+          ],
+          "target": "ref.currencies",
+          "target_columns": [
+            "code"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_exchange_rates_from_currency",
+        "ix_exchange_rates_to_currency"
+      ],
+      "triggers": [],
+      "append_only_updatable": [],
+      "has_api": true,
+      "full_name": "hrm.exchange_rates"
+    },
+    {
+      "database": "tenant",
+      "schema": "hrm",
       "name": "expense_categories",
       "module": "hrm",
       "traits": [
@@ -15863,6 +16040,40 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "kind",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "general",
+            "per_diem",
+            "mileage"
+          ]
+        },
+        {
+          "name": "flags_block_submit",
+          "kind": "Bool",
+          "type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "tax_treatment",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -15871,7 +16082,8 @@
       ],
       "checks": [
         "ck_expense_categories_code_code",
-        "ck_expense_categories_name_i18n_object"
+        "ck_expense_categories_name_i18n_object",
+        "ck_expense_categories_kind"
       ],
       "exclusions": [],
       "foreign_keys": [
@@ -16093,6 +16305,96 @@
           "type": "bigint",
           "not_null": true,
           "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "original_currency_code",
+          "kind": "FixedText",
+          "type": "character(3)",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "original_amount",
+          "kind": "Money",
+          "type": "numeric(19,4)",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "exchange_rate",
+          "kind": "Rate",
+          "type": "numeric(19,10)",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "rate_date",
+          "kind": "Date",
+          "type": "date",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "quantity",
+          "kind": "Qty",
+          "type": "numeric(19,6)",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "approved_amount",
+          "kind": "Money",
+          "type": "numeric(19,4)",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "decision_reason",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "decided_by",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "decided_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
           "generated": false,
           "sensitive": false,
           "enum_values": []
@@ -16351,6 +16653,101 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "title",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "submitted_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "needs_finance",
+          "kind": "Bool",
+          "type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "approved_total",
+          "kind": "Money",
+          "type": "numeric(19,4)",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "pay_period_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "reimbursed_at",
+          "kind": "Timestamp",
+          "type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "payment_status",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": true,
+          "has_default": true,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "none",
+            "pending",
+            "paid",
+            "failed"
+          ]
+        },
+        {
+          "name": "payment_reference",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "payment_line_id",
+          "kind": "Uuid",
+          "type": "uuid",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -16359,6 +16756,7 @@
       ],
       "checks": [
         "ck_expense_claims_reimburse_via",
+        "ck_expense_claims_payment_status",
         "ck_expense_claims_status"
       ],
       "exclusions": [],
@@ -16420,13 +16818,26 @@
             "company_id",
             "id"
           ]
+        },
+        {
+          "name": "fk_expense_claims_pay_period_id",
+          "columns": [
+            "company_id",
+            "pay_period_id"
+          ],
+          "target": "hrm.pay_periods",
+          "target_columns": [
+            "company_id",
+            "id"
+          ]
         }
       ],
       "indexes": [
         "ix_expense_claims_company_id_branch_id",
         "ix_expense_claims_company_id_employment_id",
         "ix_expense_claims_company_id_pay_input_id",
-        "ix_expense_claims_company_id_workflow_instance_id"
+        "ix_expense_claims_company_id_workflow_instance_id",
+        "ix_expense_claims_company_id_pay_period_id"
       ],
       "triggers": [],
       "append_only_updatable": [],

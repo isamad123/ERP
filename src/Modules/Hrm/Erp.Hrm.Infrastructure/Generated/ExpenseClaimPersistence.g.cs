@@ -26,6 +26,15 @@ internal sealed class ExpenseClaimConfiguration : IEntityTypeConfiguration<globa
         builder.Property(e => e.ReimburseVia).HasColumnName("reimburse_via").HasColumnType("text").IsRequired();
         builder.Property(e => e.PayInputId).HasColumnName("pay_input_id").HasColumnType("uuid");
         builder.Property(e => e.WorkflowInstanceId).HasColumnName("workflow_instance_id").HasColumnType("uuid");
+        builder.Property(e => e.Title).HasColumnName("title").HasColumnType("text");
+        builder.Property(e => e.SubmittedAt).HasColumnName("submitted_at").HasColumnType("timestamptz");
+        builder.Property(e => e.NeedsFinance).HasColumnName("needs_finance").HasColumnType("boolean");
+        builder.Property(e => e.ApprovedTotal).HasColumnName("approved_total").HasColumnType("numeric(19,4)");
+        builder.Property(e => e.PayPeriodId).HasColumnName("pay_period_id").HasColumnType("uuid");
+        builder.Property(e => e.ReimbursedAt).HasColumnName("reimbursed_at").HasColumnType("timestamptz");
+        builder.Property(e => e.PaymentStatus).HasColumnName("payment_status").HasColumnType("text").IsRequired();
+        builder.Property(e => e.PaymentReference).HasColumnName("payment_reference").HasColumnType("text");
+        builder.Property(e => e.PaymentLineId).HasColumnName("payment_line_id").HasColumnType("uuid");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
@@ -67,6 +76,10 @@ internal sealed class ExpenseClaimRepository(
         if (filter.WorkflowInstanceId is { } workflowInstanceIdFilter)
         {
             query = query.Where(e => e.WorkflowInstanceId == workflowInstanceIdFilter);
+        }
+        if (filter.PayPeriodId is { } payPeriodIdFilter)
+        {
+            query = query.Where(e => e.PayPeriodId == payPeriodIdFilter);
         }
         if (filter.Status is { } statusFilter)
         {

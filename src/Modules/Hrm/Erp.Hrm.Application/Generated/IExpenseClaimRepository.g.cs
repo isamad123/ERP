@@ -14,6 +14,7 @@ public sealed record ExpenseClaimFilter
     public global::System.Guid? EmploymentId { get; init; }
     public global::System.Guid? PayInputId { get; init; }
     public global::System.Guid? WorkflowInstanceId { get; init; }
+    public global::System.Guid? PayPeriodId { get; init; }
     public string? Status { get; init; }
     /// <summary>Sort key: claimNo; a leading minus sorts descending. Empty: by id (creation order).</summary>
     public string? Sort { get; init; }
@@ -51,10 +52,19 @@ public static class ExpenseClaimAccess
         new("claim_no", "ClaimNo", null),
         new("employment_id", "EmploymentId", null),
         new("currency_code", "CurrencyCode", null),
-        new("total_amount", "TotalAmount", null),
+        new("total_amount", "TotalAmount", "salary"),
         new("reimburse_via", "ReimburseVia", null),
         new("pay_input_id", "PayInputId", null),
         new("workflow_instance_id", "WorkflowInstanceId", null),
+        new("title", "Title", null),
+        new("submitted_at", "SubmittedAt", null),
+        new("needs_finance", "NeedsFinance", null),
+        new("approved_total", "ApprovedTotal", "salary"),
+        new("pay_period_id", "PayPeriodId", null),
+        new("reimbursed_at", "ReimbursedAt", null),
+        new("payment_status", "PaymentStatus", null),
+        new("payment_reference", "PaymentReference", null),
+        new("payment_line_id", "PaymentLineId", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

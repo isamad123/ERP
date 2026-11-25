@@ -17,6 +17,12 @@
 #   comment:    descriptive text about behaviour (no rule for the database); kept as a table comment only.
 
 tables:
+  # S1.42 (CR-098 S1.42 detail a, FR-HRM-EXP-02): a rate converts one currency into another and is positive.
+  hrm.exchange_rates:
+    checks:
+      - text: "from_currency <> to_currency and rate > 0"
+        check: { name: ck_exchange_rates_currencies_rate, sql: "from_currency <> to_currency and rate > 0" }
+
   hrm.pay_periods:
     checks:
       - text: "exclusion: (pay_group_id with =, daterange(start_date, end_date, '[]') with &&)"

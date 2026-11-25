@@ -46,6 +46,21 @@
       "format": "uuid",
       "nullable": true
     },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "general",
+        "per_diem",
+        "mileage"
+      ]
+    },
+    "flagsBlockSubmit": {
+      "type": "boolean"
+    },
+    "taxTreatment": {
+      "type": "string",
+      "nullable": true
+    },
     "isActive": {
       "type": "boolean"
     }

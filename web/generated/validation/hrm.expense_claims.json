@@ -52,6 +52,52 @@
       "format": "uuid",
       "nullable": true
     },
+    "title": {
+      "type": "string",
+      "nullable": true
+    },
+    "submittedAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
+    "needsFinance": {
+      "type": "boolean"
+    },
+    "approvedTotal": {
+      "type": "string",
+      "format": "decimal",
+      "pattern": "^-?\\d{1,15}(\\.\\d{1,4})?$",
+      "nullable": true
+    },
+    "payPeriodId": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
+    "reimbursedAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+    },
+    "paymentStatus": {
+      "type": "string",
+      "enum": [
+        "none",
+        "pending",
+        "paid",
+        "failed"
+      ]
+    },
+    "paymentReference": {
+      "type": "string",
+      "nullable": true
+    },
+    "paymentLineId": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
     "status": {
       "type": "string",
       "enum": [

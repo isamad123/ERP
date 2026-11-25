@@ -42,6 +42,33 @@ public sealed partial class ExpenseClaim : global::Erp.BuildingBlocks.Domain.Ent
     /// <summary>workflow_instance_id: fk wf.workflow_instances</summary>
     public global::System.Guid? WorkflowInstanceId { get; set; }
 
+    /// <summary>title: what the claim is for (S1.42)</summary>
+    public string? Title { get; set; }
+
+    /// <summary>submitted_at</summary>
+    public global::System.DateTimeOffset? SubmittedAt { get; set; }
+
+    /// <summary>needs_finance: true when the total reached hrm.exp.finance_threshold at submit: the route adds the finance step (S1.42, Q5)</summary>
+    public bool NeedsFinance { get; set; }
+
+    /// <summary>approved_total: sum of the approved amounts of the lines once decided (S1.42)</summary>
+    public decimal? ApprovedTotal { get; set; }
+
+    /// <summary>pay_period_id: fk hrm.pay_periods; the period of the payroll input (S1.42)</summary>
+    public global::System.Guid? PayPeriodId { get; set; }
+
+    /// <summary>reimbursed_at</summary>
+    public global::System.DateTimeOffset? ReimbursedAt { get; set; }
+
+    /// <summary>payment_status: default none; the payment batch route of S1.40a returns paid or failed here (S1.42, FR-HRM-EXP-06)</summary>
+    public string PaymentStatus { get; set; } = "none";
+
+    /// <summary>payment_reference: reference of the payment line, set by the payment return (S1.40a)</summary>
+    public string? PaymentReference { get; set; }
+
+    /// <summary>payment_line_id: reserved for the payment batch line of S1.40a (no foreign key until that table exists)</summary>
+    public global::System.Guid? PaymentLineId { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

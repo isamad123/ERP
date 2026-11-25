@@ -33,6 +33,15 @@ public sealed partial class ExpenseCategory : global::Erp.BuildingBlocks.Domain.
     /// <summary>reimbursement_component_id: fk hrm.pay_components</summary>
     public global::System.Guid? ReimbursementComponentId { get; set; }
 
+    /// <summary>kind: default general; per_diem and mileage lines carry a quantity (days or kilometres) checked against the rate of the expense policy (S1.42, FR-HRM-EXP-01)</summary>
+    public string Kind { get; set; } = "general";
+
+    /// <summary>flags_block_submit: a policy flag on a line of this category stops the claim from being submitted (S1.42, FR-HRM-EXP-03)</summary>
+    public bool FlagsBlockSubmit { get; set; }
+
+    /// <summary>tax_treatment: free label of the country pack; no rate is stored (S1.42, FR-HRM-EXP-01)</summary>
+    public string? TaxTreatment { get; set; }
+
     /// <summary>is_active</summary>
     public bool IsActive { get; set; } = true;
 

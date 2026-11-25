@@ -54,6 +54,55 @@
       "items": {
         "type": "string"
       }
+    },
+    "originalCurrencyCode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 3,
+      "nullable": true
+    },
+    "originalAmount": {
+      "type": "string",
+      "format": "decimal",
+      "pattern": "^-?\\d{1,15}(\\.\\d{1,4})?$",
+      "nullable": true
+    },
+    "exchangeRate": {
+      "type": "string",
+      "format": "decimal",
+      "pattern": "^-?\\d{1,9}(\\.\\d{1,10})?$",
+      "nullable": true
+    },
+    "rateDate": {
+      "type": "string",
+      "format": "date",
+      "nullable": true
+    },
+    "quantity": {
+      "type": "string",
+      "format": "decimal",
+      "pattern": "^-?\\d{1,13}(\\.\\d{1,6})?$",
+      "nullable": true
+    },
+    "approvedAmount": {
+      "type": "string",
+      "format": "decimal",
+      "pattern": "^-?\\d{1,15}(\\.\\d{1,4})?$",
+      "nullable": true
+    },
+    "decisionReason": {
+      "type": "string",
+      "nullable": true
+    },
+    "decidedBy": {
+      "type": "string",
+      "format": "uuid",
+      "nullable": true
+    },
+    "decidedAt": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
     }
   }
 }

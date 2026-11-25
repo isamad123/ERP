@@ -12,14 +12,6 @@
     {
       "action": "read",
       "permission": "hrm.expense_claim_lines.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.expense_claim_lines.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.expense_claim_lines.update"
     }
   ],
   "companyScoped": true,
@@ -108,7 +100,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.expense_claim_lines.amount"
+      "labelKey": "fields.hrm.expense_claim_lines.amount",
+      "fieldClass": "salary"
     },
     {
       "column": "description",
@@ -160,6 +153,98 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.expense_claim_lines.policy_flags"
+    },
+    {
+      "column": "original_currency_code",
+      "field": "originalCurrencyCode",
+      "kind": "FixedText",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claim_lines.original_currency_code"
+    },
+    {
+      "column": "original_amount",
+      "field": "originalAmount",
+      "kind": "Money",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claim_lines.original_amount",
+      "fieldClass": "salary"
+    },
+    {
+      "column": "exchange_rate",
+      "field": "exchangeRate",
+      "kind": "Rate",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claim_lines.exchange_rate"
+    },
+    {
+      "column": "rate_date",
+      "field": "rateDate",
+      "kind": "Date",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claim_lines.rate_date"
+    },
+    {
+      "column": "quantity",
+      "field": "quantity",
+      "kind": "Qty",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claim_lines.quantity"
+    },
+    {
+      "column": "approved_amount",
+      "field": "approvedAmount",
+      "kind": "Money",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claim_lines.approved_amount",
+      "fieldClass": "salary"
+    },
+    {
+      "column": "decision_reason",
+      "field": "decisionReason",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claim_lines.decision_reason"
+    },
+    {
+      "column": "decided_by",
+      "field": "decidedBy",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claim_lines.decided_by"
+    },
+    {
+      "column": "decided_at",
+      "field": "decidedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claim_lines.decided_at"
     },
     {
       "column": "created_at",

@@ -1478,6 +1478,50 @@ export const employments =
     get: (id: string) => request<Employment>('GET', `/api/hrm/employments/${id}`),
 };
 
+/** hrm.exchange_rates: The customer's exchange rates for converting expense claim lines. Field rules (S1.06) may leave a field out or mask it as text. */
+export interface ExchangeRate
+{
+    id: string;
+    companyId: string;
+    fromCurrency: string;
+    toCurrency: string;
+    rateDate: string;
+    rate: number;
+    createdAt: string;
+    createdBy: string;
+    updatedAt: string;
+    updatedBy: string;
+    rowVersion: number;
+}
+
+export interface ExchangeRateWrite
+{
+    companyId: string;
+    fromCurrency: string;
+    toCurrency: string;
+    rateDate: string;
+    rate: number;
+}
+
+export interface ExchangeRateListQuery
+{
+    after?: string;
+    limit?: number;
+    companyId?: string;
+    fromCurrency?: string;
+    toCurrency?: string;
+    /** fromCurrency, toCurrency, rateDate; a leading minus sorts descending. */
+    sort?: 'fromCurrency' | '-fromCurrency' | 'toCurrency' | '-toCurrency' | 'rateDate' | '-rateDate';
+}
+
+export const exchangeRates =
+{
+    list: (query: ExchangeRateListQuery = {}) => request<PagedResult<ExchangeRate>>('GET', '/api/hrm/exchange-rates', { query }),
+    get: (id: string) => request<ExchangeRate>('GET', `/api/hrm/exchange-rates/${id}`),
+    create: (body: ExchangeRateWrite) => request<ExchangeRate>('POST', '/api/hrm/exchange-rates', { body }),
+    update: (id: string, body: ExchangeRateWrite & { rowVersion: number }) => request<ExchangeRate>('PUT', `/api/hrm/exchange-rates/${id}`, { body }),
+};
+
 /** hrm.expense_categories: ExpenseCategory. Field rules (S1.06) may leave a field out or mask it as text. */
 export interface ExpenseCategory
 {
@@ -1488,6 +1532,9 @@ export interface ExpenseCategory
     policyId: string | null;
     requiresReceipt: boolean;
     reimbursementComponentId: string | null;
+    kind: 'general' | 'per_diem' | 'mileage';
+    flagsBlockSubmit: boolean;
+    taxTreatment: string | null;
     isActive: boolean;
     isDeleted: boolean;
     deletedAt: string | null;
@@ -1507,6 +1554,9 @@ export interface ExpenseCategoryWrite
     policyId?: string | null;
     requiresReceipt?: boolean;
     reimbursementComponentId?: string | null;
+    kind?: 'general' | 'per_diem' | 'mileage';
+    flagsBlockSubmit?: boolean;
+    taxTreatment?: string | null;
     isActive?: boolean;
 }
 
@@ -1540,31 +1590,26 @@ export interface ExpenseClaimLine
     claimId: string;
     categoryId: string;
     expenseDate: string;
-    amount: number;
+    amount?: number | string;
     description: string | null;
     receiptFileId: string | null;
     receiptHash: string | null;
     costAllocation: unknown;
     policyFlags: string[];
+    originalCurrencyCode: string | null;
+    originalAmount?: number | string | null;
+    exchangeRate: number | null;
+    rateDate: string | null;
+    quantity: number | null;
+    approvedAmount?: number | string | null;
+    decisionReason: string | null;
+    decidedBy: string | null;
+    decidedAt: string | null;
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface ExpenseClaimLineWrite
-{
-    companyId: string;
-    claimId: string;
-    categoryId: string;
-    expenseDate: string;
-    amount: number;
-    description?: string | null;
-    receiptFileId?: string | null;
-    receiptHash?: string | null;
-    costAllocation: unknown;
-    policyFlags?: string[];
 }
 
 export interface ExpenseClaimLineListQuery
@@ -1581,8 +1626,6 @@ export const expenseClaimLines =
 {
     list: (query: ExpenseClaimLineListQuery = {}) => request<PagedResult<ExpenseClaimLine>>('GET', '/api/hrm/expense-claim-lines', { query }),
     get: (id: string) => request<ExpenseClaimLine>('GET', `/api/hrm/expense-claim-lines/${id}`),
-    create: (body: ExpenseClaimLineWrite) => request<ExpenseClaimLine>('POST', '/api/hrm/expense-claim-lines', { body }),
-    update: (id: string, body: ExpenseClaimLineWrite & { rowVersion: number }) => request<ExpenseClaimLine>('PUT', `/api/hrm/expense-claim-lines/${id}`, { body }),
 };
 
 /** hrm.expense_claims: ExpenseClaim. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -1594,29 +1637,25 @@ export interface ExpenseClaim
     claimNo: string;
     employmentId: string;
     currencyCode: string;
-    totalAmount: number;
+    totalAmount?: number | string;
     reimburseVia: 'payroll' | 'payment_batch';
     payInputId: string | null;
     workflowInstanceId: string | null;
+    title: string | null;
+    submittedAt: string | null;
+    needsFinance: boolean;
+    approvedTotal?: number | string | null;
+    payPeriodId: string | null;
+    reimbursedAt: string | null;
+    paymentStatus: 'none' | 'pending' | 'paid' | 'failed';
+    paymentReference: string | null;
+    paymentLineId: string | null;
     status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'reimbursed' | 'cancelled';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface ExpenseClaimWrite
-{
-    companyId: string;
-    branchId?: string | null;
-    employmentId: string;
-    currencyCode: string;
-    totalAmount: number;
-    reimburseVia: 'payroll' | 'payment_batch';
-    payInputId?: string | null;
-    workflowInstanceId?: string | null;
-    status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'reimbursed' | 'cancelled';
 }
 
 export interface ExpenseClaimListQuery
@@ -1628,6 +1667,7 @@ export interface ExpenseClaimListQuery
     employmentId?: string;
     payInputId?: string;
     workflowInstanceId?: string;
+    payPeriodId?: string;
     status?: 'draft' | 'submitted' | 'approved' | 'rejected' | 'reimbursed' | 'cancelled';
     /** claimNo; a leading minus sorts descending. */
     sort?: 'claimNo' | '-claimNo';
@@ -1637,8 +1677,6 @@ export const expenseClaims =
 {
     list: (query: ExpenseClaimListQuery = {}) => request<PagedResult<ExpenseClaim>>('GET', '/api/hrm/expense-claims', { query }),
     get: (id: string) => request<ExpenseClaim>('GET', `/api/hrm/expense-claims/${id}`),
-    create: (body: ExpenseClaimWrite) => request<ExpenseClaim>('POST', '/api/hrm/expense-claims', { body }),
-    update: (id: string, body: ExpenseClaimWrite & { rowVersion: number }) => request<ExpenseClaim>('PUT', `/api/hrm/expense-claims/${id}`, { body }),
 };
 
 /** hrm.final_settlement_lines: FinalSettlementLine. Field rules (S1.06) may leave a field out or mask it as text. */

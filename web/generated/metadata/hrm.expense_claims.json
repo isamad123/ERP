@@ -13,14 +13,6 @@
     {
       "action": "read",
       "permission": "hrm.expense_claims.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.expense_claims.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.expense_claims.update"
     }
   ],
   "companyScoped": true,
@@ -44,12 +36,14 @@
   ],
   "search": [],
   "constraints": {
+    "ck_expense_claims_payment_status": "paymentStatus",
     "ck_expense_claims_reimburse_via": "reimburseVia",
     "ck_expense_claims_status": "status",
     "fk_expense_claims_branch_id": "branchId",
     "fk_expense_claims_company_id": "companyId",
     "fk_expense_claims_employment_id": "employmentId",
     "fk_expense_claims_pay_input_id": "payInputId",
+    "fk_expense_claims_pay_period_id": "payPeriodId",
     "fk_expense_claims_workflow_instance_id": "workflowInstanceId",
     "uq_expense_claims_company_id_claim_no": "claimNo",
     "uq_expense_claims_company_id_id": "id"
@@ -127,7 +121,8 @@
       "readOnly": false,
       "system": false,
       "filter": false,
-      "labelKey": "fields.hrm.expense_claims.total_amount"
+      "labelKey": "fields.hrm.expense_claims.total_amount",
+      "fieldClass": "salary"
     },
     {
       "column": "reimburse_via",
@@ -170,6 +165,116 @@
       "filter": true,
       "labelKey": "fields.hrm.expense_claims.workflow_instance_id",
       "references": "wf.workflow_instances"
+    },
+    {
+      "column": "title",
+      "field": "title",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claims.title"
+    },
+    {
+      "column": "submitted_at",
+      "field": "submittedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claims.submitted_at"
+    },
+    {
+      "column": "needs_finance",
+      "field": "needsFinance",
+      "kind": "Bool",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claims.needs_finance"
+    },
+    {
+      "column": "approved_total",
+      "field": "approvedTotal",
+      "kind": "Money",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claims.approved_total",
+      "fieldClass": "salary"
+    },
+    {
+      "column": "pay_period_id",
+      "field": "payPeriodId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": true,
+      "labelKey": "fields.hrm.expense_claims.pay_period_id",
+      "references": "hrm.pay_periods"
+    },
+    {
+      "column": "reimbursed_at",
+      "field": "reimbursedAt",
+      "kind": "Timestamp",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claims.reimbursed_at"
+    },
+    {
+      "column": "payment_status",
+      "field": "paymentStatus",
+      "kind": "Enum",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claims.payment_status",
+      "options": [
+        {
+          "value": "none",
+          "labelKey": "options.hrm.expense_claims.payment_status.none"
+        },
+        {
+          "value": "pending",
+          "labelKey": "options.hrm.expense_claims.payment_status.pending"
+        },
+        {
+          "value": "paid",
+          "labelKey": "options.hrm.expense_claims.payment_status.paid"
+        },
+        {
+          "value": "failed",
+          "labelKey": "options.hrm.expense_claims.payment_status.failed"
+        }
+      ]
+    },
+    {
+      "column": "payment_reference",
+      "field": "paymentReference",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claims.payment_reference"
+    },
+    {
+      "column": "payment_line_id",
+      "field": "paymentLineId",
+      "kind": "Uuid",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_claims.payment_line_id"
     },
     {
       "column": "status",

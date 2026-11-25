@@ -39,7 +39,8 @@
     "policyId",
     "requiresReceipt",
     "reimbursementComponentId",
-    "isActive"
+    "kind",
+    "flagsBlockSubmit"
   ],
   "search": [
     "code",
@@ -47,6 +48,7 @@
   ],
   "constraints": {
     "ck_expense_categories_code_code": "code",
+    "ck_expense_categories_kind": "kind",
     "ck_expense_categories_name_i18n_object": "nameI18n",
     "fk_expense_categories_company_id": "companyId",
     "fk_expense_categories_policy_id": "policyId",
@@ -129,6 +131,50 @@
       "filter": true,
       "labelKey": "fields.hrm.expense_categories.reimbursement_component_id",
       "references": "hrm.pay_components"
+    },
+    {
+      "column": "kind",
+      "field": "kind",
+      "kind": "Enum",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_categories.kind",
+      "options": [
+        {
+          "value": "general",
+          "labelKey": "options.hrm.expense_categories.kind.general"
+        },
+        {
+          "value": "per_diem",
+          "labelKey": "options.hrm.expense_categories.kind.per_diem"
+        },
+        {
+          "value": "mileage",
+          "labelKey": "options.hrm.expense_categories.kind.mileage"
+        }
+      ]
+    },
+    {
+      "column": "flags_block_submit",
+      "field": "flagsBlockSubmit",
+      "kind": "Bool",
+      "required": true,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_categories.flags_block_submit"
+    },
+    {
+      "column": "tax_treatment",
+      "field": "taxTreatment",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.expense_categories.tax_treatment"
     },
     {
       "column": "is_active",

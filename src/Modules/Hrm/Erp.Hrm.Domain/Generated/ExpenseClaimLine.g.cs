@@ -45,6 +45,33 @@ public sealed partial class ExpenseClaimLine : global::Erp.BuildingBlocks.Domain
     /// <summary>policy_flags: over_limit, duplicate, missing_receipt, out_of_policy</summary>
     public string[] PolicyFlags { get; set; } = [];
 
+    /// <summary>original_currency_code: currency the receipt was paid in (S1.42)</summary>
+    public string? OriginalCurrencyCode { get; set; }
+
+    /// <summary>original_amount: amount in the original currency; amount is the converted value in the claim currency (S1.42)</summary>
+    public decimal? OriginalAmount { get; set; }
+
+    /// <summary>exchange_rate: rate used (original to claim currency), taken from hrm.exchange_rates and kept here (S1.42, Q3)</summary>
+    public decimal? ExchangeRate { get; set; }
+
+    /// <summary>rate_date: date of the rate row that was used</summary>
+    public global::System.DateOnly? RateDate { get; set; }
+
+    /// <summary>quantity: days of a per-diem line or kilometres of a mileage line (S1.42)</summary>
+    public decimal? Quantity { get; set; }
+
+    /// <summary>approved_amount: amount the approver accepted, in the claim currency; 0 means the line was rejected (S1.42)</summary>
+    public decimal? ApprovedAmount { get; set; }
+
+    /// <summary>decision_reason: required when the approved amount is less than the amount</summary>
+    public string? DecisionReason { get; set; }
+
+    /// <summary>decided_by</summary>
+    public global::System.Guid? DecidedBy { get; set; }
+
+    /// <summary>decided_at</summary>
+    public global::System.DateTimeOffset? DecidedAt { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

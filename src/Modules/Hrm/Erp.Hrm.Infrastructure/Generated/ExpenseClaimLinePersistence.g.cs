@@ -27,6 +27,15 @@ internal sealed class ExpenseClaimLineConfiguration : IEntityTypeConfiguration<g
         builder.Property(e => e.ReceiptHash).HasColumnName("receipt_hash").HasColumnType("text");
         builder.Property(e => e.CostAllocation).HasColumnName("cost_allocation").HasColumnType("jsonb").IsRequired();
         builder.Property(e => e.PolicyFlags).HasColumnName("policy_flags").HasColumnType("text[]").IsRequired();
+        builder.Property(e => e.OriginalCurrencyCode).HasColumnName("original_currency_code").HasColumnType("char(3)");
+        builder.Property(e => e.OriginalAmount).HasColumnName("original_amount").HasColumnType("numeric(19,4)");
+        builder.Property(e => e.ExchangeRate).HasColumnName("exchange_rate").HasColumnType("numeric(19,10)");
+        builder.Property(e => e.RateDate).HasColumnName("rate_date").HasColumnType("date");
+        builder.Property(e => e.Quantity).HasColumnName("quantity").HasColumnType("numeric(19,6)");
+        builder.Property(e => e.ApprovedAmount).HasColumnName("approved_amount").HasColumnType("numeric(19,4)");
+        builder.Property(e => e.DecisionReason).HasColumnName("decision_reason").HasColumnType("text");
+        builder.Property(e => e.DecidedBy).HasColumnName("decided_by").HasColumnType("uuid");
+        builder.Property(e => e.DecidedAt).HasColumnName("decided_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");

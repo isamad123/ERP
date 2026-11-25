@@ -399,6 +399,24 @@
       "sensitive": false
     },
     {
+      "code": "hrm.exchange_rates.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.exchange_rates.read",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.exchange_rates.create",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.exchange_rates.create",
+      "sensitive": false
+    },
+    {
+      "code": "hrm.exchange_rates.update",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.exchange_rates.update",
+      "sensitive": false
+    },
+    {
       "code": "hrm.expense_categories.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.expense_categories.read",
@@ -429,33 +447,9 @@
       "sensitive": true
     },
     {
-      "code": "hrm.expense_claim_lines.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.expense_claim_lines.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.expense_claim_lines.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.expense_claim_lines.update",
-      "sensitive": true
-    },
-    {
       "code": "hrm.expense_claims.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.expense_claims.read",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.expense_claims.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.expense_claims.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.expense_claims.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.expense_claims.update",
       "sensitive": true
     },
     {

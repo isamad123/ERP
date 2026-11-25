@@ -572,9 +572,14 @@
     - [policy_id, uuid, opt, "fk hrm.policies (limits by grade, per diem, mileage)"]
     - [requires_receipt, bool, req]
     - [reimbursement_component_id, uuid, opt, fk hrm.pay_components]
+    - [kind, "enum(general,per_diem,mileage)", req, "default general; per_diem and mileage lines carry a quantity (days or kilometres) checked against the rate of the expense policy (S1.42, FR-HRM-EXP-01)"]
+    - [flags_block_submit, bool, req, "a policy flag on a line of this category stops the claim from being submitted (S1.42, FR-HRM-EXP-03)"]
+    - [tax_treatment, text, opt, "free label of the country pack; no rate is stored (S1.42, FR-HRM-EXP-01)"]
   unique: [[company_id, lower(code)]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.42 (CR-098 S1.42 detail a): three columns added; categories stay generated master data.
+  added_in: {S1.42: [kind, flags_block_submit, tax_treatment]}
   reqs: [EXP-01]
 
 - table: hrm.expense_claims
@@ -588,9 +593,22 @@
     - [reimburse_via, "enum(payroll,payment_batch)", req]
     - [pay_input_id, uuid, opt, fk hrm.pay_inputs]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+    - [title, text, opt, "what the claim is for (S1.42)"]
+    - [submitted_at, ts, opt]
+    - [needs_finance, bool, req, "true when the total reached hrm.exp.finance_threshold at submit: the route adds the finance step (S1.42, Q5)"]
+    - [approved_total, money, opt, "sum of the approved amounts of the lines once decided (S1.42)"]
+    - [pay_period_id, uuid, opt, "fk hrm.pay_periods; the period of the payroll input (S1.42)"]
+    - [reimbursed_at, ts, opt]
+    - [payment_status, "enum(none,pending,paid,failed)", req, "default none; the payment batch route of S1.40a returns paid or failed here (S1.42, FR-HRM-EXP-06)"]
+    - [payment_reference, text, opt, "reference of the payment line, set by the payment return (S1.40a)"]
+    - [payment_line_id, uuid, opt, "reserved for the payment batch line of S1.40a (no foreign key until that table exists)"]
   unique: [[company_id, claim_no]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, branch: branch_id, employment: employment_id}
+  # S1.42 (CR-098 S1.42 detail a, FR-HRM-EXP-02, GHR-06): amounts are restricted data; generated writes closed, the claim service writes.
+  field_class: {total_amount: salary, approved_total: salary}
+  api_actions: [read]
+  added_in: {S1.42: [title, submitted_at, needs_finance, approved_total, pay_period_id, reimbursed_at, payment_status, payment_reference, payment_line_id]}
   # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
   numbering: {column: claim_no, type: hrm.expense_claim_no, assign: post, gap_free: yes, default: "EXP-{yyyy}-{seq:5}", reset: yearly}
   reqs: [EXP-02, EXP-05, EXP-06]
@@ -607,10 +625,39 @@
     - [receipt_hash, text, opt, duplicate receipt check (EXP-03)]
     - [cost_allocation, json, req]
     - [policy_flags, "text[]", req, "over_limit, duplicate, missing_receipt, out_of_policy"]
+    - [original_currency_code, char(3), opt, "currency the receipt was paid in (S1.42)"]
+    - [original_amount, money, opt, "amount in the original currency; amount is the converted value in the claim currency (S1.42)"]
+    - [exchange_rate, rate, opt, "rate used (original to claim currency), taken from hrm.exchange_rates and kept here (S1.42, Q3)"]
+    - [rate_date, date, opt, "date of the rate row that was used"]
+    - [quantity, qty, opt, "days of a per-diem line or kilometres of a mileage line (S1.42)"]
+    - [approved_amount, money, opt, "amount the approver accepted, in the claim currency; 0 means the line was rejected (S1.42)"]
+    - [decision_reason, text, opt, "required when the approved amount is less than the amount"]
+    - [decided_by, uuid, opt]
+    - [decided_at, ts, opt]
   indexes: [[claim_id], [receipt_hash]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.42 (CR-098 S1.42 detail a): the line keeps the currency and rate it was converted with, the quantity of a per-diem or mileage line and the approver's decision.
+  field_class: {amount: salary, original_amount: salary, approved_amount: salary}
+  api_actions: [read]
+  added_in: {S1.42: [original_currency_code, original_amount, exchange_rate, rate_date, quantity, approved_amount, decision_reason, decided_by, decided_at]}
   reqs: [EXP-02, EXP-03]
+
+# S1.42 (CR-098 S1.42 detail a, Q3; FR-HRM-EXP-02): the customer's own exchange rate table (no rate is shipped); a claim line is converted with the latest
+# rate on or before its expense date and keeps the rate it used.
+- table: hrm.exchange_rates
+  purpose: "The customer's exchange rates for converting expense claim lines"
+  traits: [std, co]
+  added_in: S1.42
+  columns:
+    - [from_currency, char(3), req, fk ref.currencies]
+    - [to_currency, char(3), req, fk ref.currencies]
+    - [rate_date, date, req, "the rate applies to expense dates on or after this date until a later row"]
+    - [rate, rate, req, "check > 0; units of to_currency for one unit of from_currency"]
+  unique: [[company_id, from_currency, to_currency, rate_date]]
+  scope: {company: company_id}
+  checks: ["from_currency <> to_currency and rate > 0"]
+  reqs: [EXP-02]
 
 - table: hrm.salary_bands
   traits: [std, co, eff]
