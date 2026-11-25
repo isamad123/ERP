@@ -491,6 +491,8 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
         // Answers the ids the browser tests look for.
         app.MapPost("/attendance/seed", async (AttendanceSeedBody body) =>
         {
+            try
+            {
             await using var c = await fx.OpenTenantAsync(code, TenantLogins.Owner, Ct);
             var catalog = Erp.IntegrationTests.Infrastructure.MigratedDatabases.Catalog;
             var user = (Guid)(await new NpgsqlCommand("select id from iam.users where lower(username) = lower($1)", c) { Parameters = { new NpgsqlParameter { Value = body.Username } } }.ExecuteScalarAsync(Ct))!;
@@ -522,7 +524,7 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
             var roster = (Guid)(await Row("hrm.rosters", ("company_id", company), ("org_unit_id", unit), ("status", "published"), ("period_start", today.AddDays(-1)), ("period_end", today.AddDays(1))))["id"]!;
             foreach (var e in new[] { me, punched, onLeave, silent })
             {
-                await Row("hrm.roster_lines", ("company_id", company), ("roster_id", roster), ("employment_id", e), ("work_date", today), ("shift_id", shift), ("day_type", "working"), ("roster_status", "published"));
+                await Row("hrm.roster_lines", ("company_id", company), ("roster_id", roster), ("employment_id", e), ("work_date", today), ("shift_id", shift), ("day_type", "working"), ("roster_status", "published"), ("reason", "Seeded for the browser tests"));
             }
 
             foreach (var e in new[] { me, punched })
@@ -532,13 +534,19 @@ public sealed class WebEndToEndTests(TenancyFixture fx)
             }
 
             await Row("hrm.leave_request_days", ("company_id", company), ("employment_id", onLeave), ("leave_date", today), ("request_status", "approved"));
-            var exception = (Guid)(await Row("hrm.attendance_exceptions", ("company_id", company), ("employment_id", me), ("work_date", today.AddDays(-2)), ("kind", "missing_out"), ("status", "open")))["id"]!;
+            var day = (Guid)(await Row("hrm.attendance_days", ("company_id", company), ("employment_id", me), ("work_date", today.AddDays(-2)), ("superseded_at", null), ("result", "incomplete")))["id"]!;
+            var exception = (Guid)(await Row("hrm.attendance_exceptions", ("company_id", company), ("employment_id", me), ("attendance_day_id", day), ("work_date", today.AddDays(-2)), ("kind", "missing_out"), ("status", "open")))["id"]!;
             var correction = (Guid)(await Row("hrm.regularization_requests", ("company_id", company), ("employment_id", me), ("exception_id", null), ("work_date", today.AddDays(-3)), ("reason", "Seeded correction"), ("status", "submitted"),
                 ("requested_in", now.AddDays(-3)), ("requested_out", null), ("workflow_instance_id", null), ("created_by", user)))["id"]!;
             var duty = (Guid)(await Row("hrm.duty_requests", ("company_id", company), ("employment_id", me), ("kind", "official_visit"), ("status", "submitted"), ("purpose", "Seeded visit"),
                 ("start_at", now.AddDays(2)), ("end_at", now.AddDays(2).AddHours(8)), ("workflow_instance_id", null), ("created_by", user)))["id"]!;
             await tx.CommitAsync(Ct);
             return Results.Ok(new { company, unit, me, punched, onLeave, silent, exception, correction, duty });
+            }
+            catch (Exception ex)
+            {
+                return Results.Text(ex.ToString(), statusCode: 500); // the seeding says why it failed (test machinery)
+            }
         });
 
         // Facts the browser cannot see: live sessions and trusts of a person.

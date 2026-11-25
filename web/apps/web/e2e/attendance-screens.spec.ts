@@ -2,7 +2,7 @@
 // real PostgreSQL. A person with an open exception, a waiting correction and a waiting duty request sees the request and exception screens, the live dashboard,
 // the reports and the team view in English and Urdu (light and dark) at 360, 768 and 1280 pixels: no sideways scroll, right to left in Urdu, no serious axe finding.
 import { expect, test } from '@playwright/test';
-import { accessible, display, noProblems, openPage, PASSWORD, person, server, shot } from './support';
+import { accessible, display, fitsWidth, noProblems, openPage, PASSWORD, person, server, shot } from './support';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -40,8 +40,7 @@ test('FR-HRM-ATT-11 FR-HRM-ATT-14 FR-HRM-ATT-18 FR-HRM-SSP-02 the attendance scr
           await expect(page.locator('main h1')).toBeVisible();
           await expect(page.locator('main [aria-busy="true"]')).toHaveCount(0);
           expect(await page.evaluate(() => document.documentElement.dir)).toBe(language === 'ur' ? 'rtl' : 'ltr');
-          const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-          expect(overflow, `${screen.name} ${language} ${scheme} ${width}`).toBeLessThanOrEqual(0);
+          await fitsWidth(page).catch((e: Error) => { throw new Error(`${screen.name} ${language} ${scheme} ${width}: ${e.message}`); });
           if (width === 1280) {
             await accessible(page, `${screen.name} ${language} ${scheme}`);
             await shot(page, `attendance-${screen.name}-${language}-${scheme}-${width}`);

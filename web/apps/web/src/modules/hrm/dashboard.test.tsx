@@ -31,9 +31,9 @@ describe('live attendance dashboard', () => {
   it('FR-HRM-ATT-18 shows today\'s counts as cards, the as-of time and the table alternative with unit and location names', async () => {
     live();
     show(<DashboardScreen />, shell(PERMS));
-    expect(await screen.findByRole('button', { name: 'Show the people: Present' })).toBeTruthy();
-    expect(within(screen.getByRole('button', { name: 'Show the people: Present' })).getByText('25')).toBeTruthy();
-    expect(within(screen.getByRole('button', { name: 'Show the people: of which late' })).getByText('4')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /^[\d,]+\s*Present$/ })).toBeTruthy();
+    expect(within(screen.getByRole('button', { name: /^[\d,]+\s*Present$/ })).getByText('25')).toBeTruthy();
+    expect(within(screen.getByRole('button', { name: /^[\d,]+\s*of which late$/ })).getByText('4')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toContain('As of');
     const byUnit = await screen.findByRole('table', { name: 'By unit' });
     await vi.waitFor(() => expect(within(byUnit).getByText('Operations')).toBeTruthy());
@@ -45,7 +45,7 @@ describe('live attendance dashboard', () => {
   it('FR-HRM-SSP-02 a count opens the people behind it with their unit, location and first punch, and the list closes again', async () => {
     live();
     show(<DashboardScreen />, shell(PERMS));
-    await userEvent.click(await screen.findByRole('button', { name: 'Show the people: of which late' }));
+    await userEvent.click(await screen.findByRole('button', { name: /^[\d,]+\s*of which late$/ }));
     expect(await screen.findByText('Amna Khan')).toBeTruthy();
     expect(screen.getByText('E-1')).toBeTruthy();
     const people = sent.find((c) => c.url.includes('/dashboard/people'))!;
@@ -59,7 +59,7 @@ describe('live attendance dashboard', () => {
     const page = (n: number) => Array.from({ length: n }, (_, i) => ({ ...PERSON, employmentId: `e${i}`, employeeNo: `E-${i}` }));
     live({ people: (url) => (url.includes('offset=0') ? json({ status: 'present', total: 52, more: true, items: page(50) }) : json({ status: 'present', total: 52, more: false, items: page(2).map((p, i) => ({ ...p, employmentId: `z${i}`, employeeNo: `Z-${i}` })) }) ) });
     show(<DashboardScreen />, shell(PERMS));
-    await userEvent.click(await screen.findByRole('button', { name: 'Show the people: Present' }));
+    await userEvent.click(await screen.findByRole('button', { name: /^[\d,]+\s*Present$/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'Show more' }));
     expect(await screen.findByText('Z-1')).toBeTruthy();
     expect(sent.some((c) => c.url.includes('/dashboard/people') && c.url.includes('offset=50'))).toBe(true);
@@ -69,7 +69,7 @@ describe('live attendance dashboard', () => {
   it('FR-HRM-ATT-18 filters by unit and asks the server with that unit', async () => {
     live();
     show(<DashboardScreen />, shell(PERMS));
-    await screen.findByRole('button', { name: 'Show the people: Present' });
+    await screen.findByRole('button', { name: /^[\d,]+\s*Present$/ });
     await userEvent.click(screen.getByRole('button', { name: /Unit/ }));
     await userEvent.click(await screen.findByRole('option', { name: /Operations/ }));
     await vi.waitFor(() => expect(sent.some((c) => c.url.includes('/attendance/dashboard') && c.url.includes('unitId='))).toBe(true));
@@ -79,7 +79,7 @@ describe('live attendance dashboard', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     live({ dashboard: () => json({ ...DASHBOARD, refreshSeconds: 5 }) });
     show(<DashboardScreen />, shell(PERMS));
-    await screen.findByRole('button', { name: 'Show the people: Present' });
+    await screen.findByRole('button', { name: /^[\d,]+\s*Present$/ });
     expect(dashboardCalls()).toBe(1);
     await vi.advanceTimersByTimeAsync(14_000);
     expect(dashboardCalls()).toBe(1);
@@ -93,7 +93,7 @@ describe('live attendance dashboard', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     live();
     show(<DashboardScreen />, shell(PERMS));
-    await screen.findByRole('button', { name: 'Show the people: Present' });
+    await screen.findByRole('button', { name: /^[\d,]+\s*Present$/ });
     await vi.advanceTimersByTimeAsync(59_000);
     expect(dashboardCalls()).toBe(1);
     await vi.advanceTimersByTimeAsync(2_000);
@@ -114,7 +114,7 @@ describe('live attendance dashboard', () => {
     expect(await screen.findByText('The live attendance could not be loaded.')).toBeTruthy();
     fail = false;
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByRole('button', { name: 'Show the people: Present' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /^[\d,]+\s*Present$/ })).toBeTruthy();
   });
 
   it('FR-HRM-ATT-18 a person without the permission is told so and nothing is asked; a 403 from the server is shown as denied', async () => {

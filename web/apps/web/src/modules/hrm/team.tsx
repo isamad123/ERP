@@ -75,7 +75,7 @@ export default function TeamScreen() {
             {month.isPending && !!today && <Skeleton lines={3} />}
             {month.isError && <ErrorPanel title={t('team.month.error')} message={isDenied(month.error) ? t('team.denied') : refusal(month.error)} />}
             {month.data && (rows.length === 0 ? <EmptyState title={t('team.month.empty')} /> : (
-              <table className="erp-pos-table">
+              <div className="erp-live-scroll"><table className="erp-pos-table">
                 <caption className="erp-visually-hidden">{t('team.month')}</caption>
                 <thead><tr>
                   <th scope="col">{t('alive.col.employeeNo')}</th><th scope="col">{t('alive.col.name')}</th><th scope="col">{t('team.col.present')}</th><th scope="col">{t('team.col.late')}</th>
@@ -87,7 +87,7 @@ export default function TeamScreen() {
                     <td><bdi>{`${r.firstName ?? ''} ${r.lastName ?? ''}`.trim()}</bdi></td>
                     <td>{num(r.presentDays)}</td><td>{num(r.lateDays)}</td><td>{num(r.absentDays)}</td><td>{num(r.leaveDays)}</td><td>{num(r.lateMinutes)}</td>
                   </tr>))}</tbody>
-              </table>
+              </table></div>
             ))}
             {month.hasNextPage && <div><Button variant="secondary" isPending={month.isFetchingNextPage} onPress={() => { void month.fetchNextPage(); }}>{t('alive.people.more')}</Button></div>}
           </section>

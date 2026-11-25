@@ -23,7 +23,7 @@
   "alive.card.not_due": "ابھی وقت نہیں ہوا",
   "alive.card.not_scheduled": "شیڈول نہیں",
   "alive.card.no_policy": "حاضری کی پالیسی نہیں",
-  "alive.card.open": "افراد دکھائیں: {label}",
+  "alive.card.open": "{count} {label}",
   "alive.byUnit": "یونٹ کے لحاظ سے",
   "alive.byLocation": "مقام کے لحاظ سے",
   "alive.unknown": "مقرر نہیں",

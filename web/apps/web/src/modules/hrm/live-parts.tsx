@@ -64,7 +64,7 @@ export function CountCards({ counts, selected, onOpen }: { counts: Counts; selec
     const label = t(`alive.card.${status}` as MessageKey);
     return (
       <button key={status} type="button" className="erp-live-card" data-selected={selected === status || undefined} data-headline={headline || undefined}
-        aria-pressed={selected === status} aria-label={t('alive.card.open', { label })} onClick={() => onOpen(status)}>
+        aria-pressed={selected === status} onClick={() => onOpen(status)}>
         <span className="erp-live-card-count">{text.count(counts[COUNT_OF[status]])}</span>
         <span className="erp-live-card-label">{label}</span>
       </button>
@@ -88,7 +88,7 @@ export function CountsTable({ caption, labelHeader, rows }: { caption: string; l
   const { t } = useText();
   const text = useNumberText();
   return (
-    <table className="erp-pos-table">
+    <div className="erp-live-scroll"><table className="erp-pos-table">
       <caption>{caption}</caption>
       <thead><tr><th scope="col">{labelHeader}</th>{TABLE_COLUMNS.map((c) => <th key={c} scope="col">{t(`alive.col.${c}` as MessageKey)}</th>)}</tr></thead>
       <tbody>{rows.map((row) => (
@@ -96,7 +96,7 @@ export function CountsTable({ caption, labelHeader, rows }: { caption: string; l
           <th scope="row"><bdi>{row.label}</bdi></th>
           {TABLE_COLUMNS.map((c) => <td key={c}>{text.count(row.counts[c === 'headcount' ? 'headcount' : COUNT_OF[c]])}</td>)}
         </tr>))}</tbody>
-    </table>
+    </table></div>
   );
 }
 
@@ -127,7 +127,7 @@ export function PeopleList({ filter, status, onClose, refetchMs, names }: {
       {people.isError && <ErrorPanel title={t('alive.people.error')} message={isDenied(people.error) ? t('alive.denied') : t('alive.people.error')} action={<Button variant="primary" onPress={() => { void people.refetch(); }}>{t('common.retry')}</Button>} />}
       {people.data && rows.length === 0 && <EmptyState title={t('alive.people.empty')} />}
       {rows.length > 0 && (
-        <table className="erp-pos-table">
+        <div className="erp-live-scroll"><table className="erp-pos-table">
           <caption className="erp-visually-hidden">{title}</caption>
           <thead><tr>
             <th scope="col">{t('alive.col.employeeNo')}</th><th scope="col">{t('alive.col.name')}</th><th scope="col">{t('alive.col.unit')}</th><th scope="col">{t('alive.col.location')}</th>
@@ -143,7 +143,7 @@ export function PeopleList({ filter, status, onClose, refetchMs, names }: {
               <td><bdi>{p.shiftStart && p.shiftEnd ? t('alive.shift', { from: text.dateTime(p.shiftStart), to: text.dateTime(p.shiftEnd) }) : ''}</bdi></td>
               <td><bdi>{p.firstPunch ? text.dateTime(p.firstPunch) : ''}</bdi></td>
             </tr>))}</tbody>
-        </table>
+        </table></div>
       )}
       {people.hasNextPage && <div><Button variant="secondary" isPending={people.isFetchingNextPage} onPress={() => { void people.fetchNextPage(); }}>{t('alive.people.more')}</Button></div>}
     </section>

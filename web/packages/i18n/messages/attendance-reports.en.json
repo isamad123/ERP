@@ -23,7 +23,7 @@
   "alive.card.not_due": "Not due yet",
   "alive.card.not_scheduled": "Not scheduled",
   "alive.card.no_policy": "No attendance policy",
-  "alive.card.open": "Show the people: {label}",
+  "alive.card.open": "{count} {label}",
   "alive.byUnit": "By unit",
   "alive.byLocation": "By location",
   "alive.unknown": "Not assigned",

@@ -27,7 +27,7 @@ describe('team attendance view', () => {
   it('FR-HRM-SSP-02 shows today\'s counts and people, and this month\'s days and late minutes per person for the company\'s month', async () => {
     team();
     show(<TeamScreen />, shell(PERMS));
-    expect(await screen.findByRole('button', { name: 'Show the people: Present' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /^[\d,]+\s*Present$/ })).toBeTruthy();
     expect(await screen.findByText('Amna Khan', { selector: 'td bdi' })).toBeTruthy();
     const month = await screen.findByRole('table', { name: 'This month' });
     expect(within(month).getByText('95')).toBeTruthy();
@@ -40,14 +40,14 @@ describe('team attendance view', () => {
   it('FR-HRM-SSP-02 choosing another count lists those people', async () => {
     team();
     show(<TeamScreen />, shell(PERMS));
-    await userEvent.click(await screen.findByRole('button', { name: 'Show the people: Absent' }));
+    await userEvent.click(await screen.findByRole('button', { name: /^[\d,]+\s*Absent$/ }));
     await vi.waitFor(() => expect(sent.some((c) => c.url.includes('/dashboard/people') && c.url.includes('status=absent'))).toBe(true));
   });
 
   it('FR-HRM-SSP-02 the monthly summary is left out without the reports permission', async () => {
     team();
     show(<TeamScreen />, shell(['hrm.attendance_dashboard.read']));
-    expect(await screen.findByRole('button', { name: 'Show the people: Present' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /^[\d,]+\s*Present$/ })).toBeTruthy();
     expect(screen.queryByText('This month')).toBeNull();
     expect(sent.some((c) => c.url.includes('/reports/'))).toBe(false);
   });
