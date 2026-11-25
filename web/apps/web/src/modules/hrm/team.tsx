@@ -2,6 +2,7 @@
 // caller's data scope) and this month's days and late minutes per person from the monthly muster. The month comes from the company's date in the dashboard answer,
 // never from the browser's clock.
 import { useState } from 'react';
+import { ScrollRegion } from './scroll-region';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useDocumentTitle } from '@erp/engine';
 import { Button, EmptyState, ErrorPanel, PageHeader, SelectField, Skeleton } from '@erp/ui';
@@ -75,7 +76,7 @@ export default function TeamScreen() {
             {month.isPending && !!today && <Skeleton lines={3} />}
             {month.isError && <ErrorPanel title={t('team.month.error')} message={isDenied(month.error) ? t('team.denied') : refusal(month.error)} />}
             {month.data && (rows.length === 0 ? <EmptyState title={t('team.month.empty')} /> : (
-              <div className="erp-live-scroll"><table className="erp-pos-table">
+              <ScrollRegion label={t('team.month')}><table className="erp-pos-table">
                 <caption className="erp-visually-hidden">{t('team.month')}</caption>
                 <thead><tr>
                   <th scope="col">{t('alive.col.employeeNo')}</th><th scope="col">{t('alive.col.name')}</th><th scope="col">{t('team.col.present')}</th><th scope="col">{t('team.col.late')}</th>
@@ -87,7 +88,7 @@ export default function TeamScreen() {
                     <td><bdi>{`${r.firstName ?? ''} ${r.lastName ?? ''}`.trim()}</bdi></td>
                     <td>{num(r.presentDays)}</td><td>{num(r.lateDays)}</td><td>{num(r.absentDays)}</td><td>{num(r.leaveDays)}</td><td>{num(r.lateMinutes)}</td>
                   </tr>))}</tbody>
-              </table></div>
+              </table></ScrollRegion>
             ))}
             {month.hasNextPage && <div><Button variant="secondary" isPending={month.isFetchingNextPage} onPress={() => { void month.fetchNextPage(); }}>{t('alive.people.more')}</Button></div>}
           </section>

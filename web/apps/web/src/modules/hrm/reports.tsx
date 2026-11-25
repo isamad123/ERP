@@ -2,6 +2,7 @@
 // summary strip, paging and an export of exactly the filter shown (the export centre makes the file as the person, with the same scope and field security).
 // Nothing here shows pay. Dates left empty mean the server's default (the last 30 days, or this month for the monthly reports).
 import { useState } from 'react';
+import { ScrollRegion } from './scroll-region';
 import { useQuery } from '@tanstack/react-query';
 import { parseDate, type CalendarDate } from '@internationalized/date';
 import { EngineProvider, ExportButton, useDocumentTitle, type EngineApi } from '@erp/engine';
@@ -140,13 +141,13 @@ export default function ReportsScreen() {
         )}
         {data && (data.items.length === 0 ? <EmptyState title={t('arep.empty')}>{t('arep.empty.body')}</EmptyState> : (
           <>
-            <div className="erp-live-scroll">
+            <ScrollRegion label={t(`arep.report.${code}` as MessageKey)}>
               <table className="erp-pos-table">
                 <caption className="erp-visually-hidden">{t(`arep.report.${code}` as MessageKey)}</caption>
                 <thead><tr>{columns.map((c) => <th key={c} scope="col">{label(c)}</th>)}</tr></thead>
                 <tbody>{data.items.map((row, i) => <tr key={String(row.employmentId ?? row.deviceId ?? i) + String(row.workDate ?? row.eventAt ?? row.month ?? i) + i}>{columns.map((c) => <td key={c}><bdi>{cell(c, row)}</bdi></td>)}</tr>)}</tbody>
               </table>
-            </div>
+            </ScrollRegion>
             <div className="erp-row erp-wrap">
               {shown && <span className="erp-muted">{t('arep.page', { from: text.count(shown.from), to: text.count(shown.to) })}{data.total !== null ? ` · ${t('arep.summary.total', { count: text.count(data.total) })}` : ''}</span>}
               {offset > 0 && <Button variant="secondary" onPress={() => setOffset(Math.max(0, offset - PAGE))}>{t('arep.previous')}</Button>}

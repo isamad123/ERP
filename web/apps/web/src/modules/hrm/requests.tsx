@@ -2,6 +2,7 @@
 // company) and the two forms. A request waits for the approval of the line manager (or HR) in the shared approvals inbox; its maker can withdraw it while it waits.
 // A request made by someone else for a person says so. Proof files (S1.30b) are listed under a request and can be deleted while it waits.
 import './live.css';
+import { ScrollRegion } from './scroll-region';
 import { Fragment, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDocumentTitle } from '@erp/engine';
@@ -77,7 +78,7 @@ function Corrections({ company }: { company: string }) {
       {query.isPending && <Skeleton />}
       {query.isError && <ErrorPanel title={t('req.loadError')} message={refusal(query.error)} />}
       {query.data && (query.data.items.length === 0 ? <EmptyState title={t('req.empty')}>{t('req.empty.body')}</EmptyState> : (
-        <div className="erp-live-scroll"><table className="erp-pos-table">
+        <ScrollRegion label={t('req.tab.corrections')}><table className="erp-pos-table">
           <thead><tr><th scope="col">{t('req.col.day')}</th><th scope="col">{t('req.col.times')}</th><th scope="col">{t('req.col.reason')}</th><th scope="col">{t('req.col.by')}</th><th scope="col">{t('req.col.status')}</th><th scope="col">{t('req.col.actions')}</th></tr></thead>
           <tbody>{query.data.items.map((r: RegularizationRequest) => (
             <Fragment key={r.id}>
@@ -94,7 +95,7 @@ function Corrections({ company }: { company: string }) {
             </tr>
             {filesOf === r.id && <tr><td colSpan={6}><ProofList owner={PROOF_OWNER.correction} ownerId={r.id} canDelete={r.status === 'submitted' && writable} /></td></tr>}
             </Fragment>))}</tbody>
-        </table></div>
+        </table></ScrollRegion>
       ))}
       {open && <CorrectionDialog company={company} isOpen={open} onOpenChange={setOpen} />}
     </div>
@@ -117,7 +118,7 @@ function Duty({ company }: { company: string }) {
       {query.isPending && <Skeleton />}
       {query.isError && <ErrorPanel title={t('req.loadError')} message={refusal(query.error)} />}
       {query.data && (query.data.items.length === 0 ? <EmptyState title={t('req.empty')}>{t('req.empty.body')}</EmptyState> : (
-        <div className="erp-live-scroll"><table className="erp-pos-table">
+        <ScrollRegion label={t('req.tab.duty')}><table className="erp-pos-table">
           <thead><tr><th scope="col">{t('req.col.kind')}</th><th scope="col">{t('req.col.period')}</th><th scope="col">{t('req.col.purpose')}</th><th scope="col">{t('req.col.by')}</th><th scope="col">{t('req.col.status')}</th><th scope="col">{t('req.col.actions')}</th></tr></thead>
           <tbody>{query.data.items.map((r: DutyRequest) => (
             <Fragment key={r.id}>
@@ -134,7 +135,7 @@ function Duty({ company }: { company: string }) {
             </tr>
             {filesOf === r.id && <tr><td colSpan={6}><ProofList owner={PROOF_OWNER.duty} ownerId={r.id} canDelete={r.status === 'submitted' && writable} /></td></tr>}
             </Fragment>))}</tbody>
-        </table></div>
+        </table></ScrollRegion>
       ))}
       {open && <DutyDialog company={company} isOpen={open} onOpenChange={setOpen} />}
     </div>
