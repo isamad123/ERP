@@ -39,14 +39,15 @@ public sealed class AuditReviewFixTests(TenancyFixture fx) : IAsyncLifetime
     {
         // A salary change and a personal value (date of birth) in the change log.
         var company = await _h.DefaultCompanyAsync(Ct);
-        var id = (Guid)(await _h.RowAsync("hrm.pay_results", company, null, Ct))["id"]!;
+        // S1.35a closed the generated writes of pay results (only the payroll engine writes them); another salary-class record with a generated update serves.
+        var id = (Guid)(await _h.RowAsync("hrm.previous_employer_income", company, null, Ct))["id"]!;
         var editor = await _h.UserAsync(Ct);
-        await _h.AssignAsync(editor, await _h.RoleAsync(Ct, ["hrm.pay_results.read", "hrm.pay_results.update", "hrm.persons.create", "hrm.persons.read"],
-            [("hrm.pay_results", "all"), ("hrm.persons", "all")], [("hrm.pay_results", "class:salary", "editable")]), null, _h.Today.AddDays(-1), null, Ct);
-        var current = JsonNode.Parse((await _h.GetAsync(editor, $"/api/hrm/pay-results/{id}", Ct)).Body)!.AsObject();
-        var newGross = current["gross"]!.GetValue<decimal>() + 1234.5m;
-        current["gross"] = newGross;
-        Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(editor, $"/api/hrm/pay-results/{id}", current.ToJsonString(), Ct)).Status);
+        await _h.AssignAsync(editor, await _h.RoleAsync(Ct, ["hrm.previous_employer_income.read", "hrm.previous_employer_income.update", "hrm.persons.create", "hrm.persons.read"],
+            [("hrm.previous_employer_income", "all"), ("hrm.persons", "all")], [("hrm.previous_employer_income", "class:salary", "editable")]), null, _h.Today.AddDays(-1), null, Ct);
+        var current = JsonNode.Parse((await _h.GetAsync(editor, $"/api/hrm/previous-employer-income/{id}", Ct)).Body)!.AsObject();
+        var newGross = current["taxableIncome"]!.GetValue<decimal>() + 1234.5m;
+        current["taxableIncome"] = newGross;
+        Assert.Equal(HttpStatusCode.OK, (await _h.PutAsync(editor, $"/api/hrm/previous-employer-income/{id}", current.ToJsonString(), Ct)).Status);
         var person = await _h.PostAsync(editor, "/api/hrm/persons", new { personNo = "R" + Guid.NewGuid().ToString("N")[..8], firstName = "Review", gender = "female", dateOfBirth = "1977-03-29" }, Ct);
         Assert.Equal(HttpStatusCode.Created, person.Status);
         var personId = person.Json.GetProperty("id").GetGuid();
@@ -56,7 +57,7 @@ public sealed class AuditReviewFixTests(TenancyFixture fx) : IAsyncLifetime
         var adminEmployee = await _h.UserAsync(Ct, null, "tenant_admin", "employee");
         var pay = await _h.GetAsync(adminEmployee, $"/api/aud/changes?entityId={id}&action=update", Ct);
         Assert.Equal(HttpStatusCode.OK, pay.Status);
-        Assert.True(Field(pay.Json.GetProperty("items")[0], "gross").TryGetProperty("hidden", out var hidden) && hidden.GetBoolean(), pay.Body);
+        Assert.True(Field(pay.Json.GetProperty("items")[0], "taxable_income").TryGetProperty("hidden", out var hidden) && hidden.GetBoolean(), pay.Body);
         Assert.DoesNotContain(newGross.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), pay.Body, StringComparison.Ordinal);
         var who = await _h.GetAsync(adminEmployee, $"/api/aud/changes?entityId={personId}", Ct);
         Assert.Equal(HttpStatusCode.OK, who.Status);
@@ -68,7 +69,7 @@ public sealed class AuditReviewFixTests(TenancyFixture fx) : IAsyncLifetime
         // Control: the Auditor sees every record with salary read-only, so the search shows the value.
         var auditor = await _h.UserAsync(Ct, null, "auditor");
         var audited = await _h.GetAsync(auditor, $"/api/aud/changes?entityId={id}&action=update", Ct);
-        Assert.Equal(newGross, Field(audited.Json.GetProperty("items")[0], "gross").GetProperty("after").GetDecimal());
+        Assert.Equal(newGross, Field(audited.Json.GetProperty("items")[0], "taxable_income").GetProperty("after").GetDecimal());
     }
 
     // ------------------------------------------------------------------ finding 2

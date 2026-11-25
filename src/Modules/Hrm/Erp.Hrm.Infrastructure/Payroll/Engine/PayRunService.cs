@@ -223,6 +223,8 @@ internal sealed class PayRunService(
         ids = [.. ids.Where(id => !rows.TryGetValue(id, out var r) || r.Status != "calculated")];
         var snapshots = await builder.BuildAsync(ctx, ids, ct).ConfigureAwait(false);
         var byCode = providers.ToDictionary(p => p.Code, StringComparer.Ordinal);
+        var pendingLines = new List<PayResultLine>();
+        var consumed = new List<(IPayInputProvider Provider, PayInputsConsumed Items)>();
         foreach (var id in ids)
         {
             if (!snapshots.TryGetValue(id, out var taken))
@@ -313,18 +315,27 @@ internal sealed class PayRunService(
                     UpdatedBy = user,
                 };
                 lineIds[line.ComponentId] = entity.Id;
-                db.Add(entity);
+                pendingLines.Add(entity);
             }
 
-            // The inputs the result used, handed back to their providers in the same transaction (one-time inputs become consumed by the run).
+            // The inputs the result used, handed back to their providers in the same transaction once the lines are saved (one-time inputs become consumed by the run).
             foreach (var group in snapshot.Inputs.GroupBy(i => i.Provider, StringComparer.Ordinal))
             {
                 if (byCode.TryGetValue(group.Key, out var provider))
                 {
-                    await provider.ConsumedAsync(new PayInputsConsumed(ctx.Run.Id, ctx.Period.Id, id, result.Id,
-                        [.. group.Select(i => new ConsumedPayInput(i, i.ComponentId is { } c && lineIds.TryGetValue(c, out var l) ? l : null))]), ct).ConfigureAwait(false);
+                    consumed.Add((provider, new PayInputsConsumed(ctx.Run.Id, ctx.Period.Id, id, result.Id,
+                        [.. group.Select(i => new ConsumedPayInput(i, i.ComponentId is { } c && lineIds.TryGetValue(c, out var l) ? l : null))])));
                 }
             }
+        }
+
+        // Saved in order (the tables are linked by ids only): employees and results, then their lines, then what the providers mark as used.
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        db.AddRange(pendingLines);
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        foreach (var (provider, items) in consumed)
+        {
+            await provider.ConsumedAsync(items, ct).ConfigureAwait(false);
         }
 
         var tracked = await db.Set<PayRun>().FirstAsync(r => r.Id == ctx.Run.Id, ct).ConfigureAwait(false);
