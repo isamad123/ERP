@@ -29,6 +29,8 @@ internal sealed class LoanConfiguration : IEntityTypeConfiguration<global::Erp.H
         builder.Property(e => e.GuarantorEmploymentId).HasColumnName("guarantor_employment_id").HasColumnType("uuid");
         builder.Property(e => e.DisbursedOn).HasColumnName("disbursed_on").HasColumnType("date");
         builder.Property(e => e.WorkflowInstanceId).HasColumnName("workflow_instance_id").HasColumnType("uuid");
+        builder.Property(e => e.Reason).HasColumnName("reason").HasColumnType("text");
+        builder.Property(e => e.InterestMethod).HasColumnName("interest_method").HasColumnType("text");
         builder.Property(e => e.Status).HasColumnName("status").HasColumnType("text").IsRequired();
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");

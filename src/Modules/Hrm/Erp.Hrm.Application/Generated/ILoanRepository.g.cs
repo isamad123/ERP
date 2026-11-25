@@ -58,6 +58,8 @@ public static class LoanAccess
         new("guarantor_employment_id", "GuarantorEmploymentId", null),
         new("disbursed_on", "DisbursedOn", null),
         new("workflow_instance_id", "WorkflowInstanceId", null),
+        new("reason", "Reason", null),
+        new("interest_method", "InterestMethod", null),
         new("status", "Status", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),

@@ -673,6 +673,39 @@
       }
     },
     {
+      "key": "hrm.loan.max_recovery_percent",
+      "module": "hrm",
+      "type": "decimal",
+      "default": 0,
+      "validation": {
+        "min": 0,
+        "max": 100
+      },
+      "layers": [
+        "tenant",
+        "company"
+      ],
+      "roleRule": null,
+      "tightenOnly": false,
+      "selfService": false,
+      "visible": true,
+      "requiresApproval": false,
+      "area": "hr.payroll",
+      "unit": "percent",
+      "name": {
+        "en": "Largest share of pay loans may take",
+        "ur": "تنخواہ کا وہ سب سے بڑا حصہ جو قرض کی قسطیں لے سکتی ہیں"
+      },
+      "description": {
+        "en": "The most, in percent of an employee's pay for a period, that loan installments may take; 0 means not set",
+        "ur": "کسی مدت کی تنخواہ کا زیادہ سے زیادہ فیصد جو قرض کی قسطیں لے سکتی ہیں؛ 0 کا مطلب مقرر نہیں"
+      },
+      "help": {
+        "en": "Set by the customer, never by the product. When the installments of a loan (with any installment carried forward) are more than this share of the employee's pay, the loan form shows a warning. Payroll still recovers what is due. Leave it at 0 until your policy names a share.",
+        "ur": "یہ حد صارف طے کرتا ہے، پروڈکٹ نہیں۔ جب کسی قرض کی قسطیں (آگے لائی گئی قسط سمیت) ملازم کی تنخواہ کے اس حصے سے زیادہ ہوں تو قرض کا فارم تنبیہ دکھاتا ہے۔ پے رول پھر بھی واجب رقم وصول کرتا ہے۔ جب تک آپ کی پالیسی کوئی حصہ مقرر نہ کرے اسے 0 رہنے دیں۔"
+      }
+    },
+    {
       "key": "hrm.att.biometric_enabled",
       "module": "hrm",
       "type": "bool",

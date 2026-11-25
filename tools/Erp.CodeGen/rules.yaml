@@ -254,11 +254,98 @@ tables:
     notes:
       - text: "Frozen by trigger once status = deducted."
         stub: { name: loan_installments_freeze, owner: S1.41 }
+        # S1.41 (CR-097; slice S1.41 Build items 3 to 5, FR-HRM-LON-03, FR-XM-05, FR-XM-26): an installment that was recovered (deducted) or settled early never changes
+        # or goes; a scheduled or skipped one that payroll has used (it holds a result line) is never deleted; once the run that holds its line is locked it
+        # only moves to deducted (the posting of the run), every other column staying as it was. So the schedule of a recovered or locked period is never
+        # edited, by any login. The run is read with a share lock, so an edit and the run's lock never pass each other.
+        implemented:
+          slice: S1.41
+          triggers:
+            - [hrm.loan_installments, tg_loan_installments_freeze]
+          sql: |
+            create or replace function hrm.tg_loan_installments_freeze() returns trigger
+            language plpgsql as $fn$
+            declare
+                v_final constant text[] := array['locked', 'paid', 'posted', 'closed'];
+                v_free constant text[] := array['status', 'updated_at', 'updated_by', 'row_version'];
+                v_run text;
+            begin
+                if tg_op = 'DELETE' then
+                    if old.status <> 'scheduled' or old.pay_result_line_id is not null then
+                        raise exception 'loan installment %: a recovered, skipped or used installment is never deleted', old.id
+                            using errcode = '23514', constraint = 'ck_loan_installments_frozen';
+                    end if;
+                    return old;
+                end if;
+                if old.status in ('deducted', 'settled_early') then
+                    raise exception 'loan installment %: a recovered installment never changes (FR-XM-05)', old.id
+                        using errcode = '23514', constraint = 'ck_loan_installments_frozen';
+                end if;
+                if old.pay_result_line_id is not null then
+                    select r.status into v_run
+                      from hrm.pay_result_lines l
+                      join hrm.pay_results x on x.id = l.result_id
+                      join hrm.pay_runs r on r.id = x.pay_run_id
+                     where l.id = old.pay_result_line_id
+                       for share of r;
+                    if v_run = any (v_final)
+                       and (new.status <> 'deducted' or (to_jsonb(new) - v_free) is distinct from (to_jsonb(old) - v_free)) then
+                        raise exception 'loan installment %: the pay run that took it is locked; the installment only becomes deducted (FR-XM-26)', old.id
+                            using errcode = '23514', constraint = 'ck_loan_installments_frozen';
+                    end if;
+                end if;
+                return new;
+            end
+            $fn$;
+            drop trigger if exists tg_loan_installments_freeze on hrm.loan_installments;
+            create trigger tg_loan_installments_freeze before update or delete on hrm.loan_installments
+                for each row execute function hrm.tg_loan_installments_freeze();
 
   hrm.loan_transactions:
     checks:
       - text: "trigger: a recovery cannot exceed the outstanding balance"
         stub: { name: loan_transactions_recovery_within_balance, owner: S1.41 }
+        # S1.41 (CR-097; slice S1.41 Build items 3 to 6, FR-HRM-LON-03, LON-07): the ledger's signs and balance. A disbursement is positive and comes once
+        # (it opens the balance); recovery, early settlement, settlement recovery and write-off are negative; an adjustment is either but never zero; the
+        # balance after any entry is never below zero (a recovery cannot exceed what is outstanding). The loan row is locked first, so two entries of one
+        # loan are decided one after the other.
+        implemented:
+          slice: S1.41
+          triggers:
+            - [hrm.loan_transactions, tg_loan_transactions_recovery_within_balance]
+          sql: |
+            create or replace function hrm.tg_loan_transactions_recovery_within_balance() returns trigger
+            language plpgsql as $fn$
+            declare
+                v_company uuid;
+                v_balance numeric(19,4);
+            begin
+                select l.company_id into v_company from hrm.loans l where l.id = new.loan_id for update;
+                if v_company is null or v_company <> new.company_id then
+                    raise exception 'loan ledger: the entry does not belong to a loan of this company'
+                        using errcode = '23514', constraint = 'ck_loan_transactions_balance';
+                end if;
+                if new.amount = 0
+                   or (new.kind = 'disbursement' and new.amount < 0)
+                   or (new.kind in ('recovery', 'early_settlement', 'settlement_recovery', 'write_off') and new.amount > 0) then
+                    raise exception 'loan ledger: the amount of a % entry has the wrong sign or is zero', new.kind
+                        using errcode = '23514', constraint = 'ck_loan_transactions_balance';
+                end if;
+                if new.kind = 'disbursement' and exists (select 1 from hrm.loan_transactions t where t.loan_id = new.loan_id and t.kind = 'disbursement') then
+                    raise exception 'loan ledger: the loan was disbursed already'
+                        using errcode = '23514', constraint = 'ck_loan_transactions_balance';
+                end if;
+                select coalesce(sum(t.amount), 0) into v_balance from hrm.loan_transactions t where t.loan_id = new.loan_id;
+                if v_balance + new.amount < 0 then
+                    raise exception 'loan ledger: a recovery cannot exceed the outstanding balance (%)', v_balance
+                        using errcode = '23514', constraint = 'ck_loan_transactions_balance';
+                end if;
+                return new;
+            end
+            $fn$;
+            drop trigger if exists tg_loan_transactions_recovery_within_balance on hrm.loan_transactions;
+            create trigger tg_loan_transactions_recovery_within_balance before insert on hrm.loan_transactions
+                for each row execute function hrm.tg_loan_transactions_recovery_within_balance();
     notes:
       - text: "Recovery entries are written only when the pay run locks."
         comment: true
@@ -2749,3 +2836,53 @@ functions:
              on a.employment_id = r.employment_id and a.valid_from <= r.start_date and (a.valid_to is null or a.valid_to > r.start_date)
       where r.status in ('submitted', 'cancel_requested');
       grant select on hrm.rpt_leave_pending to app_rw, app_ro, backup;
+
+  # S1.41 (CR-097; slice S1.41 Build items 2 and 3, FR-HRM-LON-02, LON-03, FR-XM-05): a loan is never deleted; it is applied for, then approved or ended; once approved
+  # its terms (employee, type, principal, currency, rate, method, installments, guarantor, number) never change; a loan that is settled, written off, rejected
+  # or cancelled changes no more. The status only moves forward (applied, approved, active, settled or written off; cancelled or rejected from before activation).
+  - slice: S1.41
+    name: hrm.tg_loans_rules
+    purpose: "A loan is never deleted; its terms never change once approved; its status only moves forward and ended loans change no more; refused with constraint ck_loans_rules."
+    triggers:
+      - [hrm.loans, tg_loans_rules]
+    sql: |
+      create or replace function hrm.tg_loans_rules() returns trigger
+      language plpgsql as $fn$
+      begin
+          if tg_op = 'DELETE' then
+              raise exception 'loan %: a loan is never deleted; cancel it', old.id
+                  using errcode = '23514', constraint = 'ck_loans_rules';
+          end if;
+          if tg_op = 'INSERT' then
+              if new.status <> 'applied' or new.principal <= 0 or new.installments < 1 or new.interest_rate < 0 then
+                  raise exception 'loan %: a new loan is applied for with a principal above zero and at least one installment', new.id
+                      using errcode = '23514', constraint = 'ck_loans_rules';
+              end if;
+              return new;
+          end if;
+          if old.status in ('rejected', 'settled', 'written_off', 'cancelled') then
+              raise exception 'loan %: a loan that ended (%) changes no more', old.id, old.status
+                  using errcode = '23514', constraint = 'ck_loans_rules';
+          end if;
+          if new.status <> old.status and not (
+                 (old.status = 'applied' and new.status in ('approved', 'rejected', 'cancelled'))
+              or (old.status = 'approved' and new.status in ('active', 'cancelled'))
+              or (old.status = 'active' and new.status in ('settled', 'written_off'))) then
+              raise exception 'loan %: a loan cannot move from % to %', old.id, old.status, new.status
+                  using errcode = '23514', constraint = 'ck_loans_rules';
+          end if;
+          if old.status <> 'applied' and (
+                 new.company_id <> old.company_id or new.employment_id <> old.employment_id or new.loan_type_id <> old.loan_type_id or new.loan_no <> old.loan_no
+              or new.principal <> old.principal or new.currency_code <> old.currency_code or new.interest_rate <> old.interest_rate
+              or new.installments <> old.installments or new.interest_method is distinct from old.interest_method
+              or new.guarantor_employment_id is distinct from old.guarantor_employment_id) then
+              raise exception 'loan %: the terms of an approved loan never change', old.id
+                  using errcode = '23514', constraint = 'ck_loans_rules';
+          end if;
+          return new;
+      end
+      $fn$;
+      drop trigger if exists tg_loans_rules on hrm.loans;
+      create trigger tg_loans_rules before insert or update or delete on hrm.loans
+          for each row execute function hrm.tg_loans_rules();
+

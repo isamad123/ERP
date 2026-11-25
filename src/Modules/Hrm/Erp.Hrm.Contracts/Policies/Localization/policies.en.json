@@ -179,5 +179,15 @@
   "errors.hrm.policy.attendance.monthly_cap_below_daily": "The monthly cap cannot be below the daily cap.",
   "errors.hrm.policy.attendance.count_before_shift_required": "Say whether time before the shift starts counts as overtime.",
   "errors.hrm.policy.attendance.count_before_shift_unused": "Time before the shift counts only on a working day.",
-  "errors.hrm.policy.attendance.overtime_rest_work_ignored": "Overtime on this day type is never counted while the policy ignores work on it; record the work or remove the overtime rule."
+  "errors.hrm.policy.attendance.overtime_rest_work_ignored": "Overtime on this day type is never counted while the policy ignores work on it; record the work or remove the overtime rule.",
+  "hrm.policy.param.loan.min_service_months": "Least months of service",
+  "hrm.policy.param.loan.eligible_grades": "Grades that may borrow (empty: all)",
+  "hrm.policy.param.loan.max_open_loans": "Most loans open at once",
+  "hrm.policy.param.loan.max_amount_basis": "The most that may be lent is",
+  "hrm.policy.param.loan.max_amount": "Most that may be lent (fixed amount)",
+  "hrm.policy.param.loan.salary_multiple": "Most that may be lent (times pay)",
+  "hrm.policy.param.loan.interest_method": "Interest",
+  "hrm.policy.param.loan.annual_interest_percent": "Interest per year (percent)",
+  "hrm.policy.param.loan.max_installments": "Most installments",
+  "hrm.policy.param.loan.requires_guarantor": "A guarantor must agree"
 }

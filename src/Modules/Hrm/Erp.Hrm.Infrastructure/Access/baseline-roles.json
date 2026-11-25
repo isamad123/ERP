@@ -1,5 +1,5 @@
 {
-  "_comment": "Baseline HR roles of spec 06a section 28.1 (slice S1.06 ruling Q2): read permissions only; each HR slice adds the business actions of section 28.2. Seeded into every customer with the HR module by provisioning and the migrator's migrate command, then editable by the customer (FR-ADM-ROL-03). Urdu names to be reviewed by a native speaker. S1.31 (CR-091 S1.31 detail): payroll managers decide the request to cancel the locking payroll run and reopen its attendance period, so they hold the workflow task rights (their own tasks), like the HR administrators.",
+  "_comment": "Baseline HR roles of spec 06a section 28.1 (slice S1.06 ruling Q2): read permissions only; each HR slice adds the business actions of section 28.2. S1.41 (CR-097): an employee holds the workflow task rights on their own tasks (data scope own) so a guarantor can give consent to a colleague's loan; they are tasks assigned to them and never their own requests (FR-XM-32); finance approvers are a role of their own. Seeded into every customer with the HR module by provisioning and the migrator's migrate command, then editable by the customer (FR-ADM-ROL-03). Urdu names to be reviewed by a native speaker. S1.31 (CR-091 S1.31 detail): payroll managers decide the request to cancel the locking payroll run and reopen its attendance period, so they hold the workflow task rights (their own tasks), like the HR administrators.",
   "module": "hrm",
   "roles": [
     {
@@ -44,6 +44,11 @@
         "hrm.pay_result_lines.read",
         "hrm.loans.read",
         "hrm.loan_installments.read",
+        "hrm.loan_types.read",
+        "hrm.loan_transactions.read",
+        "hrm.loans.create",
+        "wf.workflow_tasks.read",
+        "wf.workflow_tasks.update",
         "hrm.expense_claims.read",
         "hrm.expense_claim_lines.read",
         "hrm.tax_declarations.read",
@@ -288,7 +293,14 @@
         "hrm.attendance_periods.lock",
         "hrm.attendance_periods.reopen",
         "hrm.attendance_adjustments.read",
-        "hrm.attendance_adjustments.submit"
+        "hrm.attendance_adjustments.submit",
+        "hrm.loan_types.read",
+        "hrm.loan_types.create",
+        "hrm.loan_types.update",
+        "hrm.loans.read",
+        "hrm.loan_installments.read",
+        "hrm.loans.create",
+        "hrm.loans.cancel"
       ],
       "scopes": {
         "*": "all",
@@ -374,7 +386,10 @@
         "hrm.pay.run",
         "hrm.pay.results.read",
         "hrm.pay_inputs.create",
-        "hrm.pay_inputs.cancel"
+        "hrm.pay_inputs.cancel",
+        "hrm.loans.disburse",
+        "hrm.loans.receipt",
+        "hrm.loan_reports.read"
       ],
       "scopes": {
         "*": "all"
@@ -469,7 +484,14 @@
         "hrm.pay.run",
         "hrm.pay.results.read",
         "hrm.pay_inputs.create",
-        "hrm.pay_inputs.cancel"
+        "hrm.pay_inputs.cancel",
+        "hrm.loans.disburse",
+        "hrm.loans.receipt",
+        "hrm.loans.receipt_approve",
+        "hrm.loans.cancel",
+        "hrm.loan_reports.read",
+        "hrm.loan_types.create",
+        "hrm.loan_types.update"
       ],
       "scopes": {
         "*": "all",
@@ -480,6 +502,38 @@
           "resource": "*",
           "field": "class:salary",
           "access": "editable"
+        }
+      ]
+    },
+    {
+      "code": "finance_approver",
+      "name": {
+        "en": "Finance Approver",
+        "ur": "مالیات کا منظور کنندہ"
+      },
+      "permissions": [
+        "iam.self.manage",
+        "hrm.employments.read",
+        "hrm.persons.read",
+        "hrm.loan_types.read",
+        "hrm.loans.read",
+        "hrm.loan_installments.read",
+        "hrm.loan_transactions.read",
+        "hrm.loan_reports.read",
+        "hrm.loans.receipt_approve",
+        "wf.workflow_tasks.read",
+        "wf.workflow_tasks.update",
+        "wf.workflow_instances.read"
+      ],
+      "scopes": {
+        "*": "all",
+        "wf.workflow_tasks": "own"
+      },
+      "fields": [
+        {
+          "resource": "*",
+          "field": "class:salary",
+          "access": "read_only"
         }
       ]
     },

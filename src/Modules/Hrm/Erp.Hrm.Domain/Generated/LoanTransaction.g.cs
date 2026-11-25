@@ -36,6 +36,9 @@ public sealed partial class LoanTransaction : global::Erp.BuildingBlocks.Domain.
     /// <summary>source_id</summary>
     public global::System.Guid? SourceId { get; set; }
 
+    /// <summary>reference: payment or receipt reference of a disbursement or a receipt (S1.41)</summary>
+    public string? Reference { get; set; }
+
     /// <summary>created_at</summary>
     public global::System.DateTimeOffset CreatedAt { get; set; }
 

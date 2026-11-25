@@ -68,6 +68,9 @@ public static class HrmSettingKeys
     /// <summary>How many employees a payroll calculation saves together.</summary>
     public const string HrmPayChunkSize = "hrm.pay.chunk_size";
 
+    /// <summary>The most, in percent of an employee's pay for a period, that loan installments may take; 0 means not set.</summary>
+    public const string HrmLoanMaxRecoveryPercent = "hrm.loan.max_recovery_percent";
+
     /// <summary>Allow this company to use biometric attendance devices; mapping a device user then needs the person's consent.</summary>
     public const string HrmAttBiometricEnabled = "hrm.att.biometric_enabled";
 

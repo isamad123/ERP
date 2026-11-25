@@ -2529,18 +2529,6 @@ export interface LoanInstallment
     rowVersion: number;
 }
 
-export interface LoanInstallmentWrite
-{
-    companyId: string;
-    loanId: string;
-    seq: number;
-    payPeriodId: string;
-    principalAmount: number;
-    interestAmount: number;
-    payResultLineId?: string | null;
-    status: 'scheduled' | 'deducted' | 'skipped' | 'settled_early';
-}
-
 export interface LoanInstallmentListQuery
 {
     after?: string;
@@ -2558,8 +2546,6 @@ export const loanInstallments =
 {
     list: (query: LoanInstallmentListQuery = {}) => request<PagedResult<LoanInstallment>>('GET', '/api/hrm/loan-installments', { query }),
     get: (id: string) => request<LoanInstallment>('GET', `/api/hrm/loan-installments/${id}`),
-    create: (body: LoanInstallmentWrite) => request<LoanInstallment>('POST', '/api/hrm/loan-installments', { body }),
-    update: (id: string, body: LoanInstallmentWrite & { rowVersion: number }) => request<LoanInstallment>('PUT', `/api/hrm/loan-installments/${id}`, { body }),
 };
 
 /** hrm.loan_transactions: Loan ledger (disbursement, recovery, adjustment, write-off); balance is the sum. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2573,19 +2559,9 @@ export interface LoanTransaction
     txnDate: string;
     sourceType: string | null;
     sourceId: string | null;
+    reference: string | null;
     createdAt: string;
     createdBy: string;
-}
-
-export interface LoanTransactionWrite
-{
-    companyId: string;
-    loanId: string;
-    kind: 'disbursement' | 'recovery' | 'early_settlement' | 'adjustment' | 'write_off' | 'settlement_recovery';
-    amount: number;
-    txnDate: string;
-    sourceType?: string | null;
-    sourceId?: string | null;
 }
 
 export interface LoanTransactionListQuery
@@ -2602,7 +2578,6 @@ export const loanTransactions =
 {
     list: (query: LoanTransactionListQuery = {}) => request<PagedResult<LoanTransaction>>('GET', '/api/hrm/loan-transactions', { query }),
     get: (id: string) => request<LoanTransaction>('GET', `/api/hrm/loan-transactions/${id}`),
-    create: (body: LoanTransactionWrite) => request<LoanTransaction>('POST', '/api/hrm/loan-transactions', { body }),
 };
 
 /** hrm.loan_types: LoanType. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2626,17 +2601,6 @@ export interface LoanType
     rowVersion: number;
 }
 
-export interface LoanTypeWrite
-{
-    companyId: string;
-    code: string;
-    nameI18n: Record<string, string>;
-    kind: 'loan' | 'advance' | 'pf_loan';
-    policyId?: string | null;
-    deductionComponentId: string;
-    isActive?: boolean;
-}
-
 export interface LoanTypeListQuery
 {
     after?: string;
@@ -2654,9 +2618,6 @@ export const loanTypes =
 {
     list: (query: LoanTypeListQuery = {}) => request<PagedResult<LoanType>>('GET', '/api/hrm/loan-types', { query }),
     get: (id: string) => request<LoanType>('GET', `/api/hrm/loan-types/${id}`),
-    create: (body: LoanTypeWrite) => request<LoanType>('POST', '/api/hrm/loan-types', { body }),
-    update: (id: string, body: LoanTypeWrite & { rowVersion: number }) => request<LoanType>('PUT', `/api/hrm/loan-types/${id}`, { body }),
-    remove: (id: string, rowVersion: number) => request<void>('DELETE', `/api/hrm/loan-types/${id}`, { query: { rowVersion } }),
 };
 
 /** hrm.loans: Loan. Field rules (S1.06) may leave a field out or mask it as text. */
@@ -2675,28 +2636,14 @@ export interface Loan
     guarantorEmploymentId: string | null;
     disbursedOn: string | null;
     workflowInstanceId: string | null;
+    reason: string | null;
+    interestMethod: 'none' | 'flat' | 'reducing' | null;
     status: 'applied' | 'approved' | 'rejected' | 'disbursed' | 'active' | 'settled' | 'written_off' | 'cancelled';
     createdAt: string;
     createdBy: string;
     updatedAt: string;
     updatedBy: string;
     rowVersion: number;
-}
-
-export interface LoanWrite
-{
-    companyId: string;
-    employmentId: string;
-    loanTypeId: string;
-    principal: number;
-    currencyCode: string;
-    interestRate?: number;
-    installments: number;
-    startPeriodId?: string | null;
-    guarantorEmploymentId?: string | null;
-    disbursedOn?: string | null;
-    workflowInstanceId?: string | null;
-    status: 'applied' | 'approved' | 'rejected' | 'disbursed' | 'active' | 'settled' | 'written_off' | 'cancelled';
 }
 
 export interface LoanListQuery
@@ -2718,8 +2665,6 @@ export const loans =
 {
     list: (query: LoanListQuery = {}) => request<PagedResult<Loan>>('GET', '/api/hrm/loans', { query }),
     get: (id: string) => request<Loan>('GET', `/api/hrm/loans/${id}`),
-    create: (body: LoanWrite) => request<Loan>('POST', '/api/hrm/loans', { body }),
-    update: (id: string, body: LoanWrite & { rowVersion: number }) => request<Loan>('PUT', `/api/hrm/loans/${id}`, { body }),
 };
 
 /** hrm.mandatory_training_rules: MandatoryTrainingRule. Field rules (S1.06) may leave a field out or mask it as text. */

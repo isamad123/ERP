@@ -65,6 +65,19 @@
       "format": "uuid",
       "nullable": true
     },
+    "reason": {
+      "type": "string",
+      "nullable": true
+    },
+    "interestMethod": {
+      "type": "string",
+      "enum": [
+        "none",
+        "flat",
+        "reducing"
+      ],
+      "nullable": true
+    },
     "status": {
       "type": "string",
       "enum": [

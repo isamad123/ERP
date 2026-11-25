@@ -47,6 +47,10 @@
       "type": "string",
       "format": "uuid",
       "nullable": true
+    },
+    "reference": {
+      "type": "string",
+      "nullable": true
     }
   }
 }

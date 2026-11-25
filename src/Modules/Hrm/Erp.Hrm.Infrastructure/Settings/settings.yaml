@@ -207,6 +207,18 @@ settings:
     name: {en: "Payroll calculation batch size", ur: "پے رول حساب کی کھیپ کا سائز"}
     description: {en: "How many employees a payroll calculation saves together", ur: "پے رول کا حساب ایک ساتھ کتنے ملازمین محفوظ کرتا ہے"}
     help: {en: "A calculation works through the employees of a run in batches of this size; each batch is saved on its own, so a stop loses at most one batch. Larger batches are faster, smaller ones hold the database for less time.", ur: "حساب کسی رن کے ملازمین کو اس سائز کی کھیپوں میں مکمل کرتا ہے؛ ہر کھیپ الگ محفوظ ہوتی ہے، اس لیے رکنے پر زیادہ سے زیادہ ایک کھیپ ضائع ہوتی ہے۔ بڑی کھیپیں تیز ہیں، چھوٹی ڈیٹا بیس کو کم وقت کے لیے مصروف رکھتی ہیں۔"}
+  # S1.41 (CR-097; slice S1.41 Q4; R-181): the share of an employee's pay that loan installments may take in one period. 0 (the default) means not set:
+  # no number is filled in for you (AS-4). It only warns on the loan form; it never changes what payroll recovers.
+  - key: hrm.loan.max_recovery_percent
+    type: decimal
+    default: 0
+    validation: {min: 0, max: 100}
+    layers: [tenant, company]
+    area: hr.payroll
+    unit: percent
+    name: {en: "Largest share of pay loans may take", ur: "تنخواہ کا وہ سب سے بڑا حصہ جو قرض کی قسطیں لے سکتی ہیں"}
+    description: {en: "The most, in percent of an employee's pay for a period, that loan installments may take; 0 means not set", ur: "کسی مدت کی تنخواہ کا زیادہ سے زیادہ فیصد جو قرض کی قسطیں لے سکتی ہیں؛ 0 کا مطلب مقرر نہیں"}
+    help: {en: "Set by the customer, never by the product. When the installments of a loan (with any installment carried forward) are more than this share of the employee's pay, the loan form shows a warning. Payroll still recovers what is due. Leave it at 0 until your policy names a share.", ur: "یہ حد صارف طے کرتا ہے، پروڈکٹ نہیں۔ جب کسی قرض کی قسطیں (آگے لائی گئی قسط سمیت) ملازم کی تنخواہ کے اس حصے سے زیادہ ہوں تو قرض کا فارم تنبیہ دکھاتا ہے۔ پے رول پھر بھی واجب رقم وصول کرتا ہے۔ جب تک آپ کی پالیسی کوئی حصہ مقرر نہ کرے اسے 0 رہنے دیں۔"}
   # S1.27b (CR-088 S1.27b detail; FR-HRM-ATT-02, ATT-03, ATT-20). Urdu texts to be reviewed by a native speaker (R-062).
   - key: hrm.att.biometric_enabled
     type: bool

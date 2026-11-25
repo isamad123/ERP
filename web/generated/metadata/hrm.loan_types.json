@@ -11,18 +11,6 @@
     {
       "action": "read",
       "permission": "hrm.loan_types.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.loan_types.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.loan_types.update"
-    },
-    {
-      "action": "delete",
-      "permission": "hrm.loan_types.delete"
     }
   ],
   "companyScoped": true,

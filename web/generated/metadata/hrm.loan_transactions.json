@@ -13,10 +13,6 @@
     {
       "action": "read",
       "permission": "hrm.loan_transactions.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.loan_transactions.create"
     }
   ],
   "companyScoped": true,
@@ -33,7 +29,8 @@
     "amount",
     "txnDate",
     "sourceType",
-    "sourceId"
+    "sourceId",
+    "reference"
   ],
   "search": [],
   "constraints": {
@@ -152,6 +149,16 @@
       "system": false,
       "filter": false,
       "labelKey": "fields.hrm.loan_transactions.source_id"
+    },
+    {
+      "column": "reference",
+      "field": "reference",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.loan_transactions.reference"
     },
     {
       "column": "created_at",

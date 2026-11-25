@@ -502,6 +502,9 @@
   unique: [[company_id, lower(code)]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
+  # S1.41 (CR-097; slice S1.41 Build item 1): generated writes closed; the loan type service checks that the policy is a `loan` policy of the
+  # company and that the deduction component is a deduction; a type is retired, never deleted.
+  api_actions: [read]
   reqs: [LON-01]
 
 - table: hrm.loans
@@ -519,10 +522,16 @@
     - [guarantor_employment_id, uuid, opt, fk hrm.employments]
     - [disbursed_on, date, opt]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
+    - [reason, text, opt, "the applicant's reason (S1.41)"]
+    - [interest_method, "enum(none,flat,reducing)", opt, "frozen from the loan policy when the loan is applied for (S1.41)"]
   unique: [[company_id, loan_no]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
   field_class: {principal: salary}
+  # S1.41 (CR-097): the application, the approval, the disbursement and the receipts are written by the loan services; the terms of a loan
+  # never change once it is approved (rules.yaml function hrm.tg_loans_rules).
+  added_in: {S1.41: [reason, interest_method]}
+  api_actions: [read]
   # S1.08 numbering key (CR-033, Q1, Q7): the number comes from the kernel numbering service.
   numbering: {column: loan_no, type: hrm.loan_no, assign: post, gap_free: yes, default: "LN-{yyyy}-{seq:5}", reset: yearly}
   reqs: [LON-01, LON-02, LON-03, LON-05]
@@ -541,6 +550,8 @@
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
   field_class: {principal_amount: salary, interest_amount: salary}
+  # S1.41 (CR-097): written by the loan services and the payroll provider only.
+  api_actions: [read]
   reqs: [LON-03]
   notes: Frozen by trigger once status = deducted.
 
@@ -554,6 +565,7 @@
     - [txn_date, date, req]
     - [source_type, text, opt]
     - [source_id, uuid, opt]
+    - [reference, text, opt, "payment or receipt reference of a disbursement or a receipt (S1.41)"]
   indexes: [[loan_id, txn_date]]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id}
@@ -561,6 +573,8 @@
   # S1.07 audit key (CR-026): the change log skips this table, for the reason given.
   audit: false
   audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
+  added_in: {S1.41: [reference]}
+  api_actions: [read]
   reqs: [LON-03, LON-05, LON-07]
   unique: [[loan_id, source_type, source_id, kind, where source_id is not null]]
   checks: ["trigger: a recovery cannot exceed the outstanding balance"]
