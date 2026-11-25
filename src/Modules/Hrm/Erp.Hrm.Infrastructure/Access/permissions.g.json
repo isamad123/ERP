@@ -309,18 +309,6 @@
       "sensitive": false
     },
     {
-      "code": "hrm.duty_requests.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.duty_requests.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.duty_requests.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.duty_requests.update",
-      "sensitive": false
-    },
-    {
       "code": "hrm.employee_bank_accounts.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.employee_bank_accounts.read",
@@ -1194,18 +1182,6 @@
       "code": "hrm.regularization_requests.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.regularization_requests.read",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.regularization_requests.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.regularization_requests.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.regularization_requests.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.regularization_requests.update",
       "sensitive": false
     },
     {

@@ -260,10 +260,11 @@ public static class SqlEmitter
             }
 
             // Enum values added (enum_added_in, S1.08): the check is replaced by the wider one; existing rows stay valid.
-            foreach (var check in table.Checks.Where(c => c.ReplacedIn == slice))
+            foreach (var check in table.Checks.Where(c => c.ReplacedIn == slice || (c.Steps ?? []).Any(x => x.Slice == slice)))
             {
+                var sql = check.Steps is { } steps && steps.FirstOrDefault(x => x.Slice == slice).Sql is { } step ? step : check.Sql;
                 b.Append(CultureInfo.InvariantCulture, $"alter table {table.FullName} drop constraint if exists {check.Name};\n");
-                b.Append(CultureInfo.InvariantCulture, $"alter table {table.FullName} add constraint {check.Name} check ({check.Sql});\n");
+                b.Append(CultureInfo.InvariantCulture, $"alter table {table.FullName} add constraint {check.Name} check ({sql});\n");
             }
 
             // Unique keys added (uniques_added_in, S1.08); a partial one is a unique index (S1.09b).

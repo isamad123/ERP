@@ -28,7 +28,10 @@ public static class AttendanceSources
     public const string HrEntry = "hr_entry";
     public const string Import = "import";
 
-    public static IReadOnlyList<string> All { get; } = [Web, Qr, Kiosk, Biometric, HrEntry, Import];
+    /// <summary>A correction punch written when a regularization request is approved (slice S1.30a, FR-HRM-ATT-11); never accepted from a client.</summary>
+    public const string Regularization = "regularization";
+
+    public static IReadOnlyList<string> All { get; } = [Web, Qr, Kiosk, Biometric, HrEntry, Import, Regularization];
 }
 
 /// <summary>The directions of a punch (<c>hrm.attendance_events.direction</c>).</summary>

@@ -163,7 +163,7 @@ internal sealed class AttendanceDayService(
         });
     }
 
-    public async Task<PeopleResult> ExceptionsAsync(Guid? companyId, string? status, string? kind, DateOnly? firstDay, DateOnly? lastDay, int? limit, CancellationToken cancellationToken)
+    public async Task<PeopleResult> ExceptionsAsync(Guid? companyId, string? status, string? kind, DateOnly? firstDay, DateOnly? lastDay, int? limit, CancellationToken cancellationToken, Guid? orgUnitId = null, int? minAgeDays = null)
     {
         if (!await permissions.HasPermissionAsync(AttendanceEnginePermissions.ExceptionsRead, cancellationToken).ConfigureAwait(false))
         {
@@ -182,6 +182,19 @@ internal sealed class AttendanceDayService(
         query = kind is { Length: > 0 } k ? query.Where(x => x.Kind == k) : query;
         query = firstDay is { } f ? query.Where(x => x.WorkDate >= f) : query;
         query = lastDay is { } t ? query.Where(x => x.WorkDate <= t) : query;
+        var today = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+        if (minAgeDays is { } age and > 0)
+        {
+            var latest = today.AddDays(-age);
+            query = query.Where(x => x.WorkDate <= latest);
+        }
+
+        if (orgUnitId is { } unit)
+        {
+            // The unit the person sits in today (S1.30a: the queue's filter by unit; the unit's own people, not its sub-units).
+            query = query.Where(x => db.Set<EmploymentAssignment>().Any(a => a.EmploymentId == x.EmploymentId && a.OrgUnitId == unit && a.ValidFrom <= today && (a.ValidTo == null || a.ValidTo > today)));
+        }
+
         query = await scope.ApplyAsync(query, AttendanceExceptionAccess.Scope, "read", Source, cancellationToken).ConfigureAwait(false);
         var rows = await (from x in query
                           join e in db.Set<Employment>().AsNoTracking() on x.EmploymentId equals e.Id
@@ -209,7 +222,7 @@ internal sealed class AttendanceDayService(
             items = rows.Take(take).Select(r => new
             {
                 id = r.Id, companyId = r.CompanyId, employmentId = r.EmploymentId, employeeNo = r.EmployeeNo, workDate = r.WorkDate, kind = r.Kind, status = r.Status,
-                attendanceDayId = r.AttendanceDayId, createdAt = r.CreatedAt, rowVersion = r.RowVersion,
+                attendanceDayId = r.AttendanceDayId, createdAt = r.CreatedAt, rowVersion = r.RowVersion, ageDays = Math.Max(0, today.DayNumber - r.WorkDate.DayNumber),
             }).ToList(),
             more = rows.Count > take,
             unmapped,

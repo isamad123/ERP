@@ -175,7 +175,7 @@
     - [event_date, date, req, local date at the location]
     - [event_at, ts, req]
     - [direction, "enum(in,out,break_out,break_in,unknown)", req]
-    - [source, "enum(web,biometric,kiosk,hr_entry,import,qr)", req]
+    - [source, "enum(web,biometric,kiosk,hr_entry,import,qr,regularization)", req]
     - [device_id, uuid, opt, fk hrm.attendance_devices]
     - [received_at, ts, req, server receipt time (GHR-13)]
     - [idempotency_key, text, req]
@@ -191,7 +191,7 @@
   audit_reason: "append-only: the row itself is the record and is never changed (S1.07 Q4)"
   # S1.27a (CR-088; slice S1.27 Build items 1 to 4): a punch scanned from a gate's QR code is source qr; generated writes closed, the
   # HR attendance services append events (idempotency, duplicate marking, future tolerance, time zone date).
-  enum_added_in: {S1.27a: {source: [qr]}}
+  enum_added_in: {S1.27a: {source: [qr]}, S1.30a: {source: [regularization]}}
   api_actions: [read]
   reqs: [ATT-01, ATT-03, DAT-01, DAT-02, DAT-04]
 
@@ -284,6 +284,9 @@
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.30a (CR-090; slice S1.30 Build items 1 and 3, FR-HRM-ATT-11, GHR-09): requests are made, approved and cancelled by the HR attendance
+  # request service (the acting user is created_by, the person it is for is the employment); generated writes closed.
+  api_actions: [read]
   reqs: [ATT-11]
 
 - table: hrm.duty_requests
@@ -292,13 +295,17 @@
   status: [submitted, approved, rejected, cancelled]
   columns:
     - [employment_id, uuid, req, fk hrm.employments]
-    - [kind, "enum(on_duty,official_visit,work_from_home)", req]
+    - [kind, "enum(on_duty,official_visit,work_from_home,field_duty)", req]
     - [start_at, ts, req]
     - [end_at, ts, req]
     - [purpose, text, req]
     - [workflow_instance_id, uuid, opt, fk wf.workflow_instances]
   # S1.06 access keys: scope locators and field classes (CR-018), generated writes closed (CR-020, CR-021).
   scope: {company: company_id, employment: employment_id}
+  # S1.30a (CR-090; slice S1.30 Build items 2 and 3, FR-HRM-ATT-14, GHR-09): field duty is a fourth kind; requests are made, approved and
+  # cancelled by the HR attendance request service (the acting user is created_by); generated writes closed.
+  enum_added_in: {S1.30a: {kind: [field_duty]}}
+  api_actions: [read]
   reqs: [ATT-14]
 
 - table: hrm.overtime_entries
