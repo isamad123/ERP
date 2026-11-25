@@ -67,6 +67,7 @@
   "errors.hrm.leave.year_end.company_required": "Run the year-end for one company.",
   "errors.hrm.leave.year_end.not_preview": "Only a preview can be confirmed or rolled back.",
   "errors.hrm.leave.year_end.pending": "The confirmation of this year-end is already waiting for approval.",
+  "errors.hrm.leave.year_end.requests_waiting": "Leave of this year is still waiting for a decision: decide or withdraw it before the year-end is confirmed.",
   "errors.hrm.leave.year_end.stale": "Balances have changed since this preview was made: make a new preview.",
   "errors.hrm.leave.year_end.year_not_over": "The leave year is not over yet.",
   "errors.hrm.leave.year_end.year_required": "Give the leave year (for example 2026).",

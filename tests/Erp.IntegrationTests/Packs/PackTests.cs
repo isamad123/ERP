@@ -424,7 +424,7 @@ public sealed class PackTests(TenancyFixture fx) : IAsyncLifetime
         var upgraded = await _h.PostAsync(admin, $"{Packs}/{id}/upgrade", new { }, Ct, customer);
         Assert.True(upgraded.Status == HttpStatusCode.OK, upgraded.Body);
         Assert.Equal(1, upgraded.Json.GetProperty("result").GetProperty("kept").GetInt32());
-        Assert.Equal("t|Leave", await TextAsync(customer, "select concat_ws('|', requires_document, left(name_i18n->>'en', 5)) from hrm.leave_types where id = $1", typeId));
+        Assert.Equal("t|Test leave", await TextAsync(customer, "select concat_ws('|', requires_document, name_i18n->>'en') from hrm.leave_types where id = $1", typeId)); // the changed type is kept whole
         Assert.Equal(0, await CountAsync(customer, "select count(*) from hrm.leave_ledger")); // a type gives no leave by itself
     }
 

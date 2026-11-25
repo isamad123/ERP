@@ -13,8 +13,11 @@ public sealed record LotLine(Guid Id, DateOnly Date, decimal Quantity, DateOnly?
 /// <summary>An expiry not yet posted: the lot, the day the entry is dated (the day after the lot's last usable day), the quantity left and the kind.</summary>
 public sealed record LotExpiry(Guid LotId, DateOnly On, decimal Quantity, string Kind);
 
-/// <summary>The balance at the end of each day that has an entry or an expiry, with the expiries still to post.</summary>
-public sealed record LotProjection(IReadOnlyList<(DateOnly Date, decimal Balance)> Running, IReadOnlyList<LotExpiry> Expiries, decimal Closing)
+/// <summary>A lot still usable at the end of the projection: what is left of it and its last usable day.</summary>
+public sealed record OpenLot(Guid LotId, decimal Remaining, DateOnly ExpiresOn, string Kind);
+
+/// <summary>The balance at the end of each day that has an entry or an expiry, the expiries still to post and the lots still open at the end.</summary>
+public sealed record LotProjection(IReadOnlyList<(DateOnly Date, decimal Balance)> Running, IReadOnlyList<LotExpiry> Expiries, decimal Closing, IReadOnlyList<OpenLot> Open)
 {
     /// <summary>The lowest balance at the end of any day from <paramref name="from"/> on (the balance carried into that day when nothing happens on it).</summary>
     public decimal LowestFrom(DateOnly from)
@@ -27,8 +30,10 @@ public sealed record LotProjection(IReadOnlyList<(DateOnly Date, decimal Balance
 /// <summary>
 /// Expiring leave (slice S1.32 Build items 11 and 12; FR-HRM-LVE-03 carry-forward expiry, LVE-08 comp-off expiry). An entry that adds leave and
 /// has an expiry date is a lot, usable up to and including that date; what is left of it the next day expires. Taking leave uses the lot that
-/// expires first (then leave that never expires); a reversal of a lot takes that lot; a posted expiry closes its own lot. Pure: the same
-/// entries always give the same answer, so the expiry job, the request check and the year-end agree.
+/// expires first (then leave that never expires); a reversal of a lot takes that lot; a posted expiry closes its own lot. A reversal of leave
+/// taken undoes exactly what that leave took (review S1.32b finding 1): dated on or before the leave it reverses, the two cancel out and neither
+/// is simulated; dated after it, it gives back to each lot what the leave took from it (to the leave that never expires when the lot has expired
+/// since). Pure: the same entries always give the same answer, so the expiry job, the request check and the year-end agree.
 /// </summary>
 public static class LeaveLots
 {
@@ -38,10 +43,24 @@ public static class LeaveLots
     public static LotProjection Project(IEnumerable<LotLine> entries, DateOnly yearEnd)
     {
         ArgumentNullException.ThrowIfNull(entries);
-        var lines = entries.OrderBy(l => l.Date).ThenBy(l => l.Quantity < 0m ? 1 : 0).ThenBy(l => l.Id).ToList();
+        var all = entries.ToList();
+        var byId = all.GroupBy(l => l.Id).ToDictionary(g => g.Key, g => g.First());
+
+        // A reversal of a negative entry dated on or before it: both are left out (the leave was never taken).
+        var dropped = new HashSet<Guid>();
+        foreach (var r in all.Where(l => l.Quantity > 0m && l.ReversesEntryId is not null))
+        {
+            if (byId.TryGetValue(r.ReversesEntryId!.Value, out var reversed) && reversed.Quantity < 0m && r.Date <= reversed.Date)
+            {
+                dropped.Add(r.Id);
+                dropped.Add(reversed.Id);
+            }
+        }
+
+        var lines = all.Where(l => !dropped.Contains(l.Id)).OrderBy(l => l.Date).ThenBy(l => l.Quantity < 0m ? 1 : 0).ThenBy(l => l.Id).ToList();
         var lots = new Dictionary<Guid, Lot>();
+        var taken = new Dictionary<Guid, List<(Lot Lot, decimal Quantity)>>();
         var closedByPosting = lines.Where(l => l.ExpiresLotId is not null).Select(l => l.ExpiresLotId!.Value).ToHashSet();
-        var pool = 0m;
         var balance = 0m;
         var running = new List<(DateOnly, decimal)>();
         var expiries = new List<LotExpiry>();
@@ -65,7 +84,7 @@ public static class LeaveLots
                 lot.Expired = true;
                 if (lot.Remaining > 0m)
                 {
-                    expiries.Add(new LotExpiry(lot.Id, lot.ExpiresOn.AddDays(1), lot.Remaining, lot.Kind == "comp_off_earned" ? "comp_off_expired" : "lapse"));
+                    expiries.Add(new LotExpiry(lot.Id, lot.ExpiresOn.AddDays(1), lot.Remaining, ExpiryKind(lot.Kind)));
                     balance -= lot.Remaining;
                     lot.Remaining = 0m;
                 }
@@ -77,29 +96,41 @@ public static class LeaveLots
                 balance += line.Quantity;
                 if (line.Quantity > 0m)
                 {
-                    if (line.ExpiresOn is { } expires && line.ReversesEntryId is null)
+                    if (line.ReversesEntryId is { } undone && taken.TryGetValue(undone, out var used))
                     {
-                        lots[line.Id] = new Lot(line.Id, expires, line.Kind, line.Quantity);
-                        if (expires < day)
+                        // A later reversal of leave taken gives back to each lot what that leave took; the part of a lot expired since stays in the balance as leave that does not expire (only HR reverses after the fact).
+                        foreach (var (lot, quantity) in used)
                         {
-                            lots[line.Id].Expired = true; // dated after its own expiry: nothing to use (refused at posting, kept safe here)
-                            if (!closedByPosting.Contains(line.Id))
+                            if (!lot.Expired && lot.ExpiresOn >= day)
                             {
-                                expiries.Add(new LotExpiry(line.Id, day, line.Quantity, line.Kind == "comp_off_earned" ? "comp_off_expired" : "lapse"));
-                                balance -= line.Quantity;
-                                lots[line.Id].Remaining = 0m;
+                                lot.Remaining += quantity;
                             }
                         }
+
+                        continue;
                     }
-                    else
+
+                    if (line.ExpiresOn is { } expires && line.ReversesEntryId is null)
                     {
-                        pool += line.Quantity;
+                        var lot = new Lot(line.Id, expires, line.Kind, line.Quantity);
+                        lots[line.Id] = lot;
+                        if (expires < day)
+                        {
+                            lot.Expired = true; // dated after its own expiry: nothing to use (refused at posting, kept safe here)
+                            if (!closedByPosting.Contains(line.Id))
+                            {
+                                expiries.Add(new LotExpiry(line.Id, day, line.Quantity, ExpiryKind(line.Kind)));
+                                balance -= line.Quantity;
+                                lot.Remaining = 0m;
+                            }
+                        }
                     }
 
                     continue;
                 }
 
                 var take = -line.Quantity;
+                var record = new List<(Lot, decimal)>();
                 var own = line.ExpiresLotId ?? line.ReversesEntryId;
                 if (own is { } target && lots.TryGetValue(target, out var named))
                 {
@@ -111,30 +142,37 @@ public static class LeaveLots
                         named.Expired = true;
                     }
                 }
-
-                foreach (var lot in lots.Values.Where(l => l.Remaining > 0m && !l.Expired && l.ExpiresOn >= day).OrderBy(l => l.ExpiresOn).ThenBy(l => l.Id))
+                else
                 {
-                    if (take <= 0m)
+                    foreach (var lot in lots.Values.Where(l => l.Remaining > 0m && !l.Expired && l.ExpiresOn >= day).OrderBy(l => l.ExpiresOn).ThenBy(l => l.Id))
                     {
-                        break;
-                    }
+                        if (take <= 0m)
+                        {
+                            break;
+                        }
 
-                    var used = Math.Min(lot.Remaining, take);
-                    lot.Remaining -= used;
-                    take -= used;
+                        var used = Math.Min(lot.Remaining, take);
+                        lot.Remaining -= used;
+                        take -= used;
+                        record.Add((lot, used));
+                    }
                 }
 
-                pool -= take;
+                taken[line.Id] = record;
             }
 
             running.Add((day, balance));
         }
 
-        return new LotProjection(running, expiries, balance);
+        var open = lots.Values.Where(l => !l.Expired && l.Remaining > 0m && !closedByPosting.Contains(l.Id)).OrderBy(l => l.ExpiresOn).ThenBy(l => l.Id)
+            .Select(l => new OpenLot(l.Id, l.Remaining, l.ExpiresOn, l.Kind)).ToList();
+        return new LotProjection(running, expiries, balance, open);
     }
 
     /// <summary>The source id of an expiry entry: the lot itself (one expiry per lot, the ledger's unique index).</summary>
     public static Guid ExpirySourceId(Guid lotId) => lotId;
+
+    private static string ExpiryKind(string lotKind) => lotKind == "comp_off_earned" ? "comp_off_expired" : "lapse";
 
     private sealed class Lot(Guid id, DateOnly expiresOn, string kind, decimal quantity)
     {

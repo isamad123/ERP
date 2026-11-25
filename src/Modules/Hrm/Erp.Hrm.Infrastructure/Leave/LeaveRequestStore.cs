@@ -99,7 +99,24 @@ internal static class LeaveWorkflowValues
     public const string CancellationType = "hrm.leave_cancellation";
     public const string OwnerType = "hrm.leave_requests";
 
-    public static Dictionary<string, JsonElement> Of(LeaveRequest r, Employment e, LeaveType t, LeaveTypeRules? rules, bool onBehalf)
+    /// <summary>
+    /// The user of the employee's line manager today (the manager employment of the assignment in force, current and with a user), or null. The route's
+    /// first step approves by this field, so an employee without a sign-in still reaches their own manager, never the manager of the person who
+    /// applied (review S1.32b finding 2: the kernel's "manager" asks about the first subject, else the requester).
+    /// </summary>
+    public static async Task<Guid?> LineManagerAsync(HrmDbContext db, Guid employmentId, DateOnly today, CancellationToken ct)
+    {
+        var manager = await db.Set<EmploymentAssignment>().AsNoTracking()
+            .Where(a => a.EmploymentId == employmentId && a.ValidFrom <= today && (a.ValidTo == null || a.ValidTo > today))
+            .OrderByDescending(a => a.ValidFrom).Select(a => a.ManagerEmploymentId).FirstOrDefaultAsync(ct).ConfigureAwait(false);
+        return manager is { } m
+            ? await db.Set<Employment>().AsNoTracking()
+                .Where(x => x.Id == m && x.Status != "cancelled" && x.JoiningDate <= today && (x.SeparationDate == null || x.SeparationDate >= today))
+                .Select(x => x.UserRef).FirstOrDefaultAsync(ct).ConfigureAwait(false)
+            : null;
+    }
+
+    public static Dictionary<string, JsonElement> Of(LeaveRequest r, Employment e, LeaveType t, LeaveTypeRules? rules, bool onBehalf, Guid? lineManager)
     {
         var values = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
         {
@@ -117,6 +134,11 @@ internal static class LeaveWorkflowValues
         if (e.UserRef is { } user)
         {
             values["employee"] = JsonSerializer.SerializeToElement(user.ToString());
+        }
+
+        if (lineManager is { } manager)
+        {
+            values["line_manager"] = JsonSerializer.SerializeToElement(manager.ToString());
         }
 
         return values;

@@ -47,13 +47,22 @@ internal sealed class LeaveRequestHandler(IServiceProvider services, IClock cloc
         await using var db = await LeaveOnTransaction.OpenAsync(services, transaction, cancellationToken).ConfigureAwait(false);
         var r = await db.Set<LeaveRequest>().FirstOrDefaultAsync(x => x.Id == outcome.DocumentId && x.CompanyId == outcome.CompanyId, cancellationToken).ConfigureAwait(false)
             ?? throw new WorkflowException("errors.hrm.leave.request.not_found");
+        var now = clock.UtcNow;
+        var by = actor.UserId;
+
+        // A request returned for correction is a draft on an open (returned) request: withdrawing it, or an administrator's cancel, ends it (review S1.32b finding 3).
+        if (r.Status == "draft" && r.WorkflowInstanceId == outcome.InstanceId && outcome.Outcome == WorkflowOutcomes.Cancelled)
+        {
+            await LeaveUsage.SetStatusAsync(db, r, "cancelled", now, by, cancellationToken).ConfigureAwait(false);
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
         if (r.Status != "submitted")
         {
             throw new WorkflowException("errors.hrm.leave.request.not_pending");
         }
 
-        var now = clock.UtcNow;
-        var by = actor.UserId;
         if (outcome.Outcome != WorkflowOutcomes.Approved)
         {
             var status = outcome.Outcome switch
@@ -70,11 +79,7 @@ internal sealed class LeaveRequestHandler(IServiceProvider services, IClock cloc
         var type = await db.Set<LeaveType>().AsNoTracking().FirstAsync(t => t.Id == r.LeaveTypeId, cancellationToken).ConfigureAwait(false);
         var e = await db.Set<Employment>().AsNoTracking().FirstAsync(x => x.Id == r.EmploymentId, cancellationToken).ConfigureAwait(false);
         var old = r.ModifiesRequestId is { } m ? await db.Set<LeaveRequest>().FirstOrDefaultAsync(x => x.Id == m, cancellationToken).ConfigureAwait(false) : null;
-        await LeaveLedgerStore.LockAsync(db, r.EmploymentId, r.LeaveTypeId, cancellationToken).ConfigureAwait(false);
-        if (old is not null && old.LeaveTypeId != r.LeaveTypeId)
-        {
-            await LeaveLedgerStore.LockAsync(db, old.EmploymentId, old.LeaveTypeId, cancellationToken).ConfigureAwait(false);
-        }
+        await LeaveLedgerStore.LockTypesAsync(db, r.EmploymentId, [r.LeaveTypeId, old?.LeaveTypeId], cancellationToken).ConfigureAwait(false);
 
         if (old is not null && old.Status != "approved")
         {
@@ -89,6 +94,12 @@ internal sealed class LeaveRequestHandler(IServiceProvider services, IClock cloc
             {
                 throw new WorkflowException(LeaveLedgerService.PeriodLocked);
             }
+        }
+
+        // A type that needs a document has one at the decision too (review S1.32b finding 9: files can change while the request waits).
+        if (type.RequiresDocument && (await services.GetRequiredService<IRecordFiles>().CurrentAsync(LeaveWorkflowValues.OwnerType, r.Id, transaction, cancellationToken).ConfigureAwait(false)).Count == 0)
+        {
+            throw new WorkflowException(LeaveRequestService.DocumentRequired);
         }
 
         var policies = new LeavePolicyReader(PolicyResolver.For(db, services));
@@ -139,8 +150,8 @@ internal sealed class LeaveRequestHandler(IServiceProvider services, IClock cloc
 
 /// <summary>
 /// The end of the approval of a cancellation of approved leave (document type <c>hrm.leave_cancellation</c>; FR-HRM-LVE-06, approval where the
-/// policy requires it). Approved: the usage reversed and the request cancelled (refused when a day is now in a locked period). Anything else: the
-/// leave stays approved.
+/// policy requires it). Approved: the usage reversed and the request cancelled (refused when a day is now in a locked period). Returned: it waits for
+/// the employee to send it again or withdraw it. Rejected, withdrawn or cancelled: the leave stays approved.
 /// </summary>
 internal sealed class LeaveCancellationHandler(IServiceProvider services, IClock clock, ICurrentActor actor) : IWorkflowOutcomeHandler
 {
@@ -160,6 +171,13 @@ internal sealed class LeaveCancellationHandler(IServiceProvider services, IClock
 
         var now = clock.UtcNow;
         await LeaveLedgerStore.LockAsync(db, r.EmploymentId, r.LeaveTypeId, cancellationToken).ConfigureAwait(false);
+
+        // Returned: the cancellation waits for the employee to send it again (cancel again) or withdraw it; the leave stays taken (review S1.32b finding 3).
+        if (outcome.Outcome == WorkflowOutcomes.Returned)
+        {
+            return;
+        }
+
         if (outcome.Outcome != WorkflowOutcomes.Approved)
         {
             await LeaveUsage.SetStatusAsync(db, r, "approved", now, actor.UserId, cancellationToken).ConfigureAwait(false);
@@ -178,10 +196,10 @@ internal sealed class LeaveCancellationHandler(IServiceProvider services, IClock
 }
 
 /// <summary>
-/// Files on a leave request (FR-HRM-LVE-16; owner type <c>hrm.leave_requests</c>, slice S1.11c1 ruling Q23). Read: the employee, the person who
+/// Files on a leave request (FR-HRM-LVE-16; owner type <c>hrm.leave_requests</c>, slice S1.11c1 ruling Q23, CR-114). Read: the employee, the person who
 /// applied, the people with an open approval task of the request, and readers of leave requests whose data scope covers it. Add or replace: the
-/// employee or the person who applied, or a writer of leave requests in scope, while the request is a draft or waiting for approval. Medical
-/// certificates are personal data, so the readers are also the readers of its sensitive files.
+/// employee or the person who applied while it is a draft, or a writer of leave requests in scope while it is a draft or waiting for approval. Sensitive
+/// files (medical certificates): the employee, the person who applied, the open-task approvers and the writers in scope (HR), not every reader.
 /// </summary>
 internal sealed class LeaveRequestAttachmentOwner(HrmDbContext db, ICurrentActor actor, IPermissionChecker permissions, IDataScopeFilter scope, IWorkflowQueries approvals) : IAttachmentOwner
 {
@@ -201,11 +219,14 @@ internal sealed class LeaveRequestAttachmentOwner(HrmDbContext db, ICurrentActor
         var reader = await permissions.HasPermissionAsync(LeavePermissions.RequestsRead, cancellationToken).ConfigureAwait(false)
             && await scope.AllowsAsync(r, LeaveRequestAccess.Scope, "read", source, cancellationToken).ConfigureAwait(false);
         var open = r.Status is "draft" or "submitted";
-        var writer = open && await permissions.HasPermissionAsync(LeavePermissions.RequestsUpdate, cancellationToken).ConfigureAwait(false)
+        var hr = await permissions.HasPermissionAsync(LeavePermissions.RequestsUpdate, cancellationToken).ConfigureAwait(false)
             && await scope.AllowsAsync(r, LeaveRequestAccess.Scope, "update", source, cancellationToken).ConfigureAwait(false);
-        var approver = !party && !reader && (await approvals.OpenApprovalsOfAsync(actor.UserId, null, cancellationToken).ConfigureAwait(false)).TasksToDecide
+        var approver = !party && (await approvals.OpenApprovalsOfAsync(actor.UserId, null, cancellationToken).ConfigureAwait(false)).TasksToDecide
             .Any(t => t.DocumentId == r.Id && t.DocumentType is LeaveWorkflowValues.RequestType or LeaveWorkflowValues.CancellationType);
         var read = party || reader || approver;
-        return new AttachmentOwnerAccess(r.CompanyId, read, (party && open) || writer, read);
+
+        // The parties change files only while the request is a draft (review S1.32b finding 9); HR writers while it is open. Sensitive files (medical
+        // certificates) are for the parties, the open-task approvers and HR writers in scope, not every reader of the team (review S1.32b finding 8).
+        return new AttachmentOwnerAccess(r.CompanyId, read, (party && r.Status == "draft") || (hr && open), party || approver || hr);
     }
 }

@@ -41,8 +41,10 @@ internal static class LeaveTransfers
     public const string NeedsMapping = "needs_mapping";
     public const string NegativeLeft = "negative_left";
 
-    public static Guid SourceIdOf(Guid eventId, Guid leaveTypeId) =>
-        new(SHA256.HashData(Encoding.UTF8.GetBytes(string.Create(CultureInfo.InvariantCulture, $"hrm.leave_transfer|{eventId:D}|{leaveTypeId:D}"))).AsSpan(0, 16));
+    public const string WaitingYearEnd = "waiting_year_end";
+
+    public static Guid SourceIdOf(Guid eventId, Guid leaveTypeId, Guid? lotId = null) =>
+        new(SHA256.HashData(Encoding.UTF8.GetBytes(string.Create(CultureInfo.InvariantCulture, $"hrm.leave_transfer|{eventId:D}|{leaveTypeId:D}{(lotId is { } l ? "|" + l.ToString("D") : string.Empty)}"))).AsSpan(0, 16));
 
     /// <summary>The separation event of a transfer from the employment (in force), or null.</summary>
     public static async Task<EmploymentEvent?> SeparationAsync(HrmDbContext db, Guid fromEmploymentId, CancellationToken ct)
@@ -52,7 +54,11 @@ internal static class LeaveTransfers
         return events.FirstOrDefault(x => EmploymentApplier.NextEmployment(x) is not null);
     }
 
-    /// <summary>What the transfer does with each leave type of the old employment (computed, then compared with what the ledger already holds).</summary>
+    /// <summary>
+    /// What the transfer does with each leave type of the old employment (computed, then compared with what the ledger already holds). A type with a
+    /// balance in an earlier leave year that its year-end has not closed waits for it (<c>waiting_year_end</c>, review S1.32b finding 5): the year-end
+    /// carries that balance into the last day's year first, then the transfer moves it.
+    /// </summary>
     public static async Task<List<LeaveTransferItem>> PlanAsync(HrmDbContext db, IServiceProvider services, Employment from, Employment to, EmploymentEvent separation, CancellationToken ct)
     {
         var choice = TransferApplier.CarryOver(separation)?.Leave ?? "carry";
@@ -61,6 +67,7 @@ internal static class LeaveTransfers
         var years = new LeaveYearSetting(services.GetRequiredService<ISettings>());
         var types = await db.Set<LeaveType>().AsNoTracking().Where(t => t.CompanyId == from.CompanyId && !t.IsDeleted).OrderBy(t => t.Code).ToListAsync(ct).ConfigureAwait(false);
         var targets = await db.Set<LeaveType>().AsNoTracking().Where(t => t.CompanyId == to.CompanyId && !t.IsDeleted && t.IsActive).ToListAsync(ct).ConfigureAwait(false);
+        var marker = Marker(separation);
         var items = new List<LeaveTransferItem>();
         foreach (var type in types)
         {
@@ -68,17 +75,19 @@ internal static class LeaveTransfers
             var year = await years.YearAsync(from.CompanyId, rules, lastDay, ct).ConfigureAwait(false);
             var lines = await LeaveBalances.LinesAsync(db, from.Id, type.Id, year.Year, ct).ConfigureAwait(false);
             var sourceId = SourceIdOf(separation.Id, type.Id);
-            var moved = await db.Set<LeaveLedger>().AsNoTracking().Where(x => x.SourceType == Source && x.SourceId == sourceId && x.EmploymentId == from.Id)
+            var moved = await db.Set<LeaveLedger>().AsNoTracking().Where(x => x.SourceType == Source && x.EmploymentId == from.Id && x.LeaveTypeId == type.Id && x.Reason == marker)
                 .Select(x => x.Quantity).ToListAsync(ct).ConfigureAwait(false);
             var posted = moved.Count > 0;
             var balance = posted ? -moved.Sum() : LeaveLots.Project(lines.Where(l => l.Date <= lastDay), lastDay).Closing;
-            if (balance == 0m && !posted)
+            var earlier = posted ? null : await EarlierOpenYearAsync(db, from, type, year.Year, ct).ConfigureAwait(false);
+            if (balance == 0m && !posted && earlier is null)
             {
                 continue;
             }
 
             var target = targets.FirstOrDefault(t => string.Equals(t.Code, type.Code, StringComparison.OrdinalIgnoreCase) && t.Counting == type.Counting && t.Unit == type.Unit);
             var status = posted ? Posted
+                : earlier is not null ? WaitingYearEnd
                 : choice == "carry" ? (target is null ? NeedsMapping : "due")
                 : balance < 0m ? NegativeLeft : "due";
             items.Add(new LeaveTransferItem(type.Id, type.Code, year.Year, balance, choice, choice == "carry" ? target?.Id : null, status, sourceId));
@@ -87,13 +96,37 @@ internal static class LeaveTransfers
         return items;
     }
 
-    /// <summary>Posts one item (the expiries due by the last day first, so the old year adds up); false when it was already posted.</summary>
+    /// <summary>An earlier leave year of the employment and type with a balance and no confirmed year-end, or null.</summary>
+    private static async Task<int?> EarlierOpenYearAsync(HrmDbContext db, Employment from, LeaveType type, int year, CancellationToken ct)
+    {
+        var earlier = await db.Set<LeaveLedger>().AsNoTracking().Where(x => x.EmploymentId == from.Id && x.LeaveTypeId == type.Id && x.LeaveYear < year)
+            .Select(x => x.LeaveYear).Distinct().OrderBy(y => y).ToListAsync(ct).ConfigureAwait(false);
+        foreach (var y in earlier)
+        {
+            if (!await LeaveYearEnds.ClosedAsync(db, from.CompanyId, type.Id, y, ct).ConfigureAwait(false)
+                && await db.Set<LeaveLedger>().AsNoTracking().Where(x => x.EmploymentId == from.Id && x.LeaveTypeId == type.Id && x.LeaveYear == y).SumAsync(x => x.Quantity, ct).ConfigureAwait(false) != 0m)
+            {
+                return y;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The reason every entry of one transfer carries (its employment event), so a type counts as moved once whatever its pairs.</summary>
+    private static string Marker(EmploymentEvent separation) => "transfer:" + separation.Id.ToString("D", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Posts one item (the expiries due by the last day first, so the old year adds up); false when it was already posted. A carry moves each lot still
+    /// usable with its own expiry as a pair of its own, and the rest as one pair (review S1.32b finding 5).
+    /// </summary>
     public static async Task<bool> PostAsync(HrmDbContext db, IServiceProvider services, Employment from, Employment to, EmploymentEvent separation, LeaveTransferItem item, Guid? target,
         DateTimeOffset now, Guid actor, CancellationToken ct)
     {
         var lastDay = separation.EffectiveDate.AddDays(-1);
+        var marker = Marker(separation);
         await LeaveLedgerStore.LockAsync(db, from.Id, item.LeaveTypeId, ct).ConfigureAwait(false);
-        if (await db.Set<LeaveLedger>().AsNoTracking().AnyAsync(x => x.SourceType == Source && x.SourceId == item.SourceId && x.EmploymentId == from.Id, ct).ConfigureAwait(false))
+        if (await db.Set<LeaveLedger>().AsNoTracking().AnyAsync(x => x.SourceType == Source && x.EmploymentId == from.Id && x.LeaveTypeId == item.LeaveTypeId && x.Reason == marker, ct).ConfigureAwait(false))
         {
             return false;
         }
@@ -102,7 +135,7 @@ internal static class LeaveTransfers
         var projection = LeaveLots.Project(lines.Where(l => l.Date <= lastDay), lastDay);
         foreach (var expiry in projection.Expiries)
         {
-            await InsertAsync(db, from.CompanyId, from.Id, item.LeaveTypeId, item.LeaveYear, expiry.On, expiry.Kind, -expiry.Quantity, LeaveLots.ExpirySource, LeaveLots.ExpirySourceId(expiry.LotId), "expired", now, actor, ct).ConfigureAwait(false);
+            await InsertAsync(db, from.CompanyId, from.Id, item.LeaveTypeId, item.LeaveYear, expiry.On, expiry.Kind, -expiry.Quantity, null, LeaveLots.ExpirySource, LeaveLots.ExpirySourceId(expiry.LotId), "expired", now, actor, ct).ConfigureAwait(false);
         }
 
         var balance = projection.Closing;
@@ -118,26 +151,74 @@ internal static class LeaveTransfers
                     ?.For((await db.Set<LeaveType>().AsNoTracking().FirstAsync(t => t.Id == into, ct).ConfigureAwait(false)).Code);
                 var year = await new LeaveYearSetting(services.GetRequiredService<ISettings>()).YearAsync(to.CompanyId, rules, separation.EffectiveDate, ct).ConfigureAwait(false);
                 await LeaveLedgerStore.LockAsync(db, to.Id, into, ct).ConfigureAwait(false);
-                await InsertAsync(db, from.CompanyId, from.Id, item.LeaveTypeId, item.LeaveYear, lastDay, "transfer_out", -balance, Source, item.SourceId, "transfer", now, actor, ct).ConfigureAwait(false);
-                await InsertAsync(db, to.CompanyId, to.Id, into, year.Year, separation.EffectiveDate, "transfer_in", balance, Source, item.SourceId, "transfer", now, actor, ct).ConfigureAwait(false);
+                var lots = projection.Open.Where(l => l.ExpiresOn >= separation.EffectiveDate).ToList();
+                foreach (var ending in projection.Open.Where(l => l.ExpiresOn < separation.EffectiveDate))
+                {
+                    // usable only up to the last day: it lapses there and does not move
+                    await InsertAsync(db, from.CompanyId, from.Id, item.LeaveTypeId, item.LeaveYear, lastDay, ending.Kind == "comp_off_earned" ? "comp_off_expired" : "lapse", -ending.Remaining, null, Source,
+                        SourceIdOf(separation.Id, item.LeaveTypeId, ending.LotId), marker, now, actor, ct).ConfigureAwait(false);
+                }
+
+                foreach (var lot in lots)
+                {
+                    var lotSource = SourceIdOf(separation.Id, item.LeaveTypeId, lot.LotId);
+                    await InsertAsync(db, from.CompanyId, from.Id, item.LeaveTypeId, item.LeaveYear, lastDay, "transfer_out", -lot.Remaining, null, Source, lotSource, marker, now, actor, ct).ConfigureAwait(false);
+                    await InsertAsync(db, to.CompanyId, to.Id, into, year.Year, separation.EffectiveDate, "transfer_in", lot.Remaining, lot.ExpiresOn, Source, lotSource, marker, now, actor, ct).ConfigureAwait(false);
+                }
+
+                var rest = balance - projection.Open.Sum(l => l.Remaining);
+                if (rest != 0m)
+                {
+                    await InsertAsync(db, from.CompanyId, from.Id, item.LeaveTypeId, item.LeaveYear, lastDay, "transfer_out", -rest, null, Source, item.SourceId, marker, now, actor, ct).ConfigureAwait(false);
+                    await InsertAsync(db, to.CompanyId, to.Id, into, year.Year, separation.EffectiveDate, "transfer_in", rest, null, Source, item.SourceId, marker, now, actor, ct).ConfigureAwait(false);
+                }
+
                 return true;
             case "encash" when balance > 0m:
-                await InsertAsync(db, from.CompanyId, from.Id, item.LeaveTypeId, item.LeaveYear, lastDay, "encashment", -balance, Source, item.SourceId, "transfer", now, actor, ct).ConfigureAwait(false);
+                await InsertAsync(db, from.CompanyId, from.Id, item.LeaveTypeId, item.LeaveYear, lastDay, "encashment", -balance, null, Source, item.SourceId, marker, now, actor, ct).ConfigureAwait(false);
                 return true;
             case "lapse" when balance > 0m:
-                await InsertAsync(db, from.CompanyId, from.Id, item.LeaveTypeId, item.LeaveYear, lastDay, "lapse", -balance, Source, item.SourceId, "transfer", now, actor, ct).ConfigureAwait(false);
+                await InsertAsync(db, from.CompanyId, from.Id, item.LeaveTypeId, item.LeaveYear, lastDay, "lapse", -balance, null, Source, item.SourceId, marker, now, actor, ct).ConfigureAwait(false);
                 return true;
             default:
                 return false;
         }
     }
 
-    private static Task<int> InsertAsync(HrmDbContext db, Guid company, Guid employment, Guid type, int year, DateOnly date, string kind, decimal quantity, string source, Guid sourceId,
+    /// <summary>Posts every item of a transfer from the employment that is due now (after the consumer, or once a year-end it waited for applied).</summary>
+    public static async Task<int> PostDueAsync(HrmDbContext db, IServiceProvider services, Guid fromEmploymentId, DateTimeOffset now, Guid actor, CancellationToken ct)
+    {
+        var separation = await SeparationAsync(db, fromEmploymentId, ct).ConfigureAwait(false);
+        if (separation is null || EmploymentApplier.NextEmployment(separation) is not { } next)
+        {
+            return 0;
+        }
+
+        var from = await db.Set<Employment>().AsNoTracking().FirstAsync(x => x.Id == fromEmploymentId, ct).ConfigureAwait(false);
+        var to = await db.Set<Employment>().AsNoTracking().FirstOrDefaultAsync(x => x.Id == next, ct).ConfigureAwait(false);
+        if (to is null)
+        {
+            return 0;
+        }
+
+        var posted = 0;
+        foreach (var item in await PlanAsync(db, services, from, to, separation, ct).ConfigureAwait(false))
+        {
+            if (item.Status == "due" && await PostAsync(db, services, from, to, separation, item, item.TargetTypeId, now, actor, ct).ConfigureAwait(false))
+            {
+                posted++;
+            }
+        }
+
+        return posted;
+    }
+
+    private static Task<int> InsertAsync(HrmDbContext db, Guid company, Guid employment, Guid type, int year, DateOnly date, string kind, decimal quantity, DateOnly? expires, string source, Guid sourceId,
         string reason, DateTimeOffset now, Guid actor, CancellationToken ct) =>
         db.Database.ExecuteSqlInterpolatedAsync($"""
             insert into hrm.leave_ledger (id, company_id, employment_id, leave_type_id, leave_year, entry_date, kind, quantity, expires_on, source_type, source_id,
                                           policy_version_id, reverses_entry_id, reason, created_at, created_by)
-            values ({Guid.CreateVersion7(now)}, {company}, {employment}, {type}, {year}, {date}, {kind}, {quantity}, null, {source}, {sourceId}, null, null, {reason}, {now}, {actor})
+            values ({Guid.CreateVersion7(now)}, {company}, {employment}, {type}, {year}, {date}, {kind}, {quantity}, {expires}, {source}, {sourceId}, null, null, {reason}, {now}, {actor})
             on conflict (source_type, source_id, kind, leave_type_id) where source_id is not null do nothing
             """, ct);
 }
@@ -157,31 +238,14 @@ public sealed class LeaveTransferConsumer(IServiceProvider services, IClock cloc
         ArgumentNullException.ThrowIfNull(message);
         ArgumentNullException.ThrowIfNull(transaction);
         var p = message.Payload;
-        if (!p.TryGetProperty("nextEmploymentId", out var n) || n.ValueKind != JsonValueKind.String || !Guid.TryParse(n.GetString(), out var next))
+        if (!p.TryGetProperty("nextEmploymentId", out var n) || n.ValueKind != JsonValueKind.String || !Guid.TryParse(n.GetString(), out _))
         {
             return; // not a transfer between companies
         }
 
         var actor = message.Headers.ValueKind == JsonValueKind.Object && message.Headers.TryGetProperty("actor", out var a) && a.ValueKind == JsonValueKind.String && Guid.TryParse(a.GetString(), out var g) ? g : Guid.Empty;
-        var fromId = p.GetProperty("employmentId").GetGuid();
-        var eventId = p.GetProperty("eventId").GetGuid();
         await using var db = await LeaveOnTransaction.OpenAsync(services, transaction, cancellationToken).ConfigureAwait(false);
-        var from = await db.Set<Employment>().AsNoTracking().FirstOrDefaultAsync(x => x.Id == fromId, cancellationToken).ConfigureAwait(false);
-        var to = await db.Set<Employment>().AsNoTracking().FirstOrDefaultAsync(x => x.Id == next, cancellationToken).ConfigureAwait(false);
-        var separation = await db.Set<EmploymentEvent>().AsNoTracking().FirstOrDefaultAsync(x => x.Id == eventId, cancellationToken).ConfigureAwait(false);
-        if (from is null || to is null || separation is null)
-        {
-            return;
-        }
-
-        var now = clock.UtcNow;
-        foreach (var item in await LeaveTransfers.PlanAsync(db, services, from, to, separation, cancellationToken).ConfigureAwait(false))
-        {
-            if (item.Status == "due")
-            {
-                await LeaveTransfers.PostAsync(db, services, from, to, separation, item, item.TargetTypeId, now, actor, cancellationToken).ConfigureAwait(false);
-            }
-        }
+        await LeaveTransfers.PostDueAsync(db, services, p.GetProperty("employmentId").GetGuid(), clock.UtcNow, actor, cancellationToken).ConfigureAwait(false);
     }
 }
 

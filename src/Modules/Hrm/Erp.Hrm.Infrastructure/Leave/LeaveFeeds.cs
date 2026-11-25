@@ -32,7 +32,7 @@ internal sealed class LeaveDeductionReader(HrmDbContext db, IAttendancePeriodLoc
                           join r in db.Set<LeaveRequest>().AsNoTracking() on d.LeaveRequestId equals r.Id
                           join t in db.Set<LeaveType>().AsNoTracking() on r.LeaveTypeId equals t.Id
                           where ids.Contains(d.EmploymentId) && d.LeaveDate >= firstDay && d.LeaveDate <= lastDay && (r.Status == "approved" || r.Status == "cancel_requested")
-                              && !t.IsPaid && t.IsUnpaidDeduction && d.Quantity > 0m
+                              && !d.IsPaid && t.IsUnpaidDeduction && d.Quantity > 0m // the day's own copy of "paid" (review S1.32b finding 11)
                           orderby d.EmploymentId, d.LeaveDate, r.Id
                           select new { d.EmploymentId, d.LeaveDate, RequestId = r.Id, TypeId = t.Id, t.Code, d.Quantity, Hours = t.Counting == "hours" })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -126,13 +126,28 @@ public sealed class CompOffConsumer(IServiceProvider services, IClock clock) : I
         var policy = await new LeavePolicyReader(PolicyResolver.For(db, services)).AtAsync(e.Id, workDate, cancellationToken).ConfigureAwait(false);
         var rules = policy?.For(type.Code);
         var year = await new LeaveYearSetting(services.GetRequiredService<ISettings>()).YearAsync(e.CompanyId, rules, workDate, cancellationToken).ConfigureAwait(false);
+        var expires = rules?.CompOffExpiryDays is { } n ? workDate.AddDays(n) : (DateOnly?)null;
+        var entryDate = workDate;
+
+        // Work in a leave year its year-end has closed earns into the next open year, from its first day, with the same expiry (review S1.32b finding 6).
+        while (await LeaveYearEnds.ClosedAsync(db, e.CompanyId, type.Id, year.Year, cancellationToken).ConfigureAwait(false))
+        {
+            year = LeaveYears.For(year.Year + 1, year.Start.Month);
+            entryDate = year.Start;
+        }
+
+        if (expires is { } last && last < entryDate)
+        {
+            return; // already expired before it could be used
+        }
+
         var now = clock.UtcNow;
         await LeaveLedgerStore.LockAsync(db, e.Id, type.Id, cancellationToken).ConfigureAwait(false);
         await db.Database.ExecuteSqlInterpolatedAsync($"""
             insert into hrm.leave_ledger (id, company_id, employment_id, leave_type_id, leave_year, entry_date, kind, quantity, expires_on, source_type, source_id,
                                           policy_version_id, reverses_entry_id, reason, created_at, created_by)
-            values ({Guid.CreateVersion7(now)}, {e.CompanyId}, {e.Id}, {type.Id}, {year.Year}, {workDate}, 'comp_off_earned', {quantity},
-                    {(rules?.CompOffExpiryDays is { } n ? workDate.AddDays(n) : (DateOnly?)null)}, {SourceType}, {sourceId}, {policy?.Resolution.Policy?.VersionId}, null, 'comp_off', {now}, {actor})
+            values ({Guid.CreateVersion7(now)}, {e.CompanyId}, {e.Id}, {type.Id}, {year.Year}, {entryDate}, 'comp_off_earned', {quantity},
+                    {expires}, {SourceType}, {sourceId}, {policy?.Resolution.Policy?.VersionId}, null, 'comp_off', {now}, {actor})
             on conflict (source_type, source_id, kind, leave_type_id) where source_id is not null do nothing
             """, cancellationToken).ConfigureAwait(false);
     }
@@ -147,6 +162,9 @@ public sealed class CompOffConsumer(IServiceProvider services, IClock clock) : I
 internal sealed class LeaveExpiryJob(IClock clock) : IJobHandler
 {
     public const string JobCode = "hrm.leave_expiry";
+
+    /// <summary>How far back the job looks for lots that expired (a stopped job catches up within this; a year-end posts what is still due).</summary>
+    public const int LookBackDays = 400;
 
     public string Code => JobCode;
 
@@ -164,7 +182,11 @@ internal sealed class LeaveExpiryJob(IClock clock) : IJobHandler
             var policies = new LeavePolicyReader(PolicyResolver.For(db, job.Services));
             var years = new LeaveYearSetting(settings);
             var newest = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime).AddDays(1);
-            var lots = db.Set<LeaveLedger>().AsNoTracking().Where(x => x.ExpiresOn != null && x.ExpiresOn < newest && x.Quantity > 0m && x.ReversesEntryId == null
+            // A lot used up before its expiry never gets an entry: one that expired and was posted more than the look-back ago is not looked at again
+            // (review S1.32b finding 14); a lot posted late (an old expiry, posted recently) is still found by its posting time.
+            var oldest = newest.AddDays(-LookBackDays);
+            var postedSince = clock.UtcNow.AddDays(-LookBackDays);
+            var lots = db.Set<LeaveLedger>().AsNoTracking().Where(x => x.ExpiresOn != null && x.ExpiresOn < newest && (x.ExpiresOn >= oldest || x.CreatedAt >= postedSince) && x.Quantity > 0m && x.ReversesEntryId == null
                 && !db.Set<LeaveLedger>().Any(y => y.SourceType == LeaveLots.ExpirySource && y.SourceId == x.Id));
             if (job.CompanyId is { } company)
             {

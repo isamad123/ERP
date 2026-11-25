@@ -212,7 +212,8 @@ internal sealed class LeaveRequestService(
             tracked.Reason = Reason(input.Reason) ?? tracked.Reason;
             tracked.BranchId = plan.BranchId ?? tracked.BranchId;
             EmploymentApplier.Bump(tracked, now, actor.UserId);
-            await db.Set<LeaveRequestDay>().Where(d => d.LeaveRequestId == tracked.Id).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+            db.RemoveRange(await db.Set<LeaveRequestDay>().Where(d => d.LeaveRequestId == tracked.Id).ToListAsync(cancellationToken).ConfigureAwait(false)); // audited (review S1.32b finding 10)
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             AddDays(tracked, type, plan, now);
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return new PeopleResult(PeopleOutcome.Done, Body: View(tracked, plan, type));
@@ -276,7 +277,8 @@ internal sealed class LeaveRequestService(
             // The days are counted again on the day it is sent (the plan may have changed since the draft was saved).
             var now = clock.UtcNow;
             tracked.Days = DaysOf(plan, type);
-            await db.Set<LeaveRequestDay>().Where(d => d.LeaveRequestId == tracked.Id).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+            db.RemoveRange(await db.Set<LeaveRequestDay>().Where(d => d.LeaveRequestId == tracked.Id).ToListAsync(cancellationToken).ConfigureAwait(false)); // audited (review S1.32b finding 10)
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             AddDays(tracked, type, plan, now);
             return await SendAsync(tracked, e, type, plan, now, cancellationToken).ConfigureAwait(false);
         }, cancellationToken).ConfigureAwait(false);
@@ -308,7 +310,7 @@ internal sealed class LeaveRequestService(
             return PeopleResult.Conflict(Withdraw, new Dictionary<string, object?> { ["instanceId"] = row.WorkflowInstanceId });
         }
 
-        if (row.Status is not ("draft" or "approved"))
+        if (row.Status is not ("draft" or "approved" or "cancel_requested"))
         {
             return PeopleResult.Conflict(NotCancellable);
         }
@@ -325,6 +327,24 @@ internal sealed class LeaveRequestService(
             }
 
             var now = clock.UtcNow;
+
+            // A cancellation returned for correction is sent back to its route (review S1.32b finding 3); one still running is waiting already.
+            if (tracked.Status == "cancel_requested")
+            {
+                var returnedRules = (await planner.Policies.AtAsync(e.Id, tracked.StartDate, cancellationToken).ConfigureAwait(false))?.For(type.Code);
+                var again = LeaveWorkflowValues.Of(tracked, e, type, returnedRules, e.UserRef != actor.UserId,
+                    await LeaveWorkflowValues.LineManagerAsync(db, e.Id, await applier.TodayAsync(e.CompanyId, now, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false));
+                again["reason"] = JsonSerializer.SerializeToElement(reason);
+                var resent = await workflow.ResubmitAsync(LeaveWorkflowValues.CancellationType, tracked.Id, again, db.Database.CurrentTransaction!.GetDbTransaction(), cancellationToken).ConfigureAwait(false);
+                return new PeopleResult(PeopleOutcome.Pending, Body: new { id = tracked.Id, status = tracked.Status, cancellationInstanceId = resent.InstanceId, rowVersion = tracked.RowVersion });
+            }
+
+            // Approved leave with a change waiting is not cancelled under it: the change is withdrawn first (review S1.32b finding 12).
+            if (tracked.Status == "approved" && await db.Set<LeaveRequest>().AsNoTracking().AnyAsync(r => r.ModifiesRequestId == tracked.Id && (r.Status == "draft" || r.Status == "submitted"), cancellationToken).ConfigureAwait(false))
+            {
+                return PeopleResult.Conflict(ChangeOpen);
+            }
+
             if (tracked.Status == "draft")
             {
                 await LeaveUsage.SetStatusAsync(db, tracked, "cancelled", now, actor.UserId, cancellationToken).ConfigureAwait(false);
@@ -342,7 +362,8 @@ internal sealed class LeaveRequestService(
             {
                 await LeaveUsage.SetStatusAsync(db, tracked, "cancel_requested", now, actor.UserId, cancellationToken).ConfigureAwait(false);
                 await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                var values = LeaveWorkflowValues.Of(tracked, e, type, rules, e.UserRef != actor.UserId);
+                var today = await applier.TodayAsync(e.CompanyId, now, cancellationToken).ConfigureAwait(false);
+                var values = LeaveWorkflowValues.Of(tracked, e, type, rules, e.UserRef != actor.UserId, await LeaveWorkflowValues.LineManagerAsync(db, e.Id, today, cancellationToken).ConfigureAwait(false));
                 values["reason"] = JsonSerializer.SerializeToElement(reason);
                 var started = await workflow.StartAsync(new WorkflowStartRequest(LeaveWorkflowValues.CancellationType, tracked.Id, tracked.CompanyId,
                     e.UserRef is { } subject ? [subject] : [], values), db.Database.CurrentTransaction!.GetDbTransaction(), cancellationToken).ConfigureAwait(false);
@@ -427,10 +448,12 @@ internal sealed class LeaveRequestService(
         var id = Guid.CreateVersion7(clock.UtcNow);
         return await InTransactionAsync(async () =>
         {
-            await LeaveLedgerStore.LockAsync(db, e.Id, type.Id, ct).ConfigureAwait(false);
-            if (modifies is not null && modifies.LeaveTypeId != type.Id)
+            await LeaveLedgerStore.LockTypesAsync(db, e.Id, [type.Id, modifies?.LeaveTypeId], ct).ConfigureAwait(false);
+
+            // One change of approved leave at a time, checked under the lock (review S1.32b finding 12).
+            if (modifies is not null && await db.Set<LeaveRequest>().AsNoTracking().AnyAsync(r => r.ModifiesRequestId == modifies.Id && (r.Status == "draft" || r.Status == "submitted"), ct).ConfigureAwait(false))
             {
-                await LeaveLedgerStore.LockAsync(db, e.Id, modifies.LeaveTypeId, ct).ConfigureAwait(false);
+                return PeopleResult.Conflict(ChangeOpen);
             }
 
             var today = await applier.TodayAsync(e.CompanyId, clock.UtcNow, ct).ConfigureAwait(false);
@@ -501,7 +524,8 @@ internal sealed class LeaveRequestService(
         }
 
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
-        var values = LeaveWorkflowValues.Of(row, e, type, plan.Rules, e.UserRef != actor.UserId);
+        var today = await applier.TodayAsync(e.CompanyId, now, ct).ConfigureAwait(false);
+        var values = LeaveWorkflowValues.Of(row, e, type, plan.Rules, e.UserRef != actor.UserId, await LeaveWorkflowValues.LineManagerAsync(db, e.Id, today, ct).ConfigureAwait(false));
         var tx = db.Database.CurrentTransaction!.GetDbTransaction();
         var started = returned
             ? await workflow.ResubmitAsync(LeaveWorkflowValues.RequestType, row.Id, values, tx, ct).ConfigureAwait(false)

@@ -24,10 +24,24 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Erp.Hrm.Infrastructure.Leave;
 
-/// <summary>One line of a year-end preview: an employment and leave type, its closing balance and what happens to it.</summary>
+/// <summary>A lot still usable after the year's end (comp-off, a carried-forward or granted lot with a later expiry): carried with its own expiry (review S1.32b finding 6).</summary>
+internal sealed record YearEndLot(Guid LotId, decimal Quantity, DateOnly ExpiresOn);
+
+/// <summary>
+/// One line of a year-end preview: an employment and leave type, its closing balance and what happens to it. <see cref="Lots"/> are carried with their own
+/// expiry outside the cap; the rest of the closing balance is split by the policy (carry, payout, lapse); what expires on the last day lapses.
+/// </summary>
 internal sealed record YearEndLine(
     Guid EmploymentId, string EmployeeNo, Guid LeaveTypeId, string Code, string Unit, DateOnly YearStart, DateOnly YearEnd, decimal Closing, decimal CarryForward,
-    decimal Encash, decimal Lapse, DateOnly? CarryExpiresOn, Guid? PolicyVersionId, string? RateBasis, string Status);
+    decimal Encash, decimal Lapse, DateOnly? CarryExpiresOn, Guid? PolicyVersionId, string? RateBasis, string Status, IReadOnlyList<YearEndLot>? Lots = null)
+{
+    /// <summary>What decides the line, for comparing a preview with the ledger now (the stale check).</summary>
+    public string Key => string.Join('|', EmploymentId.ToString("D", CultureInfo.InvariantCulture), LeaveTypeId.ToString("D", CultureInfo.InvariantCulture), Status,
+        N(Closing), N(CarryForward), N(Encash), N(Lapse), CarryExpiresOn?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+        string.Join(',', (Lots ?? []).Select(l => l.LotId.ToString("D", CultureInfo.InvariantCulture) + ":" + N(l.Quantity) + ":" + l.ExpiresOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))));
+
+    private static string N(decimal d) => d.ToString("0.######", CultureInfo.InvariantCulture);
+}
 
 /// <summary>A leave type of a year-end run with its leave year (types may start their year in different months).</summary>
 internal sealed record YearEndType(Guid LeaveTypeId, string Code, DateOnly YearStart, DateOnly YearEnd);
@@ -86,9 +100,15 @@ internal static class LeaveYearEndPlanner
                     continue;
                 }
 
-                var split = YearEndRules.Split(closing, rules, span.End.AddDays(1));
-                lines.Add(new YearEndLine(e.Id, e.EmployeeNo, type.Id, type.Code, type.Unit, span.Start, span.End, closing, split.CarryForward, split.Encash, split.Lapse, split.CarryExpiresOn,
-                    policy!.Resolution.Policy?.VersionId, rules.EncashmentRateBasis, Ok));
+                // Lots still usable after the last day keep their own expiry and are carried outside the cap; a lot ending on the last day lapses;
+                // the rest follows the policy (review S1.32b finding 6).
+                var projection = LeaveLots.Project(entries, span.End);
+                var later = projection.Open.Where(l => l.ExpiresOn > span.End).Select(l => new YearEndLot(l.LotId, l.Remaining, l.ExpiresOn)).ToList();
+                var ending = projection.Open.Where(l => l.ExpiresOn <= span.End).Sum(l => l.Remaining);
+                var rest = closing - later.Sum(l => l.Quantity) - ending;
+                var split = YearEndRules.Split(rest, rules, span.End.AddDays(1));
+                lines.Add(new YearEndLine(e.Id, e.EmployeeNo, type.Id, type.Code, type.Unit, span.Start, span.End, closing, split.CarryForward, split.Encash, split.Lapse + ending, split.CarryExpiresOn,
+                    policy!.Resolution.Policy?.VersionId, rules.EncashmentRateBasis, Ok, later.Count == 0 ? null : later));
             }
         }
 
@@ -106,7 +126,7 @@ internal static class LeaveYearEndPlanner
             totals = new
             {
                 lines = lines.Count,
-                carryForward = ok.Sum(l => l.CarryForward),
+                carryForward = ok.Sum(l => l.CarryForward + (l.Lots ?? []).Sum(x => x.Quantity)),
                 encash = ok.Sum(l => l.Encash),
                 lapse = ok.Sum(l => l.Lapse),
                 noPolicy = lines.Count(l => l.Status == NoPolicy),
@@ -121,6 +141,10 @@ internal static class LeaveYearEndPlanner
 
     public static List<YearEndType> Types(JsonDocument summary) =>
         summary.RootElement.TryGetProperty("types", out var t) ? t.Deserialize<List<YearEndType>>(JsonSerializerOptions.Web) ?? [] : [];
+
+    /// <summary>The last day of the latest leave year in the run: every line's and every type's year must be over before it is confirmed (review S1.32b finding 7).</summary>
+    public static DateOnly LastDay(JsonDocument summary) =>
+        Lines(summary).Select(l => l.YearEnd).Concat(Types(summary).Select(t => t.YearEnd)).DefaultIfEmpty(DateOnly.MinValue).Max();
 
     private static DateOnly Min(DateOnly a, DateOnly? b) => b is { } x && x < a ? x : a;
 }
@@ -188,8 +212,25 @@ internal static class LeaveYearEndPosting
     public const string NotPreview = "errors.hrm.leave.year_end.not_preview";
     public const string Stale = "errors.hrm.leave.year_end.stale";
     public const string NotOver = "errors.hrm.leave.year_end.year_not_over";
+    public const string RequestsWaiting = "errors.hrm.leave.year_end.requests_waiting";
 
-    public static async Task<PeopleResult?> ApplyAsync(HrmDbContext db, Guid runId, long? rowVersion, DateTimeOffset now, Guid actor, DateOnly today, CancellationToken ct)
+    /// <summary>
+    /// The refusal while leave of the run's year still waits for a decision (submitted, or a cancellation asked for): once the year is closed it
+    /// could no longer be decided (review S1.32b finding 4). Asked when the confirmation is requested and again when it is applied.
+    /// </summary>
+    public static async Task<PeopleResult?> WaitingAsync(HrmDbContext db, LeaveYearEndRun run, CancellationToken ct)
+    {
+        var lastDay = LeaveYearEndPlanner.LastDay(run.Summary);
+        var types = LeaveYearEndPlanner.Types(run.Summary);
+        var typeIds = types.Select(t => t.LeaveTypeId).ToList();
+        var first = types.Select(t => t.YearStart).DefaultIfEmpty(lastDay).Min();
+        var waiting = await db.Set<LeaveRequest>().AsNoTracking()
+            .CountAsync(r => r.CompanyId == run.CompanyId && typeIds.Contains(r.LeaveTypeId) && (r.Status == "submitted" || r.Status == "cancel_requested") && r.StartDate >= first && r.StartDate <= lastDay, ct)
+            .ConfigureAwait(false);
+        return waiting > 0 ? PeopleResult.Conflict(RequestsWaiting, new Dictionary<string, object?> { ["waiting"] = waiting }) : null;
+    }
+
+    public static async Task<PeopleResult?> ApplyAsync(HrmDbContext db, IServiceProvider services, Guid runId, long? rowVersion, DateTimeOffset now, Guid actor, DateOnly today, CancellationToken ct)
     {
         await db.Database.ExecuteSqlInterpolatedAsync($"select 1 from hrm.leave_year_end_runs where id = {runId} for update", ct).ConfigureAwait(false);
         var run = await db.Set<LeaveYearEndRun>().FirstOrDefaultAsync(r => r.Id == runId, ct).ConfigureAwait(false);
@@ -208,31 +249,34 @@ internal static class LeaveYearEndPosting
             return PeopleResult.Conflict(PersonService.Concurrency);
         }
 
-        var types = LeaveYearEndPlanner.Types(run.Summary);
-        if (types.Any(t => t.YearEnd >= today))
+        // Every line's and every type's year must be over (review S1.32b finding 7: types may start their year in different months by policy).
+        var lastDay = LeaveYearEndPlanner.LastDay(run.Summary);
+        if (lastDay >= today)
         {
-            return PeopleResult.Conflict(NotOver, new Dictionary<string, object?> { ["yearEnd"] = types.Max(t => t.YearEnd) });
+            return PeopleResult.Conflict(NotOver, new Dictionary<string, object?> { ["yearEnd"] = lastDay });
         }
 
-        // First every line is checked (a balance that moved since the preview makes it stale: nothing is posted), then everything is posted.
-        var lines = LeaveYearEndPlanner.Lines(run.Summary);
-        var checkedLines = new List<(YearEndLine Line, LotProjection Projection)>();
-        foreach (var line in lines.Where(l => l.Status == LeaveYearEndPlanner.Ok))
+        if (await WaitingAsync(db, run, ct).ConfigureAwait(false) is { } waiting)
         {
-            var entries = await LeaveBalances.LinesAsync(db, line.EmploymentId, line.LeaveTypeId, run.LeaveYear, ct).ConfigureAwait(false);
-            checkedLines.Add((line, LeaveLots.Project(entries, line.YearEnd)));
+            return waiting;
         }
 
-        var stale = checkedLines.Count(c => c.Projection.Closing != c.Line.Closing);
-        if (stale > 0)
+        // The whole company and year are worked out again; any line added, removed or changed since the preview makes it stale and nothing is posted
+        // (review S1.32b finding 4: a balance added after the preview, or an employee without one then, would otherwise be closed untouched).
+        var (_, plan) = await LeaveYearEndPlanner.PlanAsync(db, services, run.CompanyId, run.LeaveYear, ct).ConfigureAwait(false);
+        var previewed = LeaveYearEndPlanner.Lines(run.Summary);
+        var before = previewed.Select(l => l.Key).Order(StringComparer.Ordinal).ToList();
+        var nowKeys = plan.Select(l => l.Key).Order(StringComparer.Ordinal).ToList();
+        if (!before.SequenceEqual(nowKeys, StringComparer.Ordinal))
         {
-            return PeopleResult.Conflict(Stale, new Dictionary<string, object?> { ["stale"] = stale });
+            return PeopleResult.Conflict(Stale, new Dictionary<string, object?> { ["stale"] = before.Except(nowKeys, StringComparer.Ordinal).Count() + nowKeys.Except(before, StringComparer.Ordinal).Count() });
         }
 
         var posted = 0;
-        foreach (var (line, projection) in checkedLines)
+        foreach (var line in plan.Where(l => l.Status == LeaveYearEndPlanner.Ok))
         {
-            foreach (var expiry in projection.Expiries)
+            var entries = await LeaveBalances.LinesAsync(db, line.EmploymentId, line.LeaveTypeId, run.LeaveYear, ct).ConfigureAwait(false);
+            foreach (var expiry in LeaveLots.Project(entries, line.YearEnd).Expiries)
             {
                 posted += await InsertAsync(db, run.CompanyId, line.EmploymentId, line.LeaveTypeId, run.LeaveYear, expiry.On, expiry.Kind, -expiry.Quantity, null, LeaveLots.ExpirySource,
                     LeaveLots.ExpirySourceId(expiry.LotId), null, "expired", now, actor, ct).ConfigureAwait(false);
@@ -255,6 +299,16 @@ internal static class LeaveYearEndPosting
                 posted += await InsertAsync(db, run.CompanyId, line.EmploymentId, line.LeaveTypeId, run.LeaveYear + 1, line.YearEnd.AddDays(1), "carry_forward", line.CarryForward, line.CarryExpiresOn, Source,
                     YearEndRules.SourceId(run.Id, line.EmploymentId, line.LeaveTypeId, "in"), line.PolicyVersionId, "year_end_in", now, actor, ct).ConfigureAwait(false);
             }
+
+            // Lots usable after the last day go into the next year with their own expiry, one pair per lot (review S1.32b finding 6).
+            foreach (var lot in line.Lots ?? [])
+            {
+                var side = "lot:" + lot.LotId.ToString("D", CultureInfo.InvariantCulture);
+                posted += await InsertAsync(db, run.CompanyId, line.EmploymentId, line.LeaveTypeId, run.LeaveYear, line.YearEnd, "carry_forward", -lot.Quantity, null, Source,
+                    YearEndRules.SourceId(run.Id, line.EmploymentId, line.LeaveTypeId, side + ":out"), line.PolicyVersionId, "year_end_out", now, actor, ct).ConfigureAwait(false);
+                posted += await InsertAsync(db, run.CompanyId, line.EmploymentId, line.LeaveTypeId, run.LeaveYear + 1, line.YearEnd.AddDays(1), "carry_forward", lot.Quantity, lot.ExpiresOn, Source,
+                    YearEndRules.SourceId(run.Id, line.EmploymentId, line.LeaveTypeId, side + ":in"), line.PolicyVersionId, "year_end_in", now, actor, ct).ConfigureAwait(false);
+            }
         }
 
         var summary = JsonNode.Parse(run.Summary.RootElement.GetRawText())!.AsObject();
@@ -265,6 +319,13 @@ internal static class LeaveYearEndPosting
         run.Status = "applied";
         EmploymentApplier.Bump(run, now, actor);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        // A transfer between companies that waited for this year-end moves its balance now (review S1.32b finding 5).
+        foreach (var employmentId in plan.Where(l => l.Status == LeaveYearEndPlanner.Ok).Select(l => l.EmploymentId).Distinct())
+        {
+            await LeaveTransfers.PostDueAsync(db, services, employmentId, now, actor, ct).ConfigureAwait(false);
+        }
+
         return null;
     }
 
@@ -287,7 +348,8 @@ internal sealed class LeaveYearEndService(
     IDataScopeFilter scope,
     ISettings settings,
     IHeldChanges held,
-    EmploymentApplier applier) : ILeaveYearEndService
+    EmploymentApplier applier,
+    IServiceProvider services) : ILeaveYearEndService
 {
     public const string HeldKind = "hrm.leave_year_end.confirm";
     public const string AlreadyHeld = "errors.hrm.leave.year_end.pending";
@@ -306,10 +368,15 @@ internal sealed class LeaveYearEndService(
         }
 
         var today = await applier.TodayAsync(run.CompanyId, clock.UtcNow, cancellationToken).ConfigureAwait(false);
-        var types = LeaveYearEndPlanner.Types(run.Summary);
-        if (types.Any(t => t.YearEnd >= today))
+        var lastDay = LeaveYearEndPlanner.LastDay(run.Summary);
+        if (lastDay >= today)
         {
-            return PeopleResult.Conflict(LeaveYearEndPosting.NotOver, new Dictionary<string, object?> { ["yearEnd"] = types.Max(t => t.YearEnd) });
+            return PeopleResult.Conflict(LeaveYearEndPosting.NotOver, new Dictionary<string, object?> { ["yearEnd"] = lastDay });
+        }
+
+        if (await LeaveYearEndPosting.WaitingAsync(db, run, cancellationToken).ConfigureAwait(false) is { } waiting)
+        {
+            return waiting;
         }
 
         var hold = (await settings.GetAsync(HrmSettingKeys.HrmLeaveYearEndRequiresApproval, new SettingContext(run.CompanyId, null), cancellationToken).ConfigureAwait(false)).Value;
@@ -328,7 +395,7 @@ internal sealed class LeaveYearEndService(
             return new PeopleResult(PeopleOutcome.Pending, Body: new { id = run.Id, status = "pending", requestId });
         }
 
-        if (await LeaveYearEndPosting.ApplyAsync(db, run.Id, decision.RowVersion, clock.UtcNow, actor.UserId, today, cancellationToken).ConfigureAwait(false) is { } refused)
+        if (await LeaveYearEndPosting.ApplyAsync(db, services, run.Id, decision.RowVersion, clock.UtcNow, actor.UserId, today, cancellationToken).ConfigureAwait(false) is { } refused)
         {
             await tx.RollbackAsync(cancellationToken).ConfigureAwait(false);
             db.ChangeTracker.Clear();
@@ -431,7 +498,7 @@ internal sealed class YearEndConfirmHandler(IServiceProvider services, IDataScop
         }
 
         var today = await new EmploymentApplier(db, settings, PolicyResolver.For(db, services)).TodayAsync(company.Value, clock.UtcNow, cancellationToken).ConfigureAwait(false);
-        var refused = await LeaveYearEndPosting.ApplyAsync(db, h.RunId, h.RowVersion, clock.UtcNow, actor.UserId, today, cancellationToken).ConfigureAwait(false);
+        var refused = await LeaveYearEndPosting.ApplyAsync(db, services, h.RunId, h.RowVersion, clock.UtcNow, actor.UserId, today, cancellationToken).ConfigureAwait(false);
         return refused is null ? null : new HeldChangeProblem(refused.Error ?? "errors.data.invalid_request");
     }
 

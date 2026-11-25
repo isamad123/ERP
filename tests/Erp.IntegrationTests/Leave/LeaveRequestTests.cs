@@ -737,6 +737,156 @@ public sealed class LeaveRequestTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Conflict, (await _h.PostAsync(first.Admin, $"{Employments}/{carried}/leave-transfer", new { maps = new[] { new { fromLeaveTypeId = casual, toLeaveTypeId = annualThere } } }, Ct)).Status);
     }
 
+    // ------------------------------------------------------------------ review S1.32b fixes (findings 2 to 6)
+
+    [Fact]
+    public async Task GHR_09_review_2_for_an_employee_without_a_sign_in_the_line_manager_step_goes_to_the_employees_manager_not_the_appliers()
+    {
+        var o = await OrgAsync();
+        var hrManagerUser = await _h.UserAsync(Ct, null, "line_manager");
+        var hrManager = await HireAsync(o, Base.AddYears(-3), hrManagerUser);
+        await HireAsync(o, Base.AddYears(-3), o.Admin, hrManager); // the HR administrator is an employee with a line manager of their own
+        var workerManagerUser = await _h.UserAsync(Ct, null, "line_manager");
+        var workerManager = await HireAsync(o, Base.AddYears(-3), workerManagerUser);
+        var worker = await HireAsync(o, Base.AddYears(-2), manager: workerManager); // no sign-in
+        var type = await TypeAsync(o, "ANNUAL");
+        await PolicyAsync(o, Rule("ANNUAL"));
+        await GrantAsync(o, worker, type, 5m);
+
+        var applied = await _h.PostAsync(o.Admin, Requests, Ask(type, Base, employment: worker), Ct);
+        Assert.True(applied.Status == HttpStatusCode.Accepted, applied.Body);
+        var id = applied.Json.GetProperty("id").GetGuid();
+        Assert.Equal(workerManagerUser, await _h.ScalarAsync<Guid>("select assignee_user_id from wf.workflow_tasks where id = $1", Ct, await PendingTaskAsync(id)));
+        Assert.NotEqual(HttpStatusCode.OK, (await _h.PostAsync(hrManagerUser, $"/api/wf/tasks/{await PendingTaskAsync(id)}/approve", new { comment = "not mine" }, Ct)).Status);
+        await ApproveAsync(workerManagerUser, id);
+        Assert.Equal("approved", await StatusAsync(id));
+    }
+
+    [Fact]
+    public async Task FR_HRM_LVE_06_review_3_a_returned_request_can_be_withdrawn_and_a_returned_cancellation_is_sent_again_or_withdrawn()
+    {
+        var o = await OrgAsync();
+        var s = await StaffAsync(o);
+        var type = await TypeAsync(o, "CASUAL");
+        await PolicyAsync(o, Rule("CASUAL", new { cancellationApproval = true }));
+        await GrantAsync(o, s.Employment, type, 5m);
+
+        // A request returned for correction is a draft; the employee drops it by withdrawing it.
+        var a = await _h.PostAsync(s.User, Requests, Ask(type, Base), Ct);
+        var aId = a.Json.GetProperty("id").GetGuid();
+        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(s.ManagerUser, $"/api/wf/tasks/{await PendingTaskAsync(aId)}/return", new { comment = "Wrong dates" }, Ct)).Status);
+        Assert.Equal("draft", await StatusAsync(aId));
+        var instance = await _h.ScalarAsync<Guid>("select workflow_instance_id from hrm.leave_requests where id = $1", Ct, aId);
+        var withdrawn = await _h.PostAsync(s.User, $"/api/wf/instances/{instance}/withdraw", new { reason = "Not needed" }, Ct);
+        Assert.True(withdrawn.Status == HttpStatusCode.OK, withdrawn.Body);
+        Assert.Equal("cancelled", await StatusAsync(aId));
+
+        // A returned cancellation keeps the leave taken; cancelling again sends it back to its route; then it is approved.
+        var b = (await _h.PostAsync(s.User, Requests, Ask(type, Base.AddDays(7)), Ct)).Json.GetProperty("id").GetGuid();
+        await ApproveAsync(s.ManagerUser, b);
+        Assert.Equal(HttpStatusCode.Accepted, (await _h.PostAsync(s.User, $"{Requests}/{b}/cancel", new { reason = "Plans changed" }, Ct)).Status);
+        var cancelTask = await _h.ScalarAsync<Guid>("""
+            select t.id from wf.workflow_tasks t join wf.workflow_instances i on i.id = t.instance_id
+            where i.document_type = 'hrm.leave_cancellation' and i.document_id = $1 and t.status = 'pending'
+            """, Ct, b);
+        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(s.ManagerUser, $"/api/wf/tasks/{cancelTask}/return", new { comment = "Say why" }, Ct)).Status);
+        Assert.Equal("cancel_requested", await StatusAsync(b));
+        Assert.Equal(4m, await SumAsync(s.Employment, type));
+        var again = await _h.PostAsync(s.User, $"{Requests}/{b}/cancel", new { reason = "Family plans changed" }, Ct);
+        Assert.True(again.Status == HttpStatusCode.Accepted, again.Body);
+        await ApproveAsync(s.ManagerUser, b, "hrm.leave_cancellation");
+        Assert.Equal("cancelled", await StatusAsync(b));
+        Assert.Equal(5m, await SumAsync(s.Employment, type));
+    }
+
+    [Fact]
+    public async Task FR_HRM_LVE_11_review_4_and_6_a_balance_added_after_the_preview_makes_it_stale_waiting_leave_blocks_it_and_late_comp_off_keeps_its_expiry()
+    {
+        var o = await OrgAsync();
+        var managerUser = await _h.UserAsync(Ct, null, "line_manager");
+        var manager = await HireAsync(o, new DateOnly(Prev - 1, 1, 1), managerUser);
+        var e1 = await HireAsync(o, new DateOnly(Prev - 1, 1, 1), await _h.UserAsync(Ct, null, "employee"), manager);
+        var e2 = await HireAsync(o, new DateOnly(Prev - 1, 1, 1));
+        var type = await TypeAsync(o, "ANNUAL");
+        var comp = await TypeAsync(o, "COMP", new { isCompOff = true, unit = "day" });
+        await PolicyAsync(o, Rule("ANNUAL", new { carryForward = new { cap = 5 } }), Rule("COMP", new { compOffExpiryDays = 30 }));
+        await GrantAsync(o, e1, type, 10m, new DateOnly(Prev, 1, 1));
+
+        // Comp-off earned on 20 December of the closing year, usable for 30 days (into January).
+        await _h.ExecAsync("""
+            insert into hrm.outbox_messages (id, occurred_at, event_type, aggregate_type, aggregate_id, payload, headers)
+            values ($1, now(), 'hrm.attendance.comp_off_earned', 'hrm.attendance_day', $2, jsonb_build_object('employmentId', $2::text, 'companyId', $3::text, 'workDate', $4::text, 'days', 1, 'minutes', 480, 'sourceId', $5::text), '{}'::jsonb)
+            """, Ct, Guid.CreateVersion7(), e1, o.Company, Iso(new DateOnly(Prev, 12, 20)), Guid.CreateVersion7());
+        await using var rig = await JobRig.ForExistingAsync(fx, _h.Code, _h.Clock, Ct);
+        await DispatchAsync(rig);
+        Assert.Equal("comp_off_earned:1.00", await KindsAsync(e1, comp));
+
+        // A grant to someone after the preview: the held confirmation is refused as stale when the second person approves it; nothing is posted.
+        await RunJobAsync(rig, "hrm.leave_year_end", new { leave_year = Prev }, o.Company);
+        var first = await _h.ScalarAsync<Guid>("select id from hrm.leave_year_end_runs where company_id = $1 and status = 'preview'", Ct, o.Company);
+        await GrantAsync(o, e2, type, 4m, new DateOnly(Prev, 6, 1));
+        var held = await _h.PostAsync(o.Admin, $"/api/hrm/leave-year-end-runs/{first}/confirm", new { reason = "Year closed" }, Ct);
+        Assert.True(held.Status == HttpStatusCode.Accepted, held.Body);
+        var stale = await _h.PostAsync(o.SecondHr, $"/api/iam/maker-checker-requests/{held.Json.GetProperty("requestId").GetGuid()}/approve", new { reason = "Checked" }, Ct);
+        Assert.Contains("errors.hrm.leave.year_end.stale", stale.Body, StringComparison.Ordinal);
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.leave_ledger where company_id = $1 and source_type = 'hrm.leave_year_end'", Ct, o.Company));
+        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(o.Admin, $"/api/hrm/leave-year-end-runs/{first}/rollback", new { reason = "Stale" }, Ct)).Status);
+
+        // Leave of the year still waiting for its decision blocks the confirmation (HR applies for the employee; the line manager decides).
+        var waiting = await _h.PostAsync(o.Admin, Requests, Ask(type, new DateOnly(Prev, 11, 3), employment: e1), Ct);
+        Assert.True(waiting.Status == HttpStatusCode.Accepted, waiting.Body);
+        await RunJobAsync(rig, "hrm.leave_year_end", new { leave_year = Prev }, o.Company);
+        var run = await _h.ScalarAsync<Guid>("select id from hrm.leave_year_end_runs where company_id = $1 and status = 'preview'", Ct, o.Company);
+        Assert.Contains("errors.hrm.leave.year_end.requests_waiting", (await _h.PostAsync(o.Admin, $"/api/hrm/leave-year-end-runs/{run}/confirm", new { }, Ct)).Body, StringComparison.Ordinal);
+        await ApproveAsync(managerUser, waiting.Json.GetProperty("id").GetGuid());
+        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(o.Admin, $"/api/hrm/leave-year-end-runs/{run}/rollback", new { reason = "Leave approved since" }, Ct)).Status);
+
+        await RunJobAsync(rig, "hrm.leave_year_end", new { leave_year = Prev }, o.Company);
+        run = await _h.ScalarAsync<Guid>("select id from hrm.leave_year_end_runs where company_id = $1 and status = 'preview'", Ct, o.Company);
+        held = await _h.PostAsync(o.Admin, $"/api/hrm/leave-year-end-runs/{run}/confirm", new { reason = "Year closed" }, Ct);
+        Assert.True(held.Status == HttpStatusCode.Accepted, held.Body);
+        var approved = await _h.PostAsync(o.SecondHr, $"/api/iam/maker-checker-requests/{held.Json.GetProperty("requestId").GetGuid()}/approve", new { reason = "Checked" }, Ct);
+        Assert.True(approved.Status == HttpStatusCode.OK, approved.Body);
+        Assert.Equal(4m, await SumAsync(e2, type, Prev + 1)); // the late grant is carried (cap 5)
+        Assert.Equal(5m, await SumAsync(e1, type, Prev + 1)); // 10 less 1 taken, capped at 5
+
+        // The December comp-off is carried with its own expiry, outside the cap (the type sets no carry-forward).
+        Assert.Equal(1m, await SumAsync(e1, comp, Prev + 1));
+        Assert.Equal(new DateOnly(Prev, 12, 20).AddDays(30), await _h.ScalarAsync<DateOnly>("select expires_on from hrm.leave_ledger where employment_id = $1 and leave_type_id = $2 and leave_year = $3 and quantity > 0", Ct, e1, comp, Prev + 1));
+    }
+
+    [Fact]
+    public async Task FR_XM_30_review_5_a_January_transfer_waits_for_last_years_year_end_and_then_moves_the_carried_balance()
+    {
+        var first = await OrgAsync();
+        var second = first with { Company = await _h.CompanyAsync(Ct) };
+        second = second with { Place = await _h.PlaceAsync(second.Company, Ct) };
+        await NoTransferApprovalAsync(first.Company);
+        await NoTransferApprovalAsync(second.Company);
+        var year = new DateOnly(Today.Year, 1, 16) <= Today ? Today.Year : Today.Year - 1;
+        var annual = await TypeAsync(first, "ANNUAL");
+        var annualThere = await TypeAsync(second, "ANNUAL");
+        await PolicyAsync(first, Rule("ANNUAL", new { carryForward = new { cap = 10 } }));
+        var e = await HireAsync(first, new DateOnly(year - 2, 1, 1));
+        await GrantAsync(first, e, annual, 8m, new DateOnly(year - 1, 1, 1));
+
+        var next = await TransferAsync(first, second, e, new DateOnly(year, 1, 15), "carry");
+        await using var rig = await JobRig.ForExistingAsync(fx, _h.Code, _h.Clock, Ct);
+        await DispatchAsync(rig);
+        var view = await _h.GetAsync(first.Admin, $"{Employments}/{e}/leave-transfer", Ct);
+        Assert.Contains("waiting_year_end", view.Body, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, await KindsAsync(next, annualThere));
+
+        // Last year's year-end carries the 8 days into this year; the transfer then moves them to the new company.
+        await RunJobAsync(rig, "hrm.leave_year_end", new { leave_year = year - 1 }, first.Company);
+        var run = await _h.ScalarAsync<Guid>("select id from hrm.leave_year_end_runs where company_id = $1 and status = 'preview'", Ct, first.Company);
+        var held = await _h.PostAsync(first.Admin, $"/api/hrm/leave-year-end-runs/{run}/confirm", new { }, Ct);
+        Assert.True(held.Status == HttpStatusCode.Accepted, held.Body);
+        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(first.SecondHr, $"/api/iam/maker-checker-requests/{held.Json.GetProperty("requestId").GetGuid()}/approve", new { reason = "Checked" }, Ct)).Status);
+        Assert.Equal("transfer_in:8.00", await KindsAsync(next, annualThere));
+        Assert.Equal(0m, await SumAsync(e, annual, year));
+    }
+
     // ------------------------------------------------------------------ database rules (FR-HRM-LVE-04, FR-XM-30) and closed generated writes
 
     [Fact]

@@ -45,6 +45,15 @@ internal static class LeaveLedgerStore
         await db.Database.ExecuteSqlInterpolatedAsync($"select 1 from hrm.leave_types where id = {leaveTypeId} for share", ct).ConfigureAwait(false);
     }
 
+    /// <summary>The locks of one employment and several leave types, always in the same order (by type id), so two writers never wait for each other (review S1.32b finding 13).</summary>
+    public static async Task LockTypesAsync(HrmDbContext db, Guid employmentId, IEnumerable<Guid?> leaveTypeIds, CancellationToken ct)
+    {
+        foreach (var type in leaveTypeIds.Where(t => t is not null).Select(t => t!.Value).Distinct().Order())
+        {
+            await LockAsync(db, employmentId, type, ct).ConfigureAwait(false);
+        }
+    }
+
     /// <summary>The period key of a settlement's source type, or null.</summary>
     public static string? SettledPeriod(string? sourceType) =>
         sourceType is not null && sourceType.StartsWith(SettlementPrefix, StringComparison.Ordinal) ? sourceType[SettlementPrefix.Length..] : null;

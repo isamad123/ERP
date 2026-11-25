@@ -1,5 +1,5 @@
 {
-  "_comment": "Document types the HR module sends for approval (slice S1.10 format). S1.20b (CR-076 item 8, slice S1.20 ruling Q11): an employment event of a kind the company setting hrm.employment_events.approval_kinds lists waits for this route and applies on approval; the requester and the employee never approve it (FR-XM-32). Changing the route needs a second administrator (requires_approval). S1.20c: a transfer between companies uses kind transfer and gives to_company (review S1.20c finding 9). Seeded by migrate and provisioning with its default route, active at once. S1.22a (CR-078 item 2, slice S1.22 ruling Q5): hrm.strength_exception is the permission to place one person beyond a position's budgeted FTE or a unit and grade's sanctioned count; default route HR Admin; the person placed and the requester never approve it (FR-XM-32). S1.32b (CR-086 S1.32b detail; slice S1.32 Build items 7 and 9, FR-HRM-LVE-05, -06, FR-XM-32): hrm.leave_request is a leave request (default route: the employee's line manager, or the HR administrators when there is none, then HR where the leave policy sets hrApproval for the type); hrm.leave_cancellation the cancellation of approved leave where the policy sets cancellationApproval (default route: the line manager, or the HR administrators). The employee and the person who applied never approve either. The routes are the customer's to change (for example by days or leave type). Urdu texts to be reviewed by a native speaker (R-062).",
+  "_comment": "Document types the HR module sends for approval (slice S1.10 format). S1.20b (CR-076 item 8, slice S1.20 ruling Q11): an employment event of a kind the company setting hrm.employment_events.approval_kinds lists waits for this route and applies on approval; the requester and the employee never approve it (FR-XM-32). Changing the route needs a second administrator (requires_approval). S1.20c: a transfer between companies uses kind transfer and gives to_company (review S1.20c finding 9). Seeded by migrate and provisioning with its default route, active at once. S1.22a (CR-078 item 2, slice S1.22 ruling Q5): hrm.strength_exception is the permission to place one person beyond a position's budgeted FTE or a unit and grade's sanctioned count; default route HR Admin; the person placed and the requester never approve it (FR-XM-32). S1.32b (CR-086 S1.32b detail; slice S1.32 Build items 7 and 9, FR-HRM-LVE-05, -06, FR-XM-32): hrm.leave_request is a leave request (default route: the employee's line manager, given by the leave service in the field line_manager so an employee without a sign-in reaches their own manager (review S1.32b finding 2), or the HR administrators when there is none, then HR where the leave policy sets hrApproval for the type); hrm.leave_cancellation the cancellation of approved leave where the policy sets cancellationApproval (default route: the line manager, or the HR administrators). The employee and the person who applied never approve either. The routes are the customer's to change (for example by days or leave type). Urdu texts to be reviewed by a native speaker (R-062).",
   "module": "hrm",
   "document_types": [
     {
@@ -90,6 +90,7 @@
       "fields": [
         {"name": "company", "type": "company", "label": {"en": "Company", "ur": "کمپنی"}},
         {"name": "employee", "type": "user", "label": {"en": "Employee", "ur": "ملازم"}},
+        {"name": "line_manager", "type": "user", "label": {"en": "Line manager of the employee", "ur": "ملازم کا لائن مینیجر"}},
         {"name": "employee_no", "type": "text", "label": {"en": "Employee number", "ur": "ملازم نمبر"}},
         {"name": "request_no", "type": "text", "label": {"en": "Request number", "ur": "درخواست نمبر"}},
         {"name": "leave_type", "type": "text", "label": {"en": "Leave type code", "ur": "رخصت کی قسم کا کوڈ"}},
@@ -106,7 +107,7 @@
       "link": "/hrm/leave-requests/{document_id}",
       "bulk_approval": true,
       "requires_approval": true,
-      "default_route": {"steps": [{"key": "manager", "name": {"en": "Line manager", "ur": "لائن مینیجر"}, "approver": {"kind": "manager", "levels": 1}, "fallback": {"kind": "role", "role": "hr_admin"}}, {"key": "hr", "name": {"en": "HR approval", "ur": "ایچ آر کی منظوری"}, "condition": {"field": "hr_approval", "op": "eq", "value": true}, "approver": {"kind": "role", "role": "hr_admin"}}]}
+      "default_route": {"steps": [{"key": "manager", "name": {"en": "Line manager", "ur": "لائن مینیجر"}, "approver": {"kind": "document_user", "field": "line_manager"}, "fallback": {"kind": "role", "role": "hr_admin"}}, {"key": "hr", "name": {"en": "HR approval", "ur": "ایچ آر کی منظوری"}, "condition": {"field": "hr_approval", "op": "eq", "value": true}, "approver": {"kind": "role", "role": "hr_admin"}}]}
     },
     {
       "code": "hrm.leave_cancellation",
@@ -115,6 +116,7 @@
       "fields": [
         {"name": "company", "type": "company", "label": {"en": "Company", "ur": "کمپنی"}},
         {"name": "employee", "type": "user", "label": {"en": "Employee", "ur": "ملازم"}},
+        {"name": "line_manager", "type": "user", "label": {"en": "Line manager of the employee", "ur": "ملازم کا لائن مینیجر"}},
         {"name": "employee_no", "type": "text", "label": {"en": "Employee number", "ur": "ملازم نمبر"}},
         {"name": "request_no", "type": "text", "label": {"en": "Request number", "ur": "درخواست نمبر"}},
         {"name": "leave_type", "type": "text", "label": {"en": "Leave type code", "ur": "رخصت کی قسم کا کوڈ"}},
@@ -132,7 +134,7 @@
       "link": "/hrm/leave-requests/{document_id}",
       "bulk_approval": false,
       "requires_approval": true,
-      "default_route": {"steps": [{"key": "manager", "name": {"en": "Line manager", "ur": "لائن مینیجر"}, "approver": {"kind": "manager", "levels": 1}, "fallback": {"kind": "role", "role": "hr_admin"}}]}
+      "default_route": {"steps": [{"key": "manager", "name": {"en": "Line manager", "ur": "لائن مینیجر"}, "approver": {"kind": "document_user", "field": "line_manager"}, "fallback": {"kind": "role", "role": "hr_admin"}}]}
     }
   ]
 }

@@ -166,6 +166,34 @@ public sealed class LeaveRequestUnitTests
         Assert.Equal(1m, p.Closing); // the December comp-off is still there at the year-end
     }
 
+    [Theory]
+    [InlineData("2027-02-10")] // a cancellation: the reversal is dated on the leave's own day
+    [InlineData("2027-02-20")] // a later reversal (HR's correction of an adjustment)
+    public void FR_HRM_LVE_06_review_1_a_reversed_leave_gives_back_to_the_expiring_lot_and_it_still_expires(string reversedOn)
+    {
+        var lot = Guid.CreateVersion7();
+        var usage = Guid.CreateVersion7();
+        var p = LeaveLots.Project(
+        [
+            new(lot, D("2027-01-01"), 5m, D("2027-03-31"), null, null, "carry_forward"),
+            new(usage, D("2027-02-10"), -3m, null, null, null, "usage"),
+            new(Guid.CreateVersion7(), D(reversedOn), 3m, null, usage, null, "usage_reversal"),
+        ], D("2027-12-31"));
+        var expiry = Assert.Single(p.Expiries);
+        Assert.Equal((lot, 5m), (expiry.LotId, expiry.Quantity)); // nothing laundered into leave that never expires
+        Assert.Equal(0m, p.Closing);
+    }
+
+    [Fact]
+    public void FR_HRM_LVE_11_review_6_a_lot_usable_after_the_year_end_is_open_at_the_end_with_its_own_expiry()
+    {
+        var comp = Guid.CreateVersion7();
+        var p = LeaveLots.Project([new(comp, D("2027-12-20"), 1m, D("2028-01-19"), null, null, "comp_off_earned"), new(Guid.CreateVersion7(), D("2027-01-01"), 4m, null, null, null, "grant")], D("2027-12-31"));
+        var open = Assert.Single(p.Open);
+        Assert.Equal((comp, 1m, D("2028-01-19")), (open.LotId, open.Remaining, open.ExpiresOn));
+        Assert.Equal(5m, p.Closing);
+    }
+
     // ------------------------------------------------------------------ year-end (FR-HRM-LVE-11)
 
     [Theory]

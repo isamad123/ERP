@@ -67,6 +67,7 @@
   "errors.hrm.leave.year_end.company_required": "سال کا اختتام ایک کمپنی کے لیے چلائیں۔",
   "errors.hrm.leave.year_end.not_preview": "صرف پیش نظارہ کی تصدیق یا واپسی ہو سکتی ہے۔",
   "errors.hrm.leave.year_end.pending": "اس سال کے اختتام کی تصدیق پہلے ہی منظوری کی منتظر ہے۔",
+  "errors.hrm.leave.year_end.requests_waiting": "اس سال کی رخصت ابھی فیصلے کی منتظر ہے: سال کے اختتام کی تصدیق سے پہلے اس کا فیصلہ کریں یا اسے واپس لیں۔",
   "errors.hrm.leave.year_end.stale": "اس پیش نظارہ کے بعد بقایا بدل گیا ہے: نیا پیش نظارہ بنائیں۔",
   "errors.hrm.leave.year_end.year_not_over": "رخصتی سال ابھی ختم نہیں ہوا۔",
   "errors.hrm.leave.year_end.year_required": "رخصتی سال بتائیں (مثلاً 2026)۔",
