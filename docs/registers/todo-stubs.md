@@ -14,12 +14,10 @@ Tests fail if the database and this register disagree, or if an owning slice has
 | S1.39 | hrm.pay_result_reversals | `hrm.todo_pay_result_reversals_before_payment()` | allowed only while no non-failed payment line exists for the result |
 | S1.39 | hrm.retro_adjustments | `hrm.todo_retro_adjustments_apply_once()` | applied_in_run_id may be set once (trigger); status pending -> applied is one-way. |
 | S1.40 | hrm.payment_lines | `hrm.todo_payment_lines_sum_equals_net()` | deferred: sum of active lines per result equals pay_results.net |
-| S1.41 | hrm.loan_installments | `hrm.todo_loan_installments_freeze()` | Frozen by trigger once status = deducted. |
-| S1.41 | hrm.loan_transactions | `hrm.todo_loan_transactions_recovery_within_balance()` | trigger: a recovery cannot exceed the outstanding balance |
 | S1.43 | hrm.final_settlements | `hrm.todo_final_settlements_approval_needs_clearance()` | status may become approved only when clearance_status in (cleared, waived) (FR-XM-29) |
 | S1.43 | hrm.final_settlements | `hrm.todo_final_settlements_lock()` | Header and lines locked by trigger from approved onward; correction by cancel and reissue (FR-XM-05). |
 | S1.43 | hrm.training_bonds | `hrm.todo_training_bonds_final_settlement_recovery()` | Active bonds appear in final settlement as bond_recovery (LND-06). |
 | S1.44 | hrm.provident_fund_accounts | `hrm.todo_provident_fund_accounts_transfer()` | On intra-group transfer the old account closes with a transfer entry and the new account opens with the balance (employment_events.carry_over). |
 | S1.49 | hrm.goals | `hrm.todo_goals_parent_cycle()` | Cycle check trigger on parent_goal_id. |
 
-13 placeholders.
+11 placeholders.

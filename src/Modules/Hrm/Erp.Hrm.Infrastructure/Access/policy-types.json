@@ -767,6 +767,104 @@
           }
         }
       }
+    },
+    {
+      "code": "loan",
+      "name": {
+        "en": "Loan",
+        "ur": "قرض"
+      },
+      "description": {
+        "en": "The rules of one loan or advance type: who may have it (service, grade, loans already open), the most that may be lent (a fixed amount or a multiple of monthly pay), the interest (none, flat or reducing balance, as an annual percentage you enter), the longest repayment and whether a guarantor must agree. No number is filled in for you",
+        "ur": "قرض یا پیشگی کی ایک قسم کے اصول: کون لے سکتا ہے (ملازمت کی مدت، گریڈ، پہلے سے کھلے قرض)، زیادہ سے زیادہ رقم (مقررہ رقم یا ماہانہ تنخواہ کا ضرب)، سود (کوئی نہیں، فلیٹ یا گھٹتا ہوا بقایا، سالانہ فیصد جو آپ درج کرتے ہیں)، طویل ترین واپسی کی مدت اور کیا ضامن کی رضامندی لازم ہے۔ کوئی عدد خود سے نہیں بھرا جاتا"
+      },
+      "cardinality": "many",
+      "required": false,
+      "attributes": [
+        "location",
+        "branch",
+        "grade",
+        "employee_type",
+        "unit",
+        "custom"
+      ],
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "maxAmountBasis",
+          "interestMethod",
+          "maxInstallments"
+        ],
+        "properties": {
+          "minServiceMonths": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 600,
+            "title": "hrm.policy.param.loan.min_service_months"
+          },
+          "eligibleGrades": {
+            "type": "array",
+            "maxItems": 50,
+            "title": "hrm.policy.param.loan.eligible_grades",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            }
+          },
+          "maxOpenLoans": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "title": "hrm.policy.param.loan.max_open_loans"
+          },
+          "maxAmountBasis": {
+            "type": "string",
+            "enum": [
+              "fixed_amount",
+              "salary_multiple"
+            ],
+            "title": "hrm.policy.param.loan.max_amount_basis"
+          },
+          "maxAmount": {
+            "type": "number",
+            "minimum": 0,
+            "title": "hrm.policy.param.loan.max_amount"
+          },
+          "salaryMultiple": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "title": "hrm.policy.param.loan.salary_multiple"
+          },
+          "interestMethod": {
+            "type": "string",
+            "enum": [
+              "none",
+              "flat",
+              "reducing"
+            ],
+            "title": "hrm.policy.param.loan.interest_method"
+          },
+          "annualInterestPercent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "title": "hrm.policy.param.loan.annual_interest_percent"
+          },
+          "maxInstallments": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 360,
+            "title": "hrm.policy.param.loan.max_installments"
+          },
+          "requiresGuarantor": {
+            "type": "boolean",
+            "title": "hrm.policy.param.loan.requires_guarantor"
+          }
+        }
+      }
     }
   ]
 }

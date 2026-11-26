@@ -300,6 +300,12 @@ Operations screens (S1.16c): job centre `web/apps/web/src/modules/admin/jobs*.ts
 licence and usage page `admin/licence.tsx` (`/settings/licence`, answers when locked). Server additions: `GET /api/jobs/system-health` (`SystemHealthService`: files not scanned, storage, database size, this customer's last backup and restore drill) and `GET /api/ntf/deliveries/daily`;
 message text of `identity.*`, `payroll.*`, `.payslip` and `.salary` e-mails is withheld in `GET /api/ntf/deliveries/{id}` (GHR-06). Job-centre texts are lazy (R-213); the notification log and system health are also menu entries of their own (`/admin/jobs/messages`, `/admin/jobs/health`). Tests: `web/apps/web/src/modules/admin/ops.test.tsx`, `e2e/ops.spec.ts`.
 
+Loans and advances (S1.41): types, applications, payout, receipts and reports `src/Modules/Hrm/Erp.Hrm.Infrastructure/Payroll/Loan*.cs` (endpoints `Erp.Hrm.Api/Payroll/LoanEndpoints.cs` under `/api/hrm/loan-types`, `/loans`, `/loan-reports`; the generated writes of the four loan tables are closed,
+permissions in `permissions.json`); pure rules `Erp.Hrm.Application/Payroll/LoanRules.cs` (`LoanSchedule.Build` none/flat/reducing with the last installment absorbing the remainder, `LoanEligibility`, `LoanPolicy` for the policy type `loan`, no default numbers). The approval is document type
+`hrm.loan_application` (line manager by the field `line_manager`, guarantor by `guarantor`, then role `finance_approver`; `LoanApplicationHandler` builds the installments on approval); a repayment received outside payroll is a held change (`LoanReceiptHandler`). Recovery: the payroll input provider `loans`
+(`LoanInputProvider`) gives the due installments as amounts of the type's deduction component and stores the result line on each installment; `ILoanRecoveryPosting` (Hrm.Contracts) writes the ledger, marks them `deducted` and publishes `hrm.loan.installment_recovered` when a run locks (S1.38 calls it);
+`IOutstandingLoans` is the contract of clearance and final settlement. The loan ledger `hrm.loan_transactions` is append-only (a database rule) and its balance never goes below zero (trigger). Tests: `tests/Erp.IntegrationTests/Loans`, `tests/Erp.UnitTests/Payroll/LoanUnitTests.cs`; web `web/apps/web/src/modules/payroll/loan*.tsx` (texts `packages/i18n/messages/loans.{en,ur}.json`, lazy). Handoff `docs/handoff/2026-11-26-S1.41.md`.
+
 ## Where things are
 Specs: `docs/specs`. Decisions: `docs/decisions`. ADRs: `docs/adr`. Registers: `docs/registers`.
 Slices: `docs/slices`. Handoff notes: `docs/handoff`.

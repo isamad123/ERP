@@ -3222,7 +3222,7 @@ Triggers:
 
 ### hrm.loan_installments
 
-Requirements: LON-03. Pending rule (S1.41, placeholder hrm.todo_loan_installments_freeze): Frozen by trigger once status = deducted. Source: hrm-pay.yaml.
+Requirements: LON-03. Rule (implemented in S1.41): Frozen by trigger once status = deducted. Source: hrm-pay.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -3258,9 +3258,13 @@ Indexes:
 - `ix_loan_installments_company_id_pay_period_id` CREATE INDEX ix_loan_installments_company_id_pay_period_id ON hrm.loan_installments USING btree (company_id, pay_period_id)
 - `ix_loan_installments_company_id_pay_result_line_id` CREATE INDEX ix_loan_installments_company_id_pay_result_line_id ON hrm.loan_installments USING btree (company_id, pay_result_line_id)
 
+Triggers:
+
+- `tg_loan_installments_freeze` CREATE TRIGGER tg_loan_installments_freeze BEFORE DELETE OR UPDATE ON hrm.loan_installments FOR EACH ROW EXECUTE FUNCTION hrm.tg_loan_installments_freeze()
+
 ### hrm.loan_transactions
 
-Loan ledger (disbursement, recovery, adjustment, write-off); balance is the sum. Requirements: LON-03, LON-05, LON-07. Pending rule (S1.41, placeholder hrm.todo_loan_transactions_recovery_within_balance): trigger: a recovery cannot exceed the outstanding balance Recovery entries are written only when the pay run locks. Source: hrm-pay.yaml.
+Loan ledger (disbursement, recovery, adjustment, write-off); balance is the sum. Requirements: LON-03, LON-05, LON-07. Rule (implemented in S1.41): trigger: a recovery cannot exceed the outstanding balance Recovery entries are written only when the pay run locks. Source: hrm-pay.yaml.
 
 | Column | Type | Null | Default | Notes |
 | --- | --- | --- | --- | --- |
@@ -3274,6 +3278,7 @@ Loan ledger (disbursement, recovery, adjustment, write-off); balance is the sum.
 | source_id | uuid | yes |  |  |
 | created_at | timestamp with time zone | no |  |  |
 | created_by | uuid | no |  |  |
+| reference | text | yes |  | payment or receipt reference of a disbursement or a receipt (S1.41) |
 
 Constraints:
 
@@ -3293,6 +3298,7 @@ Triggers:
 
 - `tg_loan_transactions_append_only` CREATE TRIGGER tg_loan_transactions_append_only BEFORE DELETE OR UPDATE ON hrm.loan_transactions FOR EACH ROW EXECUTE FUNCTION hrm.tg_refuse_change()
 - `tg_loan_transactions_no_truncate` CREATE TRIGGER tg_loan_transactions_no_truncate BEFORE TRUNCATE ON hrm.loan_transactions FOR EACH STATEMENT EXECUTE FUNCTION hrm.tg_refuse_change()
+- `tg_loan_transactions_recovery_within_balance` CREATE TRIGGER tg_loan_transactions_recovery_within_balance BEFORE INSERT ON hrm.loan_transactions FOR EACH ROW EXECUTE FUNCTION hrm.tg_loan_transactions_recovery_within_balance()
 
 ### hrm.loan_types
 
@@ -3359,9 +3365,12 @@ Requirements: LON-01, LON-02, LON-03, LON-05. Source: hrm-pay.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| reason | text | yes |  | the applicant's reason (S1.41) |
+| interest_method | text | yes |  | frozen from the loan policy when the loan is applied for (S1.41) |
 
 Constraints:
 
+- `ck_loans_interest_method` CHECK ((interest_method = ANY (ARRAY['none'::text, 'flat'::text, 'reducing'::text])))
 - `ck_loans_status` CHECK ((status = ANY (ARRAY['applied'::text, 'approved'::text, 'rejected'::text, 'disbursed'::text, 'active'::text, 'settled'::text, 'written_off'::text, 'cancelled'::text])))
 - `fk_loans_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_loans_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
@@ -3380,6 +3389,10 @@ Indexes:
 - `ix_loans_company_id_loan_type_id` CREATE INDEX ix_loans_company_id_loan_type_id ON hrm.loans USING btree (company_id, loan_type_id)
 - `ix_loans_company_id_start_period_id` CREATE INDEX ix_loans_company_id_start_period_id ON hrm.loans USING btree (company_id, start_period_id)
 - `ix_loans_company_id_workflow_instance_id` CREATE INDEX ix_loans_company_id_workflow_instance_id ON hrm.loans USING btree (company_id, workflow_instance_id)
+
+Triggers:
+
+- `tg_loans_rules` CREATE TRIGGER tg_loans_rules BEFORE INSERT OR DELETE OR UPDATE ON hrm.loans FOR EACH ROW EXECUTE FUNCTION hrm.tg_loans_rules()
 
 ### hrm.mandatory_training_rules
 
@@ -8054,6 +8067,9 @@ Constraints:
 - `hrm.tg_leave_ledger_transfer` 
 - `hrm.tg_leave_request_days_daily_total` 
 - `hrm.tg_leave_types_rules` 
+- `hrm.tg_loan_installments_freeze` 
+- `hrm.tg_loan_transactions_recovery_within_balance` 
+- `hrm.tg_loans_rules` 
 - `hrm.tg_overtime_entries_rules` 
 - `hrm.tg_pay_component_versions_bases` 
 - `hrm.tg_pay_groups_rules` 
@@ -8070,8 +8086,6 @@ Constraints:
 - `hrm.todo_final_settlements_approval_needs_clearance` Pending rule for hrm.final_settlements, owned by S1.43: status may become approved only when clearance_status in (cleared, waived) (FR-XM-29)
 - `hrm.todo_final_settlements_lock` Pending rule for hrm.final_settlements, owned by S1.43: Header and lines locked by trigger from approved onward; correction by cancel and reissue (FR-XM-05).
 - `hrm.todo_goals_parent_cycle` Pending rule for hrm.goals, owned by S1.49: Cycle check trigger on parent_goal_id.
-- `hrm.todo_loan_installments_freeze` Pending rule for hrm.loan_installments, owned by S1.41: Frozen by trigger once status = deducted.
-- `hrm.todo_loan_transactions_recovery_within_balance` Pending rule for hrm.loan_transactions, owned by S1.41: trigger: a recovery cannot exceed the outstanding balance
 - `hrm.todo_nominations_shares_sum_to_one` Pending rule for hrm.nominations, owned by S1.20: deferred: shares per (person_id, scheme) on any date sum to 1
 - `hrm.todo_pay_periods_closed_period_guard` Pending rule for hrm.pay_periods, owned by S1.38: Trigger refuses new pay_inputs, retro_adjustments or installments targeting a closed period.
 - `hrm.todo_pay_result_reversals_before_payment` Pending rule for hrm.pay_result_reversals, owned by S1.39: allowed only while no non-failed payment line exists for the result

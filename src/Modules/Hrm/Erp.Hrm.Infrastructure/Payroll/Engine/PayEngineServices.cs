@@ -20,6 +20,8 @@ public static class PayEngineServices
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayInputProvider, LatenessInputProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayInputProvider, AdjustmentInputProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayInputProvider, PayInputRowsProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayInputProvider, LoanInputProvider>()); // S1.41: due loan installments become deductions (any host that calculates a run)
+        services.TryAddScoped<ILoanRecoveryPosting, LoanRecoveryPosting>(); // S1.41: the ledger entries when a run locks
         services.AddSingleton(AttendanceLeaveInputProvider.Names);
         services.AddSingleton(OvertimeInputProvider.Names);
         services.AddSingleton(LatenessInputProvider.Names);

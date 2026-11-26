@@ -41,7 +41,7 @@ test('FR-ADM-ROL-01 FR-ADM-ROL-02 FR-ADM-ROL-11 FR-KRN-AUD-04 an administrator c
   await page.getByLabel(/^Code/).fill(code);
   await page.getByLabel(/^Name in English/).fill(`Copied approver ${run}`);
   await choose(page, 'Start from', 'A copy of a shipped role');
-  await choose(page, 'Role to copy', /Approver/);
+  await choose(page, 'Role to copy', /^Approver$/);
   await page.getByRole('dialog').getByRole('button', { name: 'Create role' }).click();
   await expect(page.getByRole('heading', { name: `Copied approver ${run}`, level: 1 })).toBeVisible();
   await expect(page.getByText('The role was created.')).toBeVisible();

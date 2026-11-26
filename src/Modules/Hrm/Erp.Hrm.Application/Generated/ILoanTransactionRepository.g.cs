@@ -50,6 +50,7 @@ public static class LoanTransactionAccess
         new("txn_date", "TxnDate", null),
         new("source_type", "SourceType", null),
         new("source_id", "SourceId", null),
+        new("reference", "Reference", null),
         new("created_at", "CreatedAt", null),
         new("created_by", "CreatedBy", null),
     ]);

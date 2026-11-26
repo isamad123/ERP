@@ -729,27 +729,9 @@
       "sensitive": true
     },
     {
-      "code": "hrm.loan_installments.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.loan_installments.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.loan_installments.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.loan_installments.update",
-      "sensitive": true
-    },
-    {
       "code": "hrm.loan_transactions.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.loan_transactions.read",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.loan_transactions.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.loan_transactions.create",
       "sensitive": true
     },
     {
@@ -759,39 +741,9 @@
       "sensitive": false
     },
     {
-      "code": "hrm.loan_types.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.loan_types.create",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.loan_types.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.loan_types.update",
-      "sensitive": false
-    },
-    {
-      "code": "hrm.loan_types.delete",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.loan_types.delete",
-      "sensitive": false
-    },
-    {
       "code": "hrm.loans.read",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.loans.read",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.loans.create",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.loans.create",
-      "sensitive": true
-    },
-    {
-      "code": "hrm.loans.update",
-      "module": "hrm",
-      "descriptionKey": "permissions.hrm.loans.update",
       "sensitive": true
     },
     {

@@ -24,6 +24,7 @@ internal sealed class LoanTransactionConfiguration : IEntityTypeConfiguration<gl
         builder.Property(e => e.TxnDate).HasColumnName("txn_date").HasColumnType("date");
         builder.Property(e => e.SourceType).HasColumnName("source_type").HasColumnType("text");
         builder.Property(e => e.SourceId).HasColumnName("source_id").HasColumnType("uuid");
+        builder.Property(e => e.Reference).HasColumnName("reference").HasColumnType("text");
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         builder.Property(e => e.CreatedBy).HasColumnName("created_by").HasColumnType("uuid");
     }

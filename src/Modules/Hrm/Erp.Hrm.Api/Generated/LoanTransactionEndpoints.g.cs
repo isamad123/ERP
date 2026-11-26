@@ -21,20 +21,9 @@ public sealed class LoanTransactionResponse
     public global::System.DateOnly TxnDate { get; init; }
     public string? SourceType { get; init; }
     public global::System.Guid? SourceId { get; init; }
+    public string? Reference { get; init; }
     public global::System.DateTimeOffset CreatedAt { get; init; }
     public global::System.Guid CreatedBy { get; init; }
-}
-
-/// <summary>Body of create and update calls for hrm.loan_transactions. Server-owned columns (id, audit, row version, generated) are not accepted.</summary>
-public sealed class LoanTransactionWriteRequest
-{
-    public global::System.Guid? CompanyId { get; init; }
-    public global::System.Guid? LoanId { get; init; }
-    public string? Kind { get; init; }
-    public decimal? Amount { get; init; }
-    public global::System.DateOnly? TxnDate { get; init; }
-    public string? SourceType { get; init; }
-    public global::System.Guid? SourceId { get; init; }
 }
 
 /// <summary>Query string of the list endpoint for hrm.loan_transactions.</summary>
@@ -52,7 +41,7 @@ public sealed class LoanTransactionListQuery
     public string? Sort { get; init; }
 }
 
-/// <summary>Generated endpoints of hrm.loan_transactions: read, create. Answers pass through field security (S1.06).</summary>
+/// <summary>Generated endpoints of hrm.loan_transactions: read. Answers pass through field security (S1.06).</summary>
 internal static class LoanTransactionEndpoints
 {
     private const string Resource = "hrm.loan_transactions";
@@ -62,7 +51,6 @@ internal static class LoanTransactionEndpoints
         var group = app.MapGroup("/api/hrm/loan-transactions").WithTags(Resource);
         group.MapGet("/", ListAsync).WithName("hrm.loan_transactions.list").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.loan_transactions.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
         group.MapGet("/{id:guid}", GetAsync).WithName("hrm.loan_transactions.get").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "read", "hrm.loan_transactions.read"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
-        group.MapPost("/", CreateAsync).WithName("hrm.loan_transactions.create").WithMetadata(new global::Erp.BuildingBlocks.Contracts.Api.GeneratedEndpointMetadata(Resource, "create", "hrm.loan_transactions.create"), new global::Erp.BuildingBlocks.Contracts.Api.EntitlementMetadata("hrm.payroll", "hrm"));
     }
 
     private static global::System.Threading.Tasks.Task<IResult> ListAsync([global::Microsoft.AspNetCore.Http.AsParameters] LoanTransactionListQuery query, global::Erp.Hrm.Application.Generated.ILoanTransactionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
@@ -81,27 +69,6 @@ internal static class LoanTransactionEndpoints
             return row is null ? GeneratedEndpointSupport.NotFound() : TypedResults.Ok(await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.LoanTransactionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private static global::System.Threading.Tasks.Task<IResult> CreateAsync(LoanTransactionWriteRequest request, global::Erp.Hrm.Application.Generated.ILoanTransactionRepository repository, global::Erp.BuildingBlocks.Application.Security.IPermissionChecker permissions, global::Erp.BuildingBlocks.Application.Security.IFieldAccess fields, global::Erp.BuildingBlocks.Application.Security.ISensitiveAccessLog accessLog, global::System.Threading.CancellationToken cancellationToken) =>
-        GeneratedEndpointSupport.RunAsync(permissions, "hrm.loan_transactions.create", async () =>
-        {
-            var access = await fields.ForAsync(global::Erp.Hrm.Application.Generated.LoanTransactionAccess.Fields, "create", request.CompanyId, cancellationToken).ConfigureAwait(false);
-            var errors = Validate(request, update: false, access);
-            if (errors.Count > 0)
-            {
-                return GeneratedEndpointSupport.Invalid(errors);
-            }
-
-            var row = new global::Erp.Hrm.Domain.Generated.LoanTransaction();
-            var denied = Apply(request, row, update: false, access);
-            if (denied.Count > 0)
-            {
-                return GeneratedEndpointSupport.NotEditable(denied);
-            }
-
-            await repository.AddAsync(row, cancellationToken).ConfigureAwait(false);
-            return TypedResults.Created("/api/hrm/loan-transactions/" + row.Id.ToString(), await GeneratedEndpointSupport.ShapeOneAsync(repository, fields, accessLog, global::Erp.Hrm.Application.Generated.LoanTransactionAccess.Fields, row, ToResponse, cancellationToken).ConfigureAwait(false));
-        }, cancellationToken);
-
     private static LoanTransactionResponse ToResponse(global::Erp.Hrm.Domain.Generated.LoanTransaction row) => new()
     {
         Id = row.Id,
@@ -112,102 +79,10 @@ internal static class LoanTransactionEndpoints
         TxnDate = row.TxnDate,
         SourceType = row.SourceType,
         SourceId = row.SourceId,
+        Reference = row.Reference,
         CreatedAt = row.CreatedAt,
         CreatedBy = row.CreatedBy,
     };
-
-    /// <summary>Missing required values. A field the caller may not edit is not required on update: its stored value stays.</summary>
-    private static global::System.Collections.Generic.List<string> Validate(LoanTransactionWriteRequest request, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var errors = new global::System.Collections.Generic.List<string>();
-        if (!update && request.CompanyId is null)
-        {
-            errors.Add("companyId");
-        }
-        if (request.LoanId is null && (!update || access.CanEdit("loan_id")))
-        {
-            errors.Add("loanId");
-        }
-        if (request.Kind is null && (!update || access.CanEdit("kind")))
-        {
-            errors.Add("kind");
-        }
-        if (request.Amount is null && (!update || access.CanEdit("amount")))
-        {
-            errors.Add("amount");
-        }
-        if (request.TxnDate is null && (!update || access.CanEdit("txn_date")))
-        {
-            errors.Add("txnDate");
-        }
-        return errors;
-    }
-
-    /// <summary>Copies the request onto the row. Returns the fields the caller tried to change without the right to edit them (FR-KRN-IAM-13).</summary>
-    private static global::System.Collections.Generic.List<string> Apply(LoanTransactionWriteRequest request, global::Erp.Hrm.Domain.Generated.LoanTransaction row, bool update, global::Erp.BuildingBlocks.Application.Security.FieldAccessMap access)
-    {
-        var denied = new global::System.Collections.Generic.List<string>();
-        if (!update)
-        {
-            if (access.CanEdit("company_id"))
-            {
-                row.CompanyId = request.CompanyId!.Value;
-            }
-            else if (request.CompanyId is not null)
-            {
-                denied.Add("companyId");
-            }
-        }
-        if (access.CanEdit("loan_id"))
-        {
-            row.LoanId = request.LoanId!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.LoanId, row.LoanId, update))
-        {
-            denied.Add("loanId");
-        }
-        if (access.CanEdit("kind"))
-        {
-            row.Kind = request.Kind!;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Kind, row.Kind, update))
-        {
-            denied.Add("kind");
-        }
-        if (access.CanEdit("amount"))
-        {
-            row.Amount = request.Amount!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.Amount, row.Amount, update))
-        {
-            denied.Add("amount");
-        }
-        if (access.CanEdit("txn_date"))
-        {
-            row.TxnDate = request.TxnDate!.Value;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.TxnDate, row.TxnDate, update))
-        {
-            denied.Add("txnDate");
-        }
-        if (access.CanEdit("source_type"))
-        {
-            row.SourceType = request.SourceType;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SourceType, row.SourceType, update))
-        {
-            denied.Add("sourceType");
-        }
-        if (access.CanEdit("source_id"))
-        {
-            row.SourceId = request.SourceId;
-        }
-        else if (!global::Erp.BuildingBlocks.Application.Security.FieldShaping.Unchanged(request.SourceId, row.SourceId, update))
-        {
-            denied.Add("sourceId");
-        }
-        return denied;
-    }
 
     /// <summary>Reads pages of hrm.loan_transactions for an export through the list's own rules (S1.16b).</summary>
     internal sealed class ExportReader(global::System.IServiceProvider services) : global::Erp.Kernel.Contracts.Itg.IExportRowReader

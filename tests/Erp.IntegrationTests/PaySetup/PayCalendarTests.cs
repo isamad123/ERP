@@ -432,11 +432,10 @@ public sealed class PayCalendarTests(TenancyFixture fx) : IAsyncLifetime
         var items = first.Json.GetProperty("items").EnumerateArray().ToDictionary(i => i.GetProperty("code").GetString()!);
         Assert.Equal(["attendance_locked", "loans_updated", "claims_approved", "bank_data_complete", "structures_assigned"], items.Keys.ToArray());
 
-        // Items whose slice does not exist yet are "not available", never passed; S1.31 made the attendance item real: an unlocked period fails it.
-        foreach (var code in new[] { "loans_updated", "claims_approved" })
-        {
-            Assert.Equal("not_available", items[code].GetProperty("status").GetString());
-        }
+        // Items whose slice does not exist yet are "not available", never passed; S1.31 made the attendance item real: an unlocked period fails it. S1.41 made the loans item real:
+        // with no approved loan waiting to be paid out it passes (LoanTests holds the failing case).
+        Assert.Equal("not_available", items["claims_approved"].GetProperty("status").GetString());
+        Assert.Equal("passed", items["loans_updated"].GetProperty("status").GetString());
 
         Assert.Equal("failed", items["attendance_locked"].GetProperty("status").GetString());
 
@@ -451,7 +450,7 @@ public sealed class PayCalendarTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal("failed", items["structures_assigned"].GetProperty("status").GetString()); // nobody has a structure until S1.34b
         Assert.Equal(3, items["structures_assigned"].GetProperty("count").GetInt32());
         Assert.False(first.Json.GetProperty("ready").GetBoolean());
-        Assert.Equal(2, first.Json.GetProperty("summary").GetProperty("notAvailable").GetInt32()); // loans and claims (S1.41, S1.42); attendance is S1.31's check
+        Assert.Equal(1, first.Json.GetProperty("summary").GetProperty("notAvailable").GetInt32()); // claims (S1.42); attendance is S1.31's check and loans S1.41's
 
         // Once everyone has an account the item passes; the others stay as they were, so the period is still not ready.
         await AddAccountAsync(company, missing1);

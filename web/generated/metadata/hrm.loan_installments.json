@@ -11,14 +11,6 @@
     {
       "action": "read",
       "permission": "hrm.loan_installments.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.loan_installments.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.loan_installments.update"
     }
   ],
   "companyScoped": true,

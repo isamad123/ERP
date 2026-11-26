@@ -2,6 +2,7 @@ using Erp.Hrm.Application.Payroll;
 using Erp.Hrm.Contracts.Payroll;
 using Erp.Kernel.Contracts.Access;
 using Erp.Kernel.Contracts.Jobs;
+using Erp.Kernel.Contracts.Workflow;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Erp.Hrm.Infrastructure.Payroll;
@@ -29,6 +30,24 @@ public static class PayServices
         services.AddScoped<IPayReadinessCheck, BankDataCompleteCheck>();
         services.AddScoped<IPayReadinessCheck, StructuresAssignedCheck>();
         services.AddScoped<IPayReadinessCheck, Attendance.AttendanceLockedCheck>(); // S1.31 (FR-XM-26)
+        services.AddHrmLoans(); // S1.41 loan types, applications, recovery and reports
+        return services;
+    }
+
+    /// <summary>
+    /// The loan services of slice S1.41: types, applications and their approval, the payout, receipts, the reports, the payroll input provider (due installments become deductions),
+    /// the posting of a locked run and the clearance contract. The provider and the posting are also what the worker host needs; both hosts call this through the HR registration.
+    /// </summary>
+    public static IServiceCollection AddHrmLoans(this IServiceCollection services)
+    {
+        services.AddScoped<LoanFacts>();
+        services.AddScoped<ILoanTypeService, LoanTypeService>();
+        services.AddScoped<ILoanService, LoanService>();
+        services.AddScoped<ILoanReportService, LoanReportService>();
+        services.AddScoped<IPayReadinessCheck, LoansUpdatedCheck>(); // the readiness item loans_updated
+        services.AddScoped<IWorkflowOutcomeHandler, LoanApplicationHandler>();
+        services.AddScoped<IHeldChangeHandler, LoanReceiptHandler>();
+        services.AddScoped<IOutstandingLoans, OutstandingLoans>();
         return services;
     }
 

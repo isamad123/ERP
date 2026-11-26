@@ -1,0 +1,40 @@
+/* The loan screens (slice S1.41): schedule and ledger tables, facts and the preview. Tokens and logical properties only. */
+.erp-loan-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.erp-loan-table caption {
+  text-align: start;
+  padding-block: var(--space-2);
+}
+
+.erp-loan-table th,
+.erp-loan-table td {
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  text-align: start;
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+}
+
+.erp-loan-table .erp-loan-num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.erp-loan-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+
+.erp-loan-facts dd {
+  margin: 0;
+}
+
+.erp-loan-form {
+  display: grid;
+  gap: var(--space-3);
+  max-inline-size: 36rem;
+}

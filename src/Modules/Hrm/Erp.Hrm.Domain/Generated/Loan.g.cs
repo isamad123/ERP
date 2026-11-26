@@ -51,6 +51,12 @@ public sealed partial class Loan : global::Erp.BuildingBlocks.Domain.Entities.IE
     /// <summary>workflow_instance_id: fk wf.workflow_instances</summary>
     public global::System.Guid? WorkflowInstanceId { get; set; }
 
+    /// <summary>reason: the applicant's reason (S1.41)</summary>
+    public string? Reason { get; set; }
+
+    /// <summary>interest_method: frozen from the loan policy when the loan is applied for (S1.41)</summary>
+    public string? InterestMethod { get; set; }
+
     /// <summary>status</summary>
     public string Status { get; set; } = null!;
 

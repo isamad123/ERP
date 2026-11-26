@@ -14,14 +14,6 @@
     {
       "action": "read",
       "permission": "hrm.loans.read"
-    },
-    {
-      "action": "create",
-      "permission": "hrm.loans.create"
-    },
-    {
-      "action": "update",
-      "permission": "hrm.loans.update"
     }
   ],
   "companyScoped": true,
@@ -44,6 +36,7 @@
   ],
   "search": [],
   "constraints": {
+    "ck_loans_interest_method": "interestMethod",
     "ck_loans_status": "status",
     "fk_loans_company_id": "companyId",
     "fk_loans_employment_id": "employmentId",
@@ -192,6 +185,40 @@
       "filter": true,
       "labelKey": "fields.hrm.loans.workflow_instance_id",
       "references": "wf.workflow_instances"
+    },
+    {
+      "column": "reason",
+      "field": "reason",
+      "kind": "Text",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.loans.reason"
+    },
+    {
+      "column": "interest_method",
+      "field": "interestMethod",
+      "kind": "Enum",
+      "required": false,
+      "readOnly": false,
+      "system": false,
+      "filter": false,
+      "labelKey": "fields.hrm.loans.interest_method",
+      "options": [
+        {
+          "value": "none",
+          "labelKey": "options.hrm.loans.interest_method.none"
+        },
+        {
+          "value": "flat",
+          "labelKey": "options.hrm.loans.interest_method.flat"
+        },
+        {
+          "value": "reducing",
+          "labelKey": "options.hrm.loans.interest_method.reducing"
+        }
+      ]
     },
     {
       "column": "status",

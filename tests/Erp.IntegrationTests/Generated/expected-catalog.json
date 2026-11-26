@@ -20976,7 +20976,9 @@
         "ix_loan_installments_company_id_pay_period_id",
         "ix_loan_installments_company_id_pay_result_line_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_loan_installments_freeze"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.loan_installments"
@@ -21106,6 +21108,16 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "reference",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
         }
       ],
       "uniques": [
@@ -21146,7 +21158,8 @@
       ],
       "triggers": [
         "tg_loan_transactions_append_only",
-        "tg_loan_transactions_no_truncate"
+        "tg_loan_transactions_no_truncate",
+        "tg_loan_transactions_recovery_within_balance"
       ],
       "append_only_updatable": [],
       "has_api": true,
@@ -21609,6 +21622,30 @@
           "generated": false,
           "sensitive": false,
           "enum_values": []
+        },
+        {
+          "name": "reason",
+          "kind": "Text",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": []
+        },
+        {
+          "name": "interest_method",
+          "kind": "Enum",
+          "type": "text",
+          "not_null": false,
+          "has_default": false,
+          "generated": false,
+          "sensitive": false,
+          "enum_values": [
+            "none",
+            "flat",
+            "reducing"
+          ]
         }
       ],
       "uniques": [
@@ -21616,6 +21653,7 @@
         "uq_loans_company_id_id"
       ],
       "checks": [
+        "ck_loans_interest_method",
         "ck_loans_status"
       ],
       "exclusions": [],
@@ -21698,7 +21736,9 @@
         "ix_loans_company_id_guarantor_employment_id",
         "ix_loans_company_id_workflow_instance_id"
       ],
-      "triggers": [],
+      "triggers": [
+        "tg_loans_rules"
+      ],
       "append_only_updatable": [],
       "has_api": true,
       "full_name": "hrm.loans"
@@ -47711,20 +47751,6 @@
       "table": "hrm.goals",
       "owner": "S1.49",
       "rule": "Cycle check trigger on parent_goal_id."
-    },
-    {
-      "schema": "hrm",
-      "function": "todo_loan_installments_freeze",
-      "table": "hrm.loan_installments",
-      "owner": "S1.41",
-      "rule": "Frozen by trigger once status = deducted."
-    },
-    {
-      "schema": "hrm",
-      "function": "todo_loan_transactions_recovery_within_balance",
-      "table": "hrm.loan_transactions",
-      "owner": "S1.41",
-      "rule": "trigger: a recovery cannot exceed the outstanding balance"
     },
     {
       "schema": "hrm",

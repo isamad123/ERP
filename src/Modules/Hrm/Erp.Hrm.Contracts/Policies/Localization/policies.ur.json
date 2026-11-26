@@ -145,6 +145,7 @@
   "hrm.policy.param.shift.weekly_off_kind": "ہفتہ وار چھٹی کی قسم",
   "hrm.policy.type.attendance": "حاضری کے اصول",
   "hrm.policy.type.bonus": "بونس",
+  "hrm.policy.type.loan": "قرض",
   "hrm.policy.type.leave": "رخصت",
   "hrm.policy.type.notice_period": "نوٹس کی مدت",
   "hrm.policy.type.probation": "آزمائشی مدت",
@@ -179,5 +180,15 @@
   "errors.hrm.policy.attendance.monthly_cap_below_daily": "ماہانہ حد روزانہ حد سے کم نہیں ہو سکتی۔",
   "errors.hrm.policy.attendance.count_before_shift_required": "بتائیں کیا شفٹ شروع ہونے سے پہلے کا وقت اوور ٹائم میں شمار ہوتا ہے۔",
   "errors.hrm.policy.attendance.count_before_shift_unused": "شفٹ سے پہلے کا وقت صرف کام کے دن شمار ہوتا ہے۔",
-  "errors.hrm.policy.attendance.overtime_rest_work_ignored": "جب پالیسی اس دن کے کام کو نظر انداز کرتی ہے تو اس قسم کے دن کا اوور ٹائم کبھی شمار نہیں ہوتا؛ کام درج کریں یا اوور ٹائم کا اصول ہٹا دیں۔"
+  "errors.hrm.policy.attendance.overtime_rest_work_ignored": "جب پالیسی اس دن کے کام کو نظر انداز کرتی ہے تو اس قسم کے دن کا اوور ٹائم کبھی شمار نہیں ہوتا؛ کام درج کریں یا اوور ٹائم کا اصول ہٹا دیں۔",
+  "hrm.policy.param.loan.min_service_months": "ملازمت کے کم از کم ماہ",
+  "hrm.policy.param.loan.eligible_grades": "قرض لینے کے اہل گریڈ (خالی: سب)",
+  "hrm.policy.param.loan.max_open_loans": "بیک وقت کھلے قرضوں کی زیادہ سے زیادہ تعداد",
+  "hrm.policy.param.loan.max_amount_basis": "زیادہ سے زیادہ قرض کی بنیاد",
+  "hrm.policy.param.loan.max_amount": "زیادہ سے زیادہ قرض (مقررہ رقم)",
+  "hrm.policy.param.loan.salary_multiple": "زیادہ سے زیادہ قرض (تنخواہ کا ضرب)",
+  "hrm.policy.param.loan.interest_method": "سود",
+  "hrm.policy.param.loan.annual_interest_percent": "سالانہ سود (فیصد)",
+  "hrm.policy.param.loan.max_installments": "زیادہ سے زیادہ اقساط",
+  "hrm.policy.param.loan.requires_guarantor": "ضامن کی رضامندی لازم"
 }

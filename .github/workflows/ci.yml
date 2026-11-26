@@ -442,7 +442,7 @@ jobs:
       matrix:
         shard:
           - name: 1
-            files: "access attendance-periods exports notify-templates sign-in"
+            files: "access attendance-periods exports loans notify-templates sign-in"
           - name: 2
             files: "custom-fields leave-admin setup shell users"
           - name: 3
