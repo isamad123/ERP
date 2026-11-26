@@ -128,7 +128,7 @@ internal sealed class PayCalculator(
         var rows = await db.Set<PayRunEmployee>().Where(e => e.PayRunId == run.Id && ids.Contains(e.EmploymentId)).ToDictionaryAsync(e => e.EmploymentId, ct).ConfigureAwait(false);
         ids = [.. ids.Where(id => !rows.TryGetValue(id, out var r) || r.Status == "included")];
         var stored = request.Fresh ? [] : ids.Where(rows.ContainsKey).ToHashSet();
-        var built = await builder.BuildAsync(ctx with { }, [.. ids.Where(id => !stored.Contains(id))], ct).ConfigureAwait(false);
+        var built = await builder.BuildAsync(ctx, [.. ids.Where(id => !stored.Contains(id))], ct).ConfigureAwait(false);
 
         // Earlier results of these employees in this run (a recalculation): the result row is kept and changed (a new row version); its lines and trace
         // are replaced. Removed first, as the tables are linked by ids only.
