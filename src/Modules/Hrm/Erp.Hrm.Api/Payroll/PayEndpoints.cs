@@ -72,6 +72,13 @@ public static class PayEndpoints
             PersonEndpoints.Answer(await s.CreateAsync(body, ct).ConfigureAwait(false))), "create", Runs, PayRunPermissions.Run);
         Tag(app.MapPost("/api/hrm/pay-runs/{id:guid}/calculate", async (Guid id, PayRunCalculateRequest? body, IPayRunService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.CalculateAsync(id, body ?? new PayRunCalculateRequest(), ct).ConfigureAwait(false))), "record_action", Runs, PayRunPermissions.Run);
+        // S1.35b: recalculation (Build item 11), cancel of a running calculation (Build item 9) and the trace of a result (Build item 8, PAY-32).
+        Tag(app.MapPost("/api/hrm/pay-runs/{id:guid}/recalculate", async (Guid id, PayRunRecalculateRequest? body, IPayRunService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.RecalculateAsync(id, body ?? new PayRunRecalculateRequest(), ct).ConfigureAwait(false))), "record_action", Runs, PayRunPermissions.Run);
+        Tag(app.MapPost("/api/hrm/pay-runs/{id:guid}/cancel-calculation", async (Guid id, IPayRunService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.CancelCalculationAsync(id, ct).ConfigureAwait(false))), "record_action", Runs, PayRunPermissions.Run);
+        Tag(app.MapGet("/api/hrm/pay-results/{id:guid}/trace", async (Guid id, IPayRunService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.TraceAsync(id, ct).ConfigureAwait(false))), "record_action", "hrm.pay_results", PayRunPermissions.TraceRead);
         Tag(app.MapGet("/api/hrm/pay-runs/{id:guid}/summary", async (Guid id, IPayRunService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.GetAsync(id, ct).ConfigureAwait(false))), "record_action", Runs, PayRunPermissions.RunsRead);
         Tag(app.MapGet("/api/hrm/pay-runs/{id:guid}/results", async (Guid id, [FromQuery] Guid? employmentId, IPayRunService s, CancellationToken ct) =>

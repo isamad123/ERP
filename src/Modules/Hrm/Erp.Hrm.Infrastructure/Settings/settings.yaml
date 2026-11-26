@@ -207,6 +207,16 @@ settings:
     name: {en: "Payroll calculation batch size", ur: "پے رول حساب کی کھیپ کا سائز"}
     description: {en: "How many employees a payroll calculation saves together", ur: "پے رول کا حساب ایک ساتھ کتنے ملازمین محفوظ کرتا ہے"}
     help: {en: "A calculation works through the employees of a run in batches of this size; each batch is saved on its own, so a stop loses at most one batch. Larger batches are faster, smaller ones hold the database for less time.", ur: "حساب کسی رن کے ملازمین کو اس سائز کی کھیپوں میں مکمل کرتا ہے؛ ہر کھیپ الگ محفوظ ہوتی ہے، اس لیے رکنے پر زیادہ سے زیادہ ایک کھیپ ضائع ہوتی ہے۔ بڑی کھیپیں تیز ہیں، چھوٹی ڈیٹا بیس کو کم وقت کے لیے مصروف رکھتی ہیں۔"}
+  # S1.35b (CR-093 S1.35b detail, slice S1.35 ruling Q6; FR-HRM-PAY-34). Urdu texts to be reviewed by a native speaker (R-062).
+  - key: hrm.pay.max_parallel_chunks
+    type: int
+    default: 2
+    validation: {min: 1, max: 8}
+    layers: [tenant, company]
+    area: hr.payroll
+    name: {en: "Payroll calculation lanes", ur: "پے رول حساب کی متوازی قطاریں"}
+    description: {en: "How many batches of a payroll calculation may run at the same time", ur: "پے رول حساب کی کتنی کھیپیں ایک ہی وقت میں چل سکتی ہیں"}
+    help: {en: "A calculation is split into this many lanes, each a background run that saves its own batches; each employee is calculated on their own, so the lanes never wait for each other. More lanes finish sooner when the background workers have free places; one lane is the slowest and the lightest on the database.", ur: "حساب اتنی قطاروں میں بانٹا جاتا ہے، ہر قطار ایک پس منظر کا رن ہے جو اپنی کھیپیں خود محفوظ کرتا ہے؛ ہر ملازم کا حساب الگ ہوتا ہے، اس لیے قطاریں ایک دوسرے کا انتظار نہیں کرتیں۔ جب پس منظر کے ورکرز میں جگہ ہو تو زیادہ قطاریں جلد ختم کرتی ہیں؛ ایک قطار سب سے سست اور ڈیٹا بیس پر سب سے ہلکی ہے۔"}
   # S1.27b (CR-088 S1.27b detail; FR-HRM-ATT-02, ATT-03, ATT-20). Urdu texts to be reviewed by a native speaker (R-062).
   - key: hrm.att.biometric_enabled
     type: bool

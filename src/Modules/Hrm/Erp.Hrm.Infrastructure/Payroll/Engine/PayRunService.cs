@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Erp.BuildingBlocks.Application.Security;
@@ -14,6 +13,7 @@ using Erp.Hrm.Infrastructure.Employments;
 using Erp.Hrm.Infrastructure.Generated;
 using Erp.Hrm.Infrastructure.People;
 using Erp.Kernel.Contracts.Attendance;
+using Erp.Kernel.Contracts.Jobs;
 using Erp.Kernel.Contracts.Numbering;
 using Erp.Kernel.Contracts.Settings;
 using Microsoft.EntityFrameworkCore;
@@ -43,7 +43,8 @@ internal sealed class PayRunService(
     IAttendancePeriodLock locks,
     PaySnapshotBuilder builder,
     EmploymentApplier applier,
-    IEnumerable<IPayInputProvider> providers,
+    IJobRequests jobs,
+    ISensitiveAccessLog accessLog,
     IEnumerable<IStatutoryCalculator> calculators) : IPayRunService
 {
     public const string NumberType = "hrm.pay_run_no";
@@ -56,8 +57,18 @@ internal sealed class PayRunService(
     public const string EmployeeConflict = "errors.hrm.pay.run.employee_in_other_run";
     public const string BeforeCutOff = "errors.hrm.pay.run.before_cut_off";
     public const string InputsChanged = "errors.hrm.pay.run.inputs_changed";
+    public const string Calculating = "errors.hrm.pay.run.calculating";
+    public const string NotCalculating = "errors.hrm.pay.run.not_calculating";
+    public const string NotInRun = "errors.hrm.pay.run.employment_not_in_run";
+    public const string TraceSalaryClass = "errors.hrm.pay.trace.salary_class";
 
-    private static readonly string[] Calculable = ["created", "inputs_imported"];
+    /// <summary>The most incomplete employees the summary explains (the rest are counted).</summary>
+    private const int IncompleteShown = 50;
+
+    private static readonly string[] Calculable = PayCalculator.Calculable;
+
+    /// <summary>A recalculation may also follow a finished calculation, until the run moves on (validation and later are S1.38's; locked is never).</summary>
+    private static readonly string[] Recalculable = ["created", "inputs_imported", "calculated"];
 
     private DbContextScopeSource Source => new(db);
 
@@ -129,7 +140,7 @@ internal sealed class PayRunService(
                 PayPeriodId = period.Id,
                 Kind = "regular",
                 CurrencyCode = group.CurrencyCode,
-                StageLog = Stage(null, "created", now, user),
+                StageLog = PayCalculator.Stage(null, "created", now, user),
                 Status = "created",
                 CreatedAt = now,
                 CreatedBy = user,
@@ -150,6 +161,40 @@ internal sealed class PayRunService(
     public async Task<PeopleResult> CalculateAsync(Guid runId, PayRunCalculateRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var (run, refusal, lockView) = await PrepareAsync(runId, request.AcceptOpenItems, Calculable, cancellationToken).ConfigureAwait(false);
+        if (refusal is not null)
+        {
+            return refusal;
+        }
+
+        // A normal calculation takes fresh snapshots of every employee without a result; those left incomplete before are tried again.
+        return await QueueAsync(run!, lockView!, request.AcceptOpenItems, fresh: true, recalculate: null, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<PeopleResult> RecalculateAsync(Guid runId, PayRunRecalculateRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var (run, refusal, lockView) = await PrepareAsync(runId, request.AcceptOpenItems, Recalculable, cancellationToken).ConfigureAwait(false);
+        if (refusal is not null)
+        {
+            return refusal;
+        }
+
+        var listed = (request.EmploymentIds ?? []).Distinct().ToList();
+        if (listed.Count > 0)
+        {
+            var known = await db.Set<PayRunEmployee>().AsNoTracking().Where(e => e.PayRunId == runId && listed.Contains(e.EmploymentId)).Select(e => e.EmploymentId).ToListAsync(cancellationToken).ConfigureAwait(false);
+            if (known.Count != listed.Count)
+            {
+                return PeopleResult.Fields(new Dictionary<string, string[]> { ["employmentIds"] = [NotInRun] });
+            }
+        }
+
+        return await QueueAsync(run!, lockView!, request.AcceptOpenItems, request.FreshSnapshot, listed, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<PeopleResult> CancelCalculationAsync(Guid runId, CancellationToken cancellationToken)
+    {
         if (!await permissions.HasPermissionAsync(PayRunPermissions.Run, cancellationToken).ConfigureAwait(false))
         {
             return PeopleResult.Forbidden();
@@ -161,21 +206,54 @@ internal sealed class PayRunService(
             return PeopleResult.NotFound;
         }
 
-        if (run.Kind != "regular" || !Calculable.Contains(run.Status))
+        var last = LastRequest(run);
+        var active = last is null ? [] : (await jobs.StatesAsync(last.Value.JobRunIds, cancellationToken).ConfigureAwait(false)).Where(j => j.Status is "queued" or "running").Select(j => j.Id).ToList();
+        if (active.Count == 0)
         {
-            return PeopleResult.Conflict(NotCalculable, new Dictionary<string, object?> { ["status"] = run.Status });
+            return PeopleResult.Conflict(NotCalculating);
+        }
+
+        var user = actor.UserId;
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        var asked = await jobs.CancelAsync(active, user, tx.GetDbTransaction(), cancellationToken).ConfigureAwait(false);
+        await db.Database.ExecuteSqlInterpolatedAsync($"select 1 from hrm.pay_runs where id = {runId} for update", cancellationToken).ConfigureAwait(false);
+        var tracked = await db.Set<PayRun>().FirstAsync(r => r.Id == runId, cancellationToken).ConfigureAwait(false);
+        var now = clock.UtcNow;
+        tracked.StageLog = PayCalculator.Stage(tracked.StageLog, "calculation_cancel_requested", now, user, new Dictionary<string, object?> { ["request"] = last!.Value.RequestId.ToString(), ["jobRunIds"] = active });
+        EmploymentApplier.Bump(tracked, now, user);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return new PeopleResult(PeopleOutcome.Done, Body: new { id = runId, requestId = last.Value.RequestId, cancelled = asked });
+    }
+
+    /// <summary>Permission, scope, stage, cut-off and the attendance lock (FR-XM-26) before a calculation or a recalculation is queued.</summary>
+    private async Task<(PayRun? Run, PeopleResult? Refusal, Dictionary<string, object?>? Lock)> PrepareAsync(Guid runId, bool acceptOpenItems, string[] statuses, CancellationToken ct)
+    {
+        if (!await permissions.HasPermissionAsync(PayRunPermissions.Run, ct).ConfigureAwait(false))
+        {
+            return (null, PeopleResult.Forbidden(), null);
+        }
+
+        var run = await db.Set<PayRun>().AsNoTracking().FirstOrDefaultAsync(r => r.Id == runId, ct).ConfigureAwait(false);
+        if (run is null || !await scope.AllowsAsync(run, PayRunAccess.Scope, "read", Source, ct).ConfigureAwait(false))
+        {
+            return (null, PeopleResult.NotFound, null);
+        }
+
+        if (run.Kind != "regular" || !statuses.Contains(run.Status))
+        {
+            return (null, PeopleResult.Conflict(NotCalculable, new Dictionary<string, object?> { ["status"] = run.Status }), null);
         }
 
         // The lock freezes the period's days, so it waits for the cut-off date as HR's lock does (S1.31; review S1.35a finding 2).
-        var cutOff = await db.Set<PayPeriod>().AsNoTracking().Where(p => p.Id == run.PayPeriodId).Select(p => p.CutOffDate).FirstAsync(cancellationToken).ConfigureAwait(false);
-        if (await applier.TodayAsync(run.CompanyId, clock.UtcNow, cancellationToken).ConfigureAwait(false) <= cutOff)
+        var cutOff = await db.Set<PayPeriod>().AsNoTracking().Where(p => p.Id == run.PayPeriodId).Select(p => p.CutOffDate).FirstAsync(ct).ConfigureAwait(false);
+        if (await applier.TodayAsync(run.CompanyId, clock.UtcNow, ct).ConfigureAwait(false) <= cutOff)
         {
-            return PeopleResult.Conflict(BeforeCutOff, new Dictionary<string, object?> { ["cutOffDate"] = cutOff });
+            return (null, PeopleResult.Conflict(BeforeCutOff, new Dictionary<string, object?> { ["cutOffDate"] = cutOff }), null);
         }
 
-        // FR-XM-26: the period's attendance and leave lock first; nothing is calculated when they cannot.
-        var user = actor.UserId;
-        var locked = await locks.LockAsync(new PeriodLockRequest(run.PayPeriodId, run.Id, request.AcceptOpenItems, user), null, cancellationToken).ConfigureAwait(false);
+        // FR-XM-26: the period's attendance and leave lock first; nothing is queued when they cannot (a recalculation finds them locked already).
+        var locked = await locks.LockAsync(new PeriodLockRequest(run.PayPeriodId, run.Id, acceptOpenItems, actor.UserId), null, ct).ConfigureAwait(false);
         var lockView = new Dictionary<string, object?>
         {
             ["outcome"] = locked.Outcome.ToString(),
@@ -185,251 +263,141 @@ internal sealed class PayRunService(
         };
         if (locked.Outcome == PeriodLockOutcome.Refused)
         {
-            return PeopleResult.Conflict(locked.ErrorKey ?? LockRefused, new Dictionary<string, object?> { ["lock"] = lockView });
+            return (null, PeopleResult.Conflict(locked.ErrorKey ?? LockRefused, new Dictionary<string, object?> { ["lock"] = lockView }), null);
         }
 
-        var ctx = await builder.ContextAsync(run, cancellationToken).ConfigureAwait(false);
-        var eligible = await builder.EligibleAsync(ctx, cancellationToken).ConfigureAwait(false);
-        var done = (await db.Set<PayRunEmployee>().AsNoTracking().Where(e => e.PayRunId == run.Id && e.Status == "calculated").Select(e => e.EmploymentId).ToListAsync(cancellationToken).ConfigureAwait(false)).ToHashSet();
-        var todo = eligible.Where(id => !done.Contains(id)).ToList();
-        var chunkSize = await ChunkSizeAsync(run.CompanyId, cancellationToken).ConfigureAwait(false);
-        var registered = calculators.OrderBy(c => c.Code, StringComparer.Ordinal).ToList();
-        var incomplete = new List<object>();
-        foreach (var chunk in todo.Chunk(chunkSize))
-        {
-            try
-            {
-                incomplete.AddRange(await CalculateChunkAsync(ctx, chunk, registered, user, cancellationToken).ConfigureAwait(false));
-            }
-            catch (DbUpdateException e) when (e.InnerException is PostgresException { ConstraintName: "ex_pay_run_employees_employment_id_period" })
-            {
-                return PeopleResult.Conflict(EmployeeConflict);
-            }
-            catch (InvalidOperationException e) when (e.Message == NotCalculable)
-            {
-                return PeopleResult.Conflict(NotCalculable);
-            }
-            catch (PayInputsChangedException)
-            {
-                db.ChangeTracker.Clear();
-                return PeopleResult.Conflict(InputsChanged);
-            }
-        }
-
-        return await FinishAsync(run.Id, eligible.Count, incomplete, lockView, user, cancellationToken).ConfigureAwait(false);
+        return (run, null, lockView);
     }
 
-    /// <summary>One batch in one transaction: snapshots, calculation from the stored form, employees, results, lines and used inputs.</summary>
-    private async Task<List<object>> CalculateChunkAsync(PayRunContext ctx, Guid[] chunk, List<IStatutoryCalculator> registered, Guid user, CancellationToken ct)
+    /// <summary>
+    /// Queues the lanes of one calculation request with the run row held: refused while another request of the run is still queued or running; marks
+    /// the employees to calculate (those listed by a recalculation, and every employee left incomplete before) as <c>included</c>; freezes the rounding
+    /// mode and the currency's decimals for the request; records the request (who, when, its job runs) in the stage log.
+    /// </summary>
+    private async Task<PeopleResult> QueueAsync(PayRun probe, Dictionary<string, object?> lockView, bool acceptOpenItems, bool fresh, List<Guid>? recalculate, CancellationToken ct)
     {
-        var incomplete = new List<object>();
-        await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
-
-        // The run row is held for the batch: two calculations of one run never write the same employee, and a run that moved on is not written.
-        var status = (await db.Database.SqlQuery<string>($"select status as \"Value\" from hrm.pay_runs where id = {ctx.Run.Id} for update").ToListAsync(ct).ConfigureAwait(false)).FirstOrDefault();
-        if (status is null || !Calculable.Contains(status))
+        var last = LastRequest(probe);
+        if (last is not null)
         {
-            throw new InvalidOperationException(NotCalculable);
+            var running = (await jobs.StatesAsync(last.Value.JobRunIds, ct).ConfigureAwait(false)).Where(j => j.Status is "queued" or "running").Select(j => j.Id).ToList();
+            if (running.Count > 0)
+            {
+                return PeopleResult.Conflict(Calculating, new Dictionary<string, object?> { ["requestId"] = last.Value.RequestId, ["jobRunIds"] = running });
+            }
         }
 
+        // The rounding mode and the currency's minor unit are frozen for the whole request (review S1.35a finding 11); the engine rounds lines to 0 to 4 places.
+        var read = await builder.ContextAsync(probe, ct).ConfigureAwait(false);
+        var ctx = read with { CurrencyDecimals = Math.Clamp(read.CurrencyDecimals, 0, 4) };
+        var eligible = await builder.EligibleAsync(ctx, ct).ConfigureAwait(false);
+        var chunkSize = await IntSettingAsync(HrmSettingKeys.HrmPayChunkSize, probe.CompanyId, 200, ct).ConfigureAwait(false);
+        var maxLanes = Math.Clamp(await IntSettingAsync(HrmSettingKeys.HrmPayMaxParallelChunks, probe.CompanyId, 2, ct).ConfigureAwait(false), 1, 8);
+        var user = actor.UserId;
         var now = clock.UtcNow;
-        var ids = chunk.ToList();
-        var rows = await db.Set<PayRunEmployee>().Where(e => e.PayRunId == ctx.Run.Id && ids.Contains(e.EmploymentId)).ToDictionaryAsync(e => e.EmploymentId, ct).ConfigureAwait(false);
-        ids = [.. ids.Where(id => !rows.TryGetValue(id, out var r) || r.Status != "calculated")];
-        var snapshots = await builder.BuildAsync(ctx, ids, ct).ConfigureAwait(false);
-        var byCode = providers.ToDictionary(p => p.Code, StringComparer.Ordinal);
-        var pendingLines = new List<PayResultLine>();
-        var consumed = new List<(IPayInputProvider Provider, PayInputsConsumed Items)>();
-        foreach (var id in ids)
+        await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+        await db.Database.ExecuteSqlInterpolatedAsync($"select 1 from hrm.pay_runs where id = {probe.Id} for update", ct).ConfigureAwait(false);
+        var run = await db.Set<PayRun>().FirstAsync(r => r.Id == probe.Id, ct).ConfigureAwait(false);
+        var statuses = recalculate is null ? Calculable : Recalculable;
+        if (!statuses.Contains(run.Status) || run.RowVersion != probe.RowVersion)
         {
-            if (!snapshots.TryGetValue(id, out var taken))
-            {
-                continue;
-            }
+            return PeopleResult.Conflict(run.RowVersion != probe.RowVersion ? Calculating : NotCalculable, new Dictionary<string, object?> { ["status"] = run.Status });
+        }
 
-            // The calculation reads the snapshot as it is stored (PAY-31): the canonical JSON, compressed, with its SHA-256.
-            var canonical = PaySnapshotCodec.Canonical(taken);
-            var snapshot = PaySnapshotCodec.Read(canonical);
-            var calc = PayEngine.Calculate(snapshot, registered);
-            var employed = snapshot.Employment.Employed;
-            if (!rows.TryGetValue(id, out var row))
+        // The employees this request calculates are marked included: a recalculation's (all of the run's when none is listed) and every incomplete one.
+        var rows = await db.Set<PayRunEmployee>().Where(e => e.PayRunId == run.Id).ToListAsync(ct).ConfigureAwait(false);
+        var marked = 0;
+        foreach (var row in rows.Where(r => r.Status == "error" || (recalculate is not null && (recalculate.Count == 0 ? r.Status == "calculated" : recalculate.Contains(r.EmploymentId) && r.Status == "calculated"))))
+        {
+            row.Status = "included";
+            EmploymentApplier.Bump(row, now, user);
+            marked++;
+        }
+
+        var todo = eligible.Count(id => rows.FirstOrDefault(r => r.EmploymentId == id) is not { Status: "calculated" or "excluded" or "held" });
+        var lanes = Math.Max(1, Math.Min(maxLanes, (todo + chunkSize - 1) / chunkSize));
+        var requestId = Guid.CreateVersion7(now);
+        var jobRunIds = new List<Guid>();
+        for (var lane = 0; lane < lanes; lane++)
+        {
+            var parameters = JsonSerializer.SerializeToElement(new Dictionary<string, object?>
             {
-                row = new PayRunEmployee
-                {
-                    Id = Guid.CreateVersion7(now),
-                    CompanyId = ctx.Run.CompanyId,
-                    PayRunId = ctx.Run.Id,
-                    EmploymentId = id,
-                    RunKind = ctx.Run.Kind,
-                    CreatedAt = now,
-                    CreatedBy = user,
-                };
-                db.Add(row);
-            }
-            else
+                ["pay_run_id"] = run.Id.ToString(),
+                ["request_id"] = requestId.ToString(),
+                ["lane"] = lane,
+                ["lanes"] = lanes,
+                ["fresh"] = fresh,
+                ["rounding_mode"] = ctx.RoundingMode,
+                ["currency_decimals"] = ctx.CurrencyDecimals,
+            });
+            jobRunIds.Add(await jobs.QueueAsync(new JobRequest(PayrollCalculateJob.JobCode, run.CompanyId, parameters, user), tx.GetDbTransaction(), ct).ConfigureAwait(false));
+        }
+
+        var stage = recalculate is null ? "calculation_requested" : "recalculation_requested";
+        if (run.Status == "calculated")
+        {
+            // A recalculated run is not calculated until every employee has a result again; its totals wait for that.
+            run.Status = "created";
+            run.TotalGross = null;
+            run.TotalNet = null;
+            run.TotalEmployer = null;
+            run.EmployeeCount = null;
+            foreach (var row in rows)
             {
+                row.RunStatus = "created";
                 EmploymentApplier.Bump(row, now, user);
             }
-
-            row.PeriodStart = employed.Count > 0 ? employed.Min(r => r.From) : ctx.Period.StartDate;
-            row.PeriodEnd = employed.Count > 0 ? employed.Max(r => r.To) : ctx.Period.EndDate;
-            row.RunStatus = status;
-            row.Snapshot = PaySnapshotCodec.Pack(canonical);
-            row.SnapshotHash = PaySnapshotCodec.Hash(canonical);
-            row.Status = calc.Complete ? "calculated" : "error";
-            row.ValidationFlags = [.. Flags(calc)];
-            row.UpdatedAt = now;
-            row.UpdatedBy = user;
-            if (!calc.Complete)
-            {
-                incomplete.Add(new { employmentId = id, problems = calc.Problems.Select(p => new { key = p.Key, subject = p.Subject }).ToList() });
-                continue;
-            }
-
-            var result = new PayResult
-            {
-                Id = Guid.CreateVersion7(now),
-                CompanyId = ctx.Run.CompanyId,
-                PayRunId = ctx.Run.Id,
-                EmploymentId = id,
-                TaxYear = ctx.Period.TaxYear,
-                PayPeriodId = ctx.Period.Id,
-                Gross = calc.Gross,
-                Deductions = calc.Deductions,
-                Net = calc.Net,
-                EmployerCost = calc.EmployerCost,
-                TaxableIncomeYtd = calc.Facts.GetValueOrDefault("taxable_income_ytd"),
-                TaxYtd = calc.Facts.GetValueOrDefault("tax_ytd"),
-                WorkedDays = calc.WorkedDays,
-                PaidDays = calc.PaidDays,
-                CreatedAt = now,
-                CreatedBy = user,
-                UpdatedAt = now,
-                UpdatedBy = user,
-            };
-            db.Add(result);
-            var allocation = Allocation(snapshot);
-            var lineIds = new Dictionary<Guid, Guid>();
-            foreach (var line in calc.Lines)
-            {
-                var entity = new PayResultLine
-                {
-                    Id = Guid.CreateVersion7(now),
-                    CompanyId = ctx.Run.CompanyId,
-                    ResultId = result.Id,
-                    PayPeriodId = ctx.Period.Id,
-                    EmploymentId = id,
-                    ComponentId = line.ComponentId,
-                    Amount = line.Amount,
-                    Units = line.Units,
-                    Rate = line.Rate,
-                    CostAllocation = JsonDocument.Parse(allocation),
-                    CreatedAt = now,
-                    CreatedBy = user,
-                    UpdatedAt = now,
-                    UpdatedBy = user,
-                };
-                lineIds[line.ComponentId] = entity.Id;
-                pendingLines.Add(entity);
-            }
-
-            // The inputs the result used, handed back to their providers in the same transaction once the lines are saved (one-time inputs become consumed by the run).
-            foreach (var group in snapshot.Inputs.GroupBy(i => i.Provider, StringComparer.Ordinal))
-            {
-                if (byCode.TryGetValue(group.Key, out var provider))
-                {
-                    consumed.Add((provider, new PayInputsConsumed(ctx.Run.Id, ctx.Period.Id, id, result.Id,
-                        [.. group.Select(i => new ConsumedPayInput(i, i.ComponentId is { } c && lineIds.TryGetValue(c, out var l) ? l : null))])));
-                }
-            }
         }
 
-        // Saved in order (the tables are linked by ids only): employees and results, then their lines, then what the providers mark as used.
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
-        db.AddRange(pendingLines);
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
-        foreach (var (provider, items) in consumed)
+        run.CalcJobRunId = jobRunIds[0];
+        run.StageLog = PayCalculator.Stage(run.StageLog, stage, now, user, new Dictionary<string, object?>
         {
-            await provider.ConsumedAsync(items, ct).ConfigureAwait(false);
-        }
-
-        var tracked = await db.Set<PayRun>().FirstAsync(r => r.Id == ctx.Run.Id, ct).ConfigureAwait(false);
-        if (tracked.SnapshotTakenAt is null)
-        {
-            tracked.SnapshotTakenAt = now;
-            EmploymentApplier.Bump(tracked, now, user);
-        }
-
+            ["request"] = requestId.ToString(),
+            ["jobRunIds"] = jobRunIds,
+            ["lanes"] = lanes,
+            ["employees"] = eligible.Count,
+            ["toCalculate"] = todo,
+            ["marked"] = marked,
+            ["fresh"] = fresh,
+            ["acceptOpenItems"] = acceptOpenItems,
+            ["roundingMode"] = ctx.RoundingMode,
+            ["currencyDecimals"] = ctx.CurrencyDecimals,
+            ["engineVersion"] = PayEngine.Version,
+        });
+        EmploymentApplier.Bump(run, now, user);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
         await tx.CommitAsync(ct).ConfigureAwait(false);
-        db.ChangeTracker.Clear();
-        return incomplete;
-    }
-
-    /// <summary>When every employee has a result the run is calculated: totals, count, stage log, event; else the stage log records the stop.</summary>
-    private async Task<PeopleResult> FinishAsync(Guid runId, int eligible, List<object> incomplete, Dictionary<string, object?> lockView, Guid user, CancellationToken ct)
-    {
-        await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
-        await db.Database.ExecuteSqlInterpolatedAsync($"select 1 from hrm.pay_runs where id = {runId} for update", ct).ConfigureAwait(false);
-        var run = await db.Set<PayRun>().FirstAsync(r => r.Id == runId, ct).ConfigureAwait(false);
-        var counts = await db.Set<PayRunEmployee>().AsNoTracking().Where(e => e.PayRunId == runId).GroupBy(e => e.Status).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct).ConfigureAwait(false);
-        var calculated = counts.Where(c => c.Key == "calculated").Sum(c => c.Count);
-        var errors = counts.Where(c => c.Key == "error").Sum(c => c.Count);
-        var now = clock.UtcNow;
-        if (errors == 0 && Calculable.Contains(run.Status))
-        {
-            var totals = await db.Set<PayResult>().AsNoTracking().Where(r => r.PayRunId == runId)
-                .GroupBy(_ => 1).Select(g => new { Gross = g.Sum(r => r.Gross), Net = g.Sum(r => r.Net), Employer = g.Sum(r => r.EmployerCost), Count = g.Count() })
-                .FirstOrDefaultAsync(ct).ConfigureAwait(false);
-            run.Status = "calculated";
-            run.TotalGross = totals?.Gross ?? 0m;
-            run.TotalNet = totals?.Net ?? 0m;
-            run.TotalEmployer = totals?.Employer ?? 0m;
-            run.EmployeeCount = totals?.Count ?? 0;
-            run.StageLog = Stage(run.StageLog, "calculated", now, user, new Dictionary<string, object?> { ["engineVersion"] = PayEngine.Version, ["employees"] = run.EmployeeCount });
-            EmploymentApplier.Bump(run, now, user);
-            await db.Database.ExecuteSqlInterpolatedAsync($"update hrm.pay_run_employees set run_status = 'calculated', updated_at = {now}, updated_by = {user}, row_version = row_version + 1 where pay_run_id = {runId}", ct).ConfigureAwait(false);
-            db.Add(new OutboxMessage
-            {
-                Id = Guid.CreateVersion7(now),
-                OccurredAt = now,
-                EventType = PayRunEvents.Calculated,
-                AggregateType = PayRunEvents.AggregateType,
-                AggregateId = run.Id,
-                Payload = JsonSerializer.SerializeToDocument(new Dictionary<string, object?>
-                {
-                    ["payRunId"] = run.Id,
-                    ["runNo"] = run.RunNo,
-                    ["companyId"] = run.CompanyId,
-                    ["payGroupId"] = run.PayGroupId,
-                    ["payPeriodId"] = run.PayPeriodId,
-                    ["kind"] = run.Kind,
-                    ["employeeCount"] = run.EmployeeCount,
-                    ["engineVersion"] = PayEngine.Version,
-                    ["calculatedBy"] = user,
-                }, JsonSerializerOptions.Web),
-                Headers = JsonSerializer.SerializeToDocument(new { actor = user }, JsonSerializerOptions.Web),
-            });
-        }
-        else
-        {
-            run.StageLog = Stage(run.StageLog, "calculation_incomplete", now, user, new Dictionary<string, object?> { ["engineVersion"] = PayEngine.Version, ["incomplete"] = errors });
-            EmploymentApplier.Bump(run, now, user);
-        }
-
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
-        await tx.CommitAsync(ct).ConfigureAwait(false);
-        return new PeopleResult(PeopleOutcome.Done, Body: new
+        return new PeopleResult(PeopleOutcome.Pending, Body: new
         {
             id = run.Id,
             runNo = run.RunNo,
             status = run.Status,
-            employees = eligible,
-            calculated,
-            incomplete,
+            requestId,
+            jobRunIds,
+            lanes,
+            employees = eligible.Count,
+            toCalculate = todo,
             engineVersion = PayEngine.Version,
             @lock = lockView,
         });
+    }
+
+    /// <summary>The run's last calculation request in the stage log: its id and job runs.</summary>
+    private static (Guid RequestId, List<Guid> JobRunIds, JsonObject Entry)? LastRequest(PayRun run)
+    {
+        var entry = PayCalculator.Entries(run.StageLog).LastOrDefault(e => e["stage"]?.GetValue<string>() is "calculation_requested" or "recalculation_requested");
+        if (entry is null || !Guid.TryParse(entry["request"]?.GetValue<string>(), out var id))
+        {
+            return null;
+        }
+
+        var ids = (entry["jobRunIds"] as JsonArray ?? []).Select(n => Guid.TryParse(n?.GetValue<string>(), out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty).ToList();
+        return (id, ids, entry);
+    }
+
+    private async Task<int> IntSettingAsync(string key, Guid companyId, int fallback, CancellationToken ct)
+    {
+        var value = (await settings.GetAsync(key, new SettingContext(companyId, null), ct).ConfigureAwait(false)).Value;
+        return value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var n) && n > 0 ? n : fallback;
     }
 
     public async Task<PeopleResult> GetAsync(Guid runId, CancellationToken cancellationToken)
@@ -449,8 +417,88 @@ internal sealed class PayRunService(
         var access = (await plan.ResolveAsync([run], Source, cancellationToken).ConfigureAwait(false))[0];
         var counts = await db.Set<PayRunEmployee>().AsNoTracking().Where(e => e.PayRunId == runId).GroupBy(e => e.Status).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(cancellationToken).ConfigureAwait(false);
         var view = RunView(run, access);
-        view["employees"] = counts.ToDictionary(c => c.Key, c => c.Count, StringComparer.Ordinal);
+        var byStatus = counts.ToDictionary(c => c.Key, c => c.Count, StringComparer.Ordinal);
+        view["employees"] = byStatus;
+
+        // Ruling Q2: why employees are incomplete, worked out again from their stored snapshots (keys and component codes only, never an amount).
+        if (byStatus.GetValueOrDefault("error") > 0)
+        {
+            var registered = calculators.OrderBy(c => c.Code, StringComparer.Ordinal).ToList();
+            var failed = await db.Set<PayRunEmployee>().AsNoTracking().Where(e => e.PayRunId == runId && e.Status == "error").OrderBy(e => e.EmploymentId).Take(IncompleteShown)
+                .Select(e => new { e.EmploymentId, e.Snapshot }).ToListAsync(cancellationToken).ConfigureAwait(false);
+            view["incomplete"] = failed.Select(f => new
+            {
+                employmentId = f.EmploymentId,
+                problems = PayEngine.Calculate(PaySnapshotCodec.Read(PaySnapshotCodec.Unpack(f.Snapshot)), registered).Problems.Select(p => new { key = p.Key, subject = p.Subject }).ToList(),
+            }).ToList();
+        }
+
+        // FR-HRM-PAY-34: the progress of the last calculation: its lanes (job runs) with their state, and the employees done of those it had to do.
+        if (LastRequest(run) is { } last)
+        {
+            var states = await jobs.StatesAsync(last.JobRunIds, cancellationToken).ConfigureAwait(false);
+            var employees = last.Entry["employees"]?.GetValue<int>() ?? 0;
+            var calculated = byStatus.GetValueOrDefault("calculated");
+            var incomplete = byStatus.GetValueOrDefault("error");
+            var waiting = Math.Max(0, employees - calculated - incomplete - byStatus.GetValueOrDefault("excluded") - byStatus.GetValueOrDefault("held"));
+            view["calculation"] = new Dictionary<string, object?>
+            {
+                ["requestId"] = last.RequestId,
+                ["stage"] = last.Entry["stage"]?.GetValue<string>(),
+                ["requestedAt"] = last.Entry["at"]?.GetValue<string>(),
+                ["requestedBy"] = last.Entry["by"]?.GetValue<string>(),
+                ["fresh"] = last.Entry["fresh"]?.GetValue<bool>(),
+                ["lanes"] = states.Select(j => new { jobRunId = j.Id, status = j.Status, progressPct = j.ProgressPct, attempt = j.Attempt, error = j.Error }).ToList(),
+                ["running"] = states.Any(j => j.Status is "queued" or "running"),
+                ["employees"] = employees,
+                ["calculated"] = calculated,
+                ["incomplete"] = incomplete,
+                ["waiting"] = waiting,
+                ["percent"] = employees == 0 ? 100m : Math.Round((employees - waiting) * 100m / employees, 1),
+            };
+        }
+
         return new PeopleResult(PeopleOutcome.Done, Body: view);
+    }
+
+    public async Task<PeopleResult> TraceAsync(Guid resultId, CancellationToken cancellationToken)
+    {
+        if (!await permissions.HasPermissionAsync(PayRunPermissions.TraceRead, cancellationToken).ConfigureAwait(false))
+        {
+            return PeopleResult.Forbidden();
+        }
+
+        var query = await scope.ApplyAsync(db.Set<PayResult>().AsNoTracking().Where(r => r.Id == resultId), PayResultAccess.Scope, "read", Source, cancellationToken).ConfigureAwait(false);
+        var result = await query.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (result is null)
+        {
+            return PeopleResult.NotFound;
+        }
+
+        // The trace holds the employee's amounts and salary inputs: it is shown only with the salary field class on the result (GHR-06).
+        var plan = await fields.PlanAsync(PayResultAccess.Fields, PayResultAccess.Scope, "read", Source, cancellationToken).ConfigureAwait(false);
+        var access = (await plan.ResolveAsync([result], Source, cancellationToken).ConfigureAwait(false))[0];
+        if (access.Of("gross") < FieldAccessLevel.ReadOnly)
+        {
+            return PeopleResult.Forbidden(TraceSalaryClass);
+        }
+
+        var trace = await db.Set<PayTrace>().AsNoTracking().FirstOrDefaultAsync(t => t.ResultId == resultId, cancellationToken).ConfigureAwait(false);
+        if (trace is null)
+        {
+            return PeopleResult.NotFound;
+        }
+
+        await accessLog.RecordAsync("hrm.pay_traces", resultId, ["trace"], "view", 1, cancellationToken).ConfigureAwait(false); // before the answer (FR-KRN-AUD-02)
+        return new PeopleResult(PeopleOutcome.Done, Body: new Dictionary<string, object?>
+        {
+            ["resultId"] = result.Id,
+            ["payRunId"] = result.PayRunId,
+            ["employmentId"] = result.EmploymentId,
+            ["engineVersion"] = trace.EngineVersion,
+            ["traceHash"] = Convert.ToHexStringLower(PayTraceDocument.Hash(trace.Trace.RootElement)),
+            ["trace"] = trace.Trace.RootElement.Clone(),
+        });
     }
 
     public async Task<PeopleResult> ResultsAsync(Guid runId, Guid? employmentId, CancellationToken cancellationToken)
@@ -526,6 +574,23 @@ internal sealed class PayRunService(
             items.Add(view);
         }
 
+        // FR-KRN-AUD-02: an answer that shows salary amounts is recorded in the access log before it leaves (S1.35b).
+        var shown = new List<string>();
+        if (resultAccess.Any(a => a.Of("gross") >= FieldAccessLevel.ReadOnly))
+        {
+            shown.AddRange(["gross", "deductions", "net", "employer_cost", "taxable_income_ytd", "tax_ytd"]);
+        }
+
+        if (lineAccess.Any(a => a.Of("amount") >= FieldAccessLevel.ReadOnly))
+        {
+            shown.AddRange(["lines.amount", "lines.rate"]);
+        }
+
+        if (shown.Count > 0 && items.Count > 0)
+        {
+            await accessLog.RecordAsync("hrm.pay_results", employmentId is null ? null : results[0].Id, shown, "view", items.Count, cancellationToken).ConfigureAwait(false);
+        }
+
         return new PeopleResult(PeopleOutcome.Done, Body: new { runId, runNo = run.RunNo, status = run.Status, items });
     }
 
@@ -562,47 +627,5 @@ internal sealed class PayRunService(
         }
 
         return view;
-    }
-
-    /// <summary>The run's stage log with one more entry: the stage, when and who (FR-HRM-PAY-10), and the stage's facts (never an amount).</summary>
-    private static JsonDocument Stage(JsonDocument? log, string stage, DateTimeOffset at, Guid by, Dictionary<string, object?>? facts = null)
-    {
-        var list = log is null ? new JsonArray() : JsonNode.Parse(log.RootElement.GetRawText()) as JsonArray ?? [];
-        var entry = new JsonObject { ["stage"] = stage, ["at"] = at.UtcDateTime.ToString("O", CultureInfo.InvariantCulture), ["by"] = by.ToString() };
-        foreach (var (key, value) in facts ?? new Dictionary<string, object?>())
-        {
-            entry[key] = JsonSerializer.SerializeToNode(value);
-        }
-
-        list.Add(entry);
-        return JsonDocument.Parse(list.ToJsonString());
-    }
-
-    private static IEnumerable<string> Flags(PayCalculation calc)
-    {
-        if (!calc.Complete)
-        {
-            yield return "incomplete";
-        }
-        else if (calc.Net < 0m)
-        {
-            yield return "negative_net";
-        }
-    }
-
-    /// <summary>The cost allocation of the result lines: the assignment in force on the last day paid (unit, branch and its split as stored).</summary>
-    private static string Allocation(PaySnapshot s)
-    {
-        var last = s.Employment.Employed.Count > 0 ? s.Employment.Employed.Max(r => r.To) : s.Run.PeriodEnd;
-        var a = s.Assignments.LastOrDefault(x => x.ValidFrom <= last && (x.ValidTo is null || x.ValidTo > last)) ?? (s.Assignments.Count > 0 ? s.Assignments[^1] : null);
-        return a is null
-            ? "{}"
-            : JsonSerializer.Serialize(new { assignmentId = a.Id, orgUnitId = a.OrgUnitId, branchId = a.BranchId, split = a.CostAllocation }, JsonSerializerOptions.Web);
-    }
-
-    private async Task<int> ChunkSizeAsync(Guid companyId, CancellationToken ct)
-    {
-        var value = (await settings.GetAsync(HrmSettingKeys.HrmPayChunkSize, new SettingContext(companyId, null), ct).ConfigureAwait(false)).Value;
-        return value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var n) && n > 0 ? n : 200;
     }
 }

@@ -579,6 +579,12 @@
       "sensitive": true
     },
     {
+      "code": "hrm.pay.trace.read",
+      "module": "hrm",
+      "descriptionKey": "permissions.hrm.pay.trace.read",
+      "sensitive": true
+    },
+    {
       "code": "hrm.pay_inputs.create",
       "module": "hrm",
       "descriptionKey": "permissions.hrm.pay_inputs.create",

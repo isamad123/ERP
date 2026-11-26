@@ -62,6 +62,20 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.LeaveType, a.LeaveEntry, a.LeaveDraft, a.LeaveApproved, a.YearEndRun, a.ToLeaveType, a.Mover, a.Component, a.Structure, a.Overtime, a.Penalty, a.LockedPeriod, a.LockRun, a.Adjustment, a.LockedEmployment, a.OneTime, a.PayRun, a.PayInput }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
+        if (endpoint.Pattern == "/api/hrm/pay-runs/{id:guid}/cancel-calculation")
+        {
+            // S1.35b: A's own calculation is asked first (its lanes wait in A's job queue; no worker runs here), so the positive control has one to cancel.
+            var asked = await SendAsync(fx.HostA, tokenA, HttpMethod.Post, $"/api/hrm/pay-runs/{a.PayRun}/calculate", Json(new { acceptOpenItems = true }), hints: false, ct);
+            Assert.True(asked.Status == HttpStatusCode.Accepted, asked.Body);
+        }
+        else if (endpoint.Pattern == "/api/hrm/pay-results/{id:guid}/trace")
+        {
+            // S1.35b: a result of A's run with its trace, written as the engine writes them (no worker runs here); the trace's id is A's result.
+            var result = await TraceRowAsync(a, ct);
+            markers.Add(result.ToString());
+            path = $"/api/hrm/pay-results/{result}/trace";
+        }
+
         pushSecrets[a.PushDevice] = PushSecret;
         var before = await fx.FingerprintAsync(fx.CodeA, ct);
 
@@ -123,6 +137,27 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         }
 
         return failures;
+    }
+
+    /// <summary>A pay result of A's run with a trace, inserted as the engine writes them (S1.35b's trace probe needs a result; the suite runs no worker).</summary>
+    private async Task<Guid> TraceRowAsync(Material m, CancellationToken ct)
+    {
+        var id = Guid.CreateVersion7();
+        await using var c = await fx.OpenAdminAsync(fx.CodeA, ct);
+        await using var command = new NpgsqlCommand("""
+            insert into hrm.pay_results (id, company_id, pay_run_id, employment_id, tax_year, pay_period_id, gross, deductions, net, employer_cost, taxable_income_ytd, tax_ytd,
+                worked_days, paid_days, created_at, created_by, updated_at, updated_by, row_version)
+            select $1, r.company_id, r.id, $2, p.tax_year, p.id, 1, 0, 1, 0, 0, 0, 0, 0, now(), r.created_by, now(), r.created_by, 1
+            from hrm.pay_runs r join hrm.pay_periods p on p.id = r.pay_period_id where r.id = $3
+            """, c);
+        command.Parameters.Add(new NpgsqlParameter { Value = id });
+        command.Parameters.Add(new NpgsqlParameter { Value = m.LockedEmployment });
+        command.Parameters.Add(new NpgsqlParameter { Value = m.PayRun });
+        Assert.Equal(1, await command.ExecuteNonQueryAsync(ct));
+        await using var trace = new NpgsqlCommand("insert into hrm.pay_traces (result_id, trace, engine_version) values ($1, '{\"format\":\"pay-trace-v1\"}', 'probe')", c);
+        trace.Parameters.Add(new NpgsqlParameter { Value = id });
+        await trace.ExecuteNonQueryAsync(ct);
+        return id;
     }
 
     private static (string Path, string? Body) Target(ApiEndpoint endpoint, Material m)
@@ -342,6 +377,11 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "POST /api/hrm/pay-runs/{id:guid}/calculate" => ($"/api/hrm/pay-runs/{m.PayRun}/calculate", Json(new { acceptOpenItems = true })),
             "GET /api/hrm/pay-runs/{id:guid}/summary" => ($"/api/hrm/pay-runs/{m.PayRun}/summary", null),
             "GET /api/hrm/pay-runs/{id:guid}/results" => ($"/api/hrm/pay-runs/{m.PayRun}/results", null),
+            // S1.35b: recalculation, cancel of a calculation and a result's trace (the other customer's run id is never found; the trace of an id that is
+            // not one of this customer's results is not found either).
+            "POST /api/hrm/pay-runs/{id:guid}/recalculate" => ($"/api/hrm/pay-runs/{m.PayRun}/recalculate", Json(new { acceptOpenItems = true })),
+            "POST /api/hrm/pay-runs/{id:guid}/cancel-calculation" => ($"/api/hrm/pay-runs/{m.PayRun}/cancel-calculation", null),
+            "GET /api/hrm/pay-results/{id:guid}/trace" => ($"/api/hrm/pay-results/{m.PayRun}/trace", null),
             "POST /api/hrm/pay-inputs" => ("/api/hrm/pay-inputs", Json(new { items = new[] { new { employmentId = m.LockedEmployment, payPeriodId = m.PayRunPeriod, componentId = m.OneTime, amount = 250m } } })),
             "POST /api/hrm/pay-inputs/{id:guid}/cancel" => ($"/api/hrm/pay-inputs/{m.PayInput}/cancel", null),
             "GET /api/hrm/pay-input-names" => ("/api/hrm/pay-input-names", null),

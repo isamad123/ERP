@@ -198,14 +198,15 @@ public static class PayRunEvents
 {
     /// <summary>
     /// Every employee of a run has a result (FR-HRM-PAY-34): ids, counts and the engine version, never an amount:
-    /// {payRunId, runNo, companyId, payGroupId, payPeriodId, kind, employeeCount, engineVersion, calculatedBy}.
+    /// {payRunId, runNo, companyId, payGroupId, payPeriodId, kind, employeeCount, engineVersion, calculatedBy, requestId}; published again each time a
+    /// recalculation makes the run calculated (S1.35b; <c>requestId</c> names the calculation request).
     /// </summary>
     public const string Calculated = "hrm.pay_run.calculated";
 
     public const string AggregateType = "hrm.pay_run";
 }
 
-/// <summary>Permissions of the payroll engine (slice S1.35a, CR-093 ruling Q9). The trace permission <c>hrm.pay.trace.read</c> comes with S1.35b.</summary>
+/// <summary>Permissions of the payroll engine (slice S1.35a, CR-093 ruling Q9; the trace permission is S1.35b's).</summary>
 public static class PayRunPermissions
 {
     /// <summary>Create a pay run and calculate it (the calculation locks the period's attendance and leave first, FR-XM-26).</summary>
@@ -222,6 +223,9 @@ public static class PayRunPermissions
 
     public const string RunsRead = "hrm.pay_runs.read";
 
+    /// <summary>Read the calculation trace of a result (FR-HRM-PAY-32; the amounts in it also need the salary field class, GHR-06).</summary>
+    public const string TraceRead = "hrm.pay.trace.read";
+
     /// <summary>Every code declared in permissions.json for the engine (kept in step by a unit test).</summary>
-    public static IReadOnlyList<string> HandWritten { get; } = [Run, ResultsRead, InputsCreate, InputsCancel];
+    public static IReadOnlyList<string> HandWritten { get; } = [Run, ResultsRead, InputsCreate, InputsCancel, TraceRead];
 }

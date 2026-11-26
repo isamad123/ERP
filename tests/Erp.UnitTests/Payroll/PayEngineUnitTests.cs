@@ -205,9 +205,69 @@ public sealed class PayEngineUnitTests
         var workingMissing = Enumerable.Range(1, 15).Select(d => new DateOnly(2027, 1, d)).Count(d => !weekends.Contains(d));
         Assert.Equal(Math.Round(50_000m * 16m / 31m, 2, MidpointRounding.AwayFromZero), Pay("calendar_days"));
         Assert.Equal(Math.Round(50_000m * (workingInPeriod - workingMissing) / workingInPeriod, 2, MidpointRounding.AwayFromZero), Pay("working_days"));
-        Assert.Equal(50_000m * (30m - 15m) / 30m, Pay("fixed_30"));
-        Assert.Equal(Math.Round(50_000m * (26m - workingMissing) / 26m, 2, MidpointRounding.AwayFromZero), Pay("custom", 26, "working_days"));
+        // The fixed divisors pay the days employed (R-175 ruling): 16 days at 50,000 / 30; the working days employed at 50,000 / 26, at most 26.
+        Assert.Equal(Math.Round(50_000m * 16m / 30m, 2, MidpointRounding.AwayFromZero), Pay("fixed_30"));
+        Assert.Equal(Math.Round(50_000m * Math.Min(26, workingInPeriod - workingMissing) / 26m, 2, MidpointRounding.AwayFromZero), Pay("custom", 26, "working_days"));
         Assert.Equal(50_000m, Pay("none"));
+    }
+
+    /// <summary>
+    /// The 30-day rule pays the days employed (coordinator's ruling under CR-083 settling R-175, CR-093 S1.35b detail a): amount / 30 x min(30, employed
+    /// calendar days), a whole period employed paying the full amount, each unpaid leave day costing amount / 30. Expected values worked out here: a 30,000
+    /// salary in January (31 days) and February (28 days).
+    /// </summary>
+    [Theory]
+    [InlineData(2027, 1, 2, 31, 0, 30_000)]          // joined on the 2nd of a 31-day month: 30 days employed, capped at 30
+    [InlineData(2027, 1, 31, 31, 0, 1_000)]          // joined on the 31st: one day, 30,000 / 30
+    [InlineData(2027, 1, 1, 10, 0, 10_000)]          // left on the 10th: ten days
+    [InlineData(2027, 1, 1, 31, 0, 30_000)]          // the whole month
+    [InlineData(2027, 1, 1, 31, 2, 28_000)]          // the whole month with two days of unpaid leave
+    [InlineData(2027, 2, 1, 28, 0, 30_000)]          // the whole of February
+    [InlineData(2027, 2, 15, 28, 0, 14_000)]         // joined on 15 February: 14 days
+    [InlineData(2027, 2, 28, 28, 0, 1_000)]          // joined on 28 February: one day
+    public void FR_HRM_PAY_05_R_175_the_30_day_rule_pays_the_days_employed_capped_at_30_and_a_whole_month_in_full(int year, int month, int from, int to, int unpaidDays, int expected)
+    {
+        var start = new DateOnly(year, month, 1);
+        var end = start.AddMonths(1).AddDays(-1);
+        var b = new Snap(start, end).Employed(new DateOnly(year, month, from), new DateOnly(year, month, to));
+        b.Compensation(new DateOnly(year, month, from), null);
+        b.Component("BASIC", "earning", 1, "fixed", amount: 30_000m, rule: "fixed_30");
+        for (var d = 0; d < unpaidDays; d++)
+        {
+            b.Unpaid(new DateOnly(year, month, 10 + d), 1m);
+        }
+
+        var calc = PayEngine.Calculate(b.Build(), []);
+        Assert.True(calc.Complete, string.Join(",", calc.Problems.Select(p => p.Key)));
+        var employed = to - from + 1;
+        var whole = employed == end.Day;
+        Assert.Equal(30_000m / 30m * ((whole ? 30 : Math.Min(30, employed)) - unpaidDays), Line(calc, "BASIC"));
+        Assert.Equal((decimal)expected, Line(calc, "BASIC"));
+    }
+
+    /// <summary>
+    /// The calendar-day and working-day rules need no change for the ruling: their divisor is the period's own count of days, so paying the days employed
+    /// and deducting the days missing give the same amount (a joiner on the 31st of January is paid 1/31 by the calendar rule).
+    /// </summary>
+    [Fact]
+    public void FR_HRM_PAY_05_R_175_the_calendar_and_working_day_rules_pay_the_days_employed_over_the_periods_own_days()
+    {
+        var b = new Snap().Employed(new DateOnly(2027, 1, 31), End);
+        b.Compensation(new DateOnly(2027, 1, 31), null);
+        b.Component("BASIC", "earning", 1, "fixed", amount: 31_000m, rule: "calendar_days");
+        Assert.Equal(1_000m, Line(PayEngine.Calculate(b.Build(), []), "BASIC"));
+
+        // A mid-month revision under the 30-day rule over a whole month: each part by its days of the month, the total still exact for one amount.
+        var r = new Snap();
+        var basic = r.Component("BASIC", "earning", 1, "fixed", amount: 31_000m, rule: "fixed_30");
+        r.Revision(new DateOnly(2027, 1, 16), (basic, 31_000m));
+        Assert.Equal(31_000m, Line(PayEngine.Calculate(r.Build(), []), "BASIC"));
+
+        // A revision from 30,000 to 31,000 on the 16th: 15 days at the old amount and 16 at the new one, each over the month's 31 days.
+        var raised = new Snap();
+        var pay = raised.Component("BASIC", "earning", 1, "fixed", amount: 30_000m, rule: "fixed_30");
+        raised.Revision(new DateOnly(2027, 1, 16), (pay, 31_000m));
+        Assert.Equal(Math.Round((30_000m * 15m / 31m) + (31_000m * 16m / 31m), 2, MidpointRounding.AwayFromZero), Line(PayEngine.Calculate(raised.Build(), []), "BASIC"));
     }
 
     [Fact]
@@ -461,9 +521,24 @@ public sealed class PayEngineUnitTests
         private readonly List<PayInputItem> _inputs = [];
         private readonly List<DateOnly> _nonWorking = [];
         private readonly List<(DateOnly From, (Guid Component, decimal Amount)[] Lines)> _revisions = [];
-        private DateRange _employed = new(Start, End);
+        private readonly DateOnly _start;
+        private readonly DateOnly _end;
+        private DateRange _employed;
         private (DateOnly From, DateOnly? To) _comp = (new DateOnly(2026, 1, 1), null);
         private bool _keyed;
+
+        public Snap()
+            : this(Start, End)
+        {
+        }
+
+        /// <summary>A snapshot of another monthly period (S1.35b: February for the 30-day rule).</summary>
+        public Snap(DateOnly start, DateOnly end)
+        {
+            _start = start;
+            _end = end;
+            _employed = new DateRange(start, end);
+        }
 
         public string Mode { get; init; } = PayRounding.HalfAwayFromZero;
 
@@ -542,7 +617,7 @@ public sealed class PayEngineUnitTests
 
             return new PaySnapshot(
                 PayEngine.Version,
-                new SnapshotRun(Guid.CreateVersion7(), "regular", Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7(), 2026, 7, Start, End, "PKR", 2, Mode),
+                new SnapshotRun(Guid.CreateVersion7(), "regular", Guid.CreateVersion7(), Guid.CreateVersion7(), Guid.CreateVersion7(), 2026, 7, _start, _end, "PKR", 2, Mode),
                 new SnapshotEmployment(Employment, "permanent", _employed.From, null, [_employed]),
                 [],
                 new SnapshotDays(true, [.. _nonWorking.Distinct().Order()]),

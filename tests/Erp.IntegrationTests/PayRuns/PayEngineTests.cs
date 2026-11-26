@@ -157,6 +157,28 @@ public sealed class PayEngineTests(TenancyFixture fx) : IAsyncLifetime
         return created.Json.GetProperty("id").GetGuid();
     }
 
+    /// <summary>
+    /// Asks for the calculation (FR-XM-26: the lock first; 202 with the job runs of its lanes), runs the job <c>hrm.payroll_calculate</c> through a worker
+    /// over this customer until nothing is left (S1.35b), and answers the run's summary.
+    /// </summary>
+    private async Task<JsonElement> CalculateAsync(Guid user, Guid run, bool acceptOpenItems = true)
+    {
+        var answer = await _h.PostAsync(user, $"{Runs}/{run}/calculate", new { acceptOpenItems }, Ct);
+        Assert.True(answer.Status == HttpStatusCode.Accepted, answer.Body);
+        await RunJobsAsync();
+        var summary = await _h.GetAsync(user, $"{Runs}/{run}/summary", Ct);
+        Assert.True(summary.Status == HttpStatusCode.OK, summary.Body);
+        return summary.Json;
+    }
+
+    private async Task RunJobsAsync()
+    {
+        await using var jobs = await Jobs.JobRig.ForExistingAsync(fx, _h.Code, _h.Clock, Ct);
+        await jobs.RunUntilIdleAsync(jobs.Worker(), Ct);
+        var failed = await jobs.ScalarAsync<long>("select count(*) from job.runs r join job.definitions d on d.id = r.definition_id where d.code = 'hrm.payroll_calculate' and r.status not in ('succeeded', 'cancelled')", Ct);
+        Assert.True(failed == 0, await jobs.DumpAsync(Ct));
+    }
+
     private static decimal Q3(decimal value, int places = 2) => Math.Round(Math.Round(value, 4, MidpointRounding.AwayFromZero), places, MidpointRounding.AwayFromZero);
 
     private static decimal LineOf(JsonElement result, string code) =>
@@ -206,11 +228,10 @@ public sealed class PayEngineTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.pay_run_employees where pay_run_id = $1", Ct, run));
         Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from hrm.attendance_periods where pay_period_id = $1 and status = 'locked'", Ct, rig.Period.Id));
 
-        var calculated = await _h.PostAsync(rig.Manager, $"{Runs}/{run}/calculate", new { acceptOpenItems = true }, Ct);
-        Assert.True(calculated.Status == HttpStatusCode.OK, calculated.Body);
-        Assert.Equal("calculated", calculated.Json.GetProperty("status").GetString());
-        Assert.Equal(2, calculated.Json.GetProperty("calculated").GetInt32());
-        Assert.Empty(calculated.Json.GetProperty("incomplete").EnumerateArray());
+        var calculated = await CalculateAsync(rig.Manager, run);
+        Assert.Equal("calculated", calculated.GetProperty("status").GetString());
+        Assert.Equal(2, calculated.GetProperty("calculation").GetProperty("calculated").GetInt32());
+        Assert.False(calculated.TryGetProperty("incomplete", out _));
 
         // The lock came first and names the run.
         Assert.Equal("payroll", await _h.ScalarAsync<string>("select lock_kind from hrm.attendance_periods where pay_period_id = $1 and status = 'locked'", Ct, rig.Period.Id));
@@ -268,7 +289,7 @@ public sealed class PayEngineTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(joinerResult.GetProperty("net").GetDecimal(), again.Net);
         Assert.DoesNotContain("Officer", System.Text.Encoding.UTF8.GetString(canonical), StringComparison.Ordinal); // ids and amounts only
 
-        // A calculated run is not calculated again here (recalculation is S1.35b's).
+        // A calculated run is not calculated again (a recalculation is its own request, S1.35b).
         Assert.Equal(HttpStatusCode.Conflict, (await _h.PostAsync(rig.Manager, $"{Runs}/{run}/calculate", new { acceptOpenItems = true }, Ct)).Status);
     }
 
@@ -291,10 +312,9 @@ public sealed class PayEngineTests(TenancyFixture fx) : IAsyncLifetime
 
         foreach (var attempt in new[] { 1, 2 })
         {
-            var answer = await _h.PostAsync(rig.Manager, $"{Runs}/{run}/calculate", new { acceptOpenItems = true }, Ct);
-            Assert.True(answer.Status == HttpStatusCode.OK, answer.Body);
-            Assert.Equal("created", answer.Json.GetProperty("status").GetString());
-            var incomplete = Assert.Single(answer.Json.GetProperty("incomplete").EnumerateArray());
+            var answer = await CalculateAsync(rig.Manager, run);
+            Assert.Equal("created", answer.GetProperty("status").GetString());
+            var incomplete = Assert.Single(answer.GetProperty("incomplete").EnumerateArray());
             Assert.Equal(taxed, incomplete.GetProperty("employmentId").GetGuid());
             Assert.Contains(incomplete.GetProperty("problems").EnumerateArray(), p => p.GetProperty("key").GetString() == PayEngine.StatutoryCalculatorMissing && p.GetProperty("subject").GetString() == levy.Code);
             Assert.Equal(1L, await _h.ScalarAsync<long>("select count(*) from hrm.pay_results where pay_run_id = $1", Ct, run)); // the complete employee once, never re-written
@@ -321,7 +341,7 @@ public sealed class PayEngineTests(TenancyFixture fx) : IAsyncLifetime
         var employment = await HireAsync(rig, Today.AddDays(-400));
         await PayAsync(rig, employment, structure, rig.Period.Start.AddDays(-40), basic.Id, 70_000m);
         var run = await RunAsync(rig, rig.Period);
-        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(rig.Manager, $"{Runs}/{run}/calculate", new { acceptOpenItems = true }, Ct)).Status);
+        Assert.Equal("calculated", (await CalculateAsync(rig.Manager, run)).GetProperty("status").GetString());
         var result = await _h.ScalarAsync<Guid>("select id from hrm.pay_results where pay_run_id = $1", Ct, run);
 
         // Before the run is locked, the engine's rows may still change (S1.35b recalculates).
@@ -460,7 +480,7 @@ public sealed class PayEngineTests(TenancyFixture fx) : IAsyncLifetime
         var run = await RunAsync(rig, rig.Period);
         Assert.Equal(HttpStatusCode.Forbidden, (await _h.PostAsync(nobody, $"{Runs}/{run}/calculate", new { acceptOpenItems = true }, Ct)).Status);
         Assert.Equal(HttpStatusCode.Forbidden, (await _h.GetAsync(nobody, $"{Runs}/{run}/results", Ct)).Status);
-        Assert.Equal(HttpStatusCode.OK, (await _h.PostAsync(rig.Manager, $"{Runs}/{run}/calculate", new { acceptOpenItems = true }, Ct)).Status);
+        Assert.Equal("calculated", (await CalculateAsync(rig.Manager, run)).GetProperty("status").GetString());
 
         // Results without the salary class: rows and days, never an amount; with it, the amounts.
         var reader = await _h.UserAsync(Ct);
