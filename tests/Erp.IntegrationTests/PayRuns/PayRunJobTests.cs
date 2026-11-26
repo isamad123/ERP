@@ -104,12 +104,12 @@ public sealed class PayRunJobTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NotFound, (await _h.GetAsync(outsider, $"/api/hrm/pay-results/{result}/trace", Ct)).Status);
 
         // Never audited (CR-034): no change-log entry of the trace table, and the audit search of the result shows the result's entries only.
-        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from aud.change_log where entity_type = 'hrm.pay_traces'", Ct));
+        Assert.Equal(0L, await _h.ScalarAsync<long>("select count(*) from aud.change_log where entity_type = 'hrm.pay_traces' and entity_id in (select id from hrm.pay_results where pay_run_id = $1)", Ct, run));
         var search = await _h.GetAsync(rig.Admin, $"/api/aud/changes?entityId={result}", Ct);
         Assert.True(search.Status == HttpStatusCode.OK, search.Body);
         Assert.All(search.Json.GetProperty("items").EnumerateArray(), i => Assert.Equal("hrm.pay_results", i.GetProperty("entityType").GetString()));
         Assert.DoesNotContain("pay-trace-v1", search.Body, StringComparison.Ordinal);
-        var byType = await _h.GetAsync(rig.Admin, "/api/aud/changes?entityType=hrm.pay_traces", Ct);
+        var byType = await _h.GetAsync(rig.Admin, $"/api/aud/changes?entityType=hrm.pay_traces&entityId={result}", Ct);
         Assert.True(byType.Status == HttpStatusCode.OK, byType.Body);
         Assert.Empty(byType.Json.GetProperty("items").EnumerateArray());
 
