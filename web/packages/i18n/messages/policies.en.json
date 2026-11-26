@@ -104,6 +104,8 @@
   "pol.form.rows.none": "No rows yet.",
   "pol.choice.line_manager_and_hr": "Line manager and HR",
   "pol.choice.hr": "HR only",
+  "pol.choice.per_line": "A limit for a whole line",
+  "pol.choice.per_unit": "A rate per day or kilometre",
   "pol.assign.title": "Policy assignments",
   "pol.assign.description": "Who gets which policy: rules on employee details, tried in order. Activate a new set from a date to change them.",
   "pol.assign.asOf": "As of",

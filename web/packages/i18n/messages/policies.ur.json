@@ -104,6 +104,8 @@
   "pol.form.rows.none": "ابھی کوئی قطار نہیں۔",
   "pol.choice.line_manager_and_hr": "لائن مینیجر اور ایچ آر",
   "pol.choice.hr": "صرف ایچ آر",
+  "pol.choice.per_line": "پوری لائن کی حد",
+  "pol.choice.per_unit": "فی دن یا فی کلومیٹر شرح",
   "pol.assign.title": "پالیسی تفویضات",
   "pol.assign.description": "کس کو کون سی پالیسی ملتی ہے: ملازم کی تفصیلات پر اصول، ترتیب سے آزمائے جاتے ہیں۔ انہیں بدلنے کے لیے کسی تاریخ سے نیا مجموعہ نافذ کریں۔",
   "pol.assign.asOf": "بتاریخ",

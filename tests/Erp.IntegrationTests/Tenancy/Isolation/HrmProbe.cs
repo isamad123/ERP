@@ -17,7 +17,8 @@ namespace Erp.IntegrationTests.Tenancy.Isolation;
 /// payment account and a statutory registration of the first employment; from S1.23a a probation policy assigned to permanent employees
 /// (made before the hires, so the first employment's probation comes from it) and a second policy with a draft; from S1.34a a pay group
 /// with the periods of a tax year; from S1.32a a leave type and an opening balance of the first employment; from S1.32b a leave policy, a draft and an approved request, a year-end preview and the former employment moved to the second company; from S1.29b an attendance policy, a processed day with a worked-out overtime entry and a penalty (S1.29a's engine routes need nothing more: the first employment's days are processed, read and explained by id, the exception queue lists B's own); from S1.31 an employment in the pay group, a pay period locked by a calculated run and a waiting adjustment. Then, as for
-/// From S1.35a a one-time component, a created run of the fourth pay period with a pending input of the S1.31 employment, and a fifth period with no run. Then, as for
+/// From S1.35a a one-time component, a created run of the fourth pay period with a pending input of the S1.31 employment, and a fifth period with no run. From S1.42 an expense category,
+/// a draft claim and a submitted claim (made by someone else, so the probe may decide it) of the S1.31 employment. Then, as for
 /// the other probes:
 /// <list type="number">
 /// <item>B's host and token aimed at A's ids, with and without headers naming A: actions on A's records are 404; creates and lists
@@ -46,7 +47,8 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         Guid LeaveType, long LeaveTypeVersion, Guid LeaveEntry,
         Guid LeaveDraft, long LeaveDraftVersion, Guid LeaveApproved, Guid YearEndRun, Guid ToLeaveType, Guid Mover,
         Guid Overtime, Guid Penalty, Guid LockedPeriod, Guid LockRun, Guid Adjustment, Guid LockedEmployment, DateOnly LockedStart,
-        Guid OneTime, Guid PayRun, Guid PayRunPeriod, Guid FreePeriod, Guid PayInput);
+        Guid OneTime, Guid PayRun, Guid PayRunPeriod, Guid FreePeriod, Guid PayInput,
+        Guid Category, string ClaimCurrency, Guid Claim, long ClaimVersion, Guid WaitingClaim, Guid WaitingLine);
 
     /// <summary>Where the probe hires (slice S1.20b): an org unit of a company and that company's branch.</summary>
     private sealed record Hire(Guid Company, Guid OrgUnit, Guid Branch);
@@ -59,7 +61,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var tokenB = fx.Tenancy.Token(fx.CodeB);
         var a = await MaterialAsync(fx.HostA, tokenA, ct);
         await MaterialAsync(fx.HostB, tokenB, ct); // B's own records, so B's calls have real rows of their own to hit
-        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.LeaveType, a.LeaveEntry, a.LeaveDraft, a.LeaveApproved, a.YearEndRun, a.ToLeaveType, a.Mover, a.Component, a.Structure, a.Overtime, a.Penalty, a.LockedPeriod, a.LockRun, a.Adjustment, a.LockedEmployment, a.OneTime, a.PayRun, a.PayInput }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
+        var markers = new[] { a.Person, a.Into, a.Identifier, a.Contact, a.Address, a.Relation, a.Qualification, a.Case, a.Employment, a.Unlinked, a.Former, a.Contract, a.To.Company, a.BankAccount, a.Registration, a.Position, a.Policy, a.DraftPolicy, a.Draft, a.PayGroup, a.Period, a.Punching, a.Location, a.Shift, a.Roster, a.PushDevice, a.PullDevice, a.Map, a.RemovalMap, a.Unmapped, a.LeaveType, a.LeaveEntry, a.LeaveDraft, a.LeaveApproved, a.YearEndRun, a.ToLeaveType, a.Mover, a.Component, a.Structure, a.Overtime, a.Penalty, a.LockedPeriod, a.LockRun, a.Adjustment, a.LockedEmployment, a.OneTime, a.PayRun, a.PayInput, a.Category, a.Claim, a.WaitingClaim, a.WaitingLine }.Select(g => g.ToString()).ToList(); // person numbers repeat across customers, so ids only
         var method = new HttpMethod(endpoint.Method);
         var (path, body) = Target(endpoint, a);
         pushSecrets[a.PushDevice] = PushSecret;
@@ -344,6 +346,14 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             "GET /api/hrm/pay-runs/{id:guid}/results" => ($"/api/hrm/pay-runs/{m.PayRun}/results", null),
             "POST /api/hrm/pay-inputs" => ("/api/hrm/pay-inputs", Json(new { items = new[] { new { employmentId = m.LockedEmployment, payPeriodId = m.PayRunPeriod, componentId = m.OneTime, amount = 250m } } })),
             "POST /api/hrm/pay-inputs/{id:guid}/cancel" => ($"/api/hrm/pay-inputs/{m.PayInput}/cancel", null),
+            "POST /api/hrm/expense-claims" => ("/api/hrm/expense-claims", Json(new { employmentId = m.LockedEmployment, reimburseVia = "payment_batch", lines = new[] { ClaimLine(m) } })),
+            "PUT /api/hrm/expense-claims/{id:guid}" => ($"/api/hrm/expense-claims/{m.Claim}", Json(new { reimburseVia = "payment_batch", rowVersion = m.ClaimVersion, lines = new[] { ClaimLine(m) } })),
+            "POST /api/hrm/expense-claims/{id:guid}/submit" => ($"/api/hrm/expense-claims/{m.Claim}/submit", Json(new { rowVersion = m.ClaimVersion })),
+            "POST /api/hrm/expense-claims/{id:guid}/cancel" => ($"/api/hrm/expense-claims/{m.Claim}/cancel", Json(new { rowVersion = m.ClaimVersion })),
+            "GET /api/hrm/expense-claims/{id:guid}/detail" => ($"/api/hrm/expense-claims/{m.Claim}/detail", null),
+            "POST /api/hrm/expense-claims/{id:guid}/line-decisions" => ($"/api/hrm/expense-claims/{m.WaitingClaim}/line-decisions", Json(new { decisions = new[] { new { lineId = m.WaitingLine, approvedAmount = 10m, reason = (string?)null } } })),
+            "GET /api/hrm/employments/{id:guid}/open-expense-claims" => ($"/api/hrm/employments/{m.LockedEmployment}/open-expense-claims", null),
+            "GET /api/hrm/expense-claims/new-context" => ("/api/hrm/expense-claims/new-context", null),
             "GET /api/hrm/pay-input-names" => ("/api/hrm/pay-input-names", null),
             "GET /api/hrm/attendance/adjustments/{id:guid}" => ($"/api/hrm/attendance/adjustments/{m.Adjustment}", null),
             var key => throw new InvalidOperationException($"No probe target for HR endpoint {key}; extend HrmProbe."),
@@ -865,6 +875,34 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var payInput = (await PostAsync(host, token, "/api/hrm/pay-inputs", new { items = new[] { new { employmentId = lockedEmployment, payPeriodId = runPeriod, componentId = oneTime, amount = 100m } } }, ct))
             .GetProperty("items")[0].GetProperty("id").GetGuid();
 
+        // S1.42: a category, a draft claim and a submitted claim of the S1.31 employment; the submitted one is made over to the system user, so the probe is not
+        // the person who made it and may record decisions on it.
+        var category = (await PostAsync(host, token, "/api/hrm/expense-categories", new
+        {
+            companyId = org.Company, code = "EC" + Guid.NewGuid().ToString("N")[..8], nameI18n = new { en = "Probe category" }, requiresReceipt = false, kind = "general", flagsBlockSubmit = false, isActive = true,
+        }, ct)).GetProperty("id").GetGuid();
+        var context = await GetAsync(host, token, $"/api/hrm/expense-claims/new-context?employmentId={lockedEmployment}", ct);
+        var claimCurrency = context.GetProperty("currencyCode").GetString()!;
+        var claimDay = Iso(DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-2));
+        object[] oneLine = [new { categoryId = category, expenseDate = claimDay, amount = 10m, currencyCode = claimCurrency, description = "Probe expense" }];
+        var draftClaim = await PostAsync(host, token, "/api/hrm/expense-claims", new { employmentId = lockedEmployment, reimburseVia = "payment_batch", lines = oneLine }, ct);
+        var waitingClaim = await PostAsync(host, token, "/api/hrm/expense-claims", new { employmentId = lockedEmployment, reimburseVia = "payment_batch", lines = oneLine }, ct);
+        var waitingId = waitingClaim.GetProperty("id").GetGuid();
+        var submitted = await SendAsync(host, token, HttpMethod.Post, $"/api/hrm/expense-claims/{waitingId}/submit", Json(new { rowVersion = waitingClaim.GetProperty("rowVersion").GetInt64() }), hints: false, ct);
+        if (submitted.Status != HttpStatusCode.Accepted)
+        {
+            throw new InvalidOperationException($"HR probe material expense claim submit: {(int)submitted.Status} {Short(submitted.Body)}");
+        }
+
+        await using (var c = await fx.OpenAdminAsync(code, ct))
+        {
+            await using var madeOver = new NpgsqlCommand("update hrm.expense_claims set created_by = $1 where id = $2", c);
+            madeOver.Parameters.Add(new NpgsqlParameter { Value = BaselineSeed.SystemUserId });
+            madeOver.Parameters.Add(new NpgsqlParameter { Value = waitingId });
+            await madeOver.ExecuteNonQueryAsync(ct);
+        }
+
+        var waitingLine = (await GetAsync(host, token, $"/api/hrm/expense-claims/{waitingId}/detail", ct)).GetProperty("lines")[0].GetProperty("id").GetGuid();
         return new Material(person, created.GetProperty("rowVersion").GetInt64(), into, identifier.Id, identifier.Version, contact.Id, contact.Version,
             address.Id, address.Version, relation.Id, relation.Version, qualification.Id, qualification.Version,
             match.GetProperty("id").GetGuid(), match.GetProperty("rowVersion").GetInt64(), created.GetProperty("personNo").GetString()!,
@@ -881,8 +919,12 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
             removalMap, 1, unmapped, 1, mapNo,
             leaveType.GetProperty("id").GetGuid(), leaveType.GetProperty("rowVersion").GetInt64(), leaveEntry.GetProperty("id").GetGuid(),
             leaveDraft.GetProperty("id").GetGuid(), leaveDraft.GetProperty("rowVersion").GetInt64(), leaveApproved, yearEndRun, toLeaveType, mover,
-            overtime, penalty, lockedPeriod, lockRun, adjustment, lockedEmployment, lockedStart, oneTime, payRun, runPeriod, freePeriod, payInput);
+            overtime, penalty, lockedPeriod, lockRun, adjustment, lockedEmployment, lockedStart, oneTime, payRun, runPeriod, freePeriod, payInput,
+            category, claimCurrency, draftClaim.GetProperty("id").GetGuid(), draftClaim.GetProperty("rowVersion").GetInt64(), waitingId, waitingLine);
     }
+
+    private static object ClaimLine(Material m) =>
+        new { categoryId = m.Category, expenseDate = Iso(DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-2)), amount = 10m, currencyCode = m.ClaimCurrency, description = "Probe expense" };
 
     private static string Iso(DateOnly d) => d.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
 

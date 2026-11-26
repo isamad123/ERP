@@ -9,7 +9,7 @@ import { defaultFor, errorAt, fieldsOf, parseNumber, showValue } from './policie
 import './policies-messages';
 
 /** Choice values with a web text (the server's schema has none for its enum values yet). */
-const KNOWN_CHOICES = ['line_manager_and_hr', 'hr'] as const;
+const KNOWN_CHOICES = ['line_manager_and_hr', 'hr', 'per_line', 'per_unit'] as const;
 
 interface Props {
   schema: ParamSchema;

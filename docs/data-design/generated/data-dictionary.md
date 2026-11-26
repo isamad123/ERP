@@ -2,14 +2,14 @@
      migrations ran (slice S1.02). Do not edit by hand. </auto-generated> -->
 # Data dictionary (generated from the live database)
 
-Release 1.0. Customer database: 229 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
+Release 1.0. Customer database: 230 tables. Control-plane database: 15 tables. Each customer database also holds the monthly partitions of the partitioned tables (counted per table below).
 
 | Database | Schema | Tables |
 | --- | --- | --- |
 | customer | aud | 7 |
 | customer | cfg | 20 |
 | customer | doc | 7 |
-| customer | hrm | 118 |
+| customer | hrm | 119 |
 | customer | iam | 24 |
 | customer | itg | 12 |
 | customer | job | 5 |
@@ -2352,6 +2352,39 @@ Indexes:
 - `uq_employments_company_id_user_ref` CREATE UNIQUE INDEX uq_employments_company_id_user_ref ON hrm.employments USING btree (company_id, user_ref) NULLS NOT DISTINCT WHERE ((user_ref IS NOT NULL) AND (status = ANY (ARRAY['pre_joining'::text, 'active'::text, 'on_notice'::text])))
 - `uq_employments_person_id` CREATE UNIQUE INDEX uq_employments_person_id ON hrm.employments USING btree (person_id) WHERE (is_primary AND (status = ANY (ARRAY['pre_joining'::text, 'active'::text, 'on_notice'::text])))
 
+### hrm.exchange_rates
+
+The customer's exchange rates for converting expense claim lines. Requirements: EXP-02. Source: hrm-pay.yaml.
+
+| Column | Type | Null | Default | Notes |
+| --- | --- | --- | --- | --- |
+| id | uuid | no |  |  |
+| company_id | uuid | no |  |  |
+| from_currency | character(3) | no |  | fk ref.currencies |
+| to_currency | character(3) | no |  | fk ref.currencies |
+| rate_date | date | no |  | the rate applies to expense dates on or after this date until a later row |
+| rate | numeric(19,10) | no |  | check > 0; units of to_currency for one unit of from_currency |
+| created_at | timestamp with time zone | no |  |  |
+| created_by | uuid | no |  |  |
+| updated_at | timestamp with time zone | no |  |  |
+| updated_by | uuid | no |  |  |
+| row_version | bigint | no | 1 |  |
+
+Constraints:
+
+- `ck_exchange_rates_currencies_rate` CHECK (((from_currency <> to_currency) AND (rate > (0)::numeric)))
+- `ck_exchange_rates_rate_rule` CHECK ((rate > (0)::numeric))
+- `fk_exchange_rates_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
+- `fk_exchange_rates_from_currency` FOREIGN KEY (from_currency) REFERENCES ref.currencies(code)
+- `fk_exchange_rates_to_currency` FOREIGN KEY (to_currency) REFERENCES ref.currencies(code)
+- `pk_exchange_rates` PRIMARY KEY (id)
+- `uq_exchange_rates_company_id_from_currency_to_currency_99344eea` UNIQUE (company_id, from_currency, to_currency, rate_date)
+
+Indexes:
+
+- `ix_exchange_rates_from_currency` CREATE INDEX ix_exchange_rates_from_currency ON hrm.exchange_rates USING btree (from_currency)
+- `ix_exchange_rates_to_currency` CREATE INDEX ix_exchange_rates_to_currency ON hrm.exchange_rates USING btree (to_currency)
+
 ### hrm.expense_categories
 
 Requirements: EXP-01. Source: hrm-pay.yaml.
@@ -2374,10 +2407,14 @@ Requirements: EXP-01. Source: hrm-pay.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| kind | text | no | 'general'::text | default general; per_diem and mileage lines carry a quantity (days or kilometres) checked against the rate of the expense policy (S1.42, FR-HRM-EXP-01) |
+| flags_block_submit | boolean | no | false | a policy flag on a line of this category stops the claim from being submitted (S1.42, FR-HRM-EXP-03) |
+| tax_treatment | text | yes |  | free label of the country pack; no rate is stored (S1.42, FR-HRM-EXP-01) |
 
 Constraints:
 
 - `ck_expense_categories_code_code` CHECK ((((length(code) >= 1) AND (length(code) <= 40)) AND (code = btrim(code))))
+- `ck_expense_categories_kind` CHECK ((kind = ANY (ARRAY['general'::text, 'per_diem'::text, 'mileage'::text])))
 - `ck_expense_categories_name_i18n_object` CHECK ((jsonb_typeof(name_i18n) = 'object'::text))
 - `fk_expense_categories_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_expense_categories_policy_id` FOREIGN KEY (company_id, policy_id) REFERENCES hrm.policies(company_id, id)
@@ -2413,6 +2450,15 @@ Requirements: EXP-02, EXP-03. Source: hrm-pay.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| original_currency_code | character(3) | yes |  | currency the receipt was paid in (S1.42) |
+| original_amount | numeric(19,4) | yes |  | amount in the original currency; amount is the converted value in the claim currency (S1.42) |
+| exchange_rate | numeric(19,10) | yes |  | rate used (original to claim currency), taken from hrm.exchange_rates and kept here (S1.42, Q3) |
+| rate_date | date | yes |  | date of the rate row that was used |
+| quantity | numeric(19,6) | yes |  | days of a per-diem line or kilometres of a mileage line (S1.42) |
+| approved_amount | numeric(19,4) | yes |  | amount the approver accepted, in the claim currency; 0 means the line was rejected (S1.42) |
+| decision_reason | text | yes |  | required when the approved amount is less than the amount |
+| decided_by | uuid | yes |  |  |
+| decided_at | timestamp with time zone | yes |  |  |
 
 Constraints:
 
@@ -2453,15 +2499,26 @@ Requirements: EXP-02, EXP-05, EXP-06. Source: hrm-pay.yaml.
 | updated_at | timestamp with time zone | no |  |  |
 | updated_by | uuid | no |  |  |
 | row_version | bigint | no | 1 |  |
+| title | text | yes |  | what the claim is for (S1.42) |
+| submitted_at | timestamp with time zone | yes |  |  |
+| needs_finance | boolean | no | false | true when the total reached hrm.exp.finance_threshold at submit: the route adds the finance step (S1.42, Q5) |
+| approved_total | numeric(19,4) | yes |  | sum of the approved amounts of the lines once decided (S1.42) |
+| pay_period_id | uuid | yes |  | fk hrm.pay_periods; the period of the payroll input (S1.42) |
+| reimbursed_at | timestamp with time zone | yes |  |  |
+| payment_status | text | no | 'none'::text | default none; the payment batch route of S1.40a returns paid or failed here (S1.42, FR-HRM-EXP-06) |
+| payment_reference | text | yes |  | reference of the payment line, set by the payment return (S1.40a) |
+| payment_line_id | uuid | yes |  | reserved for the payment batch line of S1.40a (no foreign key until that table exists) |
 
 Constraints:
 
+- `ck_expense_claims_payment_status` CHECK ((payment_status = ANY (ARRAY['none'::text, 'pending'::text, 'paid'::text, 'failed'::text])))
 - `ck_expense_claims_reimburse_via` CHECK ((reimburse_via = ANY (ARRAY['payroll'::text, 'payment_batch'::text])))
 - `ck_expense_claims_status` CHECK ((status = ANY (ARRAY['draft'::text, 'submitted'::text, 'approved'::text, 'rejected'::text, 'reimbursed'::text, 'cancelled'::text])))
 - `fk_expense_claims_branch_id` FOREIGN KEY (company_id, branch_id) REFERENCES org.branches(company_id, id)
 - `fk_expense_claims_company_id` FOREIGN KEY (company_id) REFERENCES org.companies(id)
 - `fk_expense_claims_employment_id` FOREIGN KEY (company_id, employment_id) REFERENCES hrm.employments(company_id, id)
 - `fk_expense_claims_pay_input_id` FOREIGN KEY (company_id, pay_input_id) REFERENCES hrm.pay_inputs(company_id, id)
+- `fk_expense_claims_pay_period_id` FOREIGN KEY (company_id, pay_period_id) REFERENCES hrm.pay_periods(company_id, id)
 - `fk_expense_claims_workflow_instance_id` FOREIGN KEY (company_id, workflow_instance_id) REFERENCES wf.workflow_instances(company_id, id)
 - `pk_expense_claims` PRIMARY KEY (id)
 - `uq_expense_claims_company_id_claim_no` UNIQUE (company_id, claim_no)
@@ -2472,6 +2529,7 @@ Indexes:
 - `ix_expense_claims_company_id_branch_id` CREATE INDEX ix_expense_claims_company_id_branch_id ON hrm.expense_claims USING btree (company_id, branch_id)
 - `ix_expense_claims_company_id_employment_id` CREATE INDEX ix_expense_claims_company_id_employment_id ON hrm.expense_claims USING btree (company_id, employment_id)
 - `ix_expense_claims_company_id_pay_input_id` CREATE INDEX ix_expense_claims_company_id_pay_input_id ON hrm.expense_claims USING btree (company_id, pay_input_id)
+- `ix_expense_claims_company_id_pay_period_id` CREATE INDEX ix_expense_claims_company_id_pay_period_id ON hrm.expense_claims USING btree (company_id, pay_period_id)
 - `ix_expense_claims_company_id_workflow_instance_id` CREATE INDEX ix_expense_claims_company_id_workflow_instance_id ON hrm.expense_claims USING btree (company_id, workflow_instance_id)
 
 ### hrm.final_settlement_lines

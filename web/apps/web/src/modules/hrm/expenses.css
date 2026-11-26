@@ -1,0 +1,99 @@
+/* The expense screens (slice S1.42). Tokens and logical properties only. */
+.erp-exp-lines {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-exp-line {
+  display: grid;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  padding-inline: var(--space-4);
+  border: var(--border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  min-inline-size: 0;
+}
+
+.erp-exp-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.erp-exp-wide {
+  grid-column: 1 / -1;
+}
+
+.erp-exp-head {
+  display: grid;
+  gap: var(--space-3);
+  max-inline-size: 40rem;
+}
+
+.erp-exp-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.erp-exp-blocks {
+  color: var(--color-danger-text, var(--color-text));
+  font-weight: var(--font-weight-strong);
+}
+
+.erp-exp-hidden {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+}
+
+.erp-exp-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.erp-exp-table th,
+.erp-exp-table td {
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  text-align: start;
+  vertical-align: top;
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+}
+
+.erp-exp-sum {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+  max-inline-size: 24rem;
+}
+
+.erp-exp-sum dd {
+  margin: 0;
+  text-align: end;
+}
+
+.erp-exp-decide {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.erp-exp-card-line {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-3);
+  border-block-end: var(--border-width) solid var(--color-border-subtle);
+}

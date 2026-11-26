@@ -2,7 +2,7 @@
 // ruling 2026-11-21: People, Time and Payroll show now and open "not available yet" until their slices build them).
 // Features are D-24 keys of the licence; permissions are the read permission of each area's main table.
 import { lazy } from 'react';
-import { Activity, AlertTriangle, BookOpen, Briefcase, BarChart3, CalendarCheck, ListChecks, ClipboardEdit, CalendarDays, CalendarRange, Clock, FilePen, FileSearch, GitFork, Grid3x3, LayoutGrid, Lock, MonitorSmartphone, QrCode, Router, ScrollText, Sigma, SunMoon, Timer, Users, UsersRound, Wallet } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowLeftRight, Banknote, BookOpen, Briefcase, BarChart3, CalendarCheck, ListChecks, ClipboardEdit, CalendarDays, CalendarRange, Clock, FilePen, FileSearch, GitFork, Grid3x3, LayoutGrid, Lock, MonitorSmartphone, QrCode, Receipt, Router, ScrollText, Sigma, SunMoon, Tags, Timer, Users, UsersRound, Wallet } from 'lucide-react';
 import type { ScreenDeclaration } from '../navigation/screens';
 import { registerApprovalCard } from './kernel/approval-cards';
 
@@ -43,6 +43,14 @@ registerApprovalCard('hrm.leave_cancellation', LeaveApprovalCard);
 // S1.34a: the pay groups (made by the engine) and the payroll calendar with its readiness list, loaded with their routes.
 const PayGroupsScreen = lazy(() => import('./payroll/pay-groups'));
 const PayCalendarScreen = lazy(() => import('./payroll/calendar'));
+// S1.42: expense claims (my claims, the claim form and page), the payments list and the admin lists of categories and exchange rates, loaded with their routes.
+const ExpensesScreen = lazy(() => import('./hrm/expenses'));
+const ExpenseFinanceScreen = lazy(() => import('./hrm/expense-finance'));
+const ExpenseCategoriesScreen = lazy(() => import('./hrm/expense-admin').then((m) => ({ default: m.CategoriesScreen })));
+const ExchangeRatesScreen = lazy(() => import('./hrm/expense-admin').then((m) => ({ default: m.RatesScreen })));
+// S1.42: the approvals inbox shows this card (lines, flags, receipts and the approver's line decisions) under the fields of an expense claim (lazy, so the shell does not grow).
+const ExpenseApprovalCard = lazy(() => import('./hrm/expense-approval-card'));
+registerApprovalCard('hrm.expense_claim', ExpenseApprovalCard);
 // S1.31: the attendance lock console (periods with lock and reopen requests, late punches) and the retroactive adjustments, loaded with their routes.
 const PeriodsScreen = lazy(() => import('./hrm/periods'));
 const AdjustmentsScreen = lazy(() => import('./hrm/periods').then((m) => ({ default: m.AdjustmentsScreen })));
@@ -94,5 +102,10 @@ export const hrmScreens: ScreenDeclaration[] = [
   // S1.34a (FR-HRM-PAY-01, FR-HRM-PAY-38): the more specific routes win over the placeholder below, which S1.35 replaces.
   { id: 'pay-groups', path: '/payroll/pay-groups/*', labelKey: 'nav.payGroups', icon: UsersRound, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.pay_groups.read', component: PayGroupsScreen, tables: ['hrm.pay_groups'] },
   { id: 'pay-calendar', path: '/payroll/calendar', labelKey: 'nav.payCalendar', icon: CalendarRange, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.pay_periods.read', component: PayCalendarScreen },
+  // S1.42 (FR-HRM-EXP-01 to -03, -05): claims, payments and the master data behind them; the more specific routes win over the placeholder below.
+  { id: 'expenses', path: '/expenses/*', labelKey: 'nav.expenses', icon: Receipt, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.expense_claims.read', component: ExpensesScreen, tables: ['hrm.expense_claims'] },
+  { id: 'expense-payments', path: '/expenses/finance', labelKey: 'nav.expenseFinance', icon: Banknote, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.expense_claims.read', component: ExpenseFinanceScreen },
+  { id: 'expense-categories', path: '/payroll/expense-categories/*', labelKey: 'nav.expenseCategories', icon: Tags, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.expense_categories.update', component: ExpenseCategoriesScreen, tables: ['hrm.expense_categories'] },
+  { id: 'exchange-rates', path: '/payroll/exchange-rates/*', labelKey: 'nav.exchangeRates', icon: ArrowLeftRight, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.exchange_rates.update', component: ExchangeRatesScreen, tables: ['hrm.exchange_rates'] },
   { id: 'payroll', path: '/payroll/*', labelKey: 'nav.payroll', icon: Wallet, group: 'payroll', feature: 'hrm.payroll', permission: 'hrm.pay_runs.read', comesWith: 'S1.35' },
 ];
