@@ -46,4 +46,7 @@ public interface IExpenseClaimService
     Task<PeopleResult> DecideLinesAsync(Guid claimId, ExpenseDecisionsInput input, CancellationToken cancellationToken);
 
     Task<PeopleResult> OpenClaimsAsync(Guid employmentId, CancellationToken cancellationToken);
+
+    /// <summary>What the claim form needs before the first save: the person the claim would be for and the currency the claim would be in. Null employment: the caller's own.</summary>
+    Task<PeopleResult> NewClaimContextAsync(Guid? employmentId, CancellationToken cancellationToken);
 }

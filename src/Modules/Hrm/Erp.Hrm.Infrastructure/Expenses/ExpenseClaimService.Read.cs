@@ -210,4 +210,31 @@ internal sealed partial class ExpenseClaimService
         var open = await new ExpenseOpenClaimsReader(db).OpenForAsync(employmentId, cancellationToken).ConfigureAwait(false);
         return new PeopleResult(PeopleOutcome.Done, Body: new { employmentId, items = open });
     }
+
+    public async Task<PeopleResult> NewClaimContextAsync(Guid? employmentId, CancellationToken cancellationToken)
+    {
+        if (!await permissions.HasPermissionAsync(ExpensePermissions.Create, cancellationToken).ConfigureAwait(false))
+        {
+            return PeopleResult.Forbidden();
+        }
+
+        var (employment, failure) = await EmploymentAsync(employmentId, cancellationToken).ConfigureAwait(false);
+        if (employment is null)
+        {
+            // Nobody to make a claim for (no current employment of the caller's own): the form says so; a named person out of scope is not found.
+            return employmentId is null ? new PeopleResult(PeopleOutcome.Done, Body: new { employmentId = (Guid?)null, currencyCode = (string?)null }) : failure!;
+        }
+
+        var today = await applier.TodayAsync(employment.CompanyId, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+        var currency = await ClaimCurrencyAsync(employment, today, cancellationToken).ConfigureAwait(false);
+        return new PeopleResult(PeopleOutcome.Done, Body: new
+        {
+            employmentId = employment.Id,
+            employeeNo = employment.EmployeeNo,
+            companyId = employment.CompanyId,
+            currencyCode = currency,
+            onBehalf = employment.UserRef != actor.UserId,
+            today,
+        });
+    }
 }

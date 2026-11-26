@@ -28,6 +28,8 @@ public static class ExpenseEndpoints
 
         Tag(app.MapPost("/api/hrm/expense-claims", async (ExpenseClaimInput body, IExpenseClaimService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.CreateAsync(body, ct).ConfigureAwait(false))), "create", Claims, ExpensePermissions.Create);
+        Tag(app.MapGet("/api/hrm/expense-claims/new-context", async (Guid? employmentId, IExpenseClaimService s, CancellationToken ct) =>
+            PersonEndpoints.Answer(await s.NewClaimContextAsync(employmentId, ct).ConfigureAwait(false))), "catalog", Claims, ExpensePermissions.Create);
         Tag(app.MapPut("/api/hrm/expense-claims/{id:guid}", async (Guid id, ExpenseClaimInput body, IExpenseClaimService s, CancellationToken ct) =>
             PersonEndpoints.Answer(await s.UpdateAsync(id, body, ct).ConfigureAwait(false))), "record_action", Claims, ExpensePermissions.Create);
         Tag(app.MapPost("/api/hrm/expense-claims/{id:guid}/submit", async (Guid id, ExpenseRowVersion? body, IExpenseClaimService s, CancellationToken ct) =>
