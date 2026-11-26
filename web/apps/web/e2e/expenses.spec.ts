@@ -89,8 +89,8 @@ test('FR-HRM-EXP-03 FR-XM-32 the manager sees the card in the inbox, reduces the
   await signIn(page, manager.username);
   await page.goto('/approvals');
   await expect(page.getByRole('heading', { name: 'Approvals', level: 1 })).toBeVisible();
-  await page.getByRole('grid', { name: 'Requests' }).getByRole('button', { name: /Open/ }).first().click();
-  const card = page.getByRole('region', { name: 'Expense claim' }).or(page.locator('section[aria-labelledby="erp-exp-card"]'));
+  await page.getByRole('grid', { name: 'Requests' }).getByRole('button', { name: /^Open Expense claim EXP-/ }).click();
+  const card = page.locator('section[aria-labelledby="erp-exp-card"]');
   await expect(card.getByText('Receipt missing')).toBeVisible();
   await card.getByRole('textbox', { name: /Approved amount/ }).fill('1000');
   await card.getByRole('button', { name: 'Save line decisions' }).click();
@@ -110,11 +110,11 @@ test('FR-HRM-EXP-03 FR-XM-32 the manager sees the card in the inbox, reduces the
 test('FR-HRM-EXP-02 FR-HRM-EXP-05 GHR-06 the expense screens in English and Urdu, light and dark, at three widths', async ({ browser }) => {
   const screens = (user: 'manager' | 'colleague') => (user === 'manager'
     ? [
-      { path: '/expenses', name: 'claims', ready: 'main [role="grid"]' },
+      { path: '/expenses', name: 'claims', ready: 'main :is([role="grid"], ul[aria-label])' },
       { path: `/expenses/claims/${claimId}`, name: 'claim', ready: 'main table' },
       { path: '/expenses/finance', name: 'finance', ready: 'main h1' },
-      { path: '/payroll/expense-categories', name: 'categories', ready: 'main [role="grid"]' },
-      { path: '/payroll/exchange-rates', name: 'rates', ready: 'main [role="grid"]' },
+      { path: '/payroll/expense-categories', name: 'categories', ready: 'main :is([role="grid"], ul[aria-label])' },
+      { path: '/payroll/exchange-rates', name: 'rates', ready: 'main :is([role="grid"], ul[aria-label])' },
     ]
     : [
       { path: `/expenses/new?employment=${seed.reports[1]}`, name: 'new', ready: 'main [role="group"]' },
