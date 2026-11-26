@@ -875,7 +875,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         var payInput = (await PostAsync(host, token, "/api/hrm/pay-inputs", new { items = new[] { new { employmentId = lockedEmployment, payPeriodId = runPeriod, componentId = oneTime, amount = 100m } } }, ct))
             .GetProperty("items")[0].GetProperty("id").GetGuid();
 
-        // S1.42: a category, a draft claim and a submitted claim of the S1.31 employment; the submitted one is made over to the system user, so the probe is not
+        // S1.42: a category, a draft claim and a submitted claim of the S1.31 employment; the submitted one is made over to another user, so the probe is not
         // the person who made it and may record decisions on it.
         var category = (await PostAsync(host, token, "/api/hrm/expense-categories", new
         {
@@ -897,7 +897,7 @@ public sealed class HrmProbe(IsolationFixture fx, WebApplication app)
         await using (var c = await fx.OpenAdminAsync(code, ct))
         {
             await using var madeOver = new NpgsqlCommand("update hrm.expense_claims set created_by = $1 where id = $2", c);
-            madeOver.Parameters.Add(new NpgsqlParameter { Value = BaselineSeed.SystemUserId });
+            madeOver.Parameters.Add(new NpgsqlParameter { Value = freeUser });
             madeOver.Parameters.Add(new NpgsqlParameter { Value = waitingId });
             await madeOver.ExecuteNonQueryAsync(ct);
         }
