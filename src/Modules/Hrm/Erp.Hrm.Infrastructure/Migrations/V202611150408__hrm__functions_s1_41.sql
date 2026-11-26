@@ -4,13 +4,18 @@
 -- </auto-generated>
 -- Database functions of slice S1.41 (tools/Erp.CodeGen/rules.yaml, functions)
 
--- hrm.tg_loans_rules: A loan is never deleted; its terms never change once approved; its status only moves forward and ended loans change no more; refused with constraint ck_loans_rules.
+-- hrm.tg_loans_rules: A loan that was decided on is never deleted; its terms never change once approved; its status only moves forward and ended loans change no more; refused with constraint ck_loans_rules.
 create or replace function hrm.tg_loans_rules() returns trigger
 language plpgsql as $fn$
 begin
     if tg_op = 'DELETE' then
-        raise exception 'loan %: a loan is never deleted; cancel it', old.id
-            using errcode = '23514', constraint = 'ck_loans_rules';
+        -- Only an application nobody has decided on may go (the change log records it; the application never deletes one): a loan that was approved, paid out
+        -- or ended is kept for good, and one with installments or ledger entries cannot go at all (their foreign keys).
+        if old.status <> 'applied' then
+            raise exception 'loan %: a loan that was approved is never deleted; cancel it', old.id
+                using errcode = '23514', constraint = 'ck_loans_rules';
+        end if;
+        return old;
     end if;
     if tg_op = 'INSERT' then
         if new.status <> 'applied' or new.principal <= 0 or new.installments < 1 or new.interest_rate < 0 then

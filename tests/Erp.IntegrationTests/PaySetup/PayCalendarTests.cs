@@ -450,7 +450,7 @@ public sealed class PayCalendarTests(TenancyFixture fx) : IAsyncLifetime
         Assert.Equal("failed", items["structures_assigned"].GetProperty("status").GetString()); // nobody has a structure until S1.34b
         Assert.Equal(3, items["structures_assigned"].GetProperty("count").GetInt32());
         Assert.False(first.Json.GetProperty("ready").GetBoolean());
-        Assert.Equal(2, first.Json.GetProperty("summary").GetProperty("notAvailable").GetInt32()); // loans and claims (S1.41, S1.42); attendance is S1.31's check
+        Assert.Equal(1, first.Json.GetProperty("summary").GetProperty("notAvailable").GetInt32()); // claims (S1.42); attendance is S1.31's check and loans S1.41's
 
         // Once everyone has an account the item passes; the others stay as they were, so the period is still not ready.
         await AddAccountAsync(company, missing1);
