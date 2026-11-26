@@ -448,7 +448,7 @@ jobs:
           - name: 3
             files: "approvals imports leave-screens numbering-routes ops"
           - name: 4
-            files: "attendance-screens branches org-chart organization settings"
+            files: "attendance-screens branches expenses org-chart organization settings"
     name: web-e2e (shard ${{ matrix.shard.name }})
 
     services:

@@ -37,7 +37,7 @@ function Categories() {
   return (
     <ListPage metadata={categoryMeta as TableMetadata} columns={['code', 'nameI18n', 'kind', 'requiresReceipt', 'flagsBlockSubmit', 'taxTreatment', 'reimbursementComponentId', 'isActive']}
       companies={{ activeId: activeCompany?.id ?? null, options: useCompanyOptions() }} canCreate={writable && can('hrm.expense_categories.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')}
-      canExport={can('itg.exports.run')} description={t('exp.categories.description')}
+      canExport={can('itg.exports.run')} description={t('expc.categories.description')}
       onCreate={() => { void navigate(`${CATEGORIES_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${CATEGORIES_PATH}/${row.id}`); }}
       rowLabel={(row) => `${String(row.code ?? '')} ${nameIn(row.nameI18n, locale)}`.trim()} />
   );
@@ -60,13 +60,13 @@ function CategoryForm() {
       defaults={{ companyId: inHand?.id ?? creatable[0]?.id ?? null, isActive: true, nameI18n: {}, kind: 'general', requiresReceipt: false, flagsBlockSubmit: false }}
       companies={id ? all : creatable} canCreate={writable && creatable.length > 0} canUpdate={writable && can('hrm.expense_categories.update')} canDelete={writable && can('hrm.expense_categories.delete')}
       canHistory={can('aud.history.view')} recordTitle={title}
-      help={{ code: t('exp.categories.help.code'), kind: t('exp.categories.help.kind'), taxTreatment: t('exp.categories.help.tax'), reimbursementComponentId: t('exp.categories.help.component') }}
-      deleteText={(row) => t('exp.categories.delete.body', { category: title(row) })}
+      help={{ code: t('expc.categories.help.code'), kind: t('expc.categories.help.kind'), taxTreatment: t('expc.categories.help.tax'), reimbursementComponentId: t('expc.categories.help.component') }}
+      deleteText={(row) => t('expc.categories.delete.body', { category: title(row) })}
       onSaved={(row, created, how) => {
-        toast.success(created ? t('exp.categories.created', { category: title(row) }) : t('exp.categories.saved', { category: title(row) }));
+        toast.success(created ? t('expc.categories.created', { category: title(row) }) : t('expc.categories.saved', { category: title(row) }));
         if (how === 'form') void navigate(created ? `${CATEGORIES_PATH}/${row.id}` : CATEGORIES_PATH, { replace: created });
       }}
-      onDeleted={() => { toast.success(t('exp.categories.deleted')); void navigate(CATEGORIES_PATH); }}
+      onDeleted={() => { toast.success(t('expc.categories.deleted')); void navigate(CATEGORIES_PATH); }}
       onCancel={() => { void navigate(CATEGORIES_PATH); }} />
   );
 }
@@ -84,7 +84,7 @@ function Rates() {
   return (
     <ListPage metadata={rateMeta as TableMetadata} columns={['fromCurrency', 'toCurrency', 'rateDate', 'rate', 'companyId']}
       companies={{ activeId: activeCompany?.id ?? null, options: useCompanyOptions() }} canCreate={writable && can('hrm.exchange_rates.create', activeCompany?.id)} canShare={can('cfg.saved_views.share')}
-      canExport={can('itg.exports.run')} description={t('exp.rates.description')}
+      canExport={can('itg.exports.run')} description={t('expc.rates.description')}
       onCreate={() => { void navigate(`${RATES_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${RATES_PATH}/${row.id}`); }}
       rowLabel={(row) => `${String(row.fromCurrency ?? '')} ${String(row.toCurrency ?? '')} ${String(row.rateDate ?? '')}`.trim()} />
   );
@@ -104,9 +104,9 @@ function RateForm() {
     <FormPage metadata={rateMeta as TableMetadata} schema={rateSchema as ValidationSchema} id={id ?? null} fields={['companyId', 'fromCurrency', 'toCurrency', 'rateDate', 'rate']}
       defaults={{ companyId: inHand?.id ?? creatable[0]?.id ?? null }} companies={id ? all : creatable}
       canCreate={writable && creatable.length > 0} canUpdate={writable && can('hrm.exchange_rates.update')} canDelete={false} canHistory={can('aud.history.view')} recordTitle={title}
-      help={{ fromCurrency: t('exp.rates.help.from'), toCurrency: t('exp.rates.help.to'), rate: t('exp.rates.help.rate') }}
+      help={{ fromCurrency: t('expc.rates.help.from'), toCurrency: t('expc.rates.help.to'), rate: t('expc.rates.help.rate') }}
       onSaved={(row, created, how) => {
-        toast.success(created ? t('exp.rates.created', { rate: title(row) }) : t('exp.rates.saved', { rate: title(row) }));
+        toast.success(created ? t('expc.rates.created', { rate: title(row) }) : t('expc.rates.saved', { rate: title(row) }));
         if (how === 'form') void navigate(created ? `${RATES_PATH}/${row.id}` : RATES_PATH, { replace: created });
       }}
       onDeleted={() => { void navigate(RATES_PATH); }}

@@ -31,7 +31,7 @@ export const emptyLine = (currency: string, today = ''): LineDraft => ({ key: ne
 /** A saved line as the form's row: the amount typed is what was claimed, in the currency it was claimed in. */
 export function draftOf(line: ClaimLine): LineDraft {
   return {
-    key: newKey(), id: line.id, categoryId: line.categoryId, expenseDate: line.expenseDate, amount: line.originalAmount ?? '', currencyCode: line.originalCurrencyCode,
+    key: newKey(), id: line.id, categoryId: line.categoryId, expenseDate: line.expenseDate, amount: line.originalAmount === null ? '' : trimZeros(line.originalAmount), currencyCode: line.originalCurrencyCode,
     quantity: line.quantity && line.quantity !== '0' ? trimZeros(line.quantity) : '', description: line.description ?? '', receiptFileId: line.receiptFileId ?? '', project: line.project ?? '', costCentre: line.costCentre ?? '',
   };
 }
@@ -49,14 +49,14 @@ export function checkLines(lines: LineDraft[], categories: Map<string, Category>
   for (const line of lines) {
     const errors: LineErrors = {};
     const category = categories.get(line.categoryId);
-    if (!category) errors.category = 'exp.err.category';
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(line.expenseDate)) errors.date = 'exp.err.date';
-    if (!isPositive(line.amount)) errors.amount = AMOUNT.test(line.amount.trim()) || line.amount.trim() === '' ? 'exp.err.amount.positive' : 'exp.err.amount';
-    if (!CURRENCY.test(line.currencyCode)) errors.currency = 'exp.err.currency';
+    if (!category) errors.category = 'expc.err.category';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(line.expenseDate)) errors.date = 'expc.err.date';
+    if (!isPositive(line.amount)) errors.amount = AMOUNT.test(line.amount.trim()) || line.amount.trim() === '' ? 'expc.err.amount.positive' : 'expc.err.amount';
+    if (!CURRENCY.test(line.currencyCode)) errors.currency = 'expc.err.currency';
     if (needsQuantity(category)) {
-      if (line.quantity.trim() === '') errors.quantity = 'exp.err.quantity.required';
-      else if (!QUANTITY.test(line.quantity.trim()) || !/[1-9]/.test(line.quantity)) errors.quantity = 'exp.err.quantity';
-    } else if (line.quantity.trim() !== '' && !QUANTITY.test(line.quantity.trim())) errors.quantity = 'exp.err.quantity';
+      if (line.quantity.trim() === '') errors.quantity = 'expc.err.quantity.required';
+      else if (!QUANTITY.test(line.quantity.trim()) || !/[1-9]/.test(line.quantity)) errors.quantity = 'expc.err.quantity';
+    } else if (line.quantity.trim() !== '' && !QUANTITY.test(line.quantity.trim())) errors.quantity = 'expc.err.quantity';
     if (Object.keys(errors).length > 0) found.set(line.key, errors);
   }
   return found;
@@ -118,10 +118,10 @@ export interface DecisionDraft { approved: string; reason: string }
 
 export function decisionErrors(line: Pick<ClaimLine, 'amount'>, draft: DecisionDraft): { approved?: string; reason?: string } {
   const approved = draft.approved.trim();
-  if (!AMOUNT.test(approved)) return { approved: 'exp.decide.err.amount' };
+  if (!AMOUNT.test(approved)) return { approved: 'expc.decide.err.amount' };
   const claimed = line.amount ?? '0';
-  if (compareDecimal(approved, claimed) > 0) return { approved: 'exp.decide.err.above' };
-  if (compareDecimal(approved, claimed) < 0 && draft.reason.trim() === '') return { reason: 'exp.decide.err.reason' };
+  if (compareDecimal(approved, claimed) > 0) return { approved: 'expc.decide.err.above' };
+  if (compareDecimal(approved, claimed) < 0 && draft.reason.trim() === '') return { reason: 'expc.decide.err.reason' };
   return {};
 }
 

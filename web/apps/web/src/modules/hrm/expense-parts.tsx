@@ -15,27 +15,27 @@ const PAY_CHIP: Record<PaymentStatus, Status> = { none: 'inactive', pending: 'pe
 
 export function ClaimStatusChip({ status }: { status: ClaimStatus }) {
   const { t } = useText();
-  return <StatusChip status={CHIP[status]} label={t(`exp.status.${status}` as MessageKey)} />;
+  return <StatusChip status={CHIP[status]} label={t(`expc.status.${status}` as MessageKey)} />;
 }
 
 export function PaymentChip({ status }: { status: PaymentStatus }) {
   const { t } = useText();
-  return <StatusChip status={PAY_CHIP[status]} label={t(`exp.pay.${status}` as MessageKey)} />;
+  return <StatusChip status={PAY_CHIP[status]} label={t(`expc.pay.${status}` as MessageKey)} />;
 }
 
 /** One policy flag: an icon and its words; a flag of a category that blocks submit says so (a second chip with its own words). */
 export function FlagBadge({ flag, blocks = false }: { flag: ExpenseFlag; blocks?: boolean }) {
   const { t } = useText();
-  return <StatusChip status={blocks ? 'blocked' : 'pending'} label={t(`exp.flag.${flag}` as MessageKey)} />;
+  return <StatusChip status={blocks ? 'blocked' : 'pending'} label={t(`expc.flag.${flag}` as MessageKey)} />;
 }
 
 export function Flags({ flags, blocksSubmit }: { flags: ExpenseFlag[]; blocksSubmit: boolean }) {
   const { t } = useText();
   if (flags.length === 0) return null;
   return (
-    <ul className="erp-exp-flags" aria-label={t('exp.flags')}>
+    <ul className="erp-exp-flags" aria-label={t('expc.flags')}>
       {flags.map((f) => <li key={f}><FlagBadge flag={f} blocks={blocksSubmit} /></li>)}
-      {blocksSubmit && <li><span className="erp-exp-blocks">{t('exp.flag.blocks')}</span></li>}
+      {blocksSubmit && <li><span className="erp-exp-blocks">{t('expc.flag.blocks')}</span></li>}
     </ul>
   );
 }
@@ -45,7 +45,7 @@ export function Money({ value, currency }: { value: string | null | undefined; c
   const { t } = useText();
   const { locale, numbers } = useLocaleSettings();
   if (value === null || value === undefined) {
-    return <span className="erp-exp-hidden" title={t('exp.hidden.title')}><EyeOff size={14} aria-hidden="true" /> {t('exp.hidden')}</span>;
+    return <span className="erp-exp-hidden" title={t('expc.hidden.title')}><EyeOff size={14} aria-hidden="true" /> {t('expc.hidden')}</span>;
   }
   return <bdi>{formatMoney(value, currency, locale === 'ur' ? 'ur' : 'en', numbers)}</bdi>;
 }
@@ -55,11 +55,11 @@ export function useExpenseRefusal(): (error: unknown) => string {
   const { t, server } = useText();
   return (error) => {
     if (error instanceof ApiProblem) {
-      if (error.status === 0) return t('exp.error.network');
+      if (error.status === 0) return t('expc.error.network');
       const first = Object.values(error.fieldErrors)[0]?.[0];
-      return server(error.key) ?? (first ? server(first) : null) ?? (error.errors[0] ? server(error.errors[0]) : null) ?? t('exp.error.generic');
+      return server(error.key) ?? (first ? server(first) : null) ?? (error.errors[0] ? server(error.errors[0]) : null) ?? t('expc.error.generic');
     }
-    return t('exp.error.generic');
+    return t('expc.error.generic');
   };
 }
 

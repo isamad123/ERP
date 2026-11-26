@@ -20,7 +20,7 @@ export default function ExpenseApprovalCard({ documentId }: ApprovalCardProps) {
   const refusal = useExpenseRefusal();
   const view = useQuery({ queryKey: ['hrm', 'expenses', 'claim', documentId], queryFn: ({ signal }) => expensesApi.detail(documentId, signal), retry: false });
   if (view.isPending) return <Skeleton lines={5} />;
-  if (view.isError) return <section aria-label={t('exp.card.title')}><p className="erp-muted" role="status">{refusal(view.error)}</p></section>;
+  if (view.isError) return <section aria-label={t('expc.card.title')}><p className="erp-muted" role="status">{refusal(view.error)}</p></section>;
   return <Card view={view.data} />;
 }
 
@@ -46,39 +46,39 @@ function Card({ view }: { view: ClaimView }) {
       const d = drafts[l.id] ?? startOf(l);
       return { lineId: l.id, approvedAmount: d.approved.trim(), ...(d.reason.trim() ? { reason: d.reason.trim() } : {}) };
     })),
-    onSuccess: async () => { setMessage(null); toast.success(t('exp.decide.saved')); await queryClient.invalidateQueries({ queryKey: ['hrm', 'expenses'] }); },
+    onSuccess: async () => { setMessage(null); toast.success(t('expc.decide.saved')); await queryClient.invalidateQueries({ queryKey: ['hrm', 'expenses'] }); },
     onError: (e) => setMessage(refusal(e)),
   });
   const set = (id: string, change: Partial<DecisionDraft>) => setDrafts((d) => ({ ...d, [id]: { ...(d[id] ?? { approved: '', reason: '' }), ...change } }));
   return (
     <section aria-labelledby="erp-exp-card" className="erp-stack">
-      <h3 id="erp-exp-card">{t('exp.card.title')}</h3>
+      <h3 id="erp-exp-card">{t('expc.card.title')}</h3>
       <dl className="erp-facts">
-        <dt>{t('exp.facts.employee')}</dt><dd><bdi>{view.employeeNo ?? ''}</bdi></dd>
-        {view.title && <><dt>{t('exp.field.title')}</dt><dd><bdi>{view.title}</bdi></dd></>}
-        <dt>{t('exp.field.via')}</dt><dd>{t(`exp.via.${view.reimburseVia}` as MessageKey)}</dd>
-        <dt>{t('exp.facts.total')}</dt><dd><Money value={view.totalAmount} currency={view.currencyCode} /></dd>
+        <dt>{t('expc.facts.employee')}</dt><dd><bdi>{view.employeeNo ?? ''}</bdi></dd>
+        {view.title && <><dt>{t('expc.field.title')}</dt><dd><bdi>{view.title}</bdi></dd></>}
+        <dt>{t('expc.field.via')}</dt><dd>{t(`expc.via.${view.reimburseVia}` as MessageKey)}</dd>
+        <dt>{t('expc.facts.total')}</dt><dd><Money value={view.totalAmount} currency={view.currencyCode} /></dd>
       </dl>
-      {view.amountsHidden && <p className="erp-muted" role="note">{t('exp.hidden.note')}</p>}
-      {view.lines.some((l) => l.flags.length > 0) && <Banner tone="warning" title={t('exp.card.flagged')}>{t('exp.card.flagged.body')}</Banner>}
-      <ul className="erp-stack" aria-label={t('exp.lines')}>
+      {view.amountsHidden && <p className="erp-muted" role="note">{t('expc.hidden.note')}</p>}
+      {view.lines.some((l) => l.flags.length > 0) && <Banner tone="warning" title={t('expc.card.flagged')}>{t('expc.card.flagged.body')}</Banner>}
+      <ul className="erp-stack" aria-label={t('expc.lines')}>
         {view.lines.map((l, i) => {
           const draft = drafts[l.id] ?? startOf(l);
           const e = tried ? problems(l) : {};
           return (
             <li key={l.id} className="erp-exp-card-line">
-              <strong>{t('exp.line.n', { n: i + 1 })}: <bdi>{nameOf(l.categoryName, lang) || l.categoryCode}</bdi></strong>
+              <strong>{t('expc.line.n', { n: i + 1 })}: <bdi>{nameOf(l.categoryName, lang) || l.categoryCode}</bdi></strong>
               <span><bdi>{day(l.expenseDate)}</bdi> · <Money value={l.amount} currency={view.currencyCode} />
-                {l.originalCurrencyCode !== view.currencyCode && <> ({t('exp.card.claimedIn')} <Money value={l.originalAmount} currency={l.originalCurrencyCode} />{l.exchangeRate ? `, ${t('exp.line.rateShort', { rate: formatDecimal(l.exchangeRate, numbers) })}` : ''})</>}</span>
-              {l.quantity && l.quantity !== '0' && <span>{t('exp.line.quantity', { value: formatDecimal(trimZeros(l.quantity), numbers) })}</span>}
+                {l.originalCurrencyCode !== view.currencyCode && <> ({t('expc.card.claimedIn')} <Money value={l.originalAmount} currency={l.originalCurrencyCode} />{l.exchangeRate ? `, ${t('expc.line.rateShort', { rate: formatDecimal(l.exchangeRate, numbers) })}` : ''})</>}</span>
+              {l.quantity && l.quantity !== '0' && <span>{t('expc.line.quantity', { value: formatDecimal(trimZeros(l.quantity), numbers) })}</span>}
               {l.description && <span><bdi>{l.description}</bdi></span>}
               <Flags flags={l.flags} blocksSubmit={l.blocksSubmit} />
               <span><ReceiptLink claimId={view.id} fileId={l.receiptFileId} /></span>
               {decide && (
-                <div className="erp-exp-decide" role="group" aria-label={t('exp.decide.line', { n: i + 1 })}>
-                  <TextField label={t('exp.decide.approved')} isCode inputMode="text" maxLength={20} value={draft.approved} onChange={(v) => set(l.id, { approved: v })} error={e.approved ? t(e.approved as MessageKey) : null}
-                    help={t('exp.decide.approved.help')} />
-                  <TextField label={t('exp.decide.reason')} maxLength={500} value={draft.reason} onChange={(v) => set(l.id, { reason: v })} error={e.reason ? t(e.reason as MessageKey) : null} />
+                <div className="erp-exp-decide" role="group" aria-label={t('expc.decide.line', { n: i + 1 })}>
+                  <TextField label={t('expc.decide.approved')} isCode inputMode="text" maxLength={20} value={draft.approved} onChange={(v) => set(l.id, { approved: v })} error={e.approved ? t(e.approved as MessageKey) : null}
+                    help={t('expc.decide.approved.help')} />
+                  <TextField label={t('expc.decide.reason')} maxLength={500} value={draft.reason} onChange={(v) => set(l.id, { reason: v })} error={e.reason ? t(e.reason as MessageKey) : null} />
                 </div>)}
               {!decide && l.decidedAt !== null && <span><Money value={l.approvedAmount} currency={view.currencyCode} />{l.decisionReason ? <> · <bdi>{l.decisionReason}</bdi></> : null}</span>}
             </li>);
@@ -86,11 +86,11 @@ function Card({ view }: { view: ClaimView }) {
       </ul>
       {decide && (
         <div className="erp-stack">
-          <p className="erp-muted">{t('exp.decide.note')}</p>
+          <p className="erp-muted">{t('expc.decide.note')}</p>
           {message && <p role="alert" className="erp-field-error">{message}</p>}
-          <div><Button variant="secondary" isDisabled={!writable} isPending={save.isPending} onPress={() => { setTried(true); if (valid) save.mutate(); else setMessage(t('exp.fix')); }}>{t('exp.decide.save')}</Button></div>
+          <div><Button variant="secondary" isDisabled={!writable} isPending={save.isPending} onPress={() => { setTried(true); if (valid) save.mutate(); else setMessage(t('expc.fix')); }}>{t('expc.decide.save')}</Button></div>
         </div>)}
-      <p><Link href={`/expenses/claims/${view.id}`}>{t('exp.card.open')}</Link></p>
+      <p><Link href={`/expenses/claims/${view.id}`}>{t('expc.card.open')}</Link></p>
     </section>
   );
 }

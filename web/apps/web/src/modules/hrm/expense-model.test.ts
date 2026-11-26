@@ -14,15 +14,15 @@ describe('FR-HRM-EXP-02 the checks of a line before the server is asked', () => 
   it('asks for a category, a date, a positive amount with at most four decimals and a three-letter currency', () => {
     const bad = { ...ok, categoryId: '', expenseDate: '', amount: '0', currencyCode: 'pk' };
     const errors = checkLines([bad], categories).get(bad.key);
-    expect(errors).toEqual({ category: 'exp.err.category', date: 'exp.err.date', amount: 'exp.err.amount.positive', currency: 'exp.err.currency' });
-    expect(checkLines([{ ...ok, amount: '1.23456' }], categories).values().next().value?.amount).toBe('exp.err.amount');
-    expect(checkLines([{ ...ok, amount: '1,200' }], categories).values().next().value?.amount).toBe('exp.err.amount');
-    expect(checkLines([{ ...ok, amount: '-5' }], categories).values().next().value?.amount).toBe('exp.err.amount');
+    expect(errors).toEqual({ category: 'expc.err.category', date: 'expc.err.date', amount: 'expc.err.amount.positive', currency: 'expc.err.currency' });
+    expect(checkLines([{ ...ok, amount: '1.23456' }], categories).values().next().value?.amount).toBe('expc.err.amount');
+    expect(checkLines([{ ...ok, amount: '1,200' }], categories).values().next().value?.amount).toBe('expc.err.amount');
+    expect(checkLines([{ ...ok, amount: '-5' }], categories).values().next().value?.amount).toBe('expc.err.amount');
   });
   it('FR-HRM-EXP-01 requires days for a per-diem and kilometres for a mileage category, and none for a general one', () => {
     const perDiem = { ...ok, categoryId: 'c2' };
-    expect(checkLines([perDiem], categories).get(perDiem.key)?.quantity).toBe('exp.err.quantity.required');
-    expect(checkLines([{ ...perDiem, quantity: '0' }], categories).values().next().value?.quantity).toBe('exp.err.quantity');
+    expect(checkLines([perDiem], categories).get(perDiem.key)?.quantity).toBe('expc.err.quantity.required');
+    expect(checkLines([{ ...perDiem, quantity: '0' }], categories).values().next().value?.quantity).toBe('expc.err.quantity');
     expect(checkLines([{ ...perDiem, quantity: '3' }], categories).size).toBe(0);
     expect(checkLines([{ ...ok, categoryId: 'c3', quantity: '' }], categories).size).toBe(1);
     expect(checkLines([{ ...ok, quantity: '' }], categories).size).toBe(0);
@@ -42,7 +42,7 @@ describe('FR-HRM-EXP-02 the body of a claim', () => {
   });
   it('shows a saved line as the form row with the amount claimed and zeros trimmed', () => {
     const row = draftOf(line('l1', { originalCurrencyCode: 'USD', originalAmount: '12.5000', quantity: '2.0000' }));
-    expect(row).toMatchObject({ id: 'l1', amount: '12.5000', currencyCode: 'USD', quantity: '2' });
+    expect(row).toMatchObject({ id: 'l1', amount: '12.5', currencyCode: 'USD', quantity: '2' });
     expect(trimZeros('1200.0000')).toBe('1200');
     expect(trimZeros('12.5000')).toBe('12.5');
     expect(trimZeros('1200')).toBe('1200');
@@ -80,10 +80,10 @@ describe('FR-HRM-EXP-03 the approver\'s line decision', () => {
     expect(decisionErrors(l, { approved: '0', reason: 'Not business' })).toEqual({});
   });
   it('asks for a reason below the claimed amount, refuses more than claimed and refuses text', () => {
-    expect(decisionErrors(l, { approved: '999.9999', reason: ' ' })).toEqual({ reason: 'exp.decide.err.reason' });
-    expect(decisionErrors(l, { approved: '1000.0001', reason: 'x' })).toEqual({ approved: 'exp.decide.err.above' });
-    expect(decisionErrors(l, { approved: 'abc', reason: '' })).toEqual({ approved: 'exp.decide.err.amount' });
-    expect(decisionErrors(l, { approved: '', reason: '' })).toEqual({ approved: 'exp.decide.err.amount' });
+    expect(decisionErrors(l, { approved: '999.9999', reason: ' ' })).toEqual({ reason: 'expc.decide.err.reason' });
+    expect(decisionErrors(l, { approved: '1000.0001', reason: 'x' })).toEqual({ approved: 'expc.decide.err.above' });
+    expect(decisionErrors(l, { approved: 'abc', reason: '' })).toEqual({ approved: 'expc.decide.err.amount' });
+    expect(decisionErrors(l, { approved: '', reason: '' })).toEqual({ approved: 'expc.decide.err.amount' });
   });
   it('compares decimals exactly', () => {
     expect(compareDecimal('10', '9.9999')).toBe(1);

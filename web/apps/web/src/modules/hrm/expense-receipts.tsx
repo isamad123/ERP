@@ -28,7 +28,7 @@ export function useReceiptDownload() {
       link.remove();
       URL.revokeObjectURL(url);
     } catch {
-      toast.error(t('exp.receipts.downloadError'));
+      toast.error(t('expc.receipts.downloadError'));
     }
   };
 }
@@ -38,9 +38,9 @@ export function ReceiptLink({ claimId, fileId }: { claimId: string; fileId: stri
   const { t } = useText();
   const files = useReceipts(claimId);
   const download = useReceiptDownload();
-  if (!fileId) return <span className="erp-muted">{t('exp.receipt.none')}</span>;
+  if (!fileId) return <span className="erp-muted">{t('expc.receipt.none')}</span>;
   const file = files.data?.find((f) => f.id === fileId);
-  if (!file) return <span className="erp-muted">{files.isPending ? t('exp.loading') : t('exp.receipt.attached')}</span>;
+  if (!file) return <span className="erp-muted">{files.isPending ? t('expc.loading') : t('expc.receipt.attached')}</span>;
   return <Button variant="quiet" icon={<Download size={16} aria-hidden="true" />} onPress={() => { void download(file); }}><bdi>{file.fileName}</bdi></Button>;
 }
 
@@ -63,31 +63,31 @@ export function ReceiptsPanel({ claimId, canAdd }: { claimId: string | null; can
     },
     onSuccess: async (lost) => {
       setFailed(lost);
-      if (lost.length === 0) toast.success(t('exp.receipts.added'));
+      if (lost.length === 0) toast.success(t('expc.receipts.added'));
       await queryClient.invalidateQueries({ queryKey: receiptsKey(claimId ?? '') });
     },
   });
   return (
     <section aria-labelledby="erp-exp-receipts" className="erp-stack">
-      <h2 id="erp-exp-receipts">{t('exp.receipts')}</h2>
-      {!claimId && <p className="erp-muted">{t('exp.receipts.saveFirst')}</p>}
+      <h2 id="erp-exp-receipts">{t('expc.receipts')}</h2>
+      {!claimId && <p className="erp-muted">{t('expc.receipts.saveFirst')}</p>}
       {claimId && files.isPending && <Skeleton lines={1} />}
-      {claimId && files.isError && <ErrorPanel message={t('exp.receipts.listError')} level={2} />}
-      {claimId && files.data && (files.data.length === 0 ? <p className="erp-muted">{t('exp.receipts.empty')}</p> : (
+      {claimId && files.isError && <ErrorPanel message={t('expc.receipts.listError')} level={2} />}
+      {claimId && files.data && (files.data.length === 0 ? <p className="erp-muted">{t('expc.receipts.empty')}</p> : (
         <ul className="erp-stack">
           {files.data.map((file) => (
             <li key={file.id} className="erp-row erp-wrap">
               <bdi>{file.fileName}</bdi>
-              <IconButton label={t('exp.receipts.download', { name: file.fileName })} icon={<Download size={16} aria-hidden="true" />} onPress={() => { void download(file); }} />
+              <IconButton label={t('expc.receipts.download', { name: file.fileName })} icon={<Download size={16} aria-hidden="true" />} onPress={() => { void download(file); }} />
             </li>))}
         </ul>))}
-      {failed.length > 0 && <p role="alert" className="erp-field-error">{t('exp.receipts.failed', { names: failed.join(', ') })}</p>}
+      {failed.length > 0 && <p role="alert" className="erp-field-error">{t('expc.receipts.failed', { names: failed.join(', ') })}</p>}
       {claimId && canAdd && (
         <div className="erp-stack">
           <input ref={input} type="file" multiple accept={PROOF_ACCEPT} hidden aria-hidden="true" tabIndex={-1} data-testid="receipt-input"
             onChange={(e) => { const chosen = Array.from(e.target.files ?? []); e.target.value = ''; if (chosen.length > 0) upload.mutate(chosen); }} />
-          <div><Button variant="secondary" icon={<Paperclip size={16} aria-hidden="true" />} isPending={upload.isPending} onPress={() => input.current?.click()}>{t('exp.receipts.add')}</Button></div>
-          <span className="erp-help erp-muted">{t('exp.receipts.help')}</span>
+          <div><Button variant="secondary" icon={<Paperclip size={16} aria-hidden="true" />} isPending={upload.isPending} onPress={() => input.current?.click()}>{t('expc.receipts.add')}</Button></div>
+          <span className="erp-help erp-muted">{t('expc.receipts.help')}</span>
         </div>)}
     </section>
   );

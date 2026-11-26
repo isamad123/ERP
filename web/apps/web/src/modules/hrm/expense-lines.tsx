@@ -35,8 +35,8 @@ export function LinesEditor({ lines, onChange, categories, claimCurrency, today,
   const patch = (key: string, change: Partial<LineDraft>) => onChange(lines.map((l) => (l.key === key ? { ...l, ...change } : l)));
   return (
     <section aria-labelledby="erp-exp-lines" className="erp-stack">
-      <h2 id="erp-exp-lines">{t('exp.lines')}</h2>
-      {lines.length === 0 && <p className="erp-muted">{t('exp.lines.empty')}</p>}
+      <h2 id="erp-exp-lines">{t('expc.lines')}</h2>
+      {lines.length === 0 && <p className="erp-muted">{t('expc.lines.empty')}</p>}
       <ol className="erp-exp-lines">
         {lines.map((line, i) => {
           const category = byId.get(line.categoryId);
@@ -45,40 +45,40 @@ export function LinesEditor({ lines, onChange, categories, claimCurrency, today,
           const converted = result && result.amount !== null && result.originalCurrencyCode !== claimCurrency;
           return (
             <li key={line.key}>
-              <fieldset className="erp-exp-line" aria-label={t('exp.line.n', { n: i + 1 })}>
-                <legend className="erp-label">{t('exp.line.n', { n: i + 1 })}</legend>
+              <fieldset className="erp-exp-line" aria-label={t('expc.line.n', { n: i + 1 })}>
+                <legend className="erp-label">{t('expc.line.n', { n: i + 1 })}</legend>
                 <div className="erp-exp-fields">
-                  <SelectField label={t('exp.line.category')} isRequired options={categories.map((c) => ({ id: c.id, label: categoryName(c), detail: c.code }))} value={line.categoryId || null}
+                  <SelectField label={t('expc.line.category')} isRequired options={categories.map((c) => ({ id: c.id, label: categoryName(c), detail: c.code }))} value={line.categoryId || null}
                     onChange={(id) => patch(line.key, { categoryId: id })} error={error.category ?? null} />
-                  <DateField label={t('exp.line.date')} isRequired value={line.expenseDate ? parseDate(line.expenseDate) : null} onChange={(v) => patch(line.key, { expenseDate: v ? v.toString() : '' })} error={error.date ?? null} />
-                  <TextField label={t('exp.line.amount')} isRequired isCode inputMode="text" maxLength={20} value={line.amount} onChange={(v) => patch(line.key, { amount: v })} error={error.amount ?? null} />
-                  <TextField label={t('exp.line.currency')} isRequired isCode maxLength={3} value={line.currencyCode} onChange={(v) => patch(line.key, { currencyCode: v.toUpperCase() })} error={error.currency ?? null}
-                    help={line.currencyCode && line.currencyCode !== claimCurrency ? t('exp.line.currency.converted', { currency: claimCurrency }) : undefined} />
+                  <DateField label={t('expc.line.date')} isRequired value={line.expenseDate ? parseDate(line.expenseDate) : null} onChange={(v) => patch(line.key, { expenseDate: v ? v.toString() : '' })} error={error.date ?? null} />
+                  <TextField label={t('expc.line.amount')} isRequired isCode inputMode="text" maxLength={20} value={line.amount} onChange={(v) => patch(line.key, { amount: v })} error={error.amount ?? null} />
+                  <TextField label={t('expc.line.currency')} isRequired isCode maxLength={3} value={line.currencyCode} onChange={(v) => patch(line.key, { currencyCode: v.toUpperCase() })} error={error.currency ?? null}
+                    help={line.currencyCode && line.currencyCode !== claimCurrency ? t('expc.line.currency.converted', { currency: claimCurrency }) : undefined} />
                   {needsQuantity(category) && (
-                    <TextField label={t(category?.kind === 'per_diem' ? 'exp.line.days' : 'exp.line.km')} isRequired isCode inputMode="text" maxLength={14} value={line.quantity}
+                    <TextField label={t(category?.kind === 'per_diem' ? 'expc.line.days' : 'expc.line.km')} isRequired isCode inputMode="text" maxLength={14} value={line.quantity}
                       onChange={(v) => patch(line.key, { quantity: v })} error={error.quantity ?? null} />)}
-                  <SelectField label={t('exp.line.receipt')} options={[{ id: '', label: t('exp.line.receipt.none') }, ...receipts.map((f) => ({ id: f.id, label: f.fileName }))]} value={line.receiptFileId}
+                  <SelectField label={t('expc.line.receipt')} options={[{ id: '', label: t('expc.line.receipt.none') }, ...receipts.map((f) => ({ id: f.id, label: f.fileName }))]} value={line.receiptFileId}
                     onChange={(id) => patch(line.key, { receiptFileId: id })} error={error.receipt ?? null}
-                    help={category?.requiresReceipt ? t('exp.line.receipt.required') : undefined} />
-                  <TextField label={t('exp.line.project')} maxLength={80} value={line.project} onChange={(v) => patch(line.key, { project: v })} />
-                  <TextField label={t('exp.line.costCentre')} maxLength={80} value={line.costCentre} onChange={(v) => patch(line.key, { costCentre: v })} />
-                  <div className="erp-exp-wide"><TextField label={t('exp.line.description')} maxLength={500} value={line.description} onChange={(v) => patch(line.key, { description: v })} /></div>
+                    help={category?.requiresReceipt ? t('expc.line.receipt.required') : undefined} />
+                  <TextField label={t('expc.line.project')} maxLength={80} value={line.project} onChange={(v) => patch(line.key, { project: v })} />
+                  <TextField label={t('expc.line.costCentre')} maxLength={80} value={line.costCentre} onChange={(v) => patch(line.key, { costCentre: v })} />
+                  <div className="erp-exp-wide"><TextField label={t('expc.line.description')} maxLength={500} value={line.description} onChange={(v) => patch(line.key, { description: v })} /></div>
                 </div>
                 {error.line && <p role="alert" className="erp-field-error">{error.line}</p>}
                 {result && (
                   <div className="erp-stack" aria-live="polite">
-                    {converted && <p className="erp-small">{t('exp.line.convertedAs', { rate: result.exchangeRate ? formatDecimal(result.exchangeRate, numbers) : '', date: result.rateDate ? day(result.rateDate) : '' })} <Money value={result.amount} currency={claimCurrency} /></p>}
+                    {converted && <p className="erp-small">{t('expc.line.convertedAs', { rate: result.exchangeRate ? formatDecimal(result.exchangeRate, numbers) : '', date: result.rateDate ? day(result.rateDate) : '' })} <Money value={result.amount} currency={claimCurrency} /></p>}
                     <Flags flags={result.flags} blocksSubmit={result.blocksSubmit} />
                   </div>)}
                 <div className="erp-row">
-                  <IconButton label={t('exp.line.remove', { n: i + 1 })} icon={<Trash2 size={16} aria-hidden="true" />} onPress={() => onChange(lines.filter((l) => l.key !== line.key))} />
-                  <span className="erp-small erp-muted">{t('exp.line.remove.label')}</span>
+                  <IconButton label={t('expc.line.remove', { n: i + 1 })} icon={<Trash2 size={16} aria-hidden="true" />} onPress={() => onChange(lines.filter((l) => l.key !== line.key))} />
+                  <span className="erp-small erp-muted">{t('expc.line.remove.label')}</span>
                 </div>
               </fieldset>
             </li>);
         })}
       </ol>
-      <div><Button variant="secondary" icon={<Plus size={16} aria-hidden="true" />} isDisabled={lines.length >= MAX_LINES} onPress={() => onChange([...lines, emptyLine(claimCurrency, today)])}>{t('exp.line.add')}</Button></div>
+      <div><Button variant="secondary" icon={<Plus size={16} aria-hidden="true" />} isDisabled={lines.length >= MAX_LINES} onPress={() => onChange([...lines, emptyLine(claimCurrency, today)])}>{t('expc.line.add')}</Button></div>
     </section>
   );
 }
@@ -91,16 +91,16 @@ export function LinesTable({ claimId, lines, currency, showDecision }: { claimId
   const day = (d: string) => formatDate(`${d}T12:00:00Z`, lang, timeZone, numbers);
   return (
     <section aria-labelledby="erp-exp-lines" className="erp-stack">
-      <h2 id="erp-exp-lines">{t('exp.lines')}</h2>
-      {lines.length === 0 ? <p className="erp-muted">{t('exp.lines.empty')}</p> : (
-        <ScrollRegion label={t('exp.lines')}>
+      <h2 id="erp-exp-lines">{t('expc.lines')}</h2>
+      {lines.length === 0 ? <p className="erp-muted">{t('expc.lines.empty')}</p> : (
+        <ScrollRegion label={t('expc.lines')}>
           <table className="erp-exp-table">
-            <caption className="erp-visually-hidden">{t('exp.lines')}</caption>
+            <caption className="erp-visually-hidden">{t('expc.lines')}</caption>
             <thead>
               <tr>
-                <th scope="col">{t('exp.line.category')}</th><th scope="col">{t('exp.line.date')}</th><th scope="col">{t('exp.col.claimed')}</th><th scope="col">{t('exp.col.inCurrency', { currency })}</th>
-                <th scope="col">{t('exp.col.details')}</th><th scope="col">{t('exp.line.receipt')}</th><th scope="col">{t('exp.col.flags')}</th>
-                {showDecision && <th scope="col">{t('exp.col.approved')}</th>}
+                <th scope="col">{t('expc.line.category')}</th><th scope="col">{t('expc.line.date')}</th><th scope="col">{t('expc.col.claimed')}</th><th scope="col">{t('expc.col.inCurrency', { currency })}</th>
+                <th scope="col">{t('expc.col.details')}</th><th scope="col">{t('expc.line.receipt')}</th><th scope="col">{t('expc.col.flags')}</th>
+                {showDecision && <th scope="col">{t('expc.col.approved')}</th>}
               </tr>
             </thead>
             <tbody>
@@ -113,21 +113,21 @@ export function LinesTable({ claimId, lines, currency, showDecision }: { claimId
                     <td><Money value={l.originalAmount} currency={l.originalCurrencyCode} /></td>
                     <td>
                       <Money value={l.amount} currency={currency} />
-                      {converted && l.exchangeRate && <div className="erp-small erp-muted">{t('exp.line.rate', { rate: formatDecimal(l.exchangeRate, numbers), from: l.originalCurrencyCode, to: currency, date: l.rateDate ? day(l.rateDate) : '' })}</div>}
+                      {converted && l.exchangeRate && <div className="erp-small erp-muted">{t('expc.line.rate', { rate: formatDecimal(l.exchangeRate, numbers), from: l.originalCurrencyCode, to: currency, date: l.rateDate ? day(l.rateDate) : '' })}</div>}
                     </td>
                     <td>
-                      {l.quantity && l.quantity !== '0' && <div>{t('exp.line.quantity', { value: formatDecimal(l.quantity.replace(/\.?0+$/, '') || '0', numbers) })}</div>}
+                      {l.quantity && l.quantity !== '0' && <div>{t('expc.line.quantity', { value: formatDecimal(l.quantity.replace(/\.?0+$/, '') || '0', numbers) })}</div>}
                       {l.description && <div><bdi>{l.description}</bdi></div>}
                       {(l.project || l.costCentre) && <div className="erp-small erp-muted"><bdi>{[l.project, l.costCentre].filter(Boolean).join(' / ')}</bdi></div>}
                     </td>
                     <td><ReceiptLink claimId={claimId} fileId={l.receiptFileId} /></td>
-                    <td><Flags flags={l.flags} blocksSubmit={l.blocksSubmit} />{l.flags.length === 0 && <span className="erp-muted">{t('exp.flags.none')}</span>}</td>
+                    <td><Flags flags={l.flags} blocksSubmit={l.blocksSubmit} />{l.flags.length === 0 && <span className="erp-muted">{t('expc.flags.none')}</span>}</td>
                     {showDecision && (
                       <td>
-                        {l.decidedAt === null ? <span className="erp-muted">{t('exp.decision.open')}</span> : (
+                        {l.decidedAt === null ? <span className="erp-muted">{t('expc.decision.open')}</span> : (
                           <>
                             <Money value={l.approvedAmount} currency={currency} />
-                            {l.approvedAmount !== null && /^0(\.0+)?$/.test(l.approvedAmount) && <div>{t('exp.decision.rejected')}</div>}
+                            {l.approvedAmount !== null && /^0(\.0+)?$/.test(l.approvedAmount) && <div>{t('expc.decision.rejected')}</div>}
                             {l.decisionReason && <div className="erp-small"><bdi>{l.decisionReason}</bdi></div>}
                           </>)}
                       </td>)}

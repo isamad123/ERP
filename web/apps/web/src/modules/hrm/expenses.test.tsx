@@ -208,7 +208,7 @@ describe('FR-HRM-EXP-03 a saved draft', () => {
     expect(within(group).getByText(/Converted at the rate 280\.5/)).toBeTruthy();
     expect(within(group).getByText(/PKR 2,805\.00/)).toBeTruthy();
     expect(screen.getByText('1 line cannot be submitted as it is. Correct them or remove them, then submit again.')).toBeTruthy();
-    expect(within(group).getByRole('textbox', { name: /Amount/ }).getAttribute('value')).toBe('10.0000');
+    expect(within(group).getByRole('textbox', { name: /Amount/ }).getAttribute('value')).toBe('10');
   });
 
   it('shows the uploaded receipts, lets the line choose one, and offers to add more', async () => {

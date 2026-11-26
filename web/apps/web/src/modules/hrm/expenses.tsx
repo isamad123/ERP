@@ -39,7 +39,7 @@ function MyClaims() {
   return (
     <ListPage metadata={metadata} columns={['claimNo', 'title', 'status', 'currencyCode', 'totalAmount', 'reimburseVia', 'paymentStatus', 'submittedAt']}
       companies={{ activeId: activeCompany?.id ?? null, options }} canCreate={writable && can('hrm.expense_claims.create')} canShare={can('cfg.saved_views.share')} canExport={can('itg.exports.run')}
-      description={t('exp.list.description')} onCreate={() => { void navigate(`${EXPENSES_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${EXPENSES_PATH}/claims/${String(row.id)}`); }}
+      description={t('expc.list.description')} onCreate={() => { void navigate(`${EXPENSES_PATH}/new`); }} onOpen={(row: Row) => { void navigate(`${EXPENSES_PATH}/claims/${String(row.id)}`); }}
       rowLabel={(row) => String(row.claimNo ?? '')} />
   );
 }

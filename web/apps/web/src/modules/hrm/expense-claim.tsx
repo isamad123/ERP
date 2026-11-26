@@ -24,7 +24,7 @@ const contextKey = (employmentId?: string) => ['hrm', 'expenses', 'context', emp
 function useBack() {
   const { t } = useText();
   const navigate = useNavigate();
-  return <Button variant="quiet" onPress={() => { void navigate(EXPENSES_PATH); }}>{t('exp.back')}</Button>;
+  return <Button variant="quiet" onPress={() => { void navigate(EXPENSES_PATH); }}>{t('expc.back')}</Button>;
 }
 
 /** `/expenses/new`: a claim for the signed-in person's own employment (or `?employment=<id>` for someone in scope). */
@@ -35,13 +35,13 @@ export function NewClaimPage() {
   const employmentId = params.get('employment') ?? undefined;
   const refusal = useExpenseRefusal();
   const back = useBack();
-  useDocumentTitle(t('exp.new.title'));
+  useDocumentTitle(t('expc.new.title'));
   const context = useQuery({ queryKey: contextKey(employmentId), queryFn: ({ signal }) => expensesApi.context(employmentId, signal), enabled: can('hrm.expense_claims.create') });
-  const heading = <PageHeader title={t('exp.new.title')} description={t('exp.new.description')} actions={back} />;
-  if (!can('hrm.expense_claims.create')) return <div className="erp-page">{heading}<EmptyState title={t('exp.denied')}>{t('exp.denied.body')}</EmptyState></div>;
+  const heading = <PageHeader title={t('expc.new.title')} description={t('expc.new.description')} actions={back} />;
+  if (!can('hrm.expense_claims.create')) return <div className="erp-page">{heading}<EmptyState title={t('expc.denied')}>{t('expc.denied.body')}</EmptyState></div>;
   if (context.isPending) return <div className="erp-page">{heading}<Skeleton lines={6} /></div>;
-  if (context.isError) return <div className="erp-page">{heading}<ErrorPanel title={t('exp.loadError')} message={refusal(context.error)} action={<Button onPress={() => { void context.refetch(); }}>{t('exp.retry')}</Button>} /></div>;
-  if (!context.data.employmentId) return <div className="erp-page">{heading}<EmptyState title={t('exp.noEmployment')}>{t('exp.noEmployment.body')}</EmptyState></div>;
+  if (context.isError) return <div className="erp-page">{heading}<ErrorPanel title={t('expc.loadError')} message={refusal(context.error)} action={<Button onPress={() => { void context.refetch(); }}>{t('expc.retry')}</Button>} /></div>;
+  if (!context.data.employmentId) return <div className="erp-page">{heading}<EmptyState title={t('expc.noEmployment')}>{t('expc.noEmployment.body')}</EmptyState></div>;
   return <div className="erp-page">{heading}<ClaimEditor context={context.data} view={null} /></div>;
 }
 
@@ -55,27 +55,27 @@ export function ClaimPage() {
   const back = useBack();
   const view = useQuery({ queryKey: ['hrm', 'expenses', 'claim', id], queryFn: ({ signal }) => expensesApi.detail(id, signal), enabled: !!id });
   const context = useQuery({ queryKey: contextKey(view.data?.employmentId), queryFn: ({ signal }) => expensesApi.context(view.data?.employmentId, signal), enabled: !!view.data && view.data.canEdit && view.data.status === 'draft' });
-  useDocumentTitle(view.data ? t('exp.claim.title', { no: view.data.claimNo }) : t('exp.claim.titleLoading'));
-  const heading = (title: string) => <PageHeader title={title} description={t('exp.claim.description')} actions={back} />;
-  if (view.isPending) return <div className="erp-page">{heading(t('exp.claim.titleLoading'))}<Skeleton lines={8} /></div>;
+  useDocumentTitle(view.data ? t('expc.claim.title', { no: view.data.claimNo }) : t('expc.claim.titleLoading'));
+  const heading = (title: string) => <PageHeader title={title} description={t('expc.claim.description')} actions={back} />;
+  if (view.isPending) return <div className="erp-page">{heading(t('expc.claim.titleLoading'))}<Skeleton lines={8} /></div>;
   if (view.isError) {
     const status = view.error instanceof ApiProblem ? view.error.status : 0;
     return (
-      <div className="erp-page">{heading(t('exp.claim.titleLoading'))}
-        {status === 404 ? <EmptyState title={t('exp.gone')} action={back}>{t('exp.gone.body')}</EmptyState>
-          : status === 403 ? <EmptyState title={t('exp.denied')}>{t('exp.denied.body')}</EmptyState>
-            : <ErrorPanel title={t('exp.loadError')} message={refusal(view.error)} action={<Button onPress={() => { void view.refetch(); }}>{t('exp.retry')}</Button>} />}
+      <div className="erp-page">{heading(t('expc.claim.titleLoading'))}
+        {status === 404 ? <EmptyState title={t('expc.gone')} action={back}>{t('expc.gone.body')}</EmptyState>
+          : status === 403 ? <EmptyState title={t('expc.denied')}>{t('expc.denied.body')}</EmptyState>
+            : <ErrorPanel title={t('expc.loadError')} message={refusal(view.error)} action={<Button onPress={() => { void view.refetch(); }}>{t('expc.retry')}</Button>} />}
       </div>);
   }
   const v = view.data;
   const editing = v.canEdit && v.status === 'draft';
   return (
     <div className="erp-page">
-      {heading(t('exp.claim.title', { no: v.claimNo }))}
+      {heading(t('expc.claim.title', { no: v.claimNo }))}
       <div className="erp-stack">
-        {notice && <Banner tone="warning" title={t('exp.submitFailed')}>{notice}</Banner>}
+        {notice && <Banner tone="warning" title={t('expc.submitFailed')}>{notice}</Banner>}
         {editing && context.isPending && <Skeleton lines={6} />}
-        {editing && context.isError && <ErrorPanel title={t('exp.loadError')} message={refusal(context.error)} action={<Button onPress={() => { void context.refetch(); }}>{t('exp.retry')}</Button>} />}
+        {editing && context.isError && <ErrorPanel title={t('expc.loadError')} message={refusal(context.error)} action={<Button onPress={() => { void context.refetch(); }}>{t('expc.retry')}</Button>} />}
         {editing && context.data && <ClaimEditor context={context.data} view={v} />}
         {!editing && <ClaimReadOnly view={v} />}
       </div>
@@ -126,10 +126,10 @@ function ClaimEditor({ context, view }: { context: NewClaimContext; view: ClaimV
     const row = lines[index];
     if (!row) return;
     const merged = { ...(errors.get(row.key) ?? {}) } as Record<string, string>;
-    for (const [member, key] of Object.entries(members)) merged[FIELD_OF[member] ?? 'line'] = server(key) ?? t('exp.error.generic');
+    for (const [member, key] of Object.entries(members)) merged[FIELD_OF[member] ?? 'line'] = server(key) ?? t('expc.error.generic');
     errors.set(row.key, merged);
   });
-  const generalErrors = served ? served.general.map((k) => server(k) ?? t('exp.error.generic')) : [];
+  const generalErrors = served ? served.general.map((k) => server(k) ?? t('expc.error.generic')) : [];
 
   const header = { title, reimburseVia: via, ...(view || !context.onBehalf || !context.employmentId ? {} : { employmentId: context.employmentId }) };
   const save = async (): Promise<ClaimView> => {
@@ -144,7 +144,7 @@ function ClaimEditor({ context, view }: { context: NewClaimContext; view: ClaimV
     mutationFn: save,
     onSuccess: async (saved) => {
       setProblem(null); setMessage(null);
-      toast.success(t('exp.saved'));
+      toast.success(t('expc.saved'));
       await invalidate();
       if (!view) void navigate(`${EXPENSES_PATH}/claims/${saved.id}`, { replace: true });
     },
@@ -161,7 +161,7 @@ function ClaimEditor({ context, view }: { context: NewClaimContext; view: ClaimV
     },
     onSuccess: async (done) => {
       setProblem(null); setMessage(null);
-      toast.success(done.flagged > 0 ? t('exp.submitted.flagged', { count: done.flagged }) : t('exp.submitted'));
+      toast.success(done.flagged > 0 ? t('expc.submitted.flagged', { count: done.flagged }) : t('expc.submitted'));
       await invalidate();
       void navigate(`${EXPENSES_PATH}/claims/${done.id}`, { replace: true });
     },
@@ -175,14 +175,14 @@ function ClaimEditor({ context, view }: { context: NewClaimContext; view: ClaimV
   });
   const cancel = useMutation({
     mutationFn: () => expensesApi.cancel((view as ClaimView).id, (view as ClaimView).rowVersion),
-    onSuccess: async () => { setCancelOpen(false); toast.success(t('exp.cancelled')); await invalidate(); void navigate(EXPENSES_PATH); },
+    onSuccess: async () => { setCancelOpen(false); toast.success(t('expc.cancelled')); await invalidate(); void navigate(EXPENSES_PATH); },
     onError: (e) => { setCancelOpen(false); fail(e); },
   });
 
   const ready = lines.length > 0 && checkLines(lines, categoryMap).size === 0;
   const trySubmit = () => {
     setTried(true);
-    if (!ready) { setMessage(t('exp.fix')); return; }
+    if (!ready) { setMessage(t('expc.fix')); return; }
     setMessage(null);
     submit.mutate();
   };
@@ -190,40 +190,40 @@ function ClaimEditor({ context, view }: { context: NewClaimContext; view: ClaimV
 
   return (
     <div className="erp-stack">
-      {view?.returned && <Banner tone="warning" title={t('exp.returned.title')}>{t('exp.returned.body')}</Banner>}
+      {view?.returned && <Banner tone="warning" title={t('expc.returned.title')}>{t('expc.returned.body')}</Banner>}
       {(message || generalErrors.length > 0) && (
-        <Banner tone="danger" title={message ?? t('exp.error.generic')}>
+        <Banner tone="danger" title={message ?? t('expc.error.generic')}>
           {generalErrors.length > 0 ? <ul>{generalErrors.map((g) => <li key={g}>{g}</li>)}</ul> : null}
         </Banner>)}
-      {blocked.length > 0 && <Banner tone="warning" title={t('exp.blocked.title')}>{t('exp.blocked.body', { count: blocked.length })}</Banner>}
+      {blocked.length > 0 && <Banner tone="warning" title={t('expc.blocked.title')}>{t('expc.blocked.body', { count: blocked.length })}</Banner>}
       <div className="erp-exp-head">
-        {view ? <dl className="erp-facts"><dt>{t('exp.facts.claimNo')}</dt><dd><bdi>{view.claimNo}</bdi></dd><dt>{t('exp.facts.status')}</dt><dd><ClaimStatusChip status={view.status} /></dd></dl> : null}
-        <p><strong>{t('exp.facts.employee')}:</strong> <bdi>{context.employeeNo ?? view?.employeeNo ?? ''}</bdi>{context.onBehalf && <> {t('exp.onBehalf')}</>}</p>
-        <TextField label={t('exp.field.title')} help={t('exp.field.title.help')} maxLength={120} value={title} onChange={setTitle} />
-        <SelectField label={t('exp.field.via')} isRequired value={via} onChange={(v) => setVia(v as ReimburseVia)}
-          options={[{ id: 'payroll', label: t('exp.via.payroll') }, { id: 'payment_batch', label: t('exp.via.payment_batch') }]} help={t(`exp.via.${via}.help` as MessageKey)} />
-        <p className="erp-small erp-muted">{t('exp.field.currency', { currency })}</p>
+        {view ? <dl className="erp-facts"><dt>{t('expc.facts.claimNo')}</dt><dd><bdi>{view.claimNo}</bdi></dd><dt>{t('expc.facts.status')}</dt><dd><ClaimStatusChip status={view.status} /></dd></dl> : null}
+        <p><strong>{t('expc.facts.employee')}:</strong> <bdi>{context.employeeNo ?? view?.employeeNo ?? ''}</bdi>{context.onBehalf && <> {t('expc.onBehalf')}</>}</p>
+        <TextField label={t('expc.field.title')} help={t('expc.field.title.help')} maxLength={120} value={title} onChange={setTitle} />
+        <SelectField label={t('expc.field.via')} isRequired value={via} onChange={(v) => setVia(v as ReimburseVia)}
+          options={[{ id: 'payroll', label: t('expc.via.payroll') }, { id: 'payment_batch', label: t('expc.via.payment_batch') }]} help={t(`expc.via.${via}.help` as MessageKey)} />
+        <p className="erp-small erp-muted">{t('expc.field.currency', { currency })}</p>
       </div>
       {categories.isPending && <Skeleton lines={2} />}
-      {categories.isError && <ErrorPanel title={t('exp.categories.error')} message={refusal(categories.error)} action={<Button onPress={() => { void categories.refetch(); }}>{t('exp.retry')}</Button>} />}
-      {categories.data && categories.data.length === 0 && <EmptyState title={t('exp.categories.empty')}>{t('exp.categories.empty.body')}</EmptyState>}
+      {categories.isError && <ErrorPanel title={t('expc.categories.error')} message={refusal(categories.error)} action={<Button onPress={() => { void categories.refetch(); }}>{t('expc.retry')}</Button>} />}
+      {categories.data && categories.data.length === 0 && <EmptyState title={t('expc.categories.empty')}>{t('expc.categories.empty.body')}</EmptyState>}
       {categories.data && categories.data.length > 0 && (
         <LinesEditor lines={lines} onChange={setLines} categories={categories.data.filter((c) => c.isActive)} claimCurrency={currency} today={context.today}
           saved={new Map((view?.lines ?? []).map((l) => [l.id, l]))} receipts={receipts.data ?? []} errors={errors} />)}
       <ReceiptsPanel claimId={view?.id ?? null} canAdd={!!view} />
       <div className="erp-row erp-wrap">
-        <Button variant="secondary" isDisabled={!writable || lines.length === 0} isPending={saveDraft.isPending} onPress={() => { setTried(false); saveDraft.mutate(); }}>{t('exp.save')}</Button>
-        <Button variant="primary" isDisabled={!writable || lines.length === 0} isPending={submit.isPending} onPress={trySubmit}>{t('exp.submit')}</Button>
-        {view ? <Button variant="danger" isDisabled={!writable} onPress={() => setCancelOpen(true)}>{t('exp.cancel')}</Button>
-          : <Button variant="quiet" onPress={() => { void navigate(EXPENSES_PATH); }}>{t('exp.discard')}</Button>}
+        <Button variant="secondary" isDisabled={!writable || lines.length === 0} isPending={saveDraft.isPending} onPress={() => { setTried(false); saveDraft.mutate(); }}>{t('expc.save')}</Button>
+        <Button variant="primary" isDisabled={!writable || lines.length === 0} isPending={submit.isPending} onPress={trySubmit}>{t('expc.submit')}</Button>
+        {view ? <Button variant="danger" isDisabled={!writable} onPress={() => setCancelOpen(true)}>{t('expc.cancel')}</Button>
+          : <Button variant="quiet" onPress={() => { void navigate(EXPENSES_PATH); }}>{t('expc.discard')}</Button>}
       </div>
       {cancelOpen && (
-        <Dialog title={t('exp.cancel.title')} isOpen onOpenChange={setCancelOpen}
+        <Dialog title={t('expc.cancel.title')} isOpen onOpenChange={setCancelOpen}
           actions={(close) => <>
-            <Button variant="quiet" onPress={close}>{t('exp.cancel.keep')}</Button>
-            <Button variant="danger" isPending={cancel.isPending} onPress={() => cancel.mutate()}>{t('exp.cancel.confirm')}</Button>
+            <Button variant="quiet" onPress={close}>{t('expc.cancel.keep')}</Button>
+            <Button variant="danger" isPending={cancel.isPending} onPress={() => cancel.mutate()}>{t('expc.cancel.confirm')}</Button>
           </>}>
-          <p>{t('exp.cancel.body')}</p>
+          <p>{t('expc.cancel.body')}</p>
         </Dialog>)}
     </div>
   );
@@ -239,37 +239,37 @@ export function ClaimReadOnly({ view }: { view: ClaimView }) {
   const refusal = useExpenseRefusal();
   const invalidate = useInvalidate();
   const withdraw = useMutation({
-    mutationFn: () => expensesApi.withdraw(view.instanceId as string, t('exp.withdraw.reason')),
-    onSuccess: async () => { toast.success(t('exp.withdrawn')); await invalidate(); },
+    mutationFn: () => expensesApi.withdraw(view.instanceId as string, t('expc.withdraw.reason')),
+    onSuccess: async () => { toast.success(t('expc.withdrawn')); await invalidate(); },
     onError: (e) => toast.error(refusal(e)),
   });
   const showDecision = (view.status !== 'draft' && view.status !== 'submitted') || view.lines.some((l) => l.decidedAt !== null);
-  const when = (v: string | null) => (v ? formatDateTime(v, lang, timeZone, numbers) : t('exp.facts.none'));
+  const when = (v: string | null) => (v ? formatDateTime(v, lang, timeZone, numbers) : t('expc.facts.none'));
   return (
     <div className="erp-stack">
       <div className="erp-row erp-wrap">
         <ClaimStatusChip status={view.status} />
         {view.status === 'submitted' && !!view.instanceId && can('hrm.expense_claims.create') && (
-          <Button variant="quiet" isDisabled={!writable} isPending={withdraw.isPending} onPress={() => withdraw.mutate()}>{t('exp.withdraw')}</Button>)}
-        {view.status === 'submitted' && view.instanceId && <Link href="/approvals">{t('exp.history')}</Link>}
+          <Button variant="quiet" isDisabled={!writable} isPending={withdraw.isPending} onPress={() => withdraw.mutate()}>{t('expc.withdraw')}</Button>)}
+        {view.status === 'submitted' && view.instanceId && <Link href="/approvals">{t('expc.history')}</Link>}
       </div>
-      {view.status === 'submitted' && <p className="erp-muted" role="status">{t(view.needsFinance ? 'exp.waiting.finance' : 'exp.waiting')}</p>}
+      {view.status === 'submitted' && <p className="erp-muted" role="status">{t(view.needsFinance ? 'expc.waiting.finance' : 'expc.waiting')}</p>}
       <dl className="erp-facts">
-        <dt>{t('exp.facts.employee')}</dt><dd><bdi>{view.employeeNo ?? ''}</bdi></dd>
-        {view.title && <><dt>{t('exp.field.title')}</dt><dd><bdi>{view.title}</bdi></dd></>}
-        <dt>{t('exp.field.via')}</dt><dd>{t(`exp.via.${view.reimburseVia}` as MessageKey)}</dd>
-        <dt>{t('exp.facts.submitted')}</dt><dd>{when(view.submittedAt)}</dd>
-        <dt>{t('exp.facts.total')}</dt><dd><Money value={view.totalAmount} currency={view.currencyCode} /></dd>
-        {(view.status === 'approved' || view.status === 'reimbursed' || view.approvedTotal !== null) && <><dt>{t('exp.facts.approvedTotal')}</dt><dd><Money value={view.approvedTotal} currency={view.currencyCode} /></dd></>}
+        <dt>{t('expc.facts.employee')}</dt><dd><bdi>{view.employeeNo ?? ''}</bdi></dd>
+        {view.title && <><dt>{t('expc.field.title')}</dt><dd><bdi>{view.title}</bdi></dd></>}
+        <dt>{t('expc.field.via')}</dt><dd>{t(`expc.via.${view.reimburseVia}` as MessageKey)}</dd>
+        <dt>{t('expc.facts.submitted')}</dt><dd>{when(view.submittedAt)}</dd>
+        <dt>{t('expc.facts.total')}</dt><dd><Money value={view.totalAmount} currency={view.currencyCode} /></dd>
+        {(view.status === 'approved' || view.status === 'reimbursed' || view.approvedTotal !== null) && <><dt>{t('expc.facts.approvedTotal')}</dt><dd><Money value={view.approvedTotal} currency={view.currencyCode} /></dd></>}
         {(view.status === 'approved' || view.status === 'reimbursed') && (
           <>
-            <dt>{t('exp.facts.payment')}</dt><dd><PaymentChip status={view.paymentStatus} /></dd>
-            {view.paymentReference && <><dt>{t('exp.facts.reference')}</dt><dd><bdi>{view.paymentReference}</bdi></dd></>}
-            {view.payrollInput && <><dt>{t('exp.facts.payrollInput')}</dt><dd><bdi>{view.payrollInput}</bdi></dd></>}
-            {view.reimbursedAt && <><dt>{t('exp.facts.reimbursed')}</dt><dd>{when(view.reimbursedAt)}</dd></>}
+            <dt>{t('expc.facts.payment')}</dt><dd><PaymentChip status={view.paymentStatus} /></dd>
+            {view.paymentReference && <><dt>{t('expc.facts.reference')}</dt><dd><bdi>{view.paymentReference}</bdi></dd></>}
+            {view.payrollInput && <><dt>{t('expc.facts.payrollInput')}</dt><dd><bdi>{view.payrollInput}</bdi></dd></>}
+            {view.reimbursedAt && <><dt>{t('expc.facts.reimbursed')}</dt><dd>{when(view.reimbursedAt)}</dd></>}
           </>)}
       </dl>
-      {view.amountsHidden && <p className="erp-muted" role="note">{t('exp.hidden.note')}</p>}
+      {view.amountsHidden && <p className="erp-muted" role="note">{t('expc.hidden.note')}</p>}
       <LinesTable claimId={view.id} lines={view.lines} currency={view.currencyCode} showDecision={showDecision} />
       <ReceiptsPanel claimId={view.id} canAdd={false} />
     </div>

@@ -181,14 +181,18 @@ describe('FR-HRM-EXP-05 the payments list', () => {
     expect(screen.queryByText(/PKR 0/)).toBeNull();
   });
 
-  it('says so when nothing matches, when the server refuses, and when the person may not read claims', async () => {
+  it('says so when nothing matches', async () => {
     finance([]);
     expect(await screen.findByText('No claims here')).toBeTruthy();
-    cleanup();
+  });
+
+  it('shows the server\'s refusal with a retry', async () => {
     finance([], (_m, u) => (u.startsWith('/api/hrm/expense-claims?') ? problem('errors.server', 500) : null));
     expect(await screen.findByText('The expense claim could not be loaded.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
-    cleanup();
+  });
+
+  it('is denied without the permission to read claims and asks nothing', async () => {
     finance([], undefined, []);
     expect(await screen.findByText('You may not see this')).toBeTruthy();
     expect(sent).toHaveLength(0);
